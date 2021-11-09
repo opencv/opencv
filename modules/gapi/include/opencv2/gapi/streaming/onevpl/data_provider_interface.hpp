@@ -11,12 +11,7 @@
 #include <memory>
 #include <string>
 
-#ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
-#endif // HAVE_ONEVPL
-
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
-
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -36,7 +31,7 @@ private:
 };
 
 struct GAPI_EXPORTS DataProviderUnsupportedException : public DataProviderException {
-    DataProviderUnsupportedException(const std::string& desription);
+    DataProviderUnsupportedException(const std::string& description);
     virtual ~DataProviderUnsupportedException();
     virtual const char* what() const noexcept override;
 
@@ -44,6 +39,14 @@ private:
     std::string reason;
 };
 
+struct GAPI_EXPORTS DataProviderImplementationException : public DataProviderException {
+    DataProviderImplementationException(const std::string& description);
+    virtual ~DataProviderImplementationException();
+    virtual const char* what() const noexcept override;
+
+private:
+    std::string reason;
+};
 /**
  * @brief Public interface allows to customize extraction of video stream data
  * used by onevpl::GSource instead of reading stream from file (by default).
@@ -57,6 +60,18 @@ private:
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
     using mfx_codec_id_type = uint32_t;
+
+    /**
+     * NB: here is supposed to be forward declaration of mfxBitstream
+     * But according to current oneVPL implementation it is impossible to forward
+     * declare untagged struct mfxBitstream.
+     *
+     * IDataProvider makes sense only for HAVE_VPL is ON and to keep IDataProvider
+     * interface API/ABI compiant between core library and user application layer
+     * let's introduce wrapper mfx_bitstream which inherits mfxBitstream in private
+     * G-API code section and declare forward for wrapper mfx_bitstream here
+     */
+    struct mfx_bitstream;
 
     virtual ~IDataProvider() = default;
 
@@ -77,11 +92,10 @@ struct GAPI_EXPORTS IDataProvider {
      * @param in_out_bitsream the input-output reference on MFX bitstream buffer which MUST be empty at the first request
      * to allow implementation to allocate it by itself and to return back. Subsequent invocation of `fetch_bitstream_data`
      * MUST use the previously used in_out_bitsream to avoid skipping rest of hasn't been consumed frames
-     * @return fetched bytes count.
+     * @return true for fetched data, false on EOF and throws exception on error
      */
-#ifdef HAVE_ONEVPL
-    virtual mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &in_out_bitsream) = 0;
-#endif // HAVE_ONEVPL
+    virtual bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &in_out_bitsream) = 0;
+
     /**
      * The function is used by onevpl::GSource to check more binary data availability.
      *

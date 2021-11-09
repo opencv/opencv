@@ -14,6 +14,8 @@
 #include <queue>
 
 #ifdef HAVE_ONEVPL
+#include <vpl/mfxvideo.h>
+
 #ifdef _WIN32
 #define NOMINMAX
 #include <mfapi.h>
@@ -29,6 +31,7 @@
 #undef NOMINMAX
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 #include "streaming/onevpl/utils.hpp"
 
 namespace cv {
@@ -42,7 +45,7 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider,
     ~MFPAsyncDemuxDataProvider();
 
     mfx_codec_id_type get_mfx_codec_id() const override;
-    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitsream) override;
     bool empty() const override;
 
 protected: /* For Unit tests only */
@@ -73,7 +76,7 @@ protected: /* For Unit tests only */
     virtual void consume_worker_data();
     virtual size_t produce_worker_data(void *key,
                                        ComPtrGuard<IMFMediaBuffer> &&buffer,
-                                       std::shared_ptr<mfxBitstream> &&staging_stream);
+                                       std::shared_ptr<mfx_bitstream> &&staging_stream);
     size_t get_locked_buffer_size() const;
 
 private:
@@ -90,8 +93,8 @@ private:
     // worker & processing buffers
     std::map<void*, ComPtrGuard<IMFMediaBuffer>> worker_key_to_buffer_mapping_storage;
     std::map<void*, ComPtrGuard<IMFMediaBuffer>> processing_key_to_buffer_mapping_storage;
-    std::queue<std::shared_ptr<mfxBitstream>> worker_locked_buffer_storage;
-    std::queue<std::shared_ptr<mfxBitstream>> processing_locked_buffer_storage;
+    std::queue<std::shared_ptr<mfx_bitstream>> worker_locked_buffer_storage;
+    std::queue<std::shared_ptr<mfx_bitstream>> processing_locked_buffer_storage;
     std::condition_variable buffer_storage_non_empty_cond;
     mutable std::mutex buffer_storage_mutex;
 
@@ -110,7 +113,9 @@ namespace wip {
 namespace onevpl {
 struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider {
     MFPAsyncDemuxDataProvider(const std::string&);
-    size_t fetch_data(size_t, void*) override;
+
+    mfx_codec_id_type get_mfx_codec_id() const override;
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitsream) override;
     bool empty() const override;
 };
 } // namespace onevpl

@@ -67,6 +67,7 @@ const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type);
 
 mfxU32 cstr_to_mfx_version(const char* cstr);
 
+std::string mfxstatus_to_string(int64_t err);
 std::string mfxstatus_to_string(mfxStatus err);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);

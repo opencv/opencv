@@ -9,12 +9,10 @@
 
 #include <stdio.h>
 
-#ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
-#endif // HAVE_ONEVPL
-
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
+
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 namespace cv {
 namespace gapi {
@@ -29,11 +27,7 @@ struct FileDataProvider : public IDataProvider {
     ~FileDataProvider();
 
     mfx_codec_id_type get_mfx_codec_id() const override;
-
-#ifdef HAVE_ONEVPL
-    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
-#endif // HAVE_ONEVPL
-
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitsream) override;
     bool empty() const override;
 private:
     file_ptr source_handle;

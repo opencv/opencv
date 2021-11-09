@@ -551,7 +551,7 @@ HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
             DWORD curr_size = 0;
 
             // lock buffer directly into mfx bitstream
-            std::shared_ptr<mfxBitstream> staging_stream = std::make_shared<mfxBitstream>();
+            std::shared_ptr<mfx_bitstream> staging_stream = std::make_shared<mfx_bitstream>();
             staging_stream->Data = nullptr;
 
             hr = buffer_ptr->Lock(&staging_stream->Data, &max_buffer_size, &curr_size);
@@ -670,7 +670,7 @@ void MFPAsyncDemuxDataProvider::consume_worker_data() {
 
 size_t MFPAsyncDemuxDataProvider::produce_worker_data(void *key,
                                                       ComPtrGuard<IMFMediaBuffer> &&buffer,
-                                                      std::shared_ptr<mfxBitstream> &&staging_stream) {
+                                                      std::shared_ptr<mfx_bitstream> &&staging_stream) {
     size_t bitstream_count = 0;
     size_t worker_buffer_count = 0;
     {
@@ -700,10 +700,10 @@ IDataProvider::mfx_codec_id_type MFPAsyncDemuxDataProvider::get_mfx_codec_id() c
     return codec;
 }
 
-mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) {
+bool MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitsream) {
     if (empty()) {
         GAPI_LOG_DEBUG(nullptr, "[" << this << "] empty");
-        return MFX_ERR_MORE_DATA;
+        return false;
     }
     do {
         if (out_bitsream) {
@@ -716,7 +716,7 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
                                     ", DataLength: " <<
                                     out_bitsream->DataLength);
             if (out_bitsream->DataOffset < out_bitsream->DataLength) {
-                return MFX_ERR_NONE;
+                return true;
             }
 
             // cleanup
@@ -744,7 +744,7 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
         if (processing_locked_buffer_storage.empty()) {
             GAPI_DbgAssert(provider_state == State::Exhausted && "Source reader must be drained");
             out_bitsream.reset();
-            return MFX_ERR_MORE_DATA;
+            return false;
         }
 
         out_bitsream = processing_locked_buffer_storage.front();
@@ -759,7 +759,7 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
                                 out_bitsream->DataLength);
     }
     while (false);
-    return MFX_ERR_NONE;
+    return true;
 }
 
 bool MFPAsyncDemuxDataProvider::empty() const {
@@ -769,10 +769,28 @@ bool MFPAsyncDemuxDataProvider::empty() const {
 }
 #else
 
+struct mfx_bitstream {
+    mfx_bitstream() {
+        GAPI_Assert(false && "Reject to create `mfxBitstream` till library compiled without VPL/MFX support");
+    }
+};
+
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string&) {
     GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
 }
+IDataProvider::mfx_codec_id_type MFPAsyncDemuxDataProvider::get_mfx_codec_id() const {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    return std::numeric_limits<mfx_codec_id_type>::max();
+}
+
+bool MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    return false;
+}
+
 bool MFPAsyncDemuxDataProvider::empty() const override {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    return true;
 }
 #endif // _WIN32
 } // namespace onevpl

@@ -95,15 +95,17 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // create proper bitstream
-    std::shared_ptr<mfxBitstream> bitstream{};
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
 
     // prepare dec params
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = mfx_param_0.Data.U32;
     mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     do {
-        sts = provider_ptr->fetch_bitstream_data(bitstream);
-        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
+        bool fetched = provider_ptr->fetch_bitstream_data(bitstream);
+        if (dec_result) {
+            EXPECT_TRUE(fetched);
+        }
         sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
         EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
     } while (sts == MFX_ERR_MORE_DATA && !provider_ptr->empty());
@@ -184,7 +186,7 @@ namespace test {
 
     size_t produce_worker_data(void *key,
                                cv::gapi::wip::onevpl::ComPtrGuard<IMFMediaBuffer> &&buffer,
-                               std::shared_ptr<mfxBitstream> &&staging_stream) {
+                               std::shared_ptr<mfx_bitstream> &&staging_stream) {
         return base_t::produce_worker_data(key, std::move(buffer),
                                            std::move(staging_stream));
     }
@@ -236,9 +238,9 @@ TEST(OneVPL_Source_MFPAsyncDemux, async_flush) {
     test::IntrusiveAsyncDemuxDataProvider::need_request_next = true;
     const size_t preprocessed_samples_count = 999;
     {
-        std::shared_ptr<mfxBitstream> stream;
+        std::shared_ptr<IDataProvider::mfx_bitstream> stream;
         test::IntrusiveAsyncDemuxDataProvider provider(path, preprocessed_samples_count);
-        EXPECT_EQ(provider.fetch_bitstream_data(stream), MFX_ERR_NONE);
+        EXPECT_TRUE(provider.fetch_bitstream_data(stream));
         EXPECT_TRUE(stream);
     }
 
@@ -260,9 +262,9 @@ TEST(OneVPL_Source_MFPAsyncDemux, eof_async_detection) {
     std::future<void> wait_consume_data = start_consume_data.get_future();
 
     std::thread fetcher([&provider, &start_consume_data]() {
-        std::shared_ptr<mfxBitstream> stream;
+        std::shared_ptr<IDataProvider::mfx_bitstream> stream;
         start_consume_data.set_value();
-        EXPECT_EQ(provider.fetch_bitstream_data(stream), MFX_ERR_MORE_DATA);
+        EXPECT_FALSE(provider.fetch_bitstream_data(stream));
         EXPECT_FALSE(stream);
     });
 
@@ -296,7 +298,8 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
         wait_consume_data.wait();
         size_t total_produced_count = 0;
         for (size_t i = 0; i < produce_buffer_count; i ++) {
-            std::shared_ptr<mfxBitstream> dummy_stream = std::make_shared<mfxBitstream>();
+            std::shared_ptr<IDataProvider::mfx_bitstream> dummy_stream =
+                                std::make_shared<IDataProvider::mfx_bitstream>();
             dummy_stream->DataLength = static_cast<mfxU32>(i); // control block
             dummy_stream->DataOffset = static_cast<mfxU32>(i); // control block
             dummy_stream->Data = reinterpret_cast<mfxU8*>(i);
@@ -312,10 +315,10 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
 
         start_consume_data.set_value();
         size_t total_consumed_count = 0;
-        std::shared_ptr<mfxBitstream> dummy_stream;
+        std::shared_ptr<IDataProvider::mfx_bitstream> dummy_stream;
         size_t stream_idx = 0;
         do {
-            EXPECT_EQ(provider.fetch_bitstream_data(dummy_stream), MFX_ERR_NONE);
+            EXPECT_TRUE(provider.fetch_bitstream_data(dummy_stream));
             EXPECT_TRUE(dummy_stream);
             EXPECT_EQ(dummy_stream->DataLength, stream_idx);
             stream_idx ++;
@@ -367,14 +370,16 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // create proper bitstream
-    std::shared_ptr<mfxBitstream> bitstream{};
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
     // prepare dec params
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = mfx_param_0.Data.U32;
     mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     do {
-        sts = provider_ptr->fetch_bitstream_data(bitstream);
-        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
+        bool fetched = provider_ptr->fetch_bitstream_data(bitstream);
+        if (dec_result) {
+            EXPECT_TRUE(fetched);
+        }
         sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
         EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
     } while (sts == MFX_ERR_MORE_DATA && !provider_ptr->empty());

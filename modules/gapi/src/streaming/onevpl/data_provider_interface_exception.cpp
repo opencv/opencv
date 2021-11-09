@@ -38,6 +38,16 @@ DataProviderUnsupportedException::~DataProviderUnsupportedException() = default;
 const char* DataProviderUnsupportedException::what() const noexcept {
     return reason.c_str();
 }
+
+DataProviderImplementationException::DataProviderImplementationException(const std::string& description) {
+    reason = description;
+}
+
+DataProviderImplementationException::~DataProviderImplementationException() = default;
+
+const char* DataProviderImplementationException::what() const noexcept {
+    return reason.c_str();
+}
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

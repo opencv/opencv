@@ -26,6 +26,7 @@
 #include <opencv2/gapi/streaming/format.hpp>
 
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #ifdef HAVE_ONEVPL
 
@@ -284,6 +285,7 @@ void checkPullOverload(const cv::Mat& ref,
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
 }
 
+#ifdef HAVE_ONEVPL
 struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
     StreamDataProvider(std::istream& in) : data_stream (in) {
@@ -294,13 +296,13 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
         return MFX_CODEC_HEVC;
     }
 
-    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitstream) override {
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitstream) override {
         if (empty()) {
-            return MFX_ERR_NONE;
+            return false;
         }
 
         if (!out_bitstream) {
-            out_bitstream = std::make_shared<mfxBitstream>();
+            out_bitstream = std::make_shared<mfx_bitstream>();
             out_bitstream->MaxLength = 2000000;
             out_bitstream->Data = (mfxU8 *)calloc(out_bitstream->MaxLength, sizeof(mfxU8));
             if(!out_bitstream->Data) {
@@ -312,21 +314,15 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
         mfxU8 *p0 = out_bitstream->Data;
         mfxU8 *p1 = out_bitstream->Data + out_bitstream->DataOffset;
-        if (out_bitstream->DataOffset > out_bitstream->MaxLength - 1) {
-            return MFX_ERR_NOT_ENOUGH_BUFFER;
-        }
-        if (out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength) {
-            return MFX_ERR_NOT_ENOUGH_BUFFER;
-        }
+        EXPECT_FALSE(out_bitstream->DataOffset > out_bitstream->MaxLength - 1);
+        EXPECT_FALSE(out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength);
 
         std::copy_n(p1, out_bitstream->DataLength, p0);
 
         out_bitstream->DataOffset = 0;
         out_bitstream->DataLength += static_cast<mfxU32>(fetch_data(out_bitstream->MaxLength - out_bitstream->DataLength,
                                                          out_bitstream->Data + out_bitstream->DataLength));
-        if (out_bitstream->DataLength == 0)
-            return MFX_ERR_MORE_DATA;
-        return MFX_ERR_NONE;
+        return out_bitstream->DataLength != 0;
     }
 
     size_t fetch_data(size_t out_data_size, void* out_data_buf) {
@@ -339,6 +335,7 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 private:
     std::istream& data_stream;
 };
+#endif // HAVE_ONEVPL
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)

@@ -51,8 +51,8 @@ struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
     mfx_codec_id_type get_mfx_codec_id() const override {
         return std::numeric_limits<uint32_t>::max();
     }
-    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &) override {
-        return MFX_ERR_MORE_DATA;
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) override {
+        return false;
     }
 };
 

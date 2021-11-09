@@ -12,6 +12,7 @@
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/source_priv.hpp"
 #include "logger.hpp"
@@ -234,18 +235,21 @@ DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
 {
     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
-    std::shared_ptr<mfxBitstream> bitstream{};
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
 
     // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder_id;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     mfxStatus sts = MFX_ERR_NONE;
+    bool can_fetch_data = false;
     do {
-        sts = provider->fetch_bitstream_data(bitstream);
-        if(MFX_ERR_NONE != sts) {
-            throw std::runtime_error("Error reading bitstream, error: " +
-                                     mfxstatus_to_string(sts));
+        can_fetch_data = provider->fetch_bitstream_data(bitstream);
+        if (!can_fetch_data) {
+            // must fetch data always because EOF critical at this point
+            GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get() <<
+                                      ". Unexpected EOF");
+            throw std::runtime_error("Error reading bitstream: EOF");
         }
 
         sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);

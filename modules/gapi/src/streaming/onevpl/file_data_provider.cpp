@@ -58,16 +58,16 @@ IDataProvider::mfx_codec_id_type FileDataProvider::get_mfx_codec_id() const {
     return codec;
 }
 
-mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitstream) {
+bool FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitstream) {
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             ", dst: " << out_bitstream.get());
     if (empty()) {
-        return MFX_ERR_NONE;
+        return false;
     }
 
     if (!out_bitstream) {
-        out_bitstream = std::make_shared<mfxBitstream>();
+        out_bitstream = std::make_shared<mfx_bitstream>();
         out_bitstream->MaxLength = bitstream_data_size;
         out_bitstream->Data = (mfxU8 *)calloc(out_bitstream->MaxLength, sizeof(mfxU8));
         if(!out_bitstream->Data) {
@@ -84,10 +84,10 @@ mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &
     mfxU8 *p0 = out_bitstream->Data;
     mfxU8 *p1 = out_bitstream->Data + out_bitstream->DataOffset;
     if (out_bitstream->DataOffset > out_bitstream->MaxLength - 1) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
+        throw DataProviderImplementationException(mfxstatus_to_string(MFX_ERR_NOT_ENOUGH_BUFFER));
     }
     if (out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
+        throw DataProviderImplementationException(mfxstatus_to_string(MFX_ERR_NOT_ENOUGH_BUFFER));
     }
 
     std::copy_n(p1, out_bitstream->DataLength, p0);
@@ -111,28 +111,37 @@ mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "buff fetched: " << out_bitstream.get());
-    return MFX_ERR_NONE;
+    return true;
 }
 
 bool FileDataProvider::empty() const {
     return !source_handle;
 }
 
-#else
+#else // HAVE_ONEVPL
 
 FileDataProvider::FileDataProvider(const std::string&,
-                                   const std::vector<CfgParam>) :
-    source_handle(nullptr, &fclose) {
+                                   const std::vector<CfgParam>,
+                                   uint32_t bitstream_data_size_value) :
+    source_handle(nullptr, &fclose),
+    bitstream_data_size(bitstream_data_size_value) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 FileDataProvider::~FileDataProvider() = default;
 
 IDataProvider::mfx_codec_id_type FileDataProvider::get_mfx_codec_id() const {
-    return codec;
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    return std::numeric_limits<mfx_codec_id_type>::max();
+}
+
+bool FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    return false;
 }
 
 bool FileDataProvider::empty() const {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
     return true;
 }
 #endif // HAVE_ONEVPL

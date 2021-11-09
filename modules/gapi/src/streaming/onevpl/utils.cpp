@@ -405,6 +405,10 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
     return out;
 }
 
+std::string mfxstatus_to_string(int64_t err) {
+    return mfxstatus_to_string(static_cast<mfxStatus>(err));
+}
+
 std::string mfxstatus_to_string(mfxStatus err) {
     switch(err)
     {

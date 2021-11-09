@@ -10,6 +10,7 @@
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/engine/decode/decode_engine_legacy.hpp"
 #include "streaming/onevpl/engine/decode/decode_session.hpp"
@@ -126,8 +127,10 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                 my_sess.last_status = MFX_ERR_MORE_DATA;
                 return ExecutionStatus::Continue;
             }
-            my_sess.last_status = my_sess.data_provider->fetch_bitstream_data(my_sess.stream);
-            if (my_sess.last_status != MFX_ERR_NONE) {
+
+            my_sess.last_status = MFX_ERR_NONE;
+            if (!my_sess.data_provider->fetch_bitstream_data(my_sess.stream)) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
                 my_sess.data_provider.reset(); //close source
             }
             return ExecutionStatus::Continue;
