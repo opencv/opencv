@@ -56,6 +56,35 @@ DIV_SIMD(float, float)
 
 #undef DIV_SIMD
 
+
+#define MUL_SIMD(SRC, DST)                                                  \
+int mul_simd(const SRC in1[], const SRC in2[], DST out[],                   \
+             const int length, double _scale)                               \
+{                                                                           \
+    CV_CPU_DISPATCH(mul_simd, (in1, in2, out, length, _scale),              \
+                    CV_CPU_DISPATCH_MODES_ALL);                             \
+}
+
+
+MUL_SIMD(uchar, uchar)
+MUL_SIMD(ushort, uchar)
+MUL_SIMD(short, uchar)
+MUL_SIMD(float, uchar)
+MUL_SIMD(short, short)
+MUL_SIMD(ushort, short)
+MUL_SIMD(uchar, short)
+MUL_SIMD(float, short)
+MUL_SIMD(ushort, ushort)
+MUL_SIMD(uchar, ushort)
+MUL_SIMD(short, ushort)
+MUL_SIMD(float, ushort)
+MUL_SIMD(uchar, float)
+MUL_SIMD(ushort, float)
+MUL_SIMD(short, float)
+MUL_SIMD(float, float)
+
+#undef MUL_SIMD
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
