@@ -772,8 +772,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     cv::Matx66f A;
                     cv::Vec6f b;
-                    int lvls = (int)iterCounts.size();
-                    calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, lvls,  level, maxDepthDiff, angleThreshold, A, b);
+                    calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
                     AtA_icp = Mat(A);
                     AtB_icp = Mat(b);
                 }
@@ -1479,18 +1478,17 @@ struct GetAbInvoker : ParallelLoopBody
 };
 
 void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
-    cv::Affine3f pose, int lvls, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
-    CV_Assert(lvls > 0);
 
 #ifdef HAVE_OPENCL_
     AccessFlag af = AccessFlag::ACCESS_READ;
     calcICPLsmMatricesFast_ocl(cameraMatrix,
         oldPts.getUMat(af), oldNrm.getUMat(af),
         newPts.getUMat(af), newNrm.getUMat(af),
-        pose, lvls, level, maxDepthDiff, angleThreshold,
+        pose, level, maxDepthDiff, angleThreshold,
         A, b);
     return;
 #endif
@@ -1525,7 +1523,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 #ifdef HAVE_OPENCL
 
 void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
-    cv::Affine3f pose, int lvls, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_TRACE_FUNCTION();
 
@@ -1537,7 +1535,7 @@ void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const 
     // [A|b] = ab*(ab^t)
     // and then reduce it across work groups
 
-    std::vector<UMat> groupedSumBuffers(lvls);
+    UMat groupedSumBuffer;
     cv::String errorStr;
     String name = "getAb";
     ocl::ProgramSource source = ocl::_3d::icp_oclsrc;
@@ -1572,7 +1570,7 @@ void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const 
     Intr::Projector proj = intrinsics.scale(level).makeProjector();
     Vec2f fxy(proj.fx, proj.fy), cxy(proj.cx, proj.cy);
 
-    UMat& groupedSumGpu = groupedSumBuffers[level];
+    UMat& groupedSumGpu = groupedSumBuffer;
     groupedSumGpu.create(Size(ngroups.width * UTSIZE, ngroups.height),
         CV_32F);
     groupedSumGpu.setTo(0);
