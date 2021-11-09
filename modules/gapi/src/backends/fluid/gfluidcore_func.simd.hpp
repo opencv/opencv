@@ -58,6 +58,29 @@ DIV_SIMD(float, float)
 
 #undef DIV_SIMD
 
+#define MUL_SIMD(SRC, DST)                                     \
+int mul_simd(const SRC in1[], const SRC in2[], DST out[],      \
+             const int length, double _scale);
+
+MUL_SIMD(uchar, uchar)
+MUL_SIMD(ushort, uchar)
+MUL_SIMD(short, uchar)
+MUL_SIMD(float, uchar)
+MUL_SIMD(short, short)
+MUL_SIMD(ushort, short)
+MUL_SIMD(uchar, short)
+MUL_SIMD(float, short)
+MUL_SIMD(ushort, ushort)
+MUL_SIMD(uchar, ushort)
+MUL_SIMD(short, ushort)
+MUL_SIMD(float, ushort)
+MUL_SIMD(uchar, float)
+MUL_SIMD(ushort, float)
+MUL_SIMD(short, float)
+MUL_SIMD(float, float)
+
+#undef MUL_SIMD
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 struct scale_tag {};
@@ -93,6 +116,16 @@ CV_ALWAYS_INLINE v_float32 vg_load_f32(const uchar* in)
     return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(in)));
 }
 
+CV_ALWAYS_INLINE v_float32 mul_op(scale_tag, const v_float32& a, const v_float32& b, const v_float32& scale)
+{
+    return (scale*a * b);
+}
+
+CV_ALWAYS_INLINE v_float32 mul_op(not_scale_tag, const v_float32& a, const v_float32& b, const v_float32&)
+{
+    return a * b;
+}
+
 CV_ALWAYS_INLINE v_float32 div_op(scale_tag, const v_float32& a, const v_float32& div, const v_float32& scale)
 {
     return (a*scale/div);
@@ -103,12 +136,12 @@ CV_ALWAYS_INLINE v_float32 div_op(not_scale_tag, const v_float32& a, const v_flo
     return a / div;
 }
 
-CV_ALWAYS_INLINE void v_store_div(short* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(short* dst, v_int32& res1, v_int32& res2)
 {
     vx_store(dst, v_pack(res1, res2));
 }
 
-CV_ALWAYS_INLINE void v_store_div(ushort* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(ushort* dst, v_int32& res1, v_int32& res2)
 {
     vx_store(dst, v_pack_u(res1, res2));
 }
@@ -360,7 +393,7 @@ div_hal(scale_tag_t t, const float in1[], const float in2[], DST out[], const in
             v_int32 res1 = v_round(v_select((fdiv1 == v_zero), v_zero, r1));
             v_int32 res2 = v_round(v_select((fdiv2 == v_zero), v_zero, r2));
 
-            v_store_div(&out[x], res1, res2);
+            v_store_i16(&out[x], res1, res2);
         }
 
         if (x < length)
@@ -466,6 +499,327 @@ DIV_SIMD(short, float)
 DIV_SIMD(float, float)
 
 #undef DIV_SIMD
+
+//-------------------------
+//
+// Fluid kernels: Multiply
+//
+//-------------------------
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<(std::is_same<SRC, short>::value && std::is_same<DST, ushort>::value) ||
+                        (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value) ||
+                        (std::is_same<SRC, short>::value && std::is_same<DST, short>::value) ||
+                        (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value), int>::type
+mul_hal(scale_tag_t t, const SRC in1[], const SRC in2[], DST out[], const int length, double _scale)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_int16 a = v_reinterpret_as_s16(vx_load(&in1[x]));
+            v_int16 b = v_reinterpret_as_s16(vx_load(&in2[x]));
+
+            v_float32 a1 = v_cvt_f32(v_expand_low(a));
+            v_float32 a2 = v_cvt_f32(v_expand_high(a));
+
+            v_float32 b1 = v_cvt_f32(v_expand_low(b));
+            v_float32 b2 = v_cvt_f32(v_expand_high(b));
+
+            v_int32 r1 = v_round(mul_op(t, a1, b1, scale));
+            v_int32 r2 = v_round(mul_op(t, a2, b2, scale));
+
+            v_store_i16(&out[x], r1, r2);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<SRC, short>::value ||
+                        std::is_same<SRC, ushort>::value, int>::type
+mul_hal(scale_tag_t t, const SRC in1[], const SRC in2[], uchar out[], const int length, double _scale)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_int16 a1 = v_reinterpret_as_s16(vx_load(&in1[x]));
+            v_int16 a2 = v_reinterpret_as_s16(vx_load(&in1[x + nlanes / 2]));
+
+            v_float32 fa1 = v_cvt_f32(v_expand_low(a1));
+            v_float32 fa2 = v_cvt_f32(v_expand_high(a1));
+            v_float32 fa3 = v_cvt_f32(v_expand_low(a2));
+            v_float32 fa4 = v_cvt_f32(v_expand_high(a2));
+
+            v_int16 b1 = v_reinterpret_as_s16(vx_load(&in2[x]));
+            v_int16 b2 = v_reinterpret_as_s16(vx_load(&in2[x + nlanes/2]));
+
+            v_float32 fb1 = v_cvt_f32(v_expand_low(b1));
+            v_float32 fb2 = v_cvt_f32(v_expand_high(b1));
+            v_float32 fb3 = v_cvt_f32(v_expand_low(b2));
+            v_float32 fb4 = v_cvt_f32(v_expand_high(b2));
+
+            v_int32 sum1 = v_round(mul_op(t, fa1, fb1, scale)),
+                    sum2 = v_round(mul_op(t, fa2, fb2, scale)),
+                    sum3 = v_round(mul_op(t, fa3, fb3, scale)),
+                    sum4 = v_round(mul_op(t, fa4, fb4, scale));
+
+            v_int16 res1 = v_pack(sum1, sum2);
+            v_int16 res2 = v_pack(sum3, sum4);
+
+            vx_store(&out[x], v_pack_u(res1, res2));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t>
+CV_ALWAYS_INLINE int mul_hal(scale_tag_t t, const float in1[], const float in2[], uchar out[],
+                             const int length, double _scale)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in1[x]);
+            v_float32 a2 = vg_load_f32(&in1[x + nlanes / 4]);
+            v_float32 a3 = vg_load_f32(&in1[x + nlanes / 2]);
+            v_float32 a4 = vg_load_f32(&in1[x + 3 * nlanes / 4]);
+
+            v_float32 b1 = vg_load_f32(&in2[x]);
+            v_float32 b2 = vg_load_f32(&in2[x + nlanes / 4]);
+            v_float32 b3 = vg_load_f32(&in2[x + nlanes / 2]);
+            v_float32 b4 = vg_load_f32(&in2[x + 3 * nlanes / 4]);
+
+            v_int32 res1 = v_round(mul_op(t, a1, b1, scale));
+            v_int32 res2 = v_round(mul_op(t, a2, b2, scale));
+            v_int32 res3 = v_round(mul_op(t, a3, b3, scale));
+            v_int32 res4 = v_round(mul_op(t, a4, b4, scale));
+
+            vx_store(&out[x], v_pack_u(v_pack(res1, res2), v_pack(res3, res4)));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename scale_tag_t, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, int>::type
+mul_hal(scale_tag_t t, const uchar in1[], const uchar in2[], DST out[], const int length, double _scale)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_int16 a = v_reinterpret_as_s16(vx_load_expand(&in1[x]));
+            v_int16 b = v_reinterpret_as_s16(vx_load_expand(&in2[x]));
+
+            v_float32 a1 = v_cvt_f32(v_expand_low(a));
+            v_float32 a2 = v_cvt_f32(v_expand_high(a));
+
+            v_float32 b1 = v_cvt_f32(v_expand_low(b));
+            v_float32 b2 = v_cvt_f32(v_expand_high(b));
+
+            v_int32 r1 = v_round(mul_op(t, a1, b1, scale));
+            v_int32 r2 = v_round(mul_op(t, a2, b2, scale));
+
+            v_store_i16(&out[x], r1, r2);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, int>::type
+mul_hal(scale_tag_t t, const float in1[], const float in2[], DST out[], const int length, double _scale)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in1[x]);
+            v_float32 a2 = vg_load_f32(&in1[x + nlanes / 2]);
+
+            v_float32 b1 = vg_load_f32(&in2[x]);
+            v_float32 b2 = vg_load_f32(&in2[x + nlanes / 2]);
+
+            v_int32 res1 = v_round(mul_op(t, a1, b1, scale));
+            v_int32 res2 = v_round(mul_op(t, a2, b2, scale));
+
+            v_store_i16(&out[x], res1, res2);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE int mul_hal(scale_tag_t t, const SRC in1[], const SRC in2[], float out[],
+                             const int length, double _scale)
+{
+    constexpr int nlanes = v_float32::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in1[x]);
+            v_float32 b1 = vg_load_f32(&in2[x]);
+
+            vx_store(&out[x], mul_op(t, a1, b1, scale));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t>
+CV_ALWAYS_INLINE int mul_hal(scale_tag_t, const uchar in1[], const uchar in2[], uchar out[],
+                             const int length, double scale)
+{
+    hal::mul8u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
+               out, static_cast<size_t>(length), length, 1, &scale);
+    return length;
+}
+
+#define MUL_SIMD(SRC, DST)                                                      \
+int mul_simd(const SRC in1[], const SRC in2[], DST out[],                       \
+             const int length, double _scale)                                   \
+{                                                                               \
+    int x = 0;                                                                  \
+    float fscale = static_cast<float>(_scale);                                  \
+    if (std::fabs(fscale - 1.0f) <= FLT_EPSILON)                                \
+    {                                                                           \
+        not_scale_tag t;                                                        \
+        x = mul_hal(t, in1, in2, out, length, _scale);                          \
+    }                                                                           \
+    else                                                                        \
+    {                                                                           \
+        scale_tag t;                                                            \
+        x = mul_hal(t, in1, in2, out, length, _scale);                          \
+    }                                                                           \
+    return x;                                                                   \
+}
+
+MUL_SIMD(uchar, uchar)
+MUL_SIMD(ushort, uchar)
+MUL_SIMD(short, uchar)
+MUL_SIMD(float, uchar)
+MUL_SIMD(short, short)
+MUL_SIMD(ushort, short)
+MUL_SIMD(uchar, short)
+MUL_SIMD(float, short)
+MUL_SIMD(ushort, ushort)
+MUL_SIMD(uchar, ushort)
+MUL_SIMD(short, ushort)
+MUL_SIMD(float, ushort)
+MUL_SIMD(uchar, float)
+MUL_SIMD(ushort, float)
+MUL_SIMD(short, float)
+MUL_SIMD(float, float)
+
+#undef MUL_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
