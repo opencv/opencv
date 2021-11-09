@@ -420,9 +420,9 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum2)
     {
         for (int i = 0; i < sizeof(axises)/sizeof(axises[0]); ++i)
         {
-            runTensorFlowNet(cv::format("reduce_sum_[%d]_%s", axises[i], (keepdims ? "True" : "False")));
+            runTensorFlowNet(cv::format("reduce_sum_%d_%s", axises[i], (keepdims ? "True" : "False")));
         }
-        runTensorFlowNet(cv::format("reduce_sum_[1, 2]_%s", keepdims ? "True" : "False"));
+        runTensorFlowNet(cv::format("reduce_sum_1_2_%s", keepdims ? "True" : "False"));
     }
 }
 
