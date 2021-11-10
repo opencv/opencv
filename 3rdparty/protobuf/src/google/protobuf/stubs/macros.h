@@ -31,21 +31,19 @@
 #ifndef GOOGLE_PROTOBUF_MACROS_H__
 #define GOOGLE_PROTOBUF_MACROS_H__
 
-#include <google/protobuf/stubs/port.h>
-
 namespace google {
 namespace protobuf {
 
 #undef GOOGLE_DISALLOW_EVIL_CONSTRUCTORS
-#define GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(TypeName)    \
-  TypeName(const TypeName&);                           \
-  void operator=(const TypeName&)
+#define GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(TypeName) \
+  TypeName(const TypeName&) = delete;               \
+  void operator=(const TypeName&) = delete
 
 #undef GOOGLE_DISALLOW_IMPLICIT_CONSTRUCTORS
 #define GOOGLE_DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
-  TypeName();                                           \
-  TypeName(const TypeName&);                            \
-  void operator=(const TypeName&)
+  TypeName() = delete;                                  \
+  TypeName(const TypeName&) = delete;                   \
+  void operator=(const TypeName&) = delete
 
 // ===================================================================
 // from google3/base/basictypes.h
@@ -88,79 +86,6 @@ namespace protobuf {
 #define GOOGLE_ARRAYSIZE(a) \
   ((sizeof(a) / sizeof(*(a))) / \
    static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
-
-// The COMPILE_ASSERT macro can be used to verify that a compile time
-// expression is true. For example, you could use it to verify the
-// size of a static array:
-//
-//   COMPILE_ASSERT(ARRAYSIZE(content_type_names) == CONTENT_NUM_TYPES,
-//                  content_type_names_incorrect_size);
-//
-// or to make sure a struct is smaller than a certain size:
-//
-//   COMPILE_ASSERT(sizeof(foo) < 128, foo_too_large);
-//
-// The second argument to the macro is the name of the variable. If
-// the expression is false, most compilers will issue a warning/error
-// containing the name of the variable.
-
-namespace internal {
-
-template <bool>
-struct CompileAssert {
-};
-
-}  // namespace internal
-
-#undef GOOGLE_COMPILE_ASSERT
-#if __cplusplus >= 201103L
-#define GOOGLE_COMPILE_ASSERT(expr, msg) static_assert(expr, #msg)
-#else
-#define GOOGLE_COMPILE_ASSERT(expr, msg) \
-  ::google::protobuf::internal::CompileAssert<(bool(expr))> \
-          msg[bool(expr) ? 1 : -1]; \
-  (void)msg
-// Implementation details of COMPILE_ASSERT:
-//
-// - COMPILE_ASSERT works by defining an array type that has -1
-//   elements (and thus is invalid) when the expression is false.
-//
-// - The simpler definition
-//
-//     #define COMPILE_ASSERT(expr, msg) typedef char msg[(expr) ? 1 : -1]
-//
-//   does not work, as gcc supports variable-length arrays whose sizes
-//   are determined at run-time (this is gcc's extension and not part
-//   of the C++ standard).  As a result, gcc fails to reject the
-//   following code with the simple definition:
-//
-//     int foo;
-//     COMPILE_ASSERT(foo, msg); // not supposed to compile as foo is
-//                               // not a compile-time constant.
-//
-// - By using the type CompileAssert<(bool(expr))>, we ensures that
-//   expr is a compile-time constant.  (Template arguments must be
-//   determined at compile-time.)
-//
-// - The outter parentheses in CompileAssert<(bool(expr))> are necessary
-//   to work around a bug in gcc 3.4.4 and 4.0.1.  If we had written
-//
-//     CompileAssert<bool(expr)>
-//
-//   instead, these compilers will refuse to compile
-//
-//     COMPILE_ASSERT(5 > 0, some_message);
-//
-//   (They seem to think the ">" in "5 > 0" marks the end of the
-//   template argument list.)
-//
-// - The array size is (bool(expr) ? 1 : -1), instead of simply
-//
-//     ((expr) ? 1 : -1).
-//
-//   This is to avoid running into a bug in MS VC 7.1, which
-//   causes ((0.0) ? 1 : -1) to incorrectly evaluate to 1.
-#endif  // __cplusplus >= 201103L
 
 }  // namespace protobuf
 }  // namespace google
