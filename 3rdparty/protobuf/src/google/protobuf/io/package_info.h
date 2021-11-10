@@ -37,7 +37,6 @@
 // documentation generator.
 
 namespace google {
-
 namespace protobuf {
 
 // Auxiliary classes used for I/O.

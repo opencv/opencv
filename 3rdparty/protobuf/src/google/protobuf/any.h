@@ -34,49 +34,89 @@
 #include <string>
 
 #include <google/protobuf/stubs/common.h>
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/message.h>
 #include <google/protobuf/arenastring.h>
+#include <google/protobuf/message_lite.h>
+
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
+
+class FieldDescriptor;
+class Message;
+
 namespace internal {
 
+extern const char kAnyFullTypeName[];          // "google.protobuf.Any".
+extern const char kTypeGoogleApisComPrefix[];  // "type.googleapis.com/".
+extern const char kTypeGoogleProdComPrefix[];  // "type.googleprod.com/".
+
+std::string GetTypeUrl(StringPiece message_name,
+                       StringPiece type_url_prefix);
+
 // Helper class used to implement google::protobuf::Any.
-class LIBPROTOBUF_EXPORT AnyMetadata {
+class PROTOBUF_EXPORT AnyMetadata {
   typedef ArenaStringPtr UrlType;
   typedef ArenaStringPtr ValueType;
  public:
   // AnyMetadata does not take ownership of "type_url" and "value".
-  AnyMetadata(UrlType* type_url, ValueType* value);
+  constexpr AnyMetadata(UrlType* type_url, ValueType* value)
+      : type_url_(type_url), value_(value) {}
 
   // Packs a message using the default type URL prefix: "type.googleapis.com".
   // The resulted type URL will be "type.googleapis.com/<message_full_name>".
-  void PackFrom(const Message& message);
+  // Returns false if serializing the message failed.
+  template <typename T>
+  bool PackFrom(Arena* arena, const T& message) {
+    return InternalPackFrom(arena, message, kTypeGoogleApisComPrefix,
+                            T::FullMessageName());
+  }
+
+  bool PackFrom(Arena* arena, const Message& message);
+
   // Packs a message using the given type URL prefix. The type URL will be
   // constructed by concatenating the message type's full name to the prefix
-  // with an optional "/" separator if the prefix doesn't already end up "/".
+  // with an optional "/" separator if the prefix doesn't already end with "/".
   // For example, both PackFrom(message, "type.googleapis.com") and
   // PackFrom(message, "type.googleapis.com/") yield the same result type
   // URL: "type.googleapis.com/<message_full_name>".
-  void PackFrom(const Message& message, const string& type_url_prefix);
+  // Returns false if serializing the message failed.
+  template <typename T>
+  bool PackFrom(Arena* arena, const T& message,
+                StringPiece type_url_prefix) {
+    return InternalPackFrom(arena, message, type_url_prefix,
+                            T::FullMessageName());
+  }
+
+  bool PackFrom(Arena* arena, const Message& message,
+                StringPiece type_url_prefix);
 
   // Unpacks the payload into the given message. Returns false if the message's
   // type doesn't match the type specified in the type URL (i.e., the full
   // name after the last "/" of the type URL doesn't match the message's actual
   // full name) or parsing the payload has failed.
+  template <typename T>
+  bool UnpackTo(T* message) const {
+    return InternalUnpackTo(T::FullMessageName(), message);
+  }
+
   bool UnpackTo(Message* message) const;
 
   // Checks whether the type specified in the type URL matches the given type.
-  // A type is consdiered matching if its full name matches the full name after
+  // A type is considered matching if its full name matches the full name after
   // the last "/" in the type URL.
-  template<typename T>
+  template <typename T>
   bool Is() const {
-    return InternalIs(T::default_instance().GetDescriptor());
+    return InternalIs(T::FullMessageName());
   }
 
  private:
-  bool InternalIs(const Descriptor* message) const;
+  bool InternalPackFrom(Arena* arena, const MessageLite& message,
+                        StringPiece type_url_prefix,
+                        StringPiece type_name);
+  bool InternalUnpackTo(StringPiece type_name,
+                        MessageLite* message) const;
+  bool InternalIs(StringPiece type_name) const;
 
   UrlType* type_url_;
   ValueType* value_;
@@ -84,15 +124,22 @@ class LIBPROTOBUF_EXPORT AnyMetadata {
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(AnyMetadata);
 };
 
-extern const char kAnyFullTypeName[];          // "google.protobuf.Any".
-extern const char kTypeGoogleApisComPrefix[];  // "type.googleapis.com/".
-extern const char kTypeGoogleProdComPrefix[];  // "type.googleprod.com/".
-
 // Get the proto type name from Any::type_url value. For example, passing
 // "type.googleapis.com/rpc.QueryOrigin" will return "rpc.QueryOrigin" in
 // *full_type_name. Returns false if the type_url does not have a "/"
 // in the type url separating the full type name.
-bool ParseAnyTypeUrl(const string& type_url, string* full_type_name);
+//
+// NOTE: this function is available publicly as:
+//   google::protobuf::Any()  // static method on the generated message type.
+bool ParseAnyTypeUrl(StringPiece type_url, std::string* full_type_name);
+
+// Get the proto type name and prefix from Any::type_url value. For example,
+// passing "type.googleapis.com/rpc.QueryOrigin" will return
+// "type.googleapis.com/" in *url_prefix and "rpc.QueryOrigin" in
+// *full_type_name. Returns false if the type_url does not have a "/" in the
+// type url separating the full type name.
+bool ParseAnyTypeUrl(StringPiece type_url, std::string* url_prefix,
+                     std::string* full_type_name);
 
 // See if message is of type google.protobuf.Any, if so, return the descriptors
 // for "type_url" and "value" fields.
@@ -102,6 +149,8 @@ bool GetAnyFieldDescriptors(const Message& message,
 
 }  // namespace internal
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_ANY_H__
