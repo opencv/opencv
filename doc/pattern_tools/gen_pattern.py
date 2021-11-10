@@ -171,7 +171,7 @@ def main():
     parser.add_argument("-m", "--markers", help="list of cells with markers for the radon checkerboard. Marker "
                                                 "coordinates as list of numbers: -m 1 2 3 4 means markers in cells "
                                                 "[1, 2] and [3, 4]",
-                        action="store", dest="markers", nargs="+", type=int)
+                        default=argparse.SUPPRESS, action="store", dest="markers", nargs="+", type=int)
     args = parser.parse_args()
 
     show_help = args.show_help
@@ -195,14 +195,16 @@ def main():
                       "A5": [148, 210]}
         page_width = page_sizes[page_size][0]
         page_height = page_sizes[page_size][1]
-    if len(args.markers) % 2 == 1:
-        raise ValueError("The length of the markers array={} must be even".format(len(args.markers)))
-    markers = set()
-    for x, y in zip(args.markers[::2], args.markers[1::2]):
-        if x in range(0, columns) and y in range(0, rows):
-            markers.add((x, y))
-        else:
-            raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
+    markers = None
+    if p_type == "radon_checkerboard" and "markers" in args:
+        if len(args.markers) % 2 == 1:
+            raise ValueError("The length of the markers array={} must be even".format(len(args.markers)))
+        markers = set()
+        for x, y in zip(args.markers[::2], args.markers[1::2]):
+            if x in range(0, columns) and y in range(0, rows):
+                markers.add((x, y))
+            else:
+                raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
 
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers)
     # dict for easy lookup of pattern type
