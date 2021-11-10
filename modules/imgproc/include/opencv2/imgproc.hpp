@@ -2089,7 +2089,7 @@ The larger the value of 'votes', the higher the reliability of the Hough line.
 @param lines_max Max count of Hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
 votes ( \f$>\texttt{threshold}\f$ ).
-@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho\f|$ is the distance of a line to the origin.).
+@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
 @param max_rho Maximum value for \f$\rho\f$ for the accumulator.
 @param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
