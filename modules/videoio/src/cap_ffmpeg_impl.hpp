@@ -475,7 +475,7 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
-    bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn, const int flag);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
@@ -532,9 +532,6 @@ struct CvCapture_FFMPEG
     bool processRawPacket();
     bool rawMode;
     bool rawModeInitialized;
-    bool includeExtraData;
-    uint8_t* extraData;
-    int extraDataLen;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
@@ -581,9 +578,6 @@ void CvCapture_FFMPEG::init()
 
     rawMode = false;
     rawModeInitialized = false;
-    includeExtraData = false;
-    extraData = 0;
-    extraDataLen = 0;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
@@ -658,11 +652,6 @@ void CvCapture_FFMPEG::close()
 #else
         av_bitstream_filter_close(bsfc);
 #endif
-    }
-
-    if (extraData) {
-        delete[] extraData;
-        extraData = 0;
     }
 
     init();
@@ -1212,10 +1201,6 @@ bool CvCapture_FFMPEG::processRawPacket()
 #else
         CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #endif
-        const bool bMp4MPEG4 = eVideoCodec == AV_CODEC_ID_MPEG4 && ( !strcmp(ic->iformat->long_name, "QuickTime / MOV")
-            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)") || !strcmp(ic->iformat->long_name, "Matroska / WebM"));
-        if (ic->streams[video_stream]->codec->extradata_size && (strcmp(ic->iformat->name, "rtsp") == 0 || bMp4MPEG4))
-            includeExtraData = true;
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
@@ -1417,27 +1402,21 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
+bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn, const int flag)
 {
     if (!video_st)
         return false;
 
     if (rawMode)
     {
-        AVPacket& p = bsfc ? packet_filtered : packet;
-        if (includeExtraData) {
-            includeExtraData = false;
-            extraDataLen = ic->streams[video_stream]->codec->extradata_size;
-            *step = extraDataLen + p.size;
-            extraData = new uint8_t[*step];
-            memcpy(extraData, ic->streams[video_stream]->codec->extradata, extraDataLen);
-            memcpy(&extraData[extraDataLen], p.data, p.size);
-            *data = extraData;
-        }
-        else{
-            extraDataLen = 0;
+        if (flag == 0) {
+            AVPacket& p = bsfc ? packet_filtered : packet;
             *data = p.data;
             *step = p.size;
+        }
+        else if (flag == 1) {
+            *data = ic->streams[video_stream]->codec->extradata;
+            *step = ic->streams[video_stream]->codec->extradata_size;
         }
         *width = *step;
         *height = 1;
@@ -1612,8 +1591,6 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         const AVPacket& p = bsfc ? packet_filtered : packet;
         return ((p.flags & AV_PKT_FLAG_KEY) != 0) ? 1 : 0;
     }
-    case CAP_PROP_LRF_EXTRA_DATA_LEN:
-        return extraDataLen;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:
@@ -2961,9 +2938,9 @@ int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
     return capture->grabFrame();
 }
 
-int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
+int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn, const int flag)
 {
-    return capture->retrieveFrame(0, data, step, width, height, cn);
+    return capture->retrieveFrame(0, data, step, width, height, cn, flag);
 }
 
 static CvVideoWriter_FFMPEG* cvCreateVideoWriterWithParams_FFMPEG( const char* filename, int fourcc, double fps,
