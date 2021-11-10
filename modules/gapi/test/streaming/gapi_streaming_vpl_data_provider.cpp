@@ -58,12 +58,9 @@ class OneVPL_Source_MFPDispatcherTest : public ::testing::TestWithParam<array_el
 
 TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
 {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
     using namespace cv::gapi::wip::onevpl;
 
-    source_t path = findDataFile(std::get<0>(GetParam()), false);
+    source_t path = findDataFile(std::get<0>(GetParam()));
     dd_valid_t dd_result = std::get<1>(GetParam());
     dec_valid_t dec_result = std::get<3>(GetParam());
 
@@ -124,13 +121,10 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
 
 TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
 {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
     using namespace cv::gapi::wip::onevpl;
 
 
-    source_t path = findDataFile(std::get<0>(GetParam()), false);
+    source_t path = findDataFile(std::get<0>(GetParam()));
     dd_valid_t dd_result = std::get<1>(GetParam());
 
     std::shared_ptr<IDataProvider> provider_ptr;
@@ -167,11 +161,11 @@ namespace test {
         destroyed = true;
     }
 
-    HRESULT on_read_sample_impl(HRESULT status, DWORD stream_index,
-                                DWORD stream_flag, LONGLONG timestamp,
-                                IMFSample *sample_ptr) override {
+    STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
+                              DWORD stream_flag, LONGLONG timestamp,
+                              IMFSample *sample_ptr) override {
         if (IntrusiveAsyncDemuxDataProvider::need_request_next) {
-            return base_t::on_read_sample_impl(status, stream_index, stream_flag,
+            return base_t::OnReadSample(status, stream_index, stream_flag,
                                         timestamp, sample_ptr);
         }
         return status;
@@ -179,14 +173,9 @@ namespace test {
 
 
     // implementation methods
-    HRESULT request_next(HRESULT hr, DWORD stream_flag,
-                         size_t worker_buffer_count) override {
-        return base_t::request_next(hr, stream_flag, worker_buffer_count);
-    }
-
     size_t produce_worker_data(void *key,
                                cv::gapi::wip::onevpl::ComPtrGuard<IMFMediaBuffer> &&buffer,
-                               std::shared_ptr<mfx_bitstream> &&staging_stream) {
+                               std::shared_ptr<mfx_bitstream> &&staging_stream) override {
         return base_t::produce_worker_data(key, std::move(buffer),
                                            std::move(staging_stream));
     }
@@ -200,10 +189,6 @@ bool IntrusiveAsyncDemuxDataProvider::destroyed{};
 } // namespace test
 
 TEST(OneVPL_Source_MFPAsyncDemux, sync_flush) {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
-
     using namespace cv::gapi::wip::onevpl;
 
     source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
@@ -228,10 +213,6 @@ TEST(OneVPL_Source_MFPAsyncDemux, sync_flush) {
 }
 
 TEST(OneVPL_Source_MFPAsyncDemux, async_flush) {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
-
     using namespace cv::gapi::wip::onevpl;
 
     source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
@@ -248,10 +229,6 @@ TEST(OneVPL_Source_MFPAsyncDemux, async_flush) {
 }
 
 TEST(OneVPL_Source_MFPAsyncDemux, eof_async_detection) {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
-
     using namespace cv::gapi::wip::onevpl;
 
     source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
@@ -272,18 +249,11 @@ TEST(OneVPL_Source_MFPAsyncDemux, eof_async_detection) {
     std::this_thread::sleep_for(std::chrono::seconds(2));   // hope fetched has slept on condition
 
     test::IntrusiveAsyncDemuxDataProvider::need_request_next = true;
-    provider.on_read_sample_impl(S_OK, 0, MF_SOURCE_READERF_ENDOFSTREAM, 0, nullptr);
+    provider.OnReadSample(S_OK, 0, MF_SOURCE_READERF_ENDOFSTREAM, 0, nullptr);
     fetcher.join();
 }
 
-TEST(OneVPL_Source_MFPAsyncDemux, preprocessed_limit) {
-}
-
 TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
-
     using namespace cv::gapi::wip::onevpl;
 
     source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
@@ -333,12 +303,9 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
 class OneVPL_Source_MFPAsyncDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
 TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
 {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
     using namespace cv::gapi::wip::onevpl;
 
-    source_t path = findDataFile(std::get<0>(GetParam()), false);
+    source_t path = findDataFile(std::get<0>(GetParam()));
     dd_valid_t dd_result = std::get<1>(GetParam());
     dec_valid_t dec_result = std::get<3>(GetParam());
 

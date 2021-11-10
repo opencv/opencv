@@ -60,20 +60,17 @@ protected: /* For Unit tests only */
     STDMETHODIMP_(ULONG) Release() override;
 
     // IMFSourceReaderCallback methods
-    STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
+    virtual STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
                               DWORD stream_flag, LONGLONG timestamp,
                               IMFSample *sample_ptr) override;
-    virtual STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) override;
-    virtual STDMETHODIMP OnFlush(DWORD) override;
+    STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) override;
+    STDMETHODIMP OnFlush(DWORD) override;
 
     // implementation methods
-    virtual HRESULT on_read_sample_impl(HRESULT status, DWORD stream_index,
-                                       DWORD stream_flag, LONGLONG timestamp,
-                                       IMFSample *sample_ptr);
     void flush();
-    virtual HRESULT request_next(HRESULT hr, DWORD stream_flag,
+    HRESULT request_next(HRESULT hr, DWORD stream_flag,
                                  size_t worker_buffer_count);
-    virtual void consume_worker_data();
+    void consume_worker_data();
     virtual size_t produce_worker_data(void *key,
                                        ComPtrGuard<IMFMediaBuffer> &&buffer,
                                        std::shared_ptr<mfx_bitstream> &&staging_stream);

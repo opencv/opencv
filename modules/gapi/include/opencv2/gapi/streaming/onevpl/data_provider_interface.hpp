@@ -88,10 +88,9 @@ struct GAPI_EXPORTS IDataProvider {
      * It MUST throw `DataProviderException` kind exceptions in fail cases.
      * It MUST return MFX_ERR_MORE_DATA in EOF which considered as not-fail case.
      *
-     * @param out_data_bytes_size the available capacity of out_data buffer.
      * @param in_out_bitsream the input-output reference on MFX bitstream buffer which MUST be empty at the first request
      * to allow implementation to allocate it by itself and to return back. Subsequent invocation of `fetch_bitstream_data`
-     * MUST use the previously used in_out_bitsream to avoid skipping rest of hasn't been consumed frames
+     * MUST use the previously used in_out_bitsream to avoid skipping rest of frames which haven't been consumed
      * @return true for fetched data, false on EOF and throws exception on error
      */
     virtual bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &in_out_bitsream) = 0;

@@ -173,6 +173,18 @@ const char* mfx_codec_id_to_cstr(mfxU32 mfx_id) {
     }
 }
 
+const std::set<mfxU32>& get_supported_mfx_codec_id()
+{
+    static std::set<mfxU32> supported_codecs({MFX_CODEC_AVC,
+                                              MFX_CODEC_HEVC,
+                                              MFX_CODEC_MPEG2,
+                                              MFX_CODEC_VC1,
+                                              MFX_CODEC_VP9,
+                                              MFX_CODEC_AV1,
+                                              MFX_CODEC_JPEG});
+    return supported_codecs;
+}
+
 const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
     switch (fourcc) {
         case MFX_CODEC_JPEG: {

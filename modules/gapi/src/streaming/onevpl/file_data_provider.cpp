@@ -35,7 +35,8 @@ FileDataProvider::FileDataProvider(const std::string& file_path,
         GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
                                   "\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" "
                                   "is absent, total param count" << codec_params.size());
-        return;
+        throw DataProviderUnsupportedException("\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" "
+                                               "is required for FileDataProvider");
     }
 
     codec = cfg_param_to_mfx_variant(*codec_it).Data.U32;
@@ -107,7 +108,7 @@ bool FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_
     GAPI_LOG_DEBUG(nullptr, "bitstream after fetch, DataOffset: " << out_bitstream->DataOffset <<
                             ", DataLength: " << out_bitstream->DataLength);
     if (out_bitstream->DataLength == 0)
-        return MFX_ERR_MORE_DATA;
+        return false;
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "buff fetched: " << out_bitstream.get());

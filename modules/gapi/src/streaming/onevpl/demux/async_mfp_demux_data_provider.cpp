@@ -41,6 +41,23 @@ static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSo
     }
 
     MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
+    /**
+     * NB:
+     * CreateObjectFromURL throws exception if actual container type is mismatched with
+     * file extension. To overcome this situation by MFP it is possible to apply 2 step
+     * approach: at first step we pass special flag
+     * `MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL` which claims to fail with error
+     * in any case of input instead exception throwing;
+     * at the second step we must cease `MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL`
+     * flag AND set another special flag
+     * `MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE`
+     * to filter out container type & file extension mismatch errors.
+     *
+     * If it failed at second phase then some other errors were not related
+     * to types-extension disturbance would happen and data provider must fail ultimately.
+     *
+     * If second step passed then data provider would continue execition
+     */
     DWORD resolver_flags = MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_READ |
                            MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
     do {
@@ -415,8 +432,19 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
     }
 
     if (!is_stream_selected) {
-        GAPI_LOG_WARNING(nullptr, "[" << this << "] couldn't find video stream with supported params");
-        // TODO print codec supported list
+        const auto &supported_codecs = get_supported_mfx_codec_id();
+        std::string ss;
+        for (mfxU32 id : supported_codecs) {
+            ss += mfx_codec_id_to_cstr(id);
+            ss += ", ";
+        }
+        if (!ss.empty()) {
+            ss.erase(ss.size() - 2, 2);
+        }
+
+        GAPI_LOG_WARNING(nullptr, "[" << this << "] "
+                         "couldn't find video stream with supported params, "
+                         "expected codecs: " << ss);
         throw DataProviderUnsupportedException("couldn't find supported video stream");
     }
 
@@ -445,7 +473,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
 
 MFPAsyncDemuxDataProvider::~MFPAsyncDemuxDataProvider() {
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
-                            "deinitializing");
+                            "begin deinitializing");
 
     flush();
 
@@ -506,16 +534,9 @@ HRESULT MFPAsyncDemuxDataProvider::QueryInterface(REFIID riid, void** ppv)
 
 
 STDMETHODIMP
-MFPAsyncDemuxDataProvider::OnReadSample(HRESULT status, DWORD stream_index,
-                                        DWORD stream_flag, LONGLONG timestamp,
+MFPAsyncDemuxDataProvider::OnReadSample(HRESULT status, DWORD,
+                                        DWORD stream_flag, LONGLONG,
                                         IMFSample *sample_ptr) {
-    return on_read_sample_impl(status, stream_index, stream_flag,
-                               timestamp, sample_ptr);
-}
-
-HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
-                                                       DWORD stream_flag, LONGLONG,
-                                                       IMFSample *sample_ptr) {
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] status: " << std::to_string(HRESULT_CODE(status)) <<
                             ", stream flags: " << stream_flag <<
                             ", sample: " << sample_ptr);
@@ -604,16 +625,24 @@ void MFPAsyncDemuxDataProvider::flush() {
         source_reader->Flush(static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS));
     }
 
-    size_t iterations = 1;
+    size_t iterations = 0;
+    const int waiting_ms = 100;
+    const size_t warning_iteration_wait_count = 300; // approx 3 sec
     while (provider_state.load() != State::Exhausted) {
-        GAPI_LOG_DEBUG(nullptr, "[" << this << "] is waiting for flush finishing, "
-                                "iteration: " <<iterations);
         iterations++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (iterations > warning_iteration_wait_count) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] is still waiting for flush finishing, "
+                                      "iteration: " << iterations);
+        } else {
+            GAPI_LOG_DEBUG(nullptr, "[" << this << "] is waiting for flush finishing, "
+                                "iteration: " << iterations);
+        }
+        std::unique_lock<std::mutex> l(buffer_storage_mutex);
+        buffer_storage_non_empty_cond.wait_for(l, std::chrono::milliseconds(waiting_ms));
     }
 
-    GAPI_LOG_INFO(nullptr, "[" << this << "] has flushed in iteration: " <<
-                           iterations);
+    GAPI_LOG_INFO(nullptr, "[" << this << "] has flushed in: " <<
+                           iterations * waiting_ms << "ms interval");
 }
 
 HRESULT MFPAsyncDemuxDataProvider::request_next(HRESULT hr,
@@ -705,60 +734,59 @@ bool MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstre
         GAPI_LOG_DEBUG(nullptr, "[" << this << "] empty");
         return false;
     }
-    do {
-        if (out_bitsream) {
-            // make dmux buffer unlock for not empty bitstream
-            GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                                    "bitstream before fetch: " <<
-                                    out_bitsream.get() <<
-                                    ", DataOffset: " <<
-                                    out_bitsream->DataOffset <<
-                                    ", DataLength: " <<
-                                    out_bitsream->DataLength);
-            if (out_bitsream->DataOffset < out_bitsream->DataLength) {
-                return true;
-            }
 
-            // cleanup
-            auto it = processing_key_to_buffer_mapping_storage.find(out_bitsream->Data);
-            if (it == processing_key_to_buffer_mapping_storage.end()) {
-                GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
-                                          "cannot find appropriate dmux buffer by key: " <<
-                                          static_cast<void*>(out_bitsream->Data));
-                GAPI_Assert(false && "invalid bitstream key");
-            }
-            if (it->second) {
-                it->second->Unlock();
-            }
-            processing_key_to_buffer_mapping_storage.erase(it);
-        }
-
-        // consume bitstream portion
-        if (processing_locked_buffer_storage.empty() &&
-            provider_state.load() == State::InProgress) {
-            // get worker data collected from another thread
-            consume_worker_data();
-        }
-
-        // EOF check: nothing to process at this point
-        if (processing_locked_buffer_storage.empty()) {
-            GAPI_DbgAssert(provider_state == State::Exhausted && "Source reader must be drained");
-            out_bitsream.reset();
-            return false;
-        }
-
-        out_bitsream = processing_locked_buffer_storage.front();
-        processing_locked_buffer_storage.pop();
-
-        GAPI_LOG_DEBUG(nullptr, "[" << this << "] "
-                                "bitstream after fetch: " <<
+    // utilize consumed bitstream portion allocated at prev step
+    if (out_bitsream) {
+        // make dmux buffer unlock for not empty bitstream
+        GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                "bitstream before fetch: " <<
                                 out_bitsream.get() <<
                                 ", DataOffset: " <<
                                 out_bitsream->DataOffset <<
                                 ", DataLength: " <<
                                 out_bitsream->DataLength);
+        if (out_bitsream->DataOffset < out_bitsream->DataLength) {
+            return true;
+        }
+
+        // cleanup
+        auto it = processing_key_to_buffer_mapping_storage.find(out_bitsream->Data);
+        if (it == processing_key_to_buffer_mapping_storage.end()) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "cannot find appropriate dmux buffer by key: " <<
+                                      static_cast<void*>(out_bitsream->Data));
+            GAPI_Assert(false && "invalid bitstream key");
+        }
+        if (it->second) {
+            it->second->Unlock();
+        }
+        processing_key_to_buffer_mapping_storage.erase(it);
     }
-    while (false);
+
+    // consume new bitstream portion
+    if (processing_locked_buffer_storage.empty() &&
+        provider_state.load() == State::InProgress) {
+        // get worker data collected from another thread
+        consume_worker_data();
+    }
+
+    // EOF check: nothing to process at this point
+    if (processing_locked_buffer_storage.empty()) {
+        GAPI_DbgAssert(provider_state == State::Exhausted && "Source reader must be drained");
+        out_bitsream.reset();
+        return false;
+    }
+
+    out_bitsream = processing_locked_buffer_storage.front();
+    processing_locked_buffer_storage.pop();
+
+    GAPI_LOG_DEBUG(nullptr, "[" << this << "] "
+                            "bitstream after fetch: " <<
+                            out_bitsream.get() <<
+                            ", DataOffset: " <<
+                            out_bitsream->DataOffset <<
+                            ", DataLength: " <<
+                            out_bitsream->DataLength);
     return true;
 }
 
