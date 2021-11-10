@@ -437,7 +437,8 @@ std::string mfxstatus_to_string(mfxStatus err) {
             return "MFX_WRN_DEVICE_BUSY";
         case MFX_WRN_VIDEO_PARAM_CHANGED:
             return "MFX_WRN_VIDEO_PARAM_CHANGED";
-
+        case MFX_WRN_IN_EXECUTION:
+            return "MFX_WRN_IN_EXECUTION";
 
         default:
             break;
