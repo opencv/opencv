@@ -8,6 +8,7 @@
 #include "test_precomp.hpp"
 
 #include "gapi_fluid_test_kernels.hpp"
+#include "common/gapi_tests_common.hpp"
 
 namespace opencv_test
 {
@@ -749,8 +750,7 @@ TEST_P(NV12PlusResizeTest, Test)
     cv::Mat rgb_mat;
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
     cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
-
-    EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat(roi), out_mat_ocv(roi)));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, NV12PlusResizeTest,

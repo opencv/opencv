@@ -6,6 +6,7 @@
 
 
 #include "../test_precomp.hpp"
+#include "../common/gapi_tests_common.hpp"
 #include "api/gcomputation_priv.hpp"
 
 #include <opencv2/gapi/fluid/gfluidkernel.hpp>
@@ -115,9 +116,10 @@ TEST(GComputationCompile, FluidReshapeResizeDownScale)
     cv::Mat cv_out_mat1, cv_out_mat2;
     cv::resize(in_mat1, cv_out_mat1, szOut);
     cv::resize(in_mat2, cv_out_mat2, szOut);
-
-    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
+    // Fluid's and OpenCV's resizes aren't bit exact.
+    // So 1 is here because it is max difference between them.
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat1, cv_out_mat1));
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat2, cv_out_mat2));
 }
 
 TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
@@ -150,10 +152,11 @@ TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
     cv::resize(in_mat1, cv_out_mat1, szOut);
     cv::resize(in_mat2, cv_out_mat2, szOut);
     cv::resize(in_mat3, cv_out_mat3, szOut);
-
-    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(out_mat3, cv_out_mat3, NORM_INF));
+    // Fluid's and OpenCV's Resizes aren't bit exact.
+    // So 1 is here because it is max difference between them.
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat1, cv_out_mat1));
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat2, cv_out_mat2));
+    EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat3, cv_out_mat3));
 }
 
 TEST(GComputationCompile, ReshapeBlur)
@@ -224,8 +227,9 @@ TEST(GComputationCompile, ReshapeRois)
         cv::Mat blur_mat, cv_out_mat;
         cv::blur(in_mat, blur_mat, kernelSize);
         cv::resize(blur_mat, cv_out_mat, szOut);
-
-        EXPECT_EQ(0, cvtest::norm(out_mat(roi), cv_out_mat(roi), NORM_INF));
+        // Fluid's and OpenCV's resizes aren't bit exact.
+        // So 1 is here because it is max difference between them.
+        EXPECT_TRUE(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()(out_mat(roi), cv_out_mat(roi)));
     }
 }
 
