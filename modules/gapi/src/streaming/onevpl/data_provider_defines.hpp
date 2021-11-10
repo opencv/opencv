@@ -6,6 +6,7 @@
 #include <vpl/mfxvideo.h>
 #endif // HAVE_ONEVPL
 
+#include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 
 namespace cv {
