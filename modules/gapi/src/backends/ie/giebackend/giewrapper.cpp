@@ -96,6 +96,10 @@ IE::InferencePlugin giewrap::getPlugin(const GIEParam& params) {
 }
 #else // >= 2019.R2
 
+// NB: Some of IE plugins fail during IE::Core destroying in specific cases.
+// Solution is allocate IE::Core in heap and doesn't destroy it, which cause
+// leak, but fixes tests on CI. This behaviour is configurable by using
+// OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
 static IE::Core create_IE_Core_pointer() {
     // NB: 'delete' is never called
     static IE::Core* core = new IE::Core();
