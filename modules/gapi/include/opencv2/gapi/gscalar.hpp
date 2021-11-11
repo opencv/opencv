@@ -88,7 +88,7 @@ public:
      * This constructor overload is not marked `explicit` and can be
      * used in G-API expression code like this:
      *
-     * @snippet samples/cpp/tutorial_code/gapi/api_ref_snippets/api_ref_snippets.cpp gscalar_implicit
+     * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp gscalar_implicit
      *
      * Here operator+(GMat,GScalar) is used to wrap cv::gapi::addC()
      * and a value-initialized GScalar is created on the fly.
