@@ -16,6 +16,7 @@
 #include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 
 namespace cv {
 
@@ -85,6 +86,8 @@ using GOptRunArgs = std::vector<GOptRunArg>;
 namespace detail {
 
 template<typename T> inline GOptRunArgP wrap_opt_arg(optional<T>& arg) {
+    static_assert(!cv::is_contain_tag<T, cv::tag::Meta>::value,
+                  "gin/gout must not be used with G* structures with tag::Meta");
     // By default, T goes to an OpaqueRef. All other types are specialized
     return GOptRunArgP{OptionalOpaqueRef(arg)};
 }
