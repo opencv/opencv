@@ -662,7 +662,7 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
         // Wrap all input cv::Mats with RMats
         for (auto& arg : isl_input_args) {
             if (arg.index() == cv::GRunArg::index_of<cv::Mat>()) {
-                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg))
+                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatOnMat>(cv::util::get<cv::Mat>(arg))
                                  , arg.meta
                                  };
             }
@@ -745,7 +745,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 {
                     MatType newMat;
                     cv::gimpl::createMat(desc, newMat);
-                    auto rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(newMat);
+                    auto rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(newMat);
                     out_arg = cv::GRunArg(std::move(rmat));
                 }
                 ret_val = cv::GRunArgP(&cv::util::get<cv::RMat>(out_arg));

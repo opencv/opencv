@@ -45,11 +45,11 @@ namespace gimpl {
 #endif
     }
 
-    class RMatAdapter : public RMat::Adapter {
+    class RMatOnMat : public RMat::Adapter {
         cv::Mat m_mat;
     public:
         const void* data() const { return m_mat.data; }
-        RMatAdapter(cv::Mat m) : m_mat(m) {}
+        RMatOnMat(cv::Mat m) : m_mat(m) {}
         virtual RMat::View access(RMat::Access) override { return asView(m_mat); }
         virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
     };
