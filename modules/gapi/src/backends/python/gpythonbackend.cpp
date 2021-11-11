@@ -128,7 +128,7 @@ static void writeBack(cv::GRunArg& arg, cv::GRunArgP& out)
         case cv::GRunArg::index_of<cv::Mat>():
         {
             auto& rmat = *cv::util::get<cv::RMat*>(out);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg));
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(cv::util::get<cv::Mat>(arg));
             break;
         }
         case cv::GRunArg::index_of<cv::Scalar>():
