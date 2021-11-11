@@ -41,6 +41,7 @@ struct GOrigin;
 class GAPI_EXPORTS_W_SIMPLE GScalar
 {
 public:
+    GAPI_OBJECT_META
     /**
      * @brief Constructs an empty GScalar
      *
