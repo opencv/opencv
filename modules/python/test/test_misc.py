@@ -187,6 +187,10 @@ class Arguments(NewOpenCVTests):
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
 
+    def test_20968(self):
+        pixel = np.uint8([[[40, 50, 200]]])
+        _ = cv.cvtColor(pixel, cv.COLOR_RGB2BGR)  # should not raise exception
+
     def test_parse_to_bool_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpBool)
         for convertible_true in (True, 1, 64, np.bool(1), np.int8(123), np.int16(11), np.int32(2),

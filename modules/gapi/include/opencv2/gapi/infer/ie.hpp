@@ -79,6 +79,8 @@ struct ParamDesc {
 
     // NB: An optional config to setup RemoteContext for IE
     cv::util::any context_config;
+
+    size_t batch_size;
 };
 } // namespace detail
 
@@ -120,7 +122,8 @@ public:
               , {}
               , {}
               , 1u
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     /** @overload
@@ -141,7 +144,8 @@ public:
               , {}
               , {}
               , 1u
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -316,6 +320,19 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the inference batch size.
+
+    The function is used to specify inference batch size.
+    Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1CNNNetwork.html#a8e9d19270a48aab50cb5b1c43eecb8e9 for additional information
+
+    @param size batch size which will be used.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgBatchSize(const size_t size) {
+        desc.batch_size = size;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -350,7 +367,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}},
+                {}, 1u},
           m_tag(tag) {
     };
 
@@ -368,7 +385,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}},
+                {}, 1u},
           m_tag(tag) {
     };
 
@@ -432,6 +449,12 @@ public:
     /** @overload */
     Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
+        return *this;
+    }
+
+    /** @see ie::Params::cfgBatchSize */
+    Params& cfgBatchSize(const size_t size) {
+        desc.batch_size = size;
         return *this;
     }
 

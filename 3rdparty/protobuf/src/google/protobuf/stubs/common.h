@@ -38,19 +38,15 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
-#include <google/protobuf/stubs/port.h>
 #include <google/protobuf/stubs/macros.h>
 #include <google/protobuf/stubs/platform_macros.h>
-
-// TODO(liujisi): Remove the following includes after the include clean-up.
-#include <google/protobuf/stubs/logging.h>
-#include <google/protobuf/stubs/scoped_ptr.h>
-#include <google/protobuf/stubs/mutex.h>
-#include <google/protobuf/stubs/callback.h>
+#include <google/protobuf/stubs/port.h>
+#include <google/protobuf/stubs/stringpiece.h>
 
 #ifndef PROTOBUF_USE_EXCEPTIONS
 #if defined(_MSC_VER) && defined(_CPPUNWIND)
@@ -73,22 +69,7 @@
 #include <pthread.h>
 #endif
 
-#if defined(_WIN32) && defined(GetMessage)
-// Allow GetMessage to be used as a valid method name in protobuf classes.
-// windows.h defines GetMessage() as a macro.  Let's re-define it as an inline
-// function.  The inline function should be equivalent for C++ users.
-inline BOOL GetMessage_Win32(
-    LPMSG lpMsg, HWND hWnd,
-    UINT wMsgFilterMin, UINT wMsgFilterMax) {
-  return GetMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
-}
-#undef GetMessage
-inline BOOL GetMessage(
-    LPMSG lpMsg, HWND hWnd,
-    UINT wMsgFilterMin, UINT wMsgFilterMax) {
-  return GetMessage_Win32(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
-}
-#endif
+#include <google/protobuf/port_def.inc>
 
 namespace std {}
 
@@ -101,35 +82,31 @@ namespace internal {
 
 // The current version, represented as a single integer to make comparison
 // easier:  major * 10^6 + minor * 10^3 + micro
-#define GOOGLE_PROTOBUF_VERSION 3005001
+#define GOOGLE_PROTOBUF_VERSION 3019001
 
 // A suffix string for alpha, beta or rc releases. Empty for stable releases.
 #define GOOGLE_PROTOBUF_VERSION_SUFFIX ""
 
-// The minimum library version which works with the current version of the
-// headers.
-#define GOOGLE_PROTOBUF_MIN_LIBRARY_VERSION 3005000
-
 // The minimum header version which works with the current version of
 // the library.  This constant should only be used by protoc's C++ code
 // generator.
-static const int kMinHeaderVersionForLibrary = 3005000;
+static const int kMinHeaderVersionForLibrary = 3019000;
 
 // The minimum protoc version which works with the current version of the
 // headers.
-#define GOOGLE_PROTOBUF_MIN_PROTOC_VERSION 3005000
+#define GOOGLE_PROTOBUF_MIN_PROTOC_VERSION 3019000
 
 // The minimum header version which works with the current version of
 // protoc.  This constant should only be used in VerifyVersion().
-static const int kMinHeaderVersionForProtoc = 3005000;
+static const int kMinHeaderVersionForProtoc = 3019000;
 
 // Verifies that the headers and libraries are compatible.  Use the macro
 // below to call this.
-void LIBPROTOBUF_EXPORT VerifyVersion(int headerVersion, int minLibraryVersion,
-                                      const char* filename);
+void PROTOBUF_EXPORT VerifyVersion(int headerVersion, int minLibraryVersion,
+                                   const char* filename);
 
 // Converts a numeric version number to a string.
-std::string LIBPROTOBUF_EXPORT VersionString(int version);
+std::string PROTOBUF_EXPORT VersionString(int version);
 
 }  // namespace internal
 
@@ -146,19 +123,18 @@ std::string LIBPROTOBUF_EXPORT VersionString(int version);
 // ===================================================================
 // from google3/util/utf8/public/unilib.h
 
-class StringPiece;
 namespace internal {
 
 // Checks if the buffer contains structurally-valid UTF-8.  Implemented in
 // structurally_valid.cc.
-LIBPROTOBUF_EXPORT bool IsStructurallyValidUTF8(const char* buf, int len);
+PROTOBUF_EXPORT bool IsStructurallyValidUTF8(const char* buf, int len);
 
-inline bool IsStructurallyValidUTF8(const std::string& str) {
+inline bool IsStructurallyValidUTF8(StringPiece str) {
   return IsStructurallyValidUTF8(str.data(), static_cast<int>(str.length()));
 }
 
-// Returns initial number of bytes of structually valid UTF-8.
-LIBPROTOBUF_EXPORT int UTF8SpnStructurallyValid(const StringPiece& str);
+// Returns initial number of bytes of structurally valid UTF-8.
+PROTOBUF_EXPORT int UTF8SpnStructurallyValid(StringPiece str);
 
 // Coerce UTF-8 byte string in src_str to be
 // a structurally-valid equal-length string by selectively
@@ -172,38 +148,24 @@ LIBPROTOBUF_EXPORT int UTF8SpnStructurallyValid(const StringPiece& str);
 //
 // Optimized for: all structurally valid and no byte copying is done.
 //
-LIBPROTOBUF_EXPORT char* UTF8CoerceToStructurallyValid(
-    const StringPiece& str, char* dst, char replace_char);
+PROTOBUF_EXPORT char* UTF8CoerceToStructurallyValid(StringPiece str, char* dst,
+                                                    char replace_char);
 
 }  // namespace internal
 
-
-// ===================================================================
-// Shutdown support.
-
-// Shut down the entire protocol buffers library, deleting all static-duration
-// objects allocated by the library or by generated .pb.cc files.
-//
-// There are two reasons you might want to call this:
-// * You use a draconian definition of "memory leak" in which you expect
-//   every single malloc() to have a corresponding free(), even for objects
-//   which live until program exit.
-// * You are writing a dynamically-loaded library which needs to clean up
-//   after itself when the library is unloaded.
-//
-// It is safe to call this multiple times.  However, it is not safe to use
-// any other part of the protocol buffers library after
-// ShutdownProtobufLibrary() has been called.
-LIBPROTOBUF_EXPORT void ShutdownProtobufLibrary();
+// This lives in message_lite.h now, but we leave this here for any users that
+// #include common.h and not message_lite.h.
+PROTOBUF_EXPORT void ShutdownProtobufLibrary();
 
 namespace internal {
 
-// Register a function to be called when ShutdownProtocolBuffers() is called.
-LIBPROTOBUF_EXPORT void OnShutdown(void (*func)());
-// Destroy the string (call string destructor)
-LIBPROTOBUF_EXPORT void OnShutdownDestroyString(const std::string* ptr);
-// Destroy (not delete) the message
-LIBPROTOBUF_EXPORT void OnShutdownDestroyMessage(const void* ptr);
+// Strongly references the given variable such that the linker will be forced
+// to pull in this variable's translation unit.
+template <typename T>
+void StrongReference(const T& var) {
+  auto volatile unused = &var;
+  (void)&unused;  // Use address to avoid an extra load of "unused".
+}
 
 }  // namespace internal
 
@@ -214,7 +176,7 @@ class FatalException : public std::exception {
       : filename_(filename), line_(line), message_(message) {}
   virtual ~FatalException() throw();
 
-  virtual const char* what() const throw();
+  const char* what() const throw() override;
 
   const char* filename() const { return filename_; }
   int line() const { return line_; }
@@ -229,14 +191,11 @@ class FatalException : public std::exception {
 
 // This is at the end of the file instead of the beginning to work around a bug
 // in some versions of MSVC.
-// TODO(acozzette): remove these using statements
-using std::istream;
-using std::ostream;
-using std::pair;
 using std::string;
-using std::vector;
 
 }  // namespace protobuf
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
 
 #endif  // GOOGLE_PROTOBUF_COMMON_H__

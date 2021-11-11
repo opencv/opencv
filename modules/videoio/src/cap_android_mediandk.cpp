@@ -92,7 +92,7 @@ public:
                     AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_HEIGHT, &frameHeight);
                     AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_COLOR_FORMAT, &colorFormat);
                     uint8_t* codecBuffer = AMediaCodec_getOutputBuffer(mediaCodec.get(), bufferIndex, &bufferSize);
-                    buffer = std::vector<uint8_t>(codecBuffer + info.offset, codecBuffer + bufferSize);
+                    buffer = std::vector<uint8_t>(codecBuffer, codecBuffer + bufferSize);
                     LOGV("colorFormat: %d", colorFormat);
                     LOGV("buffer size: %zu", bufferSize);
                     LOGV("width (frame): %d", frameWidth);

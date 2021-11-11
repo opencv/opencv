@@ -353,6 +353,82 @@ TEST_P(Test_ONNX_layers, Exp)
     testONNXModels("exp");
 }
 
+TEST_P(Test_ONNX_layers, Elementwise_Ceil)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("ceil");
+}
+
+TEST_P(Test_ONNX_layers, Elementwise_Floor)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("floor");
+}
+
+TEST_P(Test_ONNX_layers, Elementwise_Log)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("log");
+}
+
+TEST_P(Test_ONNX_layers, Elementwise_Round)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("round");
+}
+
+TEST_P(Test_ONNX_layers, Elementwise_Sqrt)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("sqrt");
+}
+
+TEST_P(Test_ONNX_layers, Elementwise_not)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("not");
+}
+
+TEST_P(Test_ONNX_layers, Compare)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("equal");
+    testONNXModels("greater");
+    testONNXModels("less");
+}
+
+TEST_P(Test_ONNX_layers, CompareSameDims)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("equal_same_dims", npy, 0, 0, false, true, 2);
+    testONNXModels("greater_same_dims", npy, 0, 0, false, true, 2);
+    testONNXModels("less_same_dims", npy, 0, 0, false, true, 2);
+}
+
 TEST_P(Test_ONNX_layers, Concatenation)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -990,6 +1066,14 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
 #endif
     testONNXModels("conv_resize_pool_1d");
 }
+
+TEST_P(Test_ONNX_layers, SubFromConst)
+{
+    testONNXModels("sub_from_const1");
+    testONNXModels("sub_from_const_eltwise");
+    testONNXModels("sub_from_const_broadcast");
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {

@@ -49,3 +49,9 @@ cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::cfgNumRequests(size_t nireq) {
     m_priv->cfgNumRequests(nireq);
     return *this;
 }
+
+cv::gapi::ie::PyParams&
+cv::gapi::ie::PyParams::cfgBatchSize(const size_t size) {
+    m_priv->cfgBatchSize(size);
+    return *this;
+}

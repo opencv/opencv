@@ -38,7 +38,8 @@ private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
     ExecutionStatus process_error(mfxStatus status, LegacyDecodeSession& sess);
 
-    void on_frame_ready(LegacyDecodeSession& sess);
+    void on_frame_ready(LegacyDecodeSession& sess,
+                        mfxFrameSurface1* ready_surface);
 };
 } // namespace onevpl
 } // namespace wip

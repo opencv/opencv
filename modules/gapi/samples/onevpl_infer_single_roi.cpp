@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <cctype>
+#include <tuple>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi.hpp>
@@ -10,7 +11,28 @@
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/render.hpp>
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
+#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
+
+#ifdef HAVE_INF_ENGINE
+#include <inference_engine.hpp> // ParamMap
+
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+#pragma comment(lib,"d3d11.lib")
+
+// get rid of generate macro max/min/etc from DX side
+#define D3D11_NO_HELPERS
+#define NOMINMAX
+#include <cldnn/cldnn_config.hpp>
+#include <d3d11.h>
+#pragma comment(lib, "dxgi")
+#undef NOMINMAX
+#undef D3D11_NO_HELPERS
+
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+#endif // HAVE_INF_ENGINE
 
 const std::string about =
     "This is an OpenCV-based version of oneVPLSource decoder example";
@@ -19,6 +41,7 @@ const std::string keys =
     "{ input        |                                           | Path to the input demultiplexed video file }"
     "{ output       |                                           | Path to the output RAW video file. Use .avi extension }"
     "{ facem        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
+    "{ faced        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
     "{ cfg_params   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }";
 
 
@@ -35,6 +58,58 @@ std::string get_weights_path(const std::string &model_path) {
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
+
+#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+
+// Since ATL headers might not be available on specific MSVS Build Tools
+// we use simple `CComPtr` implementation like as `ComPtrGuard`
+// which is not supposed to be the full functional replacement of `CComPtr`
+// and it uses as RAII to make sure utilization is correct
+template <typename COMNonManageableType>
+void release(COMNonManageableType *ptr) {
+    if (ptr) {
+        ptr->Release();
+    }
+}
+
+template <typename COMNonManageableType>
+using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
+
+template <typename COMNonManageableType>
+ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
+    return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
+
+using AccelParamsType = std::tuple<ComPtrGuard<ID3D11Device>, ComPtrGuard<ID3D11DeviceContext>>;
+
+AccelParamsType create_device_with_ctx(IDXGIAdapter* adapter) {
+    UINT flags = 0;
+    D3D_FEATURE_LEVEL feature_levels[] = { D3D_FEATURE_LEVEL_11_1,
+                                           D3D_FEATURE_LEVEL_11_0,
+                                         };
+    D3D_FEATURE_LEVEL featureLevel;
+    ID3D11Device* ret_device_ptr = nullptr;
+    ID3D11DeviceContext* ret_ctx_ptr = nullptr;
+    HRESULT err = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN,
+                                    nullptr, flags,
+                                    feature_levels,
+                                    ARRAYSIZE(feature_levels),
+                                    D3D11_SDK_VERSION, &ret_device_ptr,
+                                    &featureLevel, &ret_ctx_ptr);
+    if (FAILED(err)) {
+        throw std::runtime_error("Cannot create D3D11CreateDevice, error: " +
+                                 std::to_string(HRESULT_CODE(err)));
+    }
+
+    return std::make_tuple(createCOMPtrGuard(ret_device_ptr),
+                           createCOMPtrGuard(ret_ctx_ptr));
+}
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+#endif // HAVE_INF_ENGINE
 } // anonymous namespace
 
 namespace custom {
@@ -196,10 +271,83 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    const std::string& device_id = cmd.get<std::string>("faced");
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
-        get_weights_path(face_model_path)   // path to weights
+        get_weights_path(face_model_path),   // path to weights
+        device_id
     };
+
+    // Create device_ptr & context_ptr using graphic API
+    // InferenceEngine requires such device & context to create its own
+    // remote shared context through InferenceEngine::ParamMap in
+    // GAPI InferenceEngine backend to provide interoperability with onevpl::GSource
+    // So GAPI InferenceEngine backend and onevpl::GSource MUST share the same
+    // device and context
+    void* accel_device_ptr = nullptr;
+    void* accel_ctx_ptr = nullptr;
+
+#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+    auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
+    auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
+
+    if (device_id.find("GPU") != std::string::npos) {
+        auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
+        {
+            IDXGIFactory* out_factory = nullptr;
+            HRESULT err = CreateDXGIFactory(__uuidof(IDXGIFactory),
+                                        reinterpret_cast<void**>(&out_factory));
+            if (FAILED(err)) {
+                std::cerr << "Cannot create CreateDXGIFactory, error: " << HRESULT_CODE(err) << std::endl;
+                return -1;
+            }
+            adapter_factory = createCOMPtrGuard(out_factory);
+        }
+
+        auto intel_adapter = createCOMPtrGuard<IDXGIAdapter>();
+        UINT adapter_index = 0;
+        const unsigned int refIntelVendorID = 0x8086;
+        IDXGIAdapter* out_adapter = nullptr;
+
+        while (adapter_factory->EnumAdapters(adapter_index, &out_adapter) != DXGI_ERROR_NOT_FOUND) {
+            DXGI_ADAPTER_DESC desc{};
+            out_adapter->GetDesc(&desc);
+            if (desc.VendorId == refIntelVendorID) {
+                intel_adapter = createCOMPtrGuard(out_adapter);
+                break;
+            }
+            ++adapter_index;
+        }
+
+        if (!intel_adapter) {
+            std::cerr << "No Intel GPU adapter on aboard. Exit" << std::endl;
+            return -1;
+        }
+
+        std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
+        accel_device_ptr = reinterpret_cast<void*>(dx11_dev.get());
+        accel_ctx_ptr = reinterpret_cast<void*>(dx11_ctx.get());
+
+        // put accel type description for VPL source
+        source_cfgs.push_back(cfg::create_from_string(
+                                        "mfxImplDescription.AccelerationMode"
+                                        ":"
+                                        "MFX_ACCEL_MODE_VIA_D3D11"));
+    }
+
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+    // set ctx_config for GPU device only - no need in case of CPU device type
+    if (device_id.find("GPU") != std::string::npos) {
+        InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
+                                            {"VA_DEVICE", accel_device_ptr} });
+
+        face_net.cfgContextParams(ctx_config);
+    }
+#endif // HAVE_INF_ENGINE
+
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
         , custom::OCVParseSSD
@@ -209,7 +357,14 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
-        cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
+        if (device_id.find("GPU") != std::string::npos) {
+            cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
+                                                 device_id,
+                                                 accel_device_ptr,
+                                                 accel_ctx_ptr);
+        } else {
+            cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
+        }
         std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;

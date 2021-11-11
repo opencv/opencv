@@ -45,7 +45,7 @@ namespace gimpl {
 #endif
     }
 
-    class RMatOnMat : public RMat::Adapter {
+    class RMatOnMat : public RMat::IAdapter {
         cv::Mat m_mat;
     public:
         const void* data() const { return m_mat.data; }
@@ -58,7 +58,7 @@ namespace gimpl {
     struct Data;
     struct RcDesc;
 
-    struct GAPI_EXPORTS RMatMediaFrameAdapter final: public cv::RMat::Adapter
+    struct GAPI_EXPORTS RMatMediaFrameAdapter final: public cv::RMat::IAdapter
     {
         using MapDescF = std::function<cv::GMatDesc(const GFrameDesc&)>;
         using MapDataF = std::function<cv::Mat(const GFrameDesc&, const cv::MediaFrame::View&)>;

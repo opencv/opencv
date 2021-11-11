@@ -30,7 +30,8 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy()
+VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy() :
+    hw_handle(nullptr)
 {
 #ifdef CPU_ACCEL_ADAPTER
     adapter.reset(new VPLCPUAccelerationPolicy);

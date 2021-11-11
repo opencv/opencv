@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2020 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 #include "../test_precomp.hpp"
 
@@ -2185,6 +2185,58 @@ TEST_F(LimitedSourceInfer, ReleaseFrameAsync)
     constexpr int nireq           = 8;
 
     run(max_frames, resources_limit, nireq);
+}
+
+TEST(TestAgeGenderIE, InferWithBatch)
+{
+    initDLDTDataPath();
+
+    constexpr int batch_size = 4;
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    cv::Mat in_mat({batch_size, 3, 320, 240}, CV_8U);
+    cv::randu(in_mat, 0, 255);
+
+    cv::Mat gapi_age, gapi_gender;
+
+    // Load & run IE network
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
+        setNetParameters(net);
+        net.setBatchSize(batch_size);
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
+        infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgBatchSize(batch_size);
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
 } // namespace opencv_test
