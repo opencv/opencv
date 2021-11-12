@@ -92,8 +92,6 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
 #ifdef HAVE_OPENCV_VIDEO
 TEST_P(BackgroundSubtractorTest, AccuracyTest)
 {
-    initTestDataPath();
-
     cv::gapi::video::BackgroundSubtractorType opType;
     double thr = -1;
     std::tie(opType, thr) = typeAndThreshold;

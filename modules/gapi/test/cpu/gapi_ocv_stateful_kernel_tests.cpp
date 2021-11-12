@@ -43,10 +43,6 @@ namespace opencv_test
 //----------------------------------------------- Simple tests ------------------------------------------------
 namespace
 {
-    inline void initTestDataPath()
-    {
-    }
-
     G_TYPED_KERNEL(GCountCalls, <cv::GOpaque<int>(GMat)>, "org.opencv.test.count_calls")
     {
         static GOpaqueDesc outMeta(GMatDesc /* in */) { return empty_gopaque_desc(); }
@@ -169,8 +165,6 @@ TEST(StatefulKernel, StateIsMutableInRuntime)
 
 TEST(StatefulKernel, StateIsAutoResetForNewStream)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GOpaque<bool> out = GIsStateUpToDate::on(in);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
@@ -317,8 +311,6 @@ namespace
 
 TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
 {
-    initTestDataPath();
-
     // G-API graph declaration
     cv::GMat in;
     cv::GMat out = GBackSub::on(in);

@@ -25,9 +25,6 @@
 namespace opencv_test
 {
 namespace {
-void initTestDataPath()
-{
-}
 
 class TestMediaBGR final: public cv::MediaFrame::IAdapter {
     cv::Mat m_mat;
@@ -1421,7 +1418,6 @@ TEST(Infer, SetInvalidNumberOfRequests)
 
 TEST(Infer, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1489,7 +1485,6 @@ TEST(Infer, TestStreamingInfer)
 
 TEST(InferROI, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1568,7 +1563,6 @@ TEST(InferROI, TestStreamingInfer)
 
 TEST(InferList, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1658,7 +1652,6 @@ TEST(InferList, TestStreamingInfer)
 
 TEST(Infer2, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1749,7 +1742,6 @@ TEST(Infer2, TestStreamingInfer)
 
 TEST(InferEmptyList, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1804,7 +1796,6 @@ TEST(InferEmptyList, TestStreamingInfer)
 
 TEST(Infer2EmptyList, TestStreamingInfer)
 {
-    initTestDataPath();
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
