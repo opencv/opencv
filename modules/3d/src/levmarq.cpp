@@ -336,20 +336,20 @@ static double calcJacCostChangeLm(const cv::Mat_<double>& jtb, const cv::Mat_<do
 }
 
 
-int BaseLevMarq::optimize()
+BaseLevMarq::Report BaseLevMarq::optimize()
 {
     //DEBUG
     //static int ctr = 0;
     //ctr++;
     //std::cout << "ctr: " << ctr << std::endl;
 
-    prepareVars();
+    pImpl->prepareVars();
 
     double energy = 0.0;
-    if (!calcFunc(energy, /*useProbeVars*/ false, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
+    if (!pImpl->calcFunc(energy, /*useProbeVars*/ false, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
-        return -1;
+        return BaseLevMarq::Report(false, 0, 0); // not found
     }
 
     double oldEnergy = energy;
@@ -380,7 +380,7 @@ int BaseLevMarq::optimize()
         // vec d = {d_j = sum(J_ij^2) for each column j of J} = get_diag{ J^T * J }
         // di = { 1/(1+sqrt(d_j)) }, extra +1 to avoid div by zero
         Mat_<double> ds;
-        const Mat_<double> diag = getDiag();
+        const Mat_<double> diag = pImpl->getDiag();
         cv::sqrt(diag, ds);
         di = 1.0 / (ds + 1.0);
     }
@@ -399,15 +399,15 @@ int BaseLevMarq::optimize()
         // do the jacobian conditioning improvement used in Ceres
         if (jacobiScaling)
         {
-            doJacobiScaling(di);
+            pImpl->doJacobiScaling(di);
         }
 
-        const Mat_<double> jtb = getJtb();
+        const Mat_<double> jtb = pImpl->getJtb();
 
         double gradientMax = cv::norm(jtb, NORM_INF);
 
         // Save original diagonal of jtj matrix for LevMarq
-        const Mat_<double> diag = getDiag();
+        const Mat_<double> diag = pImpl->getDiag();
 
         // Solve using LevMarq and get delta transform
         bool enoughLm = false;
@@ -420,13 +420,13 @@ int BaseLevMarq::optimize()
             if (clampDiagonal)
                 lmDiag = cv::min(cv::max(lmDiag, minDiag), maxDiag);
             jtjDiag = lmDiag + diag;
-            setDiag(jtjDiag);
+            pImpl->setDiag(jtjDiag);
 
             CV_LOG_INFO(NULL, "linear solve...");
 
             // use double or convert everything to float
             Mat_<double> x((int)jtb.rows, 1);
-            bool solved = solve(x);
+            bool solved = pImpl->solve(x);
 
             //DEBUG
             //if (ctr == 1003)
@@ -462,13 +462,13 @@ int BaseLevMarq::optimize()
                 x = -x;
 
                 // calc energy with current delta x
-                currentOplusXToProbe(x);
+                pImpl->currentOplusXToProbe(x);
 
-                bool success = calcFunc(energy, /*useProbeVars*/ true, /*calcEnergy*/ true, /*calcJacobian*/ false);
+                bool success = pImpl->calcFunc(energy, /*useProbeVars*/ true, /*calcEnergy*/ true, /*calcJacobian*/ false);
                 if (!success || energy < 0 || isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
-                    return -1;
+                    return BaseLevMarq::Report(false, iter, oldEnergy); // not found
                 }
 
                 costChange = oldEnergy - energy;
@@ -511,7 +511,7 @@ int BaseLevMarq::optimize()
                 smallEnergyDelta = (costChange / energy < relEnergyDeltaTolerance);
                 smallEnergy = (energy < smallEnergyTolerance);
 
-                acceptProbe();
+                pImpl->acceptProbe();
 
                 CV_LOG_INFO(NULL, "#" << iter << " energy: " << energy);
 
@@ -536,10 +536,10 @@ int BaseLevMarq::optimize()
         if (!done)
         {
             double dummy;
-            if (!calcFunc(dummy, /*useProbeVars*/ false, /*calcEnergy*/ false, /*calcJacobian*/ true))
+            if (!pImpl->calcFunc(dummy, /*useProbeVars*/ false, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
-                return -1;
+                return BaseLevMarq::Report(false, iter, oldEnergy); // not found
             }
         }
     }
@@ -561,14 +561,11 @@ int BaseLevMarq::optimize()
     if (bigLambda)
         CV_LOG_INFO(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
 
-    return (found ? iter : -1);
+    return BaseLevMarq::Report(found, iter, oldEnergy);
 }
 
 
-
-// This implementation is done to be compatible with old OpenCV's LMSolver
-// It uses dense matrix solver and supports the same callback formats
-struct LegacyLevMarq : public BaseLevMarq
+struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
 {
     // all variables including fixed ones
     size_t nVars;
@@ -581,9 +578,9 @@ struct LegacyLevMarq : public BaseLevMarq
     // "Long" callback: f(x, &b, &J) -> bool
     // Produces jacobian and residuals for each energy term
     LevMarqDenseLinear::LongCallback cb;
-    // Alt. callback: f(x, &jtb, &jtj, &energy) -> bool
+    // "Normal" callback: f(x, &jtb, &jtj, &energy) -> bool
     // Produces J^T*J and J^T*b directly instead of J and b
-    LevMarqDenseLinear::AltCallback cb_alt;
+    LevMarqDenseLinear::NormalCallback cb_alt;
 
     Mat_<uchar> mask;
     // full matrices containing all vars including fixed ones
@@ -599,14 +596,27 @@ struct LegacyLevMarq : public BaseLevMarq
     // What method to use for linear system solving
     int solveMethod;
 
-    LegacyLevMarq(InputOutputArray currentX_,
+    LevMarqDenseLinearImpl(int nvars_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+        LevMarqDenseLinearImpl(noArray(), nvars_, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
+    { }
+    LevMarqDenseLinearImpl(int nvars_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+        LevMarqDenseLinearImpl(noArray(), nvars_, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
+    { }
+    LevMarqDenseLinearImpl(InputOutputArray param_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+        LevMarqDenseLinearImpl(param_, 0, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
+    { }
+    LevMarqDenseLinearImpl(InputOutputArray param_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+        LevMarqDenseLinearImpl(param_, 0, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
+    { }
+
+    LevMarqDenseLinearImpl(InputOutputArray currentX_, int nvars,
         LevMarqDenseLinear::LongCallback cb_ = nullptr,
-        LevMarqDenseLinear::AltCallback cb_alt_ = nullptr,
+        LevMarqDenseLinear::NormalCallback cb_alt_ = nullptr,
         size_t nerrs_ = 0,
         bool LtoR_ = false,
         InputArray mask_ = noArray(),
         int solveMethod_ = DECOMP_SVD) :
-        BaseLevMarq(),
+        BaseLevMarq::Impl(),
         // these fields will be initialized at prepareVars()
         jtj(),
         jtb(),
@@ -617,13 +627,21 @@ struct LegacyLevMarq : public BaseLevMarq
         jLong(),
         bLong()
     {
-        CV_Assert(!currentX_.empty());
-        CV_Assert(currentX_.type() == CV_64F);
-        CV_Assert(currentX_.rows() == 1 || currentX_.cols() == 1);
-        this->allVars = currentX_.size().area();
-        this->currentX = currentX_.getMat().reshape(1, this->allVars);
+        if (!currentX_.empty())
+        {
+            CV_Assert(currentX_.type() == CV_64F);
+            CV_Assert(currentX_.rows() == 1 || currentX_.cols() == 1);
+            this->allVars = currentX_.size().area();
+            this->currentX = currentX_.getMat().reshape(1, (int)this->allVars);
+        }
+        else
+        {
+            CV_Assert(nvars > 0);
+            this->allVars = nvars;
+            this->currentX = Mat_<double>((int)this->allVars, 1);
+        }
 
-        CV_Assert(cb_ || cb_alt_);
+        CV_Assert(cb_ || cb_alt_ && !(cb_ && cb_alt_));
         this->cb = cb_;
         this->cb_alt = cb_alt_;
 
@@ -673,33 +691,33 @@ struct LegacyLevMarq : public BaseLevMarq
         Mat_<double> xd = useProbeVars ? probeX : currentX;
 
         double sd = 0.0;
-        Mat* jtbp = nullptr;
-        Mat* jtjp = nullptr;
-        Mat* jLongp = nullptr;
+        Mat jtbp, jtjp, jLongp;
         if (calcJacobian)
         {
-            jtbp = (!mask.empty()) ? &jtbFull : &jtb;
-            jtjp = (!mask.empty()) ? &jtjFull : &jtj;
+            jtbp = (!mask.empty()) ? jtbFull : jtb;
+            jtjp = (!mask.empty()) ? jtjFull : jtj;
 
-            jtbp->setZero();
-            jtjp->setZero();
+            jtbp.setZero();
+            jtjp.setZero();
 
             if (!cb_alt)
             {
                 jLong.setZero();
-                jLongp = &jLong;
+                jLongp = jLong;
             }
         }
 
         if (cb_alt)
         {
-            if (!cb_alt(xd, jtbp, jtjp, &sd))
+            bool r = calcJacobian ? cb_alt(xd, jtbp, jtjp, sd) : cb_alt(xd, noArray(), noArray(), sd);
+            if (!r)
                 return false;
         }
         else
         {
             bLong.setZero();
-            if (!cb(xd, &bLong, jLongp))
+            bool r = calcJacobian ? cb(xd, bLong, jLongp) : cb(xd, bLong, noArray());
+            if (!r)
                 return false;
         }
 
@@ -707,12 +725,12 @@ struct LegacyLevMarq : public BaseLevMarq
         {
             if (cb_alt)
             {
-                completeSymm(*jtjp, LtoR);
+                completeSymm(jtjp, LtoR);
             }
             else
             {
-                mulTransposed(*jLongp, *jtjp, true);
-                gemm(*jLongp, bLong, 1, noArray(), 0, *jtbp, GEMM_1_T);
+                mulTransposed(jLongp, jtjp, true);
+                gemm(jLongp, bLong, 1, noArray(), 0, jtbp, GEMM_1_T);
             }
         }
 
@@ -761,18 +779,18 @@ struct LegacyLevMarq : public BaseLevMarq
         jtb = Mat_<double>((int)nVars, 1);
 
         probeX = currentX.clone();
-        delta = Mat_<double>(allVars, 1);
+        delta = Mat_<double>((int)allVars, 1);
 
         // Allocate vars for use with mask
         if (!mask.empty())
         {
-            jtjFull = Mat_<double>(allVars, allVars);
-            jtbFull = Mat_<double>(allVars, 1);
+            jtjFull = Mat_<double>((int)allVars, (int)allVars);
+            jtbFull = Mat_<double>((int)allVars, 1);
         }
 
         if (nerrs)
         {
-            jLong = Mat_<double>((int)nerrs, allVars);
+            jLong = Mat_<double>((int)nerrs, (int)allVars);
             bLong = Mat_<double>((int)nerrs, 1, CV_64F);
         }
     }
@@ -825,6 +843,7 @@ struct LegacyLevMarq : public BaseLevMarq
 };
 
 
+/*
 Ptr<BaseLevMarq> createLegacyLevMarq(InputOutputArray currentX,
                                      int maxIter,
                                      LevMarqDenseLinear::LongCallback cb,
@@ -853,7 +872,9 @@ Ptr<BaseLevMarq> createLegacyLevMarq(InputOutputArray currentX,
 
     return solver;
 }
+*/
 
+/*
 class LevMarqDenseLinearImpl CV_FINAL : public LevMarqDenseLinear
 {
 public:
@@ -895,25 +916,7 @@ public:
         }
     }
 
-    void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
-    int getMaxIters() const CV_OVERRIDE { return maxIters; }
-
-    Ptr<LevMarqDenseLinear::Callback> cb;
-    Ptr<LevMarqDenseLinear::NormalCallback> cbNormal;
-    double eps;
-    int maxIters;
 };
-
-
-Ptr<LevMarqDenseLinear> LevMarqDenseLinear::create(const Ptr<LevMarqDenseLinear::Callback>& cb, int maxIters, double eps)
-{
-    return makePtr<LevMarqDenseLinearImpl>(cb, maxIters, eps);
-}
-
-Ptr<LevMarqDenseLinear> LevMarqDenseLinear::create(const Ptr<LevMarqDenseLinear::NormalCallback>& cb, int maxIters, double eps)
-{
-    return makePtr<LevMarqDenseLinearImpl>(cb, maxIters, eps);
-}
 
 
 int LevMarqDenseLinear::run(InputOutputArray param, InputArray mask,
@@ -937,6 +940,26 @@ int LevMarqDenseLinear::runAlt(InputOutputArray param, InputArray mask,
     lm->smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
     return lm->optimize();
 }
+*/
 
+LevMarqDenseLinear::LevMarqDenseLinear(int nvars, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
+    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(nvars, callback, mask, nerrs, solveMethod))
+{ }
+LevMarqDenseLinear::LevMarqDenseLinear(int nvars, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
+    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(nvars, callback, mask, LtoR, solveMethod))
+{ }
+LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
+    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(param, callback, mask, nerrs, solveMethod))
+{ }
+LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
+    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(param, callback, mask, LtoR, solveMethod))
+{ }
+
+BaseLevMarq::Report LevMarqDenseLinear::run(InputOutputArray param)
+{
+    CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
+    pImpl.dynamicCast<LevMarqDenseLinearImpl>()->currentX = param.getMat().reshape(1, param.size().area());
+    return optimize();
+}
 
 }

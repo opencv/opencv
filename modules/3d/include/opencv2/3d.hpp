@@ -464,7 +464,6 @@ can be found in:
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
-//TODO: refactor that
 
 /** Base class for Levenberg-Marquadt solvers.
 This class can be used for general local optimization using sparse linear solvers, exponential param update or fixed variables
@@ -483,8 +482,44 @@ a probe value. "Added" is quoted because in some groups (e.g. SO(3) group) such 
 
 For more details, please refer to Wikipedia page (https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm).
 */
-struct CV_EXPORTS BaseLevMarq
+class CV_EXPORTS BaseLevMarq
 {
+public:
+    struct Report
+    {
+        Report(bool found_, int iters_, double energy_) :
+            found(found_), iters(iters_), energy(energy_)
+        { }
+        bool found;
+        int iters;
+        double energy;
+    };
+
+    class Impl
+    {
+    public:
+        virtual ~Impl() { }
+
+        // calculates an energy and/or jacobian at current param vector or at probe param vector
+        virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) = 0;
+        // adds x to current variables and writes the sum to probe vars
+        virtual void currentOplusXToProbe(const Mat_<double>& x) = 0;
+        // allocates jtj, jtb, probeX and other resources for objective function calculation
+        virtual void prepareVars() = 0;
+        // returns a J^T*b vector (aka gradient)
+        virtual const Mat_<double> getJtb() = 0;
+        // returns a J^T*J diagonal vector
+        virtual const Mat_<double> getDiag() = 0;
+        // sets a J^T*J diagonal
+        virtual void setDiag(const Mat_<double>& d) = 0;
+        // performs jacobi scaling if the option is turned on
+        virtual void doJacobiScaling(const Mat_<double>& di) = 0;
+        // solves LevMarq equation for current iteration
+        virtual bool solve(Mat_<double>& x) = 0;
+        // sets current params vector to probe params
+        virtual void acceptProbe() = 0;
+    };
+
     // normalize jacobian columns for better conditioning
     // slows down sparse solver, but maybe this'd be useful for some other solver
     bool jacobiScaling;
@@ -518,7 +553,9 @@ struct CV_EXPORTS BaseLevMarq
     double initialLmUpFactor;
     double initialLmDownFactor;
 
-    BaseLevMarq() :
+    Ptr<Impl> pImpl;
+
+    BaseLevMarq(Ptr<Impl> impl_) :
         jacobiScaling(false),
         upDouble(true),
         useStepQuality(true),
@@ -534,83 +571,113 @@ struct CV_EXPORTS BaseLevMarq
         maxIterations(500),
         initialLambdaLevMarq(0.0001),
         initialLmUpFactor(2.0),
-        initialLmDownFactor(3.0)
+        initialLmDownFactor(3.0),
+        pImpl(impl_)
     { }
-    // calculates an energy and/or jacobian at current param vector or at probe param vector
-    virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) = 0;
-    // adds x to current variables and writes the sum to probe vars
-    virtual void currentOplusXToProbe(const Mat_<double>& x) = 0;
-    // allocates jtj, jtb, probeX and other resources for objective function calculation
-    virtual void prepareVars() = 0;
-    // returns a J^T*b vector (aka gradient)
-    virtual const Mat_<double> getJtb() = 0;
-    // returns a J^T*J diagonal vector
-    virtual const Mat_<double> getDiag() = 0;
-    // sets a J^T*J diagonal
-    virtual void setDiag(const Mat_<double>& d) = 0;
-    // performs jacobi scaling if the option is turned on
-    virtual void doJacobiScaling(const Mat_<double>& di) = 0;
-    // solves LevMarq equation for current iteration
-    virtual bool solve(Mat_<double>& x) = 0;
-    // sets current params vector to probe params
-    virtual void acceptProbe() = 0;
+
+    virtual ~BaseLevMarq() { }
+
     // runs optimization using given termination conditions
-    virtual int optimize() CV_FINAL;
+    Report optimize();
 };
 
 
-class CV_EXPORTS LevMarqDenseLinear
+/**
+A Levenberg-Marquadt solver with dense jacobian matrix and linear parameter increment.
+Supports fixed variables and two forms of callback function:
+1. Generating ordinary jacobian J and residual vector err ("long")
+2. Generating normal equation matrix J^T*J and gradient vector J^T*err
+*/
+class CV_EXPORTS LevMarqDenseLinear : public BaseLevMarq
 {
 public:
-    class CV_EXPORTS Callback
-    {
-    public:
-        virtual ~Callback() {}
-        /**
-         computes error and Jacobian for the specified vector of parameters
+    /** "Long" callback: f(param, &err, &J) -> bool
+        Computes error and Jacobian for the specified vector of parameters,
+        returns true on success.
 
-         @param param the current vector of parameters
-         @param err output vector of errors: err_i = actual_f_i - ideal_f_i
-         @param J output Jacobian: J_ij = d(err_i)/d(param_j)
+        param: the current vector of parameters
+        err: output vector of errors: err_i = actual_f_i - ideal_f_i
+        J: output Jacobian: J_ij = d(err_i)/d(param_j)
 
-         when J=noArray(), it means that it does not need to be computed.
-         Dimensionality of error vector and param vector can be different.
-         The callback should explicitly allocate (with "create" method) each output array
-         (unless it's noArray()).
-        */
-        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
-    };
+        Param vector values may be changed by the callback only if they are fixed.
+        Changing non-fixed variables may lead to incorrect results.
+        When J=noArray(), it means that it does not need to be computed.
+        Dimensionality of error vector and param vector can be different.
+        The callback should explicitly allocate (with "create" method) each output array
+        (unless it's noArray()).
+    */
+    typedef std::function<bool(InputOutputArray, OutputArray, OutputArray)> LongCallback;
 
-    class CV_EXPORTS NormalCallback
-    {
-    public:
-        virtual ~NormalCallback() {}
+    /** Normal callback: f(param, &JtErr, &JtJ, &errnorm) -> bool
 
-        /**
-        Computes error norm and normal equation matrix J^T*J and J^T*err vector
+        Computes squared L2 error norm, normal equation matrix J^T*J and J^T*err vector
         where J is MxN Jacobian: J_ij = d(err_i)/d(param_j)
         err is Mx1 vector of errors: err_i = actual_f_i - ideal_f_i
         M is a number of error terms, N is a number of variables to optimize.
         Make sense to use this class instead of usual Callback if the number
         of error terms greatly exceeds the number of variables.
 
-        @param param the current Nx1 vector of parameters
-        @param JtErr output Nx1 vector J^T*err
-        @param JtJ output NxN matrix J^T*J
-        @param errnorm output total error: dot(err, err)
+        param: the current Nx1 vector of parameters
+        JtErr: output Nx1 vector J^T*err
+        JtJ: output NxN matrix J^T*J
+        errnorm: output total error: dot(err, err)
 
+        Param vector values may be changed by the callback only if they are fixed.
+        Changing non-fixed variables may lead to incorrect results.
         If JtErr or JtJ are empty, they don't have to be computed.
         The callback should explicitly allocate (with "create" method) each output array
-         (unless it's noArray()).
-        */
-        virtual bool compute(InputArray param, OutputArray JtErr, OutputArray JtJ, double& errnorm) const = 0;
-    };
+        (unless it's noArray()).
+    */
+    typedef std::function<bool(InputOutputArray, OutputArray, OutputArray, double&)> NormalCallback;
+
+    /**
+        Creates a solver
+
+        @param nvars Number of variables in a param vector
+        @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
+        @param solveMethod What method to use for linear system solving
+    */
+    LevMarqDenseLinear(int nvars, LongCallback callback, InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    /**
+        Creates a solver
+
+        @param nvars Number of variables in a param vector
+        @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
+        @param solveMethod What method to use for linear system solving
+    */
+    LevMarqDenseLinear(int nvars, NormalCallback callback, InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
+
+    /**
+        Creates a solver
+
+        @param param Input/output vector containing starting param vector and resulting optimized params
+        @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
+        @param solveMethod What method to use for linear system solving
+    */
+    LevMarqDenseLinear(InputOutputArray param, LongCallback callback, InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    /**
+        Creates a solver
+
+        @param param Input/output vector containing starting param vector and resulting optimized params
+        @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
+        @param solveMethod What method to use for linear system solving
+    */
+    LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
        Runs Levenberg-Marquardt algorithm using the passed vector of parameters as the start point.
        The final vector of parameters (whether the algorithm converged or not) is stored at the same
-       vector. The method returns the number of iterations used. If it's equal to the previously specified
-       maxIters, there is a big chance the algorithm did not converge.
+       vector.
+       This method can be used instead of the optimize() method if rerun with different start points is required.
+       The method returns the optimization report.
 
        @param param initial/final vector of parameters.
 
@@ -618,63 +685,11 @@ public:
        and the dimensionality of optimized criteria is defined by the size of err vector
        computed by the callback.
     */
-    virtual int run(InputOutputArray param) const = 0;
-
-    /**
-       Sets the maximum number of iterations
-       @param maxIters the number of iterations
-    */
-    virtual void setMaxIters(int maxIters) = 0;
-    /**
-       Retrieves the current maximum number of iterations
-    */
-    virtual int getMaxIters() const = 0;
-
-    /**
-       Creates Levenberg-Marquard solver
-
-       @param cb callback
-       @param maxIters maximum number of iterations that can be further
-         modified using setMaxIters() method.
-    */
-    static Ptr<LevMarqDenseLinear> create(const Ptr<LevMarqDenseLinear::Callback>& cb, int maxIters, double eps = FLT_EPSILON);
-    static Ptr<LevMarqDenseLinear> create(const Ptr<LevMarqDenseLinear::NormalCallback>& cb, int maxIters, double eps = FLT_EPSILON);
-
-    // "Long" callback: f(param, &err, &J) -> bool
-    typedef std::function<bool(Mat&, Mat*, Mat*)> LongCallback;
-    // Alt. callback: f(param, &JtErr, &JtJ, &errnorm) -> bool
-    typedef std::function<bool(Mat&, Mat*, Mat*, double*)> AltCallback;
-
-    static int run(InputOutputArray param, InputArray mask,
-                   int nerrs, const TermCriteria& termcrit, int solveMethod,
-                   LongCallback callb);
-    static int runAlt(InputOutputArray param, InputArray mask,
-                      const TermCriteria& termcrit, int solveMethod, bool LtoR,
-                      AltCallback callb);
+    BaseLevMarq::Report run(InputOutputArray param);
 };
 
 
-/** @brief This implementation is done to be compatible with old OpenCV's LMSolver.
-It uses dense matrix solver and supports the same callback formats
-
-@param currentX Vector of parameters to start from and to write the result to
-@param cb "Long" callback, produces jacobian and residuals for each energy term, returns true on success
-@param cb_alt Alt. callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
-@param nerrs Energy terms amount, used only with "long" callback
-@param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
-@param mask Indicates what variables are fixed (zeros) and what vars to optimize
-@param solveMethod What method to use for linear system solving
-*/
-CV_EXPORTS Ptr<BaseLevMarq> createLegacyLevMarq(InputOutputArray currentX,
-                                                int maxIter,
-                                                LevMarqDenseLinear::LongCallback cb = nullptr,
-                                                LevMarqDenseLinear::AltCallback cb_alt = nullptr,
-                                                size_t nerrs = 0,
-                                                bool LtoR = false,
-                                                InputArray mask = noArray(),
-                                                int solveMethod = DECOMP_SVD);
-
-
+//TODO: remove it
 /** Levenberg-Marquardt solver. Starting with the specified vector of parameters it
     optimizes the target vector criteria "err"
     (finds local minima of each target vector component absolute value).
