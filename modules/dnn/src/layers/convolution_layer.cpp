@@ -924,18 +924,8 @@ public:
         if (nodes.size() > 1)
             CV_Assert(webnnWeights);
         const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
-        // std::cout<<"inpCn: "<<inpCn<<std::endl;
-        // const int group = blobs.size() - hasBias();
-        // const int inpGroupCn = blobs[0].size[1];
-        // // const int group = inpCn / inpGroupCn;
-        // const int group = 1;
         const int group = groups;
-        // std::cout<<"numOutput: "<<numOutput<<std::endl;
         const int inpGroupCn = inpCn / group;
-        // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
-        // std::cout<<"Group: "<<group<<std::endl;
-        // std::cout<<"padMode:"<<padMode<<std::endl;
-        // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
         std::vector<int32_t> kernel_shape;
         if (group != 1)
         {

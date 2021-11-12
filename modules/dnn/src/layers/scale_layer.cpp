@@ -15,6 +15,7 @@ Implementation of Scale layer.
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
@@ -32,6 +33,10 @@ namespace dnn
 class ScaleLayerImpl CV_FINAL : public ScaleLayer
 {
 public:
+#ifdef HAVE_WEBNN
+    mutable int dims;
+    mutable int numChannels;
+#endif
     ScaleLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
@@ -46,6 +51,15 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         outputs.assign(1, inputs[0]);
+#ifdef HAVE_WEBNN
+        dims = inputs[0].size();
+        numChannels = 1;
+        if (inputs.size() > 1)
+        {
+            for (const size_t& dim : inputs[1])
+                numChannels *= dim;
+        }
+#endif
         return true;
     }
 
@@ -63,7 +77,8 @@ public:
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && axis == 1 && !blobs.empty()) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && axis > 0);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && axis > 0) ||
+               (backendId == DNN_BACKEND_WEBNN && axis >0);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -337,6 +352,48 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand0 = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        auto webnnInpOperand1 = nodes.size() > 1 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
+        auto webnnInpOperand2 = nodes.size() > 2 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
+        std::vector<int32_t> shape(dims, 1);
+        
+        size_t channels = 1;
+        if (blobs.empty())
+            channels = numChannels;
+        else
+            channels = blobs[0].total();
+        
+        int cAxis = normalize_axis(axis, shape.size());
+        shape[cAxis] = channels;
+
+        ml::Operand operand = webnnInpOperand0;
+        if (hasWeights)
+        {
+            ml::Operand webnnWeights = blobs.empty() ? webnnInpOperand1 : webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+            webnnWeights = webnnGraphBuilder.Reshape(webnnWeights, shape.data(), shape.size());
+            operand = webnnGraphBuilder.Mul(operand, webnnWeights);
+        }
+        if (hasBias)
+        {
+            ml::Operand webnnBias;
+            if(!hasWeights)
+                webnnBias = blobs.empty() ? webnnInpOperand1 : webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs.back()), blobs.back().data, blobs.back().total()*blobs.back().elemSize(), ml::OperandType::Float32);
+            else
+                webnnBias = blobs.empty() ? webnnInpOperand2 : webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs.back()), blobs.back().data, blobs.back().total()*blobs.back().elemSize(), ml::OperandType::Float32);
+            webnnBias = webnnGraphBuilder.Reshape(webnnBias, shape.data(), shape.size());
+            operand = webnnGraphBuilder.Add(operand, webnnBias);
+        }
+
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
+
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {
