@@ -93,6 +93,12 @@ extern "C" {
 }
 #endif
 
+// GCC 4.x compilation bug. Details: https://github.com/opencv/opencv/issues/20292
+#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)
+#undef USE_AV_HW_CODECS
+#define USE_AV_HW_CODECS 0
+#endif
+
 //#define USE_AV_HW_CODECS 0
 #ifndef USE_AV_HW_CODECS
 #if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
