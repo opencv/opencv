@@ -1098,51 +1098,6 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
         eulerAngles.convertTo(_eulerAngles, depth);
 }
 
-//TODO: fix interface
-class SolvePnPCallback CV_FINAL : public LevMarqDenseLinear::Callback
-{
-public:
-    SolvePnPCallback(const Mat& _objpt, const Mat& _imgpt,
-                     const Mat& _cameraMatrix, const Mat& _distCoeffs)
-    {
-        objpt = _objpt;
-        imgpt = _imgpt;
-        cameraMatrix = _cameraMatrix;
-        distCoeffs = _distCoeffs;
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-        Mat param = _param.getMat();
-        CV_Assert((param.cols == 1 || param.rows == 1) && param.total() == 6 && param.type() == CV_64F);
-        double* pdata = param.ptr<double>();
-        Mat rvec(3, 1, CV_64F, pdata);
-        Mat tvec(3, 1, CV_64F, pdata + 3);
-        int count = objpt.rows + objpt.cols - 1;
-        _err.create(count*2, 1, CV_64F);
-        Mat err = _err.getMat();
-        err = err.reshape(2, count);
-        if( _Jac.needed() )
-        {
-            _Jac.create(count*2, 6, CV_64F);
-            Mat Jac = _Jac.getMat();
-            Mat dpdr = Jac.colRange(0, 3);
-            Mat dpdt = Jac.colRange(3, 6);
-            projectPoints( objpt, rvec, tvec, cameraMatrix, distCoeffs,
-                           err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
-        }
-        else
-        {
-            projectPoints( objpt, rvec, tvec, cameraMatrix, distCoeffs, err);
-        }
-        err = err - imgpt;
-        err = err.reshape(1, 2*count);
-        return true;
-    }
-
-    Mat objpt, imgpt, cameraMatrix, distCoeffs;
-};
-
 
 void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
                   const Mat& imagePoints, const Mat& A,
@@ -1319,8 +1274,64 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     // refine extrinsic parameters using iterative algorithm
 
     //TODO: fix interface
+    auto callback = [matM, _m, matA, distCoeffs]
+    (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
+    {
+        const Mat& objpt = matM;
+        const Mat& imgpt = _m;
+        const Mat& cameraMatrix = matA;
+        Mat x = param_.getMat();
+        CV_Assert((x.cols == 1 || x.rows == 1) && x.total() == 6 && x.type() == CV_64F);
+        double* pdata = x.ptr<double>();
+        Mat rv(3, 1, CV_64F, pdata);
+        Mat tv(3, 1, CV_64F, pdata + 3);
+        int count = objpt.rows + objpt.cols - 1;
+        _err.create(count * 2, 1, CV_64F);
+        Mat err = _err.getMat();
+        err = err.reshape(2, count);
+        if (_Jac.needed())
+        {
+            _Jac.create(count * 2, 6, CV_64F);
+            Mat Jac = _Jac.getMat();
+            Mat dpdr = Jac.colRange(0, 3);
+            Mat dpdt = Jac.colRange(3, 6);
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs,
+                err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
+        }
+        else
+        {
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs, err);
+        }
+        err = err - imgpt;
+        err = err.reshape(1, 2 * count);
+        return true;
+    };
+
+    LevMarqDenseLinear solver(_param, callback);
+    //TODO: play with it
+    solver.initialLambdaLevMarq = 0.001;
+    solver.initialLmUpFactor = 10.0;
+    solver.initialLmDownFactor = 10.0;
+    solver.upDouble = false;
+    solver.useStepQuality = false;
+    solver.clampDiagonal = false;
+    solver.checkRelEnergyChange = false;
+    solver.stepNormInf = true;
+    solver.checkMinGradient = false;
+    // old LMSolver calculates successful iterations only, this one calculates all iterations
+    solver.maxIterations = (unsigned int)(max_iter * 2.1);
+    solver.checkStepNorm = true;
+    solver.stepNormTolerance = (double)FLT_EPSILON;
+    solver.smallEnergyTolerance = (double)FLT_EPSILON * (double)FLT_EPSILON;
+
+    //TODO: remove it
+    //Ptr<LevMarqDenseLinear> solver = makePtr<LevMarqDenseLinear>(nvars = _param.total(), altCallback = nosuch, mask = noArray(), ltor = false, solveMethod = DECOMP_SVD);
+
+    BaseLevMarq::Report r = solver.optimize();
+
+    //DEBUG
+    /*
     Ptr<LevMarqDenseLinear::Callback> callb = makePtr<SolvePnPCallback>(matM, _m, matA, distCoeffs);
-    //Ptr<LevMarqDenseLinear> solver = LevMarqDenseLinear::create(callb, max_iter, (double)FLT_EPSILON);
 
     Ptr<BaseLevMarq> solver = createLegacyLevMarq(_param, max_iter,
         [&](Mat& param, Mat* err, Mat* J)->bool
@@ -1329,6 +1340,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
                                   J ? _OutputArray(*J) : _OutputArray());
         });
     int r = solver->optimize();
+    */
 
     _param.rowRange(0, 3).copyTo(rvec);
     _param.rowRange(3, 6).copyTo(tvec);
