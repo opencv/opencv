@@ -23,7 +23,8 @@ ProcessingEngineBase::ProcessingEngineBase(std::unique_ptr<VPLAccelerationPolicy
 }
 
 ProcessingEngineBase::~ProcessingEngineBase() {
-    GAPI_LOG_INFO(nullptr, "destroyed");
+    GAPI_LOG_INFO(nullptr, "destroyed, elapsed sessions count: " << sessions.size());
+    sessions.clear();
 }
 
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession session) {
@@ -57,6 +58,7 @@ ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession s
     }
 
     if (status == ExecutionStatus::Processed) {
+        GAPI_LOG_INFO(nullptr, "Processed [" << session << "]");
         sessions.erase(sess_it);
         execution_table.erase(session);
     }

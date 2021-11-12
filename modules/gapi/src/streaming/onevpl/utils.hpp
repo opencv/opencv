@@ -75,6 +75,7 @@ std::string mfxstatus_to_string(mfxStatus err);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
 
+std::string ext_mem_frame_type_to_cstr(int type);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

@@ -14,6 +14,13 @@
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
+#define ONEVPL_STRINGIFY_CASE(value)                                           \
+    case value: return #value;
+
+#define APPEND_STRINGIFY_MASK_N_ERASE(value, pref, mask)                       \
+    if (value & mask) { ss << pref << #mask; value ^= mask; }
+
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -484,6 +491,31 @@ std::string mfxstatus_to_string(mfxStatus err) {
     std::string ret("<unknown ");
     ret += std::to_string(err) + ">";
     return ret;
+}
+
+std::string ext_mem_frame_type_to_cstr(int type) {
+    std::stringstream ss;
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_DECODER_TARGET);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_PROCESSOR_TARGET);
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET);
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SYSTEM_MEMORY);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_RESERVED1);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_ENCODE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_DECODE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_VPPIN);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_VPPOUT);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_ENC);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_INTERNAL_FRAME);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_EXTERNAL_FRAME);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_EXPORT_FRAME);
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SHARED_RESOURCE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_ENCODER_TARGET);
+
+    if (type != 0) {
+        ss << "(rest: " << std::to_string(type) << ")";
+    }
+    return ss.str();
 }
 } // namespace onevpl
 } // namespace wip

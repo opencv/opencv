@@ -30,9 +30,11 @@ struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolic
 
     using pool_t = CachedPool;
 
+    AccelType get_accel_type() const override;
     void init(session_t session) override;
     void deinit(session_t session) override;
-    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
+    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator);
+    pool_key_t create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxVideoParam& param) override;
     surface_weak_ptr_t get_free_surface(pool_key_t key) override;
     size_t get_free_surface_count(pool_key_t key) const override;
     size_t get_surface_count(pool_key_t key) const override;

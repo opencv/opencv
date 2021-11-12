@@ -40,6 +40,8 @@ struct GAPI_EXPORTS EngineSession {
     EngineSession(mfxSession sess, std::shared_ptr<IDataProvider::mfx_bitstream>&& str);
     std::string error_code_to_str() const;
     virtual ~EngineSession();
+
+    virtual const mfxVideoParam& get_video_param() const = 0;
 };
 } // namespace onevpl
 } // namespace wip
