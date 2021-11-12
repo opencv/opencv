@@ -2282,7 +2282,6 @@ TEST(TestAgeGenderIE, InferWithBatch)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-
 TEST(ImportNetwork, Infer)
 {
     const std::string device = "MYRIAD";
