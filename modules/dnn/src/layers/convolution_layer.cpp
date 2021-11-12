@@ -80,6 +80,9 @@ class BaseConvolutionLayerImpl : public ConvolutionLayer
 public:
     bool fusedWeights, fusedBias;
     std::vector<double> weightsMultipliers;
+#ifdef HAVE_WEBNN
+    int groups;
+#endif
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
@@ -87,6 +90,9 @@ public:
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
+#ifdef HAVE_WEBNN
+        groups = ngroups;
+#endif
         CV_Assert(numOutput % ngroups == 0);
 
         if (kernel_size.size() == 2) {
@@ -917,11 +923,16 @@ public:
         ml::Operand webnnWeights = nodes.size() > 1 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
         if (nodes.size() > 1)
             CV_Assert(webnnWeights);
-        // const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
+        const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
+        // std::cout<<"inpCn: "<<inpCn<<std::endl;
         // const int group = blobs.size() - hasBias();
-        const int inpGroupCn = blobs[0].size[1];
+        // const int inpGroupCn = blobs[0].size[1];
         // // const int group = inpCn / inpGroupCn;
-        const int group = 1;
+        // const int group = 1;
+        const int group = groups;
+        // std::cout<<"numOutput: "<<numOutput<<std::endl;
+        const int inpGroupCn = inpCn / group;
+        // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
         // std::cout<<"Group: "<<group<<std::endl;
         // std::cout<<"padMode:"<<padMode<<std::endl;
         // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
@@ -962,6 +973,7 @@ public:
             pad_type = padMode == "VALID" ? ml::AutoPad::Explicit : ml::AutoPad::SameUpper;
 
         ml::Conv2dOptions options = {};
+        options.groups = group;
         options.autoPad = pad_type;
         std::vector<int32_t> Strides(strides.begin(), strides.end());
         if (!Strides.empty())
@@ -1000,12 +1012,12 @@ public:
             ml::Operand webnnBias = nullptr;
             if (nodes.size() == 3)
             {
-                std::vector<int32_t> bias_shape = {1, numOutput / group, 1, 1};
+                std::vector<int32_t> bias_shape = {1, numOutput, 1, 1};
                 webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, bias_shape.data(), bias_shape.size());
             }
             else
             {
-                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput / group, 1, 1}, biasvec.data(), (numOutput / group) * sizeof(float), ml::OperandType::Float32);
+                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput, 1, 1}, biasvec.data(), (numOutput) * sizeof(float), ml::OperandType::Float32);
             }
             operand = webnnGraphBuilder.Add(operand, webnnBias);
         }
