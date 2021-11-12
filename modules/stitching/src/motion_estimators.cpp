@@ -253,36 +253,47 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
                                                                 edges_[i].second].num_inliers);
 
     int nerrs = total_num_matches_ * num_errs_per_measurement_;
-    Mat cam_params_c = cam_params_.clone();
-    //TODO: interface
-    //auto callbc = [&](Mat& param, Mat* err, Mat* jac)
-    //{
-    //    // workaround against losing current value
-    //    Mat backup = cam_params_c.clone();
-    //    param.copyTo(cam_params_c);
-    //    if (jac)
-    //        calcJacobian(*jac);
-    //    if (err)
-    //        calcError(*err);
-    //    backup.copyTo(cam_params_c);
-    //    return true;
-    //};
-    auto callb = [&](Mat& param, Mat* err, Mat* jac)
+
+    auto callb = [&](InputOutputArray param, OutputArray err, OutputArray jac) -> bool
     {
         // workaround against losing value
         Mat backup = cam_params_.clone();
         param.copyTo(cam_params_);
-        if (jac)
-            calcJacobian(*jac);
-        if (err)
-            calcError(*err);
+        if (jac.needed())
+        {
+            Mat m = jac.getMat();
+            calcJacobian(m);
+        }
+        if (err.needed())
+        {
+            Mat m = err.getMat();
+            calcError(m);
+        }
         backup.copyTo(cam_params_);
         return true;
     };
 
-    LevMarqDenseLinear::run(cam_params_, noArray(), nerrs, term_criteria_, DECOMP_SVD, callb);
+    LevMarqDenseLinear solver(cam_params_, callb, noArray(), nerrs);
+    //TODO: play with them
+    solver.initialLambdaLevMarq = 0.001;
+    solver.initialLmUpFactor = 10.0;
+    solver.initialLmDownFactor = 10.0;
+    solver.upDouble = false;
+    solver.useStepQuality = false;
+    solver.clampDiagonal = false;
+    solver.checkRelEnergyChange = false;
+    solver.stepNormInf = true;
+    solver.checkMinGradient = false;
+    // old LMSolver calculates successful iterations only, this one calculates all iterations
+    solver.maxIterations = (unsigned int)(term_criteria_.maxCount * 2.1);
+    solver.checkStepNorm = true;
+    solver.stepNormTolerance = term_criteria_.epsilon;
+    solver.smallEnergyTolerance = term_criteria_.epsilon * term_criteria_.epsilon;
+    BaseLevMarq::Report r = solver.optimize();
 
-    //LMSolver::run(cam_params_c, Mat(), nerrs, term_criteria_, DECOMP_SVD, callbc);
+    //DEBUG
+    //LevMarqDenseLinear::run(cam_params_, noArray(), nerrs, term_criteria_, DECOMP_SVD, callb);
+
 
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
