@@ -9,6 +9,9 @@ core = {
         'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed',
         'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat',
         'setLogLevel', 'getLogLevel',
+
+        # binding test routines
+        'utils_testOutputRect', 'utils_testOutputRectBool',
     ],
     'Algorithm': [],
 }

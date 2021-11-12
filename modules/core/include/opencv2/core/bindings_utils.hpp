@@ -204,6 +204,21 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+
+CV_WRAP static inline
+void testOutputRect(CV_OUT Rect& result)
+{
+    result = Rect(1,2,3,4);
+}
+
+CV_WRAP static inline
+bool testOutputRectBool(CV_OUT Rect& result)
+{
+    result = Rect(1,2,3,4);
+    return true;
+}
+
+
 namespace fs {
     CV_EXPORTS_W cv::String getCacheDirectoryForDownloads();
 } // namespace fs

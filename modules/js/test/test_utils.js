@@ -251,3 +251,29 @@ QUnit.test('test_rotated_rect', function(assert) {
         assert.equal(points[1].y, cv.RotatedRect.boundingRect2f(rect).y);
     }
 });
+
+QUnit.test('Test Rect Output', function(assert) {
+    {
+        let rect1 = new cv.Rect();
+
+        cv.utils_testOutputRect(rect1);
+
+        assert.equal(rect1.x, 1);
+        assert.equal(rect1.y, 2);
+        assert.equal(rect1.width, 3);
+        assert.equal(rect1.height, 4);
+    }
+
+    {
+        let rect1 = new cv.Rect();
+
+        let boolResult = cv.utils_testOutputRectBool(rect1);
+
+        assert.equal(boolResult, true);
+
+        assert.equal(rect1.x, 1);
+        assert.equal(rect1.y, 2);
+        assert.equal(rect1.width, 3);
+        assert.equal(rect1.height, 4);
+    }
+});
