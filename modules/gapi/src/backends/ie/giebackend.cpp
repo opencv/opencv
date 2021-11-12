@@ -1036,13 +1036,13 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(1u == uu.params.input_names.size());
         GAPI_Assert(2u == in_metas.size());
 
+        const auto &input_name = uu.params.input_names.at(0);
+        auto &&mm = in_metas.at(1u);
         // NB: Configuring input precision and network reshape must be done
         // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
-            const auto &input_name = uu.params.input_names.at(0);
             auto ii = uu.net.getInputsInfo().at(input_name);
-            auto &&mm = in_metas.at(1u);
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
                 uu.params.layer_names_to_reshape.end()) {
@@ -1056,6 +1056,13 @@ struct InferROI: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+        } else {
+            GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
+            auto inputs = uu.this_network.GetInputsInfo();
+            // FIXME: This isn't the best place to collect PreProcMap.
+            auto* non_const_prepm = const_cast<IEUnit::PreProcMap*>(&uu.preproc_map);
+            auto ii = inputs.at(input_name);
+            non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm));
         }
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -1145,6 +1152,16 @@ struct InferList: public cv::detail::KernelTag {
             // but now input meta isn't passed to compile() method.
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
+            }
+        } else {
+            GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
+            std::size_t idx = 1u;
+            auto inputs = uu.this_network.GetInputsInfo();
+            auto* non_const_prepm = const_cast<IEUnit::PreProcMap*>(&uu.preproc_map);
+            for (auto &&input_name : uu.params.input_names) {
+                auto ii = inputs.at(input_name);
+                const auto & mm = in_metas[idx++];
+                non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm));
             }
         }
 
@@ -1286,6 +1303,12 @@ struct InferList2: public cv::detail::KernelTag {
                     if (!input_reshape_table.empty()) {
                         const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
                     }
+                } else {
+                    GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
+                    auto inputs = uu.this_network.GetInputsInfo();
+                    auto* non_const_prepm = const_cast<IEUnit::PreProcMap*>(&uu.preproc_map);
+                    auto ii = inputs.at(input_name);
+                    non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm_0));
                 }
             } else {
                 // This is a cv::GMat (equals to: cv::Mat)
