@@ -513,10 +513,10 @@ struct ROIListNV12: public ::testing::Test {
             for (auto &&rc : m_roi_list) {
                 const auto ie_rc = IE::ROI {
                     0u
-                        , static_cast<std::size_t>(rc.x)
-                        , static_cast<std::size_t>(rc.y)
-                        , static_cast<std::size_t>(rc.width)
-                        , static_cast<std::size_t>(rc.height)
+                    , static_cast<std::size_t>(rc.x)
+                    , static_cast<std::size_t>(rc.y)
+                    , static_cast<std::size_t>(rc.width)
+                    , static_cast<std::size_t>(rc.height)
                 };
                 infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
                 infer_request.Infer();
@@ -576,11 +576,11 @@ struct SingleROI: public ::testing::Test {
             auto infer_request = this_network.CreateInferRequest();
 
             const auto ie_rc = IE::ROI {
-                    0u
-                    , static_cast<std::size_t>(m_roi.x)
-                    , static_cast<std::size_t>(m_roi.y)
-                    , static_cast<std::size_t>(m_roi.width)
-                    , static_cast<std::size_t>(m_roi.height)
+                0u
+                , static_cast<std::size_t>(m_roi.x)
+                , static_cast<std::size_t>(m_roi.y)
+                , static_cast<std::size_t>(m_roi.width)
+                , static_cast<std::size_t>(m_roi.height)
             };
 
             IE::Blob::Ptr roi_blob = IE::make_shared_blob(cv::gapi::ie::util::to_ie(m_in_mat), ie_rc);
@@ -638,11 +638,11 @@ struct SingleROINV12: public ::testing::Test {
             auto blob = cv::gapi::ie::util::to_ie(m_in_y, m_in_uv);
 
             const auto ie_rc = IE::ROI {
-                    0u
-                    , static_cast<std::size_t>(m_roi.x)
-                    , static_cast<std::size_t>(m_roi.y)
-                    , static_cast<std::size_t>(m_roi.width)
-                    , static_cast<std::size_t>(m_roi.height)
+                0u
+                , static_cast<std::size_t>(m_roi.x)
+                , static_cast<std::size_t>(m_roi.y)
+                , static_cast<std::size_t>(m_roi.width)
+                , static_cast<std::size_t>(m_roi.height)
             };
 
             IE::Blob::Ptr roi_blob = IE::make_shared_blob(blob, ie_rc);
@@ -2412,10 +2412,10 @@ TEST(ImportNetwork, InferROI)
         auto infer_request = this_network.CreateInferRequest();
         const auto ie_rc = IE::ROI {
             0u
-                , static_cast<std::size_t>(rect.x)
-                , static_cast<std::size_t>(rect.y)
-                , static_cast<std::size_t>(rect.width)
-                , static_cast<std::size_t>(rect.height)
+            , static_cast<std::size_t>(rect.x)
+            , static_cast<std::size_t>(rect.y)
+            , static_cast<std::size_t>(rect.width)
+            , static_cast<std::size_t>(rect.height)
         };
         IE::Blob::Ptr roi_blob = IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_mat), ie_rc);
         IE::PreProcessInfo info;
@@ -2475,10 +2475,10 @@ TEST(ImportNetwork, InferROINV12)
         auto infer_request = this_network.CreateInferRequest();
         const auto ie_rc = IE::ROI {
             0u
-                , static_cast<std::size_t>(rect.x)
-                , static_cast<std::size_t>(rect.y)
-                , static_cast<std::size_t>(rect.width)
-                , static_cast<std::size_t>(rect.height)
+            , static_cast<std::size_t>(rect.x)
+            , static_cast<std::size_t>(rect.y)
+            , static_cast<std::size_t>(rect.width)
+            , static_cast<std::size_t>(rect.height)
         };
         IE::Blob::Ptr roi_blob =
             IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_y_mat, in_uv_mat), ie_rc);
@@ -2541,10 +2541,10 @@ TEST(ImportNetwork, InferList)
         for (auto &&rc : roi_list) {
             const auto ie_rc = IE::ROI {
                 0u
-                    , static_cast<std::size_t>(rc.x)
-                    , static_cast<std::size_t>(rc.y)
-                    , static_cast<std::size_t>(rc.width)
-                    , static_cast<std::size_t>(rc.height)
+                , static_cast<std::size_t>(rc.x)
+                , static_cast<std::size_t>(rc.y)
+                , static_cast<std::size_t>(rc.width)
+                , static_cast<std::size_t>(rc.height)
             };
             IE::Blob::Ptr roi_blob =
                 IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_mat), ie_rc);
@@ -2618,10 +2618,10 @@ TEST(ImportNetwork, InferListNV12)
         for (auto &&rc : roi_list) {
             const auto ie_rc = IE::ROI {
                 0u
-                    , static_cast<std::size_t>(rc.x)
-                    , static_cast<std::size_t>(rc.y)
-                    , static_cast<std::size_t>(rc.width)
-                    , static_cast<std::size_t>(rc.height)
+                , static_cast<std::size_t>(rc.x)
+                , static_cast<std::size_t>(rc.y)
+                , static_cast<std::size_t>(rc.width)
+                , static_cast<std::size_t>(rc.height)
             };
             IE::Blob::Ptr roi_blob =
                 IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_y_mat, in_uv_mat), ie_rc);
@@ -2695,10 +2695,10 @@ TEST(ImportNetwork, InferList2)
         for (auto &&rc : roi_list) {
             const auto ie_rc = IE::ROI {
                 0u
-                    , static_cast<std::size_t>(rc.x)
-                    , static_cast<std::size_t>(rc.y)
-                    , static_cast<std::size_t>(rc.width)
-                    , static_cast<std::size_t>(rc.height)
+                , static_cast<std::size_t>(rc.x)
+                , static_cast<std::size_t>(rc.y)
+                , static_cast<std::size_t>(rc.width)
+                , static_cast<std::size_t>(rc.height)
             };
             IE::Blob::Ptr roi_blob =
                 IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_mat), ie_rc);
@@ -2772,10 +2772,10 @@ TEST(ImportNetwork, InferList2NV12)
         for (auto &&rc : roi_list) {
             const auto ie_rc = IE::ROI {
                 0u
-                    , static_cast<std::size_t>(rc.x)
-                    , static_cast<std::size_t>(rc.y)
-                    , static_cast<std::size_t>(rc.width)
-                    , static_cast<std::size_t>(rc.height)
+                , static_cast<std::size_t>(rc.x)
+                , static_cast<std::size_t>(rc.y)
+                , static_cast<std::size_t>(rc.width)
+                , static_cast<std::size_t>(rc.height)
             };
             IE::Blob::Ptr roi_blob =
                 IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_y_mat, in_uv_mat), ie_rc);
