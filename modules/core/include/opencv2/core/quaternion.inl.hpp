@@ -54,7 +54,7 @@ Quat<T> Quat<T>::createFromAngleAxis(const T angle, const Vec<T, 3> &axis)
     {
         CV_Error(Error::StsBadArg, "this quaternion does not represent a rotation");
     }
-    const T angle_half = angle * 0.5;
+    const T angle_half = angle * T(0.5);
     w = std::cos(angle_half);
     const T sin_v = std::sin(angle_half);
     const T sin_norm = sin_v / vNorm;
@@ -268,7 +268,7 @@ inline Quat<T>& Quat<T>::operator/=(const T a)
 template <typename T>
 inline Quat<T> Quat<T>::operator/(const T a) const
 {
-    const T a_inv = 1.0 / a;
+    const T a_inv = T(1.0) / a;
     return Quat<T>(w * a_inv, x * a_inv, y * a_inv, z * a_inv);
 }
 

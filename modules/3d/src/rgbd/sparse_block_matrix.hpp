@@ -83,7 +83,7 @@ struct BlockSparseMat
     Mat diagonal() const
     {
         // Diagonal max length is the number of columns in the sparse matrix
-        int diagLength = blockN * nBlocks;
+        int diagLength =int( blockN * nBlocks );
         cv::Mat diag   = cv::Mat::zeros(diagLength, 1, cv::DataType<_Tp>::type);
 
         for (int i = 0; i < diagLength; i++)
