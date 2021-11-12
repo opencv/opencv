@@ -71,7 +71,7 @@ public:
      * It's an ordinary overload of addition assignment operator.
      *
      * Example of usage:
-     * @snippet modules/gapi/samples/dynamic_graph.cpp  GIOProtoArgs usage
+     * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/dynamic_graph_snippets.cpp  GIOProtoArgs usage
      *
      */
     template<typename Tg>

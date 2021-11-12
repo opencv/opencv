@@ -134,12 +134,12 @@ namespace detail {
  *
  * For example, if an example computation is executed like this:
  *
- * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_decl_apply
+ * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp graph_decl_apply
  *
  * Extra parameter specifying which kernels to compile with can be
  * passed like this:
  *
- * @snippet modules/gapi/samples/api_ref_snippets.cpp apply_with_param
+ * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp apply_with_param
  */
 
 /**

@@ -57,7 +57,7 @@ namespace detail
  *
  *  Refer to the following example. Regular (untyped) code is written this way:
  *
- *  @snippet modules/gapi/samples/api_ref_snippets.cpp Untyped_Example
+ *  @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp Untyped_Example
  *
  *  Here:
  *
@@ -71,7 +71,7 @@ namespace detail
  *
  *  Now the same code written with typed API:
  *
- *  @snippet modules/gapi/samples/api_ref_snippets.cpp Typed_Example
+ *  @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp Typed_Example
  *
  *  The key difference is:
  *
