@@ -212,121 +212,6 @@ public:
 };
 
 
-class HomographyRefineCallback CV_FINAL : public LevMarqDenseLinear::Callback
-{
-public:
-    HomographyRefineCallback(InputArray _src, InputArray _dst)
-    {
-        src = _src.getMat();
-        dst = _dst.getMat();
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-        int i, count = src.checkVector(2);
-        Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
-        Mat err = _err.getMat(), J;
-        if( _Jac.needed())
-        {
-            _Jac.create(count*2, param.rows, CV_64F);
-            J = _Jac.getMat();
-            CV_Assert( J.isContinuous() && J.cols == 8 );
-        }
-
-        const Point2f* M = src.ptr<Point2f>();
-        const Point2f* m = dst.ptr<Point2f>();
-        const double* h = param.ptr<double>();
-        double* errptr = err.ptr<double>();
-        double* Jptr = J.data ? J.ptr<double>() : 0;
-
-        for( i = 0; i < count; i++ )
-        {
-            double Mx = M[i].x, My = M[i].y;
-            double ww = h[6]*Mx + h[7]*My + 1.;
-            ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
-            double xi = (h[0]*Mx + h[1]*My + h[2])*ww;
-            double yi = (h[3]*Mx + h[4]*My + h[5])*ww;
-            errptr[i*2] = xi - m[i].x;
-            errptr[i*2+1] = yi - m[i].y;
-
-            if( Jptr )
-            {
-                Jptr[0] = Mx*ww; Jptr[1] = My*ww; Jptr[2] = ww;
-                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
-                Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi;
-                Jptr[8] = Jptr[9] = Jptr[10] = 0.;
-                Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
-                Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
-
-                Jptr += 16;
-            }
-        }
-
-        return true;
-    }
-
-    Mat src, dst;
-};
-//DEBUG: remove
-//class HomographyRefineCallback2 CV_FINAL : public LMSolver::Callback
-//{
-//public:
-//    HomographyRefineCallback2(InputArray _src, InputArray _dst)
-//    {
-//        src = _src.getMat();
-//        dst = _dst.getMat();
-//    }
-//
-//    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-//    {
-//        int i, count = src.checkVector(2);
-//        Mat param = _param.getMat();
-//        _err.create(count * 2, 1, CV_64F);
-//        Mat err = _err.getMat(), J;
-//        if (_Jac.needed())
-//        {
-//            _Jac.create(count * 2, param.rows, CV_64F);
-//            J = _Jac.getMat();
-//            CV_Assert(J.isContinuous() && J.cols == 8);
-//        }
-//
-//        const Point2f* M = src.ptr<Point2f>();
-//        const Point2f* m = dst.ptr<Point2f>();
-//        const double* h = param.ptr<double>();
-//        double* errptr = err.ptr<double>();
-//        double* Jptr = J.data ? J.ptr<double>() : 0;
-//
-//        for (i = 0; i < count; i++)
-//        {
-//            double Mx = M[i].x, My = M[i].y;
-//            double ww = h[6] * Mx + h[7] * My + 1.;
-//            ww = fabs(ww) > DBL_EPSILON ? 1. / ww : 0;
-//            double xi = (h[0] * Mx + h[1] * My + h[2]) * ww;
-//            double yi = (h[3] * Mx + h[4] * My + h[5]) * ww;
-//            errptr[i * 2] = xi - m[i].x;
-//            errptr[i * 2 + 1] = yi - m[i].y;
-//
-//            if (Jptr)
-//            {
-//                Jptr[0] = Mx * ww; Jptr[1] = My * ww; Jptr[2] = ww;
-//                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
-//                Jptr[6] = -Mx * ww * xi; Jptr[7] = -My * ww * xi;
-//                Jptr[8] = Jptr[9] = Jptr[10] = 0.;
-//                Jptr[11] = Mx * ww; Jptr[12] = My * ww; Jptr[13] = ww;
-//                Jptr[14] = -Mx * ww * yi; Jptr[15] = -My * ww * yi;
-//
-//                Jptr += 16;
-//            }
-//        }
-//
-//        return true;
-//    }
-//
-//    Mat src, dst;
-//};
-
-
 static bool createAndRunRHORegistrator(double confidence,
                                        int    maxIters,
                                        double ransacReprojThreshold,
@@ -474,18 +359,69 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                 cb->runKernel( src, dst, H );
             Mat H8(8, 1, CV_64F, H.ptr<double>());
 
-            //TODO: interface
-            //Mat H8c = H8.clone();
-            Ptr<LevMarqDenseLinear::Callback> callb = makePtr<HomographyRefineCallback>(src, dst);
-            //Ptr<LevMarqDenseLinear> solver = LevMarqDenseLinear::create(callb, max_iter, (double)FLT_EPSILON);
-
-            Ptr<BaseLevMarq> solver = createLegacyLevMarq(H8, 10,
-                [&](Mat& param, Mat* err, Mat* J)->bool
+            auto homographyRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+            {
+                int i, count = src.checkVector(2);
+                Mat param = _param.getMat();
+                _err.create(count * 2, 1, CV_64F);
+                Mat err = _err.getMat(), J;
+                if (_Jac.needed())
                 {
-                    return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
-                        J ? _OutputArray(*J) : _OutputArray());
-                });
-            int r = solver->optimize();
+                    _Jac.create(count * 2, param.rows, CV_64F);
+                    J = _Jac.getMat();
+                    CV_Assert(J.isContinuous() && J.cols == 8);
+                }
+
+                const Point2f* M = src.ptr<Point2f>();
+                const Point2f* m = dst.ptr<Point2f>();
+                const double* h = param.ptr<double>();
+                double* errptr = err.ptr<double>();
+                double* Jptr = J.data ? J.ptr<double>() : 0;
+
+                for (i = 0; i < count; i++)
+                {
+                    double Mx = M[i].x, My = M[i].y;
+                    double ww = h[6] * Mx + h[7] * My + 1.;
+                    ww = fabs(ww) > DBL_EPSILON ? 1. / ww : 0;
+                    double xi = (h[0] * Mx + h[1] * My + h[2]) * ww;
+                    double yi = (h[3] * Mx + h[4] * My + h[5]) * ww;
+                    errptr[i * 2] = xi - m[i].x;
+                    errptr[i * 2 + 1] = yi - m[i].y;
+
+                    if (Jptr)
+                    {
+                        Jptr[0] = Mx * ww; Jptr[1] = My * ww; Jptr[2] = ww;
+                        Jptr[3] = Jptr[4] = Jptr[5] = 0.;
+                        Jptr[6] = -Mx * ww * xi; Jptr[7] = -My * ww * xi;
+                        Jptr[8] = Jptr[9] = Jptr[10] = 0.;
+                        Jptr[11] = Mx * ww; Jptr[12] = My * ww; Jptr[13] = ww;
+                        Jptr[14] = -Mx * ww * yi; Jptr[15] = -My * ww * yi;
+
+                        Jptr += 16;
+                    }
+                }
+
+                return true;
+            };
+            LevMarqDenseLinear solver(H8, homographyRefineCallback);
+            //TODO: play with it
+            solver.initialLambdaLevMarq = 0.001;
+            solver.initialLmUpFactor = 10.0;
+            solver.initialLmDownFactor = 10.0;
+            solver.upDouble = false;
+            solver.useStepQuality = false;
+            solver.clampDiagonal = false;
+            solver.checkRelEnergyChange = false;
+            solver.stepNormInf = true;
+            solver.checkMinGradient = false;
+            // old LMSolver calculates successful iterations only, this one calculates all iterations
+            solver.maxIterations = 21; // 10 * 2.1
+            solver.checkStepNorm = true;
+            solver.stepNormTolerance = (double)FLT_EPSILON;
+            solver.smallEnergyTolerance = (double)FLT_EPSILON * (double)FLT_EPSILON;
+
+            BaseLevMarq::Report r = solver.optimize();
+
             //std::cout << "returned: " << r << std::endl;
             //DEBUG: remove it
             //int r2 = LMSolver::create(makePtr<HomographyRefineCallback2>(src, dst), 10)->run(H8c);
