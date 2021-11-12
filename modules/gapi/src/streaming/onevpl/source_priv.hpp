@@ -51,7 +51,7 @@ private:
     Priv();
     DecoderParams create_decoder_from_file(uint32_t decoder_id,
                                            std::shared_ptr<IDataProvider> provider);
-    std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
+    std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel(std::shared_ptr<IDeviceSelector> selector);
 
     mfxLoader mfx_handle;
     mfxImplDescription *mfx_impl_description;

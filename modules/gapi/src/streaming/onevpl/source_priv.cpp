@@ -60,7 +60,7 @@ GSource::Priv::Priv() :
 
 GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
                     const std::vector<CfgParam>& params,
-                    std::shared_ptr<IDeviceSelector>) :
+                    std::shared_ptr<IDeviceSelector> device_selector) :
      GSource::Priv()
 {
     // Enable Config
@@ -195,7 +195,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // create session driving engine if required
     if (!engine) {
-        std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel();
+        std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel(device_selector);
 
         // TODO  Add factory static method in ProcessingEngineBase
         if (mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION) {
@@ -242,7 +242,7 @@ GSource::Priv::~Priv() {
     MFXUnload(mfx_handle);
 }
 
-std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel()
+std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::shared_ptr<IDeviceSelector> selector)
 {
     std::unique_ptr<VPLAccelerationPolicy> ret;
 
@@ -253,7 +253,7 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel()
     {
         GAPI_LOG_DEBUG(nullptr, "No HW Accel requested. Use CPU");
 
-        ret.reset(new VPLCPUAccelerationPolicy);
+        ret.reset(new VPLCPUAccelerationPolicy(selector));
         return ret;
     }
 
@@ -263,13 +263,13 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel()
     switch(accel_mode.Data.U32) {
         case MFX_ACCEL_MODE_VIA_D3D11:
         {
-            std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy);
+            std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy(selector));
             ret = std::move(cand);
             break;
         }
         case MFX_ACCEL_MODE_NA:
         {
-            std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy);
+            std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(selector));
             ret = std::move(cand);
             break;
         }

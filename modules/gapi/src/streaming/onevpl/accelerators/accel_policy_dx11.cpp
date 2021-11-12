@@ -32,7 +32,8 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy() :
+VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector),
     hw_handle(),
     device_context(),
     allocator()
@@ -63,10 +64,6 @@ VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
         GAPI_LOG_INFO(nullptr, "release ID3D11Device");
         hw_handle->Release();
     }
-}
-
-VPLAccelerationPolicy::AccelType VPLDX11AccelerationPolicy::get_accel_type() const {
-    return AccelType::GPU;
 }
 
 void VPLDX11AccelerationPolicy::init(session_t session) {

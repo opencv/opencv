@@ -29,6 +29,7 @@
 
 #ifdef HAVE_ONEVPL
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/cfg_param_device_selector.hpp"
 
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
@@ -320,8 +321,10 @@ TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
 {
     using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
     using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::CfgParamDeviceSelector;
 
-    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+    auto acceleration_policy =
+            std::make_shared<VPLCPUAccelerationPolicy>(std::make_shared<CfgParamDeviceSelector>());
 
     size_t surface_count = 10;
     size_t surface_size_bytes = 1024;
@@ -350,9 +353,11 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
 {
     using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
     using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::CfgParamDeviceSelector;
     using cv::gapi::wip::onevpl::Surface;
 
-    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+    auto acceleration_policy =
+            std::make_shared<VPLCPUAccelerationPolicy>(std::make_shared<CfgParamDeviceSelector>());
 
     size_t surface_count = 10;
     size_t surface_size_bytes = 1024;
@@ -406,9 +411,11 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
 {
     using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
     using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::CfgParamDeviceSelector;
     using cv::gapi::wip::onevpl::Surface;
 
-    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+    auto acceleration_policy =
+            std::make_shared<VPLCPUAccelerationPolicy>(std::make_shared<CfgParamDeviceSelector>());
 
     size_t surface_count = 10;
     size_t surface_size_bytes = 1024;
@@ -502,10 +509,17 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);
 }
+
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
 TEST(OneVPL_Source_DX11_Accel, Init)
 {
     using namespace cv::gapi::wip::onevpl;
-    VPLDX11AccelerationPolicy accel;
+
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                           MFX_ACCEL_MODE_VIA_D3D11));
+    VPLDX11AccelerationPolicy accel(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11));
 
     mfxLoader mfx_handle = MFXLoad();
 
@@ -581,6 +595,8 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     MFXClose(mfx_session);
     MFXUnload(mfx_handle);
 }
+#endif // HAVE_DIRECTX
+#endif // HAVE_D3D11
 
 TEST(OneVPL_Source_DX11_FrameLockable, LockUnlock_without_Adaptee)
 {

@@ -12,6 +12,7 @@
 #include <type_traits>
 
 #include <opencv2/gapi/media.hpp>
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 
 #ifdef HAVE_ONEVPL
 #include <vpl/mfxvideo.h>
@@ -24,7 +25,10 @@ namespace onevpl {
 class Surface;
 struct VPLAccelerationPolicy
 {
-    virtual ~VPLAccelerationPolicy() {}
+    using device_selector_ptr_t = std::shared_ptr<IDeviceSelector>;
+
+    VPLAccelerationPolicy(device_selector_ptr_t selector) : device_selector(selector) {}
+    virtual ~VPLAccelerationPolicy() = default;
 
     using pool_key_t = void*;
 
@@ -35,12 +39,14 @@ struct VPLAccelerationPolicy
     using surface_ptr_ctr_t = std::function<surface_ptr_t(std::shared_ptr<void> out_buf_ptr,
                                                           size_t out_buf_ptr_offset,
                                                           size_t out_buf_ptr_size)>;
-    enum class AccelType {
-        CPU,
-        GPU
-    };
 
-    virtual AccelType get_accel_type() const = 0;
+    device_selector_ptr_t get_device_selector() {
+        return device_selector;
+    }
+    const device_selector_ptr_t get_device_selector() const {
+        return device_selector;
+    }
+
     virtual void init(session_t session) = 0;
     virtual void deinit(session_t session) = 0;
 
@@ -56,6 +62,8 @@ struct VPLAccelerationPolicy
 
     virtual cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
                                                             mfxFrameSurface1* surface) = 0;
+private:
+    device_selector_ptr_t device_selector;
 };
 } // namespace onevpl
 } // namespace wip

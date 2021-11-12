@@ -113,7 +113,8 @@ surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
 }
 } // namespace utils
 
-VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy() {
+VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
     GAPI_LOG_INFO(nullptr, "created");
 }
 
@@ -123,10 +124,6 @@ VPLCPUAccelerationPolicy::~VPLCPUAccelerationPolicy() {
         // do not free key here: last surface will release it
     }
     GAPI_LOG_INFO(nullptr, "destroyed");
-}
-
-VPLAccelerationPolicy::AccelType VPLCPUAccelerationPolicy::get_accel_type() const {
-    return AccelType::CPU;
 }
 
 void VPLCPUAccelerationPolicy::init(session_t session) {

@@ -36,12 +36,11 @@ namespace onevpl {
 struct GAPI_EXPORTS VPLDX11AccelerationPolicy final: public VPLAccelerationPolicy
 {
     // GAPI_EXPORTS for tests
-    VPLDX11AccelerationPolicy();
+    VPLDX11AccelerationPolicy(device_selector_ptr_t selector);
     ~VPLDX11AccelerationPolicy();
 
     using pool_t = CachedPool;
 
-    AccelType get_accel_type() const override;
     void init(session_t session) override;
     void deinit(session_t session) override;
     pool_key_t create_surface_pool(const mfxFrameAllocRequest& alloc_request,

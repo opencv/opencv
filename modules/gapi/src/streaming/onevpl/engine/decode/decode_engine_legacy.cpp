@@ -176,11 +176,17 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder.Data.U32;
-    VPLAccelerationPolicy::AccelType accel_type = acceleration_policy->get_accel_type();
-    if (accel_type == VPLAccelerationPolicy::AccelType::GPU) {
+
+    // set memory stream direction accroding to accelearion policy device type
+    IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
+    GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
+    AccelType accel_type = devices.begin()->second.get_type();
+    if (accel_type == AccelType::DX11) {
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
+    } else if (accel_type == AccelType::HOST) {
+        mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     } else {
-         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+        GAPI_Assert(false && "unsupported AccelType from device selector");
     }
 
     sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);

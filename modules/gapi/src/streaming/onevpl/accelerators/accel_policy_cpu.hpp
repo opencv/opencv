@@ -25,12 +25,11 @@ namespace onevpl {
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolicy
 {
-    VPLCPUAccelerationPolicy();
+    VPLCPUAccelerationPolicy(device_selector_ptr_t selector);
     ~VPLCPUAccelerationPolicy();
 
     using pool_t = CachedPool;
 
-    AccelType get_accel_type() const override;
     void init(session_t session) override;
     void deinit(session_t session) override;
     pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator);
