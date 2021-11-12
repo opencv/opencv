@@ -48,7 +48,7 @@ public:
     // checks if graph is connected and each edge connects exactly 2 nodes
     virtual bool isValid() const = 0;
 
-    // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
+    // Returns number of iterations elapsed or -1 if failed to optimize
     virtual int optimize() = 0;
 
     // calculate cost function based on current nodes parameters

@@ -569,10 +569,10 @@ static void doJacobiScalingSparse(BlockSparseMat<double, 6, 6>& jtj, Mat_<double
 }
 
 //TODO: robustness
-struct PoseGraphLevMarq : public BaseLevMarq
+struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
 {
-    PoseGraphLevMarq(PoseGraphImpl* pg_) :
-        BaseLevMarq(),
+    PoseGraphLevMarqImpl(PoseGraphImpl* pg_) :
+        BaseLevMarq::Impl(),
         pg(pg_),
         jtj(0),
         jtb(),
@@ -667,7 +667,7 @@ struct PoseGraphLevMarq : public BaseLevMarq
                     jtj.refBlock(srcPlace, srcPlace) += sj.t() * sj;
 
                     Vec6f jtbSrc = sj.t() * res;
-                    for (int i = 0; i < 6; i++)
+                    for (size_t i = 0; i < 6; i++)
                     {
                         jtb(6 * srcPlace + i) += jtbSrc[i];
                     }
@@ -681,7 +681,7 @@ struct PoseGraphLevMarq : public BaseLevMarq
                     jtj.refBlock(dstPlace, dstPlace) += tj.t() * tj;
 
                     Vec6f jtbDst = tj.t() * res;
-                    for (int i = 0; i < 6; i++)
+                    for (size_t i = 0; i < 6; i++)
                     {
                         jtb(6 * dstPlace + i) += jtbDst[i];
                     }
@@ -721,7 +721,7 @@ struct PoseGraphLevMarq : public BaseLevMarq
     virtual void prepareVars() CV_OVERRIDE
     {
         jtj = BlockSparseMat<double, 6, 6>(nVarNodes);
-        jtb = Mat_<double>(nVars, 1);
+        jtb = Mat_<double>((int)nVars, 1);
         tempNodes = pg->nodes;
     }
 
@@ -739,7 +739,7 @@ struct PoseGraphLevMarq : public BaseLevMarq
     {
         for (size_t i = 0; i < nVars; i++)
         {
-            jtj.refElem(i, i) = d(i);
+            jtj.refElem(i, i) = d((int)i);
         }
     }
 
@@ -781,6 +781,14 @@ struct PoseGraphLevMarq : public BaseLevMarq
 };
 
 
+class PoseGraphLevMarq : public BaseLevMarq
+{
+public:
+    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqImpl>(pg))
+    { }
+};
+
+
 int PoseGraphImpl::optimize()
 {
     Ptr<PoseGraphLevMarq> lm = makePtr<PoseGraphLevMarq>(this);
@@ -791,7 +799,9 @@ int PoseGraphImpl::optimize()
     lm->maxIterations = 100;
     lm->checkRelEnergyChange = true;
     lm->relEnergyDeltaTolerance = 1e-6;
-    return lm->optimize();
+
+    BaseLevMarq::Report r = lm->optimize();
+    return r.found ? r.iters : -1;
 }
 
 #else
