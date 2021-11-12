@@ -38,6 +38,23 @@ VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(device_selector_ptr_t selec
     device_context(),
     allocator()
 {
+    // setup dx11 device
+    IDeviceSelector::DeviceScoreTable devices = get_device_selector()->select_devices();
+    GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
+    AccelType accel_type = devices.begin()->second.get_type();
+    GAPI_Assert(accel_type == AccelType::DX11 &&
+                "Unexpected device AccelType while is waiting AccelType::DX11");
+
+    hw_handle = reinterpret_cast<ID3D11Device*>(devices.begin()->second.get_ptr());
+
+    // setup dx11 context
+    IDeviceSelector::DeviceContexts contexts = get_device_selector()->select_context();
+    GAPI_Assert(contexts.size() == 1 && "Multiple(or zero) acceleration context case is unsupported");
+    accel_type = contexts.begin()->get_type();
+    GAPI_Assert(accel_type == AccelType::DX11 &&
+                "Unexpected context AccelType while is waiting AccelType::DX11");
+    device_context = reinterpret_cast<ID3D11DeviceContext*>(contexts.begin()->get_ptr());
+
     // setup dx11 allocator
     memset(&allocator, 0, sizeof(mfxFrameAllocator));
     allocator.Alloc = alloc_cb;
@@ -53,68 +70,10 @@ VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
     for (auto& allocation_pair : allocation_table) {
         allocation_pair.second.reset();
     }
-
-    if (device_context) {
-        GAPI_LOG_INFO(nullptr, "release context: " << device_context);
-        device_context->Release();
-    }
-
-    if (hw_handle)
-    {
-        GAPI_LOG_INFO(nullptr, "release ID3D11Device");
-        hw_handle->Release();
-    }
+    GAPI_LOG_INFO(nullptr, "destroyed");
 }
 
 void VPLDX11AccelerationPolicy::init(session_t session) {
-    //Create device
-    UINT creationFlags = 0;//D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
-    // If the project is in a debug build, enable debugging via SDK Layers with this flag.
-    creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-    // This array defines the set of DirectX hardware feature levels this app will support.
-    // Note the ordering should be preserved.
-    // Don't forget to declare your application's minimum required feature level in its
-    // description.  All applications are assumed to support 9.1 unless otherwise stated.
-    D3D_FEATURE_LEVEL featureLevels[] =
-    {
-        D3D_FEATURE_LEVEL_11_1,
-        D3D_FEATURE_LEVEL_11_0,
-        D3D_FEATURE_LEVEL_10_1,
-        D3D_FEATURE_LEVEL_10_0,
-    };
-    D3D_FEATURE_LEVEL featureLevel;
-
-    // Create the Direct3D 11 API device object and a corresponding context.
-    HRESULT err =
-        D3D11CreateDevice(
-            nullptr, // Specify nullptr to use the default adapter.
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            creationFlags, // Set set debug and Direct2D compatibility flags.
-            featureLevels, // List of feature levels this app can support.
-            ARRAYSIZE(featureLevels),
-            D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION.
-            &hw_handle, // Returns the Direct3D device created.
-            &featureLevel, // Returns feature level of device created.
-            &device_context // Returns the device immediate context.
-            );
-    if(FAILED(err))
-    {
-        throw std::logic_error("Cannot create D3D11CreateDevice, error: " + std::to_string(HRESULT_CODE(err)));
-    }
-
-    // oneVPL recommendation
-    {
-        ID3D11Multithread       *pD11Multithread;
-        device_context->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
-        pD11Multithread->SetMultithreadProtected(true);
-        pD11Multithread->Release();
-    }
-
     mfxStatus sts = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE, (mfxHDL) hw_handle);
     if (sts != MFX_ERR_NONE)
     {
