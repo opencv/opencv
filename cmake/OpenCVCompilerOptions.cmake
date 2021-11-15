@@ -407,6 +407,9 @@ if(MSVC)
     endif()
   endif()
 
+  # Enable [[attribute]] syntax checking to prevent silent failure: "attribute is ignored in this syntactic position"
+  add_extra_compiler_option("/w15240")
+
   if(NOT ENABLE_NOISY_WARNINGS)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # conditional expression is constant
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4251) # class 'std::XXX' needs to have dll-interface to be used by clients of YYY

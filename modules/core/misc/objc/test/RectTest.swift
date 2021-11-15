@@ -101,6 +101,30 @@ class RectTest: OpenCVTestCase {
         XCTAssertEqual(1, r.height);
     }
 
+    func testRect2fPointPoint() {
+        let p1 = Point2f(x:4.3, y:4.1)
+        let p2 = Point2f(x:2.7, y:3.9)
+
+        let r = Rect2f(point: p1, point: p2)
+        XCTAssertNotNil(r);
+        XCTAssertEqual(2.7, r.x);
+        XCTAssertEqual(3.9, r.y);
+        XCTAssertEqual(1.6, r.width, accuracy: OpenCVTestCase.FEPS);
+        XCTAssertEqual(0.2, r.height, accuracy: OpenCVTestCase.FEPS);
+    }
+
+    func testRect2dPointPoint() {
+        let p1 = Point2d(x:4.7879839, y:4.9922311)
+        let p2 = Point2d(x:2.1213123, y:3.1122129)
+
+        let r = Rect2d(point: p1, point: p2)
+        XCTAssertNotNil(r);
+        XCTAssertEqual(2.1213123, r.x);
+        XCTAssertEqual(3.1122129, r.y);
+        XCTAssertEqual(2.6666716, r.width, accuracy: OpenCVTestCase.EPS);
+        XCTAssertEqual(1.8800182, r.height, accuracy: OpenCVTestCase.EPS);
+    }
+
     func testRectPointSize() {
         let p1 = Point(x: 4, y: 4)
         let sz = Size(width: 3, height: 1)

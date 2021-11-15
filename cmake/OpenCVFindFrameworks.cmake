@@ -17,7 +17,7 @@ else()
 endif()
 
 # --- Concurrency ---
-if(MSVC AND NOT HAVE_TBB)
+if(MSVC AND NOT HAVE_TBB AND NOT OPENCV_DISABLE_THREAD_SUPPORT)
   set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
   file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
   try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")

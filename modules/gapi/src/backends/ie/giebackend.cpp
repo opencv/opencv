@@ -237,6 +237,7 @@ struct IEUnit {
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
+            net.setBatchSize(params.batch_size);
             inputs  = net.getInputsInfo();
             outputs = net.getOutputsInfo();
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
@@ -630,6 +631,11 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           InferenceEngine::InferRequest& request,
                                           size_t id) {
     task.callback(request);
+    // NB: IE::InferRequest keeps the callback until the new one is set.
+    // Since user's callback might keep resources that should be released,
+    // need to destroy its after execution.
+    // Let's set the empty one to cause the destruction of a callback.
+    request.SetCompletionCallback([](){});
     m_idle_ids.push(id);
 }
 
@@ -831,7 +837,6 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         auto output = ctx->output(i);
         ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.post(std::move(output));
-
     }
 }
 
@@ -1408,11 +1413,11 @@ std::vector<int> cv::gapi::ie::util::to_ocv(const IE::SizeVector &dims) {
     return toCV(dims);
 }
 
-IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &blob) {
     return wrapIE(blob, cv::gapi::ie::TraitAs::IMAGE);
 }
 
-IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &y_plane, cv::Mat &uv_plane) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &y_plane, const cv::Mat &uv_plane) {
     auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
     auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
 #if INF_ENGINE_RELEASE >= 2021010000

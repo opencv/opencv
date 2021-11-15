@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2020 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -292,7 +292,7 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
     size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
         data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
-        return data_stream.gcount();
+        return (size_t)data_stream.gcount();
     }
     bool empty() const override {
         return data_stream.eof() || data_stream.bad();
@@ -353,7 +353,9 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
         // With constant inputs, the stream is endless so
         // the blocking pull() should never return `false`.
         EXPECT_TRUE(ccomp.pull(cv::gout(out_mat_gapi)));
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
 
     EXPECT_TRUE(ccomp.running());
@@ -405,7 +407,9 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
         frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(ccomp.running());
@@ -1130,7 +1134,7 @@ TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
         }
         GAPI_Assert(out_mat || out_int);
         if (out_int) {
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1748,7 +1752,7 @@ TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
         if (out_vec || out_int) {
             EXPECT_EQ(320, out_vec.value()[0]);
             EXPECT_EQ(240, out_vec.value()[1]);
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -2284,4 +2288,70 @@ TEST(OneVPL_Source, Init)
     EXPECT_TRUE(stream_data_provider->empty());
 }
 #endif
+
+TEST(GAPI_Streaming, TestDesyncRMat) {
+    cv::GMat in;
+    auto blurred = cv::gapi::blur(in, cv::Size{3,3});
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = in - blurred;
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out)).compileStreaming();
+
+    cv::Size sz(32,32);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+    pipe.setSource(cv::gin(in_mat));
+    pipe.start();
+
+    cv::optional<cv::RMat> out_desync;
+    cv::optional<cv::RMat> out_rmat;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no RMat handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_rmat)));
+        if (out_rmat) break;
+    }
+}
+
+G_API_OP(GTestBlur, <GFrame(GFrame)>, "test.blur") {
+    static GFrameDesc outMeta(GFrameDesc d) { return d; }
+};
+GAPI_OCV_KERNEL(GOcvTestBlur, GTestBlur) {
+    static void run(const cv::MediaFrame& in, cv::MediaFrame& out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat mat(d.size, CV_8UC3, view.ptr[0]);
+        cv::Mat blurred;
+        cv::blur(mat, blurred, cv::Size{3,3});
+        out = cv::MediaFrame::Create<TestMediaBGR>(blurred);
+    }
+};
+
+TEST(GAPI_Streaming, TestDesyncMediaFrame) {
+    initTestDataPath();
+    cv::GFrame in;
+    auto blurred = GTestBlur::on(in);
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = GTestBlur::on(blurred);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GOcvTestBlur>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::optional<cv::MediaFrame> out_desync;
+    cv::optional<cv::MediaFrame> out_frame;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no MediaFrame handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
+        if (out_frame) break;
+    }
+}
+
 } // namespace opencv_test

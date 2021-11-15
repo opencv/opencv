@@ -129,7 +129,6 @@ static bool areOnTheSameSideOfLine(const cv::Point2f &p1, const cv::Point2f &p2,
 
 static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const cv::Point2f &c);
 
-static void createConvexHull(cv::InputArray points, std::vector<cv::Point2f> &polygon);
 
 static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b);
 
@@ -318,28 +317,12 @@ namespace minEnclosingTriangle {
 */
 static void findMinEnclosingTriangle(cv::InputArray points,
                                      CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
-    std::vector<cv::Point2f> resultingTriangle, polygon;
-
-    createConvexHull(points, polygon);
+    CV_Assert(!points.empty());
+    std::vector<cv::Point2f> resultingTriangle;
+    cv::Mat polygon;
+    convexHull(points, polygon, true, true);
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
     cv::Mat(resultingTriangle).copyTo(triangle);
-}
-
-//! Create the convex hull of the given set of points
-/*!
-* @param points     The provided set of points
-* @param polygon    The polygon representing the convex hull of the points
-*/
-static void createConvexHull(cv::InputArray points, std::vector<cv::Point2f> &polygon) {
-    cv::Mat pointsMat = points.getMat();
-    std::vector<cv::Point2f> pointsVector;
-
-    CV_Assert((pointsMat.checkVector(2) > 0) &&
-              ((pointsMat.depth() == CV_32F) || (pointsMat.depth() == CV_32S)));
-
-    pointsMat.convertTo(pointsVector, CV_32F);
-
-    convexHull(pointsVector, polygon, true, true);
 }
 
 //! Find the minimum enclosing triangle and its area

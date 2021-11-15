@@ -7,8 +7,6 @@
 
 #include "precomp.hpp"
 
-#include <iostream>
-
 #include <ade/util/zip_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
@@ -102,7 +100,7 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
     switch (arg.index())
     {
     case GRunArg::index_of<Mat>() :
-        mag_rmat = make_rmat<RMatAdapter>(util::get<Mat>(arg)); break;
+        mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg)); break;
     case GRunArg::index_of<cv::RMat>() :
         mag_rmat = util::get<cv::RMat>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
@@ -123,7 +121,7 @@ void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
     switch (arg.index())
     {
     case GRunArgP::index_of<Mat*>() :
-        mag_rmat = make_rmat<RMatAdapter>(*util::get<Mat*>(arg)); break;
+        mag_rmat = make_rmat<RMatOnMat>(*util::get<Mat*>(arg)); break;
     case GRunArgP::index_of<cv::RMat*>() :
         mag_rmat = *util::get<cv::RMat*>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
@@ -157,12 +155,11 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         // FIXME:
         // Rework, find a better way to check if there should be
         // a real copy (add a pass to StreamingBackend?)
-        // NB: In case RMat adapter not equal to "RMatAdapter" need to
+        // NB: In case RMat adapter not equal to "RMatOnMat" need to
         // copy data back to the host as well.
-        // FIXME: Rename "RMatAdapter" to "OpenCVAdapter".
         auto& out_mat = *util::get<cv::Mat*>(g_arg);
         const auto& rmat = mag.template slot<cv::RMat>().at(rc.id);
-        auto* adapter = rmat.get<RMatAdapter>();
+        auto* adapter = rmat.get<RMatOnMat>();
         if ((adapter != nullptr && out_mat.data != adapter->data()) ||
             (adapter == nullptr)) {
             auto view = rmat.access(RMat::Access::R);
@@ -223,7 +220,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
             } else {
                 Mat mat;
                 createMat(desc, mat);
-                rmat = make_rmat<RMatAdapter>(mat);
+                rmat = make_rmat<RMatOnMat>(mat);
             }
         }
         break;
@@ -411,7 +408,8 @@ bool cv::gimpl::GExecutor::canReshape() const
 {
     // FIXME: Introduce proper reshaping support on GExecutor level
     // for all cases!
-    return (m_ops.size() == 1) && m_ops[0].isl_exec->canReshape();
+    return std::all_of(m_ops.begin(), m_ops.end(),
+                       [](const OpDesc& op) { return op.isl_exec->canReshape(); });
 }
 
 void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
@@ -421,7 +419,17 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     ade::passes::PassContext ctx{g};
     passes::initMeta(ctx, inMetas);
     passes::inferMeta(ctx, true);
-    m_ops[0].isl_exec->reshape(g, args);
+
+    // NB: Before reshape islands need to re-init resources for every slot.
+    for (auto slot : m_slots)
+    {
+        initResource(slot.slot_nh, slot.data_nh);
+    }
+
+    for (auto& op : m_ops)
+    {
+        op.isl_exec->reshape(g, args);
+    }
 }
 
 void cv::gimpl::GExecutor::prepareForNewStream()

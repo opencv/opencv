@@ -2151,6 +2151,89 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     {
         cc(gin(in_mat1), gout(out_mat_gapi));
     }
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+// This test cases were created to control performance result of test scenario mentioned here:
+// https://stackoverflow.com/questions/60629331/opencv-gapi-performance-not-good-as-expected
+
+PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    std::string fileName = get<1>(GetParam());
+    cv::GCompileArgs compile_args = get<2>(GetParam());
+
+    in_mat1 = cv::imread(findDataFile(fileName));
+
+    cv::Mat cvvga;
+    cv::Mat cvgray;
+    cv::Mat cvblurred;
+
+    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
+    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
+    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
+    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
+
+    cv::GMat in;
+    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, INTER_LINEAR);
+    cv::GMat gray = cv::gapi::BGR2Gray(vga);
+    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
+    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
+    cv::GComputation ac(in, out);
+
+    auto cc = ac.compile(descr_of(gin(in_mat1)),
+        std::move(compile_args));
+    cc(gin(in_mat1), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1), gout(out_mat_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(ResizeInSimpleGraphPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    cv::Size sz_in = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
+
+    initMatsRandU(type, sz_in, type, false);
+
+    cv::Mat add_res_ocv;
+
+    cv::add(in_mat1, in_mat2, add_res_ocv);
+    cv::resize(add_res_ocv, out_mat_ocv, cv::Size(), 0.5, 0.5);
+
+    cv::GMat in1, in2;
+    cv::GMat add_res_gapi = cv::gapi::add(in1, in2);
+    cv::GMat out = cv::gapi::resize(add_res_gapi, cv::Size(), 0.5, 0.5, INTER_LINEAR);
+    cv::GComputation ac(GIn(in1, in2), GOut(out));
+
+    auto cc = ac.compile(descr_of(gin(in_mat1, in_mat2)),
+                         std::move(compile_args));
+    cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+    }
 
     // Comparison ////////////////////////////////////////////////////////////
     {

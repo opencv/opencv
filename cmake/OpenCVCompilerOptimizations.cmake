@@ -241,7 +241,7 @@ if(X86 OR X86_64)
     ocv_intel_compiler_optimization_option(FP16 "-mavx" "/arch:AVX")
     ocv_intel_compiler_optimization_option(AVX "-mavx" "/arch:AVX")
     ocv_intel_compiler_optimization_option(FMA3 "" "")
-    ocv_intel_compiler_optimization_option(POPCNT "" "")
+    ocv_intel_compiler_optimization_option(POPCNT "-mpopcnt" "")  # -mpopcnt is available since ICC 19.0.0
     ocv_intel_compiler_optimization_option(SSE4_2 "-msse4.2" "/arch:SSE4.2")
     ocv_intel_compiler_optimization_option(SSE4_1 "-msse4.1" "/arch:SSE4.1")
     ocv_intel_compiler_optimization_option(SSE3 "-msse3" "/arch:SSE3")

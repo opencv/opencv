@@ -210,6 +210,96 @@ struct BNLLFunctor {
 };
 
 template <class T>
+struct CeilFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE CeilFunctor() { }
+    CUDA4DNN_DEVICE CeilFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::ceil;
+        return ceil(value);
+    }
+};
+
+template <class T>
+struct FloorFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE FloorFunctor() { }
+    CUDA4DNN_DEVICE FloorFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::floor;
+        return floor(value);
+    }
+};
+
+template <class T>
+struct LogFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE LogFunctor() { }
+    CUDA4DNN_DEVICE LogFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::log;
+        return log(value);
+    }
+};
+
+template <class T>
+struct RintFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE RintFunctor() { }
+    CUDA4DNN_DEVICE RintFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::rint;
+        return rint(value);
+    }
+};
+
+template <class T>
+struct SqrtFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SqrtFunctor() { }
+    CUDA4DNN_DEVICE SqrtFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::sqrt;
+        return sqrt(value);
+    }
+};
+
+template <class T>
+struct NotFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE NotFunctor() { }
+    CUDA4DNN_DEVICE NotFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::floor;
+        return floor(static_cast<T>(1.) - value);
+    }
+};
+
+template <class T>
 struct PowerFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() : exp(1), scale(1), shift(0) { }
@@ -259,6 +349,21 @@ struct MaxFunctor {
     CUDA4DNN_DEVICE T operator()(T x, T y) {
         using csl::device::max;
         return max(x, y);
+    }
+};
+
+template <class T>
+struct MinFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MinFunctor() { }
+    CUDA4DNN_DEVICE MinFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        using csl::device::min;
+        return min(x, y);
     }
 };
 

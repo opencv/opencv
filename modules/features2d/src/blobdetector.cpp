@@ -44,6 +44,8 @@
 #include <iterator>
 #include <limits>
 
+#include <opencv2/core/utils/logger.hpp>
+
 // Requires CMake flag: DEBUG_opencv_features2d=ON
 //#define DEBUG_BLOB_DETECTOR
 
@@ -317,6 +319,19 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
         CV_Error(Error::StsUnsupportedFormat, "Blob detector only supports 8-bit images!");
     }
 
+    CV_CheckGT(params.thresholdStep, 0.0f, "");
+    if (params.minThreshold + params.thresholdStep >= params.maxThreshold)
+    {
+        // https://github.com/opencv/opencv/issues/6667
+        CV_LOG_ONCE_INFO(NULL, "SimpleBlobDetector: params.minDistBetweenBlobs is ignored for case with single threshold");
+#if 0  // OpenCV 5.0
+        CV_CheckEQ(params.minRepeatability, 1u, "Incompatible parameters for case with single threshold");
+#else
+        if (params.minRepeatability != 1)
+            CV_LOG_WARNING(NULL, "SimpleBlobDetector: params.minRepeatability=" << params.minRepeatability << " is incompatible for case with single threshold. Empty result is expected.");
+#endif
+    }
+
     std::vector < std::vector<Center> > centers;
     for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
     {
@@ -325,19 +340,13 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
 
         std::vector < Center > curCenters;
         findBlobs(grayscaleImage, binarizedImage, curCenters);
-        if(params.maxThreshold - params.minThreshold <= params.thresholdStep) {
-            // if the difference between min and max threshold is less than the threshold step
-            // we're only going to enter the loop once, so we need to add curCenters
-            // to ensure we still use minDistBetweenBlobs
-            centers.push_back(curCenters);
-        }
         std::vector < std::vector<Center> > newCenters;
         for (size_t i = 0; i < curCenters.size(); i++)
         {
             bool isNew = true;
             for (size_t j = 0; j < centers.size(); j++)
             {
-                double dist = norm(centers[j][centers[j].size() / 2 ].location - curCenters[i].location);
+                double dist = norm(centers[j][ centers[j].size() / 2 ].location - curCenters[i].location);
                 isNew = dist >= params.minDistBetweenBlobs && dist >= centers[j][ centers[j].size() / 2 ].radius && dist >= curCenters[i].radius;
                 if (!isNew)
                 {

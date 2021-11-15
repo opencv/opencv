@@ -111,6 +111,12 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(AbsVal,         AbsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Power,          PowerLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Exp,            ExpLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Ceil,           CeilLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Floor,          FloorLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Log,            LogLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Round,          RoundLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Sqrt,           SqrtLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Not,            NotLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNorm,      BatchNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dropout,        BlankLayer);
@@ -133,6 +139,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Padding,        PaddingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Proposal,       ProposalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Compare,        CompareLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DataAugmentation, DataAugmentationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Correlation,    CorrelationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Accum,          AccumLayer);
@@ -144,6 +151,7 @@ void initializeLayerFactory()
 
     CV_DNN_REGISTER_LAYER_CLASS(Quantize,         QuantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dequantize,       DequantizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Requantize,       RequantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ConvolutionInt8,  ConvolutionLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProductInt8, InnerProductLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);
@@ -173,6 +181,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(SilenceInt8,      BlankLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ConstInt8,        ConstLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ReshapeInt8,      ReshapeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ResizeInt8,       ResizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SplitInt8,        SplitLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SliceInt8,        SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CropInt8,         CropLayer);

@@ -387,6 +387,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RequantizeLayer : public Layer
+    {
+    public:
+        float scale, shift;
+        static Ptr<RequantizeLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ConcatLayer : public Layer
     {
     public:
@@ -593,6 +600,42 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ExpLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CeilLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<CeilLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS FloorLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<FloorLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS LogLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<LogLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS RoundLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<RoundLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SqrtLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SqrtLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NotLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<NotLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:
@@ -610,7 +653,7 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Element wise operation on inputs
 
     Extra optional parameters:
-    - "operation" as string. Values are "sum" (default), "prod", "max", "div"
+    - "operation" as string. Values are "sum" (default), "prod", "max", "div", "min"
     - "coeff" as float array. Specify weights of inputs for SUM operation
     - "output_channels_mode" as string. Values are "same" (default, all input must have the same layout), "input_0", "input_0_truncate", "max_input_channels"
     */
@@ -658,6 +701,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         bool hasBias;
         int axis;
+        String mode;
 
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };
@@ -677,6 +721,12 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     class CV_EXPORTS ShiftLayerInt8 : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CompareLayer : public Layer
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);

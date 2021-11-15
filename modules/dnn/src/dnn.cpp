@@ -3011,7 +3011,19 @@ struct Net::Impl : public detail::NetImplBase
                         // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
                         cuda4dnn::csl::CSLContext context; // assume that initCUDA and EltwiseOp do not use the context during init
                         const auto node = nextData->layerInstance->initCUDA(&context, nextData->inputBlobsWrappers, nextData->outputBlobsWrappers);
-                        const auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
+                        auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
+
+                        // broadcasting not supported in fused ops
+                        auto required_shape = shape(nextData->outputBlobs[0]);
+                        for (int i = 0; i < nextData->inputBlobs.size(); i++)
+                        {
+                            if (shape(*nextData->inputBlobs[i]) != required_shape)
+                            {
+                                eltwiseNode.reset();
+                                break;
+                            }
+                        }
+
                         // CUDA backend uses EltwiseOp when all operands have the same number of channels; otherwise, ShortcutOp is used.
                         // Hence, a successful cast to EltwiseOp implies that the number of channels is same in all operand tensors.
                         if (eltwiseNode.empty() || eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
@@ -4360,6 +4372,9 @@ int Net::addLayer(const String &name, const String &type, const int &dtype, Laye
     if (params.get<bool>("has_dynamic_shapes", false))
         impl->hasDynamicShapes = true;
 
+    if (dtype == CV_8S)
+        impl->netWasQuantized = true;
+
     return id;
 }
 
@@ -4694,7 +4709,7 @@ Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtyp
         // Layers with multiple outputs. Number of outputs is equal to number of inputs
         if (ld.type == "Blank" || ld.type == "Dropout" || ld.type == "Identity" || ld.type == "Silence" ||
             ld.type == "Flatten" || ld.type == "Padding" || ld.type == "Permute" || ld.type == "Reshape" ||
-            ld.type == "ReLU6" || ld.type == "Reorg" || ld.type == "ShuffleChannel" ||
+            ld.type == "ReLU6" || ld.type == "Reorg" || ld.type == "ShuffleChannel" || ld.type == "Resize" ||
            (ld.type == "ReLU" && !ld.params.get<float>("negative_slope", 0.f)) /* ReLU with negative slope 0 */)
         {
             for (int i = 0; i < ld.outputBlobs.size(); i++)

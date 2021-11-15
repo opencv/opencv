@@ -2340,7 +2340,7 @@ public:
     static testing::internal::ParamGenerator<std::string> eltwiseOpList()
     {
         // TODO: automate list generation
-        return Values("sum", "max", "prod", "div");
+        return Values("sum", "max", "min", "prod", "div");
     }
 
     static testing::internal::ParamGenerator<std::string> activationLayersList()

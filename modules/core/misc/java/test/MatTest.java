@@ -686,6 +686,16 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    public void testMatMulMat() {
+        Mat m1 = new Mat(2, 2, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(2, 2, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.matMul(m2);
+
+        truth = new Mat(2, 2, CvType.CV_32F, new Scalar(12));
+        assertMatEqual(truth, dst, EPS);
+    }
+
     public void testOnesIntIntInt() {
         dst = Mat.ones(matSize, matSize, CvType.CV_32F);
 

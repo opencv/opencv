@@ -93,6 +93,12 @@ extern "C" {
 }
 #endif
 
+// GCC 4.x compilation bug. Details: https://github.com/opencv/opencv/issues/20292
+#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)
+#undef USE_AV_HW_CODECS
+#define USE_AV_HW_CODECS 0
+#endif
+
 //#define USE_AV_HW_CODECS 0
 #ifndef USE_AV_HW_CODECS
 #if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
@@ -830,6 +836,7 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
     static bool skip_header = false;
     static int prev_level = -1;
     CV_UNUSED(ptr);
+    if (level>av_log_get_level()) return;
     if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
     vprintf(fmt, vargs);
     size_t fmt_len = strlen(fmt);
@@ -850,9 +857,15 @@ public:
     {
 #ifndef NO_GETENV
         char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-        if (debug_option != NULL)
+        char* level_option = getenv("OPENCV_FFMPEG_LOGLEVEL");
+        int level = AV_LOG_VERBOSE;
+        if (level_option != NULL)
         {
-            av_log_set_level(AV_LOG_VERBOSE);
+            level = atoi(level_option);
+        }
+        if ( (debug_option != NULL) || (level_option != NULL) )
+        {
+            av_log_set_level(level);
             av_log_set_callback(ffmpeg_log_callback);
         }
         else
@@ -1591,6 +1604,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_HW_ACCELERATION_USE_OPENCL:
         return static_cast<double>(use_opencl);
 #endif  // USE_AV_HW_CODECS
+    case CAP_PROP_STREAM_OPEN_TIME_USEC:
+        //ic->start_time_realtime is in microseconds
+        return ((double)ic->start_time_realtime);
     default:
         break;
     }

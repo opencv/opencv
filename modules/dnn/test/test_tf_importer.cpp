@@ -423,6 +423,19 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
     runTensorFlowNet("reduce_sum");  // a SUM pooling over all spatial dimensions.
 }
 
+TEST_P(Test_TensorFlow_layers, pooling_reduce_sum2)
+{
+    int axises[] = {0, 1, 2, 3};
+    for (int keepdims = 0; keepdims <= 1; ++keepdims)
+    {
+        for (int i = 0; i < sizeof(axises)/sizeof(axises[0]); ++i)
+        {
+            runTensorFlowNet(cv::format("reduce_sum_%d_%s", axises[i], (keepdims ? "True" : "False")));
+        }
+        runTensorFlowNet(cv::format("reduce_sum_1_2_%s", keepdims ? "True" : "False"));
+    }
+}
+
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -579,6 +592,31 @@ TEST_P(Test_TensorFlow_layers, l2_normalize)
 #endif
 
     runTensorFlowNet("l2_normalize");
+}
+
+TEST_P(Test_TensorFlow_layers, BiasAdd)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+    runTensorFlowNet("bias_add_1");
+}
+
+TEST_P(Test_TensorFlow_layers, ExpandDims)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+    runTensorFlowNet("expand_dims_1");
+    runTensorFlowNet("expand_dims_2");
 }
 
 // TODO: fix it and add to l2_normalize
@@ -1240,6 +1278,11 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_factor_align_corners)
 TEST_P(Test_TensorFlow_layers, resize_bilinear_down)
 {
     runTensorFlowNet("resize_bilinear_down");
+}
+
+TEST_P(Test_TensorFlow_layers, resize_concat_optimization)
+{
+    runTensorFlowNet("resize_concat_optimization");
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_dense)

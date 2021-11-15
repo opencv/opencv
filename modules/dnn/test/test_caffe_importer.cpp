@@ -207,7 +207,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     ASSERT_EQ(inLayerShapes[0][3], 227);
 
     const float l1 = 1e-5;
-    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-3 : 1e-4;
+    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-3 : 1e-4;
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);

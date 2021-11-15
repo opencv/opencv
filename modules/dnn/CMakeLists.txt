@@ -14,9 +14,6 @@ ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX)
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
-if(HAVE_TENGINE)
-  add_definitions(-DHAVE_TENGINE=1)
-endif()
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
@@ -48,12 +45,23 @@ endif()
 
 ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
+if(HAVE_TENGINE)
+  add_definitions(-DHAVE_TENGINE=1)
+endif()
+
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
                                        /wd4305 /wd4127 /wd4100 /wd4512 /wd4125 /wd4389 /wd4510 /wd4610
                                        /wd4702 /wd4456 /wd4457 /wd4065 /wd4310 /wd4661 /wd4506
   )
+  if(MSVC_VERSION LESS 1910)  # MSVS 2015, .pb.cc generated files
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4309)  # 'static_cast': truncation of constant value
+  endif()
+  if(MSVC_VERSION LESS 1920)  # <MSVS2019, .pb.cc generated files
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4189)  # local variable is initialized but not referenced
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4592)  # symbol will be dynamically initialized (implementation limitation)
+  endif()
 else()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
                                        -Wunused-parameter -Wsign-compare

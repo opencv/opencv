@@ -218,7 +218,7 @@ class dnn_test(NewOpenCVTests):
         model.setInputParams(scale, size, mean)
         out, _ = model.detect(frame)
 
-        self.assertTrue(type(out) == list)
+        self.assertTrue(type(out) == tuple, msg='actual type {}'.format(str(type(out))))
         self.assertTrue(np.array(out).shape == (2, 4, 2))
 
 
@@ -391,20 +391,22 @@ class dnn_test(NewOpenCVTests):
             raise unittest.SkipTest("Missing DNN test files (dnn/onnx/data/{input/output}_hidden_lstm.npy). "
                                     "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
-        net = cv.dnn.readNet(model)
         input = np.load(input_file)
         # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
         # it should be fixed in future. see : https://github.com/opencv/opencv/issues/19091
         # please remove `expand_dims` after that
         input = np.expand_dims(input, axis=3)
         gold_output = np.load(output_file)
-        net.setInput(input)
 
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
+            net = cv.dnn.readNet(model)
+
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
+
+            net.setInput(input)
             real_output = net.forward()
 
             normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
