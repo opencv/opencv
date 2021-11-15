@@ -1483,6 +1483,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
 
+    // Temporary solution for opencl debug
+    // Mac error: "Kernel not created"
 #ifdef HAVE_OPENCL_
     AccessFlag af = AccessFlag::ACCESS_READ;
     calcICPLsmMatricesFast_ocl(cameraMatrix,
