@@ -13,6 +13,10 @@
 #include <opencv2/core/hal/hal.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
+#if CV_SIMD
+#include "gfluidcore_func.hpp"
+#endif
+
 #include <opencv2/gapi/core.hpp>
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
@@ -82,10 +86,22 @@ static inline DST mul(SRC1 x, SRC2 y, float scale=1)
 }
 
 template<typename DST, typename SRC1, typename SRC2>
-static inline DST div(SRC1 x, SRC2 y, float scale=1)
+static inline
+typename std::enable_if<!std::is_same<DST, float>::value, DST>::type
+div(SRC1 x, SRC2 y, float scale=1)
 {
-    // like OpenCV: returns 0, if y=0
+    // like OpenCV: returns 0, if DST type=uchar/short/ushort and divider(y)=0
     auto result = y? scale * x / y: 0;
+    return saturate<DST>(result, rintf);
+}
+
+template<typename DST, typename SRC1, typename SRC2>
+static inline
+typename std::enable_if<std::is_same<DST, float>::value, DST>::type
+div(SRC1 x, SRC2 y, float scale = 1)
+{
+    // like OpenCV: returns inf/nan, if DST type=float and divider(y)=0
+    auto result = scale * x / y;
     return saturate<DST>(result, rintf);
 }
 
@@ -626,7 +642,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
     return 0;
 }
-#endif
+#endif // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
@@ -672,9 +688,14 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
         case ARITHM_DIVIDE:
+        {
+#if CV_SIMD
+            x = div_simd(in1, in2, out, length, scale);
+#endif
             for (; x < length; ++x)
                 out[x] = div<DST>(in1[x], in2[x], _scale);
             break;
+        }
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -744,10 +765,19 @@ GAPI_FLUID_KERNEL(GFluidDiv, cv::gapi::core::GDiv, false)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
         BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short,  uchar,  uchar, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( float, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
 
