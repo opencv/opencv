@@ -58,7 +58,7 @@ struct TestBarrier : public cv::gapi::wip::onevpl::elastic_barrier<TestBarrier> 
 
 TEST(OneVPL_SharedLock, Create) {
     SharedLock lock;
-    EXPECT_EQ(lock.counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), 0);
 }
 
 TEST(OneVPL_SharedLock, Read_SingleThread)
@@ -70,14 +70,14 @@ TEST(OneVPL_SharedLock, Read_SingleThread)
         lock.shared_lock();
         EXPECT_FALSE(lock.owns());
     }
-    EXPECT_EQ(lock.counter.load(), single_thread_read_count);
+    EXPECT_EQ(lock.shared_counter.load(), single_thread_read_count);
 
     for(size_t i = 0; i < single_thread_read_count; i++) {
         lock.unlock_shared();
         EXPECT_FALSE(lock.owns());
     }
 
-    EXPECT_EQ(lock.counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), 0);
 }
 
 TEST(OneVPL_SharedLock, TryLock_SingleThread)
@@ -89,7 +89,7 @@ TEST(OneVPL_SharedLock, TryLock_SingleThread)
 
     lock.unlock();
     EXPECT_FALSE(lock.owns());
-    EXPECT_EQ(lock.counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), 0);
 }
 
 TEST(OneVPL_SharedLock, Write_SingleThread)
@@ -101,7 +101,7 @@ TEST(OneVPL_SharedLock, Write_SingleThread)
 
     lock.unlock();
     EXPECT_FALSE(lock.owns());
-    EXPECT_EQ(lock.counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), 0);
 }
 
 TEST(OneVPL_SharedLock, TryLockTryLock_SingleThread)

@@ -54,6 +54,7 @@ public:
 private:
     std::shared_ptr<Surface> parent_surface_ptr;
     mfxFrameAllocator allocator;
+    GFrameDesc frame_desc;
 };
 } // namespace onevpl
 } // namespace wip

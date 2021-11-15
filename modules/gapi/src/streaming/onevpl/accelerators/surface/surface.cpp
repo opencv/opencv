@@ -32,6 +32,8 @@ Surface::~Surface() {
 
 std::shared_ptr<Surface> Surface::create_surface(std::unique_ptr<handle_t>&& surf,
                                                  std::shared_ptr<void> accociated_memory) {
+    Surface::info_t& info = surf->Info;
+    info.FourCC = MFX_FOURCC_NV12;
     surface_ptr_t ret {new Surface(std::move(surf), accociated_memory)};
     return ret;
 }

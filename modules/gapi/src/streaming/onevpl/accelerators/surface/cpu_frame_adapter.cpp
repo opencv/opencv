@@ -25,12 +25,25 @@ VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surfac
     parent_surface_ptr(surface) {
 
     GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
-    parent_surface_ptr->obtain_lock();
-
     GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
                             ", w: " << parent_surface_ptr->get_info().Width <<
                             ", h: " << parent_surface_ptr->get_info().Height <<
                             ", p: " << parent_surface_ptr->get_data().Pitch);
+    const Surface::info_t& info = parent_surface_ptr->get_info();
+    switch(info.FourCC)
+    {
+        case MFX_FOURCC_I420:
+            throw std::runtime_error("MediaFrame doesn't support I420 type");
+            break;
+        case MFX_FOURCC_NV12:
+            frame_desc.fmt = MediaFormat::NV12;
+            break;
+        default:
+            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
+    }
+
+    frame_desc.size = cv::Size{info.Width, info.Height};
+    parent_surface_ptr->obtain_lock();
 }
 
 VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
@@ -42,22 +55,7 @@ VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
 }
 
 cv::GFrameDesc VPLMediaFrameCPUAdapter::meta() const {
-    GFrameDesc desc;
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    switch(info.FourCC)
-    {
-        case MFX_FOURCC_I420:
-            throw std::runtime_error("MediaFrame doesn't support I420 type");
-            break;
-        case MFX_FOURCC_NV12:
-            desc.fmt = MediaFormat::NV12;
-            break;
-        default:
-            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
-    }
-
-    desc.size = cv::Size{info.Width, info.Height};
-    return desc;
+    return frame_desc;
 }
 
 MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {

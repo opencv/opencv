@@ -31,16 +31,13 @@ public:
 
     bool owns() const;
 private:
-    enum {
-        EXCLUSIVE_ACCESS = -1
-    };
-
     SharedLock(const SharedLock&) = delete;
     SharedLock& operator= (const SharedLock&) = delete;
     SharedLock(SharedLock&&) = delete;
     SharedLock& operator== (SharedLock&&) = delete;
 
-    std::atomic<int> counter;
+    std::atomic<bool> exclusive_lock;
+    std::atomic<size_t> shared_counter;
 };
 } // namespace onevpl
 } // namespace wip

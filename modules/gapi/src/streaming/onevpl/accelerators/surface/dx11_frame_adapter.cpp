@@ -42,20 +42,30 @@ void unlock_mid(mfxMemId mid, mfxFrameData &data, MediaFrame::Access mode) {
 
 VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> surface):
     parent_surface_ptr(surface) {
-
     GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
-    parent_surface_ptr->obtain_lock();
-
 
     const Surface::info_t& info = parent_surface_ptr->get_info();
     Surface::data_t& data = parent_surface_ptr->get_data();
+    GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
+                            ", w: " << info.Width << ", h: " << info.Height <<
+                            ", p: " << data.Pitch);
+    switch(info.FourCC)
+    {
+        case MFX_FOURCC_I420:
+            throw std::runtime_error("MediaFrame doesn't support I420 type");
+            break;
+        case MFX_FOURCC_NV12:
+            frame_desc.fmt = MediaFormat::NV12;
+            break;
+        default:
+            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
+    }
+    frame_desc.size = cv::Size{info.Width, info.Height};
 
     LockAdapter* alloc_data = reinterpret_cast<LockAdapter*>(data.MemId);
     alloc_data->set_adaptee(this);
 
-    GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
-                            ", w: " << info.Width << ", h: " << info.Height <<
-                            ", p: " << data.Pitch);
+    parent_surface_ptr->obtain_lock();
 }
 
 VPLMediaFrameDX11Adapter::~VPLMediaFrameDX11Adapter() {
@@ -71,22 +81,7 @@ VPLMediaFrameDX11Adapter::~VPLMediaFrameDX11Adapter() {
 }
 
 cv::GFrameDesc VPLMediaFrameDX11Adapter::meta() const {
-    GFrameDesc desc;
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    switch(info.FourCC)
-    {
-        case MFX_FOURCC_I420:
-            throw std::runtime_error("MediaFrame doesn't support I420 type");
-            break;
-        case MFX_FOURCC_NV12:
-            desc.fmt = MediaFormat::NV12;
-            break;
-        default:
-            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
-    }
-
-    desc.size = cv::Size{info.Width, info.Height};
-    return desc;
+    return frame_desc;
 }
 
 MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {

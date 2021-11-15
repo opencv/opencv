@@ -13,41 +13,76 @@ namespace wip {
 namespace onevpl {
 
 size_t SharedLock::shared_lock() {
-    int curr_value;
+    size_t prev = 0;
+    bool in_progress = false;
+    bool pred_excl = exclusive_lock.load();
     do {
-        do {
-            // acquire if no writer, multiple readers are allowed
-            curr_value = counter.load();
-        } while (EXCLUSIVE_ACCESS == curr_value);
-    } while (!counter.compare_exchange_weak(curr_value, curr_value + 1));
+        if (!pred_excl) {
+            // if no exclusive lock than start shared lock transaction
+            prev = shared_counter.fetch_add(1);
+            in_progress = true; //transaction is in progress
+        } else {
+            if (in_progress) {
+                in_progress = false;
+                shared_counter.fetch_sub(1);
+            }
+            std::this_thread::yield();
+        }
 
-    //return prev value
-    return curr_value;
+        // test if exclusive lock happened before
+        pred_excl = exclusive_lock.load();
+    } while (pred_excl || !in_progress);
+
+    return prev;
 }
 
 size_t SharedLock::unlock_shared() {
-    return counter.fetch_sub(1);
+    return shared_counter.fetch_sub(1);
 }
 
 void SharedLock::lock() {
-    int curr_value;
+    bool in_progress = false;
+    size_t prev_shared = shared_counter.load();
     do {
-        // acquire if no readers only
-        curr_value = 0;
-    } while (!counter.compare_exchange_weak(curr_value, EXCLUSIVE_ACCESS));
+        if (prev_shared == 0) {
+            bool expected = false;
+            while (!exclusive_lock.compare_exchange_strong(expected, true)) {
+                expected = false;
+                std::this_thread::yield();
+            }
+            in_progress = true;
+        } else {
+            if (in_progress) {
+                in_progress = false;
+                exclusive_lock.store(false);
+            }
+            std::this_thread::yield();
+        }
+        prev_shared = shared_counter.load();
+    } while (prev_shared != 0 || !in_progress);
 }
 
 bool SharedLock::try_lock() {
-    int curr_value = 0;
-    return counter.compare_exchange_strong(curr_value, EXCLUSIVE_ACCESS);
+    if (shared_counter.load() != 0) {
+        return false;
+    }
+
+    bool expected = false;
+    if (exclusive_lock.compare_exchange_strong(expected, true)) {
+        if (shared_counter.load() == 0) {
+            return true;
+        } else {
+            exclusive_lock.store(false);
+        }
+    }
+    return false;
 }
 
 void SharedLock::unlock() {
-    counter.store(0);
+    exclusive_lock.store(false);
 }
-
 bool SharedLock::owns() const {
-    return (counter.load() == EXCLUSIVE_ACCESS);
+    return exclusive_lock.load();
 }
 } // namespace onevpl
 } // namespace wip
