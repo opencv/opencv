@@ -323,17 +323,23 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     MatType type = get<2>(GetParam());
     int dtype = get<3>(GetParam());
-    cv::GCompileArgs compile_args = get<4>(GetParam());
+    double scale = get<4>(GetParam());
+    cv::GCompileArgs compile_args = get<5>(GetParam());
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
+    //This condition need to workaround bug in OpenCV.
+    //It reinitializes divider matrix without zero values.
+    if (dtype == CV_16S && dtype != type)
+        cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
+
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::divide(in_mat1, in_mat2, out_mat_ocv, dtype);
+    cv::divide(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
-    out = cv::gapi::div(in1, in2, dtype);
+    out = cv::gapi::div(in1, in2, scale, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
@@ -347,8 +353,9 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }
