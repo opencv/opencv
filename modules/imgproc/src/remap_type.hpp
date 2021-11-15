@@ -1,25 +1,29 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+#ifndef OPENCV_REMAP_TYPE_HPP
+#define OPENCV_REMAP_TYPE_HPP
+
 namespace cv {
-namespace {
 
 enum class RemapType {
     fp32_mapxy,
     fp32_mapx_mapy,
-    fixedPointInt16,
-    fixedPointInt32,
+    fixedPointQ16_5,
+    fixedPointQ32_5,
     int16,
-    int32,
-    errorType
+    int32
 };
 
-const std::string errorRemapMessage =
-        "fp32_mapxy: map1 having the type CV_32FC2; map2 is empty\n"
-        "fp32_mapx_mapy: map1 having the type CV_32FC1; map2 having the type CV_32FC1\n"
-        "fixedPointInt16: map1 having the type CV_16SC2; map2 having the type CV_16UC1 or CV_16SC1\n"
-        "int16: map1 having the type CV_16SC2; map2 is empty\n"
-        "If map2 isn't empty, map1.size() must be equal to map2.size().\n";
-
-inline RemapType get_remap_type(const Mat &map1, const Mat &map2)
+inline RemapType checkAndGetRemapType(Mat &map1, Mat &map2)
 {
+    CV_Assert(!map1.empty() || !map2.empty());
+    if (map2.channels() == 2 && !map2.empty())
+        std::swap(map1, map2);
+    CV_Assert((map2.empty() && map1.channels() == 2) ||
+              (!map2.empty() && map1.size() == map2.size() && map2.channels() == 1));
+
     if ((map1.depth() == CV_32F && !map1.empty()) || (map2.depth() == CV_32F && !map2.empty())) // fp32_mapxy or fp32_mapx_mapy
     {
         if (map1.type() == CV_32FC2 && map2.empty())
@@ -36,31 +40,23 @@ inline RemapType get_remap_type(const Mat &map1, const Mat &map2)
             else if (map1.type() == CV_32SC2) // int32
                 return RemapType::int32;
         }
-        else if (map2.channels() == 1 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) // fixedPointInt16 or fixedPointInt32
+        else if (map2.channels() == 1 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) // fixedPointQ16_5 or fixedPointQ32_5
         {
-            if (map1.type() == CV_16SC2) // fixedPointInt16
-                return RemapType::fixedPointInt16;
-            else if (map1.type() == CV_32SC2) // fixedPointInt32
-                return RemapType::fixedPointInt32;
+            if (map1.type() == CV_16SC2) // fixedPointQ16_5
+                return RemapType::fixedPointQ16_5;
+            else if (map1.type() == CV_32SC2) // fixedPointQ32_5
+                return RemapType::fixedPointQ32_5;
         }
     }
-    return RemapType::errorType;
+    CV_Error(cv::Error::StsBadSize, format("remap doesn't support this type map1.type(): %d, map2.type(): %d \n"
+                                           "fp32_mapxy: map1 having the type CV_32FC2; map2 is empty\n"
+                                           "fp32_mapx_mapy: map1 having the type CV_32FC1; map2 having the type CV_32FC1\n"
+                                           "fixedPointQ16_5: map1 having the type CV_16SC2; map2 having the type CV_16UC1 or CV_16SC1\n"
+                                           "int16: map1 having the type CV_16SC2; map2 is empty\n"
+                                           "If map2 isn't empty, map1.size() must be equal to map2.size().\n",
+                                           map1.type(), map2.type()));
 }
 
-inline RemapType check_and_get_remap_type(Mat &map1, Mat &map2)
-{
-    CV_Assert(!map1.empty() || !map2.empty());
-    if (map2.channels() == 2 && !map2.empty())
-        std::swap(map1, map2);
-    CV_Assert((map2.empty() && map1.channels() == 2) ||
-              (!map2.empty() && map1.size() == map2.size() && map2.channels() == 1));
+} // namespace cv
 
-    RemapType type = get_remap_type(map1, map2);
-    if (type == RemapType::errorType)
-        CV_Error(cv::Error::StsBadSize, errorRemapMessage);
-    return type;
-}
-
-}
-
-}
+#endif

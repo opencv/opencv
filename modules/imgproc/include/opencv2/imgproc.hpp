@@ -2422,7 +2422,7 @@ map1.type() == CV_32FC2 && map2.empty()             // fp32_mapxy
 map1.type() == CV_32FC1 && map2.type() == CV_32FC1  // fp32_mapx_mapy
 map1.type() == CV_16SC2 && map2.empty()             // int16
 map1.type() == CV_32SC2 && map2.empty()             // int32
-map1.type() == CV_16SC2 && map2.type() == CV_16UC1  // fixedPointInt16
+map1.type() == CV_16SC2 && map2.type() == CV_16UC1  // fixedPointQ16_5
 @endcode
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
