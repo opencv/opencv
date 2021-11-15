@@ -168,10 +168,15 @@ public:
         ecc_level = parameters.correction_level;
         mode_type = parameters.mode;
         struct_num = parameters.structure_number;
+        version_size = 21;
+        mask_type = 0;
+        parity = 0;
+        sequence_num = 0;
+        total_num = 0;
     }
 
-    void encode(String encoded_info, OutputArray qrcode) CV_OVERRIDE;
-    void encodeStructuredAppend(String input, OutputArrayOfArrays output) CV_OVERRIDE;
+    void encode(const String& encoded_info, OutputArray qrcode) CV_OVERRIDE;
+    void encodeStructuredAppend(const String& input, OutputArrayOfArrays output) CV_OVERRIDE;
     QRCodeEncoder::Params params;
 protected:
     int version_level;
@@ -180,7 +185,6 @@ protected:
     int struct_num;
     int version_size;
     int mask_type;
-    uint32_t eci_assignment_number;
     vector<uint8_t> format;
     vector<uint8_t> version_reserved;
     vector<uint8_t>	payload;
@@ -329,7 +333,6 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
 {
     if (struct_num > 1)
     {
-        parity = 0;
         for (size_t i = 0; i < input.length(); i++)
         {
             parity ^= input[i];
@@ -537,7 +540,8 @@ bool QRCodeEncoderImpl::encodeECI(const std::string& input, vector<uint8_t>& out
     const uint32_t assign_value_range[3] = {127, 16383, 999999};
 
     // by adding other ECI modes `eci_assignment_number` can be moved to algorithm parameters
-    eci_assignment_number = ECI_UTF8; // utf-8
+    uint32_t eci_assignment_number = ECI_UTF8; // utf-8
+
     int codewords = 1;
     if(eci_assignment_number > assign_value_range[2])
         return false;
@@ -1226,7 +1230,7 @@ void QRCodeEncoderImpl::generatingProcess(const std::string& input, Mat& final_r
     copyMakeBorder(final_result, final_result, border, border, border, border, BORDER_CONSTANT, Scalar(255));
 }
 
-void QRCodeEncoderImpl::encode(String input, OutputArray output)
+void QRCodeEncoderImpl::encode(const String& input, OutputArray output)
 {
     if (output.kind() != _InputArray::MAT)
         CV_Error(Error::StsBadArg, "Output should be cv::Mat");
@@ -1237,7 +1241,7 @@ void QRCodeEncoderImpl::encode(String input, OutputArray output)
     output.assign(final_qrcodes[0]);
 }
 
-void QRCodeEncoderImpl::encodeStructuredAppend(String input, OutputArrayOfArrays output)
+void QRCodeEncoderImpl::encodeStructuredAppend(const String& input, OutputArrayOfArrays output)
 {
     if (output.kind() != _InputArray::STD_VECTOR_MAT)
         CV_Error(Error::StsBadArg, "Output should be vector of cv::Mat");
