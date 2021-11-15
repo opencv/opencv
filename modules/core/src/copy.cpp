@@ -328,6 +328,12 @@ void Mat::copyTo( OutputArray _dst ) const
     if( empty() )
     {
         _dst.release();
+        if( dims <= 2 )
+        {
+            _dst.create( rows, cols, type() );
+            return;
+        }
+        _dst.create( dims, size.p, type() );
         return;
     }
 
