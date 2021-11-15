@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -18,6 +19,7 @@ std::string keys =
     "{ std              | 0.0 0.0 0.0 | Preprocess input image by dividing on a standard deviation.}"
     "{ crop             | false | Preprocess input image by center cropping.}"
     "{ framework f      | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
+    "{ needSoftmax      | false | Use Softmax to post-process the output of the net.}"
     "{ classes          | | Optional path to a text file with names of classes. }"
     "{ backend          | 0 | Choose one of computation backends: "
                             "0: automatically (by default), "
@@ -72,6 +74,9 @@ int main(int argc, char** argv)
     String framework = parser.get<String>("framework");
     int backendId = parser.get<int>("backend");
     int targetId = parser.get<int>("target");
+    bool needSoftmax = parser.get<bool>("needSoftmax");
+    std::cout<<"mean: "<<mean<<std::endl;
+    std::cout<<"std: "<<std<<std::endl;
 
     // Open file with classes names.
     if (parser.has("classes"))
@@ -164,6 +169,20 @@ int main(int argc, char** argv)
             double freq = getTickFrequency() / 1000;
             t = net.getPerfProfile(layersTimes) / freq;
             t_sum += t;
+        }
+        if (needSoftmax == true)
+        {
+            float maxProb = 0.0;
+            float sum = 0.0;
+            Mat softmaxProb;
+
+            maxProb = *std::max_element(prob.begin<float>(), prob.end<float>());
+            cv::exp(prob-maxProb, softmaxProb);
+            sum = cv::sum(softmaxProb)[0];
+            softmaxProb /= sum;
+            Point classIdPoint;
+            minMaxLoc(softmaxProb.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
+            classId = classIdPoint.x;
         }
         std::string label = format("Inference time: %.2f ms", t);
         std::string label2 = format("Average time of 200 rounds: %.2f ms", t_sum/200);
