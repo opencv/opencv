@@ -2092,7 +2092,7 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat gmat = accessor(in);
