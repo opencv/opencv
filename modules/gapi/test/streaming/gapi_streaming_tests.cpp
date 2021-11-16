@@ -40,21 +40,6 @@ namespace opencv_test
 {
 namespace
 {
-void initTestDataPath()
-{
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath) {
-            cvtest::addDataSearchPath(testDataPath);
-        }
-        initialized = true;
-    }
-#endif // WINRT
-}
 
 enum class KernelPackage: int
 {
@@ -81,7 +66,6 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
 struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
                                                                   cv::optional<size_t>>> {
     GAPI_Streaming() {
-        initTestDataPath();
         KernelPackage pkg_kind;
         std::tie(pkg_kind, cap) = GetParam();
         pkg = getKernelPackage(pkg_kind);
@@ -846,8 +830,6 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Scalar data.
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar m = cv::gapi::mean(in);
     cv::GMat tmp = cv::gapi::convertTo(in, CV_32F) - m;
@@ -914,8 +896,6 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Vector data.
 
-    initTestDataPath();
-
     cv::GMat in1, in2;
     cv::GMat in = cv::gapi::crop(in1, cv::Rect{0,0,576,576});
     cv::GScalar m = cv::gapi::mean(in);
@@ -980,8 +960,6 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     // This test verifies if Streaming works when pipeline
     // produces scalar data only
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar out = cv::gapi::mean(in);
     auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
@@ -1019,7 +997,6 @@ TEST(GAPI_Streaming_Types, OutputVector)
     // This test verifies if Streaming works when pipeline
     // produces vector data only
 
-    initTestDataPath();
     auto pkg = cv::gapi::kernels<TypesTest::OCVSumV>();
 
     cv::GMat in1, in2;
@@ -1181,7 +1158,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
                 return cv::GComputation(cv::GIn(a, b), cv::GOut(c));
             })
     {
-        initTestDataPath();
 
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
@@ -1196,7 +1172,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST(GAPI_Streaming, TestTwoVideosDifferentLength)
 {
-    initTestDataPath();
     auto desc = cv::GMatDesc{CV_8U,3,{768,576}};
     auto path1 = findDataFile("cv/video/768x576.avi");
     auto path2 = findDataFile("highgui/video/big_buck_bunny.avi");
@@ -1458,8 +1433,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1491,8 +1464,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1628,8 +1599,6 @@ TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
 
 TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1653,8 +1622,6 @@ TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 
 TEST(GAPI_Streaming_Desync, UseSpecialPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1811,7 +1778,6 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
 
 TEST(GAPI_Streaming, CopyFrame)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -1850,7 +1816,6 @@ TEST(GAPI_Streaming, CopyFrame)
 
 TEST(GAPI_Streaming, CopyMat)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GMat in;
@@ -1887,7 +1852,6 @@ TEST(GAPI_Streaming, CopyMat)
 
 TEST(GAPI_Streaming, Reshape)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -2077,8 +2041,7 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat out = accessor(in);
@@ -2129,8 +2092,7 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat gmat = accessor(in);
@@ -2328,7 +2290,6 @@ GAPI_OCV_KERNEL(GOcvTestBlur, GTestBlur) {
 };
 
 TEST(GAPI_Streaming, TestDesyncMediaFrame) {
-    initTestDataPath();
     cv::GFrame in;
     auto blurred = GTestBlur::on(in);
     auto desynced = cv::gapi::streaming::desync(blurred);
