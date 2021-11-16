@@ -19,7 +19,7 @@ struct IDataProvider::mfx_bitstream : public mfxBitstream {};
 #else // HAVE_ONEVPL
 struct IDataProvider::mfx_bitstream {
     mfx_bitstream() {
-        GAPI_Assert(false && "Reject to create `mfxBitstream` till library compiled without VPL/MFX support");
+        GAPI_Assert(false && "Reject to create `mfxBitstream` because library compiled without VPL/MFX support");
     }
 };
 #endif // HAVE_ONEVPL

@@ -17,7 +17,7 @@ namespace wip {
 namespace onevpl {
 
 IDataProvider::Ptr DataProviderDispatcher::create(const std::string& file_path,
-                                                  const std::vector<CfgParam> cfg_params) {
+                                                  const std::vector<CfgParam> &cfg_params) {
     GAPI_LOG_INFO(nullptr, "try select suitable IDataProvider for source: " <<
                            file_path);
 
@@ -49,7 +49,7 @@ IDataProvider::Ptr DataProviderDispatcher::create(const std::string& file_path,
             provider = std::make_shared<MFPAsyncDemuxDataProvider>(file_path);
             GAPI_LOG_INFO(nullptr, "MFP data provider created");
         } catch (const DataProviderUnsupportedException& ex) {
-            GAPI_LOG_INFO(nullptr, "raw data provider creation is failed, reason: " <<
+            GAPI_LOG_INFO(nullptr, "MFP data provider creation is failed, reason: " <<
                                    ex.what());
         }
     }

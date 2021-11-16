@@ -20,7 +20,7 @@ namespace wip {
 namespace onevpl {
 DataProviderSystemErrorException::DataProviderSystemErrorException(int error_code,
                                                                    const std::string& description) {
-    reason = description + ", error: " + std::to_string(error_code) + ", description: " + strerror(error_code);
+    reason = description + ", error code: " + std::to_string(error_code) + " - " + strerror(error_code);
 }
 
 DataProviderSystemErrorException::~DataProviderSystemErrorException() = default;

@@ -24,9 +24,9 @@ namespace onevpl {
 #ifdef _WIN32
 static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
     wchar_t sURL[MAX_PATH];
-    GAPI_Assert(url.size() < MAX_PATH && "Windows MAX_PATH limit was exceeded");
-    size_t ret_url_lenght = 0;
-    mbstowcs_s(&ret_url_lenght, sURL, url.data(), url.size());
+    GAPI_Assert(url.size() < MAX_PATH && "Windows MAX_PATH limit was reached");
+    size_t ret_url_length = 0;
+    mbstowcs_s(&ret_url_length, sURL, url.data(), url.size());
 
     HRESULT hr = S_OK;
 
@@ -56,31 +56,30 @@ static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSo
      * If it failed at second phase then some other errors were not related
      * to types-extension disturbance would happen and data provider must fail ultimately.
      *
-     * If second step passed then data provider would continue execition
+     * If second step passed then data provider would continue execution
      */
     DWORD resolver_flags = MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_READ |
                            MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
-    do {
-        hr = pSourceResolver->CreateObjectFromURL(sURL,
-                                                  resolver_flags,
+    hr = pSourceResolver->CreateObjectFromURL(sURL,
+                                              resolver_flags,
+                                              nullptr, &ObjectType,
+                                              &pSourceUnk);
+    if (FAILED(hr)) {
+        GAPI_LOG_DEBUG(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE using file extension, "
+                                " looks like actual media container type doesn't match to file extension. "
+                                "Try special mode");
+        resolver_flags ^= MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
+        resolver_flags ^= MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE;
+        hr = pSourceResolver->CreateObjectFromURL(sURL, resolver_flags,
                                                   nullptr, &ObjectType,
                                                   &pSourceUnk);
         if (FAILED(hr)) {
-            resolver_flags ^= MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
-            resolver_flags ^= MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE ;
-            GAPI_LOG_DEBUG(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE using file extension, "
-                                    "try special mode");
-            continue;
+            GAPI_LOG_WARNING(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE from URI: " <<
+                                      url << ". Abort");
+            pSourceResolver->Release();
+            throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                                   "cannot create CreateObjectFromURL");
         }
-    } while (FAILED(hr) &&
-             (resolver_flags & MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE));
-
-    if (FAILED(hr)) {
-        GAPI_LOG_WARNING(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE from URI: " <<
-                                  url);
-        pSourceResolver->Release();
-        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                               "cannot create CreateObjectFromURL");
     }
 
     hr = pSourceUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)ppSource);

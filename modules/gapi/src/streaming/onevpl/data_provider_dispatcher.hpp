@@ -19,7 +19,7 @@ namespace onevpl {
 struct GAPI_EXPORTS DataProviderDispatcher {
 
     static IDataProvider::Ptr create(const std::string& file_path,
-                                     const std::vector<CfgParam> codec_params = {});
+                                     const std::vector<CfgParam> &codec_params = {});
 };
 } // namespace onevpl
 } // namespace wip

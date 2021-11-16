@@ -7,7 +7,6 @@
 #ifndef GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #define GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #include <exception>
-#include <limits>
 #include <memory>
 #include <string>
 
@@ -67,7 +66,7 @@ struct GAPI_EXPORTS IDataProvider {
      * declare untagged struct mfxBitstream.
      *
      * IDataProvider makes sense only for HAVE_VPL is ON and to keep IDataProvider
-     * interface API/ABI compiant between core library and user application layer
+     * interface API/ABI compliant between core library and user application layer
      * let's introduce wrapper mfx_bitstream which inherits mfxBitstream in private
      * G-API code section and declare forward for wrapper mfx_bitstream here
      */
