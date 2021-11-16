@@ -22,6 +22,20 @@
 #include "backends/ie/util.hpp"
 #include "backends/ie/giebackend/giewrapper.hpp"
 
+#ifdef HAVE_NGRAPH
+#if defined(__clang__)  // clang or MSVC clang
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+#include <ngraph/ngraph.hpp>
+#endif
+
 namespace opencv_test
 {
 namespace {
@@ -2857,6 +2871,66 @@ TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
     EXPECT_ANY_THROW(comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                      cv::compile_args(cv::gapi::networks(pp))));
 }
+
+#ifdef HAVE_NGRAPH
+
+TEST(Infer, ModelWith2DInputs)
+{
+    const std::string model_name   = "ModelWith2DInputs";
+    const std::string model_path   = model_name + ".xml";
+    const std::string weights_path = model_name + ".bin";
+    const std::string device_id    = "CPU";
+    const int W                    = 10;
+    const int H                    = 5;
+
+    // NB: Define model with 2D inputs.
+    auto in1 = std::make_shared<ngraph::op::Parameter>(
+        ngraph::element::Type_t::u8,
+        ngraph::Shape(std::vector<size_t>{{H, W}})
+    );
+    auto in2 = std::make_shared<ngraph::op::Parameter>(
+        ngraph::element::Type_t::u8,
+        ngraph::Shape(std::vector<size_t>{{H, W}})
+    );
+    auto result = std::make_shared<ngraph::op::v1::Add>(in1, in2);
+    auto func   = std::make_shared<ngraph::Function>(
+        ngraph::OutputVector{result},
+        ngraph::ParameterVector{in1, in2}
+    );
+
+    cv::Mat in_mat1(std::vector<int>{H, W}, CV_8U),
+            in_mat2(std::vector<int>{H, W}, CV_8U),
+            gapi_mat, ref_mat;
+
+    cv::randu(in_mat1, 0, 100);
+    cv::randu(in_mat2, 0, 100);
+    cv::add(in_mat1, in_mat2, ref_mat, cv::noArray(), CV_32F);
+
+    // Compile xml file
+    IE::CNNNetwork(func).serialize(model_path);
+
+    // Configure & run G-API
+    cv::GMat g_in1, g_in2;
+    cv::GInferInputs inputs;
+    inputs[in1->get_name()] = g_in1;
+    inputs[in2->get_name()] = g_in2;
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(model_name, inputs);
+    auto out = outputs.at(result->get_name());
+
+    cv::GComputation comp(cv::GIn(g_in1, g_in2), cv::GOut(out));
+
+    auto pp = cv::gapi::ie::Params<cv::gapi::Generic>(model_name,
+                                                      model_path,
+                                                      weights_path,
+                                                      device_id);
+
+    comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(gapi_mat),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    normAssert(ref_mat, gapi_mat, "Test model output");
+}
+
+#endif // HAVE_NGRAPH
 
 } // namespace opencv_test
 

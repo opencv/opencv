@@ -80,7 +80,10 @@ struct ParamDesc {
     // NB: An optional config to setup RemoteContext for IE
     cv::util::any context_config;
 
-    size_t batch_size;
+    // NB: batch_size can't be equal to 1 by default, because some of models
+    // have 2D (Layout::NC) input and if the first dimmension not equal to 1
+    // net.setBatchSize(1) will overwrite it.
+    cv::optional<size_t> batch_size;
 };
 } // namespace detail
 
@@ -123,7 +126,7 @@ public:
               , {}
               , 1u
               , {}
-              , 1u} {
+              , {}} {
     };
 
     /** @overload
@@ -145,7 +148,7 @@ public:
               , {}
               , 1u
               , {}
-              , 1u} {
+              , {}} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -329,7 +332,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgBatchSize(const size_t size) {
-        desc.batch_size = size;
+        desc.batch_size = cv::util::make_optional(size);
         return *this;
     }
 
@@ -367,7 +370,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, 1u},
+                {}, {}},
           m_tag(tag) {
     };
 
@@ -385,7 +388,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, 1u},
+                {}, {}},
           m_tag(tag) {
     };
 
@@ -454,7 +457,7 @@ public:
 
     /** @see ie::Params::cfgBatchSize */
     Params& cfgBatchSize(const size_t size) {
-        desc.batch_size = size;
+        desc.batch_size = cv::util::make_optional(size);
         return *this;
     }
 
