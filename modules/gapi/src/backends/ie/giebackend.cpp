@@ -127,7 +127,6 @@ inline int toCV(IE::Precision prec) {
 
 inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     const auto &sz = mat.size;
-
     // NB: For some reason RGB image is 2D image
     // (since channel component is not counted here).
     // Note: regular 2D vectors also fall into this category
@@ -148,7 +147,6 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         return IE::TensorDesc(toIE(mat.depth()),
                               IE::SizeVector{1, channels, height, width}, bdesc);
     }
-
     return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
 }
 
@@ -241,7 +239,10 @@ struct IEUnit {
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
-            net.setBatchSize(params.batch_size);
+            // NB: Set batch size only if user asked. (don't set by default)
+            if (params.batch_size.has_value())  {
+                net.setBatchSize(params.batch_size.value());
+            }
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
             this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params, rctx);
@@ -520,7 +521,9 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
                                    blob_params->second);
 }
 
-inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
+inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
+                                 std::size_t i,
+                                 cv::gapi::ie::TraitAs hint) {
     if (ctx.uu.rctx != nullptr) {
         return extractRemoteBlob(ctx, i);
     }
@@ -532,7 +535,7 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
             return wrapIE(*(ctx.views.back()), frame.desc());
         }
         case cv::GShape::GMAT: {
-            return wrapIE(ctx.inMat(i), cv::gapi::ie::TraitAs::IMAGE);
+            return wrapIE(ctx.inMat(i), hint);
         }
         default:
             GAPI_Assert("Unsupported input shape for IE backend");
@@ -545,6 +548,9 @@ static void setBlob(InferenceEngine::InferRequest& req,
                     const std::string&             layer_name,
                     const IE::Blob::Ptr&           blob,
                     const IECallContext&           ctx) {
+    // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
+    // and redirect our data producers to this memory
+    // (A memory dialog comes to the picture again)
     using namespace cv::gapi::ie::detail;
     if (ctx.uu.params.kind == ParamDesc::Kind::Load) {
         req.SetBlob(layer_name, blob);
@@ -950,7 +956,14 @@ struct Infer: public cv::detail::KernelTag {
                         uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm, input_reshape_table);
                     }
-                    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+
+                    // NB: Configure resize only for NCHW/NHWC layout,
+                    // since it isn't supposed to work with others.
+                    auto layout = ii->getTensorDesc().getLayout();
+                    if (layout == IE::Layout::NCHW ||
+                        layout == IE::Layout::NHWC) {
+                        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    }
             }
 
             // FIXME: This isn't the best place to call reshape function.
@@ -1000,11 +1013,16 @@ struct Infer: public cv::detail::KernelTag {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
-                            // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
-                            // and redirect our data producers to this memory
-                            // (A memory dialog comes to the picture again)
-                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            setBlob(req, ctx->uu.params.input_names[i], this_blob, *ctx);
+                            const auto& layer_name = ctx->uu.params.input_names[i];
+                            auto layout =
+                                ctx->uu.this_network.GetInputsInfo().
+                                    at(layer_name)->getTensorDesc().getLayout();
+                            auto hint =
+                                (layout == IE::Layout::NCHW || layout == IE::Layout::NHWC)
+                                ? cv::gapi::ie::TraitAs::IMAGE : cv::gapi::ie::TraitAs::TENSOR;
+
+                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint);
+                            setBlob(req, layer_name, this_blob, *ctx);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
@@ -1092,7 +1110,10 @@ struct InferROI: public cv::detail::KernelTag {
                         GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
-                        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+                        // NB: This blob will be used to make roi from its, so
+                        // it should be treated as image
+                        IE::Blob::Ptr this_blob =
+                            extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
                         setBlob(req,
                                 *(ctx->uu.params.input_names.begin()),
                                 IE::make_shared_blob(this_blob, toIE(this_roi)),
@@ -1187,7 +1208,9 @@ struct InferList: public cv::detail::KernelTag {
             return;
         }
 
-        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+        // NB: This blob will be used to make roi from its, so
+        // it should be treated as image
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
@@ -1331,7 +1354,9 @@ struct InferList2: public cv::detail::KernelTag {
                     cv::gimpl::ie::RequestPool    &reqPool) {
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
-        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
+        // NB: This blob will be used to make roi from its, so
+        // it should be treated as image
+        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE);
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
         if (list_size == 0u) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
