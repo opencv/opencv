@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <thread>
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 
 

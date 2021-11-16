@@ -220,4 +220,4 @@ DXGI_FORMAT VPLMediaFrameDX11Adapter::get_dx11_color_format(uint32_t mfx_fourcc)
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif HAVE_ONEVPL
+#endif // HAVE_ONEVPL
