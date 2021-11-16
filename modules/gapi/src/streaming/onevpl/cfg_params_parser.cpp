@@ -22,19 +22,16 @@ namespace onevpl {
 template <>
 struct ParamCreator<CfgParam> {
     template<typename ValueType>
-    CfgParam create (const std::string& name, ValueType&& value) {
+    CfgParam create (const std::string& name, ValueType&& value, bool is_major_flag = false) {
         return CfgParam::create(name, std::forward<ValueType>(value), is_major_flag);
     }
-    bool is_major_flag = false;
 };
 
 template <>
 struct ParamCreator<mfxVariant> {
     template<typename ValueType>
-    mfxVariant create (const std::string& name, ValueType&& value) {
-        static_assert(std::is_same<typename std::decay<ValueType>::type, mfxU32>::value,
-                      "ParamCreator<mfxVariant> supports mfxU32 at the moment. "
-                      "Feel free to extend for more types");
+    mfxVariant create (const std::string& name, ValueType&& value, bool is_major_flag = false) {
+        cv::util::suppress_unused_warning(is_major_flag);
         return create_impl(name, value);
     }
 private:
@@ -42,6 +39,18 @@ private:
         mfxVariant ret;
         ret.Type = MFX_VARIANT_TYPE_U32;
         ret.Data.U32 = value;
+        return ret;
+    }
+    mfxVariant create_impl(const std::string&, mfxI64 value) {
+        mfxVariant ret;
+        ret.Type = MFX_VARIANT_TYPE_I64;
+        ret.Data.I64 = value;
+        return ret;
+    }
+    mfxVariant create_impl(const std::string&, mfxU64 value) {
+        mfxVariant ret;
+        ret.Type = MFX_VARIANT_TYPE_U64;
+        ret.Data.U64 = value;
         return ret;
     }
 };
@@ -75,7 +84,9 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
-        } else {
+        } else if (name == CfgParam::queue_capacity()) {
+            ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+        }else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
                                     ", value: " << value);
         }
@@ -114,6 +125,32 @@ mfxVariant cfg_param_to_mfx_variant(const CfgParam& cfg_val) {
                 }
                 ret = *parsed.begin();
             }), cfg_val.get_value());
+    return ret;
+}
+
+size_t strtoull_or_throw(const char* str) {
+    char *end_ptr = nullptr;
+    errno = 0;
+    size_t ret = strtoull(str, &end_ptr, 10);
+    if ((end_ptr == str) ||
+        ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+            // nothing parsed from the string, handle errors or exit
+        GAPI_LOG_WARNING(nullptr, "strtoull failed for: " << str);
+        GAPI_Assert(false && "strtoull_or_throw");
+    }
+    return ret;
+}
+
+int64_t strtoll_or_throw(const char* str) {
+    char *end_ptr = nullptr;
+    errno = 0;
+    int64_t ret = strtoll(str, &end_ptr, 10);
+    if ((end_ptr == str) ||
+        ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+            // nothing parsed from the string, handle errors or exit
+        GAPI_LOG_WARNING(nullptr, "strtoll failed for: " << str);
+        GAPI_Assert(false && "strtoll_or_throw");
+    }
     return ret;
 }
 } // namespace onevpl

@@ -82,12 +82,8 @@ private:
                  * because main `incoming` request has already initialized it at here
                  * */
                 outgoing_requests.fetch_add(1);
-                /*GAPI_Assert(ptr->Y && (ptr->UV || (ptr->U && ptr->V)) &&
-                        "on_lock: data must be correct after first init");
-                */
                 return;
             }
-            GAPI_Assert(false && "Unknown state");
             return;
         } else {
             /*
@@ -199,11 +195,6 @@ private:
                              */
                             outgoing_requests.fetch_add(1);
                             pending_requests.fetch_sub(1);
-                            /*
-                            GAPI_LOG_DEBUG(nullptr, "REcharged, data: " << data);
-                            GAPI_Assert(ptr->Y && (ptr->UV || (ptr->U && ptr->V)) &&
-                                        "on_lock: data must be correct after subsequent reinit");
-                            */
                             return;
                         }
                     }
@@ -216,11 +207,6 @@ private:
             // Each `busy-wait` request are not busy-wait now
             pending_requests.fetch_sub(1);
         }
-
-        /*
-        GAPI_Assert(ptr->Y && (ptr->UV || (ptr->U && ptr->V)) &&
-                    "on_lock: data must exist for charging `outgoing_requests`");
-        */
         return;
     }
 
@@ -271,10 +257,7 @@ private:
                 * that main `busy-wait` must start reinit resource procedure
                 * */
                 reinit.store(true);
-                /*
-                GAPI_Assert(!ptr->Y && !(ptr->UV || (ptr->U && ptr->V)) &&
-                            "on_unlock: data must be cleared after last `incoming_requests`");
-*/
+
                 /*
                 * Deinitialize procedure is finished and main `outgoing` request
                 * (it is the oldest one in `incoming` request) must become released
@@ -297,11 +280,6 @@ private:
             * So call off deinitialization procedure here
             * */
         }
-
-        /*
-        GAPI_Assert(ptr->Y && (ptr->UV || (ptr->U && ptr->V)) &&
-                    "on_unlock: data must exist till last `outgoing_requests`");
-        */
         incoming_requests.fetch_sub(1);
     }
 

@@ -121,6 +121,7 @@ struct DX11AllocationRecord : public std::enable_shared_from_this<DX11Allocation
     // which requires contiguous memory
     using AllocationId = DX11AllocationItem*;
     AllocationId* data();
+    size_t size() const;
 private:
     DX11AllocationRecord();
     void init(unsigned int items, CComPtr<ID3D11DeviceContext> origin_ctx,

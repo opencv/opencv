@@ -380,6 +380,9 @@ DX11AllocationRecord::AllocationId* DX11AllocationRecord::data() {
     return resources.data();
 }
 
+size_t DX11AllocationRecord::size() const {
+    return resources.size();
+}
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

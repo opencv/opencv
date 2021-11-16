@@ -31,10 +31,14 @@ std::vector<ValueType> get_params_from_string(const std::string& str);
 template <typename ReturnType>
 struct ParamCreator {
     template<typename ValueType>
-    ReturnType create(const std::string& name, ValueType&& value);
+    ReturnType create(const std::string& name, ValueType&& value, bool is_major = false);
 };
 
 mfxVariant cfg_param_to_mfx_variant(const CfgParam& value);
+
+size_t strtoull_or_throw(const char* str);
+int64_t strtoll_or_throw(const char* str);
+
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

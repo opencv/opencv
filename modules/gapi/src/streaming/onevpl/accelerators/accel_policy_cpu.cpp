@@ -212,7 +212,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
 VPLCPUAccelerationPolicy::pool_key_t
 VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxVideoParam& param) {
 
-// External (application) allocation of decode surfaces
+    // External (application) allocation of decode surfaces
     GAPI_LOG_DEBUG(nullptr, "Query mfxFrameAllocRequest.NumFrameSuggested: " << alloc_request.NumFrameSuggested <<
                             ", mfxFrameAllocRequest.Type: " << alloc_request.Type);
 
@@ -236,9 +236,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_
                         utils::create_surface_other_(frameInfo, out_buf_ptr, out_buf_ptr_offset,
                                                      out_buf_size);};
 
-    //TODO Configure preallocation size (how many frames we can hold)
-    const size_t preallocated_frames_count = 30;
-    return create_surface_pool(alloc_request.NumFrameSuggested * preallocated_frames_count,
+    return create_surface_pool(alloc_request.NumFrameSuggested,
                                singleSurfaceSize, surface_creator);
 }
 

@@ -104,7 +104,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc
     mfxFrameAllocResponse mfxResponse;
     //TODO
     mfxFrameAllocRequest alloc_request = alloc_req;
-    alloc_request.NumFrameSuggested = alloc_request.NumFrameSuggested * 5;
+    alloc_request.NumFrameSuggested = alloc_request.NumFrameSuggested;
     mfxStatus sts = on_alloc(&alloc_request, &mfxResponse);
     if (sts != MFX_ERR_NONE)
     {
@@ -190,7 +190,6 @@ mfxStatus VPLDX11AccelerationPolicy::alloc_cb(mfxHDL pthis, mfxFrameAllocRequest
 
     VPLDX11AccelerationPolicy *self = static_cast<VPLDX11AccelerationPolicy *>(pthis);
 
-    request->NumFrameSuggested *= 5;
     return self->on_alloc(request, response);
 }
 
@@ -241,7 +240,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         // TODO cache
         allocation_t &resources_array = table_it->second;
         response->AllocId = request->AllocId;
-        response->NumFrameActual = request->NumFrameSuggested;
+        response->NumFrameActual = resources_array->size();
         response->mids = reinterpret_cast<mfxMemId *>(resources_array->data());
 
         return MFX_ERR_NONE;

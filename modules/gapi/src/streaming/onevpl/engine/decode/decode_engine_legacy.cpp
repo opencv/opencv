@@ -206,6 +206,52 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                             ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
                             ", mfxFrameAllocRequest.Type: " << decRequest.Type);
 
+    // NB: override NumFrameSuggested preallocation size (how many frames we can hold)
+    size_t preallocated_frames_count = decRequest.NumFrameSuggested;
+    // NB: if you see bunch of WARNING about "cannot get free surface from pool"
+    // and have abundant RAM size then increase `preallocated_frames_count`
+    // to keep more free surfaces in a round. Otherwise VPL decode pipeline will be waiting
+    // till application is freeing unusable surface on its side.
+    //
+    auto queue_capacity_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
+        return value.get_name() == CfgParam::queue_capacity();
+    });
+    if (queue_capacity_it != cfg_params.end()) {
+        cv::util::visit(cv::util::overload_lambdas(
+            [&preallocated_frames_count](uint8_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int8_t value)    { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint16_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int16_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint32_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int32_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint64_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int64_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](float_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](double_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
+            [&preallocated_frames_count](const std::string& value) {
+                preallocated_frames_count = strtoull_or_throw(value.c_str());
+            }),
+            queue_capacity_it->get_value());
+
+        GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::queue_capacity() << "\": " <<
+                      preallocated_frames_count << ", for session: " << mfx_session);
+
+    }
+    if (preallocated_frames_count < decRequest.NumFrameMin) {
+        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::queue_capacity() << "\": " <<
+                                  preallocated_frames_count << ". It must be equal or greater than "
+                                  "mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin);
+        throw std::runtime_error(std::string("Invalid value of param: ") +
+                                 CfgParam::queue_capacity());
+    } else {
+        decRequest.NumFrameSuggested = preallocated_frames_count;
+        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input for session: " << mfx_session <<
+                            ", mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin <<
+                            ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
+                            ", mfxFrameAllocRequest.Type: " << decRequest.Type);
+    }
+
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
                 acceleration_policy->create_surface_pool(decRequest, mfxDecParams);
 

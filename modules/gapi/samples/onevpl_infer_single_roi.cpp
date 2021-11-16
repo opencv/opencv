@@ -37,12 +37,14 @@
 const std::string about =
     "This is an OpenCV-based version of oneVPLSource decoder example";
 const std::string keys =
-    "{ h help       |                                           | Print this help message }"
-    "{ input        |                                           | Path to the input demultiplexed video file }"
-    "{ output       |                                           | Path to the output RAW video file. Use .avi extension }"
-    "{ facem        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
-    "{ faced        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
-    "{ cfg_params   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }";
+    "{ h help                       |                                           | Print this help message }"
+    "{ input                        |                                           | Path to the input demultiplexed video file }"
+    "{ output                       |                                           | Path to the output RAW video file. Use .avi extension }"
+    "{ facem                        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
+    "{ faced                        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
+    "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
+    "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
+    "{ source_queue_capacity        | 1                                         |  OneVPL source applies this parameter as preallocated frames pool size}";
 
 
 namespace {
@@ -248,6 +250,8 @@ int main(int argc, char *argv[]) {
     std::string file_path = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
+    const auto streaming_queue_capacity = cmd.get<size_t>("streaming_queue_capacity");
+    const auto source_queue_capacity = cmd.get<size_t>("source_queue_capacity");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -269,6 +273,12 @@ int main(int argc, char *argv[]) {
     } catch (const std::exception& ex) {
         std::cerr << "Invalid cfg parameter: " << ex.what() << std::endl;
         return -1;
+    }
+
+    if (source_queue_capacity != 0) {
+        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create(
+                                    cv::gapi::wip::onevpl::CfgParam::queue_capacity(),
+                                    source_queue_capacity, false));
     }
 
     const std::string& device_id = cmd.get<std::string>("faced");
@@ -353,6 +363,10 @@ int main(int argc, char *argv[]) {
         , custom::OCVParseSSD
         , custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(face_net);
+    auto face_detection_args = cv::compile_args(networks, kernels);
+    if (streaming_queue_capacity != 0) {
+        face_detection_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
+    }
 
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
@@ -386,7 +400,7 @@ int main(int argc, char *argv[]) {
     cv::GStreamingCompiled pipeline;
     try {
         pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
-                .compileStreaming(cv::compile_args(kernels, networks));
+                .compileStreaming(std::move(face_detection_args));
     } catch (const std::exception& ex) {
         std::cerr << "Exception occured during pipeline construction: " << ex.what() << std::endl;
         return -1;
