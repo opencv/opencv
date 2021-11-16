@@ -4066,20 +4066,28 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
     domain_dispatch_map["com.microsoft"] = dispatch;
 }
 
-
-Net readNetFromONNX(const String& onnxFile)
+Net readNetFromONNX(const String& onnxFile, int backendId)
 {
-    return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+    if(backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        return Net::readFromONNX(onnxFile, backendId);
+    else
+        return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
-Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
+Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int backendId)
 {
-    return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+    if(backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        return Net::readFromONNX(buffer, sizeBuffer, backendId);
+    else
+        return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
-Net readNetFromONNX(const std::vector<uchar>& buffer)
+Net readNetFromONNX(const std::vector<uchar>& buffer, int backendId)
 {
-    return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+    if(backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        return Net::readFromONNX(buffer, backendId);
+    else
+        return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
 Mat readTensorFromONNX(const String& path)
@@ -4098,6 +4106,69 @@ Mat readTensorFromONNX(const String& path)
     Mat mat = getMatFromTensor(tensor_proto);
     releaseONNXTensor(tensor_proto);
     return mat;
+}
+
+
+Net Net::readFromONNX(const String& onnxFile, int backend)
+{
+    CV_TRACE_FUNCTION();
+
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        return readNetFromONNX(onnxFile, backend);
+    }
+    else
+    {
+#ifndef HAVE_INF_ENGINE
+        CV_UNUSED(onnxFile);
+        CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading ONNX models with it.");
+#else
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2020_3)
+        CV_Error(Error::StsError, "Native ONNX reading with Inference Engine has been introduced in 2020.4 release."
+                                  " Choose another backend.")
+#else
+
+        InferenceEngine::Core &ie = getCore("");
+        InferenceEngine::CNNNetwork ieNet = ie.ReadNetwork(onnxFile);
+        return Net::Impl::createNetworkFromModelOptimizer(ieNet);
+
+#endif  // INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2020_3)
+#endif  // HAVE_INF_ENGINE
+    }
+}
+
+Net Net::readFromONNX(const std::vector<uchar>& buffer, int backend)
+{
+    CV_TRACE_FUNCTION();
+    return readFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size(), backend);
+}
+
+Net Net::readFromONNX(const char* buffer, size_t sizeBuffer, int backend)
+{
+    CV_TRACE_FUNCTION();
+
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE)
+    {
+        return readNetFromONNX(buffer, sizeBuffer, backend);
+    }
+    else
+    {
+#ifndef HAVE_INF_ENGINE
+        CV_UNUSED(buffer);
+        CV_UNUSED(sizeBuffer);
+        CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading ONNX models with it.");
+#else
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2020_3)
+        CV_Error(Error::StsError, "Native ONNX reading with Inference Engine has been introduced in 2020.4 release."
+                                  " Choose another backend.")
+#else
+        InferenceEngine::Core &ie = getCore("");
+        InferenceEngine::CNNNetwork ieNet = ie.ReadNetwork(std::string(buffer, sizeBuffer), InferenceEngine::Blob::CPtr{});
+        return Net::Impl::createNetworkFromModelOptimizer(ieNet);
+
+#endif  // INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2020_3)
+#endif  // HAVE_INF_ENGINE
+    }
 }
 
 #else  // HAVE_PROTOBUF

@@ -507,6 +507,35 @@ CV__DNN_INLINE_NS_BEGIN
         Net readFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
                                             const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
+        /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
+         *  @param onnxFile path to the .onnx file with text description of the network architecture.
+         *  @param backendId backend identifier.
+         *  @returns Network object that ready to do forward, throw an exception in failure cases.
+         */
+        CV_WRAP static
+        Net readFromONNX(const String& onnxFile, int backendId = DNN_BACKEND_DEFAULT);
+
+        /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
+         *         in-memory buffer.
+         *  @param buffer memory address of the first byte of the buffer.
+         *  @param sizeBuffer size of the buffer.
+         *  @param backendId backend identifier.
+         *  @returns Network object that ready to do forward, throw an exception
+         *        in failure cases.
+         */
+        static
+        Net readFromONNX(const char* buffer, size_t sizeBuffer, int backendId = DNN_BACKEND_DEFAULT);
+
+        /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
+         *         in-memory buffer.
+         *  @param buffer in-memory buffer that stores the ONNX model bytes.
+         *  @param backendId backend identifier.
+         *  @returns Network object that ready to do forward, throw an exception
+         *        in failure cases.
+         */
+        CV_WRAP static
+        Net readFromONNX(const std::vector<uchar>& buffer, int backendId = DNN_BACKEND_DEFAULT);
+
         /** Returns true if there are no layers in the network. */
         CV_WRAP bool empty() const;
 
@@ -1097,26 +1126,29 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @param backendId backend identifier.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const String &onnxFile);
+    CV_EXPORTS_W Net readNetFromONNX(const String &onnxFile, int backendId = DNN_BACKEND_DEFAULT);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.
      *  @param sizeBuffer size of the buffer.
+     *  @param backendId backend identifier.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer);
+    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int backendId = DNN_BACKEND_DEFAULT);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer in-memory buffer that stores the ONNX model bytes.
+     *  @param backendId backend identifier.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer);
+    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, int backendId = DNN_BACKEND_DEFAULT);
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.
