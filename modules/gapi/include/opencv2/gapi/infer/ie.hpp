@@ -81,7 +81,7 @@ struct ParamDesc {
     cv::util::any context_config;
 
     // NB: batch_size can't be equal to 1 by default, because some of models
-    // have 2D (Layout::NC) input and if the first dimmension not equal to 1
+    // have 2D (Layout::NC) input and if the first dimension not equal to 1
     // net.setBatchSize(1) will overwrite it.
     cv::optional<size_t> batch_size;
 };
