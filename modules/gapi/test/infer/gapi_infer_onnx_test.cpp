@@ -83,21 +83,6 @@ cv::Mat initMatrixRandU(const int type, const cv::Size& sz_in) {
 namespace opencv_test
 {
 namespace {
-void initTestDataPath()
-{
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath) {
-            cvtest::addDataSearchPath(testDataPath);
-        }
-        initialized = true;
-    }
-#endif // WINRT
-}
 
 // FIXME: taken from the DNN module
 void normAssert(cv::InputArray& ref, cv::InputArray& test,
@@ -322,7 +307,6 @@ public:
     cv::Mat in_mat;
 
     ONNXtest() {
-        initTestDataPath();
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         out_gapi.resize(1);
