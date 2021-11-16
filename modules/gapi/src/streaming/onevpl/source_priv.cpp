@@ -53,7 +53,8 @@ GSource::Priv::Priv() :
     mfx_session(),
     description(),
     description_is_valid(false),
-    engine()
+    engine(),
+    consumed_frames_count()
 {
     GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
 }
@@ -236,6 +237,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 GSource::Priv::~Priv() {
     engine.reset();
 
+    GAPI_LOG_INFO(nullptr, "consumed frames count: " << consumed_frames_count);
     GAPI_LOG_INFO(nullptr, "Unload MFX implementation description: " << mfx_impl_description);
     MFXDispReleaseImplDescription(mfx_handle, mfx_impl_description);
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
@@ -310,6 +312,7 @@ bool GSource::Priv::pull(cv::gapi::wip::Data& data)
 
     if (engine->get_ready_frames_count()) {
         engine->get_frame(data);
+        consumed_frames_count++;
         return true;
     } else {
         return false;

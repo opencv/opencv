@@ -92,6 +92,7 @@ void ProcessingEngineBase::get_frame(Data &data)
 {
     data = ready_frames.front();
     ready_frames.pop();
+    GAPI_LOG_DEBUG(nullptr, " elapsed ready frames count: " << ready_frames.size());
 }
 
 const VPLAccelerationPolicy* ProcessingEngineBase::get_accel() const {

@@ -58,8 +58,9 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.last_status == MFX_ERR_NONE
+                                                    (my_sess.data_provider || my_sess.stream->DataLength)
                                                         ? my_sess.stream.get()
+
                                                         : nullptr, /* No more data to read, start decode draining mode*/
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
@@ -76,7 +77,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    &my_sess.stream,
+                                                    my_sess.stream.get(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -312,8 +313,8 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             }
         }
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (!sess.data_provider || sess.data_provider->empty()) {
-                // No more data to drain from decoder, start encode draining mode
+            if (!(sess.data_provider || sess.stream->DataLength)) {
+                // No more data to drain from decoder
                 return ExecutionStatus::Processed;
             }
             else

@@ -64,6 +64,8 @@ private:
     bool description_is_valid;
 
     std::unique_ptr<ProcessingEngineBase> engine;
+
+    size_t consumed_frames_count;
 };
 } // namespace onevpl
 } // namespace wip
