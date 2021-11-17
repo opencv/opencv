@@ -5,7 +5,12 @@ include("${OpenCV_SOURCE_DIR}/cmake/OpenCVPluginStandalone.cmake")
 
 # scan dependencies
 set(WITH_FFMPEG ON)
-set(OPENCV_FFMPEG_SKIP_BUILD_CHECK ON)
+
+if (EMSCRIPTEN)
+  set(OPENCV_FFMPEG_SKIP_BUILD_CHECK OFF)
+else()
+  set(OPENCV_FFMPEG_SKIP_BUILD_CHECK ON)
+endif()
 include("${OpenCV_SOURCE_DIR}/modules/videoio/cmake/init.cmake")
 
 set(OPENCV_PLUGIN_DEPS core imgproc imgcodecs)
