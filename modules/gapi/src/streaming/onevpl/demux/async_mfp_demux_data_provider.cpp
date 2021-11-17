@@ -78,7 +78,7 @@ static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSo
                                       url << ". Abort");
             pSourceResolver->Release();
             throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                                   "cannot create CreateObjectFromURL");
+                                                   "CreateObjectFromURL failed");
         }
     }
 
@@ -87,7 +87,7 @@ static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSo
         pSourceUnk->Release();
         pSourceResolver->Release();
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                               "cannot query IMFMediaSource");
+                                               "QueryInterface for IMFMediaSource failed");
     }
 
     if (pSourceUnk) {
@@ -318,9 +318,12 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             " start creating source attributes");
     IMFAttributes *attrs_tmp = nullptr;
-    hr = MFCreateAttributes(&attrs_tmp, 2);
+
+    // NB: create 2 attributes for disable converters & async callback capability
+    const UINT32 relevant_attributes_count = 2;
+    hr = MFCreateAttributes(&attrs_tmp, relevant_attributes_count);
     if (FAILED(hr)) {
-        throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot MFCreateAttributes");
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFCreateAttributes failed");
     }
 
     ComPtrGuard<IMFAttributes> attributes = createCOMPtrGuard(attrs_tmp);
@@ -339,12 +342,12 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
     }
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                            "is getting presentation description");
+                            "is getting presentation descriptor");
     IMFPresentationDescriptor* descriptor_tmp = nullptr;
     hr = source->CreatePresentationDescriptor(&descriptor_tmp);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                               "cannot CreatePresentationDescriptor");
+                                               "CreatePresentationDescriptor failed");
     }
     ComPtrGuard<IMFPresentationDescriptor> descriptor = createCOMPtrGuard(descriptor_tmp);
     DWORD stream_count = 0;
@@ -369,7 +372,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
 
         ComPtrGuard<IMFStreamDescriptor> stream_descriptor =
                                     createCOMPtrGuard(stream_descriptor_tmp);
-        is_stream_selected = false; // deselect until find supported stream found
+        is_stream_selected = false; // deselect until supported stream found
         IMFMediaTypeHandler *handler_tmp = nullptr;
         stream_descriptor->GetMediaTypeHandler(&handler_tmp);
         if (!handler_tmp) {
@@ -424,7 +427,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
                           " - " << is_codec_supported)
         } else {
             GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
-                                      "Cannot media GUID subtype for stream by index: " <<
+                                      "Cannot get media GUID subtype for stream by index: " <<
                                       stream_index);
             continue;
         }
@@ -453,18 +456,19 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
     hr = MFCreateSourceReaderFromMediaSource(source.get(), attributes.get(),
                                              &source_reader_tmp);
     if (FAILED(hr)) {
-        throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create MFCreateSourceReaderFromMediaSource");
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                               "MFCreateSourceReaderFromMediaSource failed");
     }
     source_reader = createCOMPtrGuard(source_reader_tmp);
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "created IMFSourceReader: " << source_reader);
 
-    if (SUCCEEDED(hr)) {
-        // Ask for the first sample.
-        request_next(hr, 0, 0);
-    } else {
-        throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot ReadSample");
+    // Ask for the first sample.
+    hr = request_next(hr, 0, 0);
+    if (FAILED(hr)) {
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                               "ReadSample failed while requesting initial sample");
     }
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
                             "initialized");
