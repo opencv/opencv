@@ -27,7 +27,7 @@ using cv::gapi::wip::onevpl::SharedLock;
 struct TestBarrier : public cv::gapi::wip::onevpl::elastic_barrier<TestBarrier> {
     void on_first_in_impl(size_t visitor_id) {
 
-        static std::atomic<size_t> thread_counter{};
+        static std::atomic<int> thread_counter{};
         thread_counter++;
         EXPECT_EQ(thread_counter.load(), 1);
 
@@ -40,7 +40,7 @@ struct TestBarrier : public cv::gapi::wip::onevpl::elastic_barrier<TestBarrier> 
 
     void on_last_out_impl(size_t visitor_id) {
 
-        static std::atomic<size_t> thread_counter{};
+        static std::atomic<int> thread_counter{};
         thread_counter++;
         EXPECT_EQ(thread_counter.load(), 1);
 
@@ -151,8 +151,7 @@ TEST(OneVPL_SharedLock, Write_MultiThread)
     std::promise<void> barrier;
     std::shared_future<void> sync = barrier.get_future();
 
-    const size_t work_count = 3;
-    const size_t inc_count = 10000000;
+    static const size_t inc_count = 10000000;
     size_t shared_value = 0;
     auto work = [&lock, &shared_value](size_t count) {
         for (size_t i = 0; i < count; i ++) {
@@ -162,9 +161,9 @@ TEST(OneVPL_SharedLock, Write_MultiThread)
         }
     };
 
-    std::thread worker_thread([&barrier, sync, work, inc_count] () {
+    std::thread worker_thread([&barrier, sync, work] () {
 
-        std::thread sub_worker([&barrier, work, inc_count] () {
+        std::thread sub_worker([&barrier, work] () {
             barrier.set_value();
             work(inc_count);
         });
@@ -188,7 +187,7 @@ TEST(OneVPL_SharedLock, ReadWrite_MultiThread)
     std::promise<void> barrier;
     std::future<void> sync = barrier.get_future();
 
-    const size_t inc_count = 10000000;
+    static const size_t inc_count = 10000000;
     size_t shared_value = 0;
     auto write_work = [&lock, &shared_value](size_t count) {
         for (size_t i = 0; i < count; i ++) {
@@ -209,7 +208,7 @@ TEST(OneVPL_SharedLock, ReadWrite_MultiThread)
         }
     };
 
-    std::thread writer_thread([&barrier, write_work, inc_count] () {
+    std::thread writer_thread([&barrier, write_work] () {
         barrier.set_value();
         write_work(inc_count);
     });
@@ -248,7 +247,7 @@ TEST(OneVPL_ElasticBarrier, multi_thread_visit)
 {
     TestBarrier tested_barrier;
 
-    const size_t max_visit_count = 10000000;
+    static const size_t max_visit_count = 10000000;
     std::atomic<size_t> visit_in_wait_counter{};
     std::promise<void> start_sync_barrier;
     std::shared_future<void> start_sync = start_sync_barrier.get_future();
@@ -256,7 +255,6 @@ TEST(OneVPL_ElasticBarrier, multi_thread_visit)
     std::shared_future<void> phase_sync = phase_sync_barrier.get_future();
 
     auto visit_worker_job = [&tested_barrier,
-                             max_visit_count,
                              &visit_in_wait_counter,
                              start_sync,
                              phase_sync] (size_t worker_id) {
@@ -283,7 +281,6 @@ TEST(OneVPL_ElasticBarrier, multi_thread_visit)
     };
 
     auto visit_main_job = [&tested_barrier,
-                           max_visit_count,
                            &visit_in_wait_counter,
                            &phase_sync_barrier] (size_t total_workers_count,
                                                  size_t worker_id) {

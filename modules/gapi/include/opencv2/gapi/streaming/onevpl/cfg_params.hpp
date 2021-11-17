@@ -49,11 +49,11 @@ struct GAPI_EXPORTS CfgParam {
     /**
      * @brief queue_capacity
      *
-     * Special configuration parameter names for @ref onevp::GSource:
+     * Special configuration parameter names for onevp::GSource:
      *
      * @note queue_capacity allows to allocate surfaces pool appropriate size to keep
      * decoded frames in accelerator memory ready before
-     * they would be consumed by @ref onevp::GSource::pull operation. If you see
+     * they would be consumed by onevp::GSource::pull operation. If you see
      * a lot of WARNING about lack of free surface then it's time to increase
      * queue_capacity but be aware of accelerator free memory volume.
      * If not set then MFX implementation use
