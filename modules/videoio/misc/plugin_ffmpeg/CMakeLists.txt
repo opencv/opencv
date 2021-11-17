@@ -6,10 +6,8 @@ include("${OpenCV_SOURCE_DIR}/cmake/OpenCVPluginStandalone.cmake")
 # scan dependencies
 set(WITH_FFMPEG ON)
 
-if (EMSCRIPTEN)
-  set(OPENCV_FFMPEG_SKIP_BUILD_CHECK OFF)
-else()
-  set(OPENCV_FFMPEG_SKIP_BUILD_CHECK ON)
+if(EMSCRIPTEN AND NOT DEFINED OPENCV_FFMPEG_SKIP_BUILD_CHECK)
+  set(OPENCV_FFMPEG_SKIP_BUILD_CHECK ON)  # try_compile doesn't work properly with Emscripten
 endif()
 include("${OpenCV_SOURCE_DIR}/modules/videoio/cmake/init.cmake")
 
