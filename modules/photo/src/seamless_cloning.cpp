@@ -67,6 +67,7 @@ static Mat checkMask(InputArray _mask, Size size)
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
     CV_INSTRUMENT_REGION();
+    CV_Assert(!_src.empty());
 
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
