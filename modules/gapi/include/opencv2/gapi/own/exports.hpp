@@ -39,4 +39,5 @@
 
 #   endif
 
+#include <opencv2/gapi/gtags.hpp>
 #endif // OPENCV_GAPI_OWN_TYPES_HPP
