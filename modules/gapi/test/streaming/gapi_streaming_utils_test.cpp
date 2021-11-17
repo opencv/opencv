@@ -58,7 +58,7 @@ struct TestBarrier : public cv::gapi::wip::onevpl::elastic_barrier<TestBarrier> 
 
 TEST(OneVPL_SharedLock, Create) {
     SharedLock lock;
-    EXPECT_EQ(lock.shared_counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), size_t{0});
 }
 
 TEST(OneVPL_SharedLock, Read_SingleThread)
@@ -77,7 +77,7 @@ TEST(OneVPL_SharedLock, Read_SingleThread)
         EXPECT_FALSE(lock.owns());
     }
 
-    EXPECT_EQ(lock.shared_counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), size_t{0});
 }
 
 TEST(OneVPL_SharedLock, TryLock_SingleThread)
@@ -89,7 +89,7 @@ TEST(OneVPL_SharedLock, TryLock_SingleThread)
 
     lock.unlock();
     EXPECT_FALSE(lock.owns());
-    EXPECT_EQ(lock.shared_counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), size_t{0});
 }
 
 TEST(OneVPL_SharedLock, Write_SingleThread)
@@ -101,7 +101,7 @@ TEST(OneVPL_SharedLock, Write_SingleThread)
 
     lock.unlock();
     EXPECT_FALSE(lock.owns());
-    EXPECT_EQ(lock.shared_counter.load(), 0);
+    EXPECT_EQ(lock.shared_counter.load(), size_t{0});
 }
 
 TEST(OneVPL_SharedLock, TryLockTryLock_SingleThread)
@@ -229,17 +229,17 @@ TEST(OneVPL_ElasticBarrier, single_thread_visit)
     size_t visit_id = 0;
     for (visit_id = 0; visit_id < max_visit_count; visit_id++) {
         barrier.visit_in(visit_id);
-        EXPECT_EQ(barrier.visitors_in.size(), 1);
+        EXPECT_EQ(barrier.visitors_in.size(), size_t{1});
     }
-    EXPECT_EQ(barrier.last_visitor_id, 0);
-    EXPECT_EQ(barrier.visitors_out.size(), 0);
+    EXPECT_EQ(barrier.last_visitor_id, size_t{0});
+    EXPECT_EQ(barrier.visitors_out.size(), size_t{0});
 
     for (visit_id = 0; visit_id < max_visit_count; visit_id++) {
         barrier.visit_out(visit_id);
-        EXPECT_EQ(barrier.visitors_in.size(), 1);
+        EXPECT_EQ(barrier.visitors_in.size(), size_t{1});
     }
     EXPECT_EQ(barrier.last_visitor_id, visit_id - 1);
-    EXPECT_EQ(barrier.visitors_out.size(), 1);
+    EXPECT_EQ(barrier.visitors_out.size(), size_t{1});
 }
 
 
