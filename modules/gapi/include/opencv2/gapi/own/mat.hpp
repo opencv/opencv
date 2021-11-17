@@ -88,6 +88,8 @@ namespace cv { namespace gapi { namespace own {
     class Mat : public detail::MatHeader{
     public:
 
+        GAPI_OBJECT(GraphRejected);
+
         Mat() = default;
 
         /** @overload

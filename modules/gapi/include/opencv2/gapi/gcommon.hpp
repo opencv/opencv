@@ -13,6 +13,7 @@
 #include <type_traits>  // decay
 
 #include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/gtags.hpp>
 
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/util/optional.hpp>
@@ -24,44 +25,6 @@
 namespace cv {
 
 class GMat; // FIXME: forward declaration for GOpaqueTraits
-
-template<typename ...Tags>
-struct TagHolder : Tags...
-{
-};
-
-namespace tag
-{
-    struct Meta {};
-}
-
-#define GAPI_OBJECT_META using tags_t = cv::TagHolder<cv::tag::Meta>;
-
-template<typename... Ts>
-struct make_void { typedef void type;};
-
-template<typename... Ts>
-using void_t = typename make_void<Ts...>::type;
-
-template<typename, typename = void>
-struct is_tagged_type : std::false_type {};
-
-template<typename TaggedTypeCandidate>
-struct is_tagged_type<TaggedTypeCandidate,
-                       void_t<typename TaggedTypeCandidate::tags_t>> :
-    std::true_type
-{};
-
-template <typename Type, typename Tag>
-struct is_contain_tag_impl : std::is_base_of<Tag, typename Type::tags_t> {
-};
-
-template<typename Type, typename Tag>
-struct is_contain_tag : std::conditional<is_tagged_type<Type>::value,
-                                         is_contain_tag_impl<Type, Tag>,
-                                         std::false_type>::type
-{};
-
 
 namespace detail
 {

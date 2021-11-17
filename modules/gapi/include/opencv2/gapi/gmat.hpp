@@ -66,7 +66,7 @@ struct GOrigin;
 class GAPI_EXPORTS_W_SIMPLE GMat
 {
 public:
-    GAPI_OBJECT_META
+    GAPI_OBJECT(Meta)
     /**
      * @brief Constructs an empty GMat
      *
