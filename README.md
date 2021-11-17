@@ -1,3 +1,6 @@
+<div align="center">
+  <img height="500px" width="500px" src="https://opencv.org/wp-content/uploads/2020/07/OpenCV_logo_no_text_.png">
+</div>
 ## OpenCV: Open Source Computer Vision Library
 
 ### Resources
