@@ -13,6 +13,11 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+SharedLock::SharedLock() {
+    exclusive_lock.store(false);
+    shared_counter.store(0);
+}
+
 size_t SharedLock::shared_lock() {
     size_t prev = 0;
     bool in_progress = false;

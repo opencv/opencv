@@ -19,7 +19,7 @@ namespace onevpl {
 
 class GAPI_EXPORTS SharedLock {
 public:
-    SharedLock() = default;
+    SharedLock();
     ~SharedLock() = default;
 
     size_t shared_lock();
