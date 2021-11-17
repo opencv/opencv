@@ -208,19 +208,23 @@ PERF_TEST_P_(SubRCPerfTest, TestPerformance)
 
 PERF_TEST_P_(MulPerfTest, TestPerformance)
 {
-    Size sz = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    int dtype = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    compare_f cmpF;
+    cv::Size sz;
+    MatType type = -1;
+    int dtype = -1;
+    double scale = 1.0;
+    cv::GCompileArgs compile_args;
+
+    std::tie(cmpF, sz, type, dtype, scale, compile_args) = GetParam();
 
     initMatsRandU(type, sz, dtype, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::multiply(in_mat1, in_mat2, out_mat_ocv, 1.0, dtype);
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
-    out = cv::gapi::mul(in1, in2, 1.0, dtype);
+    out = cv::gapi::mul(in1, in2, scale, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
@@ -234,8 +238,9 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }
