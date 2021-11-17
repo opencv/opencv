@@ -483,12 +483,11 @@ TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
 
     string video_file = findDataFile("video/big_buck_bunny.mp4");
     VideoCapture cap;
-    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG, {
-        CAP_PROP_FORMAT, -1  // demux only
-        }));
-
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     Mat data;
-    cap.retrieve(data, 1);
+    int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
+    EXPECT_TRUE(codecExtradataIdx);
+    cap.retrieve(data, codecExtradataIdx);
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)45, data.total());

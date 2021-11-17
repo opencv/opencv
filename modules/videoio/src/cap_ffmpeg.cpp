@@ -102,8 +102,14 @@ public:
             }
         }
 
-        if (!icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn, flag))
-            return false;
+        if (flag == 0) {
+            if (!icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
+                return false;
+        }
+        else {
+            if (!ffmpegCapture->retrieveFrame(flag, &data, &step, &width, &height, &cn))
+                return false;
+        }
 
         cv::Mat tmp(height, width, CV_MAKETYPE(CV_8U, cn), data, step);
         this->rotateFrame(tmp);
