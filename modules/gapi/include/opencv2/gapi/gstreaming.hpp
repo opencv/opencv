@@ -86,9 +86,6 @@ using GOptRunArgs = std::vector<GOptRunArg>;
 namespace detail {
 
 template<typename T> inline GOptRunArgP wrap_opt_arg(optional<T>& arg) {
-    static_assert(!(cv::gapi::has_tag<T, cv::gapi::tag::Meta>::value ||
-                    cv::gapi::has_tag<T, cv::gapi::tag::GraphRejected>::value),
-                  "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
     // By default, T goes to an OpaqueRef. All other types are specialized
     return GOptRunArgP{OptionalOpaqueRef(arg)};
 }
