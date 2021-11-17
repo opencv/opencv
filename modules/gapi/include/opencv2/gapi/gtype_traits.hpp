@@ -170,8 +170,17 @@ namespace detail
             return static_cast<typename std::remove_reference<T>::type>(t);
         }
 
-        template<typename U> static U  wrap_in (const U &u) { return  u;  }
-        template<typename U> static U* wrap_out(U &u)       { return &u;  }
+        template<typename U> static U  wrap_in (const U &u) {
+            static_assert(!(cv::gapi::has_tag<U, cv::gapi::tag::Meta>::value ||
+                          cv::gapi::has_tag<U, cv::gapi::tag::GraphRejected>::value),
+                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
+            return  u;
+        }
+        template<typename U> static U* wrap_out(U &u)       {
+            static_assert(!(cv::gapi::has_tag<U, cv::gapi::tag::Meta>::value ||
+                          cv::gapi::has_tag<U, cv::gapi::tag::GraphRejected>::value),
+                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
+            return &u;  }
     };
     template<typename T> struct WrapValue<T, typename std::enable_if<has_custom_wrap<T>::value>::type>
     {
