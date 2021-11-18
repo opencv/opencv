@@ -2392,11 +2392,20 @@ The function remap transforms the source image using the specified map:
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using convertMaps. The reason you might want to
+\f$map_1\f$, or fixed-point maps created by using convertMaps(). The reason you might want to
 convert from floating to fixed-point representations of a map is that they can yield much faster
-(\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
-cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
+(\~2x) remapping operations.
+Current implementation fixed-point numbers are denoted as Q16.5 in [Q number format](https://en.wikipedia.org/wiki/Q_(number_format)).
+\f$map_1\f$ contains pairs (cvFloor(x), cvFloor(y)) and \f$map_2\f$ contains 5 fraction bits of x and 5 fraction bits of y.
 
+In the fixed-point case to get fraction bits of \f$x_{i,j}\f$ use:
+@code
+map2.at<unsigned short>(i,j) % 32 // fraction bits value in [0, 31] range
+@endcode
+In the fixed-point case to get fraction bits of \f$y_{i,j}\f$ use:
+@code
+map2.at<unsigned short>(i,j) / 32 // fraction bits value in [0, 31] range
+@endcode
 This function cannot operate in-place.
 
 @param src Source image.
