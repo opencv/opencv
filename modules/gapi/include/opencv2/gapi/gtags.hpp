@@ -18,8 +18,9 @@ namespace tag
     struct GraphRejected {};
 }
 
-#define GAPI_OBJECT(TAG_1)        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::TAG_1 >;
-#define GAPI_OBJECT_2(TAG_1, TAG_2) using tags_t = cv::gapi::TagHolder<cv::gapi::tag::TAG_1, cv::gapi::tag:: ## TAG_2 >;
+#define GAPI_OBJECT(TAG_1)                  using tags_t = cv::gapi::TagHolder<cv::gapi::tag::TAG_1 >;
+#define GAPI_OBJECT_2(TAG_1, TAG_2)         using tags_t = cv::gapi::TagHolder<cv::gapi::tag::TAG_1, cv::gapi::tag::TAG_2 >;
+#define GAPI_OBJECT_3(TAG_1, TAG_2, TAG_3)  using tags_t = cv::gapi::TagHolder<cv::gapi::tag::TAG_1, cv::gapi::tag::TAG_2, cv::gapi::tag::TAG_3 >;
 
 template<typename... Ts>
 struct make_void { typedef void type;};

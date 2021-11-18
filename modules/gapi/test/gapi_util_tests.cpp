@@ -8,6 +8,35 @@
 #include "test_precomp.hpp"
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/gtags.hpp>
+
+namespace cv {
+namespace gapi{
+namespace tag {
+struct Tag1 {};
+struct Tag2 {};
+struct Tag3 {};
+}
+}
+}
+class NonTagged {};
+
+class HasTag1 {
+public:
+    GAPI_OBJECT (Tag1)
+};
+class HasTag2 {
+public:
+    GAPI_OBJECT (Tag2)
+};
+class HasTag23 {
+public:
+    GAPI_OBJECT_2 (Tag2, Tag3)
+};
+class HasTag123 {
+public:
+    GAPI_OBJECT_3 (Tag1, Tag2, Tag3)
+};
 
 namespace cv
 {
