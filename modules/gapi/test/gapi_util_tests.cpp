@@ -10,6 +10,35 @@
 #include <type_traits>
 
 #include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/gtags.hpp>
+
+namespace cv {
+namespace gapi{
+namespace tag {
+struct Tag1 {};
+struct Tag2 {};
+struct Tag3 {};
+}
+}
+}
+class NonTagged {};
+
+class HasTag1 {
+public:
+    GAPI_OBJECT (Tag1)
+};
+class HasTag2 {
+public:
+    GAPI_OBJECT (Tag2)
+};
+class HasTag23 {
+public:
+    GAPI_OBJECT_2 (Tag2, Tag3)
+};
+class HasTag123 {
+public:
+    GAPI_OBJECT_3 (Tag1, Tag2, Tag3)
+};
 
 namespace opencv_test
 {
@@ -40,4 +69,43 @@ TEST(GAPIUtil, AllButLast)
                   "[int, float] are NOT all integral types");
 }
 
+TEST(GAPIUtil, GTags_NonTagged)
+{
+    using namespace cv::gapi::tag;
+    static_assert(!cv::gapi::has_tag<NonTagged, Tag1>::value, "NonTagged hasn't got Tag1");
+    static_assert(!cv::gapi::has_tag<NonTagged, Tag2>::value, "NonTagged hasn't got Tag2");
+    static_assert(!cv::gapi::has_tag<NonTagged, Tag3>::value, "NonTagged hasn't got Tag3");
+}
+
+TEST(GAPIUtil, GTags_HasTag1)
+{
+    using namespace cv::gapi::tag;
+    static_assert(cv::gapi::has_tag<HasTag1, Tag1>::value, "HasTag1 has got Tag1");
+    static_assert(!cv::gapi::has_tag<HasTag1, Tag2>::value, "HasTag1 hasn't got Tag2");
+    static_assert(!cv::gapi::has_tag<HasTag1, Tag3>::value, "HasTag1 hasn't got Tag3");
+}
+
+TEST(GAPIUtil, GTags_HasTag2)
+{
+    using namespace cv::gapi::tag;
+    static_assert(!cv::gapi::has_tag<HasTag2, Tag1>::value, "HasTag2 hasn't got Tag1");
+    static_assert(cv::gapi::has_tag<HasTag2, Tag2>::value, "HasTag2 has got Tag2");
+    static_assert(!cv::gapi::has_tag<HasTag2, Tag3>::value, "HasTag2 hasn't got Tag3");
+}
+
+TEST(GAPIUtil, GTags_HasTag23)
+{
+    using namespace cv::gapi::tag;
+    static_assert(!cv::gapi::has_tag<HasTag23, Tag1>::value, "HasTag23 hasn't got Tag1");
+    static_assert(cv::gapi::has_tag<HasTag23, Tag2>::value, "HasTag23 has got Tag2 & Tag3 both");
+    static_assert(cv::gapi::has_tag<HasTag23, Tag3>::value, "HasTag23 has got Tag2 & Tag3 both");
+}
+
+TEST(GAPIUtil, GTags_HasTag123)
+{
+    using namespace cv::gapi::tag;
+    static_assert(cv::gapi::has_tag<HasTag123, Tag1>::value, "HasTag123 has got Tag1");
+    static_assert(cv::gapi::has_tag<HasTag123, Tag2>::value, "HasTag123 has got Tag2");
+    static_assert(cv::gapi::has_tag<HasTag123, Tag3>::value, "HasTag123 has got Tag3");
+}
 } // namespace opencv_test
