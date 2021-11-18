@@ -495,15 +495,21 @@ public:
         double energy;
     };
 
-    class Impl
+    class Backend
     {
     public:
-        virtual ~Impl() { }
+        virtual ~Backend() { }
+
+        // enables geodesic acceleration support in a backend, returns true on success
+        virtual bool enableGeo() = 0;
 
         // calculates an energy and/or jacobian at current param vector or at probe param vector
         virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) = 0;
-        // adds x to current variables and writes the sum to probe vars
-        virtual void currentOplusXToProbe(const Mat_<double>& x) = 0;
+
+        // adds x to current variables and writes the sum to probe var
+        // or to geodesic acceleration var if geo flag is set
+        virtual void currentOplusX(const Mat_<double>& x, bool geo = false) = 0;
+
         // allocates jtj, jtb, probeX and other resources for objective function calculation
         virtual void prepareVars() = 0;
         // returns a J^T*b vector (aka gradient)
@@ -514,8 +520,25 @@ public:
         virtual void setDiag(const Mat_<double>& d) = 0;
         // performs jacobi scaling if the option is turned on
         virtual void doJacobiScaling(const Mat_<double>& di) = 0;
+
+        //TODO: remove it
         // solves LevMarq equation for current iteration
-        virtual bool solve(Mat_<double>& x) = 0;
+        //virtual bool solve(Mat_<double>& x) = 0;
+
+        //TODO: this
+        // decomposes LevMarq matrix before solution
+        virtual bool decompose() = 0;
+        // solves LevMarq equation (J^T*J + lmdiag) * x = J^T*b for current iteration using existing decomposition
+        virtual bool solveDecomposed(Mat_<double>& x) = 0;
+
+        // solves LevMarq geodesic acceleration equation (J^T*J + lmdiag) * xgeo = J^T*rvv using existing decomposition
+        virtual bool solveDecomposedGeo(Mat_<double>& xgeo) = 0;
+        // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
+        // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
+        // where v is a LevMarq equation solution
+        virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) = 0;
+
+
         // sets current params vector to probe params
         virtual void acceptProbe() = 0;
     };
@@ -537,6 +560,10 @@ public:
     bool checkMinGradient;
     // to use stepNormTolerance or not
     bool checkStepNorm;
+    // to use geodesic acceleration or not
+    bool geodesic;
+    // second directional derivative approximation step for geodesic acceleration
+    double hGeo;
     // optimization stops when norm2(dx) drops below this value
     double stepNormTolerance;
     // optimization stops when relative energy change drops below this value
@@ -553,9 +580,9 @@ public:
     double initialLmUpFactor;
     double initialLmDownFactor;
 
-    Ptr<Impl> pImpl;
+    Ptr<Backend> pBackend;
 
-    BaseLevMarq(Ptr<Impl> impl_) :
+    BaseLevMarq(Ptr<Backend> backend_) :
         jacobiScaling(false),
         upDouble(true),
         useStepQuality(true),
@@ -564,6 +591,8 @@ public:
         checkRelEnergyChange(true),
         checkMinGradient(true),
         checkStepNorm(true),
+        geodesic(false),
+        hGeo(1e-4),
         stepNormTolerance(1e-6),
         relEnergyDeltaTolerance(1e-6),
         minGradientTolerance(1e-6),
@@ -572,7 +601,7 @@ public:
         initialLambdaLevMarq(0.0001),
         initialLmUpFactor(2.0),
         initialLmDownFactor(3.0),
-        pImpl(impl_)
+        pBackend(backend_)
     { }
 
     virtual ~BaseLevMarq() { }

@@ -343,10 +343,16 @@ BaseLevMarq::Report BaseLevMarq::optimize()
     //ctr++;
     //std::cout << "ctr: " << ctr << std::endl;
 
-    pImpl->prepareVars();
+    if (geodesic && !pBackend->enableGeo())
+    {
+        CV_LOG_INFO(NULL, "The backend does not support geodesic acceleration, please turn off the corresponding option");
+        return BaseLevMarq::Report(false, 0, 0); // not found
+    }
+
+    pBackend->prepareVars();
 
     double energy = 0.0;
-    if (!pImpl->calcFunc(energy, /*useProbeVars*/ false, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
+    if (!pBackend->calcFunc(energy, /*useProbeVars*/ false, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
         return BaseLevMarq::Report(false, 0, 0); // not found
@@ -380,7 +386,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         // vec d = {d_j = sum(J_ij^2) for each column j of J} = get_diag{ J^T * J }
         // di = { 1/(1+sqrt(d_j)) }, extra +1 to avoid div by zero
         Mat_<double> ds;
-        const Mat_<double> diag = pImpl->getDiag();
+        const Mat_<double> diag = pBackend->getDiag();
         cv::sqrt(diag, ds);
         di = 1.0 / (ds + 1.0);
     }
@@ -399,15 +405,15 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         // do the jacobian conditioning improvement used in Ceres
         if (jacobiScaling)
         {
-            pImpl->doJacobiScaling(di);
+            pBackend->doJacobiScaling(di);
         }
 
-        const Mat_<double> jtb = pImpl->getJtb();
+        const Mat_<double> jtb = pBackend->getJtb();
 
         double gradientMax = cv::norm(jtb, NORM_INF);
 
         // Save original diagonal of jtj matrix for LevMarq
-        const Mat_<double> diag = pImpl->getDiag();
+        const Mat_<double> diag = pBackend->getDiag();
 
         // Solve using LevMarq and get delta transform
         bool enoughLm = false;
@@ -420,13 +426,18 @@ BaseLevMarq::Report BaseLevMarq::optimize()
             if (clampDiagonal)
                 lmDiag = cv::min(cv::max(lmDiag, minDiag), maxDiag);
             jtjDiag = lmDiag + diag;
-            pImpl->setDiag(jtjDiag);
+            pBackend->setDiag(jtjDiag);
+
+            CV_LOG_INFO(NULL, "linear decompose...");
+
+            bool decomposed = pBackend->decompose();
+
+            CV_LOG_INFO(NULL, (decomposed ? "OK" : "FAIL"));
 
             CV_LOG_INFO(NULL, "linear solve...");
-
             // use double or convert everything to float
             Mat_<double> x((int)jtb.rows, 1);
-            bool solved = pImpl->solve(x);
+            bool solved = pBackend->solveDecomposed(x);
 
             //DEBUG
             //if (ctr == 1003)
@@ -458,13 +469,38 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                     x = x.mul(di);
                 }
 
+                if (geodesic)
+                {
+                    pBackend->currentOplusX(x * hGeo, /*geo*/ true);
+
+                    if (pBackend->calcJtrvv(x, lmDiag, hGeo))
+                    {
+                        Mat_<double> xgeo((int)jtb.rows, 1);
+                        bool geoSolved = pBackend->solveDecomposedGeo(xgeo);
+
+                        if (geoSolved)
+                        {
+
+                            //TODO: drop a step if truncerr >= 1 or smaller
+                            double truncerr = sqrt(xgeo.dot(xgeo) / x.dot(x));
+                            CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr);
+                            //TODO: or not 0.5?
+                            x += xgeo * 0.5;
+                        }
+                        else
+                        {
+                            CV_LOG_INFO(NULL, "Geo: failed to solve");
+                        }
+                    }
+                }
+
                 // remember, we move against the gradient direction
                 x = -x;
 
                 // calc energy with current delta x
-                pImpl->currentOplusXToProbe(x);
+                pBackend->currentOplusX(x, /*geo*/ false);
 
-                bool success = pImpl->calcFunc(energy, /*useProbeVars*/ true, /*calcEnergy*/ true, /*calcJacobian*/ false);
+                bool success = pBackend->calcFunc(energy, /*useProbeVars*/ true, /*calcEnergy*/ true, /*calcJacobian*/ false);
                 if (!success || energy < 0 || isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
@@ -511,7 +547,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 smallEnergyDelta = (costChange / energy < relEnergyDeltaTolerance);
                 smallEnergy = (energy < smallEnergyTolerance);
 
-                pImpl->acceptProbe();
+                pBackend->acceptProbe();
 
                 CV_LOG_INFO(NULL, "#" << iter << " energy: " << energy);
 
@@ -536,7 +572,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         if (!done)
         {
             double dummy;
-            if (!pImpl->calcFunc(dummy, /*useProbeVars*/ false, /*calcEnergy*/ false, /*calcJacobian*/ true))
+            if (!pBackend->calcFunc(dummy, /*useProbeVars*/ false, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
                 return BaseLevMarq::Report(false, iter, oldEnergy); // not found
@@ -565,7 +601,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
 }
 
 
-struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
+struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
 {
     // all variables including fixed ones
     size_t nVars;
@@ -596,27 +632,34 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
     // What method to use for linear system solving
     int solveMethod;
 
-    LevMarqDenseLinearImpl(int nvars_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
-        LevMarqDenseLinearImpl(noArray(), nvars_, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
+    // for geodesic acceleration
+    bool useGeo;
+    // x0 + v*h variable
+    Mat_<double> geoX;
+    // J^T*rvv vector
+    Mat_<double> jtrvv;
+
+    LevMarqDenseLinearBackend(int nvars_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+        LevMarqDenseLinearBackend(noArray(), nvars_, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearImpl(int nvars_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
-        LevMarqDenseLinearImpl(noArray(), nvars_, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
+    LevMarqDenseLinearBackend(int nvars_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+        LevMarqDenseLinearBackend(noArray(), nvars_, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearImpl(InputOutputArray param_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
-        LevMarqDenseLinearImpl(param_, 0, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
+    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+        LevMarqDenseLinearBackend(param_, 0, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearImpl(InputOutputArray param_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
-        LevMarqDenseLinearImpl(param_, 0, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
+    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+        LevMarqDenseLinearBackend(param_, 0, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
     { }
 
-    LevMarqDenseLinearImpl(InputOutputArray currentX_, int nvars,
+    LevMarqDenseLinearBackend(InputOutputArray currentX_, int nvars,
         LevMarqDenseLinear::LongCallback cb_ = nullptr,
         LevMarqDenseLinear::NormalCallback cb_alt_ = nullptr,
         size_t nerrs_ = 0,
         bool LtoR_ = false,
         InputArray mask_ = noArray(),
         int solveMethod_ = DECOMP_SVD) :
-        BaseLevMarq::Impl(),
+        BaseLevMarq::Backend(),
         // these fields will be initialized at prepareVars()
         jtj(),
         jtb(),
@@ -625,7 +668,8 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
         jtjFull(),
         jtbFull(),
         jLong(),
-        bLong()
+        bLong(),
+        useGeo()
     {
         if (!currentX_.empty())
         {
@@ -664,6 +708,76 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
         CV_Assert(this->nVars > 0);
     }
 
+    virtual bool enableGeo() CV_OVERRIDE
+    {
+        useGeo = true;
+        return true;
+    }
+
+    virtual void prepareVars() CV_OVERRIDE
+    {
+        jtj = Mat_<double>((int)nVars, (int)nVars);
+        jtb = Mat_<double>((int)nVars, 1);
+
+        probeX = currentX.clone();
+        delta = Mat_<double>((int)allVars, 1);
+
+        // Allocate vars for use with mask
+        if (!mask.empty())
+        {
+            jtjFull = Mat_<double>((int)allVars, (int)allVars);
+            jtbFull = Mat_<double>((int)allVars, 1);
+        }
+
+        if (nerrs)
+        {
+            jLong = Mat_<double>((int)nerrs, (int)allVars);
+            bLong = Mat_<double>((int)nerrs, 1, CV_64F);
+        }
+
+        if (useGeo)
+        {
+            geoX = currentX.clone();
+            jtrvv = jtb.clone();
+        }
+    }
+
+    // adds x to current variables and writes result to probe vars
+    virtual void currentOplusX(const Mat_<double>& x, bool geo) CV_OVERRIDE
+    {
+        // 'unpack' the param delta
+        int j = 0;
+        if (!mask.empty())
+        {
+            for (int i = 0; i < allVars; i++)
+            {
+                delta.at<double>(i) = (mask.at<uchar>(i) != 0) ? x(j++) : 0.0;
+            }
+        }
+        else
+            delta = x;
+
+        if (geo)
+        {
+            if (useGeo)
+            {
+                geoX = currentX + delta;
+            }
+            else
+            {
+                CV_Error(CV_StsBadArg, "Geodesic acceleration is disabled");
+            }
+        }
+        else
+        {
+            probeX = currentX + delta;
+        }
+    }
+
+    virtual void acceptProbe() CV_OVERRIDE
+    {
+        probeX.copyTo(currentX);
+    }
 
     static void subMatrix(const Mat_<double>& src, Mat_<double>& dst, const Mat_<uchar>& mask)
     {
@@ -691,6 +805,7 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
         Mat_<double> xd = useProbeVars ? probeX : currentX;
 
         double sd = 0.0;
+        // TODO: remove jlongp
         Mat jtbp, jtjp, jLongp;
         if (calcJacobian)
         {
@@ -755,46 +870,6 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
         return true;
     }
 
-    // adds x to current variables and writes result to probe vars
-    virtual void currentOplusXToProbe(const Mat_<double>& x) CV_OVERRIDE
-    {
-        // 'unpack' the param delta
-        int j = 0;
-        if (!mask.empty())
-        {
-            for (int i = 0; i < allVars; i++)
-            {
-                delta.at<double>(i) = (mask.at<uchar>(i) != 0) ? x(j++) : 0.0;
-            }
-        }
-        else
-            delta = x;
-
-        probeX = currentX + delta;
-    }
-
-    virtual void prepareVars() CV_OVERRIDE
-    {
-        jtj = Mat_<double>((int)nVars, (int)nVars);
-        jtb = Mat_<double>((int)nVars, 1);
-
-        probeX = currentX.clone();
-        delta = Mat_<double>((int)allVars, 1);
-
-        // Allocate vars for use with mask
-        if (!mask.empty())
-        {
-            jtjFull = Mat_<double>((int)allVars, (int)allVars);
-            jtbFull = Mat_<double>((int)allVars, 1);
-        }
-
-        if (nerrs)
-        {
-            jLong = Mat_<double>((int)nerrs, (int)allVars);
-            bLong = Mat_<double>((int)nerrs, 1, CV_64F);
-        }
-    }
-
     virtual const Mat_<double> getDiag() CV_OVERRIDE
     {
         return jtj.diag().clone();
@@ -831,14 +906,58 @@ struct LevMarqDenseLinearImpl : public BaseLevMarq::Impl
         }
     }
 
-    virtual bool solve(Mat_<double>& x) CV_OVERRIDE
+    virtual bool decompose() CV_OVERRIDE
+    {
+        //TODO: do the real decomposition
+        return true;
+    }
+
+    virtual bool solveDecomposed(Mat_<double>& x) CV_OVERRIDE
     {
         return cv::solve(jtj, jtb, x, solveMethod);
     }
 
-    virtual void acceptProbe() CV_OVERRIDE
+    virtual bool solveDecomposedGeo(Mat_<double>& xgeo) CV_OVERRIDE
     {
-        probeX.copyTo(currentX);
+        return cv::solve(jtj, jtrvv, xgeo, solveMethod);
+    }
+
+    // calculates J^T*rvv
+    // J^T*rvv = J^T*((f(x0 + v*h) - f(x0))/h - J*v)/h =
+    // J^T*(f(x0 + v*h) - f(x0) - J*v*h)/h^2 =
+    // (J^T*f(x0 + v*h) - J^T*f(x0) - J^T*J*v*h)/h^2 =
+    // < using (J^T*J + lmdiag) * v = J^T*b, also f(x0 + v*h) = b_v, f(x0) = b >
+    // (J^T*b_v - J^T*b - (J^T*J + lmdiag - lmdiag)*v*h)/h^2 =
+    // (J^T*b_v - J^T*b + J^t*b*h + lmdiag*v*h)/h^2 =
+    // (J^T*b_v - J^t*b*(1 - h) + lmdiag*v*h)/h^2
+    virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) CV_OVERRIDE
+    {
+        if (cb_alt)
+        {
+            CV_Error(CV_StsNotImplemented, "Geodesic acceleration is not implemented for normal callbacks, please use \"long\" callbacks");
+        }
+        else
+        {
+            Mat_<double> b_v = bLong.clone();
+            bool r = cb(geoX, b_v, noArray());
+            if (!r)
+                return false;
+
+            Mat_<double> jLong_t = jLong.t();
+            Mat_<double> jLongFiltered_t(jLong.rows, (int)nVars);
+            int ctr = 0;
+            for (int i = 0; i < allVars; i++)
+            {
+                if (mask(i))
+                {
+                    jLong_t.row(i).copyTo(jLongFiltered_t.row(ctr));
+                    ctr++;
+                }
+            }
+
+            jtrvv = (jLongFiltered_t * b_v - jtb * (1.0 - hGeo) + lmdiag.mul(v) * hGeo) / (hGeo * hGeo);
+            return true;
+        }
     }
 };
 
@@ -943,22 +1062,22 @@ int LevMarqDenseLinear::runAlt(InputOutputArray param, InputArray mask,
 */
 
 LevMarqDenseLinear::LevMarqDenseLinear(int nvars, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(nvars, callback, mask, nerrs, solveMethod))
+    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod))
 { }
 LevMarqDenseLinear::LevMarqDenseLinear(int nvars, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(nvars, callback, mask, LtoR, solveMethod))
+    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod))
 { }
 LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(param, callback, mask, nerrs, solveMethod))
+    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod))
 { }
 LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearImpl>(param, callback, mask, LtoR, solveMethod))
+    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod))
 { }
 
 BaseLevMarq::Report LevMarqDenseLinear::run(InputOutputArray param)
 {
     CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
-    pImpl.dynamicCast<LevMarqDenseLinearImpl>()->currentX = param.getMat().reshape(1, param.size().area());
+    pBackend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
     return optimize();
 }
 

@@ -569,14 +569,19 @@ static void doJacobiScalingSparse(BlockSparseMat<double, 6, 6>& jtj, Mat_<double
 }
 
 //TODO: robustness
-struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
+struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 {
-    PoseGraphLevMarqImpl(PoseGraphImpl* pg_) :
-        BaseLevMarq::Impl(),
+    PoseGraphLevMarqBackend(PoseGraphImpl* pg_) :
+        BaseLevMarq::Backend(),
         pg(pg_),
         jtj(0),
         jtb(),
         tempNodes(),
+        useGeo(),
+        geoNodes(),
+        jtrvv(),
+        jtCached(),
+        decomposition(),
         numNodes(),
         numEdges(),
         placesIds(),
@@ -669,7 +674,7 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
                     Vec6f jtbSrc = sj.t() * res;
                     for (size_t i = 0; i < 6; i++)
                     {
-                        jtb(6 * srcPlace + i) += jtbSrc[i];
+                        jtb(6 * (int)srcPlace + (int)i) += jtbSrc[i];
                     }
                 }
 
@@ -683,7 +688,7 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
                     Vec6f jtbDst = tj.t() * res;
                     for (size_t i = 0; i < 6; i++)
                     {
-                        jtb(6 * dstPlace + i) += jtbDst[i];
+                        jtb(6 * (int)dstPlace + (int)i) += jtbDst[i];
                     }
                 }
 
@@ -692,6 +697,11 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
                     Matx66d sjttj = sj.t() * tj;
                     jtj.refBlock(srcPlace, dstPlace) += sjttj;
                     jtj.refBlock(dstPlace, srcPlace) += sjttj.t();
+                }
+
+                if (useGeo)
+                {
+                    jtCached.push_back({ sj, tj });
                 }
             }
         }
@@ -704,15 +714,29 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
         return true;
     }
 
-    // adds d to current variables and writes result to probe vars
-    virtual void currentOplusXToProbe(const Mat_<double>& d) CV_OVERRIDE
+
+    virtual bool enableGeo() CV_OVERRIDE
     {
-        tempNodes = pg->nodes;
+        useGeo = true;
+        return true;
+    }
+
+    // adds d to current variables and writes result to probe vars or geo vars
+    virtual void currentOplusX(const Mat_<double>& d, bool geo = false) CV_OVERRIDE
+    {
+        if (geo && !useGeo)
+        {
+            CV_Error(CV_StsBadArg, "Geodesic acceleration is disabled");
+        }
+
+        std::map<size_t, PoseGraphImpl::Node>& nodes = geo ? geoNodes : tempNodes;
+
+        nodes = pg->nodes;
 
         for (size_t i = 0; i < nVarNodes; i++)
         {
             Vec6d dx(d[0] + (i * 6));
-            PoseGraphImpl::Pose3d& p = tempNodes.at(placesIds[i]).pose;
+            PoseGraphImpl::Pose3d& p = nodes.at(placesIds[i]).pose;
 
             p = p.oplus(dx);
         }
@@ -723,7 +747,94 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
         jtj = BlockSparseMat<double, 6, 6>(nVarNodes);
         jtb = Mat_<double>((int)nVars, 1);
         tempNodes = pg->nodes;
+        if (useGeo)
+            geoNodes = pg->nodes;
     }
+
+    // decomposes LevMarq matrix before solution
+    virtual bool decompose() CV_OVERRIDE
+    {
+        return jtj.decompose(decomposition, false);
+    }
+
+    // solves LevMarq equation (J^T*J + lmdiag) * x = J^T*b for current iteration using existing decomposition
+    virtual bool solveDecomposed(Mat_<double>& x) CV_OVERRIDE
+    {
+        return jtj.solveDecomposed(decomposition, jtb, x);
+    }
+
+    // solves LevMarq geodesic acceleration equation (J^T*J + lmdiag) * xgeo = J^T*rvv using existing decomposition
+    virtual bool solveDecomposedGeo(Mat_<double>& xgeo) CV_OVERRIDE
+    {
+        return jtj.solveDecomposed(decomposition, jtrvv, xgeo);
+    }
+
+    // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
+    // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
+    // where v is a LevMarq equation solution
+    // J^T*rvv = J^T*((f(x0 + v*h) - f(x0))/h - J*v)/h =
+    // J^T*(f(x0 + v*h) - f(x0) - J*v*h)/h^2 =
+    // (J^T*f(x0 + v*h) - J^T*f(x0) - J^T*J*v*h)/h^2 =
+    // < using (J^T*J + lmdiag) * v = J^T*b, also f(x0 + v*h) = b_v, f(x0) = b >
+    // (J^T*b_v - J^T*b - (J^T*J + lmdiag - lmdiag)*v*h)/h^2 =
+    // (J^T*b_v - J^T*b + J^t*b*h + lmdiag*v*h)/h^2 =
+    // (J^T*b_v - J^t*b*(1 - h) + lmdiag*v*h)/h^2
+    virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) CV_OVERRIDE
+    {
+        Mat_<double> jtbv((int)nVars, 1);
+
+        int ei = 0;
+        for (const auto& e : pg->edges)
+        {
+            size_t srcId = e.sourceNodeId, dstId = e.targetNodeId;
+            const PoseGraphImpl::Node& srcNode = geoNodes.at(srcId);
+            const PoseGraphImpl::Node& dstNode = geoNodes.at(dstId);
+
+            const PoseGraphImpl::Pose3d& srcP = srcNode.pose;
+            const PoseGraphImpl::Pose3d& tgtP = dstNode.pose;
+            bool srcFixed = srcNode.isFixed;
+            bool dstFixed = dstNode.isFixed;
+
+            Vec6d res;
+            // dummy vars
+            Matx<double, 6, 3> stj, ttj;
+            Matx<double, 6, 4> sqj, tqj;
+
+            double err = poseError(srcP.q, srcP.t, tgtP.q, tgtP.t, e.pose.q, e.pose.t, e.sqrtInfo,
+                /* needJacobians = */ false, sqj, stj, tqj, ttj, res);
+
+            size_t srcPlace = (size_t)(-1), dstPlace = (size_t)(-1);
+            Matx66d sj = jtCached[ei].first, tj = jtCached[ei].second;
+
+            if (!srcFixed)
+            {
+                srcPlace = idToPlace.at(srcId);
+
+                Vec6f jtbSrc = sj.t() * res;
+                for (size_t i = 0; i < 6; i++)
+                {
+                    jtbv(int(6 * srcPlace + i)) += jtbSrc[i];
+                }
+            }
+
+            if (!dstFixed)
+            {
+                dstPlace = idToPlace.at(dstId);
+
+                Vec6f jtbDst = tj.t() * res;
+                for (size_t i = 0; i < 6; i++)
+                {
+                    jtbv(int(6 * dstPlace + i)) += jtbDst[i];
+                }
+            }
+
+            ei++;
+        }
+
+        jtrvv = (jtbv - jtb * (1.0 - hGeo) + lmdiag.mul(v) * hGeo) / (hGeo * hGeo);
+        return true;
+    }
+
 
     virtual const Mat_<double> getDiag() CV_OVERRIDE
     {
@@ -748,10 +859,6 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
         doJacobiScalingSparse(jtj, jtb, di);
     }
 
-    virtual bool solve(Mat_<double>& x) CV_OVERRIDE
-    {
-        return jtj.sparseSolve(jtb, x, false);
-    }
 
     virtual void acceptProbe() CV_OVERRIDE
     {
@@ -767,6 +874,15 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
 
     // Probe variable for different lambda tryout
     std::map<size_t, PoseGraphImpl::Node> tempNodes;
+
+    // For geodesic acceleration
+    bool useGeo;
+    std::map<size_t, PoseGraphImpl::Node> geoNodes;
+    Mat_<double> jtrvv;
+    std::vector<std::pair<Matx66d, Matx66d>> jtCached;
+
+    // Used for keeping intermediate matrix decomposition for further linear solve operations
+    BlockSparseMat<double, 6, 6>::Decomposition decomposition;
 
     // The rest members are generated from pg
     size_t nVars;
@@ -784,23 +900,20 @@ struct PoseGraphLevMarqImpl : public BaseLevMarq::Impl
 class PoseGraphLevMarq : public BaseLevMarq
 {
 public:
-    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqImpl>(pg))
+    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqBackend>(pg))
     { }
 };
 
 
 int PoseGraphImpl::optimize()
 {
-    Ptr<PoseGraphLevMarq> lm = makePtr<PoseGraphLevMarq>(this);
+    PoseGraphLevMarq lm(this);
 
-    if (!lm)
-        return -1;
+    lm.maxIterations = 100;
+    lm.checkRelEnergyChange = true;
+    lm.relEnergyDeltaTolerance = 1e-6;
 
-    lm->maxIterations = 100;
-    lm->checkRelEnergyChange = true;
-    lm->relEnergyDeltaTolerance = 1e-6;
-
-    BaseLevMarq::Report r = lm->optimize();
+    BaseLevMarq::Report r = lm.optimize();
     return r.found ? r.iters : -1;
 }
 
