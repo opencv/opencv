@@ -11,9 +11,9 @@
 #include <math.h>
 
 #include <limits>
-#include <type_traits>
 
 #include <opencv2/gapi/own/assert.hpp>
+#include <opencv2/gapi/util/type_traits.hpp>
 
 namespace cv { namespace gapi { namespace own {
 //-----------------------------
@@ -22,15 +22,12 @@ namespace cv { namespace gapi { namespace own {
 //
 //-----------------------------
 
-template<typename DST, typename SRC>
+template<typename DST, typename SRC, typename = cv::util::are_different_t<DST,SRC>>
 static inline DST saturate(SRC x)
 {
     // only integral types please!
     GAPI_DbgAssert(std::is_integral<DST>::value &&
                    std::is_integral<SRC>::value);
-
-    if (std::is_same<DST, SRC>::value)
-        return static_cast<DST>(x);
 
     if (sizeof(DST) > sizeof(SRC))
         return static_cast<DST>(x);
@@ -43,6 +40,11 @@ static inline DST saturate(SRC x)
            x > std::numeric_limits<DST>::max()?
                std::numeric_limits<DST>::max():
            static_cast<DST>(x);
+}
+template<typename T>
+static inline T saturate(T x)
+{
+    return x;
 }
 
 // Note, that OpenCV rounds differently:

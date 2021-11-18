@@ -24,6 +24,8 @@
 #include "backends/streaming/gstreamingbackend.hpp" // GCopy
 #include "compiler/gcompiler.hpp" // for compileIslands
 
+#include <logger.hpp>
+
 #include "executor/gstreamingexecutor.hpp"
 
 #include <opencv2/gapi/streaming/meta.hpp>
@@ -1380,10 +1382,23 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     });
 }
 
-cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
-{
+void cv::gimpl::GStreamingExecutor::destruct() {
     if (state == State::READY || state == State::RUNNING)
         stop();
+}
+cv::gimpl::GStreamingExecutor::~GStreamingExecutor() noexcept(false)
+{
+    if (std::uncaught_exception()) {
+        try {
+            destruct();
+        } catch (const std::logic_error e) {
+            std::stringstream message;
+            message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
+            GAPI_LOG_WARNING(NULL, message.str());
+        }
+    } else {
+        destruct();
+    }
 }
 
 void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)

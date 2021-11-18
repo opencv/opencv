@@ -105,6 +105,7 @@ public:
 
 class GStreamingExecutor final
 {
+    void destruct();
 protected:
     // GStreamingExecutor is a state machine described as follows
     //
@@ -200,7 +201,8 @@ protected:
 public:
     explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
                                 const cv::GCompileArgs &comp_args);
-    ~GStreamingExecutor();
+    ~GStreamingExecutor() noexcept(false); // throwing when a regular destruction fails only;
+                                           // not throwing if the stack is unwinding.
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
