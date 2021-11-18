@@ -58,30 +58,35 @@ namespace detail
         static constexpr const ArgKind kind = ArgKind::GMAT;
         static constexpr const GShape shape = GShape::GMAT;
         static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
     };
     template<>           struct GTypeTraits<cv::GMatP>
     {
         static constexpr const ArgKind kind = ArgKind::GMATP;
         static constexpr const GShape shape = GShape::GMAT;
         static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
     };
     template<>           struct GTypeTraits<cv::GFrame>
     {
         static constexpr const ArgKind kind = ArgKind::GFRAME;
         static constexpr const GShape shape = GShape::GFRAME;
         static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
     };
     template<>           struct GTypeTraits<cv::GScalar>
     {
         static constexpr const ArgKind kind = ArgKind::GSCALAR;
         static constexpr const GShape shape = GShape::GSCALAR;
         static constexpr const OpaqueKind op_kind = OpaqueKind::CV_UNKNOWN;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
     };
     template<class T> struct GTypeTraits<cv::GArray<T> >
     {
         static constexpr const ArgKind kind = ArgKind::GARRAY;
         static constexpr const GShape shape = GShape::GARRAY;
         static constexpr const OpaqueKind op_kind = GOpaqueTraits<T>::kind;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
         using host_type  = std::vector<T>;
         using strip_type = cv::detail::VectorRef;
         static cv::detail::GArrayU   wrap_value(const cv::GArray<T>  &t) { return t.strip();}
@@ -93,6 +98,7 @@ namespace detail
         static constexpr const ArgKind kind = ArgKind::GOPAQUE;
         static constexpr const GShape shape = GShape::GOPAQUE;
         static constexpr const OpaqueKind op_kind = GOpaqueTraits<T>::kind;
+        using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Meta>;
         using host_type  = T;
         using strip_type = cv::detail::OpaqueRef;
         static cv::detail::GOpaqueU  wrap_value(const cv::GOpaque<T>  &t) { return t.strip();}
@@ -171,15 +177,10 @@ namespace detail
         }
 
         template<typename U> static U  wrap_in (const U &u) {
-            static_assert(!(cv::gapi::has_tag<U, cv::gapi::tag::Meta>::value ||
-                          cv::gapi::has_tag<U, cv::gapi::tag::GraphRejected>::value),
-                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
             return  u;
         }
         template<typename U> static U* wrap_out(U &u)       {
-            static_assert(!(cv::gapi::has_tag<U, cv::gapi::tag::Meta>::value ||
-                          cv::gapi::has_tag<U, cv::gapi::tag::GraphRejected>::value),
-                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
+
             return &u;  }
     };
     template<typename T> struct WrapValue<T, typename std::enable_if<has_custom_wrap<T>::value>::type>
@@ -190,10 +191,16 @@ namespace detail
         }
         template<typename U> static auto wrap_in (const U &u) -> typename GTypeTraits<T>::strip_type
         {
+            static_assert(!(cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::Meta>::value ||
+                          cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::GraphRejected>::value),
+                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
             return GTypeTraits<T>::wrap_in(u);
         }
         template<typename U> static auto wrap_out(U &u) -> typename GTypeTraits<T>::strip_type
         {
+                        static_assert(!(cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::Meta>::value ||
+                          cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::GraphRejected>::value),
+                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
             return GTypeTraits<T>::wrap_out(u);
         }
     };

@@ -25,19 +25,22 @@ class NonTagged {};
 
 class HasTag1 {
 public:
-    GAPI_OBJECT (Tag1)
+    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag1>;
 };
 class HasTag2 {
 public:
-    GAPI_OBJECT (Tag2)
+    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag2>;
 };
 class HasTag23 {
 public:
-    GAPI_OBJECT_2 (Tag2, Tag3)
+    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag2,
+                                       cv::gapi::tag::Tag3>;
 };
 class HasTag123 {
 public:
-    GAPI_OBJECT_3 (Tag1, Tag2, Tag3)
+    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag1,
+                                       cv::gapi::tag::Tag2,
+                                       cv::gapi::tag::Tag3>;
 };
 
 namespace opencv_test
