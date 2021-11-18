@@ -325,7 +325,6 @@ namespace detail
 template<typename T> class GOpaque
 {
 public:
-    GAPI_OBJECT(Meta)
     // Host type (or Flat type) - the type this GOpaque is actually
     // specified to.
     /// @private
