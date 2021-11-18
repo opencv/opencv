@@ -533,7 +533,6 @@ class FuncVariant(object):
 class FuncInfo(object):
     def __init__(self, classname, name, cname, isconstructor, namespace, is_static):
         self.classname = classname
-        print("FuncInfo: name: s" % name)
         self.name = name
         self.cname = cname
         self.isconstructor = isconstructor
