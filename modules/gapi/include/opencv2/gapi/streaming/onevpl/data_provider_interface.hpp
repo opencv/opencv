@@ -17,34 +17,28 @@ namespace wip {
 namespace onevpl {
 
 struct GAPI_EXPORTS DataProviderException : public std::exception {
-    virtual ~DataProviderException() {}
+    DataProviderException(const std::string& descr);
+    DataProviderException(std::string&& descr);
+
+    virtual ~DataProviderException() = default;
+    virtual const char* what() const noexcept override;
+private:
+    std::string reason;
 };
 
-struct GAPI_EXPORTS DataProviderSystemErrorException : public DataProviderException {
+struct GAPI_EXPORTS DataProviderSystemErrorException final : public DataProviderException {
     DataProviderSystemErrorException(int error_code, const std::string& desription = std::string());
-    virtual ~DataProviderSystemErrorException();
-    virtual const char* what() const noexcept override;
-
-private:
-    std::string reason;
+    ~DataProviderSystemErrorException() = default;
 };
 
-struct GAPI_EXPORTS DataProviderUnsupportedException : public DataProviderException {
+struct GAPI_EXPORTS DataProviderUnsupportedException final : public DataProviderException {
     DataProviderUnsupportedException(const std::string& description);
-    virtual ~DataProviderUnsupportedException();
-    virtual const char* what() const noexcept override;
-
-private:
-    std::string reason;
+    ~DataProviderUnsupportedException() = default;
 };
 
 struct GAPI_EXPORTS DataProviderImplementationException : public DataProviderException {
     DataProviderImplementationException(const std::string& description);
-    virtual ~DataProviderImplementationException();
-    virtual const char* what() const noexcept override;
-
-private:
-    std::string reason;
+    ~DataProviderImplementationException() = default;
 };
 /**
  * @brief Public interface allows to customize extraction of video stream data

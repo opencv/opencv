@@ -173,7 +173,7 @@ const char* mfx_codec_id_to_cstr(mfxU32 mfx_id) {
     }
 }
 
-const std::set<mfxU32>& get_supported_mfx_codec_id()
+const std::set<mfxU32>& get_supported_mfx_codec_ids()
 {
     static std::set<mfxU32> supported_codecs({MFX_CODEC_AVC,
                                               MFX_CODEC_HEVC,

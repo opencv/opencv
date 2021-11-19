@@ -22,7 +22,7 @@ struct FileDataProvider : public IDataProvider {
 
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
     FileDataProvider(const std::string& file_path,
-                     const std::vector<CfgParam> codec_params = {},
+                     const std::vector<CfgParam> &codec_params = {},
                      uint32_t bitstream_data_size_value = 2000000);
     ~FileDataProvider();
 

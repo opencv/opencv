@@ -4,9 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef GAPI_STREAMING_ONEVPL_ASYNC_DEMUX_MFP_DATA_PROVIDER_HPP
-#define GAPI_STREAMING_ONEVPL_ASYNC_DEMUX_MFP_DATA_PROVIDER_HPP
-#include <stdio.h>
+#ifndef GAPI_STREAMING_ONEVPL_DEMUX_ASYNC_MFP_DEMUX_DATA_PROVIDER_HPP
+#define GAPI_STREAMING_ONEVPL_DEMUX_ASYNC_MFP_DEMUX_DATA_PROVIDER_HPP
 
 #include <atomic>
 #include <condition_variable>
@@ -22,7 +21,6 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <mfobjects.h>
-#include <mfidl.h>
 #include <mftransform.h>
 #include <mferror.h>
 #include <shlwapi.h>
@@ -54,22 +52,22 @@ protected: /* For Unit tests only */
         Exhausted
     };
 
-    // IUnknown methods forbidden for current implemenations
+    // IUnknown methods forbidden for current implementations
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv) override;
     STDMETHODIMP_(ULONG) AddRef() override;
     STDMETHODIMP_(ULONG) Release() override;
 
     // IMFSourceReaderCallback methods
     virtual STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
-                              DWORD stream_flag, LONGLONG timestamp,
-                              IMFSample *sample_ptr) override;
+                                      DWORD stream_flag, LONGLONG timestamp,
+                                      IMFSample *sample_ptr) override;
     STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) override;
     STDMETHODIMP OnFlush(DWORD) override;
 
     // implementation methods
     void flush();
     HRESULT request_next(HRESULT hr, DWORD stream_flag,
-                                 size_t worker_buffer_count);
+                         size_t worker_buffer_count);
     void consume_worker_data();
     virtual size_t produce_worker_data(void *key,
                                        ComPtrGuard<IMFMediaBuffer> &&buffer,
@@ -77,6 +75,9 @@ protected: /* For Unit tests only */
     size_t get_locked_buffer_size() const;
 
 private:
+    static bool select_supported_video_stream(ComPtrGuard<IMFPresentationDescriptor> &descriptor,
+                                              mfx_codec_id_type &out_codec_id,
+                                              void *source_id);
     // members
     size_t keep_preprocessed_buf_count;
 
@@ -109,7 +110,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider {
-    MFPAsyncDemuxDataProvider(const std::string&);
+    explicit MFPAsyncDemuxDataProvider(const std::string&);
 
     mfx_codec_id_type get_mfx_codec_id() const override;
     bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitsream) override;
@@ -122,4 +123,4 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider {
 
 #endif // _WIN32
 #endif // HAVE_ONEVPL
-#endif // GAPI_STREAMING_ONEVPL_ASYNC_DEMUX_MFP_DATA_PROVIDER_HPP
+#endif // GAPI_STREAMING_ONEVPL_DEMUX_ASYNC_MFP_DEMUX_DATA_PROVIDER_HPP

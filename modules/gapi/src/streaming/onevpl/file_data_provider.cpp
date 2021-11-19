@@ -18,7 +18,7 @@ namespace onevpl {
 
 #ifdef HAVE_ONEVPL
 FileDataProvider::FileDataProvider(const std::string& file_path,
-                                   const std::vector<CfgParam> codec_params,
+                                   const std::vector<CfgParam> &codec_params,
                                    uint32_t bitstream_data_size_value) :
     source_handle(nullptr, &fclose),
     bitstream_data_size(bitstream_data_size_value) {
@@ -122,7 +122,7 @@ bool FileDataProvider::empty() const {
 #else // HAVE_ONEVPL
 
 FileDataProvider::FileDataProvider(const std::string&,
-                                   const std::vector<CfgParam>,
+                                   const std::vector<CfgParam> &,
                                    uint32_t bitstream_data_size_value) :
     source_handle(nullptr, &fclose),
     codec(std::numeric_limits<mfx_codec_id_type>::max()),

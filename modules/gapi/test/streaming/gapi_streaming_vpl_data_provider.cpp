@@ -54,9 +54,8 @@ array_element_t files[] = {
                                     false,     false,          false}
 };
 
-class OneVPL_Source_MFPDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
-
-TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
+class OneVPL_Source_MFPAsyncDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
+TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
 {
     using namespace cv::gapi::wip::onevpl;
 
@@ -119,7 +118,7 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
 }
 
 
-TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
+TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, choose_dmux_provider)
 {
     using namespace cv::gapi::wip::onevpl;
 
@@ -147,7 +146,7 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
     EXPECT_TRUE(std::dynamic_pointer_cast<MFPAsyncDemuxDataProvider>(provider_ptr));
 }
 
-INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPL_Source_MFPDispatcherTest,
+INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPL_Source_MFPAsyncDispatcherTest,
                         testing::ValuesIn(files));
 
 namespace test {
@@ -299,71 +298,6 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
     producer.join();
     consumer.join();
 }
-
-class OneVPL_Source_MFPAsyncDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
-TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
-{
-    using namespace cv::gapi::wip::onevpl;
-
-    source_t path = findDataFile(std::get<0>(GetParam()));
-    dd_valid_t dd_result = std::get<1>(GetParam());
-    dec_valid_t dec_result = std::get<3>(GetParam());
-
-    // open demux source & check format support
-    std::unique_ptr<MFPAsyncDemuxDataProvider> provider_ptr;
-    try {
-        provider_ptr.reset(new MFPAsyncDemuxDataProvider(path));
-    } catch (...) {
-        EXPECT_FALSE(dd_result);
-        GTEST_SUCCEED();
-        return;
-    }
-    EXPECT_TRUE(dd_result);
-
-    // initialize MFX
-    mfxLoader mfx_handle = MFXLoad();
-
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
-    EXPECT_TRUE(cfg_inst_0);
-    mfxVariant mfx_param_0;
-    mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
-    mfx_param_0.Data.U32 = provider_ptr->get_mfx_codec_id();
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
-                                                    mfx_param_0), MFX_ERR_NONE);
-
-    // create MFX session
-    mfxSession mfx_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
-    EXPECT_EQ(MFX_ERR_NONE, sts);
-
-    // create proper bitstream
-    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
-    // prepare dec params
-    mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = mfx_param_0.Data.U32;
-    mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
-    do {
-        bool fetched = provider_ptr->fetch_bitstream_data(bitstream);
-        if (dec_result) {
-            EXPECT_TRUE(fetched);
-        }
-        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
-        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
-    } while (sts == MFX_ERR_MORE_DATA && !provider_ptr->empty());
-
-    if (dec_result) {
-        EXPECT_EQ(MFX_ERR_NONE, sts);
-    } else {
-        EXPECT_FALSE(MFX_ERR_NONE == sts);
-    }
-
-    MFXVideoDECODE_Close(mfx_session);
-    MFXClose(mfx_session);
-    MFXUnload(mfx_handle);
-}
-
-INSTANTIATE_TEST_CASE_P(MFP_ASYNC_VPL_DecodeHeaderTests, OneVPL_Source_MFPAsyncDispatcherTest,
-                        testing::ValuesIn(files));
 }
 } // namespace opencv_test
 

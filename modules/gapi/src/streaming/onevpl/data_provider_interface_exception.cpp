@@ -18,35 +18,30 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+
+DataProviderException::DataProviderException(const std::string& descr) :
+    reason(descr) {
+}
+DataProviderException::DataProviderException(std::string&& descr) :
+    reason(std::move(descr)) {
+}
+
+const char* DataProviderException::what() const noexcept {
+    return reason.c_str();
+}
+
 DataProviderSystemErrorException::DataProviderSystemErrorException(int error_code,
-                                                                   const std::string& description) {
-    reason = description + ", error code: " + std::to_string(error_code) + " - " + strerror(error_code);
+                                                                   const std::string& description) :
+    DataProviderException(description + ", error code: " + std::to_string(error_code) + " - " + strerror(error_code)) {
+
 }
 
-DataProviderSystemErrorException::~DataProviderSystemErrorException() = default;
-
-const char* DataProviderSystemErrorException::what() const noexcept {
-    return reason.c_str();
+DataProviderUnsupportedException::DataProviderUnsupportedException(const std::string& description) :
+    DataProviderException(description) {
 }
 
-DataProviderUnsupportedException::DataProviderUnsupportedException(const std::string& description) {
-    reason = description;
-}
-
-DataProviderUnsupportedException::~DataProviderUnsupportedException() = default;
-
-const char* DataProviderUnsupportedException::what() const noexcept {
-    return reason.c_str();
-}
-
-DataProviderImplementationException::DataProviderImplementationException(const std::string& description) {
-    reason = description;
-}
-
-DataProviderImplementationException::~DataProviderImplementationException() = default;
-
-const char* DataProviderImplementationException::what() const noexcept {
-    return reason.c_str();
+DataProviderImplementationException::DataProviderImplementationException(const std::string& description) :
+    DataProviderException(description) {
 }
 } // namespace onevpl
 } // namespace wip
