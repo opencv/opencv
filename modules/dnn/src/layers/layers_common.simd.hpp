@@ -954,19 +954,26 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
         int j = 0;
         for( ; j < blockSize; j += FASCONV_BASE_VECSZ )
         {
-            bool tail = false;
+            const float* rptr = rowbuf + j*vecsize_aligned;
+            const float *rptr1 = rptr + vecsize_aligned*1,
+                        *rptr2 = rptr + vecsize_aligned*2,
+                        *rptr3 = rptr + vecsize_aligned*3,
+                        *rptr4 = rptr + vecsize_aligned*4,
+                        *rptr5 = rptr + vecsize_aligned*5,
+                        *rptr6 = rptr + vecsize_aligned*6,
+                        *rptr7 = rptr + vecsize_aligned*7;
             if (j + FASCONV_BASE_VECSZ > blockSize)
             {
-                if (j == 0) {
-                    unroll_tail = blockSize;
-                }
-                else {
-                    j = blockSize - FASCONV_BASE_VECSZ;
-                    tail = true;
-                }
+                unroll_tail = blockSize - j;
+                rptr1 = rptr + vecsize_aligned*std::min(1, unroll_tail-1),
+                rptr2 = rptr + vecsize_aligned*std::min(2, unroll_tail-1),
+                rptr3 = rptr + vecsize_aligned*std::min(3, unroll_tail-1),
+                rptr4 = rptr + vecsize_aligned*std::min(4, unroll_tail-1),
+                rptr5 = rptr + vecsize_aligned*std::min(5, unroll_tail-1),
+                rptr6 = rptr + vecsize_aligned*std::min(6, unroll_tail-1),
+                rptr7 = rptr + vecsize_aligned*std::min(7, unroll_tail-1);
             }
-            int k = 0;
-            const float* rptr = rowbuf + j*vecsize_aligned;
+
             int vl, avl = vecsize;
             vfloat32m1_t
                 vs00 = vfmv_v_f_f32m1(0, vlm1), vs10 = vfmv_v_f_f32m1(0, vlm1), vs20 = vfmv_v_f_f32m1(0, vlm1),
@@ -978,7 +985,7 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                 vs06 = vfmv_v_f_f32m1(0, vlm1), vs16 = vfmv_v_f_f32m1(0, vlm1), vs26 = vfmv_v_f_f32m1(0, vlm1),
                 vs07 = vfmv_v_f_f32m1(0, vlm1), vs17 = vfmv_v_f_f32m1(0, vlm1), vs27 = vfmv_v_f_f32m1(0, vlm1);
 
-            for (; k < vecsize; k += vl, rptr += vl, avl -= vl)
+            for (int k = 0; k < vecsize; k += vl, avl -= vl)
             {
                 vl = vsetvl_e32m1(avl);
                 vfloat32m1_t w0 = vle32_v_f32m1(wptr0 + k, vl);
@@ -990,40 +997,43 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                 vs10 = vfmacc_vv_f32m1(vs10, w1, r0, vl);
                 vs20 = vfmacc_vv_f32m1(vs20, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned, vl);
+                r0 = vle32_v_f32m1(rptr1, vl);
                 vs01 = vfmacc_vv_f32m1(vs01, w0, r0, vl);
                 vs11 = vfmacc_vv_f32m1(vs11, w1, r0, vl);
                 vs21 = vfmacc_vv_f32m1(vs21, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*2, vl);
+                r0 = vle32_v_f32m1(rptr2, vl);
                 vs02 = vfmacc_vv_f32m1(vs02, w0, r0, vl);
                 vs12 = vfmacc_vv_f32m1(vs12, w1, r0, vl);
                 vs22 = vfmacc_vv_f32m1(vs22, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*3, vl);
+                r0 = vle32_v_f32m1(rptr3, vl);
                 vs03 = vfmacc_vv_f32m1(vs03, w0, r0, vl);
                 vs13 = vfmacc_vv_f32m1(vs13, w1, r0, vl);
                 vs23 = vfmacc_vv_f32m1(vs23, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*4, vl);
+                r0 = vle32_v_f32m1(rptr4, vl);
                 vs04 = vfmacc_vv_f32m1(vs04, w0, r0, vl);
                 vs14 = vfmacc_vv_f32m1(vs14, w1, r0, vl);
                 vs24 = vfmacc_vv_f32m1(vs24, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*5, vl);
+                r0 = vle32_v_f32m1(rptr5, vl);
                 vs05 = vfmacc_vv_f32m1(vs05, w0, r0, vl);
                 vs15 = vfmacc_vv_f32m1(vs15, w1, r0, vl);
                 vs25 = vfmacc_vv_f32m1(vs25, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*6, vl);
+                r0 = vle32_v_f32m1(rptr6, vl);
                 vs06 = vfmacc_vv_f32m1(vs06, w0, r0, vl);
                 vs16 = vfmacc_vv_f32m1(vs16, w1, r0, vl);
                 vs26 = vfmacc_vv_f32m1(vs26, w2, r0, vl);
 
-                r0 = vle32_v_f32m1(rptr + vecsize_aligned*7, vl);
+                r0 = vle32_v_f32m1(rptr7, vl);
                 vs07 = vfmacc_vv_f32m1(vs07, w0, r0, vl);
                 vs17 = vfmacc_vv_f32m1(vs17, w1, r0, vl);
                 vs27 = vfmacc_vv_f32m1(vs27, w2, r0, vl);
+
+                rptr += vl;  rptr1 += vl; rptr2 += vl; rptr3 += vl;
+                rptr4 += vl; rptr5 += vl; rptr6 += vl; rptr7 += vl;
             }
 
             // compute sum of each vs
@@ -1089,19 +1099,6 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                 s0 = vmerge_vvm_f32m2(m0, vfmul_vf_f32m2(s0, r0, unroll_tail), s0, unroll_tail);
                 s1 = vmerge_vvm_f32m2(m1, vfmul_vf_f32m2(s1, r1, unroll_tail), s1, unroll_tail);
                 s2 = vmerge_vvm_f32m2(m2, vfmul_vf_f32m2(s2, r2, unroll_tail), s2, unroll_tail);
-            }
-
-            if( tail )
-            {
-                int maskbuf[FASCONV_BASE_VECSZ] = {0};
-                int rsz = blockSize % FASCONV_BASE_VECSZ;
-                for( int i = 0; i < rsz; i++ )
-                    maskbuf[FASCONV_BASE_VECSZ - i - 1] = -1;
-                vint32m2_t vmaskbuf = vle32_v_i32m2(maskbuf ,unroll_tail);
-                vbool16_t mask = vmslt_vx_i32m2_b16(vmaskbuf, 0, unroll_tail); // mask for unroll_tail
-                s0 = vmerge_vvm_f32m2(mask, vle32_v_f32m2(outptr0 + j, unroll_tail), s0, unroll_tail);
-                s1 = vmerge_vvm_f32m2(mask, vle32_v_f32m2(outptr1 + j, unroll_tail), s1, unroll_tail);
-                s2 = vmerge_vvm_f32m2(mask, vle32_v_f32m2(outptr2 + j, unroll_tail), s2, unroll_tail);
             }
 
             vse32_v_f32m2(outptr0 + j, s0, unroll_tail);
