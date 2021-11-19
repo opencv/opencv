@@ -1144,22 +1144,6 @@ cv::Rect cv::boundingRect(InputArray array)
 
 ////////////////////////////////////////////// C API ///////////////////////////////////////////
 
-CV_IMPL int
-cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius )
-{
-    cv::AutoBuffer<double> abuf;
-    cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-    cv::Point2f center;
-    float radius;
-
-    cv::minEnclosingCircle(points, center, radius);
-    if(_center)
-        *_center = cvPoint2D32f(center);
-    if(_radius)
-        *_radius = radius;
-    return 1;
-}
-
 static void
 icvMemCopy( double **buf1, double **buf2, double **buf3, int *b_max )
 {
@@ -1473,14 +1457,6 @@ cvArcLength( const void *array, CvSlice slice, int is_closed )
     return perimeter;
 }
 
-
-CV_IMPL CvBox2D
-cvFitEllipse2( const CvArr* array )
-{
-    cv::AutoBuffer<double> abuf;
-    cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-    return cvBox2D(cv::fitEllipse(points));
-}
 
 /* Calculates bounding rectangle of a point set or retrieves already calculated */
 CV_IMPL  CvRect

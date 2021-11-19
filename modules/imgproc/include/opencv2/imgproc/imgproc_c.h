@@ -193,14 +193,6 @@ CVAPI(CvMat*) cvGetPerspectiveTransform( const CvPoint2D32f* src,
                                          const CvPoint2D32f* dst,
                                          CvMat* map_matrix );
 
-/** @brief Performs generic geometric transformation using the specified coordinate maps
-@see cv::remap
-*/
-CVAPI(void)  cvRemap( const CvArr* src, CvArr* dst,
-                      const CvArr* mapx, const CvArr* mapy,
-                      int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
-                      CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
-
 /** @brief Returns a structuring element of the specified size and shape for morphological operations.
 
 @note the created structuring element IplConvKernel\* element must be released in the end using
@@ -269,23 +261,6 @@ CVAPI(void) cvGetHuMoments( CvMoments*  moments, CvHuMoments*  hu_moments );
 
 /*********************************** data sampling **************************************/
 
-/** @brief Fetches pixels that belong to the specified line segment and stores them to the buffer.
-
-   Returns the number of retrieved points.
-@see cv::LineSegmentDetector
-*/
-CVAPI(int)  cvSampleLine( const CvArr* image, CvPoint pt1, CvPoint pt2, void* buffer,
-                          int connectivity CV_DEFAULT(8));
-
-/** @brief Retrieves the rectangular image region with specified center from the input array.
-
- dst(x,y) <- src(x + center.x - dst_width/2, y + center.y - dst_height/2).
- Values of pixels with fractional coordinates are retrieved using bilinear interpolation
-@see cv::getRectSubPix
-*/
-CVAPI(void)  cvGetRectSubPix( const CvArr* src, CvArr* dst, CvPoint2D32f center );
-
-
 /** @brief Retrieves quadrangle from the input array.
 
     matrixarr = ( a11  a12 | b1 )   dst(x,y) <- src(A[x y]' + b)
@@ -295,13 +270,6 @@ CVAPI(void)  cvGetRectSubPix( const CvArr* src, CvArr* dst, CvPoint2D32f center 
 */
 CVAPI(void)  cvGetQuadrangleSubPix( const CvArr* src, CvArr* dst,
                                     const CvMat* map_matrix );
-
-/** @brief Measures similarity between template and overlapped windows in the source image
-   and fills the resultant image with the measurements
-@see cv::matchTemplate
-*/
-CVAPI(void)  cvMatchTemplate( const CvArr* image, const CvArr* templ,
-                              CvArr* result, int method );
 
 /** @brief Computes earth mover distance between
    two weighted point sets (called signatures)
@@ -441,24 +409,6 @@ CVAPI(double)  cvContourArea( const CvArr* contour,
                               CvSlice slice CV_DEFAULT(CV_WHOLE_SEQ),
                               int oriented CV_DEFAULT(0));
 
-/** @brief Finds minimum area rotated rectangle bounding a set of points
-@see cv::minAreaRect
-*/
-CVAPI(CvBox2D)  cvMinAreaRect2( const CvArr* points,
-                                CvMemStorage* storage CV_DEFAULT(NULL));
-
-/** @brief Finds minimum enclosing circle for a set of points
-@see cv::minEnclosingCircle
-*/
-CVAPI(int)  cvMinEnclosingCircle( const CvArr* points,
-                                  CvPoint2D32f* center, float* radius );
-
-/** @brief Compares two contours by matching their moments
-@see cv::matchShapes
-*/
-CVAPI(double)  cvMatchShapes( const void* object1, const void* object2,
-                              int method, double parameter CV_DEFAULT(0));
-
 /** @brief Calculates exact convex hull of 2d point set
 @see cv::convexHull
 */
@@ -473,33 +423,12 @@ CVAPI(CvSeq*) cvConvexHull2( const CvArr* input,
 CVAPI(int)  cvCheckContourConvexity( const CvArr* contour );
 
 
-/** @brief Fits ellipse into a set of 2d points
-@see cv::fitEllipse
-*/
-CVAPI(CvBox2D) cvFitEllipse2( const CvArr* points );
-
-/** @brief Finds minimum rectangle containing two given rectangles */
-CVAPI(CvRect)  cvMaxRect( const CvRect* rect1, const CvRect* rect2 );
-
-/** @brief Finds coordinates of the box vertices */
-CVAPI(void) cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] );
-
 /** @brief Initializes sequence header for a matrix (column or row vector) of points
 
    a wrapper for cvMakeSeqHeaderForArray (it does not initialize bounding rectangle!!!) */
 CVAPI(CvSeq*) cvPointSeqFromMat( int seq_kind, const CvArr* mat,
                                  CvContour* contour_header,
                                  CvSeqBlock* block );
-
-/** @brief Checks whether the point is inside polygon, outside, on an edge (at a vertex).
-
-   Returns positive, negative or zero value, correspondingly.
-   Optionally, measures a signed distance between
-   the point and the nearest polygon edge (measure_dist=1)
-@see cv::pointPolygonTest
-*/
-CVAPI(double) cvPointPolygonTest( const CvArr* contour,
-                                  CvPoint2D32f pt, int measure_dist );
 
 /****************************************************************************************\
 *                                  Histogram functions                                   *
@@ -741,16 +670,6 @@ CVAPI(void)  cvFloodFill( CvArr* image, CvPoint seed_point,
 *                                  Feature detection                                     *
 \****************************************************************************************/
 
-
-/** @brief Calculates constraint image for corner detection
-
-   Dx^2 * Dyy + Dxx * Dy^2 - 2 * Dx * Dy * Dxy.
-   Applying threshold to the result gives coordinates of corners
-@see cv::preCornerDetect
-*/
-CVAPI(void) cvPreCornerDetect( const CvArr* image, CvArr* corners,
-                               int aperture_size CV_DEFAULT(3) );
-
 /** @brief Calculates eigen values and vectors of 2x2
    gradient covariation matrix at every image pixel
 @see cv::cornerEigenValsAndVecs
@@ -764,13 +683,6 @@ CVAPI(void)  cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv,
 */
 CVAPI(void)  cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval,
                                   int block_size, int aperture_size CV_DEFAULT(3) );
-
-/** @brief Adjust corner position using some sort of gradient search
-@see cv::cornerSubPix
-*/
-CVAPI(void)  cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners,
-                                 int count, CvSize win, CvSize zero_zone,
-                                 CvTermCriteria  criteria );
 
 
 /** @brief Finds lines on binary image using one of several methods.
@@ -798,11 +710,6 @@ CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,
                               int min_radius CV_DEFAULT(0),
                               int max_radius CV_DEFAULT(0));
 
-/** @brief Fits a line into set of 2d or 3d points in a robust way (M-estimator technique)
-@see cv::fitLine
-*/
-CVAPI(void)  cvFitLine( const CvArr* points, int dist_type, double param,
-                        double reps, double aeps, float* line );
 
 /****************************************************************************************\
 *                                     Drawing                                            *
@@ -860,18 +767,6 @@ CVAPI(void)  cvEllipse( CvArr* img, CvPoint center, CvSize axes,
                         CvScalar color, int thickness CV_DEFAULT(1),
                         int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0));
 
-CV_INLINE  void  cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color,
-                               int thickness CV_DEFAULT(1),
-                               int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0) )
-{
-    CvSize axes = cvSize(
-        cvRound(box.size.width*0.5),
-        cvRound(box.size.height*0.5)
-    );
-
-    cvEllipse( img, cvPointFrom32f( box.center ), axes, box.angle,
-               0, 360, color, thickness, line_type, shift );
-}
 
 /** @brief Fills an area bounded by one or more arbitrary polygons
 @see cv::fillPoly
