@@ -8,4 +8,4 @@ Set environment variable `WEBNN_NATIVE_DIR` to enable native DNN_BACKEND_WEBNN b
 
 ### Test native DNN_BACKEND_WEBNN backend
 Add -DWITH_WEBNN=ON to the cmake command to build the WebNN module such as:
-`cmake -DWITH_WEBNN=ON ../opencv` (according to the [Installation in Linux](/doc/tutorials/introduction/linux_install/linux_install.markdown))
+`cmake -DWITH_WEBNN=ON ../opencv` (according to the @ref tutorial_linux_install)

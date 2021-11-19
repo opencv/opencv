@@ -187,7 +187,7 @@ int main(int argc, char** argv)
 
             maxProb = *std::max_element(prob.begin<float>(), prob.end<float>());
             cv::exp(prob-maxProb, softmaxProb);
-            sum = cv::sum(softmaxProb)[0];
+            sum = (float)cv::sum(softmaxProb)[0];
             softmaxProb /= sum;
             Point classIdPoint;
             minMaxLoc(softmaxProb.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
