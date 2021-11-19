@@ -399,13 +399,13 @@ public:
         auto webnnInpOperand1 = nodes.size() > 1 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
         auto webnnInpOperand2 = nodes.size() > 2 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
         std::vector<int32_t> shape(dims, 1);
-        
+
         size_t channels = 1;
         if (blobs.empty())
             channels = numChannels;
         else
             channels = blobs[0].total();
-        
+
         int cAxis = normalize_axis(axis, shape.size());
         shape[cAxis] = channels;
 

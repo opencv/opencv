@@ -164,7 +164,7 @@ class Builder:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=ON")
         else:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=OFF")
-        
+
         if self.options.webnn:
             cmd.append("-DWITH_WEBNN=ON")
 

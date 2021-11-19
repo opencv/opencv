@@ -5,7 +5,6 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include "sys/time.h"
 
 #include "common.hpp"
 
@@ -148,15 +147,25 @@ int main(int argc, char** argv)
         net.setInput(blob);
         //! [Set input blob]
         //! [Make forward pass]
-        double t_sum = 0.0;
-        double t;
+        // double t_sum = 0.0;
+        // double t;
         int classId;
         double confidence;
+        cv::TickMeter timeRecorder;
+        timeRecorder.reset();
         Mat prob = net.forward();
-        for(int i = 0; i < 200; i++) {
-            prob = net.forward();
+        double t1;
+        timeRecorder.start();
+        prob = net.forward();
+        timeRecorder.stop();
+        t1 = timeRecorder.getTimeMilli();
 
+        timeRecorder.reset();
+        for(int i = 0; i < 200; i++) {
             //! [Make forward pass]
+            timeRecorder.start();
+            prob = net.forward();
+            timeRecorder.stop();
 
             //! [Get a class with a highest score]
             Point classIdPoint;
@@ -165,10 +174,10 @@ int main(int argc, char** argv)
             //! [Get a class with a highest score]
 
             // Put efficiency information.
-            std::vector<double> layersTimes;
-            double freq = getTickFrequency() / 1000;
-            t = net.getPerfProfile(layersTimes) / freq;
-            t_sum += t;
+            // std::vector<double> layersTimes;
+            // double freq = getTickFrequency() / 1000;
+            // t = net.getPerfProfile(layersTimes) / freq;
+            // t_sum += t;
         }
         if (needSoftmax == true)
         {
@@ -184,8 +193,8 @@ int main(int argc, char** argv)
             minMaxLoc(softmaxProb.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
             classId = classIdPoint.x;
         }
-        std::string label = format("Inference time: %.2f ms", t);
-        std::string label2 = format("Average time of 200 rounds: %.2f ms", t_sum/200);
+        std::string label = format("Inference time of 1 round: %.2f ms", t1);
+        std::string label2 = format("Average time of 200 rounds: %.2f ms", timeRecorder.getTimeMilli()/200);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
