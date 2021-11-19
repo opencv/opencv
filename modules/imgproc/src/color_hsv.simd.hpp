@@ -955,12 +955,11 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 h *= hscale;
-                if( h < 0 )
-                    do h += 6; while( h < 0 );
-                else if( h >= 6 )
-                    do h -= 6; while( h >= 6 );
+                // We need both loops to clamp (e.g. for h == -1e-40).
+                while( h < 0 ) h += 6;
+                while( h >= 6 ) h -= 6;
 
-                assert( 0 <= h && h < 6 );
+                CV_DbgAssert( 0 <= h && h < 6 );
                 sector = cvFloor(h);
                 h -= sector;
 
