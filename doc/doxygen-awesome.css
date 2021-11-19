@@ -165,52 +165,6 @@ html {
     }
 }
 
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) {
-        color-scheme: dark;
-        
-        --primary-color: #1982d2;
-        --primary-dark-color: #5ca8e2;
-        --primary-light-color: #4779ac;
-        --primary-lighter-color: #191e21;
-        --primary-lightest-color: #191a1c;
-
-        --box-shadow: 0 2px 10px 0 rgba(0,0,0,.35);
-
-        --odd-color: rgba(0,0,0,.1);
-
-        --menu-selected-background: rgba(0,0,0,.4);
-
-        --page-background-color: #1C1D1F;
-        --page-foreground-color: #d2dbde;
-        --page-secondary-foreground-color: #859399;
-        --separator-color: #000000;
-        --side-nav-background: #252628;
-
-        --code-background: #2a2c2f;
-
-        --tablehead-background: #2a2c2f;
-
-        --blockquote-background: #1f2022;
-        --blockquote-foreground: #77848a;
-
-        --warning-color: #b61825;
-        --warning-color-dark: #510a02;
-        --warning-color-darker: #f5b1aa;
-        --note-color: rgb(255, 183, 0);
-        --note-color-dark: #9f7300;
-        --note-color-darker: #645b39;
-        --deprecated-color: rgb(88, 90, 96);
-        --deprecated-color-dark: #262e37;
-        --deprecated-color-darker: #a0a5b0;
-        --bug-color: rgb(248, 113, 0);
-        --bug-color-dark: #812a00;
-        --bug-color-darker: #ffd3be;
-
-        --darkmode-toggle-button-icon: '🌛';
-    }
-}
-
 /* dark mode variables are defined twice, to support both the dark-mode without and with doxygen-awesome-darkmode-toggle.js */
 html.dark-mode {
     color-scheme: dark;
@@ -585,12 +539,6 @@ iframe {
     color-scheme: normal;
 }
 
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) iframe#MSearchResults {
-        filter: invert() hue-rotate(180deg);
-    }
-}
-
 html.dark-mode iframe#MSearchResults {
     filter: invert() hue-rotate(180deg);
 }
@@ -651,8 +599,8 @@ html.dark-mode iframe#MSearchResults {
         animation: ease-out 280ms slideInSearchResultsMobile;
     }
 
-    /* 
-     * Overwrites for fixing the searchbox on mobile in doxygen 1.9.2 
+    /*
+     * Overwrites for fixing the searchbox on mobile in doxygen 1.9.2
      */
     label.main-menu-btn ~ #searchBoxPos1 {
         top: 3px !important;
@@ -829,17 +777,6 @@ div.contents p, div.contents li {
 
 div.contents div.dyncontent {
     margin: var(--spacing-medium) 0;
-}
-
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) div.contents div.dyncontent img,
-    html:not(.light-mode) div.contents center img,
-    html:not(.light-mode) div.contents table img,
-    html:not(.light-mode) div.contents div.dyncontent iframe,
-    html:not(.light-mode) div.contents center iframe,
-    html:not(.light-mode) div.contents table iframe {
-        filter: hue-rotate(180deg) invert();
-    }
 }
 
 html.dark-mode div.contents div.dyncontent img,
@@ -1363,12 +1300,6 @@ table.directory {
     div.directory {
         margin-left: calc(0px - var(--spacing-medium));
         margin-right: calc(0px - var(--spacing-medium));
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) .iconfopen, html:not(.light-mode) .iconfclosed {
-        filter: hue-rotate(180deg) invert();
     }
 }
 
