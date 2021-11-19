@@ -2289,6 +2289,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
     const std::string& type = layer.op();
     const int num_inputs = layer.input_size();
     std::string pool_type = cv::toLowerCase(type);
+    DataLayout layout = getDataLayout(name, data_layouts);
 
     if (pool_type == "mean")
     {
@@ -2352,6 +2353,16 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
 
         if (!keepDims)
         {
+            if (layout == DATA_LAYOUT_NHWC)
+            {
+                LayerParams permLP;
+                int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                std::string permName = name + "/nhwc";
+                Pin inpId = Pin(layerShapeName);
+                addPermuteLayer(order, permName, inpId);
+                layerShapeName = permName;
+            }
+
             LayerParams squeezeLp;
             std::string squeezeName = name + "/squeeze";
             CV_Assert(layer_id.find(squeezeName) == layer_id.end());
@@ -2374,22 +2385,30 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
             layerParams.set("pool", pool_type);
             layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
             layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
-            layer_id[name] = id;
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 
-            if (!keepDims)
+            if (keepDims)
+            {
+                int id = dstNet.addLayer(name, "Pooling", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            }
+            else
             {
                 // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
+                std::string poolingName = name + "/Pooling";
+                CV_Assert(layer_id.find(poolingName) == layer_id.end());
+                int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
+                layer_id[poolingName] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                std::string permName = name + "/nchw";
-                Pin inpId = Pin(name);
+                std::string permName = name + "/nhwc";
+                Pin inpId = Pin(poolingName);
                 addPermuteLayer(order, permName, inpId);
 
                 LayerParams squeezeLp;
-                std::string squeezeName = name + "/squeeze";
-                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                const std::string& squeezeName = name;
                 squeezeLp.set("axis", indices.at<int>(0));
                 squeezeLp.set("end_axis", indices.at<int>(0) + 1);
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
@@ -2401,32 +2420,34 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         {
             int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
             Pin inpId = parsePin(layer.input(0));
-            addPermuteLayer(order, name + "/nhwc", inpId);
+            std::string permName = name + "/nhwc";
+            addPermuteLayer(order, permName, inpId);
 
             layerParams.set("pool", pool_type);
             layerParams.set("kernel_h", 1);
             layerParams.set("global_pooling_w", true);
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
-            layer_id[name] = id;
-            connect(layer_id, dstNet, inpId, id, 0);
+            std::string poolingName = name + "/Pooling";
+            CV_Assert(layer_id.find(poolingName) == layer_id.end());
+            int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
+            layer_id[poolingName] = id;
+            connect(layer_id, dstNet, Pin(permName), id, 0);
 
             if (!keepDims)
             {
                 LayerParams squeezeLp;
-                std::string squeezeName = name + "/squeeze";
-                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                const std::string& squeezeName = name;
                 int channel_id = 3; // TF NHWC layout
                 squeezeLp.set("axis", channel_id - 1);
                 squeezeLp.set("end_axis", channel_id);
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                 layer_id[squeezeName] = squeezeId;
-                connect(layer_id, dstNet, Pin(name), squeezeId, 0);
+                connect(layer_id, dstNet, Pin(poolingName), squeezeId, 0);
             }
             else
             {
                 int order[] = {0, 3, 1, 2};  // From NHWC to OpenCV's NCHW.
-                Pin inpId = parsePin(name);
-                addPermuteLayer(order, name + "/nchw", inpId);
+                Pin inpId = parsePin(poolingName);
+                addPermuteLayer(order, name, inpId);
             }
         }
     } else {
@@ -2435,18 +2456,26 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
 
         layerParams.set("pool", pool_type);
         layerParams.set("global_pooling", true);
-        int id = dstNet.addLayer(name, "Pooling", layerParams);
-        layer_id[name] = id;
-        connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 
-        if (!keepDims)
+        if (keepDims)
         {
+            int id = dstNet.addLayer(name, "Pooling", layerParams);
+            layer_id[name] = id;
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
+        else
+        {
+            std::string poolingName = name + "/Pooling";
+            CV_Assert(layer_id.find(poolingName) == layer_id.end());
+            int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
+            layer_id[poolingName] = id;
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             LayerParams flattenLp;
-            std::string flattenName = name + "/flatten";
-            CV_Assert(layer_id.find(flattenName) == layer_id.end());
+            const std::string& flattenName = name;
             int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
             layer_id[flattenName] = flattenId;
-            connect(layer_id, dstNet, Pin(name), flattenId, 0);
+            connect(layer_id, dstNet, Pin(poolingName), flattenId, 0);
+            data_layouts[name] = DATA_LAYOUT_PLANAR;
         }
     }
 }
@@ -2888,14 +2917,21 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
 
 void TFImporter::populateNet()
 {
-    CV_Assert(netBin.ByteSize() || netTxt.ByteSize());
+#if GOOGLE_PROTOBUF_VERSION < 3005000
+    size_t netBinSize = saturate_cast<size_t>(netBin.ByteSize());
+    size_t netTxtSize = saturate_cast<size_t>(netTxt.ByteSize());
+#else
+    size_t netBinSize = netBin.ByteSizeLong();
+    size_t netTxtSize = netTxt.ByteSizeLong();
+#endif
+    CV_Assert(netBinSize || netTxtSize);
 
     CV_LOG_INFO(NULL, "DNN/TF: parsing model"
         << (netBin.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netBin.versions().producer(), (int)netBin.versions().min_consumer()) : cv::String(" (N/A version info)"))
         << ". Number of nodes = " << netBin.node_size()
     );
 
-    if (netTxt.ByteSize())
+    if (netTxtSize)
     {
         CV_LOG_INFO(NULL, "DNN/TF: parsing config"
             << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
@@ -2924,7 +2960,7 @@ void TFImporter::populateNet()
         CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
     }
 
-    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+    tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
 
     int layersSize = net.node_size();
 
@@ -3027,7 +3063,12 @@ void TFImporter::addPermuteLayer(const int* order, const std::string& permName, 
 
 void TFImporter::parseNode(const tensorflow::NodeDef& layer)
 {
-    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+#if GOOGLE_PROTOBUF_VERSION < 3005000
+    size_t netTxtSize = saturate_cast<size_t>(netTxt.ByteSize());
+#else
+    size_t netTxtSize = netTxt.ByteSizeLong();
+#endif
+    tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
 
     const std::string& name = layer.name();
     const std::string& type = layer.op();

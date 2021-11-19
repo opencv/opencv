@@ -32,10 +32,10 @@ namespace opencv_test
     class SubPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class SubCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class SubRCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class MulPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class MulPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
     class MulDoublePerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MulCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class DivPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class DivPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
     class DivCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class DivRCPerfTest : public TestPerfParams<tuple<compare_f,cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MaskPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
@@ -81,7 +81,9 @@ namespace opencv_test
                                                          cv::GCompileArgs>> {};
     class TransposePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
+    class BottleneckKernelsConstInputPerfTest : public TestPerfParams<tuple<compare_f, std::string, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class ResizeInSimpleGraphPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
     class ParseSSDBLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseSSDPerfTest   : public TestPerfParams<tuple<cv::Size, float, bool, bool, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseYoloPerfTest  : public TestPerfParams<tuple<cv::Size, float, float, int, cv::GCompileArgs>>, public ParserYoloTest {};

@@ -256,9 +256,17 @@ int main(int argc, char *argv[])
     pipeline.start();
 
     cv::Mat out;
+    int framesCount = 0;
+    cv::TickMeter t;
+    t.start();
     while (pipeline.pull(cv::gout(out))) {
         cv::imshow("Out", out);
         cv::waitKey(1);
+        framesCount++;
     }
+    t.stop();
+    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
+    std::cout << "FPS: " << framesCount / (t.getTimeSec() ? t.getTimeSec() : 1) << std::endl;
+    std::cout << "framesCount: " << framesCount << std::endl;
     return 0;
 }
