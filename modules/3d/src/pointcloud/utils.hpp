@@ -12,7 +12,7 @@
 #include <algorithm>
 
 
-namespace cv { namespace pc {
+namespace cv {
 
 std::vector<std::string> split(const std::string &s, char delimiter);
 
@@ -60,6 +60,6 @@ void swapEndian(T &val)
     val = dst.val;
 }
 
-}} /* namespace cv::pc */
+} /* namespace cv */
 
 #endif

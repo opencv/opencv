@@ -2,9 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "coders_base.hpp"
+#include "../precomp.hpp"
+#include "io_base.hpp"
 
-namespace cv { namespace pc {
+namespace cv {
 
 void BasePointCloudDecoder::setSource(const std::string &filename) noexcept
 {
@@ -28,4 +29,4 @@ void BasePointCloudEncoder::writeData(const std::vector<Point3f> &points, const 
     writeData(points, normals, indices);
 }
 
-}} /* namespace cv::pc */
+} /* namespace cv */

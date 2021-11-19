@@ -5,10 +5,10 @@
 #ifndef _CODERS_OBJ_H_
 #define _CODERS_OBJ_H_
 
-#include "coders_base.hpp"
+#include "io_base.hpp"
 #include <unordered_set>
 
-namespace cv { namespace pc {
+namespace cv {
 
 class ObjDecoder CV_FINAL : public BasePointCloudDecoder
 {
@@ -26,6 +26,6 @@ public:
 
 };
 
-}} /* namespace cv::pc */
+} /* namespace cv */
 
 #endif

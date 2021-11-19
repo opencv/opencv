@@ -2,13 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "coders_obj.hpp"
+#include "../precomp.hpp"
+#include "io_obj.hpp"
 #include <fstream>
-#include <iostream>
 #include <opencv2/core/utils/logger.hpp>
 #include "utils.hpp"
 
-namespace cv { namespace pc {
+namespace cv {
 
 std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
@@ -21,7 +21,7 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     std::ifstream file(m_filename, std::ios::binary);
     if (!file)
     {
-        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
     }
     std::string s;
@@ -67,7 +67,7 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
         {
             if (m_unsupportedKeys.find(key) == m_unsupportedKeys.end()) {
                 m_unsupportedKeys.insert(key);
-                CV_LOG_WARNING(NULL, "Key " + key + " not supported");
+                CV_LOG_WARNING(NULL, "Key " << key << " not supported");
             }
         }
     }
@@ -79,7 +79,7 @@ void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 {
     std::ofstream file(m_filename, std::ios::binary);
     if (!file) {
-        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
     }
 
@@ -109,4 +109,4 @@ void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     file.close();
 }
 
-}} /* namespace cv::pc */
+} /* namespace cv */

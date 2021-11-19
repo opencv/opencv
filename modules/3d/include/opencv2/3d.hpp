@@ -2602,7 +2602,7 @@ protected:
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
 */
-CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals);
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray());
 
 /** @brief Saves a point cloud to a specified file.
 *
@@ -2613,7 +2613,7 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
 */
-CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals);
+CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray());
 
 /** @brief Loads a mesh from a file.
 *
@@ -2621,8 +2621,7 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 * If the mesh cannot be read, throws an error
 *
 * Currently, the following file formats are supported:
-* -  Wavefront obj file \*.obj (ONLY TRIANGULATED FACES)
-*
+* -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) vertex coordinates of a mesh
 * @param normals (vector of Point3f) vertex normals of a mesh

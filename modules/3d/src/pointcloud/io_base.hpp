@@ -11,7 +11,7 @@
 
 #include <opencv2/core.hpp>
 
-namespace cv { namespace pc {
+namespace cv {
 
 class BasePointCloudDecoder;
 class BasePointCloudEncoder;
@@ -46,6 +46,6 @@ protected:
     String m_filename;
 };
 
-}} /* namespace cv::pc */
+} /* namespace cv */
 
 #endif

@@ -4,16 +4,16 @@
 
 #include "../precomp.hpp"
 
-#include "coders_base.hpp"
-#include "coders_obj.hpp"
-#include "coders_ply.hpp"
+#include "io_base.hpp"
+#include "io_obj.hpp"
+#include "io_ply.hpp"
 #include "utils.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
 #include <memory>
 
-namespace cv { namespace pc {
+namespace cv {
 
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
@@ -49,15 +49,13 @@ static PointCloudEncoder findEncoder(const String &filename)
 
 #endif
 
-}
-
 void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    auto decoder = pc::findDecoder(filename);
+    auto decoder = findDecoder(filename);
     if (!decoder) {
-        String file_ext = cv::pc::getExtension(filename);
-        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        String file_ext = getExtension(filename);
+        CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }
 
@@ -71,7 +69,7 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     if (!vec_vertices.empty())
         Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, &vec_vertices[0]).copyTo(vertices);
 
-    if (!vec_normals.empty())
+    if (!vec_normals.empty() && normals.needed())
         Mat(static_cast<int>(vec_normals.size()), 1, CV_32FC3, &vec_normals[0]).copyTo(normals);
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
@@ -89,10 +87,10 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
         return;
     };
 
-    auto encoder = pc::findEncoder(filename);
+    auto encoder = findEncoder(filename);
     if (!encoder) {
-        String file_ext = cv::pc::getExtension(filename);
-        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        String file_ext = getExtension(filename);
+        CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }
 
@@ -117,10 +115,10 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    pc::PointCloudDecoder decoder = pc::findDecoder(filename);
-    String file_ext = cv::pc::getExtension(filename);
+    PointCloudDecoder decoder = findDecoder(filename);
+    String file_ext = getExtension(filename);
     if (!decoder || (file_ext != "obj" && file_ext != "OBJ")) {
-        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }
 
@@ -164,10 +162,10 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
         return;
     }
 
-    auto encoder = pc::findEncoder(filename);
-    String file_ext = cv::pc::getExtension(filename);
+    auto encoder = findEncoder(filename);
+    String file_ext = getExtension(filename);
     if (!encoder || (file_ext != "obj" && file_ext != "OBJ")) {
-        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_ERROR(NULL, "File extension '" << file_ext << "' is not supported");
         return;
     }
 
@@ -196,4 +194,6 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 
-}} /* namespace cv::pc */
+}
+
+}/* namespace cv */

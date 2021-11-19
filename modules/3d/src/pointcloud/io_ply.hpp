@@ -5,12 +5,11 @@
 #ifndef _CODERS_PLY_H_
 #define _CODERS_PLY_H_
 
-#include "coders_base.hpp"
+#include "io_base.hpp"
 #include <istream>
 #include <vector>
-#include <string>
 
-namespace cv { namespace pc {
+namespace cv {
 
 enum class DataFormat
 {
@@ -41,6 +40,6 @@ public:
 
 };
 
-}} /* namespace cv::pc */
+} /* namespace cv */
 
 #endif

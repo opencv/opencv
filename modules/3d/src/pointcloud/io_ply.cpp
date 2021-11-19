@@ -2,14 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "coders_ply.hpp"
+#include "../precomp.hpp"
+#include "io_ply.hpp"
 #include "utils.hpp"
 #include <opencv2/core/utils/logger.hpp>
-#include <iostream>
 #include <fstream>
 #include <string>
 
-namespace cv { namespace pc {
+namespace cv {
 
 void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
 {
@@ -30,14 +30,14 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     std::getline(file, s);
     if (trimSpaces(s) != "ply")
     {
-        CV_LOG_WARNING(NULL, "Provided file is not in PLY format");
+        CV_LOG_ERROR(NULL, "Provided file is not in PLY format");
         return false;
     }
     std::getline(file, s);
     auto splitArr = split(s, ' ');
     if (splitArr[0] != "format")
     {
-        CV_LOG_WARNING(NULL, "Provided file doesn't have format");
+        CV_LOG_ERROR(NULL, "Provided file doesn't have format");
         return false;
     }
     if (splitArr[1] == "ascii")
@@ -54,7 +54,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
     }
     else
     {
-        CV_LOG_WARNING(NULL, "Provided PLY file format is not supported");
+        CV_LOG_ERROR(NULL, "Provided PLY file format is not supported");
         return false;
     }
 
@@ -84,7 +84,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                 if (splitArrElem[2] == "x" || splitArrElem[2] == "red" || splitArrElem[2] == "nx")
                 {
                     if (splitArrElem[1] != "float") {
-                        CV_LOG_WARNING(NULL, "Provided PLY file format '" + splitArrElem[1] + "' is not supported");
+                        CV_LOG_ERROR(NULL, "Provided PLY file format '" << splitArrElem[1] << "' is not supported");
                         return false;
                     }
                 }
@@ -166,7 +166,7 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     CV_UNUSED(indices);
     std::ofstream file(m_filename, std::ios::binary);
     if (!file) {
-        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
     }
 
@@ -202,4 +202,4 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     file.close();
 }
 
-}} /* namespace cv::pc */
+} /* namespace cv */
