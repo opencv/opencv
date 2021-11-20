@@ -459,35 +459,33 @@ void showCameraTrajectory(
             position + (-right * aspect + up) * scale * 1.5f + forward * scale * 2.0f,
         };
 
-        points_data.insert(points_data.end(), {
-            back_f[0](0), back_f[0](1), back_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[1](0), back_f[1](1), back_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[1](0), back_f[1](1), back_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[2](0), back_f[2](1), back_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[2](0), back_f[2](1), back_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[3](0), back_f[3](1), back_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[3](0), back_f[3](1), back_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[0](0), back_f[0](1), back_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
+        // Get line points
+        Vec3f lines[24] = {
+            // Back face
+            back_f[0], back_f[1],
+            back_f[1], back_f[2],
+            back_f[2], back_f[3],
+            back_f[3], back_f[0],
 
-            front_f[0](0), front_f[0](1), front_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[1](0), front_f[1](1), front_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[1](0), front_f[1](1), front_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[2](0), front_f[2](1), front_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[2](0), front_f[2](1), front_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[3](0), front_f[3](1), front_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[3](0), front_f[3](1), front_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[0](0), front_f[0](1), front_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
+            // Front face
+            front_f[0], front_f[1],
+            front_f[1], front_f[2],
+            front_f[2], front_f[3],
+            front_f[3], front_f[0],
 
-            back_f[0](0), back_f[0](1), back_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[0](0), front_f[0](1), front_f[0](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[1](0), back_f[1](1), back_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[1](0), front_f[1](1), front_f[1](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[2](0), back_f[2](1), back_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[2](0), front_f[2](1), front_f[2](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            back_f[3](0), back_f[3](1), back_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-            front_f[3](0), front_f[3](1), front_f[3](2), frustum_color(0), frustum_color(1), frustum_color(2),
-        });
+            // Side lines
+            back_f[0], front_f[0],
+            back_f[1], front_f[1],
+            back_f[2], front_f[2],
+            back_f[3], front_f[3],
+        };
 
+        // Add line points
+        for (int i = 0; i < sizeof(lines) / sizeof(Vec3f); ++i)
+            points_data.insert(points_data.end(), {
+                lines[i](0), lines[i](1), lines[i](2),
+                frustum_color[0], frustum_color[1], frustum_color[2],
+            });
     }
 
     // Add trajectory line
@@ -871,6 +869,10 @@ static Mat getGridVertices(const View& view)
     const float scale = 0.3f;
 
     float tick_step = 1.0f;
+    if (view.getDistance() * scale / tick_step > 4.0)
+        tick_step *= powf(floorf(logf(view.getDistance() * scale) / logf(tick_step)), 2.0);
+
+        tick_step *= log1p(view.getDistance() * scale / 4.0);
     while (view.getDistance() * scale / tick_step > 4.0f)
         tick_step *= 2.0f;
     while (view.getDistance() * scale / tick_step < 2.0f)
