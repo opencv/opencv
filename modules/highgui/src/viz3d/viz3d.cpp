@@ -328,10 +328,12 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
             for (float t = 0.0f, n; t < LIMIT;)
             {
                 n = t + LIMIT / (divs * 4);
+                auto p1 = ex * cosf(t) + ey * sinf(t);
+                auto p2 = ex * cosf(n) + ey * sinf(n);
                 points_data.insert(points_data.end(), {
-                    ex(0) * cosf(t) + ey(0) * sinf(t), ex(1) * cosf(t) + ey(1) * sinf(t), ex(2) * cosf(t) + ey(2) * sinf(t), color(0), color(1), color(2),
-                    ex(0) * cosf(n) + ey(0) * sinf(n), ex(1) * cosf(n) + ey(1) * sinf(n), ex(2) * cosf(n) + ey(2) * sinf(n), color(0), color(1), color(2),
-                    });
+                    p1(0), p1(1), p1(2), color(0), color(1), color(2),
+                    p2(0), p2(1), p2(2), color(0), color(1), color(2),
+                });
                 t = n;
             }
         }
@@ -351,33 +353,35 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
         for (int s = -1; s <= 1; s += 2)
             for (int e = 0; e < 3; ++e)
             {
-                auto ex = Vec3f::zeros();
-                auto ey = Vec3f::zeros();
-                auto pz = Vec3f::zeros();
+                auto ex = Vec3f::all(0.0f);
+                auto ey = Vec3f::all(0.0f);
+                auto pz = Vec3f::all(0.0f);
                 ex((e + 1) % 3) = 1.0f / divs;
                 ey((e + 2) % 3) = 1.0f / divs;
                 pz(e) = s;
 
                 for (int x = -divs; x < divs; ++x)
                     for (int y = -divs; y < divs; ++y)
-                        if (mode == RENDER_SIMPLE)
+                    {
+                        // Quad positions
+                        Vec3f positions[6] = {
+                            (x + 0) * ex + (y + 0) * ey + pz,
+                            (x + 0) * ex + (y + 1) * ey + pz,
+                            (x + 1) * ex + (y + 1) * ey + pz,
+                            (x + 1) * ex + (y + 1) * ey + pz,
+                            (x + 1) * ex + (y + 0) * ey + pz,
+                            (x + 0) * ex + (y + 0) * ey + pz,
+                        };
+
+                        for (int i = 0; i < 6; ++i) {
                             verts_data.insert(verts_data.end(), {
-                                ex(0) * (x + 0) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2),
-                                ex(0) * (x + 1) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2),
-                                ex(0) * (x + 1) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2),
-                                ex(0) * (x + 1) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2),
-                                ex(0) * (x + 0) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2),
-                                ex(0) * (x + 0) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2),
-                                });
-                        else
-                            verts_data.insert(verts_data.end(), {
-                                ex(0) * (x + 0) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                ex(0) * (x + 1) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                ex(0) * (x + 1) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                ex(0) * (x + 1) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 1) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 1) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                ex(0) * (x + 0) + ey(0) * (y + 1) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 1) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 1) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                ex(0) * (x + 0) + ey(0) * (y + 0) + pz(0), ex(1) * (x + 0) + ey(1) * (y + 0) + pz(1), ex(2) * (x + 0) + ey(2) * (y + 0) + pz(2), color(0), color(1), color(2), 0.0f, 0.0f, 0.0f,
-                                });
+                                positions[i](0), positions[i](1), positions[i](2),
+                                color(0), color(1), color(2),
+                            });
+                            if (mode == RENDER_SHADING)
+                                verts_data.insert(verts_data.end(), { 0.0f, 0.0f, 0.0f });
+                        }
+                    }
             }
 
         if (mode == RENDER_SIMPLE)
