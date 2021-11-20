@@ -59,6 +59,141 @@ static Window* getWindow(const String& win_name)
     return win;
 }
 
+// Generates vertices for a box.
+static void generateBox(Mat& mat, const Vec3f& size, const Vec3f& color, RenderMode mode)
+{
+    if (mode == RENDER_SHADING)
+        mat.create(6 * 6, 9, CV_32F); // 6 faces, each with 6 vertices, and 9 floats per vertex (position + color + normal)
+    else if (mode == RENDER_SIMPLE)
+        mat.create(6 * 6, 6, CV_32F); // 6 faces, each with 6 vertices, and 6 floats per vertex (position + color)
+    else if (mode == RENDER_WIREFRAME)
+        mat.create(8 * 6, 6, CV_32F); // 6 faces, each with 8 vertices, and 6 floats per vertex (position + color)
+    int next_row = 0;
+
+    for (int s = -1; s <= 1; s += 2) // For each side
+        for (int a = 0; a < 3; ++a) // For each axis
+        {
+            // Get the normal vector.
+            Vec3f normal = Vec3f::all(0.0f);
+            normal((a + 2) % 3) = static_cast<float>(s);
+
+            // Get offset vectors
+            Vec3f offset_x, offset_y, offset_z;
+            offset_x = offset_y = offset_z = Vec3f::all(0.0f);
+            offset_x((a + 0) % 3) = size((a + 0) % 3);
+            offset_y((a + 1) % 3) = size((a + 1) % 3);
+            offset_z((a + 2) % 3) = static_cast<float>(s) * size((a + 2) % 3);
+
+            // Generate vertex positions
+            Vec3f positions[8];
+            int count = 0;
+
+            if (mode == RENDER_WIREFRAME) {
+                // Face line segments
+                count = 8;
+                positions[0] = offset_z - offset_x - offset_y;
+                positions[1] = offset_z + offset_x - offset_y;
+                positions[2] = offset_z + offset_x - offset_y;
+                positions[3] = offset_z + offset_x + offset_y;
+                positions[4] = offset_z + offset_x + offset_y;
+                positions[5] = offset_z - offset_x + offset_y;
+                positions[6] = offset_z - offset_x + offset_y;
+                positions[7] = offset_z - offset_x - offset_y;
+            }
+            else
+            {
+                // Face triangles
+                count = 6;
+                positions[0] = offset_z - offset_x - offset_y;
+                positions[1] = offset_z + offset_x - offset_y;
+                positions[2] = offset_z + offset_x + offset_y;
+                positions[3] = offset_z + offset_x + offset_y;
+                positions[4] = offset_z - offset_x + offset_y;
+                positions[5] = offset_z - offset_x - offset_y;
+            }
+
+            // Add the vertices
+            for (int i = 0; i < count; ++i)
+            {
+                mat.at<float>(next_row, 0) = positions[i](0);
+                mat.at<float>(next_row, 1) = positions[i](1);
+                mat.at<float>(next_row, 2) = positions[i](2);
+                mat.at<float>(next_row, 3) = color(0);
+                mat.at<float>(next_row, 4) = color(1);
+                mat.at<float>(next_row, 5) = color(2);
+                if (mode == RENDER_SHADING)
+                {
+                    mat.at<float>(next_row, 6) = normal(0);
+                    mat.at<float>(next_row, 7) = normal(1);
+                    mat.at<float>(next_row, 8) = normal(2);
+                }
+                next_row += 1;
+            }
+        }
+}
+
+// Generates vertices for a plane.
+static void generatePlane(Mat& mat, const Vec2f& size, const Vec3f& color, RenderMode mode)
+{
+    if (mode == RENDER_SHADING)
+        mat.create(6, 9, CV_32F); // 6 vertices, and 9 floats per vertex (position + color + normal)
+    else if (mode == RENDER_SIMPLE)
+        mat.create(6, 6, CV_32F); // 6 vertices, and 6 floats per vertex (position + color)
+    else if (mode == RENDER_WIREFRAME)
+        mat.create(8, 6, CV_32F); // 8 vertices, and 6 floats per vertex (position + color)
+    int next_row = 0;
+
+    // Get offset vectors
+    Vec3f offset_x = Vec3f(size(0), 0.0f, 0.0f);
+    Vec3f offset_y = Vec3f(0.0f, 0.0f, size(1));
+
+    // Generate vertex positions
+    Vec3f positions[8];
+    int count = 0;
+
+    if (mode == RENDER_WIREFRAME) {
+        // Quad line segments
+        count = 8;
+        positions[0] = - offset_x - offset_y;
+        positions[1] =   offset_x - offset_y;
+        positions[2] =   offset_x - offset_y;
+        positions[3] =   offset_x + offset_y;
+        positions[4] =   offset_x + offset_y;
+        positions[5] = - offset_x + offset_y;
+        positions[6] = - offset_x + offset_y;
+        positions[7] = - offset_x - offset_y;
+    }
+    else
+    {
+        // Quad triangles
+        count = 6;
+        positions[0] = - offset_x - offset_y;
+        positions[1] =   offset_x - offset_y;
+        positions[2] =   offset_x + offset_y;
+        positions[3] =   offset_x + offset_y;
+        positions[4] = - offset_x + offset_y;
+        positions[5] = - offset_x - offset_y;
+    }
+
+    // Add the vertices
+    for (int i = 0; i < count; ++i)
+    {
+        mat.at<float>(next_row, 0) = positions[i](0);
+        mat.at<float>(next_row, 1) = positions[i](1);
+        mat.at<float>(next_row, 2) = positions[i](2);
+        mat.at<float>(next_row, 3) = color(0);
+        mat.at<float>(next_row, 4) = color(1);
+        mat.at<float>(next_row, 5) = color(2);
+        if (mode == RENDER_SHADING)
+        {
+            mat.at<float>(next_row, 6) = 0.0f;
+            mat.at<float>(next_row, 7) = 1.0f;
+            mat.at<float>(next_row, 8) = 0.0f;
+        }
+        next_row += 1;
+    }
+}
+
 #endif // HAVE_OPENGL
 
 void setPerspective(const String& win_name, float fov, float z_near, float z_far)
@@ -132,126 +267,12 @@ void showBox(const String& win_name, const String& obj_name, const Vec3f& size, 
     CV_UNUSED(mode);
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
+    Mat mat;
+    generateBox(mat, size, color, mode);
     if (mode == RENDER_WIREFRAME)
-    {
-        float points_data[] = {
-            -size(0), -size(1), -size(2), color(0), color(1), color(2),
-            +size(0), -size(1), -size(2), color(0), color(1), color(2),
-            -size(0), +size(1), -size(2), color(0), color(1), color(2),
-            +size(0), +size(1), -size(2), color(0), color(1), color(2),
-            -size(0), -size(1), +size(2), color(0), color(1), color(2),
-            +size(0), -size(1), +size(2), color(0), color(1), color(2),
-            -size(0), +size(1), +size(2), color(0), color(1), color(2),
-            +size(0), +size(1), +size(2), color(0), color(1), color(2),
-
-            -size(0), -size(1), -size(2), color(0), color(1), color(2),
-            -size(0), +size(1), -size(2), color(0), color(1), color(2),
-            +size(0), -size(1), -size(2), color(0), color(1), color(2),
-            +size(0), +size(1), -size(2), color(0), color(1), color(2),
-            -size(0), -size(1), +size(2), color(0), color(1), color(2),
-            -size(0), +size(1), +size(2), color(0), color(1), color(2),
-            +size(0), -size(1), +size(2), color(0), color(1), color(2),
-            +size(0), +size(1), +size(2), color(0), color(1), color(2),
-
-            -size(0), -size(1), -size(2), color(0), color(1), color(2),
-            -size(0), -size(1), +size(2), color(0), color(1), color(2),
-            +size(0), -size(1), -size(2), color(0), color(1), color(2),
-            +size(0), -size(1), +size(2), color(0), color(1), color(2),
-            -size(0), +size(1), -size(2), color(0), color(1), color(2),
-            -size(0), +size(1), +size(2), color(0), color(1), color(2),
-            +size(0), +size(1), -size(2), color(0), color(1), color(2),
-            +size(0), +size(1), +size(2), color(0), color(1), color(2),
-        };
-
-        const Mat points_mat = Mat(Size(6, 24), CV_32F, &points_data);
-
-        showLines(win_name, obj_name, points_mat);
-    }
-    else if (mode == RENDER_SIMPLE)
-    {
-        float verts_data[] = {
-            -size(0), -size(1), -size(2), color(0), color(1), color(2),
-            +size(0), -size(1), -size(2), color(0), color(1), color(2),
-            +size(0), +size(1), -size(2), color(0), color(1), color(2),
-            -size(0), +size(1), -size(2), color(0), color(1), color(2),
-            -size(0), -size(1), +size(2), color(0), color(1), color(2),
-            +size(0), -size(1), +size(2), color(0), color(1), color(2),
-            +size(0), +size(1), +size(2), color(0), color(1), color(2),
-            -size(0), +size(1), +size(2), color(0), color(1), color(2),
-        };
-
-        static unsigned char indices_data[] = {
-            0, 1, 2,
-            2, 3, 0,
-            4, 5, 6,
-            6, 7, 4,
-            0, 1, 5,
-            5, 4, 0,
-            3, 2, 6,
-            6, 7, 3,
-            0, 3, 7,
-            7, 4, 0,
-            1, 2, 6,
-            6, 5, 1,
-        };
-
-        const Mat verts_mat = Mat(Size(6, 8), CV_32F, &verts_data);
-        const Mat indices_mat = Mat(Size(3, 12), CV_8U, &indices_data);
-
-        showMesh(win_name, obj_name, verts_mat, indices_mat);
-    }
-    else if (mode == RENDER_SHADING)
-    {
-        float verts_data[] = {
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 0
-            +size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 1
-            +size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 2
-            +size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 2
-            -size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 3
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, 0.0f, -1.0f, // 0
-
-            -size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 4
-            +size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 5
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 6
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 6
-            -size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 7
-            -size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, 0.0f, +1.0f, // 4
-
-
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 0
-            +size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 1
-            +size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 5
-            +size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 5
-            -size(0), -size(1), +size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 4
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), 0.0f, -1.0f, 0.0f, // 0
-
-            -size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 3
-            +size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 2
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 6
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 6
-            -size(0), +size(1), +size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 7
-            -size(0), +size(1), -size(2), color(0), color(1), color(2), 0.0f, +1.0f, 0.0f, // 3
-
-
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 0
-            -size(0), +size(1), -size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 3
-            -size(0), +size(1), +size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 7
-            -size(0), +size(1), +size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 7
-            -size(0), -size(1), +size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 4
-            -size(0), -size(1), -size(2), color(0), color(1), color(2), -1.0f, 0.0f, 0.0f, // 0
-
-            +size(0), -size(1), -size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 1
-            +size(0), +size(1), -size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 2
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 6
-            +size(0), +size(1), +size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 6
-            +size(0), -size(1), +size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 5
-            +size(0), -size(1), -size(2), color(0), color(1), color(2), +1.0f, 0.0f, 0.0f, // 1
-        };
-
-        const Mat verts_mat = Mat(Size(9, 36), CV_32F, &verts_data);
-
-        showMesh(win_name, obj_name, verts_mat);
-    }
+        showLines(win_name, obj_name, mat);
+    else
+        showMesh(win_name, obj_name, mat);
 #endif
 }
 
@@ -266,53 +287,12 @@ void showPlane(const String& win_name, const String& obj_name, const Vec2f& size
     CV_UNUSED(mode);
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
+    Mat mat;
+    generatePlane(mat, size, color, mode);
     if (mode == RENDER_WIREFRAME)
-    {
-        float points_data[] = {
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            -size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            -size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2),
-        };
-
-        const Mat points_mat = Mat(Size(6, 8), CV_32F, points_data);
-
-        showLines(win_name, obj_name, points_mat);
-    }
-    else if (mode == RENDER_SIMPLE)
-    {
-        float verts_data[] = {
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2),
-            -size(0), 0.0f, +size(1), color(0), color(1), color(2),
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2),
-        };
-
-        const Mat verts_mat = Mat(Size(6, 6), CV_32F, verts_data);
-
-        showMesh(win_name, obj_name, verts_mat);
-    }
-    else if (mode == RENDER_SHADING)
-    {
-        float verts_data[] = {
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-            +size(0), 0.0f, -size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-            -size(0), 0.0f, -size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-            -size(0), 0.0f, +size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-            +size(0), 0.0f, +size(1), color(0), color(1), color(2), 0.0f, 1.0f, 0.0f,
-        };
-
-        const Mat verts_mat = Mat(Size(9, 6), CV_32F, verts_data);
-
-        showMesh(win_name, obj_name, verts_mat);
-    }
+        showLines(win_name, obj_name, mat);
+    else
+        showMesh(win_name, obj_name, mat);
 #endif
 }
 
@@ -348,8 +328,8 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
             {
                 n = t + LIMIT / (divs * 4);
                 points_data.insert(points_data.end(), {
-                    ex(0) * cos(t) + ey(0) * sin(t), ex(1) * cos(t) + ey(1) * sin(t), ex(2) * cos(t) + ey(2) * sin(t), color(0), color(1), color(2),
-                    ex(0) * cos(n) + ey(0) * sin(n), ex(1) * cos(n) + ey(1) * sin(n), ex(2) * cos(n) + ey(2) * sin(n), color(0), color(1), color(2),
+                    ex(0) * cosf(t) + ey(0) * sinf(t), ex(1) * cosf(t) + ey(1) * sinf(t), ex(2) * cosf(t) + ey(2) * sinf(t), color(0), color(1), color(2),
+                    ex(0) * cosf(n) + ey(0) * sinf(n), ex(1) * cosf(n) + ey(1) * sinf(n), ex(2) * cosf(n) + ey(2) * sinf(n), color(0), color(1), color(2),
                     });
                 t = n;
             }
