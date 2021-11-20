@@ -594,8 +594,8 @@ void showRGBD(const String& win_name, const String& obj_name, InputArray img, co
             Vec4f c = mat.at<Vec4f>(v, u);
             float d = c(3) * 0.001f; // mm to m
 
-            float x_over_z = (cx - (float)u) / fx;
-            float y_over_z = (cy - (float)v) / fy;
+            float x_over_z = (cx - static_cast<float>(u)) / fx;
+            float y_over_z = (cy - static_cast<float>(v)) / fy;
             float z = d/* / sqrt(1.0f + x_over_z * x_over_z + y_over_z * y_over_z)*/;
             float x = x_over_z * z;
             float y = y_over_z * z;
@@ -1020,7 +1020,7 @@ void Window::setGridVisible(bool visible)
 void Window::draw()
 {
     Rect rect = getWindowImageRect(this->name);
-    float aspect = (float)rect.width / (float)rect.height;
+    float aspect = static_cast<float>(rect.width) / static_cast<float>(rect.height);
     this->view.setAspect(aspect);
 
     ogl::enable(ogl::DEPTH_TEST);
