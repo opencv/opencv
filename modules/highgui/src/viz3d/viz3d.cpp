@@ -767,20 +767,10 @@ void View::lookAt(const Vec3f& point, const Vec3f& up)
     Vec3f s = normalize(up.cross(f));
     Vec3f u = f.cross(s);
 
-    this->view = Matx44f::zeros();
-    this->view(0, 0) = s[0];
-    this->view(1, 0) = s[1];
-    this->view(2, 0) = s[2];
-    this->view(0, 1) = u[0];
-    this->view(1, 1) = u[1];
-    this->view(2, 1) = u[2];
-    this->view(0, 2) = f[0];
-    this->view(1, 2) = f[1];
-    this->view(2, 2) = f[2];
-    this->view(3, 0) = -s.dot(this->position);
-    this->view(3, 1) = -u.dot(this->position);
-    this->view(3, 2) = -f.dot(this->position);
-    this->view(3, 3) = 1.0f;
+    this->view = Matx44f(s(0), u(0), f(0), 0.0f,
+                         s(1), u(1), f(1), 0.0f,
+                         s(2), u(2), f(2), 0.0f,
+                         -s.dot(this->position), -u.dot(this->position), -f.dot(this->position), 1.0f);
 }
 
 Window::Window(const String& name)
