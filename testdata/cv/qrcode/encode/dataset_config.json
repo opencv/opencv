@@ -1,0 +1,28 @@
+{
+    "test_images": [
+        { "image_name": "version1_mode1.png", "info": "12345678" },
+        { "image_name": "version1_mode2.png", "info": "ADSWE22223DFAS" },
+        { "image_name": "version1_mode4.png", "info": "woaiwo5555@qq.com" },
+        { "image_name": "version1_mode7.png", "info": "дЛцмЩрёВ" },
+        { "image_name": "version2_mode1.png",
+            "info": "91172339675319066800542009332763324407887566419283892024943292" },
+        { "image_name": "version2_mode2.png",
+            "info": "000NATASHA WE DROPPED EVERYTHING000" },
+        { "image_name": "version2_mode4.png",
+            "info": "aQqdqecq%hre3?JXcDxx#PqLG_29G*R^" },
+        { "image_name": "version2_mode7.png",
+            "info": "42ЁдЬзьКЕ,ыЙкя" },
+        { "image_name": "version3_mode2.png",
+            "info": "OPENCV OSPP 2020 QR-CODE ENCODER. TEST ENCODER QR VERSION 3 MODE ALPHANUMERIC" },
+        { "image_name": "version3_mode4.png",
+            "info": "https://github.com/opencv/opencv/tree/master/modules/" },
+        { "image_name": "version3_mode7.png",
+            "info": "ПЖлШУ.ьёвщЛДо8феп7ъА" },
+        { "image_name": "version4_mode4.png",
+            "info": "aQqdqecq%hre3?JXcDxx#PqLG_29G*R^&f?bD6C5qam+Y_MUGaSmS5&fh_Q&bCZz" },
+        { "image_name": "version4_mode7.png",
+            "info": "и?ЮпЙДЁХслМЖЬ4ыпЛД,нЕу5РВя8ЦзцП.6б" },
+        { "image_name": "version5_mode7.png",
+            "info": "957БщпоХСЛдЦешхЯ1ЕШТ;П4!сёИгфла.НЫКУЗВЧ,уймЁМ" }
+    ]
+}

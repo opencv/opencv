@@ -1,0 +1,9 @@
+{
+    "version_ecc_capacity": [
+        { "version_level": "1", "ecc_level": [ 19, 16, 13, 9 ] },
+        { "version_level": "2", "ecc_level": [ 34, 28, 22, 16 ] },
+        { "version_level": "3", "ecc_level": [ 55, 44, 34, 26 ] },
+        { "version_level": "4", "ecc_level": [ 80, 64, 48, 36 ] },
+        { "version_level": "5", "ecc_level": [ 108, 86, 62, 46 ] }
+    ]
+}
