@@ -385,9 +385,10 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
             for (int i = 0; i < verts_data.size() / 6; ++i)
             {
                 float l = sqrtf(verts_data[6 * i + 0] * verts_data[6 * i + 0] + verts_data[6 * i + 1] * verts_data[6 * i + 1] + verts_data[6 * i + 2] * verts_data[6 * i + 2]);
-                verts_data[6 * i + 0] *= radius / l;
-                verts_data[6 * i + 1] *= radius / l;
-                verts_data[6 * i + 2] *= radius / l;
+                float r = radius / l;
+                verts_data[6 * i + 0] *= r;
+                verts_data[6 * i + 1] *= r;
+                verts_data[6 * i + 2] *= r;
             }
 
             const Mat verts_mat = Mat(Size(6, verts_data.size() / 6), CV_32F, verts_data.data());
@@ -398,12 +399,13 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
             for (int i = 0; i < verts_data.size() / 9; ++i)
             {
                 float l = sqrtf(verts_data[9 * i + 0] * verts_data[9 * i + 0] + verts_data[9 * i + 1] * verts_data[9 * i + 1] + verts_data[9 * i + 2] * verts_data[9 * i + 2]);
+                float r = radius / l;
                 verts_data[9 * i + 6] = verts_data[9 * i + 0] / l;
                 verts_data[9 * i + 7] = verts_data[9 * i + 1] / l;
                 verts_data[9 * i + 8] = verts_data[9 * i + 2] / l;
-                verts_data[9 * i + 0] *= radius / l;
-                verts_data[9 * i + 1] *= radius / l;
-                verts_data[9 * i + 2] *= radius / l;
+                verts_data[9 * i + 0] *= r;
+                verts_data[9 * i + 1] *= r;
+                verts_data[9 * i + 2] *= r;
             }
 
             const Mat verts_mat = Mat(Size(9, verts_data.size() / 9), CV_32F, verts_data.data());
