@@ -135,6 +135,8 @@ public:
     virtual void setShader(ogl::Program program) override;
 
 private:
+    void initVA(int width);
+
     ogl::Program program;
     ogl::VertexArray va;
     ogl::Buffer verts;

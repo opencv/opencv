@@ -1024,7 +1024,7 @@ void Window::draw()
     this->view.setAspect(aspect);
 
     ogl::enable(ogl::DEPTH_TEST);
-    ogl::clearColor({ double(this->sky_color(0) * 255.0f), double(this->sky_color(1) * 255.0f), double(this->sky_color(2) * 255.0f), 255.0 });
+    ogl::clearColor(this->sky_color.mul(255.0f));
 
     if (this->grid)
     {
@@ -1153,63 +1153,7 @@ Mesh::Mesh(InputArray verts, InputArray indices)
     }
 
     // Prepare vertex array
-    if (verts.size().width == 3)
-    {
-        this->va.create({
-            {
-                this->verts,
-                3 * sizeof(float), 0,
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                0
-            }
-        });
-    }
-    else if (verts.size().width == 6)
-    {
-        this->va.create({
-            {
-                this->verts,
-                6 * sizeof(float), 0,
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                0
-            },
-            {
-                this->verts,
-                6 * sizeof(float), 3 * sizeof(float),
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                1
-            }
-        });
-    }
-    else if (verts.size().width == 9)
-    {
-        this->va.create({
-            {
-                this->verts,
-                9 * sizeof(float), 0,
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                0
-            },
-            {
-                this->verts,
-                9 * sizeof(float), 3 * sizeof(float),
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                1
-            },
-            {
-                this->verts,
-                9 * sizeof(float), 6 * sizeof(float),
-                3, ogl::Attribute::FLOAT,
-                false, false,
-                2
-            }
-        });
-    }
+    this->initVA(verts.size().width);
 }
 
 Mesh::Mesh(InputArray verts)
@@ -1227,7 +1171,13 @@ Mesh::Mesh(InputArray verts)
     this->index_type = 0;
 
     // Prepare vertex array
-    if (verts.size().width == 3)
+    this->initVA(verts.size().width);
+}
+
+void Mesh::initVA(int width)
+{
+    // Prepare vertex array
+    if (width == 3)
     {
         this->va.create({
             {
@@ -1239,7 +1189,7 @@ Mesh::Mesh(InputArray verts)
             }
             });
     }
-    else if (verts.size().width == 6)
+    else if (width == 6)
     {
         this->va.create({
             {
@@ -1258,7 +1208,7 @@ Mesh::Mesh(InputArray verts)
             }
         });
     }
-    else if (verts.size().width == 9)
+    else if (width == 9)
     {
         this->va.create({
             {
