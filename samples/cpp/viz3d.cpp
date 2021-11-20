@@ -16,7 +16,7 @@ Mat loadPoints(const String& path)
 
     int _;
     float x, y, z, r, g, b;
-    float cx = 0.0f, cy = 0.0f, cz = 0.0f;
+    Vec3f c = Vec3f::all(0.0f);
     int count;
 
     std::string str;
@@ -27,21 +27,14 @@ Mat loadPoints(const String& path)
         y = -y;
         float data[] = { x, y, z, r / 255.0f, g / 255.0f, b / 255.0f };
         points.push_back(Mat(Size(6, 1), CV_32F, &data));
-        cx += x;
-        cy += y;
-        cz += z;
+        c += Vec3f(x, y, z);
     }
 
-    cx /= count;
-    cy /= count;
-    cz /= count;
+    c /= count;
 
     for (int i = 0; i < count; ++i)
-    {
-        points.at<float>(i, 0) -= cx;
-        points.at<float>(i, 1) -= cy;
-        points.at<float>(i, 2) -= cz;
-    }
+        for (int j = 0; j < 3; ++j)
+            points.at<float>(i, j) -= c(j);
 
     return points;
 }
