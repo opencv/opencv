@@ -374,6 +374,10 @@ bool __termination;  // skip some cleanups, because process is terminating
 
 cv::Mutex& getInitializationMutex();
 
+/// @brief Returns timestamp in nanoseconds since program launch
+int64 getTimestampNS();
+
+
 // TODO Memory barriers?
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
     static TYPE* volatile instance = NULL; \
