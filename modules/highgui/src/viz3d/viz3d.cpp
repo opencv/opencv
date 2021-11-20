@@ -316,6 +316,7 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
         static const float LIMIT = 2.0f * PI;
 
         std::vector<float> points_data;
+        points_data.reserve(3 * divs * 4 * 2 * 6); // 3 axis, divs * 4 segments per axis, 2 points per segment, 6 values per point
 
         for (int e = 0; e < 3; ++e)
         {
@@ -342,6 +343,10 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
     else
     {
         std::vector<float> verts_data;
+        if (mode == RENDER_SHADING)
+            verts_data.reserve(6 * divs * divs * 4 * 9); // 6 sides divs * divs * 4 quads per side, 6 vertices per face, 9 values per vertex
+        else
+            verts_data.reserve(6 * divs * divs * 4 * 6); // 6 sides, divs * divs * 4 quads per side, 6 vertices per face, 6 values per vertex
 
         for (int s = -1; s <= 1; s += 2)
             for (int e = 0; e < 3; ++e)
@@ -427,6 +432,7 @@ void showCameraTrajectory(
 
     auto data = trajectory.getMat();
     std::vector<float> points_data;
+    points_data.reserve(data.rows * 12 * 2 * 6); // data.rows frustums, 12 lines per frustum, 2 points per line, 6 values per point
 
     // Add frustums
     for (int i = 0; i < data.rows; ++i)
