@@ -484,13 +484,14 @@ TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
     string video_file = findDataFile("video/big_buck_bunny.mp4");
     VideoCapture cap;
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
-    Mat data;
-    int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
+    const int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
 #ifdef _WIN32  // handle old FFmpeg backend
     if (codecExtradataIdx <= 0)
         throw SkipTestException("Codec extra data is not supported by backend or video stream");
 #endif
-    cap.retrieve(data, codecExtradataIdx);
+    Mat data;
+    ASSERT_TRUE(cap.retrieve(data, codecExtradataIdx));
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)45, data.total());
