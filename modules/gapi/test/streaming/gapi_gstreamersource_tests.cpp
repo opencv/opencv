@@ -314,10 +314,8 @@ struct GStreamerMultiSourceTest :
 
 TEST_P(GStreamerMultiSourceTest, ImageDataTest)
 {
-    initTestDataPathOrSkip();
-
-    std::string pathToLeftIm = findDataFile("cv/stereomatching/datasets/tsukuba/im6.png", false);
-    std::string pathToRightIm = findDataFile("cv/stereomatching/datasets/tsukuba/im2.png", false);
+    std::string pathToLeftIm = findDataFile("cv/stereomatching/datasets/tsukuba/im6.png");
+    std::string pathToRightIm = findDataFile("cv/stereomatching/datasets/tsukuba/im2.png");
 
     std::string pipelineToReadImage("filesrc location=LOC ! pngdec ! videoconvert ! "
         "videoscale ! video/x-raw,format=NV12 ! appsink");
