@@ -1187,7 +1187,7 @@ void fastDepthwiseConv( const float* wptr,
 
         if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
         {
-            int avl = outW1;
+            int avl = outW1 - out_j;
             if( stride_w == 1 )
                 for( ; out_j < outW1; out_j += vl, avl -= vl)
                 {
