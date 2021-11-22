@@ -198,16 +198,16 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const float sample
 } // randomSampling()
 
 /**
- * FPS Algorithm:
- *   Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit*
- *   Initialize: Set sampled point cloud S to the empty set
- *   Step:
- *     1. Randomly take a seed point from C and take it from C to S;
- *     2. Find a point in C that is the farthest away from S and take it from C to S;
- *       (The distance from point to set S is the smallest distance from point to all points in S)
- *     3. Repeat *step 2* until the farthest distance of the point in C from S
- *       is less than *dist_lower_limit*, or the size of S is equal to *sampled_pts_size*.
- *   Output: Sampled point cloud S
+ * FPS Algorithm:\n
+ *   Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit* \n
+ *   Initialize: Set sampled point cloud S to the empty set \n
+ *   Step: \n
+ *     1. Randomly take a seed point from C and take it from C to S; \n
+ *     2. Find a point in C that is the farthest away from S and take it from C to S; \n
+ *       (The distance from point to set S is the smallest distance from point to all points in S) \n
+ *     3. Repeat *step 2* until the farthest distance of the point in C from S \n
+ *       is less than *dist_lower_limit*, or the size of S is equal to *sampled_pts_size*. \n
+ *   Output: Sampled point cloud S \n
  */
 int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         const int sampled_pts_size, const float dist_lower_limit, RNG *rng)
@@ -218,12 +218,9 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
 
     // Get input point cloud data
     Mat ori_pts;
-#ifdef CV_SIMD
-    // If SIMD is used, the position of the point will be swapped, and data copying is mandatory
+    // In order to keep the points continuous in memory (which allows better support for SIMD),
+    // the position of the points may be changed, data copying is mandatory
     _getMatFromInputArray(input_pts, ori_pts, 1, true);
-#else
-    _getMatFromInputArray(input_pts, ori_pts, 1);
-#endif
 
     const int ori_pts_size = ori_pts.rows * ori_pts.cols / 3;
     CV_CheckLT(sampled_pts_size, ori_pts_size,
@@ -244,7 +241,7 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         dist_square[i] = FLT_MAX;
     }
 
-    // Randomly take a seed point from C and put it into S
+    // Randomly take a seed point from C and take it from C to S
     int seed = (int) ((rng ? rng->next() : theRNG().next()) % ori_pts_size);
     idxs[0] = seed;
     idxs[seed] = 0;
@@ -254,46 +251,33 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
     float *const ori_pts_ptr_y = ori_pts_ptr_x + ori_pts_size;
     float *const ori_pts_ptr_z = ori_pts_ptr_y + ori_pts_size;
 
-#ifdef CV_SIMD
     // Ensure that the point(in C) data x,y,z is continuous in the memory respectively
     _swap(ori_pts_ptr_x[seed], ori_pts_ptr_x[0]);
     _swap(ori_pts_ptr_y[seed], ori_pts_ptr_y[0]);
     _swap(ori_pts_ptr_z[seed], ori_pts_ptr_z[0]);
-#endif
 
     int sampled_cnt = 1;
     const float dist_lower_limit_square = dist_lower_limit * dist_lower_limit;
     while (sampled_cnt < sampled_pts_size)
     {
-        // The position of the point that was last added to S
-#ifdef CV_SIMD
         int last_pt = sampled_cnt - 1;
-#elif
-        int last_pt = idxs[sampled_cnt - 1];
-#endif
         float last_pt_x = ori_pts_ptr_x[last_pt];
         float last_pt_y = ori_pts_ptr_y[last_pt];
         float last_pt_z = ori_pts_ptr_z[last_pt];
 
         // Calculate the distance from point in C to set S
         float max_dist_square = 0;
-
+        int next_pt = sampled_cnt;
+        int i = sampled_cnt;
 #ifdef CV_SIMD
-        // Calculate how many floats can be stored in each vector
-        int step = sizeof(v_float32) / sizeof(float);
-        int k = (ori_pts_size - sampled_cnt) / step;
-        int end = sampled_cnt + step * k;
+        int k = (ori_pts_size - sampled_cnt) / v_float32::nlanes;
+        int end = sampled_cnt + v_float32::nlanes * k;
 
-        std::vector<float> last_p_x_arr(step, last_pt_x);
-        v_float32 v_last_p_x = vx_load(last_p_x_arr.data());
-        std::vector<float> last_p_y_arr(step, last_pt_y);
-        v_float32 v_last_p_y = vx_load(last_p_y_arr.data());
-        std::vector<float> last_p_z_arr(step, last_pt_z);
-        v_float32 v_last_p_z = vx_load(last_p_z_arr.data());
+        v_float32 v_last_p_x = vx_setall_f32(last_pt_x);
+        v_float32 v_last_p_y = vx_setall_f32(last_pt_y);
+        v_float32 v_last_p_z = vx_setall_f32(last_pt_z);
 
-        AutoBuffer<float> _next_dist_square_arr(step);
-        float *next_dist_square_arr = _next_dist_square_arr.data();
-        for (int i = sampled_cnt; i < end; i += step)
+        for (; i < end; i += v_float32::nlanes)
         {
             v_float32 vx_diff = v_last_p_x - vx_load(ori_pts_ptr_x + i);
             v_float32 vy_diff = v_last_p_y - vx_load(ori_pts_ptr_y + i);
@@ -302,39 +286,40 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
             v_float32 v_next_dist_square =
                     vx_diff * vx_diff + vy_diff * vy_diff + vz_diff * vz_diff;
 
-            vx_store(next_dist_square_arr, v_next_dist_square);
-            for (int m = 0; m < step; ++m)
+            // Update the distance from the points(in C) to S
+            float *dist_square_ptr = dist_square + i;
+            v_float32 v_dist_square = vx_load(dist_square_ptr);
+            v_dist_square = v_min(v_dist_square, v_next_dist_square);
+            vx_store(dist_square_ptr, v_dist_square);
+
+            // Find a point in C that is the farthest away from S and take it from C to S
+            if (v_check_any(v_dist_square > vx_setall_f32(max_dist_square)))
             {
-                int ds_idx = i + m;
-                if (next_dist_square_arr[m] < dist_square[ds_idx])
+                for (int m = 0; m < v_float32::nlanes; ++m)
                 {
-                    dist_square[ds_idx] = next_dist_square_arr[m];
-                }
-                if (dist_square[ds_idx] > max_dist_square)
-                {
-                    last_pt = ds_idx;
-                    max_dist_square = dist_square[ds_idx];
+                    if (dist_square_ptr[m] > max_dist_square)
+                    {
+                        next_pt = i + m;
+                        max_dist_square = dist_square_ptr[m];
+                    }
                 }
             }
 
         }
 
-        for (int i = end; i < ori_pts_size; ++i)
-#else
-        for (int i = sampled_cnt; i < ori_pts_size; ++i)
 #endif
+        for (; i < ori_pts_size; ++i)
         {
             float x_diff = (last_pt_x - ori_pts_ptr_x[i]);
             float y_diff = (last_pt_y - ori_pts_ptr_y[i]);
             float z_diff = (last_pt_z - ori_pts_ptr_z[i]);
             float next_dist_square = x_diff * x_diff + y_diff * y_diff + z_diff * z_diff;
-            if (next_dist_square < dist_square[i])
-            {
-                dist_square[i] = next_dist_square;
-            }
+            // Update the distance from the points(in C) to S
+            dist_square[i] = std::min(dist_square[i], next_dist_square);
+            // Find a point in C that is the farthest away from S and take it from C to S
             if (dist_square[i] > max_dist_square)
             {
-                last_pt = i;
+                next_pt = i;
                 max_dist_square = dist_square[i];
             }
         }
@@ -343,15 +328,15 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         if (max_dist_square < dist_lower_limit_square)
             break;
 
-        // take point last_pt from C to S
-        _swap(idxs[sampled_cnt], idxs[last_pt]);
-        _swap(dist_square[sampled_cnt], dist_square[last_pt]);
-#ifdef CV_SIMD
+        // Take point next_pt from C to S
+        _swap(idxs[next_pt], idxs[sampled_cnt]);
+        _swap(dist_square[next_pt], dist_square[sampled_cnt]);
+
         // Ensure that the point(in C) data x,y,z is continuous in the memory respectively
-        _swap(ori_pts_ptr_x[last_pt], ori_pts_ptr_x[sampled_cnt]);
-        _swap(ori_pts_ptr_y[last_pt], ori_pts_ptr_y[sampled_cnt]);
-        _swap(ori_pts_ptr_z[last_pt], ori_pts_ptr_z[sampled_cnt]);
-#endif
+        _swap(ori_pts_ptr_x[next_pt], ori_pts_ptr_x[sampled_cnt]);
+        _swap(ori_pts_ptr_y[next_pt], ori_pts_ptr_y[sampled_cnt]);
+        _swap(ori_pts_ptr_z[next_pt], ori_pts_ptr_z[sampled_cnt]);
+
         ++sampled_cnt;
     }
 
