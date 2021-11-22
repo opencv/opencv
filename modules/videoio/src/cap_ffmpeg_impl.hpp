@@ -1411,8 +1411,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 
     if (rawMode || flag == extraDataIdx)
     {
+        AVPacket& p = bsfc ? packet_filtered : packet;
         if (flag == 0) {
-            AVPacket& p = bsfc ? packet_filtered : packet;
             *data = p.data;
             *step = p.size;
         }
@@ -1423,7 +1423,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         *width = *step;
         *height = 1;
         *cn = 1;
-        return *data != NULL;
+        return p.data != NULL;
     }
 
     AVFrame* sw_picture = picture;
