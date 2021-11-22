@@ -99,34 +99,6 @@ const VPLAccelerationPolicy* ProcessingEngineBase::get_accel() const {
 VPLAccelerationPolicy* ProcessingEngineBase::get_accel() {
     return const_cast<VPLAccelerationPolicy*>(static_cast<const ProcessingEngineBase*>(this)->get_accel());
 }
-
-
-// Read encoded stream from file
-mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& data_provider) {
-
-    if (!data_provider) {
-        return MFX_ERR_MORE_DATA;
-    }
-
-    mfxU8 *p0 = bs.Data;
-    mfxU8 *p1 = bs.Data + bs.DataOffset;
-    if (bs.DataOffset > bs.MaxLength - 1) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-    if (bs.DataLength + bs.DataOffset > bs.MaxLength) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-
-    std::copy_n(p1, bs.DataLength, p0);
-
-    bs.DataOffset = 0;
-    bs.DataLength += static_cast<mfxU32>(data_provider->fetch_data(bs.MaxLength - bs.DataLength,
-                                                                   bs.Data + bs.DataLength));
-    if (bs.DataLength == 0)
-        return MFX_ERR_MORE_DATA;
-
-    return MFX_ERR_NONE;
-}
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

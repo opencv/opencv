@@ -87,9 +87,6 @@ protected:
         return sess_impl;
     }
 };
-
-
-mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& data_provider);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

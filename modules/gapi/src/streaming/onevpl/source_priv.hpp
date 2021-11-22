@@ -49,7 +49,7 @@ struct GSource::Priv
     GMetaArg descr_of() const;
 private:
     Priv();
-    DecoderParams create_decoder_from_file(const CfgParam& decoder,
+    DecoderParams create_decoder_from_file(uint32_t decoder_id,
                                            std::shared_ptr<IDataProvider> provider);
     std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
 
