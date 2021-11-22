@@ -22,13 +22,12 @@ namespace cv { namespace gapi { namespace own {
 //
 //-----------------------------
 
-template<typename DST, typename SRC, typename = cv::util::are_different_t<DST,SRC>>
+template<typename DST, typename SRC,
+         typename = cv::util::are_different_t<DST,SRC>,
+         typename = cv::util::enable_if_t<std::is_integral<DST>::value &&
+                                          std::is_integral<SRC>::value>  >
 static inline DST saturate(SRC x)
 {
-    // only integral types please!
-    GAPI_DbgAssert(std::is_integral<DST>::value &&
-                   std::is_integral<SRC>::value);
-
     if (sizeof(DST) > sizeof(SRC))
         return static_cast<DST>(x);
 

@@ -928,7 +928,7 @@ IIStream& ByteMemoryInStream::operator>> (std::string& str) {
     if (sz == 0u) {
         str.clear();
     } else {
-        str.resize(std::size_t(sz));
+        str.resize(static_cast<std::size_t>(sz));
         for (auto &&i : ade::util::iota(sz)) { *this >> str[i]; }
     }
     return *this;
