@@ -24,8 +24,16 @@ namespace gimpl {
 
     inline cv::Mat asMat(RMat::View& v) {
 #if !defined(GAPI_STANDALONE)
-        return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
-                                : cv::Mat(v.dims(), v.type(), v.ptr(), v.steps().data());
+        if (v.dims().empty()) {
+            return cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step());
+        } else {
+            cv::Mat m(v.dims(), v.type(), v.ptr(), v.steps().data());
+            if (v.dims().size() == 1) {
+                // FIXME: The only way to get 1D Mat out of RMat
+                m.dims = 1;
+            }
+            return m;
+        }
 #else
         // FIXME: add a check that steps are default
         return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
