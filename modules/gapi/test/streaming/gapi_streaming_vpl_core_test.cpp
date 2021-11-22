@@ -45,11 +45,14 @@ namespace
 
 struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
-    size_t fetch_data(size_t, void*) override {
-        return 0;
-    }
     bool empty() const override {
         return true;
+    }
+    mfx_codec_id_type get_mfx_codec_id() const override {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) override {
+        return false;
     }
 };
 

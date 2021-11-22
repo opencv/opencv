@@ -152,6 +152,39 @@ mfxU32 cstr_to_mfx_codec_id(const char* cstr) {
     throw std::logic_error(std::string("Cannot parse \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" value: ") + cstr);
 }
 
+const char* mfx_codec_id_to_cstr(mfxU32 mfx_id) {
+    switch(mfx_id) {
+        case MFX_CODEC_AVC:
+            return "MFX_CODEC_AVC";
+        case MFX_CODEC_HEVC:
+            return "MFX_CODEC_HEVC";
+        case MFX_CODEC_MPEG2:
+            return "MFX_CODEC_MPEG2";
+        case MFX_CODEC_VC1:
+            return "MFX_CODEC_VC1";
+        case MFX_CODEC_VP9:
+            return "MFX_CODEC_VP9";
+        case MFX_CODEC_AV1:
+            return "MFX_CODEC_AV1";
+        case MFX_CODEC_JPEG:
+            return "MFX_CODEC_JPEG";
+        default:
+            return "<unsupported>";
+    }
+}
+
+const std::set<mfxU32>& get_supported_mfx_codec_ids()
+{
+    static std::set<mfxU32> supported_codecs({MFX_CODEC_AVC,
+                                              MFX_CODEC_HEVC,
+                                              MFX_CODEC_MPEG2,
+                                              MFX_CODEC_VC1,
+                                              MFX_CODEC_VP9,
+                                              MFX_CODEC_AV1,
+                                              MFX_CODEC_JPEG});
+    return supported_codecs;
+}
+
 const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
     switch (fourcc) {
         case MFX_CODEC_JPEG: {
@@ -382,6 +415,10 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
 
     out << "\n(*) - configurable params" << std::endl;
     return out;
+}
+
+std::string mfxstatus_to_string(int64_t err) {
+    return mfxstatus_to_string(static_cast<mfxStatus>(err));
 }
 
 std::string mfxstatus_to_string(mfxStatus err) {

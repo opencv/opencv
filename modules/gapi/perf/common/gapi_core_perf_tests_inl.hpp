@@ -208,19 +208,23 @@ PERF_TEST_P_(SubRCPerfTest, TestPerformance)
 
 PERF_TEST_P_(MulPerfTest, TestPerformance)
 {
-    Size sz = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    int dtype = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    compare_f cmpF;
+    cv::Size sz;
+    MatType type = -1;
+    int dtype = -1;
+    double scale = 1.0;
+    cv::GCompileArgs compile_args;
+
+    std::tie(cmpF, sz, type, dtype, scale, compile_args) = GetParam();
 
     initMatsRandU(type, sz, dtype, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::multiply(in_mat1, in_mat2, out_mat_ocv, 1.0, dtype);
+    cv::multiply(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
-    out = cv::gapi::mul(in1, in2, 1.0, dtype);
+    out = cv::gapi::mul(in1, in2, scale, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
@@ -234,8 +238,9 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }
@@ -323,17 +328,23 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     Size sz = get<1>(GetParam());
     MatType type = get<2>(GetParam());
     int dtype = get<3>(GetParam());
-    cv::GCompileArgs compile_args = get<4>(GetParam());
+    double scale = get<4>(GetParam());
+    cv::GCompileArgs compile_args = get<5>(GetParam());
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
+    //This condition need to workaround bug in OpenCV.
+    //It reinitializes divider matrix without zero values.
+    if (dtype == CV_16S && dtype != type)
+        cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
+
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::divide(in_mat1, in_mat2, out_mat_ocv, dtype);
+    cv::divide(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
-    out = cv::gapi::div(in1, in2, dtype);
+    out = cv::gapi::div(in1, in2, scale, dtype);
     cv::GComputation c(GIn(in1, in2), GOut(out));
 
     // Warm-up graph engine:
@@ -347,8 +358,9 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }
