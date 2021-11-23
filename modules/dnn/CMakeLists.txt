@@ -19,6 +19,10 @@ if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
 endif()
 
+if(WITH_WEBNN AND HAVE_WEBNN)
+  add_definitions(-DHAVE_WEBNN=1)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
@@ -142,6 +146,16 @@ if(HAVE_TENGINE)
 	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
+set(webnn_srcs "")
+if(NOT EMSCRIPTEN)
+  if(HAVE_WEBNN)
+    list(APPEND include_dirs ${WEBNN_HEADER_DIRS})
+    list(APPEND include_dirs ${WEBNN_INCLUDE_DIRS})
+    list(APPEND libs -Wl,--whole-archive ${WEBNN_LIBRARIES} -Wl,--no-whole-archive)
+    list(APPEND webnn_srcs $ENV{WEBNN_NATIVE_DIR}/gen/src/webnn/webnn_cpp.cpp)
+  endif()
+endif()
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
@@ -171,7 +185,7 @@ if(HAVE_NGRAPH)
   list(APPEND dnn_runtime_libs ngraph::ngraph)
 endif()
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})

@@ -29,6 +29,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_CUDA: *os << "CUDA"; return;
     case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
+    case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -247,7 +248,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withCpuOCV /*= true*/,
         bool withVkCom /*= true*/,
         bool withCUDA /*= true*/,
-        bool withNgraph /*= true*/
+        bool withNgraph /*= true*/,
+        bool withWebnn /*= false*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -300,6 +302,17 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
             targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
     }
+#endif
+
+#ifdef HAVE_WEBNN
+    if (withWebnn)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_WEBNN)) {
+            targets.push_back(make_tuple(DNN_BACKEND_WEBNN, target));
+        }
+    }
+#else
+    CV_UNUSED(withWebnn);
 #endif
 
     {

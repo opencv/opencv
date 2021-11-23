@@ -135,7 +135,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withCpuOCV = true,
         bool withVkCom = true,
         bool withCUDA = true,
-        bool withNgraph = true
+        bool withNgraph = true,
+        bool withWebnn = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();

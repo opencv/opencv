@@ -129,7 +129,7 @@ video = {
     'TrackerMIL_Params': [],
 }
 
-dnn = {'dnn_Net': ['setInput', 'forward'],
+dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend'],
        '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
             'readNetFromONNX', 'readNet', 'blobFromImage']}
 
