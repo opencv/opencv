@@ -1485,15 +1485,15 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
     // Temporary solution for opencl debug
     // Mac error: "Kernel not created"
-#ifdef HAVE_OPENCL_
+    bool useOpenCL = ocl::isOpenCLActivated();
     AccessFlag af = AccessFlag::ACCESS_READ;
-    calcICPLsmMatricesFast_ocl(cameraMatrix,
-        oldPts.getUMat(af), oldNrm.getUMat(af),
-        newPts.getUMat(af), newNrm.getUMat(af),
-        pose, level, maxDepthDiff, angleThreshold,
-        A, b);
-    return;
-#endif
+    CV_OCL_RUN(useOpenCL,
+        ocl_calcICPLsmMatricesFast(cameraMatrix,
+            oldPts.getUMat(af), oldNrm.getUMat(af),
+            newPts.getUMat(af), newNrm.getUMat(af),
+            pose, level, maxDepthDiff, angleThreshold,
+            A, b)
+        );
 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
@@ -1524,7 +1524,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
 #ifdef HAVE_OPENCL
 
-void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
+bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
     cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_TRACE_FUNCTION();
@@ -1638,6 +1638,7 @@ void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const 
 
         b(i) = sumAB(i, 6);
     }
+    return true;
 }
 
 #endif

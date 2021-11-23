@@ -221,8 +221,8 @@ size_t OdometryFrameImplTMat<TMat>::getPyramidLevels(OdometryFramePyramidType of
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setPyramidAt(InputArray  _img, OdometryFramePyramidType pyrType, size_t level)
 {
-    CV_Assert(pyrType >= OdometryFramePyramidType::N_PYRAMIDS);
-    CV_Assert(level >= pyramids[pyrType].size());
+    CV_Assert(pyrType < OdometryFramePyramidType::N_PYRAMIDS);
+    CV_Assert(level < pyramids[pyrType].size());
     TMat img = getTMat<TMat>(_img);
     pyramids[pyrType][level] = img;
 }
@@ -230,8 +230,8 @@ void OdometryFrameImplTMat<TMat>::setPyramidAt(InputArray  _img, OdometryFramePy
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::getPyramidAt(OutputArray _img, OdometryFramePyramidType pyrType, size_t level)
 {
-    CV_Assert(pyrType >= OdometryFramePyramidType::N_PYRAMIDS);
-    CV_Assert(level >= pyramids[pyrType].size());
+    CV_Assert(pyrType < OdometryFramePyramidType::N_PYRAMIDS);
+    CV_Assert(level < pyramids[pyrType].size());
     TMat img = pyramids[pyrType][level];
     _img.assign(img);
 }
