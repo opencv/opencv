@@ -308,7 +308,7 @@ public:
         AImage_getPlaneData(image.get(), 2, &vPixel, &vLen);
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
 
-        if ( (uvPixelStride == 2) && (vPixel == uPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
+        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420SemiPlanar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
