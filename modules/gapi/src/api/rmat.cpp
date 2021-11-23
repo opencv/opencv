@@ -41,7 +41,7 @@ View::View(const cv::GMatDesc& desc, uchar* data, size_t step, DestroyCallback&&
     : m_desc(checkDesc(desc))
     , m_data(data)
     , m_steps([this, step](){
-        // GAPI_Assert(m_desc.dims.empty());
+        GAPI_Assert(m_desc.dims.empty());
         auto steps = defaultSteps(m_desc);
         if (step != 0u) {
             steps[0] = step;

@@ -49,7 +49,10 @@ namespace gimpl {
         }
         return RMat::View(cv::descr_of(m), m.data, steps, std::move(cb));
 #else
-        return RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb));
+        return m.dims.empty()
+            ? RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb))
+            // Own Mat doesn't support n-dimensional steps so default ones are used in this case
+            : RMat::View(cv::descr_of(m), m.data, RMat::View::stepsT{}, std::move(cb));
 #endif
     }
 
