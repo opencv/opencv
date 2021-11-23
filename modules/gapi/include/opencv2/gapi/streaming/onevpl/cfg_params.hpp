@@ -63,6 +63,47 @@ struct GAPI_EXPORTS CfgParam {
     static constexpr const char *queue_capacity() { return "queue_capacity"; }
 
     /**
+     * @brief acceleration_mode()
+     *
+     * Special configuration parameter names for onevp::GSource:
+     *
+     * @note acceleration_mode allows to activate hardware acceleration &
+     * device memory management.
+     * Supported values:
+     * - MFX_ACCEL_MODE_VIA_D3D11   Will activate DX11 acceleration and will produces
+     * MediaFrames with data allocated in DX11 device memory
+     *
+     * If not set then MFX implementation will use default acceleration behavior:
+     * all decoding operation uses default GPU resources but MediaFrame produces
+     * data allocated by using host RAM
+     *
+     */
+    static constexpr const char *acceleration_mode() { return "mfxImplDescription.AccelerationMode"; }
+
+    /**
+     * @brief decoder_id()
+     *
+     * Special configuration parameter names for onevp::GSource:
+     *
+     * @note decoder_id allows to specify VPL decoder type which MUST present
+     * in case of RAW video input data and MUST NOT present as CfgParam if video
+     * stream incapsulated into container(*.mp4, *.mkv and so on). In latter case
+     * onevp::GSource will determine it automatically
+     * Supported values:
+     * - MFX_CODEC_AVC
+     * - MFX_CODEC_HEVC
+     * - MFX_CODEC_MPEG2
+     * - MFX_CODEC_VC1
+     * - MFX_CODEC_CAPTURE
+     * - MFX_CODEC_VP9
+     * - MFX_CODEC_AV1
+     *
+     */
+    static constexpr const char *decoder_id() { return "mfxImplDescription.mfxDecoderDescription.decoder.CodecID"; }
+
+    static constexpr const char *implementation() { return "mfxImplDescription.Impl"; }
+
+    /**
      * Create onevp::GSource configuration parameter.
      *
      *@param name           name of parameter.

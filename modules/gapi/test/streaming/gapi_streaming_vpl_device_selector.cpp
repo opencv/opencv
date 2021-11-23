@@ -94,7 +94,7 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithAccelNACfgParam)
 {
     using namespace cv::gapi::wip::onevpl;
     std::vector<CfgParam> cfg_params_w_no_accel;
-    cfg_params_w_no_accel.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+    cfg_params_w_no_accel.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
                                                                MFX_ACCEL_MODE_NA));
     CfgParamDeviceSelector selector(cfg_params_w_no_accel);
     IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
@@ -126,7 +126,7 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithDX11AccelCfgParam_
 {
     using namespace cv::gapi::wip::onevpl;
     std::vector<CfgParam> cfg_params_w_dx11;
-    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
                                                            MFX_ACCEL_MODE_VIA_D3D11));
     std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
     EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(cfg_params_w_dx11)));
@@ -146,7 +146,7 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, NULLDeviceWithDX11AccelCfgParam_DX1
 {
     using namespace cv::gapi::wip::onevpl;
     std::vector<CfgParam> cfg_params_w_dx11;
-    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
                                                            MFX_ACCEL_MODE_VIA_D3D11));
     Device::Ptr empty_device_ptr = nullptr;
     Context::Ptr empty_ctx_ptr = nullptr;
@@ -179,7 +179,7 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, ExternalDeviceWithDX11AccelCfgParam
 
     std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
     std::vector<CfgParam> cfg_params_w_dx11;
-    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
                                                            MFX_ACCEL_MODE_VIA_D3D11));
     EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(device, "GPU",
                                                                   device_context,
@@ -205,8 +205,8 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, DX11DeviceFromCfgParamWithDX11Disab
 {
     using namespace cv::gapi::wip::onevpl;
     std::vector<CfgParam> cfg_params_w_non_existed_dx11;
-    cfg_params_w_not_existed_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                        MFX_ACCEL_MODE_VIA_D3D11));
+    cfg_params_w_not_existed_dx11.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
+                                                                       MFX_ACCEL_MODE_VIA_D3D11));
     EXPECT_THROW(CfgParamDeviceSelector{cfg_params_w_non_existed_dx11},
                  std::logic_error);
 }

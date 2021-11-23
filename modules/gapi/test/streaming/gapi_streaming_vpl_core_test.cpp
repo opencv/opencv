@@ -517,7 +517,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     using namespace cv::gapi::wip::onevpl;
 
     std::vector<CfgParam> cfg_params_w_dx11;
-    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
                                                            MFX_ACCEL_MODE_VIA_D3D11));
     VPLDX11AccelerationPolicy accel(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11));
 
@@ -528,7 +528,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
     mfx_param_0.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.Impl",
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation(),
                                                     mfx_param_0), MFX_ERR_NONE);
 
     mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
@@ -536,7 +536,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     mfxVariant mfx_param_1;
     mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
     mfx_param_1.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)"mfxImplDescription.AccelerationMode",
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode(),
                                                     mfx_param_1), MFX_ERR_NONE);
 
     mfxConfig cfg_inst_2 = MFXCreateConfig(mfx_handle);
@@ -544,7 +544,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     mfxVariant mfx_param_2;
     mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
     mfx_param_2.Data.U32 = MFX_CODEC_HEVC;
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)CfgParam::decoder_id(),
                                                     mfx_param_2), MFX_ERR_NONE);
 
     // create session

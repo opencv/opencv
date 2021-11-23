@@ -45,15 +45,15 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
     accel_mode_t mode = get<2>(params);
 
     std::vector<CfgParam> cfg_params {
-        CfgParam::create<std::string>("mfxImplDescription.Impl", "MFX_IMPL_TYPE_HARDWARE"),
+        CfgParam::create<std::string>(CfgParam::implementation(), "MFX_IMPL_TYPE_HARDWARE"),
     };
 
     if (!type.empty()) {
-        cfg_params.push_back(CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type));
+        cfg_params.push_back(CfgParam::create(CfgParam::decoder_id(), type));
     }
 
     if (!mode.empty()) {
-        cfg_params.push_back(CfgParam::create("mfxImplDescription.AccelerationMode", mode));
+        cfg_params.push_back(CfgParam::create(CfgParam::acceleration_mode(), mode));
     }
 
     auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);

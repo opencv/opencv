@@ -82,7 +82,7 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
     mfx_param_0.Data.U32 = provider_ptr->get_mfx_codec_id();
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::decoder_id(),
                                                     mfx_param_0), MFX_ERR_NONE);
 
     // create MFX session
@@ -135,7 +135,7 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, choose_dmux_provider)
         EXPECT_FALSE(dd_result);
         provider_ptr = DataProviderDispatcher::create(path,
                                 { CfgParam::create<std::string>(
-                                            "mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+                                            CfgParam::decoder_id(),
                                             "MFX_CODEC_HEVC") /* Doesn't matter what codec for RAW here*/});
         EXPECT_TRUE(std::dynamic_pointer_cast<FileDataProvider>(provider_ptr));
         GTEST_SUCCEED();

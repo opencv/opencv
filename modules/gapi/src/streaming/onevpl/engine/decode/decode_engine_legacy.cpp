@@ -189,7 +189,7 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     if (MFX_ERR_NONE != sts) {
         GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
                                   << ". Make sure data source is valid and/or "
-                                  "\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
+                                  "\"" << CfgParam::decoder_id() << "\""
                                   " has correct value in case of demultiplexed raw input");
          throw std::runtime_error("Error decode header, error: " +
                                   mfxstatus_to_string(sts));

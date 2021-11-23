@@ -76,11 +76,11 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
         std::string value = line.substr(name_endline_pos + 2);
 
         ParamCreator<ValueType> creator;
-        if (name == "mfxImplDescription.Impl") {
+        if (name == CfgParam::implementation()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
-        } else if (name == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID") {
+        } else if (name == CfgParam::decoder_id()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
-        } else if (name == "mfxImplDescription.AccelerationMode") {
+        } else if (name == CfgParam::acceleration_mode()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
