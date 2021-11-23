@@ -137,6 +137,8 @@ bool OdometryRGB::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Output
     settings.getIterCounts(miterCounts);
     for (int i = 0; i < miterCounts.size().height; i++)
         iterCounts.push_back(miterCounts.at<int>(i));
+    CV_CheckTypeEQ(miterCounts.type(), CV_32S, "");
+
     bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
         this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
         iterCounts, this->settings.getMaxTranslation(),
