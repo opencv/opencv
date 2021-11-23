@@ -5,18 +5,10 @@
 #ifndef OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP
 #define OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP
 
-namespace cv {
-namespace detail {
-
 //! @cond IGNORED
 
-enum class ReduceMode
-{
-    FIRST_MIN = 0, //!< get index of first min occurrence
-    LAST_MIN  = 1, //!< get index of last min occurrence
-    FIRST_MAX = 2, //!< get index of first max occurrence
-    LAST_MAX  = 3, //!< get index of last max occurrence
-};
+namespace cv {
+namespace detail {
 
 template<template<typename> class Functor, typename... Args>
 static inline void depthDispatch(const int depth, Args&&... args)
@@ -50,8 +42,8 @@ static inline void depthDispatch(const int depth, Args&&... args)
     };
 }
 
-//! @endcond
-
 }}
+
+//! @endcond
 
 #endif //OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP

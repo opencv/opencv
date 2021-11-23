@@ -1405,7 +1405,8 @@ struct reduceArgMinMaxOp : public BaseElemWiseOp
     void generateScalars(int depth, RNG& rng) override
     {
         BaseElemWiseOp::generateScalars(depth, rng);
-        mode = randInt(rng) & 0b11;
+        isLast = (randInt(rng) % 2 == 0);
+        isMax = (randInt(rng) % 2 == 0);
         axis = randInt(rng);
     }
     int getAxis(const Mat& src) const
@@ -1417,8 +1418,6 @@ struct reduceArgMinMaxOp : public BaseElemWiseOp
     {
         const Mat& inp = src[0];
         const int axis_ = getAxis(inp);
-        const bool isLast = (mode & 1u) != 0;
-        const bool isMax = (mode & 0b10u) != 0;
         if (isMax)
         {
             cv::reduceArgMax(inp, dst, axis_, isLast);
@@ -1432,10 +1431,27 @@ struct reduceArgMinMaxOp : public BaseElemWiseOp
     {
         const Mat& inp = src[0];
         const int axis_ = getAxis(inp);
-        cvtest::reduceMinMax(inp, dst, static_cast<cv::detail::ReduceMode>(mode), axis_);
+
+        if (!isLast && !isMax)
+        {
+            cvtest::MinMaxReducer<std::less>::reduce(inp, dst, axis_);
+        }
+        else if (!isLast && isMax)
+        {
+            cvtest::MinMaxReducer<std::greater>::reduce(inp, dst, axis_);
+        }
+        else if (isLast && !isMax)
+        {
+            cvtest::MinMaxReducer<std::less_equal>::reduce(inp, dst, axis_);
+        }
+        else
+        {
+            cvtest::MinMaxReducer<std::greater_equal>::reduce(inp, dst, axis_);
+        }
     }
 
-    uint8_t mode;
+    bool isLast;
+    bool isMax;
     uint32_t axis;
 };
 

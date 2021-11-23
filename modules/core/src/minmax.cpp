@@ -7,7 +7,7 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
-#include "opencv2/core/detail/reduce_arg_helper.impl.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm>
 
@@ -1574,23 +1574,31 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
         std::swap(maxLoc->x, maxLoc->y);
 }
 
+enum class ReduceMode
+{
+    FIRST_MIN = 0, //!< get index of first min occurrence
+    LAST_MIN  = 1, //!< get index of last min occurrence
+    FIRST_MAX = 2, //!< get index of first max occurrence
+    LAST_MAX  = 3, //!< get index of last max occurrence
+};
+
 template <typename T>
 struct reduceMinMaxImpl
 {
-    void operator()(const cv::Mat& src, cv::Mat& dst, cv::detail::ReduceMode mode, const int axis) const
+    void operator()(const cv::Mat& src, cv::Mat& dst, ReduceMode mode, const int axis) const
     {
         switch(mode)
         {
-        case cv::detail::ReduceMode::FIRST_MIN:
+        case ReduceMode::FIRST_MIN:
             reduceMinMaxApply<std::less>(src, dst, axis);
             break;
-        case cv::detail::ReduceMode::LAST_MIN:
+        case ReduceMode::LAST_MIN:
             reduceMinMaxApply<std::less_equal>(src, dst, axis);
             break;
-        case cv::detail::ReduceMode::FIRST_MAX:
+        case ReduceMode::FIRST_MAX:
             reduceMinMaxApply<std::greater>(src, dst, axis);
             break;
-        case cv::detail::ReduceMode::LAST_MAX:
+        case ReduceMode::LAST_MAX:
             reduceMinMaxApply<std::greater_equal>(src, dst, axis);
             break;
         }
@@ -1636,7 +1644,7 @@ struct reduceMinMaxImpl
     }
 };
 
-static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, cv::detail::ReduceMode mode, int axis)
+static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mode, int axis)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1673,10 +1681,10 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, cv::detail::Re
 
 void cv::reduceArgMin(InputArray src, OutputArray dst, int axis, bool lastIndex)
 {
-    reduceMinMax(src, dst, lastIndex ? cv::detail::ReduceMode::LAST_MIN : cv::detail::ReduceMode::FIRST_MIN, axis);
+    reduceMinMax(src, dst, lastIndex ? ReduceMode::LAST_MIN : ReduceMode::FIRST_MIN, axis);
 }
 
 void cv::reduceArgMax(InputArray src, OutputArray dst, int axis, bool lastIndex)
 {
-    reduceMinMax(src, dst, lastIndex ? cv::detail::ReduceMode::LAST_MAX : cv::detail::ReduceMode::FIRST_MAX, axis);
+    reduceMinMax(src, dst, lastIndex ? ReduceMode::LAST_MAX : ReduceMode::FIRST_MAX, axis);
 }

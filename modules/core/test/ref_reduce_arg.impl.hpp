@@ -5,38 +5,19 @@
 #ifndef OPENCV_TEST_REF_REDUCE_ARG_HPP
 #define OPENCV_TEST_REF_REDUCE_ARG_HPP
 
-#include "opencv2/core/detail/reduce_arg_helper.impl.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm>
 #include <numeric>
 
 namespace cvtest {
 
-template <typename T>
+template <class Cmp, typename T>
 struct reduceMinMaxImpl
 {
-    void operator()(const cv::Mat& src, cv::Mat& dst, cv::detail::ReduceMode mode, const int axis) const
+    void operator()(const cv::Mat& src, cv::Mat& dst, const int axis) const
     {
-        switch(mode)
-        {
-            case cv::detail::ReduceMode::FIRST_MIN:
-                reduceMinMaxApply<true, true>(src, dst, axis);
-                break;
-            case cv::detail::ReduceMode::LAST_MIN:
-                reduceMinMaxApply<true, false>(src, dst, axis);
-                break;
-            case cv::detail::ReduceMode::FIRST_MAX:
-                reduceMinMaxApply<false, true>(src, dst, axis);
-                break;
-            case cv::detail::ReduceMode::LAST_MAX:
-                reduceMinMaxApply<false, false>(src, dst, axis);
-                break;
-        }
-    }
-
-    template <bool isMin, bool isFirst>
-    static void reduceMinMaxApply(const cv::Mat& src, cv::Mat& dst, const int axis)
-    {
+        Cmp cmp;
         std::vector<int> sizes(src.dims);
         std::copy(src.size.p, src.size.p + src.dims, sizes.begin());
 
@@ -46,28 +27,11 @@ struct reduceMinMaxImpl
         const std::vector<int> newShape{1, src.size[axis]};
         for (int i = 0; i < n ; ++i)
         {
-            cv::Mat sub = src(idx).clone().reshape(1, newShape);
+            cv::Mat sub = src(idx);
 
-            double minVal, maxVal;
-            cv::minMaxLoc(sub, &minVal, &maxVal);
-
-            double val = isMin ? minVal : maxVal;
-
-            // not sure what minMaxLoc guarantees (first/last/any occurrence of min/max)
-            int32_t res = 0;
-            if (isFirst)
-            {
-                auto begin = sub.begin<T>();
-                auto end = sub.end<T>();
-                res = static_cast<int32_t>(std::distance(begin, std::find(begin, end, val)));
-            }
-            else
-            {
-                auto rbegin = sub.rbegin<T>();
-                auto rend = sub.rend<T>();
-                res = static_cast<int32_t>(std::distance(std::find(rbegin, rend, val), std::prev(rend)));
-            }
-            *dst(idx).ptr<int32_t>() = res;
+            auto begin = sub.begin<T>();
+            auto it = std::min_element(begin, sub.end<T>(), cmp);
+            *dst(idx).ptr<int32_t>() = static_cast<int32_t>(std::distance(begin, it));
 
             for (int j = static_cast<int>(idx.size()) - 1; j >= 0; --j)
             {
@@ -88,20 +52,26 @@ struct reduceMinMaxImpl
     }
 };
 
-static void reduceMinMax(const Mat& src, Mat& dst, cv::detail::ReduceMode mode, int axis)
-{
-    axis = (axis + src.dims) % src.dims;
-    CV_Assert(src.channels() == 1 && axis >= 0 && axis < src.dims);
+template<template<class> class Cmp>
+struct MinMaxReducer{
+    template <typename T>
+    using Impl = reduceMinMaxImpl<Cmp<T>, T>;
 
-    std::vector<int> sizes(src.dims);
-    std::copy(src.size.p, src.size.p + src.dims, sizes.begin());
-    sizes[axis] = 1;
+    static void reduce(const Mat& src, Mat& dst, int axis)
+    {
+        axis = (axis + src.dims) % src.dims;
+        CV_Assert(src.channels() == 1 && axis >= 0 && axis < src.dims);
 
-    dst.create(sizes, CV_32SC1); // indices
-    dst.setTo(cv::Scalar::all(0));
+        std::vector<int> sizes(src.dims);
+        std::copy(src.size.p, src.size.p + src.dims, sizes.begin());
+        sizes[axis] = 1;
 
-    cv::detail::depthDispatch<reduceMinMaxImpl>(src.depth(), src, dst, mode, axis);
-}
+        dst.create(sizes, CV_32SC1); // indices
+        dst.setTo(cv::Scalar::all(0));
+
+        cv::detail::depthDispatch<Impl>(src.depth(), src, dst, axis);
+    }
+};
 
 }
 
