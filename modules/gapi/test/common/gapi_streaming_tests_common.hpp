@@ -19,7 +19,6 @@
 #endif
 
 #include <vpl/mfx.h>
-#endif // HAVE_ONEVPL
 
 namespace opencv_test {
 namespace streaming {
@@ -88,4 +87,5 @@ static const unsigned char hevc_header[] = {
 } // namespace onevpl
 } // namespace streaming
 } // namespace opencv_test
+#endif // HAVE_ONEVPL
 #endif // OPENCV_GAPI_STREAMING_TESTS_HPP

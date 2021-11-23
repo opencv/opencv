@@ -2217,7 +2217,7 @@ TEST(OneVPL_Source, Init)
     }
     EXPECT_TRUE(stream_data_provider->empty());
 }
-#endif
+#endif // HAVE_ONEVPL
 
 TEST(GAPI_Streaming, TestDesyncRMat) {
     cv::GMat in;
