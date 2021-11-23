@@ -2,6 +2,7 @@
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/core.hpp>
 #include <opencv2/highgui.hpp>
 
 const std::string keys =
@@ -117,10 +118,7 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 
         cv::Mat mask_img;
         classesToColors(classes, mask_img);
-
         cv::resize(mask_img, out, in.size());
-        const float blending = 0.3f;
-        out = in * blending + out * (1 - blending);
     }
 };
 } // namespace custom
@@ -148,7 +146,10 @@ int main(int argc, char *argv[]) {
     // Now build the graph
     cv::GMat in;
     cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(in);
-    cv::GMat out = custom::PostProcessing::on(in, out_blob);
+    cv::GMat post_proc_out = custom::PostProcessing::on(in, out_blob);
+    cv::GMat blending_in = cv::gapi::mulC(in, 0.3, CV_8U);
+    cv::GMat blending_out = cv::gapi::mulC(post_proc_out, 0.7, CV_8U);
+    cv::GMat out = cv::gapi::add(blending_in, blending_out, CV_8U);
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -156,21 +157,35 @@ int main(int argc, char *argv[]) {
 
     // The execution part
     pipeline.setSource(std::move(inputs));
-    pipeline.start();
 
     cv::VideoWriter writer;
+    cv::VideoCapture cap(input);
+
+    if (!output.empty()) {
+        cv::Mat first_frame;
+        cap >> first_frame;
+        const auto sz = cv::Size{ first_frame.cols, first_frame.rows };
+        cap.release();
+        writer.open(output, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 25.0, sz);
+    }
+    cv::TickMeter tm;
     cv::Mat outMat;
+
+    int frames = 0;
+    tm.start();
+    pipeline.start();
     while (pipeline.pull(cv::gout(outMat))) {
+        ++frames;
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
             if (!writer.isOpened()) {
-                const auto sz = cv::Size{outMat.cols, outMat.rows};
-                writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
                 CV_Assert(writer.isOpened());
             }
             writer << outMat;
         }
     }
+    tm.stop();
+    std::cout << "Mean FPS is " << float(frames) / tm.getAvgTimeSec() << std::endl;
     return 0;
 }
