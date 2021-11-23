@@ -1485,12 +1485,10 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
     // Temporary solution for opencl debug
     // Mac error: "Kernel not created"
-    bool useOpenCL = ocl::isOpenCLActivated();
-    AccessFlag af = AccessFlag::ACCESS_READ;
-    CV_OCL_RUN(useOpenCL,
+    CV_OCL_RUN(ocl::isOpenCLActivated(),
         ocl_calcICPLsmMatricesFast(cameraMatrix,
-            oldPts.getUMat(af), oldNrm.getUMat(af),
-            newPts.getUMat(af), newNrm.getUMat(af),
+            oldPts.getUMat(AccessFlag::ACCESS_READ), oldNrm.getUMat(AccessFlag::ACCESS_READ),
+            newPts.getUMat(AccessFlag::ACCESS_READ), newNrm.getUMat(AccessFlag::ACCESS_READ),
             pose, level, maxDepthDiff, angleThreshold,
             A, b)
         );
