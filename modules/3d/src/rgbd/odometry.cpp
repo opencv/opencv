@@ -17,7 +17,7 @@ private:
 public:
     Impl() {};
     virtual ~Impl() {};
-    virtual OdometryFrame createOdometryFrame() = 0;
+    virtual OdometryFrame createOdometryFrame() const = 0;
     virtual void prepareFrame(OdometryFrame frame) = 0;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const = 0;
@@ -34,7 +34,7 @@ public:
     OdometryICP(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryICP();
 
-    virtual OdometryFrame createOdometryFrame() override;
+    virtual OdometryFrame createOdometryFrame() const override;
     virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
@@ -50,7 +50,7 @@ OdometryICP::~OdometryICP()
 {
 }
 
-OdometryFrame OdometryICP::createOdometryFrame()
+OdometryFrame OdometryICP::createOdometryFrame() const
 {
 #ifdef HAVE_OPENCL
     return OdometryFrame(OdometryFrameStoreType::UMAT);
@@ -97,7 +97,7 @@ public:
     OdometryRGB(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryRGB();
 
-    virtual OdometryFrame createOdometryFrame() override;
+    virtual OdometryFrame createOdometryFrame() const override;
     virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
@@ -113,7 +113,7 @@ OdometryRGB::~OdometryRGB()
 {
 }
 
-OdometryFrame OdometryRGB::createOdometryFrame()
+OdometryFrame OdometryRGB::createOdometryFrame() const
 {
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
@@ -156,7 +156,7 @@ public:
     OdometryRGBD(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryRGBD();
 
-    virtual OdometryFrame createOdometryFrame() override;
+    virtual OdometryFrame createOdometryFrame() const override;
     virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
@@ -172,7 +172,7 @@ OdometryRGBD::~OdometryRGBD()
 {
 }
 
-OdometryFrame OdometryRGBD::createOdometryFrame()
+OdometryFrame OdometryRGBD::createOdometryFrame() const
 {
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
@@ -236,12 +236,12 @@ Odometry::~Odometry()
 {
 }
 
-OdometryFrame Odometry::createOdometryFrame()
+OdometryFrame Odometry::createOdometryFrame() const
 {
     return this->impl->createOdometryFrame();
 }
 
-OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType)
+OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType) const
 {
     return OdometryFrame(matType);
 }

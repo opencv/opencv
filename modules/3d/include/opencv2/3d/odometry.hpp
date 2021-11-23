@@ -45,10 +45,10 @@ public:
     /** Create new odometry frame
      * The Type (Mat or UMat) depends on odometry type
      */
-    OdometryFrame createOdometryFrame();
+    OdometryFrame createOdometryFrame() const;
 
     // Deprecated
-    OdometryFrame createOdometryFrame(OdometryFrameStoreType matType);
+    OdometryFrame createOdometryFrame(OdometryFrameStoreType matType) const;
 
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
