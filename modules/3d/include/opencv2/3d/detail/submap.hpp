@@ -52,7 +52,7 @@ public:
     virtual ~Submap() = default;
 
     virtual void integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
-    virtual void raycast(Odometry icp, const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
+    virtual void raycast(const Odometry icp, const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                          OutputArray points = noArray(), OutputArray normals = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume->getTotalVolumeUnits()); };
@@ -110,7 +110,7 @@ void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::
 }
 
 template<typename MatType>
-void Submap<MatType>::raycast(Odometry icp, const cv::Affine3f& _cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
+void Submap<MatType>::raycast(const Odometry icp, const cv::Affine3f& _cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                               OutputArray points, OutputArray normals)
 {
     if (!points.needed() && !normals.needed())
