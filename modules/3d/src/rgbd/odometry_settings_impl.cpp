@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #include "../precomp.hpp"
 #include "utils.hpp"
-
-#include <iostream>
 
 namespace cv
 {
@@ -229,7 +231,7 @@ void OdometrySettingsImplCommon::getIterCounts(OutputArray val) const
     Mat(defaultIterCounts).copyTo(val);
 }
 
-void  OdometrySettingsImplCommon::setMinDepth(float val)
+void OdometrySettingsImplCommon::setMinDepth(float val)
 {
     this->minDepth = val;
 }

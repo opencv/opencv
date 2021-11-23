@@ -5,7 +5,6 @@
 #ifndef OPENCV_3D_ODOMETRY_FUNCTIONS_HPP
 #define OPENCV_3D_ODOMETRY_FUNCTIONS_HPP
 
-#include "../precomp.hpp"
 #include "utils.hpp"
 #include <opencv2/imgproc.hpp>
 
