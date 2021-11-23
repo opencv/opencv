@@ -9,6 +9,8 @@
 
 #include "gapi_tests_common.hpp"
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
+#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #ifdef HAVE_ONEVPL
 
@@ -29,7 +31,40 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
         EXPECT_TRUE(in);
     }
 
-    size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
+mfx_codec_id_type get_mfx_codec_id() const override {
+        return MFX_CODEC_HEVC;
+    }
+
+    bool fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &out_bitstream) override {
+        if (empty()) {
+            return false;
+        }
+
+        if (!out_bitstream) {
+            out_bitstream = std::make_shared<mfx_bitstream>();
+            out_bitstream->MaxLength = 2000000;
+            out_bitstream->Data = (mfxU8 *)calloc(out_bitstream->MaxLength, sizeof(mfxU8));
+            if(!out_bitstream->Data) {
+                throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
+                                         std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
+            }
+            out_bitstream->CodecId = get_mfx_codec_id();
+        }
+
+        mfxU8 *p0 = out_bitstream->Data;
+        mfxU8 *p1 = out_bitstream->Data + out_bitstream->DataOffset;
+        EXPECT_FALSE(out_bitstream->DataOffset > out_bitstream->MaxLength - 1);
+        EXPECT_FALSE(out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength);
+
+        std::copy_n(p1, out_bitstream->DataLength, p0);
+
+        out_bitstream->DataOffset = 0;
+        out_bitstream->DataLength += static_cast<mfxU32>(fetch_data(out_bitstream->MaxLength - out_bitstream->DataLength,
+                                                         out_bitstream->Data + out_bitstream->DataLength));
+        return out_bitstream->DataLength != 0;
+    }
+
+    size_t fetch_data(size_t out_data_size, void* out_data_buf) {
         data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
         return data_stream.gcount();
     }

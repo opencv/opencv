@@ -58,7 +58,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || my_sess.stream->DataLength)
+                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
                                                         ? my_sess.stream.get()
 
                                                         : nullptr, /* No more data to read, start decode draining mode*/
@@ -144,39 +144,15 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                           std::shared_ptr<IDataProvider> provider) {
     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
-    // Find codec ID from config
-    auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID";
-    });
-    if (dec_it == cfg_params.end()) {
-        throw std::logic_error("Cannot determine DecoderID from oneVPL config. Abort");
-    }
-
-    mfxVariant decoder = cfg_param_to_mfx_variant(*dec_it);
-
-    // fill input bitstream
-    mfxBitstream bitstream{};
-    const int BITSTREAM_BUFFER_SIZE = 2000000;
-    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
-    if(!bitstream.Data) {
-        throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
-                                 std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
-    }
-
-    bitstream.CodecId = decoder.Data.U32;
-    mfxStatus sts = ReadEncodedStream(bitstream, provider);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error reading bitstream, error: " +
-                                 mfxstatus_to_string(sts));
-    }
-
     // init session
     acceleration_policy->init(mfx_session);
 
-    // Retrieve the frame information from input stream
+    // Get codec ID from data provider
+    IDataProvider::mfx_codec_id_type decoder_id = provider->get_mfx_codec_id();
+
+    // Prepare video param
     mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = decoder.Data.U32;
+    mfxDecParams.mfx.CodecId = decoder_id;
 
     // set memory stream direction accroding to accelearion policy device type
     IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
@@ -190,12 +166,34 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
         GAPI_Assert(false && "unsupported AccelType from device selector");
     }
 
-    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error decoding header, error: " +
-                                 mfxstatus_to_string(sts));
-    }
+    // try fetch & decode input data
+    mfxStatus sts = MFX_ERR_NONE;
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
+    bool can_fetch_data = false;
+    do {
+        can_fetch_data = provider->fetch_bitstream_data(bitstream);
+        if (!can_fetch_data) {
+            // must fetch data always because EOF critical at this point
+            GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get() <<
+                                      ". Unexpected EOF");
+            throw std::runtime_error("Error reading bitstream: EOF");
+        }
 
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
+        if(MFX_ERR_NONE != sts && MFX_ERR_MORE_DATA != sts) {
+            throw std::runtime_error("Error decoding header, error: " +
+                                     mfxstatus_to_string(sts));
+        }
+    } while (sts == MFX_ERR_MORE_DATA && !provider->empty());
+
+    if (MFX_ERR_NONE != sts) {
+        GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
+                                  << ". Make sure data source is valid and/or "
+                                  "\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
+                                  " has correct value in case of demultiplexed raw input");
+         throw std::runtime_error("Error decode header, error: " +
+                                  mfxstatus_to_string(sts));
+    }
     mfxFrameAllocRequest decRequest {};
 
     // Query number required surfaces for decoder
@@ -313,7 +311,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             }
         }
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (!(sess.data_provider || sess.stream->DataLength)) {
+            if (!(sess.data_provider || (sess.stream && sess.stream->DataLength))) {
                 // No more data to drain from decoder
                 return ExecutionStatus::Processed;
             }

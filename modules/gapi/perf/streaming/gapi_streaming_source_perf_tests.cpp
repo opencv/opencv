@@ -18,11 +18,13 @@ using namespace perf;
 const std::string files[] = {
     "highgui/video/big_buck_bunny.h265",
     "highgui/video/big_buck_bunny.h264",
+    "highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4",
 };
 
 const std::string codec[] = {
     "MFX_CODEC_HEVC",
-    "MFX_CODEC_AVC"
+    "MFX_CODEC_AVC",
+    "",
 };
 
 using source_t = std::string;
@@ -44,8 +46,11 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
 
     std::vector<CfgParam> cfg_params {
         CfgParam::create<std::string>("mfxImplDescription.Impl", "MFX_IMPL_TYPE_HARDWARE"),
-        CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type),
     };
+
+    if (!type.empty()) {
+        cfg_params.push_back(CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type));
+    }
 
     if (!mode.empty()) {
         cfg_params.push_back(CfgParam::create("mfxImplDescription.AccelerationMode", mode));
@@ -81,11 +86,14 @@ INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerfTest,
                         Values(source_description_t(files[0], codec[0], ""),
                                source_description_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11"),
                                source_description_t(files[1], codec[1], ""),
-                               source_description_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11")));
+                               source_description_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11"),
+                               source_description_t(files[2], codec[2], ""),
+                               source_description_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11")));
 
 INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerfTest,
                         Values(files[0],
-                               files[1]));
+                               files[1],
+                               files[2]));
 } // namespace opencv_test
 
 #endif // HAVE_ONEVPL

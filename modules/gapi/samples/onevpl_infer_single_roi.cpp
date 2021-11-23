@@ -44,7 +44,7 @@ const std::string keys =
     "{ faced                        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
-    "{ source_queue_capacity        | 1                                         |  OneVPL source applies this parameter as preallocated frames pool size}";
+    "{ source_queue_capacity        | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}";
 
 
 namespace {
