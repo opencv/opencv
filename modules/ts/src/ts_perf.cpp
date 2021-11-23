@@ -1366,7 +1366,7 @@ bool TestBase::next()
     bool has_next = false;
 
     do {
-        assert(currentIter == times.size());
+        CV_Assert(currentIter == times.size());
         if (currentIter == 0)
         {
             has_next = true;
@@ -1379,7 +1379,7 @@ bool TestBase::next()
         }
         else
         {
-            assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
+            CV_Assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
                 std::cout << '.' << std::endl;
@@ -1638,7 +1638,7 @@ performance_metrics& TestBase::calcMetrics()
     }
     else
     {
-        assert(false);
+        CV_Assert(false);
     }
 
     int offset = static_cast<int>(start - times.begin());
@@ -1714,7 +1714,7 @@ void TestBase::validateMetrics()
     }
     else
     {
-        assert(false);
+        CV_Assert(false);
     }
 }
 

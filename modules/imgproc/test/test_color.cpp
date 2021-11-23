@@ -217,7 +217,7 @@ void CV_ColorCvtBaseTest::convert_forward( const Mat& src, Mat& dst )
     float* dst_buf = &_dst_buf[0];
     int i, j;
 
-    assert( (cn == 3 || cn == 4) && (dst_cn == 3 || dst_cn == 1) );
+    CV_Assert( (cn == 3 || cn == 4) && (dst_cn == 3 || dst_cn == 1) );
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -281,7 +281,7 @@ void CV_ColorCvtBaseTest::convert_forward( const Mat& src, Mat& dst )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }
@@ -312,7 +312,7 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
         float* dst_buf = &_dst_buf[0];
         int i, j;
 
-        assert( cn == 3 || cn == 4 );
+        CV_Assert( cn == 3 || cn == 4 );
 
         for( i = 0; i < src.rows; i++ )
         {
@@ -385,7 +385,7 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
             }
         }
     }
@@ -1571,7 +1571,7 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }
@@ -1677,7 +1677,7 @@ void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat&
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }

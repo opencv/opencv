@@ -441,7 +441,7 @@ CvCaptureCAM_Giganetix::grabImage ()
     {
       gige::IImageInfo imageInfo;
       m_device->GetImageInfo (&imageInfo);
-      assert(imageInfo.IsValid());
+      CV_Assert(imageInfo.IsValid());
 
       if (m_device->GetPendingImagesCount() ==  1)
       {

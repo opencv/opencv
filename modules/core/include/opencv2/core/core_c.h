@@ -1752,7 +1752,7 @@ CV_INLINE  CvSetElem* cvSetNew( CvSet* set_header )
 CV_INLINE  void cvSetRemoveByPtr( CvSet* set_header, void* elem )
 {
     CvSetElem* _elem = (CvSetElem*)elem;
-    assert( _elem->flags >= 0 /*&& (elem->flags & CV_SET_ELEM_IDX_MASK) < set_header->total*/ );
+    CV_Assert( _elem->flags >= 0 /*&& (elem->flags & CV_SET_ELEM_IDX_MASK) < set_header->total*/ );
     _elem->next_free = set_header->free_elems;
     _elem->flags = (_elem->flags & CV_SET_ELEM_IDX_MASK) | CV_SET_ELEM_FREE_FLAG;
     set_header->free_elems = _elem;

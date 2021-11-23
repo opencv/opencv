@@ -291,7 +291,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
     }
 
     cascade->hid_cascade = out;
-    assert( (char*)haar_node_ptr - (char*)out <= datasize );
+    CV_Assert( (char*)haar_node_ptr - (char*)out <= datasize );
 
     return out;
 }
@@ -622,7 +622,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
     if( cascade->is_tree )
     {
         CvHidHaarStageClassifier* ptr = cascade->stage_classifier;
-        assert( start_stage == 0 );
+        CV_Assert( start_stage == 0 );
 
         while( ptr )
         {

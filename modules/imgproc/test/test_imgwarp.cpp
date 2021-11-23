@@ -169,7 +169,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
 
         /*switch( depth )
@@ -482,7 +482,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
             }
         }
     }

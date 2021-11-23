@@ -2125,7 +2125,7 @@ static double cvStereoCalibrateImpl( const CvMat* _objectPoints, const CvMat* _i
                 if( solver.state == CvLevMarq::CALC_J )
                 {
                     int iofs = (nimages+1)*6 + k*NINTRINSIC, eofs = (i+1)*6;
-                    assert( JtJ && JtErr );
+                    CV_Assert( JtJ && JtErr );
 
                     Mat _JtJ(cvarrToMat(JtJ)), _JtErr(cvarrToMat(JtErr));
 
@@ -2929,7 +2929,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     CvMat Qx = cvMat(3, 3, CV_64F, _Qx);
 
     cvMatMul(&M, &Qx, &R);
-    assert(fabs(matR[2][1]) < FLT_EPSILON);
+    CV_Assert(fabs(matR[2][1]) < FLT_EPSILON);
     matR[2][1] = 0;
 
     /* Find Givens rotation for y axis. */
@@ -2948,7 +2948,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     CvMat Qy = cvMat(3, 3, CV_64F, _Qy);
     cvMatMul(&R, &Qy, &M);
 
-    assert(fabs(matM[2][0]) < FLT_EPSILON);
+    CV_Assert(fabs(matM[2][0]) < FLT_EPSILON);
     matM[2][0] = 0;
 
     /* Find Givens rotation for z axis. */
@@ -2968,7 +2968,7 @@ cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
     CvMat Qz = cvMat(3, 3, CV_64F, _Qz);
 
     cvMatMul(&M, &Qz, &R);
-    assert(fabs(matR[1][0]) < FLT_EPSILON);
+    CV_Assert(fabs(matR[1][0]) < FLT_EPSILON);
     matR[1][0] = 0;
 
     // Solve the decomposition ambiguity.

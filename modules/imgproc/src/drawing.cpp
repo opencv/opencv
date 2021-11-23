@@ -138,7 +138,7 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
             }
         }
 
-        assert( (c1 & c2) != 0 || (x1 | y1 | x2 | y2) >= 0 );
+        CV_Assert( (c1 & c2) != 0 || (x1 | y1 | x2 | y2) >= 0 );
     }
 
     return (c1 | c2) == 0;
@@ -222,7 +222,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
 
     if( connectivity == 8 )
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = dx - (dy + dy);
         plusDelta = dx + dx;
@@ -233,7 +233,7 @@ LineIterator::LineIterator(const Mat& img, Point pt1, Point pt2,
     }
     else /* connectivity == 4 */
     {
-        assert( dx >= 0 && dy >= 0 );
+        CV_Assert( dx >= 0 && dy >= 0 );
 
         err = 0;
         plusDelta = (dx + dx) + (dy + dy);
@@ -1102,7 +1102,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     p0.x <<= XY_SHIFT - shift;
     p0.y <<= XY_SHIFT - shift;
 
-    assert( 0 <= shift && shift <= XY_SHIFT );
+    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     xmin = xmax = v[0].x;
     ymin = ymax = v[0].y;
 
@@ -1322,7 +1322,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
     for( i = 0; i < total; i++ )
     {
         PolyEdge& e1 = edges[i];
-        assert( e1.y0 < e1.y1 );
+        CV_Assert( e1.y0 < e1.y1 );
         // Determine x-coordinate of the end of the edge.
         // (This is not necessary x-coordinate of any vertex in the array.)
         int64 x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
@@ -2596,7 +2596,7 @@ cvDrawContours( void* _img, CvSeq* contour,
                 char code;
                 CV_READ_SEQ_ELEM( code, reader );
 
-                assert( (code & ~7) == 0 );
+                CV_Assert( (code & ~7) == 0 );
 
                 if( code != prev_code )
                 {

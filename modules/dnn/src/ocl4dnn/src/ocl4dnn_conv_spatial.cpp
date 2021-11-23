@@ -48,7 +48,6 @@
 #include <vector>
 #include <fstream>
 #include <sys/stat.h>
-#include <assert.h>
 #include "../include/common.hpp"
 #include "../include/ocl4dnn.hpp"
 #include "opencl_kernels_dnn.hpp"

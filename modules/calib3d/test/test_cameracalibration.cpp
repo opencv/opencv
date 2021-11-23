@@ -831,30 +831,30 @@ void CV_CameraCalibrationTest_CPP::calibrate(int imageCount, int* pointCounts,
                      perViewErrorsMat,
                      flags );
 
-    assert( stdDevsMatInt.type() == CV_64F );
-    assert( stdDevsMatInt.total() == static_cast<size_t>(CV_CALIB_NINTRINSIC) );
+    CV_Assert( stdDevsMatInt.type() == CV_64F );
+    CV_Assert( stdDevsMatInt.total() == static_cast<size_t>(CV_CALIB_NINTRINSIC) );
     memcpy( stdDevs, stdDevsMatInt.ptr(), CV_CALIB_NINTRINSIC*sizeof(double) );
 
-    assert( stdDevsMatExt.type() == CV_64F );
-    assert( stdDevsMatExt.total() == static_cast<size_t>(6*imageCount) );
+    CV_Assert( stdDevsMatExt.type() == CV_64F );
+    CV_Assert( stdDevsMatExt.total() == static_cast<size_t>(6*imageCount) );
     memcpy( stdDevs + CV_CALIB_NINTRINSIC, stdDevsMatExt.ptr(), 6*imageCount*sizeof(double) );
 
-    assert( perViewErrorsMat.type() == CV_64F);
-    assert( perViewErrorsMat.total() == static_cast<size_t>(imageCount) );
+    CV_Assert( perViewErrorsMat.type() == CV_64F);
+    CV_Assert( perViewErrorsMat.total() == static_cast<size_t>(imageCount) );
     memcpy( perViewErrors, perViewErrorsMat.ptr(), imageCount*sizeof(double) );
 
-    assert( cameraMatrix.type() == CV_64FC1 );
+    CV_Assert( cameraMatrix.type() == CV_64FC1 );
     memcpy( _cameraMatrix, cameraMatrix.ptr(), 9*sizeof(double) );
 
-    assert( cameraMatrix.type() == CV_64FC1 );
+    CV_Assert( cameraMatrix.type() == CV_64FC1 );
     memcpy( _distortionCoeffs, distCoeffs.ptr(), 4*sizeof(double) );
 
     vector<Mat>::iterator rvecsIt = rvecs.begin();
     vector<Mat>::iterator tvecsIt = tvecs.begin();
     double *rm = rotationMatrices,
            *tm = translationVectors;
-    assert( rvecsIt->type() == CV_64FC1 );
-    assert( tvecsIt->type() == CV_64FC1 );
+    CV_Assert( rvecsIt->type() == CV_64FC1 );
+    CV_Assert( tvecsIt->type() == CV_64FC1 );
     for( int i = 0; i < imageCount; ++rvecsIt, ++tvecsIt, i++, rm+=9, tm+=3 )
     {
         Mat r9( 3, 3, CV_64FC1 );
@@ -1141,7 +1141,7 @@ void CV_ProjectPointsTest::run(int)
         imgPoints, dpdrot, dpdt, dpdf, dpdc, dpddist, 0 );
 
     // calculate and check image points
-    assert( (int)imgPoints.size() == pointCount );
+    CV_Assert( (int)imgPoints.size() == pointCount );
     vector<Point2f>::const_iterator it = imgPoints.begin();
     for( int i = 0; i < pointCount; i++, ++it )
     {
