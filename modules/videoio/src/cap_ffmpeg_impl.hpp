@@ -481,7 +481,7 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
-    bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
@@ -547,6 +547,7 @@ struct CvCapture_FFMPEG
     VideoAccelerationType va_type;
     int hw_device;
     int use_opencl;
+    int extraDataIdx;
 };
 
 void CvCapture_FFMPEG::init()
@@ -590,6 +591,7 @@ void CvCapture_FFMPEG::init()
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
     use_opencl = 0;
+    extraDataIdx = 1;
 }
 
 
@@ -1408,20 +1410,28 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
+bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
     if (!video_st)
         return false;
 
-    if (rawMode)
+    if (rawMode || flag == extraDataIdx)
     {
-        AVPacket& p = bsfc ? packet_filtered : packet;
-        *data = p.data;
-        *step = p.size;
-        *width = p.size;
+        bool ret = true;
+        if (flag == 0) {
+            AVPacket& p = bsfc ? packet_filtered : packet;
+            *data = p.data;
+            *step = p.size;
+            ret = p.data != NULL;
+        }
+        else if (flag == extraDataIdx) {
+            *data = ic->streams[video_stream]->codec->extradata;
+            *step = ic->streams[video_stream]->codec->extradata_size;
+        }
+        *width = *step;
         *height = 1;
         *cn = 1;
-        return p.data != NULL;
+        return  ret;
     }
 
     AVFrame* sw_picture = picture;
@@ -1586,6 +1596,12 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (rawMode)
             return -1;
         break;
+    case CAP_PROP_LRF_HAS_KEY_FRAME: {
+        const AVPacket& p = bsfc ? packet_filtered : packet;
+        return ((p.flags & AV_PKT_FLAG_KEY) != 0) ? 1 : 0;
+    }
+    case CAP_PROP_CODEC_EXTRADATA_INDEX:
+            return extraDataIdx;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:
