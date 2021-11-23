@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -117,6 +118,7 @@ public:
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_WEBNN && !padding) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
@@ -408,6 +410,22 @@ public:
             params.set("padding_value", zeropoints[1][0]);
         return true;
     }
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<ml::Operand> inputsOperand;
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            inputsOperand.push_back(nodes[i].dynamicCast<WebnnBackendNode>()->operand);
+        }
+        auto operand = webnnGraphBuilder.Concat(inputsOperand.size(), inputsOperand.data(), axis);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
+
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)
