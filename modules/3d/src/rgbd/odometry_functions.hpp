@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef ODOMETRY_FUNCTIONS_HPP
-#define ODOMETRY_FUNCTIONS_HPP
+#ifndef OPENCV_3D_ODOMETRY_FUNCTIONS_HPP
+#define OPENCV_3D_ODOMETRY_FUNCTIONS_HPP
 
 #include "../precomp.hpp"
 #include "utils.hpp"
@@ -210,4 +210,4 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x);
 bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double maxRotation);
 
 }
-#endif //ODOMETRY_FUNCTIONS_HPP
+#endif //OPENCV_3D_ODOMETRY_FUNCTIONS_HPP

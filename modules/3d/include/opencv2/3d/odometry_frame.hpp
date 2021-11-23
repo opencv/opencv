@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef ODOMETRY_FRAME_HPP
-#define ODOMETRY_FRAME_HPP
+#ifndef OPENCV_3D_ODOMETRY_FRAME_HPP
+#define OPENCV_3D_ODOMETRY_FRAME_HPP
 
 #include <opencv2/core.hpp>
 
@@ -59,4 +59,4 @@ private:
     Ptr<Impl> impl;
 };
 }
-#endif // !ODOMETRY_FRAME_HPP
+#endif // !OPENCV_3D_ODOMETRY_FRAME_HPP
