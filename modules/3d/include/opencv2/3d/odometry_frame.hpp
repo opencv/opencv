@@ -23,7 +23,15 @@ namespace cv
 
 enum OdometryFramePyramidType
 {
-    PYR_IMAGE = 0, PYR_DEPTH = 1, PYR_MASK = 2, PYR_CLOUD = 3, PYR_DIX = 4, PYR_DIY = 5, PYR_TEXMASK = 6, PYR_NORM = 7, PYR_NORMMASK = 8,
+    PYR_IMAGE = 0,
+    PYR_DEPTH = 1,
+    PYR_MASK = 2,
+    PYR_CLOUD = 3,
+    PYR_DIX = 4,
+    PYR_DIY = 5,
+    PYR_TEXMASK = 6,
+    PYR_NORM = 7,
+    PYR_NORMMASK = 8,
     N_PYRAMIDS
 };
 
