@@ -13,7 +13,6 @@
 #include <type_traits>  // decay
 
 #include <opencv2/gapi/opencv_includes.hpp>
-#include <opencv2/gapi/gtags.hpp>
 
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/util/optional.hpp>
