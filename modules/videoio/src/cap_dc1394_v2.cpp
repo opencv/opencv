@@ -64,7 +64,6 @@ static uint32_t getControlRegister(dc1394camera_t *camera, uint64_t offset)
     uint32_t value = 0;
     dc1394error_t err = dc1394_get_control_register(camera, offset, &value);
 
-    CV_Assert(err == DC1394_SUCCESS);
     return err == DC1394_SUCCESS ? value : 0xffffffff;
 }
 

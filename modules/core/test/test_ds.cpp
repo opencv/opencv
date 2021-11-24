@@ -50,7 +50,11 @@ static void cvTsSimpleSeqShiftAndCopy( CvTsSimpleSeq* seq, int from_idx, int to_
 
     if( from_idx == to_idx )
         return;
-    CV_Assert( (from_idx > to_idx && !elem) || (from_idx < to_idx && elem) );
+
+    if (elem)
+        CV_Assert(from_idx < to_idx)
+    else
+        CV_Assert(from_idx > to_idx)
 
     if( from_idx < seq->count )
     {
