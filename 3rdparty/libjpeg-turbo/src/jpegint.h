@@ -5,8 +5,9 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 1997-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015-2016, 2019, D. R. Commander.
+ * Copyright (C) 2015-2016, 2019, 2021, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
+ * Copyright (C) 2021, Alex Richardson.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -47,6 +48,18 @@ typedef enum {            /* Operating modes for buffer controllers */
 /* JLONG must hold at least signed 32-bit values. */
 typedef long JLONG;
 
+/* JUINTPTR must hold pointer values. */
+#ifdef __UINTPTR_TYPE__
+/*
+ * __UINTPTR_TYPE__ is GNU-specific and available in GCC 4.6+ and Clang 3.0+.
+ * Fortunately, that is sufficient to support the few architectures for which
+ * sizeof(void *) != sizeof(size_t).  The only other options would require C99
+ * or Clang-specific builtins.
+ */
+typedef __UINTPTR_TYPE__ JUINTPTR;
+#else
+typedef size_t JUINTPTR;
+#endif
 
 /*
  * Left shift macro that handles a negative operand without causing any
