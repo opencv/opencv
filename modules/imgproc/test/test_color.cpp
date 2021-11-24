@@ -1840,6 +1840,20 @@ TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
+TEST(Imgproc_ColorLuv, Overflow) {
+  cv::Mat3b luv_init(1, 1), rgb;
+  luv_init(0, 0) = cv::Vec3b(49, 205, 23);
+  cvtColor(luv_init, rgb, cv::COLOR_Luv2RGB);
+  // Convert to normal Luv coordinates for floats.
+  cv::Mat3f luv_initf(1, 1), rgbf;
+  luv_initf(0, 0) = cv::Vec3f(luv_init(0, 0)[0]/255.f*100, luv_init(0, 0)[1]*354/255.f - 134,
+                              luv_init(0, 0)[2]*262/255.f - 140);
+  cvtColor(luv_initf, rgbf, cv::COLOR_Luv2RGB);
+  cv::Mat3f rgb_converted;
+  rgb.convertTo(rgb_converted, CV_32F);
+  EXPECT_EQ(cvtest::norm(255.f*rgbf - rgb_converted, NORM_INF), 0.f);
+}
+
 TEST(Imgproc_ColorBayer, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
@@ -2569,7 +2583,7 @@ int row8uLuv2RGB(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_i
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
-        x = y*x/BASE;
+        x = ((long long int)y)*x/BASE;
 
         long long int vpl = LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
@@ -2725,11 +2739,11 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
 
-        0xec311a14, 0x995efefc, 0xf71b590b, 0xc1edfce7, 0x67b2b2e2, 0xe6d7f90d, 0xbcbaff5c, 0xd86ae19c,
-        0x3e8e4647, 0x53f1a5e3, 0x60dfb6ca, 0xcda851fe, 0xd91084b3, 0xe361bf6f, 0x90fe66ed, 0xb19c5b89,
+        0x4bff0e00, 0x76bbff01, 0x80735725, 0xb5e0f137, 0x96abb417, 0xfb2cf5cf, 0x314cf55e, 0x77bde10e,
+        0x2ab24209, 0x81caa6F0, 0x3019b8eb, 0x427c505f, 0x5bba7d77, 0xf29cb4d6, 0x760f65ca, 0xf6b4536c,
 
-        0x190508ec, 0xc7764e22, 0x19b042a8, 0x2db4c5d8, 0x6e1cfd1d, 0x39bddd51, 0x942714ed, 0x19444d39,
-        0xed16e206, 0xc4102784, 0x590075fe, 0xaaef2ec6, 0xbeb84149, 0x8da31e4f, 0x7cbe7d77, 0x1c90b30a,
+        0xb5cd0704, 0x82144fd4, 0x4e6f4843, 0x106bc505, 0xf587fc97, 0x3665d9a3, 0x3ea014a8, 0xec664953,
+        0x6ec9e59e, 0xf9201e08, 0xf3676fb8, 0xe4e42c10, 0x92d33f64, 0x13b923f7, 0x308f7f50, 0xca98b420,
     };
 
     RNG rng(0);
