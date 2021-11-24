@@ -63,7 +63,7 @@ struct GAPI_EXPORTS CfgParam {
     static constexpr const char *queue_capacity() { return "queue_capacity"; }
 
     /**
-     * @brief acceleration_mode()
+     * @brief acceleration_mode
      *
      * Special configuration parameter names for onevp::GSource:
      *
@@ -81,7 +81,7 @@ struct GAPI_EXPORTS CfgParam {
     static constexpr const char *acceleration_mode() { return "mfxImplDescription.AccelerationMode"; }
 
     /**
-     * @brief decoder_id()
+     * @brief decoder_id
      *
      * Special configuration parameter names for onevp::GSource:
      *
