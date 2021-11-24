@@ -19,11 +19,28 @@
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/util/util.hpp>
 
 namespace cv
 {
 namespace detail
 {
+    template<typename, typename = void>
+    struct is_shaped_type : std::false_type {};
+
+    template<typename TaggedTypeCandidate>
+    struct is_shaped_type<TaggedTypeCandidate,
+                          void_t<decltype(TaggedTypeCandidate::shape)>> :
+        std::is_same<typename std::decay<decltype(TaggedTypeCandidate::shape)>::type, GShape>
+    {};
+
+    template <typename Type, typename Tag>
+    struct is_contain_tag_impl : std::is_base_of<Tag, typename Type::tags_t> {
+    };
+
+    template<typename Type>
+    struct has_gshape : is_shaped_type<Type> {};
+
     // FIXME: These traits and enum and possible numerous switch(kind)
     // block may be replaced with a special Handler<T> object or with
     // a double dispatch
@@ -191,15 +208,13 @@ namespace detail
         }
         template<typename U> static auto wrap_in (const U &u) -> typename GTypeTraits<T>::strip_type
         {
-            static_assert(!(cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::Meta>::value ||
-                          cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::GraphRejected>::value),
+            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value),
                           "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
             return GTypeTraits<T>::wrap_in(u);
         }
         template<typename U> static auto wrap_out(U &u) -> typename GTypeTraits<T>::strip_type
         {
-                        static_assert(!(cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::Meta>::value ||
-                          cv::gapi::has_tag<GTypeTraits<U>, cv::gapi::tag::GraphRejected>::value),
+                        static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value),
                           "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
             return GTypeTraits<T>::wrap_out(u);
         }
