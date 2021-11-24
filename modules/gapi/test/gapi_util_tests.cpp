@@ -8,37 +8,14 @@
 #include "test_precomp.hpp"
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/util/util.hpp>
-#include <opencv2/gapi/gtags.hpp>
+#include <opencv2/gapi/gtype_traits.hpp>
 
-namespace cv {
-namespace gapi{
-namespace tag {
-struct Tag1 {};
-struct Tag2 {};
-struct Tag3 {};
-}
-}
-}
-class NonTagged {};
-
-class HasTag1 {
-public:
-    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag1>;
+struct NoGhape {};
+struct HasGShape {
+    static constexpr cv::GShape shape = cv::GShape::GFRAME;
 };
-class HasTag2 {
-public:
-    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag2>;
-};
-class HasTag23 {
-public:
-    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag2,
-                                       cv::gapi::tag::Tag3>;
-};
-class HasTag123 {
-public:
-    using tags_t = cv::gapi::TagHolder<cv::gapi::tag::Tag1,
-                                       cv::gapi::tag::Tag2,
-                                       cv::gapi::tag::Tag3>;
+struct MimicGShape {
+     static constexpr int shape = 0;
 };
 
 namespace cv
