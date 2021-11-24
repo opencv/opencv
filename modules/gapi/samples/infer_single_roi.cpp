@@ -188,17 +188,15 @@ int main(int argc, char *argv[])
     pipeline.start();
 
     cv::Mat out;
-    int framesCount = 0;
-    cv::TickMeter t;
-    t.start();
+    size_t frames = 0u;
+    cv::TickMeter tm;
+    tm.start();
     while (pipeline.pull(cv::gout(out))) {
         cv::imshow("Out", out);
         cv::waitKey(1);
-        framesCount++;
+        ++frames;
     }
-    t.stop();
-    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
-    std::cout << "FPS: " << framesCount / (t.getTimeSec() ? t.getTimeSec() : 1) << std::endl;
-    std::cout << "framesCount: " << framesCount << std::endl;
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
     cv::TickMeter tm;
     cv::Mat outMat;
 
-    int frames = 0;
+    std::size_t frames = 0u;
     tm.start();
     pipeline.start();
     while (pipeline.pull(cv::gout(outMat))) {
@@ -186,6 +186,6 @@ int main(int argc, char *argv[]) {
         }
     }
     tm.stop();
-    std::cout << "Mean FPS is " << float(frames) / tm.getAvgTimeSec() << std::endl;
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

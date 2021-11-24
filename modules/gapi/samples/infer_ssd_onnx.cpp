@@ -122,8 +122,8 @@ int main(int argc, char *argv[])
     // Now build the graph
     cv::GMat in;
     auto blob = cv::gapi::infer<custom::ObjDetector>(in);
-    cv::GOpaque<cv::Size> size = cv::gapi::streaming::size(in);
-    cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
+    cv::GArray<cv::Rect> rcs =
+        cv::gapi::parseSSD(blob, cv::gapi::streaming::size(in), 0.5f, true, true);
     auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs));
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -132,12 +132,16 @@ int main(int argc, char *argv[])
 
     // The execution part
     pipeline.setSource(std::move(inputs));
-    pipeline.start();
 
+    cv::TickMeter tm;
     cv::VideoWriter writer;
-
+    size_t frames = 0u;
     cv::Mat outMat;
+
+    tm.start();
+    pipeline.start();
     while (pipeline.pull(cv::gout(outMat))) {
+        ++frames;
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
@@ -149,5 +153,7 @@ int main(int argc, char *argv[])
             writer << outMat;
         }
     }
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

@@ -343,8 +343,8 @@ int main(int argc, char *argv[]) {
     pipeline.setSource(std::move(cap));
     pipeline.start();
 
-    int framesCount = 0;
-    cv::TickMeter t;
+    size_t frames = 0u;
+    cv::TickMeter tm;
     cv::VideoWriter writer;
     if (!output.empty() && !writer.isOpened()) {
         const auto sz = cv::Size{frame_descr.size.width, frame_descr.size.height};
@@ -353,20 +353,17 @@ int main(int argc, char *argv[]) {
     }
 
     cv::Mat outMat;
-    t.start();
+    tm.start();
     while (pipeline.pull(cv::gout(outMat))) {
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
             writer << outMat;
         }
-        framesCount++;
+        ++frames;
     }
-    t.stop();
-    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
-    std::cout << "FPS: " << framesCount /  t.getTimeSec() << std::endl;
-    std::cout << "framesCount: " << framesCount << std::endl;
-
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }
 
