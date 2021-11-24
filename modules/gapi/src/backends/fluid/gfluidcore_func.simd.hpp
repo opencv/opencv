@@ -160,12 +160,12 @@ CV_ALWAYS_INLINE v_float32 div_op(not_scale_tag, const v_float32& a, const v_flo
     return a / div;
 }
 
-CV_ALWAYS_INLINE void v_store_i16(short* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(short* dst, const v_int32& res1, const v_int32& res2)
 {
     vx_store(dst, v_pack(res1, res2));
 }
 
-CV_ALWAYS_INLINE void v_store_i16(ushort* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(ushort* dst, const v_int32& res1, const v_int32& res2)
 {
     vx_store(dst, v_pack_u(res1, res2));
 }
@@ -850,6 +850,7 @@ MUL_SIMD(float, float)
 // Fluid kernels: AddC
 //
 //-------------------------
+
 CV_ALWAYS_INLINE void addc_pack_store_c3(short* out_ptr, const v_int32& c1,
                                          const v_int32& c2, const v_int32& c3,
                                          const v_int32& c4, const v_int32& c5,
@@ -871,6 +872,7 @@ CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* out_ptr, const v_int32& c1,
     vx_store(&out_ptr[nlanes], v_pack_u(c3, c4));
     vx_store(&out_ptr[2*nlanes], v_pack_u(c5, c6));
 }
+
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<DST, ushort>::value ||
@@ -1021,8 +1023,8 @@ addc_simd_c3_impl(const SRC in[], DST out[], const v_float32& s1, const v_float3
 
 template<typename SRC>
 CV_ALWAYS_INLINE int addc_simd_c3_impl(const SRC in[], uchar out[],
-                                           const v_float32& s1, const v_float32& s2,
-                                           const v_float32& s3, const int length)
+                                       const v_float32& s1, const v_float32& s2,
+                                       const v_float32& s3, const int length)
 {
     constexpr int nlanes = v_uint8::nlanes;
     constexpr int chan = 3;

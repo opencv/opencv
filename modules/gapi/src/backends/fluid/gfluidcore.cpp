@@ -844,19 +844,15 @@ GAPI_FLUID_KERNEL(GFluidAbsDiff, cv::gapi::core::GAbsDiff, false)
 //
 //--------------------------------------
 
-static inline v_uint16x8  v_add_16u(const v_uint16x8 &x, const v_uint16x8 &y) { return x + y; }
 static inline v_uint16x8  v_sub_16u(const v_uint16x8 &x, const v_uint16x8 &y) { return x - y; }
 static inline v_uint16x8 v_subr_16u(const v_uint16x8 &x, const v_uint16x8 &y) { return y - x; }
 
-static inline v_float32x4  v_add_32f(const v_float32x4 &x, const v_float32x4 &y) { return x + y; }
 static inline v_float32x4  v_sub_32f(const v_float32x4 &x, const v_float32x4 &y) { return x - y; }
 static inline v_float32x4 v_subr_32f(const v_float32x4 &x, const v_float32x4 &y) { return y - x; }
 
-static inline int  s_add_8u(uchar x, uchar y) { return x + y; }
 static inline int  s_sub_8u(uchar x, uchar y) { return x - y; }
 static inline int s_subr_8u(uchar x, uchar y) { return y - x; }
 
-static inline float  s_add_32f(float x, float y) { return x + y; }
 static inline float  s_sub_32f(float x, float y) { return x - y; }
 static inline float s_subr_32f(float x, float y) { return y - x; }
 
@@ -946,11 +942,6 @@ static void run_arithm_s1(uchar out[], const float in[], int width, const float 
     }
 }
 
-static void run_arithm_s_add3(uchar out[], const uchar in[], int width, const uchar scalar[])
-{
-    run_arithm_s3(out, in, width, scalar, v_add_16u, s_add_8u);
-}
-
 static void run_arithm_s_sub3(uchar out[], const uchar in[], int width, const uchar scalar[])
 {
     run_arithm_s3(out, in, width, scalar, v_sub_16u, s_sub_8u);
@@ -959,11 +950,6 @@ static void run_arithm_s_sub3(uchar out[], const uchar in[], int width, const uc
 static void run_arithm_s_subr3(uchar out[], const uchar in[], int width, const uchar scalar[])
 {
     run_arithm_s3(out, in, width, scalar, v_subr_16u, s_subr_8u); // reverse: subr
-}
-
-static void run_arithm_s_add1(uchar out[], const float in[], int width, const float scalar[])
-{
-    run_arithm_s1(out, in, width, scalar, v_add_32f, s_add_32f);
 }
 
 static void run_arithm_s_sub1(uchar out[], const float in[], int width, const float scalar[])
@@ -1288,33 +1274,10 @@ static void run_arithm_s(Buffer &dst, const View &src, const float scalar[4], Ar
     int width  = dst.length();
     int chan   = dst.meta().chan;
 
-    // What if we cast the scalar into the SRC type?
-    const SRC myscal[4] = { static_cast<SRC>(scalar[0]), static_cast<SRC>(scalar[1]),
-                            static_cast<SRC>(scalar[2]), static_cast<SRC>(scalar[3]) };
-    bool usemyscal = (myscal[0] == scalar[0]) && (myscal[1] == scalar[1]) &&
-                     (myscal[2] == scalar[2]) && (myscal[3] == scalar[3]);
-
     switch (arithm)
     {
     case ARITHM_ADD:
     {
-#if 1
-        if (usemyscal)
-        {
-            if (std::is_same<DST, uchar>::value &&
-                std::is_same<SRC, uchar>::value &&
-                chan == 3)
-                run_arithm_s_add3((uchar*)out, (const uchar*)in, width, (const uchar*)myscal);
-            else if (std::is_same<DST, uchar>::value &&
-                std::is_same<SRC, float>::value &&
-                chan == 1)
-                run_arithm_s_add1((uchar*)out, (const float*)in, width, (const float*)myscal);
-            else
-                run_arithm_s(out, in, width, chan, myscal, add<DST, SRC, SRC>);
-        }
-        else
-        {
-#endif
             int w = 0;
 #if CV_SIMD
             w = addc_simd(in, scalar, out, width, chan);
@@ -1323,27 +1286,33 @@ static void run_arithm_s(Buffer &dst, const View &src, const float scalar[4], Ar
             for (; w < width * chan; ++w)
                 out[w] = add<DST>(in[w], scalar[w % chan]);
 
-            //run_arithm_s(out, in, width, chan, scalar, add<DST, SRC, float>);
-        }
         break;
     }
     case ARITHM_SUBTRACT:
+    {
+        // What if we cast the scalar into the SRC type?
+        const SRC myscal[4] = { static_cast<SRC>(scalar[0]), static_cast<SRC>(scalar[1]),
+                                static_cast<SRC>(scalar[2]), static_cast<SRC>(scalar[3]) };
+        bool usemyscal = (myscal[0] == scalar[0]) && (myscal[1] == scalar[1]) &&
+            (myscal[2] == scalar[2]) && (myscal[3] == scalar[3]);
+
         if (usemyscal)
         {
-            if (std::is_same<DST,uchar>::value &&
-                std::is_same<SRC,uchar>::value &&
+            if (std::is_same<DST, uchar>::value &&
+                std::is_same<SRC, uchar>::value &&
                 chan == 3)
                 run_arithm_s_sub3((uchar*)out, (const uchar*)in, width, (const uchar*)myscal);
-            else if (std::is_same<DST,uchar>::value &&
-                     std::is_same<SRC,float>::value &&
-                     chan == 1)
+            else if (std::is_same<DST, uchar>::value &&
+                std::is_same<SRC, float>::value &&
+                chan == 1)
                 run_arithm_s_sub1((uchar*)out, (const float*)in, width, (const float*)myscal);
             else
-                run_arithm_s(out, in, width, chan, myscal, sub<DST,SRC,SRC>);
+                run_arithm_s(out, in, width, chan, myscal, sub<DST, SRC, SRC>);
         }
         else
-            run_arithm_s(out, in, width, chan, scalar, sub<DST,SRC,float>);
+            run_arithm_s(out, in, width, chan, scalar, sub<DST, SRC, float>);
         break;
+    }
     // TODO: optimize miltiplication and division
     case ARITHM_MULTIPLY:
         for (int w=0; w < width; w++)
@@ -1488,6 +1457,9 @@ GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
     static void initScratch(const GMatDesc&, const GScalarDesc&, int, Buffer& scratch)
     {
 #if CV_SIMD
+        // Max value of v_float32::nlanes = 16 in AVX512 ISA
+        // So max value was taken.
+        // +2 for offset.
         constexpr int buflen = 16 + 2; // buffer size
 #else
         constexpr int buflen = 4;

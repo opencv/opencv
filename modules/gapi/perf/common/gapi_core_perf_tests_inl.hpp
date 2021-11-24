@@ -61,11 +61,13 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
 
 PERF_TEST_P_(AddCPerfTest, TestPerformance)
 {
-    compare_f cmpF = get<0>(GetParam());
-    Size sz = get<1>(GetParam());
-    MatType type = get<2>(GetParam());
-    int dtype = get<3>(GetParam());
-    cv::GCompileArgs compile_args = get<4>(GetParam());
+    compare_f cmpF;
+    cv::Size sz;
+    MatType type = -1;
+    int dtype = -1;
+    cv::GCompileArgs compile_args;
+
+    std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
 
     initMatsRandU(type, sz, dtype, false);
 
@@ -87,24 +89,7 @@ PERF_TEST_P_(AddCPerfTest, TestPerformance)
     {
         cc(gin(in_mat1, sc), gout(out_mat_gapi));
     }
-#if 0
-    int error = 0;
-    for (int i = 0; i < out_mat_gapi.size().height; i++) {
-        for (int j = 0; j < out_mat_gapi.size().width * out_mat_gapi.channels(); j++) {
-            if ((out_mat_gapi.at<uint8_t>(i, j) != out_mat_ocv.at<uint8_t>(i, j)) &&
-                (cv::abs(out_mat_gapi.at<uint8_t>(i, j) - out_mat_ocv.at<uint8_t>(i, j)) > 0))
-            {
-                std::cout << "Error number: " << error << std::endl << std::endl;
-                std::cout << "row = " << i << "; col = " << j << std::endl;
-                std::cout << "G-API result value = " << (int)out_mat_gapi.at<uint8_t>(i, j) << std::endl;
-                std::cout << "OCV result value = " << (int)out_mat_ocv.at<uint8_t>(i, j) << std::endl;
-                std::cout << "Diff = " << (int)cv::abs(out_mat_gapi.at<uint8_t>(i, j) - out_mat_ocv.at<uint8_t>(i, j))
-                    << std::endl << std::endl;
-                error++;
-            }
-        }
-    }
-#endif
+
     // Comparison ////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
