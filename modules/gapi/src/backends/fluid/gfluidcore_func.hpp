@@ -60,6 +60,29 @@ MUL_SIMD(float, float)
 
 #undef MUL_SIMD
 
+#define ADDC_SIMD(SRC, DST)                                                              \
+int addc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int width, const int chan);
+
+ADDC_SIMD(uchar, uchar)
+ADDC_SIMD(ushort, uchar)
+ADDC_SIMD(short, uchar)
+ADDC_SIMD(float, uchar)
+ADDC_SIMD(short, short)
+ADDC_SIMD(ushort, short)
+ADDC_SIMD(uchar, short)
+ADDC_SIMD(float, short)
+ADDC_SIMD(ushort, ushort)
+ADDC_SIMD(uchar, ushort)
+ADDC_SIMD(short, ushort)
+ADDC_SIMD(float, ushort)
+ADDC_SIMD(uchar, float)
+ADDC_SIMD(ushort, float)
+ADDC_SIMD(short, float)
+ADDC_SIMD(float, float)
+
+#undef ADDC_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
