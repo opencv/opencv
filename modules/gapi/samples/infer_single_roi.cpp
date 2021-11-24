@@ -154,16 +154,16 @@ int main(int argc, char *argv[])
     cv::GStreamingCompiled pipeline;
     auto inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
 
+    cv::GMat in;
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
     if (opt_roi.has_value()) {
         // Use the value provided by user
         std::cout << "Will run inference for static region "
                   << opt_roi.value()
                   << " only"
                   << std::endl;
-        cv::GMat in;
         cv::GOpaque<cv::Rect> in_roi;
         auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
-        cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
         cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, in_roi));
         pipeline  = cv::GComputation(cv::GIn(in, in_roi), cv::GOut(out))
@@ -175,10 +175,8 @@ int main(int argc, char *argv[])
         // Automatically detect ROI to infer. Make it output parameter
         std::cout << "ROI is not set or invalid. Locating it automatically"
                   << std::endl;
-        cv::GMat in;
         cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(in);
         auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-        cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
         cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, roi));
         pipeline  = cv::GComputation(cv::GIn(in), cv::GOut(out))
