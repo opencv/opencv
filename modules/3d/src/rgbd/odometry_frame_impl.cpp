@@ -144,8 +144,8 @@ template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
 
-    Mat depth_tmp, depth_flt;
-    depth_tmp = getTMat<Mat>(_depth);
+    TMat depth_tmp, depth_flt;
+    depth_tmp = getTMat<TMat>(_depth);
     // Odometry works with depth values in range [0, 10)
     // if the max depth value more than 10, it needs to devide by 5000
     double max;
@@ -153,10 +153,10 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
     if (max > 10)
     {
         depth_tmp.convertTo(depth_flt, CV_32FC1, 1.f / 5000.f);
-        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth_flt < FLT_EPSILON);
+        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), getTMat<Mat>(depth_flt) < FLT_EPSILON);
         depth_tmp = depth_flt;
     }
-    this->depth = getTMat<TMat>(depth_tmp);
+    this->depth = depth_tmp;
     this->findMask(_depth);
 }
 
