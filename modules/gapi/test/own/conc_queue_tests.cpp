@@ -6,6 +6,7 @@
 
 #include "../test_precomp.hpp"
 
+#include <future>
 #include <unordered_set>
 #include <thread>
 
@@ -55,6 +56,75 @@ TEST(ConcQueue, Clear)
     EXPECT_FALSE(q.try_pop(x));
 }
 
+TEST(ConcQueue, TryPush)
+{
+    own::concurrent_bounded_queue<int> q;
+    static const size_t capacity = 10;
+    q.set_capacity(capacity);
+    for (int i = 0; i < capacity; i++) {
+        EXPECT_TRUE(q.try_push(i));
+    }
+
+    for (int i = 0; i < capacity; i++) {
+        EXPECT_FALSE(q.try_push(i));
+    }
+
+    int x = 0;
+    EXPECT_TRUE(q.try_pop(x));
+    EXPECT_TRUE(q.try_push(x));
+    EXPECT_FALSE(q.try_push(x));
+}
+
+TEST(ConcQueue, Ordering)
+{
+    own::concurrent_bounded_queue<int> q;
+
+    static const size_t capacity = 100;
+    static const size_t load_factor = 3000;
+    q.set_capacity(capacity);
+
+    // fill queue up its capacity
+    for (int i = 0; i < capacity; i++) {
+        q.push(i);
+    }
+    int x = 0;
+    EXPECT_FALSE(q.try_push(x));
+
+    std::vector<std::thread> pushers;
+    pushers.reserve(capacity + load_factor);
+
+    // create capacity * load_factor threads which hold on push
+    for (int i = capacity; i < (capacity + load_factor); i ++) {
+        std::promise<void> barrier;
+        std::shared_future<void> sync = barrier.get_future();
+        pushers.emplace_back([&, i, sync] () {
+            barrier.set_value();
+            q.push(i);
+        });
+
+        sync.wait();
+    }
+
+    // now capacity * load_factor threads are waiting to put it's value
+    // let's release them
+    // last popped value MUST be greater than previous
+    int extracted_value = 0;
+    int prev_extracted_value = -1;
+    size_t extracted_count = 0;
+    while (extracted_count != (capacity + load_factor)) {
+        if (!q.try_pop(extracted_value)) {
+            continue;
+        }
+        EXPECT_TRUE(extracted_value > prev_extracted_value);
+        prev_extracted_value = extracted_value;
+        extracted_count++;
+    }
+
+    for (auto &p : pushers) {
+        p.join();
+    }
+    EXPECT_EQ(extracted_count, (capacity + load_factor));
+}
 // In this test, every writer thread produces its own range of integer
 // numbers, writing those to a shared queue.
 //
@@ -190,8 +260,8 @@ TEST_P(ConcQueue_, Test)
 }
 
 INSTANTIATE_TEST_CASE_P(ConcQueueStress, ConcQueue_,
-                        Combine(  Values(1, 2, 4, 8, 16)     // writers
+                        Combine(  Values(1, 2, 4, 5, 8, 11, 16, 19)     // writers
                                 , Values(1, 32, 96, 256)     // writes
-                                , Values(1, 2, 10)           // readers
-                                , Values(0u, 16u, 32u)));    // capacity
+                                , Values(1, 2, 10, 17)           // readers
+                                , Values(0u, 19u, 32u, 999u, 47u)));    // capacity
 } // namespace opencv_test
