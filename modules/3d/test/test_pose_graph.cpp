@@ -387,5 +387,44 @@ TEST(PoseGraph, simple)
 }
 
 
+TEST(LevMarq, Rosenbrock)
+{
+    auto f = [](double x, double y) -> double
+    {
+        return (1.0 - x) * (1.0 - x) + 100.0 * (y - x * x) * (y - x * x);
+    };
+
+    auto j = [](double x, double y) -> Matx12d
+    {
+        return {/*dx*/ -2.0 + 2.0 * x - 400.0 * x * y + 400.0 * x*x*x,
+                /*dy*/ 200.0 * y - 200.0 * x*x,
+                };
+    };
+
+    LevMarqDenseLinear solver(2, [f, j](InputOutputArray param, OutputArray err, OutputArray jv) -> bool
+    {
+            Vec2d v = param.getMat();
+            double x = v[0], y = v[1];
+            err.create(1, 1, CV_64F);
+            err.getMat().at<double>(0) = f(x, y);
+            if (jv.needed())
+            {
+                jv.create(1, 2, CV_64F);
+                Mat(j(x, y)).copyTo(jv);
+            }
+            return true;
+    });
+
+    solver.geodesic = true;
+
+    Mat_<double> x (Vec2d(1, 3));
+
+    auto r = solver.run(x);
+
+    EXPECT_TRUE(r.found);
+    EXPECT_LT(r.energy, 0.035);
+    EXPECT_LE(r.iters, 23);
+}
+
 
 }} // namespace
