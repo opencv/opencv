@@ -686,6 +686,14 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 
 TEST_P(Test_ONNX_layers, LSTM_Activations)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE Exception: Ngraph operation Reshape with name Block1237_Output_0_before_reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+
     testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
 }
 
@@ -810,6 +818,13 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 
 TEST_P(Test_ONNX_layers, GatherMultiOutput)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE Exception: Ngraph operation Reshape with name 6 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
@@ -817,7 +832,7 @@ TEST_P(Test_ONNX_layers, GatherMultiOutput)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
 #endif
 
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2021030000)
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
 #endif
@@ -827,14 +842,25 @@ TEST_P(Test_ONNX_layers, GatherMultiOutput)
 
 TEST_P(Test_ONNX_layers, DynamicAxes)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     }
+#endif
+#endif
     testONNXModels("squeeze_and_conv_dynamic_axes");
     testONNXModels("unsqueeze_and_conv_dynamic_axes");
     testONNXModels("gather_dynamic_axes");
@@ -914,6 +940,13 @@ TEST_P(Test_ONNX_layers, PoolConv1d)
 
 TEST_P(Test_ONNX_layers, ConvResizePool1d)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE Exception: Ngraph operation Reshape with name 15 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
@@ -1116,8 +1149,12 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 #endif
 
     // output range: [-11; 8]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
+    double l1 =  default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.02;
+        lInf = 0.2;
+    }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -1202,10 +1239,10 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
         l1 = 2.4e-4;
         lInf = 6e-4;
     }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
-        l1 = 0.012f; lInf = 0.035f;
+        l1 = 0.013f; lInf = 0.035f;
     }
 #endif
 

@@ -164,8 +164,12 @@ TEST_P(Test_Torch_layers, run_concat)
 
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
-    runTorchNet("net_depth_concat", "", false, true, true, 0.0,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.032 : 0.0);
+    double lInf = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        lInf = 0.032;
+    }
+    runTorchNet("net_depth_concat", "", false, true, true, 0.0, lInf);
 }
 
 TEST_P(Test_Torch_layers, run_deconv)
