@@ -623,9 +623,9 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
     }
 
 
-    virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) CV_OVERRIDE
+    virtual bool calcFunc(double& energy, bool calcEnergy = true, bool calcJacobian = false) CV_OVERRIDE
     {
-        std::map<size_t, PoseGraphImpl::Node>& nodes = useProbeVars ? tempNodes : pg->nodes;
+        std::map<size_t, PoseGraphImpl::Node>& nodes = tempNodes;
 
         std::vector<cv::Matx<double, 7, 6>> cachedJac;
         if (calcJacobian)

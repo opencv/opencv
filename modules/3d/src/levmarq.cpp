@@ -349,10 +349,11 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         return BaseLevMarq::Report(false, 0, 0); // not found
     }
 
+    // this function sets probe vars to current X
     pBackend->prepareVars();
 
     double energy = 0.0;
-    if (!pBackend->calcFunc(energy, /*useProbeVars*/ false, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
+    if (!pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
         return BaseLevMarq::Report(false, 0, 0); // not found
@@ -500,7 +501,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 // calc energy with current delta x
                 pBackend->currentOplusX(x, /*geo*/ false);
 
-                bool success = pBackend->calcFunc(energy, /*useProbeVars*/ true, /*calcEnergy*/ true, /*calcJacobian*/ false);
+                bool success = pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ false);
                 if (!success || energy < 0 || isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
@@ -572,7 +573,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         if (!done)
         {
             double dummy;
-            if (!pBackend->calcFunc(dummy, /*useProbeVars*/ false, /*calcEnergy*/ false, /*calcJacobian*/ true))
+            if (!pBackend->calcFunc(dummy, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
                 return BaseLevMarq::Report(false, iter, oldEnergy); // not found
@@ -800,38 +801,32 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         }
     }
 
-    virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) CV_OVERRIDE
+    virtual bool calcFunc(double& energy, bool calcEnergy = true, bool calcJacobian = false) CV_OVERRIDE
     {
-        Mat_<double> xd = useProbeVars ? probeX : currentX;
+        Mat_<double> xd = probeX;
 
         double sd = 0.0;
-        // TODO: remove jlongp
-        Mat jtbp, jtjp, jLongp;
         if (calcJacobian)
         {
-            jtbp = (!mask.empty()) ? jtbFull : jtb;
-            jtjp = (!mask.empty()) ? jtjFull : jtj;
-
-            jtbp.setZero();
-            jtjp.setZero();
+            jtbFull.setZero();
+            jtjFull.setZero();
 
             if (!cb_alt)
             {
                 jLong.setZero();
-                jLongp = jLong;
             }
         }
 
         if (cb_alt)
         {
-            bool r = calcJacobian ? cb_alt(xd, jtbp, jtjp, sd) : cb_alt(xd, noArray(), noArray(), sd);
+            bool r = calcJacobian ? cb_alt(xd, jtbFull, jtjFull, sd) : cb_alt(xd, noArray(), noArray(), sd);
             if (!r)
                 return false;
         }
         else
         {
             bLong.setZero();
-            bool r = calcJacobian ? cb(xd, bLong, jLongp) : cb(xd, bLong, noArray());
+            bool r = calcJacobian ? cb(xd, bLong, jLong) : cb(xd, bLong, noArray());
             if (!r)
                 return false;
         }
@@ -840,12 +835,12 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         {
             if (cb_alt)
             {
-                completeSymm(jtjp, LtoR);
+                completeSymm(jtjFull, LtoR);
             }
             else
             {
-                mulTransposed(jLongp, jtjp, true);
-                gemm(jLongp, bLong, 1, noArray(), 0, jtbp, GEMM_1_T);
+                mulTransposed(jLong, jtjFull, true);
+                gemm(jLong, bLong, 1, noArray(), 0, jtbFull, GEMM_1_T);
             }
         }
 
@@ -865,6 +860,11 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         {
             subMatrix(jtjFull, jtj, mask);
             subMatrix(jtbFull, jtb, mask);
+        }
+        else
+        {
+            jtj = jtjFull;
+            jtb = jtbFull;
         }
 
         return true;

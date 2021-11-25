@@ -503,8 +503,8 @@ public:
         // enables geodesic acceleration support in a backend, returns true on success
         virtual bool enableGeo() = 0;
 
-        // calculates an energy and/or jacobian at current param vector or at probe param vector
-        virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) = 0;
+        // calculates an energy and/or jacobian at probe param vector
+        virtual bool calcFunc(double& energy, bool calcEnergy = true, bool calcJacobian = false) = 0;
 
         // adds x to current variables and writes the sum to probe var
         // or to geodesic acceleration var if geo flag is set
