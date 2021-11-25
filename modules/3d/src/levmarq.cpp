@@ -337,6 +337,23 @@ static double calcJacCostChangeLm(const cv::Mat_<double>& jtb, const cv::Mat_<do
 {
     return -0.5 * cv::sum(x.mul(jtb - lmDiag.mul(x)))[0];
 }
+
+
+// calculates J^T*rvv where rvv is second directional derivative of the function in direction v
+// rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
+// where v is a LevMarq equation solution
+// J^T*rvv = J^T*((f(x0 + v*h) - f(x0))/h - J*v)/h =
+// J^T*(f(x0 + v*h) - f(x0) - J*v*h)/h^2 =
+// (J^T*f(x0 + v*h) - J^T*f(x0) - J^T*J*v*h)/h^2 =
+// < using (J^T*J + lmdiag) * v = J^T*b, also f(x0 + v*h) = b_v, f(x0) = b >
+// (J^T*b_v - J^T*b - (J^T*J + lmdiag - lmdiag)*v*h)/h^2 =
+// (J^T*b_v - J^T*b + J^t*b*h + lmdiag*v*h)/h^2 =
+// (J^T*b_v - J^t*b*(1 - h) + lmdiag*v*h)/h^2
+static void calcJtrvv(const Mat_<double>& jtbv, const Mat_<double>& jtb, const Mat_<double>& lmdiag,
+                      const Mat_<double>& v, const double hGeo,
+                      Mat_<double>& jtrvv)
+{
+    jtrvv = (jtbv + jtb * (hGeo - 1.0) + lmdiag.mul(v, hGeo)) / (hGeo * hGeo);
 }
 
 
@@ -478,19 +495,23 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 {
                     pBackend->currentOplusX(x * hGeo, /*geo*/ true);
 
-                    if (pBackend->calcJtrvv(x, lmDiag, hGeo))
+                    Mat_<double> jtbv(jtb.rows, 1);
+                    if (pBackend->calcJtbv(jtbv))
                     {
+                        Mat_<double> jtrvv(jtb.rows, 1);
+                        calcJtrvv(jtbv, jtb, lmDiag, x, hGeo, jtrvv);
+
                         Mat_<double> xgeo((int)jtb.rows, 1);
-                        bool geoSolved = pBackend->solveDecomposedGeo(xgeo);
+                        bool geoSolved = pBackend->solveDecomposed(jtrvv, xgeo);
 
                         if (geoSolved)
                         {
-
-                            //TODO: drop a step if truncerr >= 1 or smaller
                             double truncerr = sqrt(xgeo.dot(xgeo) / x.dot(x));
-                            CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr);
-                            //TODO: or not 0.5?
-                            x += xgeo * 0.5;
+                            bool geoIsGood = (truncerr < 1.0);
+                            if (geoIsGood)
+                                x += xgeo * geoScale;
+
+                            CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr << (geoIsGood ? ", use it" : ", skip it") );
                         }
                         else
                         {
@@ -718,9 +739,6 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
 
     virtual void prepareVars() CV_OVERRIDE
     {
-        jtj = Mat_<double>((int)nVars, (int)nVars);
-        jtb = Mat_<double>((int)nVars, 1);
-
         probeX = currentX.clone();
         delta = Mat_<double>((int)allVars, 1);
 
@@ -729,6 +747,15 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         {
             jtjFull = Mat_<double>((int)allVars, (int)allVars);
             jtbFull = Mat_<double>((int)allVars, 1);
+            jtj = Mat_<double>((int)nVars, (int)nVars);
+            jtb = Mat_<double>((int)nVars, 1);
+        }
+        else
+        {
+            jtj = Mat_<double>((int)nVars, (int)nVars);
+            jtb = Mat_<double>((int)nVars, 1);
+            jtjFull = jtj;
+            jtbFull = jtb;
         }
 
         if (nerrs)
@@ -918,15 +945,8 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         return cv::solve(jtj, -right, x, solveMethod);
     }
 
-    // calculates J^T*rvv
-    // J^T*rvv = J^T*((f(x0 + v*h) - f(x0))/h - J*v)/h =
-    // J^T*(f(x0 + v*h) - f(x0) - J*v*h)/h^2 =
-    // (J^T*f(x0 + v*h) - J^T*f(x0) - J^T*J*v*h)/h^2 =
-    // < using (J^T*J + lmdiag) * v = J^T*b, also f(x0 + v*h) = b_v, f(x0) = b >
-    // (J^T*b_v - J^T*b - (J^T*J + lmdiag - lmdiag)*v*h)/h^2 =
-    // (J^T*b_v - J^T*b + J^t*b*h + lmdiag*v*h)/h^2 =
-    // (J^T*b_v - J^t*b*(1 - h) + lmdiag*v*h)/h^2
-    virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) CV_OVERRIDE
+    // calculates J^T*f(geo)
+    virtual bool calcJtbv(Mat_<double>& jtbv) CV_OVERRIDE
     {
         if (cb_alt)
         {
@@ -939,19 +959,18 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
             if (!r)
                 return false;
 
-            Mat_<double> jLong_t = jLong.t();
-            Mat_<double> jLongFiltered_t(jLong.rows, (int)nVars);
+            Mat_<double> jLongFiltered(jLong.rows, (int)nVars);
             int ctr = 0;
             for (int i = 0; i < allVars; i++)
             {
-                if (mask(i))
+                if (mask.empty() || mask(i))
                 {
-                    jLong_t.row(i).copyTo(jLongFiltered_t.row(ctr));
+                    jLong.col(i).copyTo(jLongFiltered.col(ctr));
                     ctr++;
                 }
             }
 
-            jtrvv = (jLongFiltered_t * b_v - jtb * (1.0 - hGeo) + lmdiag.mul(v) * hGeo) / (hGeo * hGeo);
+            jtbv = jLongFiltered.t() * b_v;
             return true;
         }
     }

@@ -638,6 +638,9 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
             {
                 cachedJac.push_back(nodes.at(id).pose.expJacobian());
             }
+
+            if (useGeo)
+                jtCached.clear();
         }
 
         double totalErr = 0.0;
@@ -671,7 +674,7 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 
                     jtj.refBlock(srcPlace, srcPlace) += sj.t() * sj;
 
-                    Vec6f jtbSrc = sj.t() * res;
+                    Vec6d jtbSrc = sj.t() * res;
                     for (size_t i = 0; i < 6; i++)
                     {
                         jtb(6 * (int)srcPlace + (int)i) += jtbSrc[i];
@@ -685,7 +688,7 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 
                     jtj.refBlock(dstPlace, dstPlace) += tj.t() * tj;
 
-                    Vec6f jtbDst = tj.t() * res;
+                    Vec6d jtbDst = tj.t() * res;
                     for (size_t i = 0; i < 6; i++)
                     {
                         jtb(6 * (int)dstPlace + (int)i) += jtbDst[i];
@@ -713,7 +716,6 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 
         return true;
     }
-
 
     virtual bool enableGeo() CV_OVERRIDE
     {
@@ -764,19 +766,10 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
         return jtj.solveDecomposed(decomposition, -right, x);
     }
 
-    // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
-    // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
-    // where v is a LevMarq equation solution
-    // J^T*rvv = J^T*((f(x0 + v*h) - f(x0))/h - J*v)/h =
-    // J^T*(f(x0 + v*h) - f(x0) - J*v*h)/h^2 =
-    // (J^T*f(x0 + v*h) - J^T*f(x0) - J^T*J*v*h)/h^2 =
-    // < using (J^T*J + lmdiag) * v = J^T*b, also f(x0 + v*h) = b_v, f(x0) = b >
-    // (J^T*b_v - J^T*b - (J^T*J + lmdiag - lmdiag)*v*h)/h^2 =
-    // (J^T*b_v - J^T*b + J^t*b*h + lmdiag*v*h)/h^2 =
-    // (J^T*b_v - J^t*b*(1 - h) + lmdiag*v*h)/h^2
-    virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) CV_OVERRIDE
+    // calculates J^T*f(geo)
+    virtual bool calcJtbv(Mat_<double>& jtbv) CV_OVERRIDE
     {
-        Mat_<double> jtbv((int)nVars, 1);
+        jtbv.setZero();
 
         int ei = 0;
         for (const auto& e : pg->edges)
@@ -805,7 +798,7 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
             {
                 srcPlace = idToPlace.at(srcId);
 
-                Vec6f jtbSrc = sj.t() * res;
+                Vec6d jtbSrc = sj.t() * res;
                 for (size_t i = 0; i < 6; i++)
                 {
                     jtbv(int(6 * srcPlace + i)) += jtbSrc[i];
@@ -816,7 +809,7 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
             {
                 dstPlace = idToPlace.at(dstId);
 
-                Vec6f jtbDst = tj.t() * res;
+                Vec6d jtbDst = tj.t() * res;
                 for (size_t i = 0; i < 6; i++)
                 {
                     jtbv(int(6 * dstPlace + i)) += jtbDst[i];
@@ -826,10 +819,8 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
             ei++;
         }
 
-        jtrvv = (jtbv - jtb * (1.0 - hGeo) + lmdiag.mul(v) * hGeo) / (hGeo * hGeo);
         return true;
     }
-
 
     virtual const Mat_<double> getDiag() CV_OVERRIDE
     {

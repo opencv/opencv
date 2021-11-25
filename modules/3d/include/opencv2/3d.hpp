@@ -527,11 +527,12 @@ public:
         // right can be equal to J^T*b for LevMarq equation or J^T*rvv for geodesic acceleration equation
         virtual bool solveDecomposed(const Mat_<double>& right, Mat_<double>& x) = 0;
 
+        // calculates J^T*f(geo) where geo is geodesic acceleration variable
+        // this is used for J^T*rvv calculation for geodesic acceleration
         // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
         // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
         // where v is a LevMarq equation solution
-        virtual bool calcJtrvv(const Mat_<double>& v, const Mat_<double>& lmdiag, double hGeo) = 0;
-
+        virtual bool calcJtbv(Mat_<double>& jtbv) = 0;
 
         // sets current params vector to probe params
         virtual void acceptProbe() = 0;
@@ -558,6 +559,8 @@ public:
     bool geodesic;
     // second directional derivative approximation step for geodesic acceleration
     double hGeo;
+    // how much of geodesic acceleration is used
+    double geoScale;
     // optimization stops when norm2(dx) drops below this value
     double stepNormTolerance;
     // optimization stops when relative energy change drops below this value
@@ -587,6 +590,7 @@ public:
         checkStepNorm(true),
         geodesic(false),
         hGeo(1e-4),
+        geoScale(0.5),
         stepNormTolerance(1e-6),
         relEnergyDeltaTolerance(1e-6),
         minGradientTolerance(1e-6),
