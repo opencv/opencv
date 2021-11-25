@@ -475,7 +475,7 @@ This class does not support fixed/masked variables, this should also be implemen
 A Levenberg-Marquadt algorithm locally minimizes an objective function value (aka energy, cost or error) starting from
 current param vector.
 To do that, at each iteration it repeatedly calculates the energy at probe points until it's reduced.
-To calculate a probe point, a linear equation is solved: (J^T*J + lambda*D)*dx = J^T*b where J is a function jacobian,
+To calculate a probe point, a linear equation is solved: (J^T*J + lambda*D)*dx = -J^T*b where J is a function jacobian,
 b is a vector of residuals (aka errors or energy terms), D is a diagonal matrix generated from J^T*J diagonal
 and lambda changes for each probe point. Then the resulting dx is "added" to current variable and it forms
 a probe value. "Added" is quoted because in some groups (e.g. SO(3) group) such an increment can be a non-trivial operation.
@@ -510,7 +510,7 @@ public:
         // or to geodesic acceleration var if geo flag is set
         virtual void currentOplusX(const Mat_<double>& x, bool geo = false) = 0;
 
-        // allocates jtj, jtb, probeX and other resources for objective function calculation
+        // allocates jtj, jtb and other resources for objective function calculation, sets probeX to current X
         virtual void prepareVars() = 0;
         // returns a J^T*b vector (aka gradient)
         virtual const Mat_<double> getJtb() = 0;
@@ -521,18 +521,12 @@ public:
         // performs jacobi scaling if the option is turned on
         virtual void doJacobiScaling(const Mat_<double>& di) = 0;
 
-        //TODO: remove it
-        // solves LevMarq equation for current iteration
-        //virtual bool solve(Mat_<double>& x) = 0;
-
-        //TODO: this
         // decomposes LevMarq matrix before solution
         virtual bool decompose() = 0;
-        // solves LevMarq equation (J^T*J + lmdiag) * x = J^T*b for current iteration using existing decomposition
-        virtual bool solveDecomposed(Mat_<double>& x) = 0;
+        // solves LevMarq equation (J^T*J + lmdiag) * x = -right for current iteration using existing decomposition
+        // right can be equal to J^T*b for LevMarq equation or J^T*rvv for geodesic acceleration equation
+        virtual bool solveDecomposed(const Mat_<double>& right, Mat_<double>& x) = 0;
 
-        // solves LevMarq geodesic acceleration equation (J^T*J + lmdiag) * xgeo = J^T*rvv using existing decomposition
-        virtual bool solveDecomposedGeo(Mat_<double>& xgeo) = 0;
         // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
         // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
         // where v is a LevMarq equation solution

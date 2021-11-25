@@ -322,17 +322,21 @@ int LMSolver::runAlt(InputOutputArray param, InputArray mask,
 // eq. energy = 1/2 * (residuals + J * step)^2 =
 // 1/2 * ( residuals^2 + 2 * residuals^T * J * step + (J*step)^T * J * step)
 // eq. energy change = 1/2 * residuals^2 - eq. energy =
-// residuals^T * J * step + 1/2 * (J*step)^T * J * step =
-// (residuals^T * J + 1/2 * step^T * J^T * J) * step =
-// step^T * ((residuals^T * J)^T + 1/2 * (step^T * J^T * J)^T) =
-// 1/2 * step^T * (2 * J^T * residuals + J^T * J * step) =
-// 1/2 * step^T * (2 * J^T * residuals + (J^T * J + LMDiag - LMDiag) * step) =
-// 1/2 * step^T * (2 * J^T * residuals + (J^T * J + LMDiag) * step - LMDiag * step) =
-// 1/2 * step^T * (J^T * residuals - LMDiag * step) =
-// 1/2 * x^T * (jtb - lmDiag^T * x)
+// 1/2 * residuals^2 - 1/2 * ( residuals^2 + 2 * residuals^T * J * step + (J*step)^T * J * step) =
+// 1/2 * ( residuals^2 - residuals^2 - 2 * residuals^T * J * step - (J*step)^T * J * step) =
+// - 1/2 * ( 2 * residuals^T * J * step + (J*step)^T * J * step) =
+// - 1/2 * ( 2 * residuals^T * J + (J*step)^T * J ) * step =
+// - 1/2 * ( 2 * residuals^T * J + step^T * J^T * J ) * step =
+// - 1/2 * step^T * ( 2 * J^t * residuals + J^T * J * step ) =
+// - 1/2 * step^T * ( 2 * J^t * residuals + (J^T * J + LMDiag - LMDiag) * step ) =
+// - 1/2 * step^T * ( 2 * J^t * residuals + (J^T * J + LMDiag) * step - LMDiag * step ) =
+// - 1/2 * step^T * ( 2 * J^t * residuals - J^T * residuals - LMDiag * step ) =
+// - 1/2 * step^T * ( J^t * residuals - LMDiag * step ) =
+// - 1/2 * x^T * ( jtb - LMDiag * x )
 static double calcJacCostChangeLm(const cv::Mat_<double>& jtb, const cv::Mat_<double>& x, const cv::Mat_<double>& lmDiag)
 {
-    return cv::sum(x.mul(jtb - lmDiag.mul(x)))[0] * 0.5;
+    return -0.5 * cv::sum(x.mul(jtb - lmDiag.mul(x)))[0];
+}
 }
 
 
@@ -438,7 +442,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
             CV_LOG_INFO(NULL, "linear solve...");
             // use double or convert everything to float
             Mat_<double> x((int)jtb.rows, 1);
-            bool solved = pBackend->solveDecomposed(x);
+            bool solved = decomposed && pBackend->solveDecomposed(jtb, x);
 
             //DEBUG
             //if (ctr == 1003)
@@ -494,9 +498,6 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                         }
                     }
                 }
-
-                // remember, we move against the gradient direction
-                x = -x;
 
                 // calc energy with current delta x
                 pBackend->currentOplusX(x, /*geo*/ false);
@@ -912,14 +913,9 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         return true;
     }
 
-    virtual bool solveDecomposed(Mat_<double>& x) CV_OVERRIDE
+    virtual bool solveDecomposed(const Mat_<double>& right, Mat_<double>& x) CV_OVERRIDE
     {
-        return cv::solve(jtj, jtb, x, solveMethod);
-    }
-
-    virtual bool solveDecomposedGeo(Mat_<double>& xgeo) CV_OVERRIDE
-    {
-        return cv::solve(jtj, jtrvv, xgeo, solveMethod);
+        return cv::solve(jtj, -right, x, solveMethod);
     }
 
     // calculates J^T*rvv

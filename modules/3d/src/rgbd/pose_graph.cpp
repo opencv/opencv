@@ -757,16 +757,11 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
         return jtj.decompose(decomposition, false);
     }
 
-    // solves LevMarq equation (J^T*J + lmdiag) * x = J^T*b for current iteration using existing decomposition
-    virtual bool solveDecomposed(Mat_<double>& x) CV_OVERRIDE
+    // solves LevMarq equation (J^T*J + lmdiag) * x = -right for current iteration using existing decomposition
+    // right can be equal to J^T*b for LevMarq equation or J^T*rvv for geodesic acceleration equation
+    virtual bool solveDecomposed(const Mat_<double>& right, Mat_<double>& x) CV_OVERRIDE
     {
-        return jtj.solveDecomposed(decomposition, jtb, x);
-    }
-
-    // solves LevMarq geodesic acceleration equation (J^T*J + lmdiag) * xgeo = J^T*rvv using existing decomposition
-    virtual bool solveDecomposedGeo(Mat_<double>& xgeo) CV_OVERRIDE
-    {
-        return jtj.solveDecomposed(decomposition, jtrvv, xgeo);
+        return jtj.solveDecomposed(decomposition, -right, x);
     }
 
     // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
