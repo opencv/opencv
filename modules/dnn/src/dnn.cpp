@@ -45,6 +45,7 @@
 #include "ie_ngraph.hpp"
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
+#include "op_webnn.hpp"
 
 #ifdef HAVE_CUDA
 #include "cuda4dnn/init.hpp"
@@ -223,6 +224,13 @@ private:
         }
 #endif
 #endif // HAVE_INF_ENGINE
+
+#ifdef HAVE_WEBNN
+        if (haveWebnn())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_WEBNN, DNN_TARGET_CPU));
+        }
+#endif // HAVE_WEBNN
 
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL())
@@ -1116,6 +1124,14 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
 #endif
     }
+    else if (backendId == DNN_BACKEND_WEBNN)
+    {
+#ifdef HAVE_WEBNN
+        return Ptr<BackendWrapper>(new WebnnBackendWrapper(targetId, m));
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of WebNN");
+#endif
+    }
     else if (backendId == DNN_BACKEND_VKCOM)
     {
         CV_Assert(haveVulkan());
@@ -1259,6 +1275,12 @@ struct Net::Impl : public detail::NetImplBase
             {
                 return wrapMat(preferableBackend, preferableTarget, host);
             }
+            else if (preferableBackend == DNN_BACKEND_WEBNN)
+            {
+#ifdef HAVE_WEBNN
+                return wrapMat(preferableBackend, preferableTarget, host);
+#endif
+            }
             else if (preferableBackend == DNN_BACKEND_VKCOM)
             {
   #ifdef HAVE_VULKAN
@@ -1398,6 +1420,13 @@ struct Net::Impl : public detail::NetImplBase
                   preferableTarget == DNN_TARGET_HDDL ||
                   preferableTarget == DNN_TARGET_FPGA
             );
+        }
+#endif
+#ifdef HAVE_WEBNN
+        if (preferableBackend == DNN_BACKEND_WEBNN)
+        {
+            CV_Assert(preferableTarget == DNN_TARGET_CPU ||
+                      preferableTarget == DNN_TARGET_OPENCL);
         }
 #endif
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
@@ -1622,6 +1651,14 @@ struct Net::Impl : public detail::NetImplBase
             initNgraphBackend(blobsToKeep_);
 #else
             CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
+#endif
+        }
+        else if (preferableBackend == DNN_BACKEND_WEBNN)
+        {
+#ifdef HAVE_WEBNN
+            initWebnnBackend(blobsToKeep_);
+#else
+            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of WebNN");
 #endif
         }
         else if (preferableBackend == DNN_BACKEND_VKCOM)
@@ -2340,6 +2377,270 @@ struct Net::Impl : public detail::NetImplBase
         }
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    void addWebnnOutputs(LayerData &ld)
+    {
+        CV_TRACE_FUNCTION();
+
+        Ptr<WebnnNet> layerNet;
+        auto it = ld.backendNodes.find(preferableBackend);
+        if (it != ld.backendNodes.end())
+        {
+            Ptr<BackendNode> node = it->second;
+            if (!node.empty())
+            {
+                Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+                CV_Assert(!webnnNode.empty()); CV_Assert(!webnnNode->net.empty());
+                layerNet = webnnNode->net;
+            }
+        }
+
+        for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+        {
+            LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+            Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+            if (!inpNode.empty())
+            {
+                Ptr<WebnnBackendNode> webnnInpNode = inpNode.dynamicCast<WebnnBackendNode>();
+                CV_Assert(!webnnInpNode.empty()); CV_Assert(!webnnInpNode->net.empty());
+                if (layerNet != webnnInpNode->net)
+                {
+                    webnnInpNode->net->addOutput(webnnInpNode->name);
+                    webnnInpNode->net->setUnconnectedNodes(webnnInpNode);
+                }
+            }
+        }
+    }
+
+    void initWebnnBackend(const std::vector<LayerPin>& blobsToKeep_)
+    {
+        CV_TRACE_FUNCTION();
+        CV_Assert_N(preferableBackend == DNN_BACKEND_WEBNN, haveWebnn());
+
+        MapIdToLayerData::iterator it;
+        Ptr<WebnnNet> net;
+
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+            if (ld.id == 0)
+            {
+                CV_Assert((netInputLayer->outNames.empty() && ld.outputBlobsWrappers.size() == 1) ||
+                          (netInputLayer->outNames.size() == ld.outputBlobsWrappers.size()));
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                    std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+                    outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+                    wrapper->name = outputName;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                    std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+                    wrapper->name = outputName;
+                }
+            }
+        }
+
+        // Build WebNN networks from sets of layers that support this
+        // backend. Split a whole model on several WebNN networks if
+        // some of layers are not implemented.
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+
+            if (ld.id == 0 && ld.skip)
+                continue;
+
+            bool fused = ld.skip;
+            Ptr<Layer> layer = ld.layerInstance;
+            if (!fused && !layer->supportBackend(preferableBackend))
+            {
+                // For test use. when not using WebNN, the test case will fail
+                // with the following code.
+                CV_LOG_WARNING(NULL, "Layer " + ld.type + " name " + ld.name + " is unsupported by WebNN backend.");
+
+                addWebnnOutputs(ld);
+                net = Ptr<WebnnNet>();
+                layer->preferableTarget = DNN_TARGET_CPU;
+
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                    Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                    if (!inpNode.empty()) {
+                        Ptr<WebnnBackendNode> webnnNode = inpNode.dynamicCast<WebnnBackendNode>();
+                        CV_Assert(!webnnNode.empty());
+                        webnnNode->net->setUnconnectedNodes(webnnNode);
+                    }
+                }
+                continue;
+            }
+            ld.skip = true; // Initially skip all WebNN supported layers.
+
+            // Create a new network if one of inputs from different WebNN graph.
+            std::vector<Ptr<BackendNode>> inputNodes;
+            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+            {
+                // Layer_Test_ROIPooling.Accuracy has 2 inputs inpLD = 0, 0 -> has 4 inputNodes (input, rois, input, rois)
+                if (inputNodes.size() == ld.inputBlobsId.size()) {
+                    break;
+                }
+                LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                if (!inpNode.empty())
+                {
+                     Ptr<WebnnBackendNode> webnnInpNode = inpNode.dynamicCast<WebnnBackendNode>();
+                     CV_Assert(!webnnInpNode.empty()); CV_Assert(!webnnInpNode->net.empty());
+                     if (webnnInpNode->net == net && !fused) {
+                        inputNodes.push_back(inpNode);
+                        continue;
+                     }
+                }
+
+                if (net.empty()) {
+                    net = Ptr<WebnnNet>(new WebnnNet());
+                }
+
+                if (!fused) {
+                    std::vector<std::string> inputNames;
+                    std::vector<cv::Mat> inputs;
+
+                    auto curr_pos = inpLd.consumers.begin();
+                    auto compare = [&ld] (const LayerPin& lp) { return lp.lid == ld.id; };
+                    auto cons = curr_pos;
+                    while ((cons = std::find_if(curr_pos, inpLd.consumers.end(), compare)) !=
+                            inpLd.consumers.end()) {
+                        int cons_inp = cons->oid;
+                        Ptr<WebnnBackendWrapper> inpWrapper = inpLd.outputBlobsWrappers[cons_inp].
+                                                                     dynamicCast<WebnnBackendWrapper>();
+                        CV_Assert(!inpWrapper.empty());
+                        auto iter = std::find(inputNames.begin(), inputNames.end(),
+                                              inpWrapper->name);
+                        if (iter == inputNames.end()) {
+                            inputNames.push_back(inpWrapper->name);
+                            inputs.push_back(inpLd.outputBlobs[cons_inp]);
+                        }
+                        curr_pos = cons + 1;
+                    }
+
+                    auto inps = net->setInputs(inputs, inputNames);
+                    for (auto& inp : inps) {
+                        WebnnBackendNode* node = new WebnnBackendNode(inp);
+                        node->net = net;
+                        inputNodes.emplace_back(Ptr<BackendNode>(node));
+                    }
+                }
+            }
+
+            Ptr<BackendNode> node;
+            if (!net.empty())
+            {
+                if (fused)
+                {
+                    bool inPlace = ld.inputBlobsId.size() == 1 && ld.outputBlobs.size() == 1 &&
+                                   ld.inputBlobs[0]->data == ld.outputBlobs[0].data;
+                    CV_Assert(inPlace);
+                    node = layers[ld.inputBlobsId[0].lid].backendNodes[preferableBackend];
+                    ld.inputBlobsWrappers = layers[ld.inputBlobsId[0].lid].inputBlobsWrappers;
+                }
+            }
+            else {
+                net = Ptr<WebnnNet>(new WebnnNet());
+            }
+
+            if (!fused)
+            {
+                CV_Assert(ld.inputBlobsId.size() == inputNodes.size());
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    int lid = ld.inputBlobsId[i].lid;
+                    int oid = ld.inputBlobsId[i].oid;
+                    if (oid == 0 || lid == 0)
+                        continue;
+
+                    auto webnnInpNode = inputNodes[i].dynamicCast<WebnnBackendNode>();
+                    inputNodes[i] = Ptr<BackendNode>(new WebnnBackendNode(webnnInpNode->operand));
+                }
+
+                if (layer->supportBackend(preferableBackend))
+                {
+                    if (ld.type == "Const") {
+                        ml::Operand fake_operand;
+                        Ptr<WebnnBackendNode> fake_input_node = Ptr<WebnnBackendNode>(new WebnnBackendNode(fake_operand));
+                        fake_input_node->net = net;
+                        inputNodes.push_back(fake_input_node);
+                    }
+                    node = layer->initWebnn(ld.inputBlobsWrappers, inputNodes);
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                        node.dynamicCast<WebnnBackendNode>()->name = wrapper->name;
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            else if (node.empty())
+                continue;
+
+            ld.backendNodes[preferableBackend] = node;
+
+            Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+            CV_Assert(!webnnNode.empty());
+            webnnNode->net = net;
+
+            if (ld.consumers.empty()) {
+                // TF EAST_text_detection
+                webnnNode->net->setUnconnectedNodes(webnnNode);
+            }
+            for (const auto& pin : blobsToKeep_)
+            {
+                if (pin.lid == ld.id)
+                {
+                    webnnNode->net->addOutput(webnnNode->name);
+                    break;
+                }
+            }
+            net->addBlobs(ld.inputBlobsWrappers);
+            net->addBlobs(ld.outputBlobsWrappers);
+            addWebnnOutputs(ld);
+        }
+
+        // Initialize all networks.
+        for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
+        {
+            LayerData &ld = it->second;
+            auto iter = ld.backendNodes.find(preferableBackend);
+            if (iter == ld.backendNodes.end())
+                continue;
+
+            Ptr<BackendNode>& node = iter->second;
+            if (node.empty())
+                continue;
+
+            Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+            if (webnnNode.empty())
+                continue;
+
+            CV_Assert(!webnnNode->net.empty());
+
+            if (!webnnNode->net->isInitialized())
+            {
+                webnnNode->net->setUnconnectedNodes(webnnNode);
+                webnnNode->net->createNet((Target)preferableTarget);
+                ld.skip = false;
+            }
+        }
+    }
+#endif
 
     void initVkComBackend()
     {
@@ -3393,6 +3694,10 @@ struct Net::Impl : public detail::NetImplBase
                 else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
                 {
                     forwardNgraph(ld.outputBlobsWrappers, node, isAsync);
+                }
+                 else if (preferableBackend == DNN_BACKEND_WEBNN)
+                {
+                    forwardWebnn(ld.outputBlobsWrappers, node, isAsync);
                 }
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
@@ -4830,6 +5135,7 @@ string Net::Impl::dump()
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
         case DNN_BACKEND_VKCOM: backend = "VULKAN/"; break;
         case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
+        case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -5417,6 +5723,13 @@ Ptr<BackendNode> Layer::initInfEngine(const std::vector<Ptr<BackendWrapper> > &)
 Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendWrapper> > & inputs, const std::vector<Ptr<BackendNode> >& nodes)
 {
     CV_Error(Error::StsNotImplemented, "Inference Engine pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
+Ptr<BackendNode> Layer::initWebnn(const std::vector<Ptr<BackendWrapper> > & inputs, const std::vector<Ptr<BackendNode> >& nodes)
+{
+    CV_Error(Error::StsNotImplemented, "WebNN pipeline of " + type +
                                        " layers is not defined.");
     return Ptr<BackendNode>();
 }

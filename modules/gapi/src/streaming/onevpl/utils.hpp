@@ -17,6 +17,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
@@ -61,10 +62,15 @@ mfxResourceType cstr_to_mfx_resource_type(const char* cstr);
 
 mfxU32 cstr_to_mfx_codec_id(const char* cstr);
 
+const char* mfx_codec_id_to_cstr(mfxU32 mfx_id);
+
+const std::set<mfxU32> &get_supported_mfx_codec_ids();
+
 const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type);
 
 mfxU32 cstr_to_mfx_version(const char* cstr);
 
+std::string mfxstatus_to_string(int64_t err);
 std::string mfxstatus_to_string(mfxStatus err);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);

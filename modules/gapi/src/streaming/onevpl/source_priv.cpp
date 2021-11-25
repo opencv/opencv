@@ -12,6 +12,7 @@
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/source_priv.hpp"
 #include "logger.hpp"
@@ -43,7 +44,6 @@ enum {
     VPL_NEW_API_MAJOR_VERSION = 2,
     VPL_NEW_API_MINOR_VERSION = 2
 };
-
 
 GSource::Priv::Priv() :
     mfx_handle(MFXLoad()),
@@ -147,7 +147,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
         // An available VPL implementation with max matching count
         std::vector<CfgParam> impl_params = get_params_from_string<CfgParam>(ss.str());
         std::sort(impl_params.begin(), impl_params.end());
-        GAPI_LOG_DEBUG(nullptr, "Find implementation cfg params count" << impl_params.size());
+        GAPI_LOG_DEBUG(nullptr, "Find implementation cfg params count: " << impl_params.size());
 
         std::vector<CfgParam> matched_params;
         std::set_intersection(impl_params.begin(), impl_params.end(),
@@ -195,10 +195,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // initialize decoder
     // Find codec ID from config
-    auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID";
-    });
-    GAPI_Assert (dec_it != cfg_params.end() && "Cannot determine DecoderID from oneVPL config. Abort");
+    IDataProvider::mfx_codec_id_type decoder_id = provider->get_mfx_codec_id();
 
     // create session driving engine if required
     if (!engine) {
@@ -215,7 +212,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     }
 
     //create decoder for session accoring to header recovered from source file
-    DecoderParams decoder_param = create_decoder_from_file(*dec_it, provider);
+    DecoderParams decoder_param = create_decoder_from_file(decoder_id, provider);
 
     // create engine session for processing mfx session pipeline
     engine->initialize_session(mfx_session, std::move(decoder_param),
@@ -233,41 +230,42 @@ GSource::Priv::~Priv()
     MFXUnload(mfx_handle);
 }
 
-DecoderParams GSource::Priv::create_decoder_from_file(const CfgParam& decoder_cfg,
+DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
                                                       std::shared_ptr<IDataProvider> provider)
 {
     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
-    mfxBitstream bitstream{};
-    const int BITSTREAM_BUFFER_SIZE = 2000000;
-    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
-    if(!bitstream.Data) {
-        throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
-                                 std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
-    }
-
-    mfxVariant decoder = cfg_param_to_mfx_variant(decoder_cfg);
-    // according to oneVPL documentation references
-    // https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_struct.html
-    // mfxVariant is an `union` type and considered different meaning for different param ids
-    // So CodecId has U32 data type
-    bitstream.CodecId = decoder.Data.U32;
-
-    mfxStatus sts = ReadEncodedStream(bitstream, provider);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error reading bitstream, error: " +
-                                 mfxstatus_to_string(sts));
-    }
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
 
     // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = decoder.Data.U32;
+    mfxDecParams.mfx.CodecId = decoder_id;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error decoding header, error: " +
-                                 mfxstatus_to_string(sts));
+    mfxStatus sts = MFX_ERR_NONE;
+    bool can_fetch_data = false;
+    do {
+        can_fetch_data = provider->fetch_bitstream_data(bitstream);
+        if (!can_fetch_data) {
+            // must fetch data always because EOF critical at this point
+            GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get() <<
+                                      ". Unexpected EOF");
+            throw std::runtime_error("Error reading bitstream: EOF");
+        }
+
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
+        if(MFX_ERR_NONE != sts && MFX_ERR_MORE_DATA != sts) {
+            throw std::runtime_error("Error decoding header, error: " +
+                                     mfxstatus_to_string(sts));
+        }
+    } while (sts == MFX_ERR_MORE_DATA && !provider->empty());
+
+    if (MFX_ERR_NONE != sts) {
+        GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
+                                  << ". Make sure data source is valid and/or "
+                                  "\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
+                                  " has correct value in case of demultiplexed raw input");
+         throw std::runtime_error("Error decode header, error: " +
+                                  mfxstatus_to_string(sts));
     }
 
     // Input parameters finished, now initialize decode

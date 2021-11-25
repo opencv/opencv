@@ -91,6 +91,12 @@ ocv_cmake_hook(CMAKE_INIT)
 
 # must go before the project()/enable_language() commands
 ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
+if(NOT DEFINED CMAKE_BUILD_TYPE
+    AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE
+)
+  message(STATUS "'Release' build type is used by default. Use CMAKE_BUILD_TYPE to specify build type (Release or Debug)")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build")
+endif()
 if(DEFINED CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${CMAKE_CONFIGURATION_TYPES}")
 endif()
@@ -290,6 +296,9 @@ OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
 OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
   VISIBLE_IF TRUE
   VERIFY TARGET ngraph::ngraph)
+OCV_OPTION(WITH_WEBNN "Include WebNN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_WEBNN)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support (Jasper)" ON
   VISIBLE_IF NOT IOS
   VERIFY HAVE_JASPER)
@@ -610,10 +619,6 @@ endif()
 # ----------------------------------------------------------------------------
 # OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
-# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
-  set(CMAKE_BUILD_TYPE Release)
-endif()
 
 ocv_cmake_hook(POST_CMAKE_BUILD_OPTIONS)
 
@@ -789,6 +794,11 @@ endif()
 # --- VkCom ---
 if(WITH_VULKAN)
   include(cmake/OpenCVDetectVulkan.cmake)
+endif()
+
+# --- WebNN ---
+if(WITH_WEBNN)
+  include(cmake/OpenCVDetectWebNN.cmake)
 endif()
 
 # --- Inference Engine ---
@@ -1619,6 +1629,15 @@ if(WITH_VULKAN OR HAVE_VULKAN)
   if(HAVE_VULKAN)
     status("    Include path:"  VULKAN_INCLUDE_DIRS THEN "${VULKAN_INCLUDE_DIRS}" ELSE "NO")
     status("    Link libraries:" VULKAN_LIBRARIES THEN "${VULKAN_LIBRARIES}" ELSE "Dynamic load")
+  endif()
+endif()
+
+if(WITH_WEBNN OR HAVE_WEBNN)
+  status("")
+  status("  WebNN:"     HAVE_WEBNN THEN "YES" ELSE "NO")
+  if(HAVE_WEBNN AND NOT EMSCRIPTEN)
+    status("    Include path:"  WEBNN_HEADER_DIRS THEN "${WEBNN_HEADER_DIRS}" ELSE "NO")
+    status("    Link libraries:" WEBNN_LIBRARIES THEN "${WEBNN_LIBRARIES}" ELSE "NO")
   endif()
 endif()
 

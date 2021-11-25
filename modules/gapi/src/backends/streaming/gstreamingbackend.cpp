@@ -279,7 +279,7 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
             cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(bgr);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(bgr);
             break;
         }
         default:
@@ -327,7 +327,7 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             cv::Mat tmp_bgr(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
             cv::Mat yuv;
             cvtColor(tmp_bgr, yuv, cv::COLOR_BGR2YUV_I420);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(yuv.rowRange(0, desc.size.height));
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(yuv.rowRange(0, desc.size.height));
             break;
         }
         case cv::MediaFormat::NV12:
@@ -396,7 +396,7 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
                 yuv.rowRange(start + range_h, start + range_h * 2).reshape(0, dims)
             };
             cv::merge(uv_planes, uv);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(uv);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(uv);
             break;
         }
         case cv::MediaFormat::NV12:

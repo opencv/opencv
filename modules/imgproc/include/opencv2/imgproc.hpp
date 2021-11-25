@@ -744,54 +744,99 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YV12 = 133,
     COLOR_BGRA2YUV_YV12 = 134,
 
-    //! Demosaicing
-    COLOR_BayerBG2BGR = 46,
-    COLOR_BayerGB2BGR = 47,
-    COLOR_BayerRG2BGR = 48,
-    COLOR_BayerGR2BGR = 49,
+    //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
+    COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR = 47, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR = 48, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR = 49, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR,
-    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR,
-    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR,
-    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR,
+    COLOR_BayerRGGB2BGR = COLOR_BayerBG2BGR,
+    COLOR_BayerGRBG2BGR = COLOR_BayerGB2BGR,
+    COLOR_BayerBGGR2BGR = COLOR_BayerRG2BGR,
+    COLOR_BayerGBRG2BGR = COLOR_BayerGR2BGR,
 
-    COLOR_BayerBG2GRAY = 86,
-    COLOR_BayerGB2GRAY = 87,
-    COLOR_BayerRG2GRAY = 88,
-    COLOR_BayerGR2GRAY = 89,
+    COLOR_BayerRGGB2RGB = COLOR_BayerBGGR2BGR,
+    COLOR_BayerGRBG2RGB = COLOR_BayerGBRG2BGR,
+    COLOR_BayerBGGR2RGB = COLOR_BayerRGGB2BGR,
+    COLOR_BayerGBRG2RGB = COLOR_BayerGRBG2BGR,
+
+    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerBG2GRAY = 86, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2GRAY = 87, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2GRAY = 88, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2GRAY = 89, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerRGGB2GRAY = COLOR_BayerBG2GRAY,
+    COLOR_BayerGRBG2GRAY = COLOR_BayerGB2GRAY,
+    COLOR_BayerBGGR2GRAY = COLOR_BayerRG2GRAY,
+    COLOR_BayerGBRG2GRAY = COLOR_BayerGR2GRAY,
 
     //! Demosaicing using Variable Number of Gradients
-    COLOR_BayerBG2BGR_VNG = 62,
-    COLOR_BayerGB2BGR_VNG = 63,
-    COLOR_BayerRG2BGR_VNG = 64,
-    COLOR_BayerGR2BGR_VNG = 65,
+    COLOR_BayerBG2BGR_VNG = 62, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_VNG = 63, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_VNG = 64, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_VNG = 65, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG,
-    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG,
-    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG,
-    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerRGGB2BGR_VNG = COLOR_BayerBG2BGR_VNG,
+    COLOR_BayerGRBG2BGR_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerBGGR2BGR_VNG = COLOR_BayerRG2BGR_VNG,
+    COLOR_BayerGBRG2BGR_VNG = COLOR_BayerGR2BGR_VNG,
+
+    COLOR_BayerRGGB2RGB_VNG = COLOR_BayerBGGR2BGR_VNG,
+    COLOR_BayerGRBG2RGB_VNG = COLOR_BayerGBRG2BGR_VNG,
+    COLOR_BayerBGGR2RGB_VNG = COLOR_BayerRGGB2BGR_VNG,
+    COLOR_BayerGBRG2RGB_VNG = COLOR_BayerGRBG2BGR_VNG,
+
+    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG, //!< equivalent to GBRG Bayer pattern
 
     //! Edge-Aware Demosaicing
-    COLOR_BayerBG2BGR_EA  = 135,
-    COLOR_BayerGB2BGR_EA  = 136,
-    COLOR_BayerRG2BGR_EA  = 137,
-    COLOR_BayerGR2BGR_EA  = 138,
+    COLOR_BayerBG2BGR_EA  = 135, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_EA  = 136, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_EA  = 137, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_EA  = 138, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA,
-    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA,
-    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
-    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerRGGB2BGR_EA  = COLOR_BayerBG2BGR_EA,
+    COLOR_BayerGRBG2BGR_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerBGGR2BGR_EA  = COLOR_BayerRG2BGR_EA,
+    COLOR_BayerGBRG2BGR_EA  = COLOR_BayerGR2BGR_EA,
+
+    COLOR_BayerRGGB2RGB_EA  = COLOR_BayerBGGR2BGR_EA,
+    COLOR_BayerGRBG2RGB_EA  = COLOR_BayerGBRG2BGR_EA,
+    COLOR_BayerBGGR2RGB_EA  = COLOR_BayerRGGB2BGR_EA,
+    COLOR_BayerGBRG2RGB_EA  = COLOR_BayerGRBG2BGR_EA,
+
+    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA, //!< equivalent to GBRG Bayer pattern
 
     //! Demosaicing with alpha channel
-    COLOR_BayerBG2BGRA = 139,
-    COLOR_BayerGB2BGRA = 140,
-    COLOR_BayerRG2BGRA = 141,
-    COLOR_BayerGR2BGRA = 142,
+    COLOR_BayerBG2BGRA = 139, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGRA = 140, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGRA = 141, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGRA = 142, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
-    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
-    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
-    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+    COLOR_BayerRGGB2BGRA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGRBG2BGRA = COLOR_BayerGB2BGRA,
+    COLOR_BayerBGGR2BGRA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGBRG2BGRA = COLOR_BayerGR2BGRA,
+
+    COLOR_BayerRGGB2RGBA = COLOR_BayerBGGR2BGRA,
+    COLOR_BayerGRBG2RGBA = COLOR_BayerGBRG2BGRA,
+    COLOR_BayerBGGR2RGBA = COLOR_BayerRGGB2BGRA,
+    COLOR_BayerGBRG2RGBA = COLOR_BayerGRBG2BGRA,
+
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
     COLOR_COLORCVT_MAX  = 143
 };
@@ -2112,12 +2157,12 @@ The function finds lines in a set of points using a modification of the Hough tr
 @param point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
-@param lines_max Max count of hough lines.
+@param lines_max Max count of Hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
-votes ( \f$>\texttt{threshold}\f$ )
-@param min_rho Minimum Distance value of the accumulator in pixels.
-@param max_rho Maximum Distance value of the accumulator in pixels.
-@param rho_step Distance resolution of the accumulator in pixels.
+votes ( \f$>\texttt{threshold}\f$ ).
+@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
+@param max_rho Maximum value for \f$\rho\f$ for the accumulator.
+@param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.

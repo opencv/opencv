@@ -13,23 +13,6 @@
 
 namespace opencv_test {
 
-namespace {
-void initTestDataPath() {
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath != nullptr) {
-            cvtest::addDataSearchPath(testDataPath);
-            initialized = true;
-        }
-    }
-#endif // WINRT
-}
-} // anonymous namespace
-
 TEST(GraphMeta, Trad_AccessInput) {
     cv::GMat in;
     cv::GMat out1 = cv::gapi::blur(in, cv::Size(3,3));
@@ -91,8 +74,6 @@ TEST(GraphMeta, Trad_AccessOutput) {
 }
 
 TEST(GraphMeta, Streaming_AccessInput) {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::blur(in, cv::Size(3,3));
     cv::GOpaque<int64_t> out2 = cv::gapi::streaming::seq_id(in);
@@ -118,8 +99,6 @@ TEST(GraphMeta, Streaming_AccessInput) {
 }
 
 TEST(GraphMeta, Streaming_AccessOutput) {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::blur(in, cv::Size(3,3));
     cv::GOpaque<int64_t> out2 = cv::gapi::streaming::seq_id(out1);
@@ -151,8 +130,6 @@ TEST(GraphMeta, Streaming_AccessOutput) {
 }
 
 TEST(GraphMeta, Streaming_AccessDesync) {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GOpaque<int64_t> out1 = cv::gapi::streaming::seq_id(in);
     cv::GOpaque<int64_t> out2 = cv::gapi::streaming::timestamp(in);
