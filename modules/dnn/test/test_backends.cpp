@@ -209,8 +209,16 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
 #if defined(INF_ENGINE_RELEASE)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) &&
         target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE exception: Ngraph operation Transpose with name conv15_2_mbox_conf_perm has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
     float diffScores  = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.029 : 0.0;
@@ -280,12 +288,23 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
                  CV_TEST_TAG_DEBUG_VERYLONG);
     if (backend == DNN_BACKEND_HALIDE && target == DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);  // TODO HALIDE_CPU
-    double scoreThreshold = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.0325 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.032 : 0.0;
+
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
+
+    float scoreDiff = 0.0, iouDiff = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        scoreDiff = 0.04;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        scoreDiff = 0.0325;
+        iouDiff = 0.032;
+    }
+
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
-               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreThreshold, lInf);
+               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }
 
