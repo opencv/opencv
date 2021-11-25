@@ -1382,22 +1382,15 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     });
 }
 
-void cv::gimpl::GStreamingExecutor::destruct() {
-    if (state == State::READY || state == State::RUNNING)
-        stop();
-}
-cv::gimpl::GStreamingExecutor::~GStreamingExecutor() noexcept(false)
+cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
 {
-    if (std::uncaught_exception()) {
-        try {
-            destruct();
-        } catch (const std::logic_error& e) {
-            std::stringstream message;
-            message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
-            GAPI_LOG_WARNING(NULL, message.str());
-        }
-    } else {
-        destruct();
+    try {
+        if (state == State::READY || state == State::RUNNING)
+            stop();
+    } catch (const std::logic_error& e) {
+        std::stringstream message;
+        message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
+        GAPI_LOG_WARNING(NULL, message.str());
     }
 }
 
