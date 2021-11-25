@@ -103,6 +103,17 @@ namespace cv
 namespace detail
 {
 
+class PoseGraphImpl;
+class PoseGraphLevMarqBackend;
+
+class PoseGraphLevMarq : public BaseLevMarq
+{
+public:
+    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqBackend>(pg))
+    { }
+};
+
+
 class PoseGraphImpl : public detail::PoseGraph
 {
 public:
@@ -220,8 +231,9 @@ public:
         Matx66f sqrtInfo;
     };
 
-    PoseGraphImpl() : nodes(), edges()
+    PoseGraphImpl() : nodes(), edges(), lm()
     { }
+
     virtual ~PoseGraphImpl() CV_OVERRIDE
     { }
 
@@ -319,11 +331,26 @@ public:
     // calculate cost function based on provided nodes parameters
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
+    // creates an optimizer
+    virtual Ptr<BaseLevMarq> createOptimizer() CV_OVERRIDE
+    {
+        lm = makePtr<PoseGraphLevMarq>(this);
+
+        lm->maxIterations = 100;
+        lm->checkRelEnergyChange = true;
+        lm->relEnergyDeltaTolerance = 1e-6;
+        lm->geodesic = true;
+
+        return lm;
+    }
+
     // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
-    virtual int optimize() CV_OVERRIDE;
+    virtual BaseLevMarq::Report optimize() CV_OVERRIDE;
 
     std::map<size_t, Node> nodes;
     std::vector<Edge> edges;
+
+    Ptr<PoseGraphLevMarq> lm;
 };
 
 
@@ -569,8 +596,9 @@ static void doJacobiScalingSparse(BlockSparseMat<double, 6, 6>& jtj, Mat_<double
 }
 
 //TODO: robustness
-struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
+class PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 {
+public:
     PoseGraphLevMarqBackend(PoseGraphImpl* pg_) :
         BaseLevMarq::Backend(),
         pg(pg_),
@@ -883,24 +911,11 @@ struct PoseGraphLevMarqBackend : public BaseLevMarq::Backend
 };
 
 
-class PoseGraphLevMarq : public BaseLevMarq
+BaseLevMarq::Report PoseGraphImpl::optimize()
 {
-public:
-    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqBackend>(pg))
-    { }
-};
-
-
-int PoseGraphImpl::optimize()
-{
-    PoseGraphLevMarq lm(this);
-
-    lm.maxIterations = 100;
-    lm.checkRelEnergyChange = true;
-    lm.relEnergyDeltaTolerance = 1e-6;
-
-    BaseLevMarq::Report r = lm.optimize();
-    return r.found ? r.iters : -1;
+    if (!lm)
+        createOptimizer();
+    return lm->optimize();
 }
 
 #else

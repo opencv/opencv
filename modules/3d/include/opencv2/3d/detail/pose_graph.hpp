@@ -48,8 +48,12 @@ public:
     // checks if graph is connected and each edge connects exactly 2 nodes
     virtual bool isValid() const = 0;
 
+    // creates an optimizer and returns a pointer on it
+    // this function can be omited if a user wants to run optimizer with default settings
+    virtual Ptr<BaseLevMarq> createOptimizer() = 0;
+
     // Returns number of iterations elapsed or -1 if failed to optimize
-    virtual int optimize() = 0;
+    virtual BaseLevMarq::Report optimize() = 0;
 
     // calculate cost function based on current nodes parameters
     virtual double calcEnergy() const = 0;

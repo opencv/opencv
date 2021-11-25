@@ -115,14 +115,15 @@ TEST( PoseGraph, sphereG2O )
     // You may change logging level to view detailed optimization report
     // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
 
-    int iters = pg->optimize();
+    // experimental, not guaranteed to work on other problems
+    pg->createOptimizer()->geoScale = 1.0;
 
-    ASSERT_GE(iters, 0);
-    ASSERT_LE(iters, 36); // should converge in 36 iterations
+    auto r = pg->optimize();
 
-    double energy = pg->calcEnergy();
+    EXPECT_TRUE(r.found);
+    EXPECT_LE(r.iters, 20); // should converge in 31 iterations
 
-    ASSERT_LE(energy, 1.47723e+06); // should converge to 1.47722e+06 or less
+    EXPECT_LE(r.energy, 1.47723e+06); // should converge to 1.47722e+06 or less
 
     // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
     if (cvtest::debugLevel > 0)
@@ -372,7 +373,7 @@ TEST(PoseGraph, simple)
         writeObj("pg_simple_in.obj", allMeshes);
     }
 
-    int iters = pg->optimize();
+    auto r = pg->optimize();
 
     Mesh after = drawPoseGraph(pg);
 
@@ -382,7 +383,7 @@ TEST(PoseGraph, simple)
         writeObj("pg_simple_out.obj", after);
     }
 
-    ASSERT_GE(iters, 0);
+    EXPECT_TRUE(r.found);
 }
 
 
