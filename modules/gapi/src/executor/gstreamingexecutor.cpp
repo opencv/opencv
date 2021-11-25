@@ -1384,6 +1384,8 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
 cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
 {
+    // FIXME: this is a temporary try-catch exception hadling.
+    // Need to eliminate throwings from stop()
     try {
         if (state == State::READY || state == State::RUNNING)
             stop();
