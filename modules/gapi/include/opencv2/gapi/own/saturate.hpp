@@ -26,7 +26,7 @@ template<typename DST, typename SRC,
          typename = cv::util::enable_if_t<!std::is_same<DST, SRC>::value &&
                                            std::is_integral<DST>::value  &&
                                            std::is_integral<SRC>::value>   >
-static inline DST saturate(SRC x)
+static CV_ALWAYS_INLINE DST saturate(SRC x)
 {
     if (sizeof(DST) > sizeof(SRC))
         return static_cast<DST>(x);
@@ -41,21 +41,21 @@ static inline DST saturate(SRC x)
            static_cast<DST>(x);
 }
 template<typename T>
-static inline T saturate(T x)
+static CV_ALWAYS_INLINE T saturate(T x)
 {
     return x;
 }
 
 template<typename DST, typename SRC, typename R,
          cv::util::enable_if_t<std::is_floating_point<DST>::value, bool> = true >
-static inline DST saturate(SRC x, R)
+static CV_ALWAYS_INLINE DST saturate(SRC x, R)
 {
     return static_cast<DST>(x);
 }
 template<typename DST, typename SRC, typename R,
          cv::util::enable_if_t<std::is_integral<DST>::value &&
-                               std::is_integral<SRC>::value    , bool> = true >
-static inline DST saturate(SRC x, R)
+                               std::is_integral<SRC>::value   , bool> = true >
+static CV_ALWAYS_INLINE DST saturate(SRC x, R)
 {
     return saturate<DST>(x);
 }
@@ -65,7 +65,7 @@ static inline DST saturate(SRC x, R)
 template<typename DST, typename SRC, typename R,
          cv::util::enable_if_t<std::is_integral<DST>::value &&
                                std::is_floating_point<SRC>::value, bool> = true >
-static inline DST saturate(SRC x, R round)
+static CV_ALWAYS_INLINE DST saturate(SRC x, R round)
 {
     int ix = static_cast<int>(round(x));
     return saturate<DST>(ix);
