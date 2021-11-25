@@ -270,12 +270,12 @@ def createSSDGraph(modelPath, configPath, outputPath):
     addConstNode('concat/axis_flatten', [-1], graph_def)
     addConstNode('PriorBox/concat/axis', [-2], graph_def)
 
-    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor is 'convolutional' else 'BoxPredictor']:
+    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor == 'convolutional' else 'BoxPredictor']:
         concatInputs = []
         for i in range(num_layers):
             # Flatten predictions
             flatten = NodeDef()
-            if box_predictor is 'convolutional':
+            if box_predictor == 'convolutional':
                 inpName = 'BoxPredictor_%d/%s/BiasAdd' % (i, label)
             else:
                 if i == 0:
@@ -308,7 +308,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         priorBox = NodeDef()
         priorBox.name = 'PriorBox_%d' % i
         priorBox.op = 'PriorBox'
-        if box_predictor is 'convolutional':
+        if box_predictor == 'convolutional':
             priorBox.input.append('BoxPredictor_%d/BoxEncodingPredictor/BiasAdd' % i)
         else:
             if i == 0:
