@@ -2002,7 +2002,7 @@ template<typename DST, typename SRC,
 CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
 {
     // manual SIMD if need rounding
-    GAPI_Assert(( std::is_same<SRC,float>::value ));
+    static_assert(std::is_same<SRC,float>::value, "64-bit floating-point source is not supported");
     int l = run_convertto_simd(out, in, length); // cycle index
     // tail of SIMD cycle
     for (; l < length; l++)
@@ -2024,6 +2024,7 @@ template<typename DST, typename SRC,
          cv::util::enable_if_t<std::is_floating_point<DST>::value, bool> = true >
 CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
 {
+    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
     for (int l = 0; l < length; l++)
     {
         out[l] = static_cast<DST>(in[l]);
@@ -2034,6 +2035,7 @@ template<typename DST, typename SRC>
 CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const float alpha, const float beta,
                                     const int length)
 {
+    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
     // TODO: optimize if alpha and beta and data are integral
     for (int l = 0; l < length; l++)
     {
@@ -2056,7 +2058,7 @@ static void run_convertto(Buffer &dst, const View &src, double _alpha, double _b
     const auto beta  = static_cast<float>( _beta  );
 
     // compute faster if no alpha no beta
-    if (1 == alpha && 0 == beta)
+    if (1.f == alpha && 0.f == beta)
     {
         run_convertto(out, in, length);
     }

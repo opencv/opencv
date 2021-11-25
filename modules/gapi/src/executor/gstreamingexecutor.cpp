@@ -1389,7 +1389,7 @@ cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
     try {
         if (state == State::READY || state == State::RUNNING)
             stop();
-    } catch (const std::logic_error& e) {
+    } catch (const std::exception& e) {
         std::stringstream message;
         message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
         GAPI_LOG_WARNING(NULL, message.str());
