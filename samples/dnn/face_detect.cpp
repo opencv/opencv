@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     CommandLineParser parser(argc, argv,
         "{help  h           |            | Print this message}"
         "{image1 i1         |            | Path to the input image1. Omit for detecting through VideoCapture}"
-        "{image2 i2         |            | Path to the input image2. When input1 and Input2 parameters given then the program try to find a face on both images and runs face recognition algorithm}"
+        "{image2 i2         |            | Path to the input image2. When image1 and image2 parameters given then the program try to find a face on both images and runs face recognition algorithm}"
         "{video v           | 0          | Path to the input video}"
         "{scale sc          | 1.0        | Scale factor used to resize input video frames}"
         "{fd_model fd       | yunet.onnx | Path to the model. Download yunet.onnx in https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx }"
@@ -198,6 +198,8 @@ int main(int argc, char** argv)
     }
     else
     {
+        int frameWidth, frameHeight;
+        float scale = parser.get<float>("scale");
         VideoCapture capture;
         std::string video = parser.get<string>("video");
         if (video.size() == 1 && isdigit(video[0]))
@@ -206,9 +208,11 @@ int main(int argc, char** argv)
             capture.open(samples::findFileOrKeep(video));  // keep GStreamer pipelines
         if (capture.isOpened())
         {
+            frameWidth = int(capture.get(CAP_PROP_FRAME_WIDTH) * scale);
+            frameHeight = int(capture.get(CAP_PROP_FRAME_HEIGHT) * scale);
             cout << "Video " << video
-                << ": width=" << capture.get(CAP_PROP_FRAME_WIDTH)
-                << ", height=" << capture.get(CAP_PROP_FRAME_HEIGHT)
+                << ": width=" << frameWidth
+                << ", height=" << frameHeight
                 << endl;
         }
         else
@@ -217,9 +221,6 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        float scale = parser.get<float>("scale");
-        int frameWidth = int(capture.get(CAP_PROP_FRAME_WIDTH) * scale);
-        int frameHeight = int(capture.get(CAP_PROP_FRAME_HEIGHT) * scale);
         detector->setInputSize(Size(frameWidth, frameHeight));
 
         cout << "Press 'SPACE' to save frame, any other key to exit..." << endl;

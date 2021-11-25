@@ -12,8 +12,8 @@ def str2bool(v):
         raise NotImplementedError
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--input1', '-i1', type=str, help='Path to the input image1. Omit for detecting on default camera.')
-parser.add_argument('--input2', '-i2', type=str, help='Path to the input image2. When input1 and Input2 parameters given then the program try to find a face on both images and runs face recognition algorithm.')
+parser.add_argument('--image1', '-i1', type=str, help='Path to the input image1. Omit for detecting on default camera.')
+parser.add_argument('--image2', '-i2', type=str, help='Path to the input image2. When image1 and image2 parameters given then the program try to find a face on both images and runs face recognition algorithm.')
 parser.add_argument('--video', '-v', type=str, help='Path to the input video.')
 parser.add_argument('--scale', '-sc', type=float, default=1.0, help='Scale factor used to resize input video frames.')
 parser.add_argument('--face_detection_model', '-fd', type=str, default='yunet.onnx', help='Path to the face detection model. Download the model at https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx.')
@@ -54,8 +54,8 @@ if __name__ == '__main__':
     tm = cv.TickMeter()
 
     # If input is an image
-    if args.input1 is not None:
-        img1 = cv.imread(cv.samples.findFile(args.input1))
+    if args.image1 is not None:
+        img1 = cv.imread(cv.samples.findFile(args.image1))
 
         tm.start()
         ## [inference]
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         ## [inference]
 
         tm.stop()
-        assert faces1[1] is not None, 'Cannot find a face in {}'.format(args.input1)
+        assert faces1[1] is not None, 'Cannot find a face in {}'.format(args.image1)
 
         # Draw results on the input image
         visualize(img1, faces1, tm.getFPS())
@@ -77,19 +77,19 @@ if __name__ == '__main__':
             cv.imwrite('result.jpg', img1)
 
         # Visualize results in a new window
-        cv.imshow("input1", img1)
+        cv.imshow("image1", img1)
 
-        if args.input2 is not None:
-            img2 = cv.imread(cv.samples.findFile(args.input2))
+        if args.image2 is not None:
+            img2 = cv.imread(cv.samples.findFile(args.image2))
 
             tm.reset()
             tm.start()
             detector.setInputSize((img2.shape[1], img2.shape[0]))
             faces2 = detector.detect(img2)
             tm.stop()
-            assert faces2[1] is not None, 'Cannot find a face in {}'.format(args.input2)
+            assert faces2[1] is not None, 'Cannot find a face in {}'.format(args.image2)
             visualize(img2, faces2, tm.getFPS())
-            cv.imshow("input2", img2)
+            cv.imshow("image2", img2)
 
             ## [initialize_FaceRecognizerSF]
             recognizer = cv.FaceRecognizerSF.create(
