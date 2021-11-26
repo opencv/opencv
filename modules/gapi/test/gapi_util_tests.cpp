@@ -30,7 +30,7 @@ namespace gapi
 namespace own
 {
 struct Own {};
-Own to_ocv(const ConvertibleToOwn &) {
+inline Own to_ocv(const ConvertibleToOwn &) {
     return {};
 }
 }
