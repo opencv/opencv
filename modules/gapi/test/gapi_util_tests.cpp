@@ -20,6 +20,22 @@ struct MimicGShape {
      static constexpr int shape = 0;
 };
 
+namespace cv
+{
+struct ConvertibleToOwn{};
+struct NotConvertibleToOwn{};
+
+namespace gapi
+{
+namespace own
+{
+struct Own {};
+Own to_ocv(const ConvertibleToOwn &) {
+    return {};
+}
+}
+}
+}
 namespace opencv_test
 {
 
@@ -56,4 +72,9 @@ TEST(GAPIUtil, GShaped)
     static_assert(!cv::detail::has_gshape<MimicGShape>::value, "MimicGShape hasn't got right shape");
 }
 
+TEST(GAPIUtil, ToOcv)
+{
+    static_assert(!cv::detail::has_to_ocv<NotConvertibleToOwn>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
+    static_assert(cv::detail::has_to_ocv<ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
+}
 } // namespace opencv_test

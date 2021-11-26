@@ -20,26 +20,33 @@
 #include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
 {
 namespace detail
 {
     template<typename, typename = void>
-    struct is_shaped_type : std::false_type {};
+    struct contains_shape_field : std::false_type {};
 
     template<typename TaggedTypeCandidate>
-    struct is_shaped_type<TaggedTypeCandidate,
-                          void_t<decltype(TaggedTypeCandidate::shape)>> :
+    struct contains_shape_field<TaggedTypeCandidate,
+                                void_t<decltype(TaggedTypeCandidate::shape)>> :
         std::is_same<typename std::decay<decltype(TaggedTypeCandidate::shape)>::type, GShape>
     {};
 
-    template <typename Type, typename Tag>
-    struct is_contain_tag_impl : std::is_base_of<Tag, typename Type::tags_t> {
-    };
-
     template<typename Type>
-    struct has_gshape : is_shaped_type<Type> {};
+    struct has_gshape : contains_shape_field<Type> {};
+
+    template<typename, typename = void>
+    struct is_to_ocv_exist : std::false_type {};
+
+    template<typename ConvertibleType>
+    struct is_to_ocv_exist<ConvertibleType,
+                           void_t<decltype(::cv::gapi::own::to_ocv(std::declval<ConvertibleType>()))>> : std::true_type {};
+
+    template<class Type>
+    struct has_to_ocv : is_to_ocv_exist<typename std::decay<Type>::type> {};
 
     // FIXME: These traits and enum and possible numerous switch(kind)
     // block may be replaced with a special Handler<T> object or with
@@ -187,12 +194,8 @@ namespace detail
             return static_cast<typename std::remove_reference<T>::type>(t);
         }
 
-        template<typename U> static U  wrap_in (const U &u) {
-            return  u;
-        }
-        template<typename U> static U* wrap_out(U &u)       {
-
-            return &u;  }
+        template<typename U> static U  wrap_in (const U &u) { return  u;  }
+        template<typename U> static U* wrap_out(U &u)       { return &u;  }
     };
     template<typename T> struct WrapValue<T, typename std::enable_if<has_custom_wrap<T>::value>::type>
     {
@@ -202,14 +205,16 @@ namespace detail
         }
         template<typename U> static auto wrap_in (const U &u) -> typename GTypeTraits<T>::strip_type
         {
-            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value),
-                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
+            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value
+                            || cv::detail::has_to_ocv<U>::value),
+                          "gin/gout must not be used with G* classes or cv::gapi::own::*");
             return GTypeTraits<T>::wrap_in(u);
         }
         template<typename U> static auto wrap_out(U &u) -> typename GTypeTraits<T>::strip_type
         {
-                        static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value),
-                          "gin/gout must not be used with G* structures with tag::Meta or gapi::own");
+            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value
+                            || cv::detail::has_to_ocv<U>::value),
+                          "gin/gout must not be used with G* classses or cv::gapi::own::*");
             return GTypeTraits<T>::wrap_out(u);
         }
     };

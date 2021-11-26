@@ -8,6 +8,7 @@
 #include "../test_precomp.hpp"
 
 #include "api/gcomputation_priv.hpp"
+#include <opencv2/gapi/own/convert.hpp>
 
 namespace opencv_test
 {
@@ -140,7 +141,7 @@ TEST(GMetaArg, Can_Describe_RunArg)
     cv::Scalar s;
     constexpr int w = 3, h = 3, c = 3;
     uchar data[w*h*c];
-    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
+    cv::Mat om(h, w, CV_8UC3, data);
     cv::Scalar os;
     std::vector<int> v;
 
@@ -180,7 +181,7 @@ TEST(GMetaArg, Can_Describe_RunArgP)
     cv::Scalar s;
     constexpr int w = 3, h = 3, c = 3;
     uchar data[w*h*c];
-    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
+    cv::Mat om(h, w, CV_8UC3, data);
     cv::Scalar os;
     std::vector<int> v;
 
