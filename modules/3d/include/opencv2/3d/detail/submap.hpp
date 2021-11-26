@@ -204,7 +204,7 @@ public:
     Ptr<SubmapT> getCurrentSubmap(void) const;
 
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
-    bool updateMap(int _frameId, OdometryFrame _frame);
+    bool updateMap(int frameId, OdometryFrame frame);
 
     bool addEdgeToCurrentSubmap(const int currentSubmapID, const int tarSubmapID);
 
