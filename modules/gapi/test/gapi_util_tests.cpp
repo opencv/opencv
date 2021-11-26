@@ -74,7 +74,7 @@ TEST(GAPIUtil, GShaped)
 
 TEST(GAPIUtil, ToOcv)
 {
-    static_assert(!cv::detail::has_to_ocv<NotConvertibleToOwn>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
-    static_assert(cv::detail::has_to_ocv<ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
+    static_assert(!cv::detail::has_to_ocv<cv::NotConvertibleToOwn>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
+    static_assert(cv::detail::has_to_ocv<cv::ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
 }
 } // namespace opencv_test
