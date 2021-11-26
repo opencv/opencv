@@ -28,14 +28,6 @@ namespace gimpl
 {
     // Forward-declare an internal class
     class GCPUExecutable;
-
-    namespace render
-    {
-    namespace ocv
-    {
-        class GRenderExecutable;
-    }
-    }
 } // namespace gimpl
 
 namespace gapi
@@ -133,7 +125,6 @@ protected:
     std::unordered_map<std::size_t, GRunArgP> m_results;
 
     friend class gimpl::GCPUExecutable;
-    friend class gimpl::render::ocv::GRenderExecutable;
 };
 
 class GAPI_EXPORTS GCPUKernel
