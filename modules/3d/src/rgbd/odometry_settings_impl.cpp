@@ -128,7 +128,7 @@ public:
         static constexpr float defaultMaxRotation = 15.f;
 
         static constexpr float defaultMinGradientMagnitude = 10.f;
-        const std::vector<float> defaultMinGradientMagnitudes = std::vector<float>(defaultIterCounts.size(), defaultMinGradientMagnitude);
+        const std::vector<float> defaultMinGradientMagnitudes = std::vector<float>(defaultIterCounts.size(), 10.f /*defaultMinGradientMagnitude*/);
     };
 };
 
