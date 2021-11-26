@@ -8,28 +8,6 @@
 namespace cv
 {
 
-const cv::Matx33f defaultCameraMatrix =
-{ /* fx, 0, cx*/ 0, 0, 0,
-  /* 0, fy, cy*/ 0, 0, 0,
-  /* 0,  0,  0*/ 0, 0, 0 };
-const std::vector<int> defaultIterCounts = { 7, 7, 7, 10 };
-
-const float defaultMinDepth = 0.f;
-const float defaultMaxDepth = 4.f;
-const float defaultMaxDepthDiff = 0.07f;
-const float defaultMaxPointsPart = 0.07f;
-
-static const int defaultSobelSize = 3;
-static const double defaultSobelScale = 1. / 8.;
-static const int defaultNormalWinSize = 5;
-
-const float defaultAngleThreshold = (float)(30. * CV_PI / 180.);
-const float defaultMaxTranslation = 0.15f;
-const float defaultMaxRotation = 15.f;
-
-const float defaultMinGradientMagnitude = 10.f;
-std::vector<float> defaultMinGradientMagnitudes = std::vector<float>(defaultIterCounts.size(), defaultMinGradientMagnitude);
-
 class OdometrySettings::Impl
 {
 public:
@@ -126,6 +104,32 @@ private:
 
     float minGradientMagnitude;
     std::vector<float> minGradientMagnitudes;
+
+public:
+    static class DefaultSets {
+    public:
+        const cv::Matx33f defaultCameraMatrix =
+        { /* fx, 0, cx*/ 0, 0, 0,
+            /* 0, fy, cy*/ 0, 0, 0,
+            /* 0,  0,  0*/ 0, 0, 0 };
+        const std::vector<int> defaultIterCounts = { 7, 7, 7, 10 };
+
+        static constexpr float defaultMinDepth = 0.f;
+        static constexpr float defaultMaxDepth = 4.f;
+        static constexpr float defaultMaxDepthDiff = 0.07f;
+        static constexpr float defaultMaxPointsPart = 0.07f;
+
+        static const int defaultSobelSize = 3;
+        static constexpr double defaultSobelScale = 1. / 8.;
+        static const int defaultNormalWinSize = 5;
+
+        static constexpr float defaultAngleThreshold = (float)(30. * CV_PI / 180.);
+        static constexpr float defaultMaxTranslation = 0.15f;
+        static constexpr float defaultMaxRotation = 15.f;
+
+        static constexpr float defaultMinGradientMagnitude = 10.f;
+        const std::vector<float> defaultMinGradientMagnitudes = std::vector<float>(defaultIterCounts.size(), defaultMinGradientMagnitude);
+    };
 };
 
 
@@ -170,24 +174,25 @@ void OdometrySettings::getMinGradientMagnitudes(OutputArray val) const { this->i
 
 OdometrySettingsImplCommon::OdometrySettingsImplCommon()
 {
-    this->cameraMatrix = defaultCameraMatrix;
-    this->iterCounts = defaultIterCounts;
+    DefaultSets ds;
+    this->cameraMatrix = ds.defaultCameraMatrix;
+    this->iterCounts = ds.defaultIterCounts;
 
-    this->minDepth = defaultMinDepth;
-    this->maxDepth = defaultMaxDepth;
-    this->maxDepthDiff = defaultMaxDepthDiff;
-    this->maxPointsPart = defaultMaxPointsPart;
+    this->minDepth = ds.defaultMinDepth;
+    this->maxDepth = ds.defaultMaxDepth;
+    this->maxDepthDiff = ds.defaultMaxDepthDiff;
+    this->maxPointsPart = ds.defaultMaxPointsPart;
 
-    this->sobelSize = defaultSobelSize;
-    this->sobelScale = defaultSobelScale;
-    this->normalWinSize = defaultNormalWinSize;
+    this->sobelSize = ds.defaultSobelSize;
+    this->sobelScale = ds.defaultSobelScale;
+    this->normalWinSize = ds.defaultNormalWinSize;
 
-    this->angleThreshold = defaultAngleThreshold;
-    this->maxTranslation = defaultMaxTranslation;
-    this->maxRotation = defaultMaxRotation;
+    this->angleThreshold = ds.defaultAngleThreshold;
+    this->maxTranslation = ds.defaultMaxTranslation;
+    this->maxRotation = ds.defaultMaxRotation;
 
-    this->minGradientMagnitude = defaultMinGradientMagnitude;
-    this->minGradientMagnitudes = defaultMinGradientMagnitudes;
+    this->minGradientMagnitude = ds.defaultMinGradientMagnitude;
+    this->minGradientMagnitudes = ds.defaultMinGradientMagnitudes;
 }
 
 void OdometrySettingsImplCommon::setCameraMatrix(InputArray val)
@@ -200,7 +205,8 @@ void OdometrySettingsImplCommon::setCameraMatrix(InputArray val)
     }
     else
     {
-        this->cameraMatrix = defaultCameraMatrix;
+        DefaultSets ds;
+        this->cameraMatrix = ds.defaultCameraMatrix;
     }
 }
 
@@ -222,13 +228,15 @@ void OdometrySettingsImplCommon::setIterCounts(InputArray val)
     }
     else
     {
-        this->iterCounts = defaultIterCounts;
+        DefaultSets ds;
+        this->iterCounts = ds.defaultIterCounts;
     }
 }
 
 void OdometrySettingsImplCommon::getIterCounts(OutputArray val) const
 {
-    Mat(defaultIterCounts).copyTo(val);
+    DefaultSets ds;
+    Mat(ds.defaultIterCounts).copyTo(val);
 }
 
 void OdometrySettingsImplCommon::setMinDepth(float val)
@@ -335,7 +343,8 @@ void OdometrySettingsImplCommon::setMinGradientMagnitudes(InputArray val)
     }
     else
     {
-        this->minGradientMagnitudes = defaultMinGradientMagnitudes;
+        DefaultSets ds;
+        this->minGradientMagnitudes = ds.defaultMinGradientMagnitudes;
     }
 }
 void OdometrySettingsImplCommon::getMinGradientMagnitudes(OutputArray val) const

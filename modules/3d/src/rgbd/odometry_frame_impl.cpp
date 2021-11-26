@@ -4,10 +4,7 @@
 
 #include "../precomp.hpp"
 
-#include <iostream>
-#include <opencv2/core.hpp>
 #include <opencv2/core/ocl.hpp>
-#include <opencv2/core/mat.hpp>
 
 #include "utils.hpp"
 
@@ -17,24 +14,24 @@ namespace cv
 class OdometryFrame::Impl
 {
 public:
-    Impl() {};
-    virtual ~Impl() {};
+    Impl() {}
+    virtual ~Impl() {}
     virtual void setImage(InputArray  image) = 0;
-    virtual void getImage(OutputArray image) = 0;
-    virtual void getGrayImage(OutputArray image) = 0;
+    virtual void getImage(OutputArray image) const = 0;
+    virtual void getGrayImage(OutputArray image) const = 0;
     virtual void setDepth(InputArray  depth) = 0;
-    virtual void getDepth(OutputArray depth) = 0;
+    virtual void getDepth(OutputArray depth) const = 0;
     virtual void setMask(InputArray  mask) = 0;
-    virtual void getMask(OutputArray mask) = 0;
+    virtual void getMask(OutputArray mask) const = 0;
     virtual void setNormals(InputArray  normals) = 0;
-    virtual void getNormals(OutputArray normals) = 0;
+    virtual void getNormals(OutputArray normals) const = 0;
     virtual void   setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype) = 0;
     virtual void   setPyramidLevels(size_t _nLevels) = 0;
-    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) = 0;
+    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) const = 0;
     virtual void setPyramidAt(InputArray  img,
         OdometryFramePyramidType pyrType, size_t level) = 0;
     virtual void getPyramidAt(OutputArray img,
-        OdometryFramePyramidType pyrType, size_t level) = 0;
+        OdometryFramePyramidType pyrType, size_t level) const = 0;
 };
 
 template<typename TMat>
@@ -45,21 +42,21 @@ public:
     ~OdometryFrameImplTMat() {};
 
     virtual void setImage(InputArray  image) override;
-    virtual void getImage(OutputArray image) override;
-    virtual void getGrayImage(OutputArray image) override;
+    virtual void getImage(OutputArray image) const override;
+    virtual void getGrayImage(OutputArray image) const override;
     virtual void setDepth(InputArray  depth) override;
-    virtual void getDepth(OutputArray depth) override;
+    virtual void getDepth(OutputArray depth) const override;
     virtual void setMask(InputArray  mask) override;
-    virtual void getMask(OutputArray mask) override;
+    virtual void getMask(OutputArray mask) const override;
     virtual void setNormals(InputArray  normals) override;
-    virtual void getNormals(OutputArray normals) override;
+    virtual void getNormals(OutputArray normals) const override;
     virtual void   setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype) override;
     virtual void   setPyramidLevels(size_t _nLevels) override;
-    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) override;
+    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) const override;
     virtual void setPyramidAt(InputArray  img,
         OdometryFramePyramidType pyrType, size_t level) override;
     virtual void getPyramidAt(OutputArray img,
-        OdometryFramePyramidType pyrType, size_t level) override;
+        OdometryFramePyramidType pyrType, size_t level) const override;
 
 private:
     void findMask(InputArray image);
@@ -129,13 +126,13 @@ void OdometryFrameImplTMat<TMat>::setImage(InputArray _image)
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getImage(OutputArray _image)
+void OdometryFrameImplTMat<TMat>::getImage(OutputArray _image) const
 {
     _image.assign(this->image);
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image)
+void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image) const
 {
     _image.assign(this->imageGray);
 }
@@ -161,7 +158,7 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getDepth(OutputArray _depth)
+void OdometryFrameImplTMat<TMat>::getDepth(OutputArray _depth) const
 {
     _depth.assign(this->depth);
 }
@@ -173,7 +170,7 @@ void OdometryFrameImplTMat<TMat>::setMask(InputArray _mask)
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getMask(OutputArray _mask)
+void OdometryFrameImplTMat<TMat>::getMask(OutputArray _mask) const
 {
     _mask.assign(this->mask);
 }
@@ -185,7 +182,7 @@ void OdometryFrameImplTMat<TMat>::setNormals(InputArray _normals)
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getNormals(OutputArray _normals)
+void OdometryFrameImplTMat<TMat>::getNormals(OutputArray _normals) const
 {
     _normals.assign(this->normals);
 }
@@ -210,7 +207,7 @@ void OdometryFrameImplTMat<TMat>::setPyramidLevels(size_t _nLevels)
 }
 
 template<typename TMat>
-size_t OdometryFrameImplTMat<TMat>::getPyramidLevels(OdometryFramePyramidType oftype)
+size_t OdometryFrameImplTMat<TMat>::getPyramidLevels(OdometryFramePyramidType oftype) const
 {
     if (oftype < OdometryFramePyramidType::N_PYRAMIDS)
         return pyramids[oftype].size();
@@ -228,7 +225,7 @@ void OdometryFrameImplTMat<TMat>::setPyramidAt(InputArray  _img, OdometryFramePy
 }
 
 template<typename TMat>
-void OdometryFrameImplTMat<TMat>::getPyramidAt(OutputArray _img, OdometryFramePyramidType pyrType, size_t level)
+void OdometryFrameImplTMat<TMat>::getPyramidAt(OutputArray _img, OdometryFramePyramidType pyrType, size_t level) const
 {
     CV_Assert(pyrType < OdometryFramePyramidType::N_PYRAMIDS);
     CV_Assert(level < pyramids[pyrType].size());
