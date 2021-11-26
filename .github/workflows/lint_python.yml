@@ -1,5 +1,5 @@
 name: lint_python
-on: [pull_request, push]
+on: workflow_dispatch
 jobs:
   lint_python:
     runs-on: ubuntu-latest
