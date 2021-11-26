@@ -29,7 +29,8 @@ namespace gimpl {
         } else {
             cv::Mat m(v.dims(), v.type(), v.ptr(), v.steps().data());
             if (v.dims().size() == 1) {
-                // FIXME: The only way to get 1D Mat out of RMat
+                // FIXME: cv::Mat() constructor will set m.dims to 2;
+                // To obtain 1D Mat, we have to set m.dims back to 1 manually
                 m.dims = 1;
             }
             return m;
