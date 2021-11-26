@@ -1957,12 +1957,13 @@ GAPI_FLUID_KERNEL(GFluidLUT, cv::gapi::core::GLUT, false)
 
 #if CV_SIMD128
 template<typename DST, typename SRC>
-CV_ALWAYS_INLINE int run_convertto_simd(DST*, const SRC*, int, int l)
+CV_ALWAYS_INLINE int run_convertto_simd(DST*, const SRC*, int)
 {
-    return l;
+    return 0;
 }
-CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int length, int l)
+CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int length)
 {
+    int l = 0;
     for (; l <= length - 16; l += 16)
     {
         v_int32x4 i0, i1, i2, i3;
@@ -1981,8 +1982,9 @@ CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int l
     }
     return l;
 }
-CV_ALWAYS_INLINE int run_convertto_simd(ushort *out, const float *in, const int length, int l)
+CV_ALWAYS_INLINE int run_convertto_simd(ushort *out, const float *in, const int length)
 {
+    int l = 0;
     for (; l <= length - 8; l += 8)
     {
         v_int32x4 i0, i1;
@@ -2006,7 +2008,7 @@ CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
     static_assert(std::is_same<SRC,float>::value, "64-bit floating-point source is not supported");
     int l = 0; // cycle index
 #if CV_SIMD128
-    l = run_convertto_simd(out, in, length, l);
+    l = run_convertto_simd(out, in, length);
 #endif
     // tail of SIMD cycle
     for (; l < length; l++)
