@@ -84,6 +84,16 @@ typedef unsigned short ushort;
 
 // cvdef.h:
 
+#ifndef CV_ALWAYS_INLINE
+#  if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
+#    define CV_ALWAYS_INLINE inline __attribute__((always_inline))
+#  elif defined(_MSC_VER)
+#    define CV_ALWAYS_INLINE __forceinline
+#  else
+#    define CV_ALWAYS_INLINE inline
+#  endif
+#endif
+
 #define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
 #define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
 #define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
