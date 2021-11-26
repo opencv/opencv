@@ -6,8 +6,6 @@
 
 namespace opencv_test { namespace {
 
-#define SHOW_DEBUG_IMAGES 0
-
 static
 void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& tvec, const Mat& K,
                Mat& warpedImage, Mat& warpedDepth)
@@ -300,14 +298,16 @@ void OdometryTest::run()
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
         Mat calcTvec = calcRt(Rect(3,0,1,3));
-#if SHOW_DEBUG_IMAGES
-        imshow("image", image);
-        imshow("warpedImage", warpedImage);
-        Mat resultImage, resultDepth;
-        warpFrame(image, depth, calcRvec, calcTvec, K, resultImage, resultDepth);
-        imshow("resultImage", resultImage);
-        waitKey(100);
-#endif
+
+        if (cvtest::debugLevel >= 10)
+        {
+            imshow("image", image);
+            imshow("warpedImage", warpedImage);
+            Mat resultImage, resultDepth;
+            warpFrame(image, depth, calcRvec, calcTvec, K, resultImage, resultDepth);
+            imshow("resultImage", resultImage);
+            waitKey(100);
+        }
 
         // compare rotation
         double possibleError = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.015f;
