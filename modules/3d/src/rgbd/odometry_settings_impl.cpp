@@ -106,7 +106,7 @@ private:
     std::vector<float> minGradientMagnitudes;
 
 public:
-    static class DefaultSets {
+    class DefaultSets {
     public:
         const cv::Matx33f defaultCameraMatrix =
         { /* fx, 0, cx*/ 0, 0, 0,
