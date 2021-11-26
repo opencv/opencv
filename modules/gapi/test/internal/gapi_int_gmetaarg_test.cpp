@@ -8,6 +8,7 @@
 #include "../test_precomp.hpp"
 
 #include "api/gcomputation_priv.hpp"
+#include <opencv2/gapi/own/convert.hpp>
 
 namespace opencv_test
 {
