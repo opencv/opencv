@@ -645,8 +645,8 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 #endif // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
-static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
-                       double scale=1)
+static CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2,
+                                        Arithm arithm, double scale=1)
 {
     static_assert(std::is_same<SRC1, SRC2>::value, "wrong types");
 
@@ -1265,8 +1265,8 @@ static void run_absdiffc(Buffer &dst, const View &src, const float scalar[])
 }
 
 template<typename DST, typename SRC>
-static void run_arithm_s(Buffer &dst, const View &src, const float scalar[4], Arithm arithm,
-                         float scale=1)
+CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float scalar[],
+                                   Arithm arithm, float scale=1)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -1422,6 +1422,8 @@ GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
 
     static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst, Buffer &scratch)
     {
+        GAPI_Assert(src.meta().chan <= 4);
+
         if (dst.y() == 0)
         {
             const int chan = src.meta().chan;
@@ -1457,10 +1459,20 @@ GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
     static void initScratch(const GMatDesc&, const GScalarDesc&, int, Buffer& scratch)
     {
 #if CV_SIMD
-        // Max value of v_float32::nlanes = 16 in AVX512 ISA
-        // So max value was taken.
-        // +2 for offset.
-        constexpr int buflen = 16 + 2; // buffer size
+        // 512 bits / 32 bits = 16 elements of float32 can contain a AVX 512 SIMD vector.
+        constexpr int maxNlanes = 16;
+
+        // +2 is offset for 3-channel case.
+        // Offset is need to right load coefficients from scalar array to SIMD vectors for 3-channel case.
+        // Scalar array looks like: scalar[] = {C1, C2, C3, C1, C2, C3, ...}
+        // The first scalar SIMD vector should looks like:
+        // C1 C2 C3 C1
+        // The second:
+        // C2 C3 C1 C2
+        // The third:
+        // C3 C1 C2 C3
+        constexpr int offset = 2;
+        constexpr int buflen = maxNlanes + offset;
 #else
         constexpr int buflen = 4;
 #endif

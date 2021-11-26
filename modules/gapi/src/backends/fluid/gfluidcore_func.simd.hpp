@@ -851,129 +851,63 @@ MUL_SIMD(float, float)
 //
 //-------------------------
 
-CV_ALWAYS_INLINE void addc_pack_store_c3(short* out_ptr, const v_int32& c1,
+CV_ALWAYS_INLINE void addc_pack_store_c3(short* outx,       const v_int32& c1,
                                          const v_int32& c2, const v_int32& c3,
                                          const v_int32& c4, const v_int32& c5,
                                          const v_int32& c6)
 {
-    constexpr int nlanes = static_cast<int>(v_int16::nlanes);
-    vx_store(out_ptr, v_pack(c1, c2));
-    vx_store(out_ptr + nlanes, v_pack(c3, c4));
-    vx_store(out_ptr + 2*nlanes, v_pack(c5, c6));
+    constexpr int nlanes = v_int16::nlanes;
+    vx_store(outx,           v_pack(c1, c2));
+    vx_store(&outx[nlanes],   v_pack(c3, c4));
+    vx_store(&outx[2*nlanes], v_pack(c5, c6));
 }
 
-CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* out_ptr, const v_int32& c1,
+CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* outx,      const v_int32& c1,
                                          const v_int32& c2, const v_int32& c3,
                                          const v_int32& c4, const v_int32& c5,
                                          const v_int32& c6)
 {
-    constexpr int nlanes = static_cast<int>(v_uint16::nlanes);
-    vx_store(out_ptr, v_pack_u(c1, c2));
-    vx_store(&out_ptr[nlanes], v_pack_u(c3, c4));
-    vx_store(&out_ptr[2*nlanes], v_pack_u(c5, c6));
+    constexpr int nlanes = v_uint16::nlanes;
+    vx_store(outx,            v_pack_u(c1, c2));
+    vx_store(&outx[nlanes],   v_pack_u(c3, c4));
+    vx_store(&outx[2*nlanes], v_pack_u(c5, c6));
 }
 
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<DST, ushort>::value ||
-                         std::is_same<DST, short>::value), int>::type
-addc_simd_impl(const SRC in[], const float scalar[], DST out[], const int length)
+                         std::is_same<DST, short>::value), void>::type
+addc_simd_common_impl(const SRC* inx, DST* outx, const v_float32& sc, const int nlanes)
 {
-    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes/2]);
 
-    if (length < nlanes)
-        return 0;
-
-    v_float32 s = vx_load(scalar);
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            v_float32 a1 = vg_load_f32(&in[x]);
-            v_float32 a2 = vg_load_f32(&in[x + nlanes/2]);
-
-            v_store_i16(&out[x], v_round(a1 + s), v_round(a2 + s));
-        }
-
-        if (x < length)
-        {
-            x = length - nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    v_store_i16(outx, v_round(a1 + sc), v_round(a2 + sc));
 }
 
 //-------------------------------------------------------------------------------------------------
 
 template<typename SRC>
-CV_ALWAYS_INLINE int addc_simd_impl(const SRC in[], const float scalar[], uchar out[], const int length)
+CV_ALWAYS_INLINE void addc_simd_common_impl(const SRC* inx, uchar* outx, const v_float32& sc, const int nlanes)
 {
-    constexpr int nlanes = v_uint8::nlanes;
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes/4]);
+    v_float32 a3 = vg_load_f32(&inx[nlanes/2]);
+    v_float32 a4 = vg_load_f32(&inx[3 * nlanes/4]);
 
-    if (length < nlanes)
-        return 0;
-
-    v_float32 s = vx_load(scalar);
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            v_float32 a1 = vg_load_f32(&in[x]);
-            v_float32 a2 = vg_load_f32(&in[x + nlanes/4]);
-            v_float32 a3 = vg_load_f32(&in[x + nlanes/2]);
-            v_float32 a4 = vg_load_f32(&in[x + 3 * nlanes/4]);
-
-            vx_store(&out[x], v_pack_u(v_pack(v_round(a1 + s),
-                                              v_round(a2 + s)),
-                                       v_pack(v_round(a3 + s),
-                                              v_round(a4 + s))));
-        }
-
-        if (x < length)
-        {
-            x = length - nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    vx_store(outx, v_pack_u(v_pack(v_round(a1 + sc),
+                                   v_round(a2 + sc)),
+                            v_pack(v_round(a3 + sc),
+                                   v_round(a4 + sc))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
 template<typename SRC>
-CV_ALWAYS_INLINE int addc_simd_impl(const SRC in[], const float scalar[], float out[], const int length)
+CV_ALWAYS_INLINE void addc_simd_common_impl(const SRC* inx, float* outx, const v_float32& sc, const int)
 {
-    constexpr int nlanes = v_float32::nlanes;
-
-    if (length < nlanes)
-        return 0;
-
-    v_float32 s = vx_load(scalar);
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            v_float32 a1 = vg_load_f32(&in[x]);
-            vx_store(&out[x], a1 + s);
-        }
-
-        if (x < length)
-        {
-            x = length - nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    v_float32 a1 = vg_load_f32(inx);
+    vx_store(outx, a1 + sc);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -981,122 +915,65 @@ CV_ALWAYS_INLINE int addc_simd_impl(const SRC in[], const float scalar[], float 
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, int>::type
-addc_simd_c3_impl(const SRC in[], DST out[], const v_float32& s1, const v_float32& s2,
-                  const v_float32& s3, const int length)
+                        std::is_same<DST, ushort>::value, void>::type
+addc_simd_c3_impl(const SRC* inx, DST* outx, const v_float32& s1, const v_float32& s2,
+                  const v_float32& s3, const int nlanes)
 {
-    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
-    constexpr int chan = 3;
-    constexpr int lanes = chan * nlanes;
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes / 2]);
+    v_float32 a3 = vg_load_f32(&inx[nlanes]);
+    v_float32 a4 = vg_load_f32(&inx[3 * nlanes / 2]);
+    v_float32 a5 = vg_load_f32(&inx[2 * nlanes]);
+    v_float32 a6 = vg_load_f32(&inx[5 * nlanes / 2]);
 
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - lanes; x += lanes)
-        {
-            v_float32 a1 = vg_load_f32(&in[x]);
-            v_float32 a2 = vg_load_f32(&in[x + nlanes / 2]);
-            v_float32 a3 = vg_load_f32(&in[x + nlanes]);
-            v_float32 a4 = vg_load_f32(&in[x + 3 * nlanes / 2]);
-            v_float32 a5 = vg_load_f32(&in[x + 2 * nlanes]);
-            v_float32 a6 = vg_load_f32(&in[x + 5 * nlanes / 2]);
-
-            addc_pack_store_c3(&out[x], v_round(a1 + s1),
-                                        v_round(a2 + s2),
-                                        v_round(a3 + s3),
-                                        v_round(a4 + s1),
-                                        v_round(a5 + s2),
-                                        v_round(a6 + s3));
-        }
-
-        if (x < length)
-        {
-            x = length - lanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    addc_pack_store_c3(outx, v_round(a1 + s1),
+                             v_round(a2 + s2),
+                             v_round(a3 + s3),
+                             v_round(a4 + s1),
+                             v_round(a5 + s2),
+                             v_round(a6 + s3));
 }
 
 //-------------------------------------------------------------------------------------------------
 
 template<typename SRC>
-CV_ALWAYS_INLINE int addc_simd_c3_impl(const SRC in[], uchar out[],
+CV_ALWAYS_INLINE void addc_simd_c3_impl(const SRC* inx, uchar* outx,
                                        const v_float32& s1, const v_float32& s2,
-                                       const v_float32& s3, const int length)
+                                       const v_float32& s3, const int nlanes)
 {
-    constexpr int nlanes = v_uint8::nlanes;
-    constexpr int chan = 3;
-    constexpr int lanes = chan * nlanes;
+    vx_store(outx,
+               v_pack_u(v_pack(v_round(vg_load_f32(inx) + s1),
+                               v_round(vg_load_f32(&inx[nlanes/4]) + s2)),
+                        v_pack(v_round(vg_load_f32(&inx[nlanes/2]) + s3),
+                               v_round(vg_load_f32(&inx[3*nlanes/4]) + s1))));
 
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - lanes; x += lanes)
-        {
-            vx_store(&out[x],
-                     v_pack_u(v_pack(v_round(vg_load_f32(&in[x]) + s1),
-                                     v_round(vg_load_f32(&in[x + nlanes/4]) + s2)),
-                              v_pack(v_round(vg_load_f32(&in[x + nlanes/2]) + s3),
-                                     v_round(vg_load_f32(&in[x + 3*nlanes/4]) + s1))));
+    vx_store(&outx[nlanes],
+                v_pack_u(v_pack(v_round(vg_load_f32(&inx[nlanes]) + s2),
+                                v_round(vg_load_f32(&inx[5*nlanes/4]) + s3)),
+                         v_pack(v_round(vg_load_f32(&inx[3*nlanes/2]) + s1),
+                                v_round(vg_load_f32(&inx[7*nlanes/4]) + s2))));
 
-            vx_store(&out[x + nlanes],
-                     v_pack_u(v_pack(v_round(vg_load_f32(&in[x + nlanes]) + s2),
-                                     v_round(vg_load_f32(&in[x + 5*nlanes/4]) + s3)),
-                              v_pack(v_round(vg_load_f32(&in[x + 3*nlanes/2]) + s1),
-                                     v_round(vg_load_f32(&in[x + 7*nlanes/4]) + s2))));
-
-            vx_store(&out[x + 2 * nlanes],
-                     v_pack_u(v_pack(v_round(vg_load_f32(&in[x + 2*nlanes]) + s3),
-                                     v_round(vg_load_f32(&in[x + 9*nlanes/4]) + s1)),
-                              v_pack(v_round(vg_load_f32(&in[x + 5*nlanes/2]) + s2),
-                                     v_round(vg_load_f32(&in[x + 11*nlanes/4]) + s3))));
-        }
-
-        if (x < length)
-        {
-            x = length - lanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    vx_store(&outx[2 * nlanes],
+                v_pack_u(v_pack(v_round(vg_load_f32(&inx[2*nlanes]) + s3),
+                                v_round(vg_load_f32(&inx[9*nlanes/4]) + s1)),
+                         v_pack(v_round(vg_load_f32(&inx[5*nlanes/2]) + s2),
+                                v_round(vg_load_f32(&inx[11*nlanes/4]) + s3))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
 template<typename SRC>
-CV_ALWAYS_INLINE int addc_simd_c3_impl(const SRC in[], float out[],
-                                       const v_float32& s1, const v_float32& s2,
-                                       const v_float32& s3, const int length)
+CV_ALWAYS_INLINE void addc_simd_c3_impl(const SRC* in, float* out,
+                                        const v_float32& s1, const v_float32& s2,
+                                        const v_float32& s3, const int nlanes)
 {
-    constexpr int nlanes = v_float32::nlanes;
-    constexpr int chan = 3;
-    constexpr int lanes = chan * nlanes;
+    v_float32 a1 = vg_load_f32(in);
+    v_float32 a2 = vg_load_f32(&in[nlanes]);
+    v_float32 a3 = vg_load_f32(&in[2*nlanes]);
 
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - lanes; x += lanes)
-        {
-            v_float32 a1 = vg_load_f32(&in[x]);
-            v_float32 a2 = vg_load_f32(&in[x + nlanes]);
-            v_float32 a3 = vg_load_f32(&in[x + 2*nlanes]);
-
-            vx_store(&out[x], a1 + s1);
-            vx_store(&out[x + nlanes], a2 + s2);
-            vx_store(&out[x + 2*nlanes], a3 + s3);
-        }
-
-        if (x < length)
-        {
-            x = length - lanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    vx_store(out, a1 + s1);
+    vx_store(&out[nlanes], a2 + s2);
+    vx_store(&out[2*nlanes], a3 + s3);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1120,7 +997,50 @@ CV_ALWAYS_INLINE int addc_simd_c3(const SRC in[], const float scalar[], DST out[
     v_float32 s3 = vx_load(&scalar[2]);
 #endif
 
-    return addc_simd_c3_impl(in, out, s1, s2, s3, length);
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - lanes; x += lanes)
+        {
+            addc_simd_c3_impl(&in[x], &out[x], s1, s2, s3, nlanes);
+        }
+
+        if (x < length)
+        {
+            x = length - lanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int addc_simd_common(const SRC in[], const float scalar[], DST out[], const int length)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 sc = vx_load(scalar);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            addc_simd_common_impl(&in[x], &out[x], sc, nlanes);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
 }
 
 #define ADDC_SIMD(SRC, DST)                                       \
@@ -1133,10 +1053,11 @@ int addc_simd(const SRC in[], const float scalar[], DST out[],    \
     case 1:                                                       \
     case 2:                                                       \
     case 4:                                                       \
-        return addc_simd_impl(in, scalar, out, length);           \
+        return addc_simd_common(in, scalar, out, length);         \
     case 3:                                                       \
         return addc_simd_c3(in, scalar, out, length);             \
     default:                                                      \
+        GAPI_Assert(chan <= 4);                                   \
         break;                                                    \
     }                                                             \
     return 0;                                                     \
