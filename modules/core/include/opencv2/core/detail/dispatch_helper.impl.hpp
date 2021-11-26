@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP
-#define OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP
+#ifndef OPENCV_CORE_DETAIL_DISPATCH_HELPER_IMPL_HPP
+#define OPENCV_CORE_DETAIL_DISPATCH_HELPER_IMPL_HPP
 
 //! @cond IGNORED
 
@@ -46,4 +46,4 @@ static inline void depthDispatch(const int depth, Args&&... args)
 
 //! @endcond
 
-#endif //OPENCV_CORE_DETAIL_REDUCE_ARG_HELPER_IMPL_HPP
+#endif //OPENCV_CORE_DETAIL_DISPATCH_HELPER_IMPL_HPP

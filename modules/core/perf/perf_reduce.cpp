@@ -68,7 +68,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 typedef tuple<Size, MatType, int> Size_MatType_RMode_t;
 typedef perf::TestBaseWithParam<Size_MatType_RMode_t> Size_MatType_RMode;
 
-PERF_TEST_P(Size_MatType_RMode, reduceArgMinMax, testing::Combine(
+PERF_TEST_P(Size_MatType_RMode, DISABLED_reduceArgMinMax, testing::Combine(
         testing::Values(TYPICAL_MAT_SIZES),
         testing::Values(CV_8U, CV_32F),
         testing::Values(0, 1)
