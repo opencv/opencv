@@ -147,8 +147,8 @@ int main(int argc, char *argv[]) {
     cv::GMat in;
     cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(in);
     cv::GMat post_proc_out = custom::PostProcessing::on(in, out_blob);
-    cv::GMat blending_in = in * 0.3;
-    cv::GMat blending_out = post_proc_out * 0.7;
+    cv::GMat blending_in = in * 0.3f;
+    cv::GMat blending_out = post_proc_out * 0.7f;
     cv::GMat out = blending_in + blending_out;
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
