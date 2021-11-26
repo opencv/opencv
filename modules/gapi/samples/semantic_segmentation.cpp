@@ -2,6 +2,7 @@
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/operators.hpp>
 #include <opencv2/highgui.hpp>
 
 const std::string keys =
@@ -117,10 +118,7 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 
         cv::Mat mask_img;
         classesToColors(classes, mask_img);
-
         cv::resize(mask_img, out, in.size());
-        const float blending = 0.3f;
-        out = in * blending + out * (1 - blending);
     }
 };
 } // namespace custom
@@ -148,7 +146,10 @@ int main(int argc, char *argv[]) {
     // Now build the graph
     cv::GMat in;
     cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(in);
-    cv::GMat out = custom::PostProcessing::on(in, out_blob);
+    cv::GMat post_proc_out = custom::PostProcessing::on(in, out_blob);
+    cv::GMat blending_in = in * 0.3f;
+    cv::GMat blending_out = post_proc_out * 0.7f;
+    cv::GMat out = blending_in + blending_out;
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -156,11 +157,16 @@ int main(int argc, char *argv[]) {
 
     // The execution part
     pipeline.setSource(std::move(inputs));
-    pipeline.start();
 
     cv::VideoWriter writer;
+    cv::TickMeter tm;
     cv::Mat outMat;
+
+    std::size_t frames = 0u;
+    tm.start();
+    pipeline.start();
     while (pipeline.pull(cv::gout(outMat))) {
+        ++frames;
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
@@ -172,5 +178,7 @@ int main(int argc, char *argv[]) {
             writer << outMat;
         }
     }
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

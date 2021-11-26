@@ -13,6 +13,7 @@
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
+#include <opencv2/gapi/infer/parsers.hpp>
 
 #ifdef HAVE_INF_ENGINE
 #include <inference_engine.hpp> // ParamMap
@@ -126,12 +127,6 @@ G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
     }
 };
 
-G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-ssd") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &, const cv::GOpaqueDesc &) {
-        return cv::empty_array_desc();
-    }
-};
-
 G_API_OP(BBoxes, <GPrims(GDetections, GRect)>, "sample.custom.b-boxes") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GOpaqueDesc &) {
         return cv::empty_array_desc();
@@ -160,55 +155,6 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
                            , sqside
                            , sqside
                            };
-    }
-};
-
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Rect &in_roi,
-                    const cv::Size &in_parent_size,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Size up_roi = in_roi.size();
-        const cv::Rect surface({0,0}, in_parent_size);
-
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-            (void) label; // unused
-
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-
-            // map relative coordinates to the original image scale
-            // taking the ROI into account
-            cv::Rect rc;
-            rc.x      = static_cast<int>(rc_left   * up_roi.width);
-            rc.y      = static_cast<int>(rc_top    * up_roi.height);
-            rc.width  = static_cast<int>(rc_right  * up_roi.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * up_roi.height) - rc.y;
-            rc.x += in_roi.x;
-            rc.y += in_roi.y;
-            out_objects.emplace_back(rc & surface);
-        }
     }
 };
 
@@ -350,7 +296,6 @@ int main(int argc, char *argv[]) {
 
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
-        , custom::OCVParseSSD
         , custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(face_net);
 
@@ -379,7 +324,7 @@ int main(int argc, char *argv[]) {
     auto size = cv::gapi::streaming::size(in);
     auto roi = custom::LocateROI::on(size);
     auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-    auto rcs = custom::ParseSSD::on(blob, roi, size);
+    cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
     auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
     auto out = cv::gapi::streaming::BGR(out_frame);
 
@@ -398,8 +343,8 @@ int main(int argc, char *argv[]) {
     pipeline.setSource(std::move(cap));
     pipeline.start();
 
-    int framesCount = 0;
-    cv::TickMeter t;
+    size_t frames = 0u;
+    cv::TickMeter tm;
     cv::VideoWriter writer;
     if (!output.empty() && !writer.isOpened()) {
         const auto sz = cv::Size{frame_descr.size.width, frame_descr.size.height};
@@ -408,20 +353,17 @@ int main(int argc, char *argv[]) {
     }
 
     cv::Mat outMat;
-    t.start();
+    tm.start();
     while (pipeline.pull(cv::gout(outMat))) {
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
             writer << outMat;
         }
-        framesCount++;
+        ++frames;
     }
-    t.stop();
-    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
-    std::cout << "FPS: " << framesCount /  t.getTimeSec() << std::endl;
-    std::cout << "framesCount: " << framesCount << std::endl;
-
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }
 
