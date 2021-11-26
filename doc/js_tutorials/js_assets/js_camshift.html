@@ -77,7 +77,7 @@ cv.normalize(roiHist, roiHist, 0, 255, cv.NORM_MINMAX);
 // delete useless mats.
 roi.delete(); hsvRoi.delete(); mask.delete(); low.delete(); high.delete(); hsvRoiVec.delete();
 
-// Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+// Setup the termination criteria, either 10 iteration or move by at least 1 pt
 let termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1);
 
 let hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
