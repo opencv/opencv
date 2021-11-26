@@ -268,4 +268,13 @@ TEST_F(RMatViewCallbackTest, MagazineInteraction) {
     mag.slot<View>().erase(rc);
     EXPECT_EQ(1, callbackCalls);
 }
+
+TEST(RMatView, Access1DMat) {
+    cv::Mat m({1}, CV_32FC1);
+    m.dims = 1;
+    auto rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(m);
+    auto view = rmat.access(cv::RMat::Access::R);
+    auto out = cv::gimpl::asMat(view);
+    EXPECT_EQ(1, out.dims);
+}
 } // namespace opencv_test

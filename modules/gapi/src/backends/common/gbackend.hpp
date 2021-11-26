@@ -24,8 +24,17 @@ namespace gimpl {
 
     inline cv::Mat asMat(RMat::View& v) {
 #if !defined(GAPI_STANDALONE)
-        return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
-                                : cv::Mat(v.dims(), v.type(), v.ptr(), v.steps().data());
+        if (v.dims().empty()) {
+            return cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step());
+        } else {
+            cv::Mat m(v.dims(), v.type(), v.ptr(), v.steps().data());
+            if (v.dims().size() == 1) {
+                // FIXME: cv::Mat() constructor will set m.dims to 2;
+                // To obtain 1D Mat, we have to set m.dims back to 1 manually
+                m.dims = 1;
+            }
+            return m;
+        }
 #else
         // FIXME: add a check that steps are default
         return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
@@ -41,7 +50,10 @@ namespace gimpl {
         }
         return RMat::View(cv::descr_of(m), m.data, steps, std::move(cb));
 #else
-        return RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb));
+        return m.dims.empty()
+            ? RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb))
+            // Own Mat doesn't support n-dimensional steps so default ones are used in this case
+            : RMat::View(cv::descr_of(m), m.data, RMat::View::stepsT{}, std::move(cb));
 #endif
     }
 
