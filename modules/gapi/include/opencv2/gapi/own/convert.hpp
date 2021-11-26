@@ -43,9 +43,32 @@ namespace own
             ? cv::Mat{m.rows, m.cols, m.type(), m.data, m.step}
             : cv::Mat{m.dims, m.type(), m.data};
     }
+    inline cv::Mat to_ocv(cv::Mat const&) = delete;
 
-    cv::Mat to_ocv(Mat&&) = delete;
+    inline cv::Rect to_ocv(cv::gapi::own::Rect const& r) {
+        return cv::Rect{r.x, r.y, r.width, r.height};
+    }
+    inline cv::Rect to_ocv(cv::Rect const&) = delete;
 
+    inline cv::Size to_ocv(cv::gapi::own::Size const& s) {
+        return cv::Size{s.width, s.height};
+    }
+    inline cv::Size to_ocv(cv::Size const&) = delete;
+
+    inline cv::Point to_ocv(cv::gapi::own::Point const& p) {
+        return cv::Point{p.x, p.y};
+    }
+    inline cv::Point to_ocv(cv::Point const&) = delete;
+
+    inline cv::Point2f to_ocv(cv::gapi::own::Point2f const& p2f) {
+        return cv::Point2f{p2f.x, p2f.y};
+    }
+    inline cv::Point2f to_ocv(cv::Point2f const&) = delete;
+
+    inline cv::Scalar to_ocv(cv::gapi::own::Scalar const& s) {
+        return cv::Scalar{s[0], s[1], s[2], s[3]};
+    }
+    inline cv::Scalar to_ocv(cv::Scalar const&) = delete;
 } // namespace own
 } // namespace gapi
 } // namespace cv
