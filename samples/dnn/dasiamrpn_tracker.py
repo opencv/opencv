@@ -226,7 +226,7 @@ def main():
     mark = True
     drawing = False
     cx, cy, w, h = 0.0, 0.0, 0, 0
-    # Fucntion for drawing during videostream
+    # Function for drawing during videostream
     def get_bb(event, x, y, flag, param):
         nonlocal point1, point2, cx, cy, w, h, drawing, mark
 
