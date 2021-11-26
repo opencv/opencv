@@ -113,7 +113,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
-# Bootstap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+# Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
 enable_language(CXX C)
 
 ocv_cmake_hook(POST_CMAKE_BOOTSTRAP)
