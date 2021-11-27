@@ -356,7 +356,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
 
 
     }
-    assert( image_widget->scaled_image );
+    CV_Assert( image_widget->scaled_image );
 }
 
 static void

@@ -212,7 +212,7 @@ int CvCaptureCAM_CMU::getDepth()
 
     // TODO
     if( format==7 ) {
-        assert(0);
+        CV_Assert(0);
         return 1;
     }
     // irrelvant to depth
@@ -233,7 +233,7 @@ int CvCaptureCAM_CMU::getNChannels()
     int mode = cmucam->GetVideoMode();
 
     if( format==7 ){
-        assert(0);
+        CV_Assert(0);
         return 1;
     }
 

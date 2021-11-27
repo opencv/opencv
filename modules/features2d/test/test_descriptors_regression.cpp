@@ -159,7 +159,7 @@ protected:
 
     void emptyDataTest()
     {
-        assert( dextractor );
+        CV_Assert( dextractor );
 
         // One image.
         Mat image;
@@ -205,7 +205,7 @@ protected:
 
     void regressionTest()
     {
-        assert( dextractor );
+        CV_Assert( dextractor );
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;

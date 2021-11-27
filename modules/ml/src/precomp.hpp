@@ -48,7 +48,6 @@
 
 #include "opencv2/core/private.hpp"
 
-#include <assert.h>
 #include <float.h>
 #include <limits.h>
 #include <math.h>

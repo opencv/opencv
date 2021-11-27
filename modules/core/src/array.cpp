@@ -497,7 +497,7 @@ cvInitNArrayIterator( int count, CvArr** arrs,
 // returns zero value if iteration is finished, non-zero otherwise
 CV_IMPL int cvNextNArraySlice( CvNArrayIterator* iterator )
 {
-    assert( iterator != 0 );
+    CV_Assert( iterator != 0 );
     int i, dims;
 
     for( dims = iterator->dims; dims > 0; dims-- )
@@ -648,7 +648,7 @@ icvGetNodePtr( CvSparseMat* mat, const int* idx, int* _type,
     int i, tabidx;
     unsigned hashval = 0;
     CvSparseNode *node;
-    assert( CV_IS_SPARSE_MAT( mat ));
+    CV_Assert( CV_IS_SPARSE_MAT( mat ));
 
     if( !precalc_hashval )
     {
@@ -697,7 +697,7 @@ icvGetNodePtr( CvSparseMat* mat, const int* idx, int* _type,
             int newrawsize = newsize*sizeof(newtable[0]);
 
             CvSparseMatIterator iterator;
-            assert( (newsize & (newsize - 1)) == 0 );
+            CV_Assert( (newsize & (newsize - 1)) == 0 );
 
             // resize hash table
             newtable = (void**)cvAlloc( newrawsize );
@@ -742,7 +742,7 @@ icvDeleteNode( CvSparseMat* mat, const int* idx, unsigned* precalc_hashval )
     int i, tabidx;
     unsigned hashval = 0;
     CvSparseNode *node, *prev = 0;
-    assert( CV_IS_SPARSE_MAT( mat ));
+    CV_Assert( CV_IS_SPARSE_MAT( mat ));
 
     if( !precalc_hashval )
     {
@@ -1462,7 +1462,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
     int cn = CV_MAT_CN( type );
     int depth = type & CV_MAT_DEPTH_MASK;
 
-    assert( scalar && data );
+    CV_Assert( scalar && data );
     if( (unsigned)(cn - 1) >= 4 )
         CV_Error( CV_StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
 
@@ -1509,7 +1509,7 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
             ((double*)data)[cn] = (double)(scalar->val[cn]);
         break;
     default:
-        assert(0);
+        CV_Assert(0);
         CV_Error( CV_BadDepth, "" );
     }
 
@@ -1534,7 +1534,7 @@ cvRawDataToScalar( const void* data, int flags, CvScalar* scalar )
 {
     int cn = CV_MAT_CN( flags );
 
-    assert( scalar && data );
+    CV_Assert( scalar && data );
 
     if( (unsigned)(cn - 1) >= 4 )
         CV_Error( CV_StsOutOfRange, "The number of channels must be 1, 2, 3 or 4" );
@@ -1572,7 +1572,7 @@ cvRawDataToScalar( const void* data, int flags, CvScalar* scalar )
             scalar->val[cn] = ((double*)data)[cn];
         break;
     default:
-        assert(0);
+        CV_Assert(0);
         CV_Error( CV_BadDepth, "" );
     }
 }
@@ -2623,7 +2623,7 @@ cvReshapeMatND( const CvArr* arr,
 
             {
             CvMatND* mat = (CvMatND*)arr;
-            assert( new_cn > 0 );
+            CV_Assert( new_cn > 0 );
             int last_dim_size = mat->dim[mat->dims-1].size*CV_MAT_CN(mat->type);
             int new_size = last_dim_size/new_cn;
 
@@ -2901,7 +2901,7 @@ CV_IMPL IplImage *
 cvCreateImage( CvSize size, int depth, int channels )
 {
     IplImage *img = cvCreateImageHeader( size, depth, channels );
-    assert( img );
+    CV_Assert( img );
     cvCreateData( img );
 
     return img;

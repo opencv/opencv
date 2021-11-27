@@ -157,7 +157,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
         imaxval = cvRound(maxval);
     }
 
-    assert( depth == CV_8U || depth == CV_16S || depth == CV_16U || depth == CV_32F || depth == CV_64F );
+    CV_Assert( depth == CV_8U || depth == CV_16S || depth == CV_16U || depth == CV_32F || depth == CV_64F );
 
     switch( thresh_type )
     {
@@ -407,7 +407,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
         }
         break;
     default:
-        assert(0);
+        CV_Assert(0);
     }
 }
 

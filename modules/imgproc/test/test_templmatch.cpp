@@ -185,7 +185,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
             b_denom = 1.;
     }
 
-    assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
 
     for( i = 0; i < result->rows; i++ )
     {

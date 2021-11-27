@@ -312,7 +312,7 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
         case 1: createIndex( data, KDTreeIndexParams() ); break;
         //case 2: createIndex( data, CompositeIndexParams() ); break; // nothing to save for linear search
         //case 2: createIndex( data, AutotunedIndexParams() ); break; // possible linear index !
-        default: assert(0);
+        default: CV_Assert(0);
     }
     string filename = tempfile();
     index->save( filename );

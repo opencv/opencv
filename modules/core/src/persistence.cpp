@@ -160,7 +160,7 @@ void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection )
     {
         if( collection->tag != CV_NODE_NONE )
         {
-            assert( fs->fmt == CV_STORAGE_FORMAT_XML );
+            CV_Assert( fs->fmt == CV_STORAGE_FORMAT_XML );
             CV_PARSE_ERROR( "Sequence element should not have name (use <_></_>)" );
         }
 
@@ -551,7 +551,7 @@ int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len )
     if( !dt || !len )
         return 0;
 
-    assert( fmt_pairs != 0 && max_len > 0 );
+    CV_Assert( fmt_pairs != 0 && max_len > 0 );
     fmt_pairs[0] = 0;
     max_len *= 2;
 

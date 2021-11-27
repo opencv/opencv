@@ -638,7 +638,7 @@ void SparseMat::resizeHashTab(size_t newsize)
 uchar* SparseMat::newNode(const int* idx, size_t hashval)
 {
     const int HASH_MAX_FILL_FACTOR=3;
-    assert(hdr);
+    CV_Assert(hdr);
     size_t hsize = hdr->hashtab.size();
     if( ++hdr->nodeCount > hsize*HASH_MAX_FILL_FACTOR )
     {

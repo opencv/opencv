@@ -205,7 +205,7 @@ public:
             }
             else
             {
-                assert( cn == 3 );
+                CV_Assert( cn == 3 );
                 AutoBuffer<float> buf(alignSize(size.width, CV_SIMD_WIDTH)*3 + size.width + CV_SIMD_WIDTH - 1);
                 memset(buf.data(), 0, buf.size() * sizeof(float));
                 float *sum_b = alignPtr(buf.data(), CV_SIMD_WIDTH);

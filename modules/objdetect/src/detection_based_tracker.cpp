@@ -42,7 +42,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <cassert>
 
 #ifdef CV_CXX11
 #define USE_STD_THREADS

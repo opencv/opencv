@@ -106,8 +106,8 @@ public:
             fprintf(stderr, "I can only search one feature at a time for range search\n");
             return -1;
         }
-        assert(query.cols == veclen());
-        assert(indices.cols == dists.cols);
+        CV_Assert(query.cols == veclen());
+        CV_Assert(indices.cols == dists.cols);
 
         int n = 0;
         int* indices_ptr = NULL;

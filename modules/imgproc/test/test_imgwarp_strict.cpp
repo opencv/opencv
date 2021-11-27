@@ -935,7 +935,7 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
     else if (interpolation == INTER_LANCZOS4)
         ksize = 8;
     else if (interpolation != INTER_LINEAR)
-        assert(0);
+        CV_Assert(0);
     int ofs = (ksize / 2) - 1;
 
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());

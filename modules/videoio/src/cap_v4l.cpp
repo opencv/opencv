@@ -220,7 +220,6 @@ make & enjoy!
 
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <limits>
@@ -929,8 +928,8 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
         return false;
     }
 
-    assert(buf.index < req.count);
-    assert(buffers[buf.index].length == buf.length);
+    CV_Assert(buf.index < req.count);
+    CV_Assert(buffers[buf.index].length == buf.length);
 
     //We shouldn't use this buffer in the queue while not retrieve frame from it.
     buffers[buf.index].buffer = buf;

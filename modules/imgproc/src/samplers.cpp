@@ -74,7 +74,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
             src += rect.width*pix_size;
             rect.width = 0;
         }
-        assert( rect.width <= win_size.width );
+        CV_Assert( rect.width <= win_size.width );
     }
 
     if( ip.y >= 0 )

@@ -797,7 +797,7 @@ void icvYMLEndWriteStruct( CvFileStorage* fs )
 
     if( !CV_NODE_IS_FLOW(parent_flags) )
         fs->struct_indent -= CV_YML_INDENT + CV_NODE_IS_FLOW(struct_flags);
-    assert( fs->struct_indent >= 0 );
+    CV_Assert( fs->struct_indent >= 0 );
 
     fs->struct_flags = parent_flags;
 }

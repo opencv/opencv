@@ -249,7 +249,6 @@ make & enjoy!
 #include <string.h>
 #include <stdlib.h>
 #include <asm/types.h>          /* for videodev2.h */
-#include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
@@ -1125,7 +1124,7 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
         }
    }
 
-   assert(buf.index < capture->req.count);
+   CV_Assert(buf.index < capture->req.count);
 
 #ifdef USE_TEMP_BUFFER
    memcpy(capture->buffers[MAX_V4L_BUFFERS].start,

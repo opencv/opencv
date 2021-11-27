@@ -60,7 +60,6 @@ using namespace cv;
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 
 #ifdef HAVE_OPENGL
 #include <memory>
@@ -105,7 +104,7 @@ static const char* trackbar_text =
 
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
 {
-    assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
+    CV_Assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
 
     BITMAPINFOHEADER* bmih = &(bmi->bmiHeader);
 
@@ -1107,7 +1106,7 @@ static RECT icvCalcWindowRect( CvWindow* window )
 {
     RECT crect = { 0 }, trect = { 0 }, rect = { 0 };
 
-    assert(window);
+    CV_Assert(window);
 
     GetClientRect(window->frame, &crect);
     if (window->toolbar.toolbar)
@@ -1157,7 +1156,7 @@ static bool icvGetBitmapData( CvWindow* window, SIZE* size, int* channels, void*
 static void icvUpdateWindowPos( CvWindow* window )
 {
     RECT rect = { 0 };
-    assert(window);
+    CV_Assert(window);
 
     if( (window->flags & CV_WINDOW_AUTOSIZE) && window->image )
     {
