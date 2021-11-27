@@ -191,7 +191,7 @@ void CV_DetectorTest::run( int )
 
         // write detectors
         validationFS << DETECTORS << "{";
-        assert( detectorNames.size() == detectorFilenames.size() );
+        CV_Assert( detectorNames.size() == detectorFilenames.size() );
         nit = detectorNames.begin();
         for( int di = 0; nit != detectorNames.end(); ++nit, di++ )
         {
@@ -291,7 +291,7 @@ static bool isZero( uchar i ) {return i == 0;}
 
 int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
 {
-    assert( imageFilenames.size() == objects.size() );
+    CV_Assert( imageFilenames.size() == objects.size() );
     int imageIdx = 0;
     int totalNoPair = 0, totalValRectCount = 0;
 
@@ -504,7 +504,7 @@ int CV_HOGDetectorTest::detectMultiScale( int di, const Mat& img,
     if( detectorFilenames[di].empty() )
         hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
     else
-        assert(0);
+        CV_Assert(0);
     hog.detectMultiScale(img, objects);
     return cvtest::TS::OK;
 }
@@ -787,7 +787,7 @@ void HOGCacheTester::init(const HOGDescriptorTester* _descriptor,
             data->gradWeight = weights(i,j);
         }
 
-    assert( count1 + count2 + count4 == rawBlockSize );
+    CV_Assert( count1 + count2 + count4 == rawBlockSize );
     // defragment pixData
     for( j = 0; j < count2; j++ )
         pixData[j + count1] = pixData[j + rawBlockSize];
@@ -809,7 +809,7 @@ void HOGCacheTester::init(const HOGDescriptorTester* _descriptor,
 const float* HOGCacheTester::getBlock(Point pt, float* buf)
 {
     float* blockHist = buf;
-    assert(descriptor != 0);
+    CV_Assert(descriptor != 0);
 
     Size blockSize = descriptor->blockSize;
     pt += imgoffset;
@@ -1285,7 +1285,7 @@ void HOGDescriptorTester::computeGradient(const Mat& img, Mat& grad, Mat& qangle
                hidx += _nbins;
            else if( hidx >= _nbins )
                hidx -= _nbins;
-           assert( (unsigned)hidx < (unsigned)_nbins );
+           CV_Assert( (unsigned)hidx < (unsigned)_nbins );
 
            qanglePtr[x*2] = (uchar)hidx;
            hidx++;

@@ -756,7 +756,7 @@ void icvJSONEndWriteStruct( CvFileStorage* fs )
     cvSeqPop( fs->write_stack, &parent_flags );
     fs->struct_indent -= 4;
     fs->struct_flags = parent_flags & ~CV_NODE_EMPTY;
-    assert( fs->struct_indent >= 0 );
+    CV_Assert( fs->struct_indent >= 0 );
 
     if ( CV_NODE_IS_COLLECTION(struct_flags) )
     {

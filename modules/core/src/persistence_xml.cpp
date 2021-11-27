@@ -37,7 +37,7 @@ icvXMLSkipSpaces( CvFileStorage* fs, char* ptr, int mode )
 
             if( c == '-' )
             {
-                assert( ptr[1] == '-' && ptr[2] == '>' );
+                CV_Assert( ptr[1] == '-' && ptr[2] == '>' );
                 mode = 0;
                 ptr += 3;
             }
@@ -484,7 +484,7 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
     else if( *ptr == '!' )
     {
         tag_type = CV_XML_DIRECTIVE_TAG;
-        assert( ptr[1] != '-' || ptr[2] != '-' );
+        CV_Assert( ptr[1] != '-' || ptr[2] != '-' );
         ptr++;
     }
     else
@@ -549,7 +549,7 @@ icvXMLParseTag( CvFileStorage* fs, char* ptr, CvStringHashNode** _tag,
             }
 
             ptr = icvXMLParseValue( fs, ptr, &stub, CV_NODE_STRING );
-            assert( stub.tag == CV_NODE_STRING );
+            CV_Assert( stub.tag == CV_NODE_STRING );
             last->attr[count*2+1] = stub.data.str.ptr;
             count++;
         }

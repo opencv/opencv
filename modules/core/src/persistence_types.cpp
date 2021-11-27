@@ -34,7 +34,7 @@ static void icvWriteMat( CvFileStorage* fs, const char* name, const void* struct
     cv::Size size;
     int y;
 
-    assert( CV_IS_MAT_HDR_Z(mat) );
+    CV_Assert( CV_IS_MAT_HDR_Z(mat) );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_MAT );
     cvWriteInt( fs, "rows", mat->rows );
@@ -121,7 +121,7 @@ static void icvWriteMatND( CvFileStorage* fs, const char* name, const void* stru
     int dims, sizes[CV_MAX_DIM];
     char dt[16];
 
-    assert( CV_IS_MATND_HDR(mat) );
+    CV_Assert( CV_IS_MATND_HDR(mat) );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_MATND );
     dims = cvGetDims( mat, sizes );
@@ -237,7 +237,7 @@ static void icvWriteSparseMat( CvFileStorage* fs, const char* name, const void* 
     int *prev_idx = 0;
     char dt[16];
 
-    assert( CV_IS_SPARSE_MAT(mat) );
+    CV_Assert( CV_IS_SPARSE_MAT(mat) );
 
     memstorage = cvCreateMemStorage();
 
@@ -273,7 +273,7 @@ static void icvWriteSparseMat( CvFileStorage* fs, const char* name, const void* 
         if( i > 0 )
         {
             for( ; idx[k] == prev_idx[k]; k++ )
-                assert( k < dims );
+                CV_Assert( k < dims );
             if( k < dims - 1 )
                 fs->write_int( fs, 0, k - dims + 1 );
         }
@@ -383,7 +383,7 @@ static void icvWriteImage( CvFileStorage* fs, const char* name, const void* stru
     cv::Size size;
     int y, depth;
 
-    assert( CV_IS_IMAGE(image) );
+    CV_Assert( CV_IS_IMAGE(image) );
 
     if( image->dataOrder == IPL_DATA_ORDER_PLANE )
         CV_Error( CV_StsUnsupportedFormat,
@@ -623,7 +623,7 @@ static void icvWriteSeq( CvFileStorage* fs, const char* name, const void* struct
     char buf[128];
     char dt_buf[128], *dt;
 
-    assert( CV_IS_SEQ( seq ));
+    CV_Assert( CV_IS_SEQ( seq ));
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_SEQ );
 
     if( level >= 0 )
@@ -671,7 +671,7 @@ static void icvWriteSeqTree( CvFileStorage* fs, const char* name, const void* st
                        strcmp(recursive_value,"False") != 0 &&
                        strcmp(recursive_value,"FALSE") != 0;
 
-    assert( CV_IS_SEQ( seq ));
+    CV_Assert( CV_IS_SEQ( seq ));
 
     if( !is_recursive )
     {
@@ -873,7 +873,7 @@ static void* icvReadSeqTree( CvFileStorage* fs, CvFileNode* node )
             root = seq;
         if( level > prev_level )
         {
-            assert( level == prev_level + 1 );
+            CV_Assert( level == prev_level + 1 );
             parent = prev_seq;
             prev_seq = 0;
             if( parent )
@@ -933,7 +933,7 @@ static void icvWriteGraph( CvFileStorage* fs, const char* name, const void* stru
     char edge_dt_buf[128], *edge_dt;
     int write_buf_size;
 
-    assert( CV_IS_GRAPH(graph) );
+    CV_Assert( CV_IS_GRAPH(graph) );
     vtx_count = cvGraphGetVtxCount( graph );
     edge_count = cvGraphGetEdgeCount( graph );
     flag_buf = (int*)cvAlloc( vtx_count*sizeof(flag_buf[0]));

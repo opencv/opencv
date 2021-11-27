@@ -55,7 +55,6 @@
 
 // standard includes
 #include <cstdio>
-#include <cassert>
 
 // Mac OS includes
 #include <Carbon/Carbon.h>
@@ -608,14 +607,14 @@ static CvCapture_QT_Cam * icvCaptureFromCam_QT (const int index)
 /// capture properties currently unimplemented for QuickTime camera interface
 static double icvGetProperty_QT_Cam (CvCapture_QT_Cam * capture, int property_id)
 {
-    assert (0);
+    CV_Assert (0);
     return 0;
 }
 
 /// capture properties currently unimplemented for QuickTime camera interface
 static int icvSetProperty_QT_Cam (CvCapture_QT_Cam * capture, int property_id, double value)
 {
-    assert (0);
+    CV_Assert (0);
     return 0;
 }
 

@@ -119,7 +119,7 @@ static CvWindow* hg_windows = 0;
 if( !(exp) )                                                    \
 {                                                               \
     printf("Assertion: %s  %s: %d\n", #exp, __FILE__, __LINE__);\
-    assert(exp);                                                \
+    CV_Assert(exp);                                                \
 }
 
 static int wasInitialized = 0;

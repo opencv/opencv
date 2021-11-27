@@ -272,7 +272,7 @@ static CvCaptureCAM_DC1394 * icvCaptureFromCAM_DC1394 (int index)
             format_idx = preferred_modes[i] - FORMAT_MIN;
             continue;
         }
-        assert(format_idx != -1);
+        CV_Assert(format_idx != -1);
         if ( ! icvFormatSupportedCAM_DC1394(pcap->format, formats) )
             continue;
         if ( icvModeSupportedCAM_DC1394(pcap->format, preferred_modes[i], modes[format_idx]) ){
