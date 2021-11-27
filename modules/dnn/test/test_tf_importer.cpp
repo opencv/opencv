@@ -731,6 +731,10 @@ TEST_P(Test_TensorFlow_layers, BiasAdd)
 
 TEST_P(Test_TensorFlow_layers, ExpandDims)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Layout::ANY is broken on CPU
+#endif
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
@@ -1042,7 +1046,6 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_resnet50_coco_2018_01_28)
     double iouDiff = 1e-4;
     if (target == DNN_TARGET_CUDA)
     {
-        // for faster_rcnn_resnet50_coco_2018_01_28
         scoresDiff = 0.06;
         iouDiff = 0.08;
     }
