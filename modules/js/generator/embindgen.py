@@ -485,7 +485,7 @@ class JSWrapperGenerator(object):
                 arg_types.append(arg_type)
                 unwrapped_arg_types.append(arg_type)
 
-            # Function attribure
+            # Function attribute
             func_attribs = ''
             if '*' in ''.join(arg_types):
                 func_attribs += ', allow_raw_pointers()'
@@ -680,7 +680,7 @@ class JSWrapperGenerator(object):
                     def_args.append(arg.defval)
                 arg_types.append(orig_arg_types[-1])
 
-            # Function attribure
+            # Function attribute
             func_attribs = ''
             if '*' in ''.join(orig_arg_types):
                 func_attribs += ', allow_raw_pointers()'

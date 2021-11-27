@@ -172,16 +172,19 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
+        CV_UNUSED(backend); CV_UNUSED(target); CV_UNUSED(inp); CV_UNUSED(ref);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021000000)
         if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
             {
+                std::cout << "Inconsistent batch size of input and output blobs for Myriad plugin" << std::endl;
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-                throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
             }
         }
+#endif
     }
 
     void expectNoFallbacks(Net& net, bool raiseError = true)

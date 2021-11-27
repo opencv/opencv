@@ -245,13 +245,13 @@ public:
                 nms_boxes.push_back(box);
                 nms_confidences.push_back(conf);
                 nms_classIds.push_back(class_id);
-#if 0  // use to update test reference data
-                std::cout << b << ", " << class_id << ", " << conf << "f, "
-                          << box.x << "f, " << box.y << "f, "
-                          << box.x + box.width << "f, " << box.y + box.height << "f,"
-                          << std::endl;
-#endif
-
+                if (cvtest::debugLevel > 0)
+                {
+                    std::cout << b << ", " << class_id << ", " << conf << "f, "
+                              << box.x << "f, " << box.y << "f, "
+                              << box.x + box.width << "f, " << box.y + box.height << "f,"
+                              << std::endl;
+                }
             }
 
             if (cvIsNaN(iouDiff))
@@ -359,6 +359,13 @@ TEST_P(Test_Darknet_nets, YoloVoc)
         scoreDiff = 0.03;
         iouDiff = 0.018;
     }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = std::numeric_limits<double>::quiet_NaN();
+    }
+#endif
 
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
@@ -372,6 +379,12 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     SCOPED_TRACE("batch size 2");
     testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold);
     }
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 }
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
@@ -615,6 +628,14 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     std::string config_file = "yolov4.cfg";
     std::string weights_file = "yolov4.weights";
 
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy (batch 1)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = std::numeric_limits<double>::quiet_NaN();
+    }
+#endif
 #if defined(INF_ENGINE_RELEASE)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD &&
@@ -633,6 +654,13 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     {
         SCOPED_TRACE("batch size 2");
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy (batch 1)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = 0.45f;
+    }
+#endif
 #if defined(INF_ENGINE_RELEASE)
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
@@ -648,6 +676,12 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
         testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
     }
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 }
 
 TEST_P(Test_Darknet_nets, YOLOv4_tiny)
@@ -718,6 +752,13 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE exception: Ngraph operation Transpose with name permute_168 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
