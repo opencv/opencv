@@ -378,7 +378,7 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
     // Reference output values are in range [-0.0001, 10.3906]
     double l1 = (target == DNN_TARGET_MYRIAD) ? 0.005 : 0.0;
     double lInf = (target == DNN_TARGET_MYRIAD) ? 0.021 : 0.0;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
     {
         l1 = 0.006f; lInf = 0.05f;
@@ -1475,6 +1475,14 @@ TEST_P(Test_DLDT_two_inputs, as_backend)
         lInf = 0.3;
     }
     normAssert(out, ref, "", l1, lInf);
+    if (cvtest::debugLevel > 0 || HasFailure())
+    {
+        std::cout << "input1 scale=" << kScale << " input2 scale=" << kScaleInv << std::endl;
+        std::cout << "input1: " << firstInp.size << " " << firstInp.reshape(1, 1) << std::endl;
+        std::cout << "input2: " << secondInp.size << " " << secondInp.reshape(1, 1) << std::endl;
+        std::cout << "ref: " << ref.reshape(1, 1) << std::endl;
+        std::cout << "out: " << out.reshape(1, 1) << std::endl;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(

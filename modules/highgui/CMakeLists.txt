@@ -66,7 +66,7 @@ if(HAVE_QT)
       QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     else()
-      message(FATAL_ERROR "Unsuported QT version: ${QT_VERSION_MAJOR}")
+      message(FATAL_ERROR "Unsupported QT version: ${QT_VERSION_MAJOR}")
     endif()
 
     list(APPEND highgui_srcs

@@ -186,7 +186,7 @@ TEST_P(Test_Torch_layers, run_concat)
 TEST_P(Test_Torch_layers, run_depth_concat)
 {
     double lInf = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         lInf = 0.032;
     }

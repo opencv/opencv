@@ -106,7 +106,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
-# Bootstap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+# Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
