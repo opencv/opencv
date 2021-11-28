@@ -39,7 +39,7 @@ class CV_EXPORTS_W Odometry
 {
 public:
     Odometry();
-    Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
+    Odometry(OdometryType otype, const OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
     /** Create new odometry frame
@@ -70,7 +70,7 @@ public:
      *   R_31 R_32 R_33 t_3
      *   0    0    0    1  }
      */
-    bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt);
+    bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt);
 
     class Impl;
 private:

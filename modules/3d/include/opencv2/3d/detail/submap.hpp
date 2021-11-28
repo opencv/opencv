@@ -204,7 +204,7 @@ public:
     Ptr<SubmapT> getCurrentSubmap(void) const;
 
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
-    bool updateMap(int frameId, OdometryFrame frame);
+    bool updateMap(int frameId, const OdometryFrame frame);
 
     bool addEdgeToCurrentSubmap(const int currentSubmapID, const int tarSubmapID);
 
@@ -427,7 +427,7 @@ bool SubmapManager<MatType>::addEdgeToCurrentSubmap(const int currentSubmapID, c
 }
 
 template<typename MatType>
-bool SubmapManager<MatType>::updateMap(int _frameId, OdometryFrame _frame)
+bool SubmapManager<MatType>::updateMap(int _frameId, const OdometryFrame _frame)
 {
     bool mapUpdated = false;
     int changedCurrentMapId = -1;
