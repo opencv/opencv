@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include "ref_reduce_arg.impl.hpp"
 
 namespace opencv_test { namespace {
 
@@ -1387,6 +1388,73 @@ struct MinMaxLocOp : public BaseElemWiseOp
     }
 };
 
+struct reduceArgMinMaxOp : public BaseElemWiseOp
+{
+    reduceArgMinMaxOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0))
+    {
+        context = ARITHM_MAX_NDIMS*2 + 2;
+    };
+    int getRandomType(RNG& rng) override
+    {
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
+    }
+    void getRandomSize(RNG& rng, vector<int>& size) override
+    {
+        cvtest::randomSize(rng, 2, ARITHM_MAX_NDIMS, 6, size);
+    }
+    void generateScalars(int depth, RNG& rng) override
+    {
+        BaseElemWiseOp::generateScalars(depth, rng);
+        isLast = (randInt(rng) % 2 == 0);
+        isMax = (randInt(rng) % 2 == 0);
+        axis = randInt(rng);
+    }
+    int getAxis(const Mat& src) const
+    {
+        int dims = src.dims;
+        return static_cast<int>(axis % (2 * dims)) - dims; // [-dims; dims - 1]
+    }
+    void op(const vector<Mat>& src, Mat& dst, const Mat&) override
+    {
+        const Mat& inp = src[0];
+        const int axis_ = getAxis(inp);
+        if (isMax)
+        {
+            cv::reduceArgMax(inp, dst, axis_, isLast);
+        }
+        else
+        {
+            cv::reduceArgMin(inp, dst, axis_, isLast);
+        }
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&) override
+    {
+        const Mat& inp = src[0];
+        const int axis_ = getAxis(inp);
+
+        if (!isLast && !isMax)
+        {
+            cvtest::MinMaxReducer<std::less>::reduce(inp, dst, axis_);
+        }
+        else if (!isLast && isMax)
+        {
+            cvtest::MinMaxReducer<std::greater>::reduce(inp, dst, axis_);
+        }
+        else if (isLast && !isMax)
+        {
+            cvtest::MinMaxReducer<std::less_equal>::reduce(inp, dst, axis_);
+        }
+        else
+        {
+            cvtest::MinMaxReducer<std::greater_equal>::reduce(inp, dst, axis_);
+        }
+    }
+
+    bool isLast;
+    bool isMax;
+    uint32_t axis;
+};
+
 
 typedef Ptr<BaseElemWiseOp> ElemWiseOpPtr;
 class ElemWiseTest : public ::testing::TestWithParam<ElemWiseOpPtr> {};
@@ -1492,6 +1560,7 @@ INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWis
 INSTANTIATE_TEST_CASE_P(Core_Sum, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new SumOp)));
 INSTANTIATE_TEST_CASE_P(Core_Norm, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new NormOp)));
 INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MinMaxLocOp)));
+INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
 

@@ -65,4 +65,33 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     SANITY_CHECK(vec, 1);
 }
 
+typedef tuple<Size, MatType, int> Size_MatType_RMode_t;
+typedef perf::TestBaseWithParam<Size_MatType_RMode_t> Size_MatType_RMode;
+
+PERF_TEST_P(Size_MatType_RMode, DISABLED_reduceArgMinMax, testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_8U, CV_32F),
+        testing::Values(0, 1)
+)
+)
+{
+    Size srcSize = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int axis = get<2>(GetParam());
+
+    Mat src(srcSize, matType);
+
+    std::vector<int> dstSize(src.dims);
+    std::copy(src.size.p, src.size.p + src.dims, dstSize.begin());
+    dstSize[axis] = 1;
+
+    Mat dst(dstSize, CV_32S, 0.);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::reduceArgMin(src, dst, axis, true);
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
