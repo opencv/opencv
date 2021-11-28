@@ -13,6 +13,10 @@
 #include <opencv2/core/hal/hal.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
+#if CV_SIMD
+#include "gfluidcore_func.hpp"
+#endif
+
 #include <opencv2/gapi/core.hpp>
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
@@ -82,10 +86,22 @@ static inline DST mul(SRC1 x, SRC2 y, float scale=1)
 }
 
 template<typename DST, typename SRC1, typename SRC2>
-static inline DST div(SRC1 x, SRC2 y, float scale=1)
+static inline
+typename std::enable_if<!std::is_same<DST, float>::value, DST>::type
+div(SRC1 x, SRC2 y, float scale=1)
 {
-    // like OpenCV: returns 0, if y=0
+    // like OpenCV: returns 0, if DST type=uchar/short/ushort and divider(y)=0
     auto result = y? scale * x / y: 0;
+    return saturate<DST>(result, rintf);
+}
+
+template<typename DST, typename SRC1, typename SRC2>
+static inline
+typename std::enable_if<std::is_same<DST, float>::value, DST>::type
+div(SRC1 x, SRC2 y, float scale = 1)
+{
+    // like OpenCV: returns inf/nan, if DST type=float and divider(y)=0
+    auto result = scale * x / y;
     return saturate<DST>(result, rintf);
 }
 
@@ -626,7 +642,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 
     return 0;
 }
-#endif
+#endif // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
@@ -668,13 +684,23 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
             break;
         }
         case ARITHM_MULTIPLY:
+        {
+#if CV_SIMD
+            x = mul_simd(in1, in2, out, length, scale);
+#endif
             for (; x < length; ++x)
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
+        }
         case ARITHM_DIVIDE:
+        {
+#if CV_SIMD
+            x = div_simd(in1, in2, out, length, scale);
+#endif
             for (; x < length; ++x)
                 out[x] = div<DST>(in1[x], in2[x], _scale);
             break;
+        }
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -724,13 +750,22 @@ GAPI_FLUID_KERNEL(GFluidMul, cv::gapi::core::GMul, false)
     static void run(const View &src1, const View &src2, double scale, int /*dtype*/, Buffer &dst)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
-        BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
-        BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(uchar,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(uchar,  short,  short,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(uchar,  float,  float,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(short,  short,  short,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(short,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(short,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(short,  float,  float,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(ushort, uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(ushort, short,  short,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(ushort, float,  float,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(float,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(float,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(float,  short,  short,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
+        BINARY_(float,  float,  float,  run_arithm, dst, src1, src2, ARITHM_MULTIPLY, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -744,10 +779,19 @@ GAPI_FLUID_KERNEL(GFluidDiv, cv::gapi::core::GDiv, false)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
         BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short,  uchar,  uchar, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( short,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( float, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
 
@@ -1911,93 +1955,122 @@ GAPI_FLUID_KERNEL(GFluidLUT, cv::gapi::core::GLUT, false)
 //
 //-------------------------
 
+#if CV_SIMD128
+template<typename DST, typename SRC>
+CV_ALWAYS_INLINE int run_convertto_simd(DST*, const SRC*, int)
+{
+    return 0;
+}
+CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int length)
+{
+    int l = 0;
+    for (; l <= length - 16; l += 16)
+    {
+        v_int32x4 i0, i1, i2, i3;
+        i0 = v_round( v_load( (float*)& in[l     ] ) );
+        i1 = v_round( v_load( (float*)& in[l +  4] ) );
+        i2 = v_round( v_load( (float*)& in[l +  8] ) );
+        i3 = v_round( v_load( (float*)& in[l + 12] ) );
+
+        v_uint16x8 us0, us1;
+        us0 = v_pack_u(i0, i1);
+        us1 = v_pack_u(i2, i3);
+
+        v_uint8x16 uc;
+        uc = v_pack(us0, us1);
+        v_store((uchar*)& out[l], uc);
+    }
+    return l;
+}
+CV_ALWAYS_INLINE int run_convertto_simd(ushort *out, const float *in, const int length)
+{
+    int l = 0;
+    for (; l <= length - 8; l += 8)
+    {
+        v_int32x4 i0, i1;
+        i0 = v_round( v_load( (float*)& in[l     ] ) );
+        i1 = v_round( v_load( (float*)& in[l +  4] ) );
+
+        v_uint16x8 us;
+        us = v_pack_u(i0, i1);
+        v_store((ushort*)& out[l], us);
+    }
+    return l;
+}
+#endif
+
+template<typename DST, typename SRC,
+         cv::util::enable_if_t<std::is_integral<DST>::value &&
+                               std::is_floating_point<SRC>::value, bool> = true >
+CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
+{
+    // manual SIMD if need rounding
+    static_assert(std::is_same<SRC,float>::value, "64-bit floating-point source is not supported");
+    int l = 0; // cycle index
+#if CV_SIMD128
+    l = run_convertto_simd(out, in, length);
+#endif
+    // tail of SIMD cycle
+    for (; l < length; l++)
+    {
+        out[l] = saturate<DST>(in[l], rintf);
+    }
+}
+template<typename DST, typename SRC,
+         cv::util::enable_if_t<std::is_integral<DST>::value &&
+                               std::is_integral<SRC>::value   , bool> = true >
+CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
+{
+    for (int l = 0; l < length; l++)
+    {
+        out[l] = saturate<DST>(in[l]);
+    }
+}
+template<typename DST, typename SRC,
+         cv::util::enable_if_t<std::is_floating_point<DST>::value, bool> = true >
+CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
+{
+    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
+    for (int l = 0; l < length; l++)
+    {
+        out[l] = static_cast<DST>(in[l]);
+    }
+}
+
+template<typename DST, typename SRC>
+CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const float alpha, const float beta,
+                                    const int length)
+{
+    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
+    // TODO: optimize if alpha and beta and data are integral
+    for (int l = 0; l < length; l++)
+    {
+        out[l] = saturate<DST>(in[l] * alpha + beta, rintf);
+    }
+}
+
 template<typename DST, typename SRC>
 static void run_convertto(Buffer &dst, const View &src, double _alpha, double _beta)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
 
-    int width  = dst.length();
-    int chan   = dst.meta().chan;
-    int length = width * chan;
+    const int width  = dst.length();
+    const int chan   = dst.meta().chan;
+    const int length = width * chan;
 
     // NB: don't do this if SRC or DST is 64-bit
-    auto alpha = static_cast<float>( _alpha );
-    auto beta  = static_cast<float>( _beta  );
+    const auto alpha = static_cast<float>( _alpha );
+    const auto beta  = static_cast<float>( _beta  );
 
     // compute faster if no alpha no beta
-    if (alpha == 1 && beta == 0)
+    if (1.f == alpha && 0.f == beta)
     {
-        // manual SIMD if need rounding
-        if (std::is_integral<DST>::value && std::is_floating_point<SRC>::value)
-        {
-            GAPI_Assert(( std::is_same<SRC,float>::value ));
-
-            int l = 0; // cycle index
-
-        #if CV_SIMD128
-            if (std::is_same<DST,uchar>::value)
-            {
-                for (; l <= length-16; l+=16)
-                {
-                    v_int32x4 i0, i1, i2, i3;
-                    i0 = v_round( v_load( (float*)& in[l     ] ) );
-                    i1 = v_round( v_load( (float*)& in[l +  4] ) );
-                    i2 = v_round( v_load( (float*)& in[l +  8] ) );
-                    i3 = v_round( v_load( (float*)& in[l + 12] ) );
-
-                    v_uint16x8 us0, us1;
-                    us0 = v_pack_u(i0, i1);
-                    us1 = v_pack_u(i2, i3);
-
-                    v_uint8x16 uc;
-                    uc = v_pack(us0, us1);
-                    v_store((uchar*)& out[l], uc);
-                }
-            }
-            if (std::is_same<DST,ushort>::value)
-            {
-                for (; l <= length-8; l+=8)
-                {
-                    v_int32x4 i0, i1;
-                    i0 = v_round( v_load( (float*)& in[l     ] ) );
-                    i1 = v_round( v_load( (float*)& in[l +  4] ) );
-
-                    v_uint16x8 us;
-                    us = v_pack_u(i0, i1);
-                    v_store((ushort*)& out[l], us);
-                }
-            }
-        #endif
-
-            // tail of SIMD cycle
-            for (; l < length; l++)
-            {
-                out[l] = saturate<DST>(in[l], rintf);
-            }
-        }
-        else if (std::is_integral<DST>::value) // here SRC is integral
-        {
-            for (int l=0; l < length; l++)
-            {
-                out[l] = saturate<DST>(in[l]);
-            }
-        }
-        else // DST is floating-point, SRC is any
-        {
-            for (int l=0; l < length; l++)
-            {
-                out[l] = static_cast<DST>(in[l]);
-            }
-        }
+        run_convertto(out, in, length);
     }
     else // if alpha or beta is non-trivial
     {
-        // TODO: optimize if alpha and beta and data are integral
-        for (int l=0; l < length; l++)
-        {
-            out[l] = saturate<DST>(in[l]*alpha + beta, rintf);
-        }
+        run_convertto(out, in, alpha, beta, length);
     }
 }
 

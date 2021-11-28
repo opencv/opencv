@@ -10,6 +10,7 @@
 #include <opencv2/gapi/util/variant.hpp>
 
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
+#include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
@@ -36,45 +37,6 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-
-// TODO Will be changed on generic function from `onevpl_param_parser` as soons as feature merges
-static mfxVariant cfg_param_to_mfx_variant(const CfgParam& accel_param) {
-    mfxVariant ret;
-    const CfgParam::value_t& accel_val = accel_param.get_value();
-    if (!cv::util::holds_alternative<std::string>(accel_val)) {
-        // expected string or uint32_t as value
-        if (!cv::util::holds_alternative<uint32_t>(accel_val)) {
-            throw std::logic_error("Incorrect value type of \"mfxImplDescription.AccelerationMode\" "
-                                   " std::string is expected" );
-        }
-        ret.Type = MFX_VARIANT_TYPE_U32;
-        ret.Data.U32 = cv::util::get<uint32_t>(accel_val);
-        return ret;
-    }
-
-    const std::string& accel_val_str = cv::util::get<std::string>(accel_val);
-    ret.Type = MFX_VARIANT_TYPE_U32;
-    if (accel_val_str == "MFX_ACCEL_MODE_NA") {
-        ret.Data.U32 = MFX_ACCEL_MODE_NA;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_D3D9") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_D3D9;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_D3D11") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_VAAPI") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_VAAPI_GLX") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_GLX;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_VAAPI_X11") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_X11;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND;
-    } else if (accel_val_str == "MFX_ACCEL_MODE_VIA_HDDLUNITE") {
-        ret.Data.U32 = MFX_ACCEL_MODE_VIA_HDDLUNITE;
-    }
-    return ret;
-}
 
 CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
     suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),

@@ -163,7 +163,7 @@ class BuilderDLDT:
         self.config = config
 
         cpath = self.config.dldt_config
-        log.info('DLDT build configration: %s', cpath)
+        log.info('DLDT build configuration: %s', cpath)
         if not os.path.exists(cpath):
             cpath = os.path.join(SCRIPT_DIR, cpath)
             if not os.path.exists(cpath):
@@ -575,5 +575,5 @@ if __name__ == "__main__":
     try:
         main()
     except:
-        log.info('FATAL: Error occured. To investigate problem try to change logging level using LOGLEVEL=DEBUG environment variable.')
+        log.info('FATAL: Error occurred. To investigate problem try to change logging level using LOGLEVEL=DEBUG environment variable.')
         raise

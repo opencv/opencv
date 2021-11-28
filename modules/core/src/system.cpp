@@ -944,6 +944,51 @@ int64 getCPUTickCount(void)
 
 #endif
 
+
+namespace internal {
+
+class Timestamp
+{
+public:
+    const int64 zeroTickCount;
+    const double ns_in_ticks;
+
+    Timestamp()
+        : zeroTickCount(getTickCount())
+        , ns_in_ticks(1e9 / getTickFrequency())
+    {
+        // nothing
+    }
+
+    int64 getTimestamp()
+    {
+        int64 t = getTickCount();
+        return (int64)((t - zeroTickCount) * ns_in_ticks);
+    }
+
+    static Timestamp& getInstance()
+    {
+        static Timestamp g_timestamp;
+        return g_timestamp;
+    }
+};
+
+class InitTimestamp {
+public:
+    InitTimestamp() {
+        Timestamp::getInstance();
+    }
+};
+static InitTimestamp g_initialize_timestamp;  // force zero timestamp initialization
+
+}  // namespace
+
+int64 getTimestampNS()
+{
+    return internal::Timestamp::getInstance().getTimestamp();
+}
+
+
 const String& getBuildInformation()
 {
     static String build_info =
