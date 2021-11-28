@@ -766,6 +766,7 @@ protected:
     unsigned int audioBaseIndex;
     int outputVideoFormat;
     int outputAudioFormat;
+    int audioSamplesPerSecond;
     bool convertFormat;
     MFTIME duration;
     LONGLONG frameStep;
@@ -818,6 +819,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     audioBaseIndex(1),
     outputVideoFormat(CV_CAP_MODE_BGR),
     outputAudioFormat(CV_16S),
+    audioSamplesPerSecond(0),
     convertFormat(true),
     duration(0),
     frameStep(0),
@@ -1047,7 +1049,7 @@ bool CvCapture_MSMF::configureAudioOutput(MediaType newType)
     MediaType newFormat = bestMatch.second;
 
     newFormat.majorType = MFMediaType_Audio;
-    newFormat.nSamplesPerSec = 44100;
+    newFormat.nSamplesPerSec = (audioSamplesPerSecond == 0) ? 44100 : audioSamplesPerSecond;
     switch (outputAudioFormat)
     {
     case CV_8S:
@@ -1316,6 +1318,19 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
         else
         {
             outputAudioFormat = value;
+        }
+    }
+    if (params.has(CAP_PROP_AUDIO_SAMPLES_PER_SECOND))
+    {
+        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+        if (value != 8000 && value != 11025 && value !=  22050 && value !=  44100)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << value);
+            return false;
+        }
+        else
+        {
+            audioSamplesPerSecond = value;
         }
     }
     if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
