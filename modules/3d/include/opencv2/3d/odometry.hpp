@@ -53,13 +53,13 @@ public:
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
      */
-    void prepareFrame(OdometryFrame frame);
+    void prepareFrame(OdometryFrame& frame);
 
     /** Prepare frame for odometry calculation
      * @param srcFrame frame will be prepared as src frame ("original" image)
      * @param dstFrame frame will be prepared as dsr frame ("rotated" image)
      */
-    void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
+    void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame);
 
     /** Prepare frame for odometry calculation
      * @param srcFrame src frame ("original" image)
@@ -70,7 +70,7 @@ public:
      *   R_31 R_32 R_33 t_3
      *   0    0    0    1  }
      */
-    bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt);
+    bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt);
 
     class Impl;
 private:

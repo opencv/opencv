@@ -18,9 +18,9 @@ public:
     Impl() {};
     virtual ~Impl() {};
     virtual OdometryFrame createOdometryFrame() const = 0;
-    virtual void prepareFrame(OdometryFrame frame) = 0;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
-    virtual bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const = 0;
+    virtual void prepareFrame(OdometryFrame& frame) = 0;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) = 0;
+    virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
 };
 
 
@@ -35,9 +35,9 @@ public:
     ~OdometryICP();
 
     virtual OdometryFrame createOdometryFrame() const override;
-    virtual void prepareFrame(OdometryFrame frame) override;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
-    virtual bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const override;
+    virtual void prepareFrame(OdometryFrame& frame) override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
 };
 
 OdometryICP::OdometryICP(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -59,17 +59,17 @@ OdometryFrame OdometryICP::createOdometryFrame() const
 #endif
 }
 
-void OdometryICP::prepareFrame(OdometryFrame frame)
+void OdometryICP::prepareFrame(OdometryFrame& frame)
 {
     prepareICPFrame(frame, frame, this->settings, this->algtype);
 }
 
-void OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void OdometryICP::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
     prepareICPFrame(srcFrame, dstFrame, this->settings, this->algtype);
 }
 
-bool OdometryICP::compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const
+bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
 {
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -98,9 +98,9 @@ public:
     ~OdometryRGB();
 
     virtual OdometryFrame createOdometryFrame() const override;
-    virtual void prepareFrame(OdometryFrame frame) override;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
-    virtual bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const override;
+    virtual void prepareFrame(OdometryFrame& frame) override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
 };
 
 OdometryRGB::OdometryRGB(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -118,17 +118,17 @@ OdometryFrame OdometryRGB::createOdometryFrame() const
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
 
-void OdometryRGB::prepareFrame(OdometryFrame frame)
+void OdometryRGB::prepareFrame(OdometryFrame& frame)
 {
     prepareRGBFrame(frame, frame, this->settings);
 }
 
-void OdometryRGB::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void OdometryRGB::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
     prepareRGBFrame(srcFrame, dstFrame, this->settings);
 }
 
-bool OdometryRGB::compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const
+bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
 {
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -158,9 +158,9 @@ public:
     ~OdometryRGBD();
 
     virtual OdometryFrame createOdometryFrame() const override;
-    virtual void prepareFrame(OdometryFrame frame) override;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
-    virtual bool compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const override;
+    virtual void prepareFrame(OdometryFrame& frame) override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
 };
 
 OdometryRGBD::OdometryRGBD(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -178,17 +178,17 @@ OdometryFrame OdometryRGBD::createOdometryFrame() const
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
 
-void OdometryRGBD::prepareFrame(OdometryFrame frame)
+void OdometryRGBD::prepareFrame(OdometryFrame& frame)
 {
     prepareRGBDFrame(frame, frame, this->settings, this->algtype);
 }
 
-void OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void OdometryRGBD::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
     prepareRGBDFrame(srcFrame, dstFrame, this->settings, this->algtype);
 }
 
-bool OdometryRGBD::compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt) const
+bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
 {
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -247,19 +247,19 @@ OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType) cons
     return OdometryFrame(matType);
 }
 
-void Odometry::prepareFrame(OdometryFrame frame)
+void Odometry::prepareFrame(OdometryFrame& frame)
 {
     this->impl->prepareFrame(frame);
 }
 
-void Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void Odometry::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
     this->impl->prepareFrames(srcFrame, dstFrame);
 }
 
-bool Odometry::compute(const OdometryFrame srcFrame, const OdometryFrame dstFrame, OutputArray Rt)
+bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt)
 {
-    this->prepareFrames(srcFrame, dstFrame);
+    //this->prepareFrames(srcFrame, dstFrame);
     return this->impl->compute(srcFrame, dstFrame, Rt);
 }
 
