@@ -68,7 +68,7 @@ namespace raw {
          * to compute IOU(GROUP_B, GROUP_A). We still have to compute IOU(GROUP_A, GROUP_A) though since
          * each group has many boxes and we need IOUs amongst boxes within a group.
          *
-         * We arbitarily choose a scheme to exit : exit if group_i is greater than group_j. This way we only
+         * We arbitrarily choose a scheme to exit : exit if group_i is greater than group_j. This way we only
          * compute IOUs between groups once. While nearly half the blocks are wasted, it's ok since they exit
          * early on and the working blocks are compute heavy.
          */
@@ -92,7 +92,7 @@ namespace raw {
          */
 
         /* The `j` box is fixed for each thread. All `i` boxes will be required for every thread.
-         * We store the `i` boxes in shared memory to allow global memory coalesing.
+         * We store the `i` boxes in shared memory to allow global memory coalescing.
          */
         using vector_type = get_vector_type_t<T, 4>;
         __shared__ vector_type group_i_boxes[BLOCK_SIZE];
@@ -162,7 +162,7 @@ namespace raw {
          * this loop has been highly tuned. Please profile and verify carefully before making changes.
          */
         /* UNROLL_SIZE is the number of boxes that must be processed per iteration. We manually unroll
-         * the loop since the compiler cannot effectively unroll on its own preassumably due to presence
+         * the loop since the compiler cannot effectively unroll on its own presumably due to presence
          * of instructions forcing warp synchronization.
          */
         constexpr int UNROLL_SIZE = 4;
@@ -290,7 +290,7 @@ namespace raw {
         if (boxes == 0)
             return;
 
-        /* We have a fixed number of threads and an arbitary number of boxes. We use an array of
+        /* We have a fixed number of threads and an arbitrary number of boxes. We use an array of
          * bits to store which boxes haven't been eliminated and which are still active. We organize
          * the array of bits into a matrix of bits of the shape (num_rows, BLOCK_SIZE, 32) which
          * is equivalent to (num_rows, BLOCK_SIZE) where the type is a 32-bit unsigned integer.

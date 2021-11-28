@@ -1154,7 +1154,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     // Convert OpenCV's NHC to NCH first.
     if(outShapeSize == 3)
     {
-        // If axis equal to outShapeSize, that mean we expand in Channel dimmension, and do not add permuteLayer.
+        // If axis equal to outShapeSize, that mean we expand in Channel dimension, and do not add permuteLayer.
         if(axis != outShapeSize)
         {
             int order[] = {0, 2, 1};  // From OpenCV's NHC to NCH.
