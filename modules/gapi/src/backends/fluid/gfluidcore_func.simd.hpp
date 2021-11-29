@@ -81,6 +81,29 @@ MUL_SIMD(float, float)
 
 #undef MUL_SIMD
 
+#define ADDC_SIMD(SRC, DST)                                                              \
+int addc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int width, const int chan);
+
+ADDC_SIMD(uchar, uchar)
+ADDC_SIMD(ushort, uchar)
+ADDC_SIMD(short, uchar)
+ADDC_SIMD(float, uchar)
+ADDC_SIMD(short, short)
+ADDC_SIMD(ushort, short)
+ADDC_SIMD(uchar, short)
+ADDC_SIMD(float, short)
+ADDC_SIMD(ushort, ushort)
+ADDC_SIMD(uchar, ushort)
+ADDC_SIMD(short, ushort)
+ADDC_SIMD(float, ushort)
+ADDC_SIMD(uchar, float)
+ADDC_SIMD(ushort, float)
+ADDC_SIMD(short, float)
+ADDC_SIMD(float, float)
+
+#undef ADDC_SIMD
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 struct scale_tag {};
@@ -95,6 +118,7 @@ using vector_type_of_t = typename vector_type_of<scalar_t>::type;
 template<> struct vector_type_of<uchar> { using type = v_uint8; };
 template<> struct vector_type_of<ushort> { using type = v_uint16; };
 template<> struct vector_type_of<short> { using type = v_int16; };
+template<> struct vector_type_of<float> { using type = v_float32; };
 
 CV_ALWAYS_INLINE v_float32 vg_load_f32(const float* in)
 {
@@ -136,12 +160,12 @@ CV_ALWAYS_INLINE v_float32 div_op(not_scale_tag, const v_float32& a, const v_flo
     return a / div;
 }
 
-CV_ALWAYS_INLINE void v_store_i16(short* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(short* dst, const v_int32& res1, const v_int32& res2)
 {
     vx_store(dst, v_pack(res1, res2));
 }
 
-CV_ALWAYS_INLINE void v_store_i16(ushort* dst, v_int32& res1, v_int32& res2)
+CV_ALWAYS_INLINE void v_store_i16(ushort* dst, const v_int32& res1, const v_int32& res2)
 {
     vx_store(dst, v_pack_u(res1, res2));
 }
@@ -820,6 +844,243 @@ MUL_SIMD(short, float)
 MUL_SIMD(float, float)
 
 #undef MUL_SIMD
+
+//-------------------------
+//
+// Fluid kernels: AddC
+//
+//-------------------------
+
+CV_ALWAYS_INLINE void addc_pack_store_c3(short* outx,       const v_int32& c1,
+                                         const v_int32& c2, const v_int32& c3,
+                                         const v_int32& c4, const v_int32& c5,
+                                         const v_int32& c6)
+{
+    constexpr int nlanes = v_int16::nlanes;
+    vx_store(outx,           v_pack(c1, c2));
+    vx_store(&outx[nlanes],   v_pack(c3, c4));
+    vx_store(&outx[2*nlanes], v_pack(c5, c6));
+}
+
+CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* outx,      const v_int32& c1,
+                                         const v_int32& c2, const v_int32& c3,
+                                         const v_int32& c4, const v_int32& c5,
+                                         const v_int32& c6)
+{
+    constexpr int nlanes = v_uint16::nlanes;
+    vx_store(outx,            v_pack_u(c1, c2));
+    vx_store(&outx[nlanes],   v_pack_u(c3, c4));
+    vx_store(&outx[2*nlanes], v_pack_u(c5, c6));
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<(std::is_same<DST, ushort>::value ||
+                         std::is_same<DST, short>::value), void>::type
+addc_simd_common_impl(const SRC* inx, DST* outx, const v_float32& sc, const int nlanes)
+{
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes/2]);
+
+    v_store_i16(outx, v_round(a1 + sc), v_round(a2 + sc));
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC>
+CV_ALWAYS_INLINE void addc_simd_common_impl(const SRC* inx, uchar* outx, const v_float32& sc, const int nlanes)
+{
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes/4]);
+    v_float32 a3 = vg_load_f32(&inx[nlanes/2]);
+    v_float32 a4 = vg_load_f32(&inx[3 * nlanes/4]);
+
+    vx_store(outx, v_pack_u(v_pack(v_round(a1 + sc),
+                                   v_round(a2 + sc)),
+                            v_pack(v_round(a3 + sc),
+                                   v_round(a4 + sc))));
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC>
+CV_ALWAYS_INLINE void addc_simd_common_impl(const SRC* inx, float* outx, const v_float32& sc, const int)
+{
+    v_float32 a1 = vg_load_f32(inx);
+    vx_store(outx, a1 + sc);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, void>::type
+addc_simd_c3_impl(const SRC* inx, DST* outx, const v_float32& s1, const v_float32& s2,
+                  const v_float32& s3, const int nlanes)
+{
+    v_float32 a1 = vg_load_f32(inx);
+    v_float32 a2 = vg_load_f32(&inx[nlanes / 2]);
+    v_float32 a3 = vg_load_f32(&inx[nlanes]);
+    v_float32 a4 = vg_load_f32(&inx[3 * nlanes / 2]);
+    v_float32 a5 = vg_load_f32(&inx[2 * nlanes]);
+    v_float32 a6 = vg_load_f32(&inx[5 * nlanes / 2]);
+
+    addc_pack_store_c3(outx, v_round(a1 + s1),
+                             v_round(a2 + s2),
+                             v_round(a3 + s3),
+                             v_round(a4 + s1),
+                             v_round(a5 + s2),
+                             v_round(a6 + s3));
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC>
+CV_ALWAYS_INLINE void addc_simd_c3_impl(const SRC* inx, uchar* outx,
+                                       const v_float32& s1, const v_float32& s2,
+                                       const v_float32& s3, const int nlanes)
+{
+    vx_store(outx,
+               v_pack_u(v_pack(v_round(vg_load_f32(inx) + s1),
+                               v_round(vg_load_f32(&inx[nlanes/4]) + s2)),
+                        v_pack(v_round(vg_load_f32(&inx[nlanes/2]) + s3),
+                               v_round(vg_load_f32(&inx[3*nlanes/4]) + s1))));
+
+    vx_store(&outx[nlanes],
+                v_pack_u(v_pack(v_round(vg_load_f32(&inx[nlanes]) + s2),
+                                v_round(vg_load_f32(&inx[5*nlanes/4]) + s3)),
+                         v_pack(v_round(vg_load_f32(&inx[3*nlanes/2]) + s1),
+                                v_round(vg_load_f32(&inx[7*nlanes/4]) + s2))));
+
+    vx_store(&outx[2 * nlanes],
+                v_pack_u(v_pack(v_round(vg_load_f32(&inx[2*nlanes]) + s3),
+                                v_round(vg_load_f32(&inx[9*nlanes/4]) + s1)),
+                         v_pack(v_round(vg_load_f32(&inx[5*nlanes/2]) + s2),
+                                v_round(vg_load_f32(&inx[11*nlanes/4]) + s3))));
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC>
+CV_ALWAYS_INLINE void addc_simd_c3_impl(const SRC* in, float* out,
+                                        const v_float32& s1, const v_float32& s2,
+                                        const v_float32& s3, const int nlanes)
+{
+    v_float32 a1 = vg_load_f32(in);
+    v_float32 a2 = vg_load_f32(&in[nlanes]);
+    v_float32 a3 = vg_load_f32(&in[2*nlanes]);
+
+    vx_store(out, a1 + s1);
+    vx_store(&out[nlanes], a2 + s2);
+    vx_store(&out[2*nlanes], a3 + s3);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int addc_simd_c3(const SRC in[], const float scalar[], DST out[], const int length)
+{
+    constexpr int chan = 3;
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+    constexpr int lanes = chan * nlanes;
+
+    if (length < lanes)
+        return 0;
+
+    v_float32 s1 = vx_load(scalar);
+#if CV_SIMD_WIDTH == 32
+    v_float32 s2 = vx_load(&scalar[2]);
+    v_float32 s3 = vx_load(&scalar[1]);
+#else
+    v_float32 s2 = vx_load(&scalar[1]);
+    v_float32 s3 = vx_load(&scalar[2]);
+#endif
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - lanes; x += lanes)
+        {
+            addc_simd_c3_impl(&in[x], &out[x], s1, s2, s3, nlanes);
+        }
+
+        if (x < length)
+        {
+            x = length - lanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int addc_simd_common(const SRC in[], const float scalar[], DST out[], const int length)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 sc = vx_load(scalar);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            addc_simd_common_impl(&in[x], &out[x], sc, nlanes);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+#define ADDC_SIMD(SRC, DST)                                       \
+int addc_simd(const SRC in[], const float scalar[], DST out[],    \
+              const int width, const int chan)                    \
+{                                                                 \
+    const int length = width * chan;                              \
+    switch (chan)                                                 \
+    {                                                             \
+    case 1:                                                       \
+    case 2:                                                       \
+    case 4:                                                       \
+        return addc_simd_common(in, scalar, out, length);         \
+    case 3:                                                       \
+        return addc_simd_c3(in, scalar, out, length);             \
+    default:                                                      \
+        GAPI_Assert(chan <= 4);                                   \
+        break;                                                    \
+    }                                                             \
+    return 0;                                                     \
+}
+
+ADDC_SIMD(uchar, uchar)
+ADDC_SIMD(ushort, uchar)
+ADDC_SIMD(short, uchar)
+ADDC_SIMD(float, uchar)
+ADDC_SIMD(short, short)
+ADDC_SIMD(ushort, short)
+ADDC_SIMD(uchar, short)
+ADDC_SIMD(float, short)
+ADDC_SIMD(ushort, ushort)
+ADDC_SIMD(uchar, ushort)
+ADDC_SIMD(short, ushort)
+ADDC_SIMD(float, ushort)
+ADDC_SIMD(uchar, float)
+ADDC_SIMD(ushort, float)
+ADDC_SIMD(short, float)
+ADDC_SIMD(float, float)
+
+#undef ADDC_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
