@@ -9,33 +9,34 @@
 namespace cv {
 
 /**
- * @brief Get cv::Mat with Nx3 or 3xN type CV_32FC1 from cv::InputArray
+ * @brief Get cv::Mat with Nx3 or 3xN type CV_32FC1 from cv::InputArray.
  *
- * @param input_pts Point cloud xyz data
- * @param[out] mat Point cloud xyz data in cv::Mat with Nx3 or 3xN type CV_32FC1
- * @param arrangement_of_points The arrangement of point data in the matrix,
- *                              0 by row (Nx3), 1 by column (3xN)
- * @param clone_data Flag to specify whether data cloning is mandatory
+ * @param input_pts Point cloud xyz data.
+ * @param[out] mat Point cloud xyz data in cv::Mat with Nx3 or 3xN type CV_32FC1.
+ * @param arrangement_of_points The arrangement of point data in the matrix, 
+ *                              0 by row (Nx3, [x1, y1, z1, ..., xn, yn, zn]),  
+ *                              1 by column (3xN, [x1, ..., xn, y1, ..., yn, z1, ..., zn]).
+ * @param clone_data Flag to specify whether data cloning is mandatory.
  *
  * @note The following cases will clone data even if flag clone_data is false:
- *       1. Data is discontinuous in memory \n
- *       2. Data type is not float \n
- *       3. The original arrangement of data is not the same as the expected new arrangement. \n
+ *       1. Data is discontinuous in memory 
+ *       2. Data type is not float 
+ *       3. The original arrangement of data is not the same as the expected new arrangement. 
  *          For example, transforming from
  *          Nx3(x1, y1, z1, ..., xn, yn, zn) to 3xN(x1, ..., xn, y1, ..., yn, z1, ..., zn)
  *
  */
 inline void _getMatFromInputArray(InputArray input_pts, Mat &mat,
-        int arrangement_of_points = 0, bool clone_data = false)
+        int arrangement_of_points = 1, bool clone_data = false)
 {
     CV_Check(input_pts.dims(), input_pts.dims() < 3,
-             "Only support data with dimension less than 3.");
+            "Only support data with dimension less than 3.");
 
     // Guaranteed data can construct N×3 point clouds
     int rows = input_pts.rows(), cols = input_pts.cols(), channels = input_pts.channels();
     size_t total = rows * cols * channels;
     CV_Check(total, total % 3 == 0,
-             "total = input_pts.rows() * input_pts.cols() * input_pts.channels() must be an integer multiple of 3");
+            "total = input_pts.rows() * input_pts.cols() * input_pts.channels() must be an integer multiple of 3");
 
     /**
      Layout of point cloud data in memory space.
@@ -70,42 +71,6 @@ inline void _getMatFromInputArray(InputArray input_pts, Mat &mat,
         mat = mat.clone();
     }
 
-}
-
-inline void
-copyPointDataByIdxs(const Mat &src, Mat &dst, const std::vector<int> &idxs, int dst_size = -1)
-{
-    if (-1 == dst_size)
-    {
-        dst_size = (int) idxs.size();
-    }
-    dst = Mat(dst_size, 3, CV_32F);
-
-    const float *src_ptr = (float *) src.data;
-    float *const dst_ptr = (float *) dst.data;
-
-    for (int i = 0; i < dst_size; ++i)
-    {
-        const float *src_ptr_base = src_ptr + 3 * idxs[i];
-        float *dst_ptr_base = dst_ptr + 3 * i;
-        dst_ptr_base[0] = src_ptr_base[0];
-        dst_ptr_base[1] = src_ptr_base[1];
-        dst_ptr_base[2] = src_ptr_base[2];
-    }
-}
-
-inline void copyPointDataByFlags(const Mat &src, Mat &dst, const std::vector<bool> &flags)
-{
-    int pt_size = (int) flags.size();
-    std::vector<int> idxs;
-    for (int i = 0; i < pt_size; ++i)
-    {
-        if (flags[i])
-        {
-            idxs.emplace_back(i);
-        }
-    }
-    copyPointDataByIdxs(src, dst, idxs, -1);
 }
 
 }

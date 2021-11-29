@@ -30,7 +30,7 @@ int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
 
     // Get input point cloud data
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts);
+    _getMatFromInputArray(input_pts, ori_pts, 0);
 
     const int ori_pts_size = ori_pts.rows;
 
@@ -150,7 +150,7 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sampled_
 
     // Get input point cloud data
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts);
+    _getMatFromInputArray(input_pts, ori_pts, 0);
 
     const int ori_pts_size = ori_pts.rows;
     CV_CheckLT(sampled_pts_size, ori_pts_size,
@@ -193,7 +193,7 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const float sample
     CV_CheckGT(sampled_scale, 0.0f, "The point cloud sampled scale must greater than 0.");
     CV_CheckLT(sampled_scale, 1.0f, "The point cloud sampled scale must less than 1.");
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts);
+    _getMatFromInputArray(input_pts, ori_pts, 0);
     randomSampling(sampled_pts, input_pts, cvCeil(sampled_scale * ori_pts.rows), rng);
 } // randomSampling()
 
@@ -359,9 +359,9 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
     CV_CheckGE(dist_lower_limit, 0.0f,
                "The distance lower bound must be greater than or equal to 0.");
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts);
+    _getMatFromInputArray(input_pts, ori_pts, 1);
     return farthestPointSampling(sampled_point_flags, input_pts,
-                                 cvCeil(sampled_scale * ori_pts.rows), dist_lower_limit, rng);
+                                 cvCeil(sampled_scale * ori_pts.cols), dist_lower_limit, rng);
 } // farthestPointSampling()
 
 //! @} _3d

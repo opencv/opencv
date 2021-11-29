@@ -18,7 +18,7 @@ namespace cv {
  * point cloud data, in each voxel (i.e., 3D box), all the points present will be
  * approximated (i.e., downsampled) with the point closest to their centroid.
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ * @param[out] sampled_point_flags  Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
  *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
  * @param length Grid length.
@@ -61,19 +61,19 @@ CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
 
 /**
  * @brief Point cloud sampling by Farthest Point Sampling(FPS).
- * \n\n
- * FPS Algorithm:\n
- *   Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit* \n
- *   Initialize: Set sampled point cloud S to the empty set \n
- *   Step: \n
- *     1. Randomly take a seed point from C and take it from C to S; \n
- *     2. Find a point in C that is the farthest away from S and take it from C to S; \n
- *       (The distance from point to set S is the smallest distance from point to all points in S) \n
- *     3. Repeat *step 2* until the farthest distance of the point in C from S \n
- *       is less than *dist_lower_limit*, or the size of S is equal to *sampled_pts_size*. \n
- *   Output: Sampled point cloud S \n
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ * FPS Algorithm:
+ * + Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit* <br>
+ * + Initialize: Set sampled point cloud S to the empty set <br>
+ * + Step:
+ *     1. Randomly take a seed point from C and take it from C to S;
+ *     2. Find a point in C that is the farthest away from S and take it from C to S;
+ *       (The distance from point to set S is the smallest distance from point to all points in S)
+ *     3. Repeat *step 2* until the farthest distance of the point in C from S
+ *       is less than *dist_lower_limit*, or the size of S is equal to *sampled_pts_size*.
+ * + Output: Sampled point cloud S
+ *
+ * @param[out] sampled_point_flags  Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
  *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
  * @param sampled_pts_size The desired point cloud size after sampling.
@@ -89,7 +89,7 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
 /**
  * @overload
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ * @param[out] sampled_point_flags  Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
  *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
  * @param sampled_scale Range (0, 1), the percentage of the sampled point cloud to the original size,
