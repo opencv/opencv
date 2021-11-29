@@ -5,12 +5,10 @@
 // Copyright (C) 2018 Intel Corporation
 
 #include <type_traits>
+#include "test_precomp.hpp"
+#include <opencv2/gapi/gtype_traits.hpp>
+#include <opencv2/gapi/util/util.hpp>
 
-// NB: emulate top-level of own classes:
-// Linux gcc require to define own classes and `to_ocv` functions
-// right before SFINAE `has_to_ocv` is declared
-// This requirement satisfied in regular gapi include hierarchy
-// so we need to repeat the same hierarchy here
 namespace cv
 {
 struct Own {};
@@ -28,10 +26,6 @@ static cv::Own to_ocv(const cv::gapi::own::ConvertibleToOwn&) {
 } // gapi
 } // cv
 
-#include "test_precomp.hpp"
-#include <opencv2/gapi/gtype_traits.hpp>
-#include <opencv2/gapi/util/util.hpp>
-
 struct NoGhape {};
 struct HasGShape {
     static constexpr cv::GShape shape = cv::GShape::GFRAME;
@@ -39,7 +33,7 @@ struct HasGShape {
 struct MimicGShape {
      static constexpr int shape = 0;
 };
-
+#define DISALLOWED_LIST  cv::gapi::own::NotConvertibleToOwn
 namespace opencv_test
 {
 
@@ -79,7 +73,9 @@ TEST(GAPIUtil, GShaped)
 TEST(GAPIUtil, ToOcv)
 {
     (void)to_ocv(cv::gapi::own::ConvertibleToOwn {});
-    static_assert(!cv::detail::has_to_ocv<cv::gapi::own::NotConvertibleToOwn>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
-    static_assert(cv::detail::has_to_ocv<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
+
+    static_assert(cv::detail::contains<cv::gapi::own::NotConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn has got `to_ocv`");
 }
 } // namespace opencv_test

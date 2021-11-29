@@ -29,15 +29,6 @@ public:
     Point() = default;
     Point(int _x, int _y) : x(_x),  y(_y) {}
 
-#if !defined(GAPI_STANDALONE)
-    Point(const cv::Point& other) : x(other.x), y(other.y) {}
-    inline Point& operator=(const cv::Point& other)
-    {
-        x = other.x;
-        y = other.x;
-        return *this;
-    }
-#endif // !defined(GAPI_STANDALONE)
     int x = 0;
     int y = 0;
 };
@@ -48,15 +39,6 @@ public:
     Point2f() = default;
     Point2f(float _x, float _y) : x(_x),  y(_y) {}
 
-#if !defined(GAPI_STANDALONE)
-    Point2f(const cv::Point2f& other) : x(other.x), y(other.y) {}
-    inline Point2f& operator=(const cv::Point2f& other)
-    {
-        x = other.x;
-        y = other.x;
-        return *this;
-    }
-#endif // !defined(GAPI_STANDALONE)
     float x = 0.f;
     float y = 0.f;
 };
@@ -161,6 +143,7 @@ inline std::ostream& operator<<(std::ostream& o, const Size& s)
     return o;
 }
 
+struct VoidType {};
 } // namespace own
 } // namespace gapi
 } // namespace cv
