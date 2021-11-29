@@ -1380,57 +1380,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   testing::ValuesIn(list_sizes)
 ));
 
-typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_DLDT_two_inputs;
-TEST_P(Test_DLDT_two_inputs, as_backend)
-{
-    static const float kScale = 0.5f;
-    static const float kScaleInv = 1.0f / kScale;
-
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-
-    Net net;
-    LayerParams lp;
-    lp.type = "Eltwise";
-    lp.name = "testLayer";
-    lp.set("operation", "sum");
-    int eltwiseId = net.addLayerToPrev(lp.name, lp.type, lp);  // connect to a first input
-    net.connect(0, 1, eltwiseId, 1);  // connect to a second input
-
-    int inpSize[] = {1, 2, 3, 4};
-    Mat firstInp(4, &inpSize[0], get<0>(GetParam()));
-    Mat secondInp(4, &inpSize[0], get<1>(GetParam()));
-    randu(firstInp, 0, 255);
-    randu(secondInp, 0, 255);
-
-    net.setInputsNames({"data", "second_input"});
-    net.setInput(firstInp, "data", kScale);
-    net.setInput(secondInp, "second_input", kScaleInv);
-    net.setPreferableBackend(backendId);
-    net.setPreferableTarget(targetId);
-    Mat out = net.forward();
-
-    Mat ref;
-    addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
-    // Output values are in range [0, 637.5].
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
-    normAssert(out, ref, "", l1, lInf);
-    if (cvtest::debugLevel > 0 || HasFailure())
-    {
-        std::cout << "input1 scale=" << kScale << " input2 scale=" << kScaleInv << std::endl;
-        std::cout << "input1: " << firstInp.size << " " << firstInp.reshape(1, 1) << std::endl;
-        std::cout << "input2: " << secondInp.size << " " << secondInp.reshape(1, 1) << std::endl;
-        std::cout << "ref: " << ref.reshape(1, 1) << std::endl;
-        std::cout << "out: " << out.reshape(1, 1) << std::endl;
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
-  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  dnnBackendsAndTargets()
-));
-
 class UnsupportedLayer : public Layer
 {
 public:
