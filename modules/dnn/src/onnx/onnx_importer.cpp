@@ -920,6 +920,7 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
         layerParams.set("num_split", node_proto.output_size());
     }
     layerParams.type = "Slice";
+    layerParams.set("axis", layerParams.get<float>("axis", 0));
     addLayer(layerParams, node_proto);
 }
 
@@ -1184,15 +1185,15 @@ void ONNXImporter::parseImageScaler(LayerParams& layerParams, const opencv_onnx:
 void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ReLU6";
-    replaceLayerParam(layerParams, "min", "min_value");
-    replaceLayerParam(layerParams, "max", "max_value");
+    layerParams.set("min_value", layerParams.get<float>("min", -FLT_MAX));
+    layerParams.set("max_value", layerParams.get<float>("max", FLT_MAX));
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ReLU";
-    replaceLayerParam(layerParams, "alpha", "negative_slope");
+    layerParams.set("negative_slope", layerParams.get<float>("alpha", 0.01));
     addLayer(layerParams, node_proto);
 }
 
