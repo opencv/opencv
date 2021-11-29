@@ -18,10 +18,6 @@ namespace own
 {
 struct ConvertibleToOwn{};
 struct NotConvertibleToOwn{};
-
-static cv::Own to_ocv(const cv::gapi::own::ConvertibleToOwn&) {
-    return {};
-}
 } // own
 } // gapi
 } // cv
@@ -70,12 +66,10 @@ TEST(GAPIUtil, GShaped)
     static_assert(!cv::detail::has_gshape<MimicGShape>::value, "MimicGShape hasn't got right shape");
 }
 
-TEST(GAPIUtil, ToOcv)
+TEST(GAPIUtil, GTypeList)
 {
-    (void)to_ocv(cv::gapi::own::ConvertibleToOwn {});
-
-    static_assert(cv::detail::contains<cv::gapi::own::NotConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "NotConvertibleToOwn hasn't got `to_ocv`");
-    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn has got `to_ocv`");
-    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn has got `to_ocv`");
+    static_assert(cv::detail::contains<cv::gapi::own::NotConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "NotConvertibleToOwn is in denial list");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn is not in empty denial list");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn is not in denial list");
 }
 } // namespace opencv_test

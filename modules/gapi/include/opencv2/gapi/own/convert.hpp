@@ -44,8 +44,8 @@ namespace own
             : cv::Mat{m.dims, m.type(), m.data};
     }
 
-
     cv::Mat to_ocv(Mat&&) = delete;
+
 } // namespace own
 } // namespace gapi
 } // namespace cv
