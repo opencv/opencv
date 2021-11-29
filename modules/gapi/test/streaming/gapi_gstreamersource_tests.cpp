@@ -319,7 +319,7 @@ TEST_P(GStreamerMultiSourceTest, ImageDataTest)
 
     std::string pipelineToReadImage("filesrc location=LOC ! pngdec ! videoconvert ! "
         "videoscale ! video/x-raw,format=NV12 ! appsink");
- 
+
     cv::gapi::wip::GStreamerSource leftImageProvider(
         std::regex_replace(pipelineToReadImage, std::regex("LOC"), pathToLeftIm));
     cv::gapi::wip::GStreamerSource rightImageProvider(

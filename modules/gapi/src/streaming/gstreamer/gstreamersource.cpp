@@ -344,7 +344,7 @@ GMetaArg GStreamerSource::Priv::descr_of() const noexcept
 
 GStreamerSource::Priv::~Priv()
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    // No need an assert here. The assert raise C4722 warning. Constructor have already got assert.
 }
 
 #endif // HAVE_GSTREAMER

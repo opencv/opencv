@@ -54,7 +54,7 @@ template<> inline void GStreamerPtrRelease<GstPad>(GstPad* ptr)
 }
 
 template<> inline void GStreamerPtrRelease<GstBus>(GstBus* ptr)
-{ 
+{
     GStreamerPtrUnrefObject<GstBus>(ptr);
 }
 

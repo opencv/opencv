@@ -15,8 +15,8 @@ namespace gst {
 /*!
  * \brief The GStreamerEnv class
  * Initializes gstreamer once in the whole process
- * 
- * 
+ *
+ *
  * @note You need to build OpenCV with GStreamer support to use this class.
  */
 class GStreamerEnv

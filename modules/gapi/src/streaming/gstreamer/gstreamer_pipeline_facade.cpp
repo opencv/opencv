@@ -53,7 +53,7 @@ GStreamerPipelineFacade::GStreamerPipelineFacade(const std::string& pipelineDesc
     }
 }
 
-// The destructors are noexcept by default (since C++11). 
+// The destructors are noexcept by default (since C++11).
 GStreamerPipelineFacade::~GStreamerPipelineFacade()
 {
     // There is no mutex acquisition here, because we assume that no one will call this method

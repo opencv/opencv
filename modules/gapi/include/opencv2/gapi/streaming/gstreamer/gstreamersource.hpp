@@ -22,7 +22,7 @@ namespace gst {
  *        Streams cv::Mat-s/cv::MediaFrame from passed GStreamer pipeline.
  *
  * This class implements IStreamSource interface.
- * 
+ *
  * To create GStreamerSource instance you need to pass 'pipeline' and, optionally, 'outputType'
  * arguments into constructor.
  * 'pipeline' should represent GStreamer pipeline in form of textual description.
@@ -31,19 +31,19 @@ namespace gst {
  *      - there should be __one__ appsink element in the pipeline to pass data to OpenCV app.
  *        Pipeline can actually contain many sink elements, but it must have one and only one
  *        appsink among them.
- *        
+ *
  *      - data passed to appsink should be video-frame in NV12 format.
- * 
+ *
  * 'outputType' is used to select type of output data to produce: 'cv::MediaFrame' or 'cv::Mat'.
  * To produce 'cv::MediaFrame'-s you need to pass 'GStreamerSource::OutputType::FRAME' and,
  * correspondingly, 'GStreamerSource::OutputType::MAT' to produce 'cv::Mat'-s.
  * Please note, that in the last case, output 'cv::Mat' will be of BGR format, internal conversion
  * from NV12 GStreamer data will happen.
  * Default value for 'outputType' is 'GStreamerSource::OutputType::MAT'.
- * 
+ *
  * @note Stream sources are passed to G-API via shared pointers, so please use gapi::make_src<>
  *       to create objects and ptr() to pass a GStreamerSource to cv::gin().
- * 
+ *
  * @note You need to build OpenCV with GStreamer support to use this class.
  */
 
@@ -59,7 +59,7 @@ public:
         FRAME,
         MAT
     };
- 
+
     GStreamerSource(const std::string& pipeline,
                     const GStreamerSource::OutputType outputType =
                         GStreamerSource::OutputType::MAT);
