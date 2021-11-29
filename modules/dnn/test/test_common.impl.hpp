@@ -361,10 +361,15 @@ void initDNNTests()
         cvtest::addDataSearchPath(extraTestDataPath);
 
     registerGlobalSkipTag(
-        CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
-        CV_TEST_TAG_DNN_SKIP_HALIDE,
+        CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND,
+        CV_TEST_TAG_DNN_SKIP_CPU,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );
+#if defined(HAVE_HALIDE)
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_HALIDE
+    )
+#endif
 #if defined(INF_ENGINE_RELEASE)
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_IE,
@@ -393,6 +398,10 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
 #endif
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
+        CV_TEST_TAG_DNN_SKIP_PARSER
+    );
 }
 
 } // namespace

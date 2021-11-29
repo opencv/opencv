@@ -6,9 +6,18 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include <opencv2/core/utils/filesystem.hpp>
 
-#include <tuple>
+#if defined(_MSC_VER)  // workaround for 32-bit MSVC compiler
+#pragma optimize("", off)
+#endif
+
+
+#define CV_TEST_TAG_DNN_ERROR_PARSER "dnn_error_parser"
+#define CV_TEST_TAG_DNN_ERROR_NET_SETUP "dnn_error_net_setup"
+#define CV_TEST_TAG_DNN_ERROR_FORWARD "dnn_error_forward"
+#define CV_TEST_TAG_DNN_LAYER_FALLBACK "dnn_layer_fallback"
+#define CV_TEST_TAG_DNN_NO_ACCURACY_CHECK "dnn_no_accuracy_check"
+
 
 namespace opencv_test {
 
@@ -968,7 +977,7 @@ public:
         backend = get<0>(get<1>(GetParam()));
         target = get<1>(get<1>(GetParam()));
 
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
             default_l1 = 4e-3;
             default_lInf = 2e-2;
@@ -980,14 +989,14 @@ public:
         }
     }
 
-    void expectNoFallbacks(Net& net) const
+    bool checkFallbacks(Net& net) const
     {
         // Check if all the layers are supported with current backend and target.
         // Some layers might be fused so their timings equal to zero.
         std::vector<double> timings;
         net.getPerfProfile(timings);
         std::vector<String> names = net.getLayerNames();
-        ASSERT_EQ(names.size(), timings.size());
+        CV_CheckEQ(names.size(), timings.size(), "DNN critical error");
 
         bool hasFallbacks = false;
         for (int i = 0; i < names.size(); ++i)
@@ -1000,58 +1009,160 @@ public:
                 std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
             }
         }
-        ASSERT_FALSE(hasFallbacks) << "Implementation fallbacks are not expected in this test";
+        return hasFallbacks;
     }
 };
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
 {
-    applyTestTag(CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    std::string name = test_case.name;
+    //Backend backend = ...;
+    //Target target = ...;
+
+    bool checkLayersFallbacks = true;
+    bool checkAccuracy = true;
+
+#include "test_onnx_conformance_layer_filter_parser.inl.hpp"
+    if (backend == DNN_BACKEND_OPENCV)
+    {
+        #include "test_onnx_conformance_layer_filter__opencv.inl.hpp"
+    }
+#if 0 //def HAVE_HALIDE
+    else if (backend == DNN_BACKEND_HALIDE)
+    {
+        #include "test_onnx_conformance_layer_filter__halide.inl.hpp"
+    }
+#endif
+#if 0 //def HAVE_INF_ENGINE
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        #include "test_onnx_conformance_layer_filter__ngraph.inl.hpp"
+    }
+#endif
+#if 0 //def HAVE_VULKAN
+    else if (backend == DNN_BACKEND_VKCOM)
+    {
+        #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
+    }
+#endif
+#if 0 //def HAVE_CUDA
+    else if (backend == DNN_BACKEND_CUDA)
+    {
+        #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
+    }
+#endif
+    else
+    {
+        std::ostringstream ss;
+        ss << "No test filter available for backend ";
+        PrintTo(backend, &ss);
+        ss << ". Run test by default";
+        std::cout << ss.str() << std::endl;
+    }
 
     std::vector<Mat> inputs;
     std::vector<Mat> ref_outputs;
 
-    std::transform(test_case.input_paths.begin(), test_case.input_paths.end(),
-                   std::back_inserter(inputs), readTensorFromONNX);
+    Net net;
+    try
+    {
+        //cout << "Read ONNX inputs..." << endl;
+        std::transform(test_case.input_paths.begin(), test_case.input_paths.end(),
+                       std::back_inserter(inputs), readTensorFromONNX);
 
-    std::transform(test_case.output_paths.begin(), test_case.output_paths.end(),
-                   std::back_inserter(ref_outputs), readTensorFromONNX);
+        //cout << "Read ONNX reference outputs..." << endl;
+        std::transform(test_case.output_paths.begin(), test_case.output_paths.end(),
+                       std::back_inserter(ref_outputs), readTensorFromONNX);
 
-    Net net = readNetFromONNX(test_case.model_path);
+        //cout << "Parse model..." << endl;
+        net = readNetFromONNX(test_case.model_path);
+        if (net.empty())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_ERROR_PARSER);
+        }
+    }
+    catch (...)
+    {
+        cout << "Exception during ONNX model parse / loading input / loading reference data!" << endl;
+        applyTestTag(CV_TEST_TAG_DNN_ERROR_PARSER);
+        throw;
+    }
     ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
 
     std::vector<String> inputNames;
     for (int i = 0; i < inputs.size(); ++i)
-        inputNames.push_back(format("%d", i));
+        inputNames.push_back(cv::format("%d", i));
     net.setInputsNames(inputNames);
 
-    for (int i = 0; i < inputs.size(); ++i)
-        net.setInput(inputs[i], inputNames[i]);
+    try
+    {
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
 
-    std::vector<std::string> layerNames = net.getUnconnectedOutLayersNames();
-    std::vector<std::vector<Mat>> outputs_;
-    net.forward(outputs_, layerNames);
-    ASSERT_EQ(outputs_.size(), 1);
+        for (int i = 0; i < inputs.size(); ++i)
+            net.setInput(inputs[i], inputNames[i]);
+    }
+    catch (...)
+    {
+        cout << "Exception during network configuration!" << endl;
+        applyTestTag(CV_TEST_TAG_DNN_ERROR_NET_SETUP);
+        throw;
+    }
+
+    std::vector<String> layerNames = net.getUnconnectedOutLayersNames();
+    std::vector< std::vector<Mat> > outputs_;
+    try
+    {
+        net.forward(outputs_, layerNames);
+    }
+    catch (...)
+    {
+        cout << "Exception during net.forward() call!" << endl;
+        applyTestTag(CV_TEST_TAG_DNN_ERROR_FORWARD);
+        throw;
+    }
+    ASSERT_GE(outputs_.size(), 1);
     const std::vector<Mat>& outputs = outputs_[0];
 
-    if (ref_outputs.size() == 1)
+    if (checkLayersFallbacks)
     {
-        // probably we found random unconnected layers.
-        normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
-    }
-    else
-    {
-        ASSERT_EQ(outputs.size(), ref_outputs.size());
-        for (size_t i = 0; i < ref_outputs.size(); ++i)
+        if (checkFallbacks(net))
         {
-            normAssert(ref_outputs[i], outputs[i], "", default_l1, default_lInf);
+            applyTestTag(CV_TEST_TAG_DNN_LAYER_FALLBACK);
         }
     }
 
-    expectNoFallbacks(net);
+    if (checkAccuracy)
+    {
+        try
+        {
+            if (ref_outputs.size() == 1)
+            {
+                // probably we found random unconnected layers.
+                normAssert(ref_outputs[0], outputs[0], "", default_l1, default_lInf);
+            }
+            else
+            {
+                ASSERT_EQ(outputs.size(), ref_outputs.size());
+                for (size_t i = 0; i < ref_outputs.size(); ++i)
+                {
+                    normAssert(ref_outputs[i], outputs[i], "", default_l1, default_lInf);
+                }
+            }
+        }
+        catch (...)
+        {
+            cout << "Exception during accuracy check!" << endl;
+            throw;
+        }
+    }
+    else
+    {
+        applyTestTag(CV_TEST_TAG_DNN_NO_ACCURACY_CHECK);
+    }
+
+    if (!HasFailure())
+        cout << "Test passed!" << endl;
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
