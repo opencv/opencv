@@ -1365,7 +1365,7 @@ void CvCapture_MSMF::checkAudioProperties()
             type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND , &actualAudioSamplesPerSecond);
             if (actualAudioSamplesPerSecond != audioSamplesPerSecond)
             {
-                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << audioSamplesPerSecond 
+                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << audioSamplesPerSecond
                             << ". Current value of CAP_PROP_AUDIO_SAMPLES_PER_SECOND: " << actualAudioSamplesPerSecond);
                 captureAudioFormat.nSamplesPerSec = actualAudioSamplesPerSecond;
             }
