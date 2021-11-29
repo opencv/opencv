@@ -54,7 +54,7 @@ TEST_P(GStreamerSourceTest, AccuracyTest)
     ccomp.start();
     EXPECT_TRUE(ccomp.running());
 
-    // Streaming - pulling of frames until the end:  
+    // Streaming - pulling of frames until the end:
     cv::Mat in_mat_gapi;
 
     EXPECT_TRUE(ccomp.pull(cv::gout(in_mat_gapi)));
@@ -325,7 +325,7 @@ TEST_P(GStreamerMultiSourceTest, ImageDataTest)
     cv::gapi::wip::GStreamerSource rightImageProvider(
         std::regex_replace(pipelineToReadImage, std::regex("LOC"), pathToRightIm));
 
-    cv::gapi::wip::Data leftImData, rightImData; 
+    cv::gapi::wip::Data leftImData, rightImData;
     leftImageProvider.pull(leftImData);
     rightImageProvider.pull(rightImData);
 
@@ -333,7 +333,7 @@ TEST_P(GStreamerMultiSourceTest, ImageDataTest)
     cv::Mat rightRefMat = cv::util::get<cv::Mat>(rightImData);
 
     // Retrieve test parameters:
-    std::tuple<cv::GComputation, cv::gapi::wip::GStreamerSource::OutputType> params = GetParam(); 
+    std::tuple<cv::GComputation, cv::gapi::wip::GStreamerSource::OutputType> params = GetParam();
     cv::GComputation extractImage = std::move(std::get<0>(params));
     cv::gapi::wip::GStreamerSource::OutputType outputType = std::get<1>(params);
 

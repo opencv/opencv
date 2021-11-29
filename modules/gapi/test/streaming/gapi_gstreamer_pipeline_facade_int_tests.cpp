@@ -113,7 +113,7 @@ TEST(GStreamerPipelineFacadeTest, PlayUnitTest)
     pipelineFacade.play();
 
     cv::gapi::wip::gst::PipelineState state;
-    GstStateChangeReturn status = 
+    GstStateChangeReturn status =
         gst_element_get_state(appsink, &state.current, &state.pending, 5 * GST_SECOND);
     EXPECT_EQ(GST_STATE_CHANGE_SUCCESS, status);
     EXPECT_EQ(GST_STATE_PLAYING, state.current);

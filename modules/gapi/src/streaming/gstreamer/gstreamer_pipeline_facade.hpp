@@ -55,7 +55,7 @@ public:
     bool isPlaying();
 
 private:
-    std::string m_pipelineDesc; 
+    std::string m_pipelineDesc;
 
     GStreamerPtr<GstElement> m_pipeline;
 
