@@ -63,8 +63,8 @@ CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
  * @brief Point cloud sampling by Farthest Point Sampling(FPS).
  *
  * FPS Algorithm:
- * + Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit* <br>
- * + Initialize: Set sampled point cloud S to the empty set <br>
+ * + Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit*
+ * + Initialize: Set sampled point cloud S to the empty set
  * + Step:
  *     1. Randomly take a seed point from C and take it from C to S;
  *     2. Find a point in C that is the farthest away from S and take it from C to S;
