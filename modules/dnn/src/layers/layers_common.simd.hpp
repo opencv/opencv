@@ -557,13 +557,14 @@ static const uint32_t tailMaskArray[15] = {
 };
 
 // dst = vec * weights^t + bias
-// Requires that vecsize is at least 8 or equal to 0 to avoid memory access problems.  Does not require alignment.
+// Requires that vecsize is at least 8 or equal to 0 to avoid memory access problems. Does not require alignment.
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize )
 {
     int i = 0;
 
+    CV_Assert(vecsize >= 8 || vecsize == 0);
 
     __m256 tailMask = _mm256_loadu_ps(reinterpret_cast<const float*>(tailMaskArray) + (vecsize % 8));
 
@@ -593,7 +594,7 @@ void fastGEMM1T( const float* vec, const float* weights,
         if (k != vecsize) {
             // Tail
             k = vecsize - 8;
-            wptr = weights + i * wstep + vecsize - 8;
+            wptr = weights + i * wstep + k;
             __m256 v = _mm256_loadu_ps(vec + k);
             v = _mm256_and_ps(v, tailMask);
 
@@ -629,14 +630,14 @@ void fastGEMM1T( const float* vec, const float* weights,
         int k = 0;
         for( ; k <= vecsize-8; k += 8, wptr += 8 )
         {
-            __m256 v = _mm256_load_ps(vec + k);
+            __m256 v = _mm256_loadu_ps(vec + k);
             vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
         }
 
         if (k != vecsize) {
             // Tail
             k = vecsize - 8;
-            wptr = weights + i * wstep + vecsize - 8;
+            wptr = weights + i * wstep + k;
             __m256 v = _mm256_loadu_ps(vec + k);
             v = _mm256_and_ps(v, tailMask);
             vs0 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr), tailMask), v, vs0);

@@ -120,7 +120,12 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     ActivationFunction g_activation;
     ActivationFunction h_activation;
 
-    bool useAVX, useAVX2;
+#if CV_TRY_AVX
+    bool useAVX;
+#endif
+#if CV_TRY_AVX2
+    bool useAVX2;
+#endif
 
 public:
 
@@ -357,6 +362,9 @@ public:
             bool canUseAvx = gates.isContinuous() && bias.isContinuous()
                 && Wx.depth() == CV_32F && gates.depth() == CV_32F
                 && bias.depth() == CV_32F && Wx.cols >= 8;
+            bool canUseAvx_hInternal = hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F
+                && Wh.cols >= 8;
 #endif
 
             int tsStart, tsEnd, tsInc;
@@ -376,7 +384,8 @@ public:
                 Mat xCurr = xTs.rowRange(curRowRange);
 
 #if CV_TRY_AVX2
-                if (useAVX2 && xCurr.isContinuous() && canUseAvx)
+                if (useAVX2 && canUseAvx && xCurr.isContinuous())
+                {
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX2::fastGEMM1T(
                             xCurr.ptr<float>(n),
@@ -388,10 +397,12 @@ public:
                             Wx.cols
                         );
                     }
+                }
                 else
 #endif
 #if CV_TRY_AVX
-                if (useAVX && xCurr.isContinuous() && canUseAvx)
+                if (useAVX && canUseAvx && xCurr.isContinuous())
+                {
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX::fastGEMM1T(
                             xCurr.ptr<float>(n),
@@ -403,6 +414,7 @@ public:
                             Wx.cols
                         );
                     }
+                }
                 else
 #endif
                 {
@@ -411,7 +423,8 @@ public:
                 }
 
 #if CV_TRY_AVX2
-                if (useAVX2 && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
+                if (useAVX2 && canUseAvx_hInternal)
+                {
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX2::fastGEMM1T(
                             hInternal.ptr<float>(n),
@@ -423,10 +436,12 @@ public:
                             Wh.cols
                         );
                     }
+                }
                 else
 #endif
 #if CV_TRY_AVX
-                if (useAVX && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
+                if (useAVX && canUseAvx_hInternal)
+                {
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX::fastGEMM1T(
                             hInternal.ptr<float>(n),
@@ -438,6 +453,7 @@ public:
                             Wh.cols
                         );
                     }
+                }
                 else
 #endif
                 {
