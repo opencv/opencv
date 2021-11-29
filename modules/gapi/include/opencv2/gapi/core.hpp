@@ -57,6 +57,7 @@ namespace core {
 
     G_TYPED_KERNEL(GAddC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.addC") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc, int ddepth) {
+            GAPI_Assert(a.chan <= 4);
             return a.withDepth(ddepth);
         }
     };

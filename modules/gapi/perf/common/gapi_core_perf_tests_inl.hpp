@@ -61,10 +61,13 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
 
 PERF_TEST_P_(AddCPerfTest, TestPerformance)
 {
-    Size sz = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    int dtype = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
+    compare_f cmpF;
+    cv::Size sz;
+    MatType type = -1;
+    int dtype = -1;
+    cv::GCompileArgs compile_args;
+
+    std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
 
     initMatsRandU(type, sz, dtype, false);
 
@@ -88,8 +91,9 @@ PERF_TEST_P_(AddCPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }
