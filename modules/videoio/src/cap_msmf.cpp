@@ -727,7 +727,7 @@ protected:
     bool configureHW(bool enable);
     bool configureStreams(const cv::VideoCaptureParameters&);
     bool setAudioProperties(const cv::VideoCaptureParameters&);
-    void checkAudioProperties();
+    bool checkAudioProperties();
 
     template <typename CtrlT>
     bool readComplexPropery(long prop, long& val) const;
@@ -1149,9 +1149,8 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
 
     if (params)
     {
-        configureHW(*params);
-        configureStreams(*params);
-        setAudioProperties(*params);
+        if (!(configureHW(*params) && configureStreams(*params) && setAudioProperties(*params)))
+            return false;
     }
     if (videoStream != -1 && audioStream != -1 || videoStream == -1 && audioStream == -1)
     {
@@ -1196,7 +1195,8 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     if (isOpen)
     {
         if (audioStream != -1)
-            checkAudioProperties();
+            if (!checkAudioProperties())
+                return false;
     }
 
     return isOpen;
@@ -1210,9 +1210,8 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
 
     if (params)
     {
-        configureHW(*params);
-        configureStreams(*params);
-        setAudioProperties(*params);
+        if (!(configureHW(*params) && configureStreams(*params) && setAudioProperties(*params)))
+            return false;
     }
     // Set source reader parameters
     _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
@@ -1247,7 +1246,8 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
     {
         if (audioStream != -1)
         {
-            checkAudioProperties();
+            if (!checkAudioProperties())
+                return false;
             if (videoStream != -1)
             {
                 isOpen = grabFrame();
@@ -1353,7 +1353,7 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
     }
     return true;
 }
-void CvCapture_MSMF::checkAudioProperties()
+bool CvCapture_MSMF::checkAudioProperties()
 {
     if (audioSamplesPerSecond != 0)
     {
@@ -1367,9 +1367,12 @@ void CvCapture_MSMF::checkAudioProperties()
             {
                 CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter value is invalid/unsupported: " << audioSamplesPerSecond
                             << ". Current value of CAP_PROP_AUDIO_SAMPLES_PER_SECOND: " << actualAudioSamplesPerSecond);
-                captureAudioFormat.nSamplesPerSec = actualAudioSamplesPerSecond;
+                close();
+                return false;
             }
+            return true;
         }
+        return false;
     }
 }
 bool CvCapture_MSMF::grabVideoFrame()
