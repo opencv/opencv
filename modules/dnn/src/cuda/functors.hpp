@@ -169,16 +169,20 @@ struct SigmoidFunctor {
 template <class T>
 struct ELUFunctor {
     struct Params {
-        CUDA4DNN_HOST_DEVICE Params() { }
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
     };
 
-    CUDA4DNN_DEVICE ELUFunctor() { }
-    CUDA4DNN_DEVICE ELUFunctor(const Params& params) { }
+    CUDA4DNN_DEVICE ELUFunctor() : ELUFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ELUFunctor(const Params& params) : alpha{params.alpha} { }
 
     CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::expm1;
-        return value >= T(0) ? value : expm1(value);
+        return value >= T(0) ? value : alpha * expm1(value);
     }
+
+    T alpha;
 };
 
 template <class T>

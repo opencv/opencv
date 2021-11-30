@@ -156,15 +156,16 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     template <class T>
     class ELUOp final : public BaseOp<ELUOp, T> {
     public:
-        ELUOp(csl::Stream stream_) : stream(std::move(stream_)) { }
+        ELUOp(csl::Stream stream_, T alpha_) : stream(std::move(stream_)), alpha(alpha_) { }
 
         void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
         {
-            kernels::elu<T>(stream, output, input);
+            kernels::elu<T>(stream, output, input, alpha);
         }
 
     private:
         csl::Stream stream;
+        T alpha;
     };
 
     template <class T>

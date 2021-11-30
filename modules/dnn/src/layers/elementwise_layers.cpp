@@ -987,6 +987,9 @@ const char* const SigmoidFunctor::BaseDefaultFunctor<SigmoidFunctor>::ocl_kernel
 struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 {
     typedef ELULayer Layer;
+    float alpha;
+
+    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
 
     bool supportBackend(int backendId, int)
     {
@@ -998,13 +1001,18 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 
     inline float calculate(float x) const
     {
-        return x >= 0.f ? x : exp(x) - 1.f;
+        return x >= 0.f ? x : alpha * (exp(x) - 1.f);
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
     }
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
-        return make_cuda_node<cuda4dnn::ELUOp>(target, stream);
+        return make_cuda_node<cuda4dnn::ELUOp>(target, stream, alpha);
     }
 #endif
 
@@ -1012,7 +1020,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
         Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = select(input >= 0.0f, input, exp(input) - 1);
+        top(x, y, c, n) = select(input >= 0.0f, input, alpha * (exp(input) - 1));
     }
 #endif  // HAVE_HALIDE
 
@@ -1026,7 +1034,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
     {
-        return std::make_shared<ngraph::op::Elu>(node, 1.0);
+        return std::make_shared<ngraph::op::Elu>(node, alpha);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1856,8 +1864,10 @@ Ptr<SigmoidLayer> SigmoidLayer::create(const LayerParams& params)
 
 Ptr<ELULayer> ELULayer::create(const LayerParams& params)
 {
-    Ptr<ELULayer> l(new ElementWiseLayer<ELUFunctor>(ELUFunctor()));
+    float alpha = params.get<float>("alpha", 1.0f);
+    Ptr<ELULayer> l(new ElementWiseLayer<ELUFunctor>(ELUFunctor(alpha)));
     l->setParamsFrom(params);
+    l->alpha = alpha;
 
     return l;
 }
