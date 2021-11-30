@@ -612,11 +612,23 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
     }
 }
 
+void setCeilMode(LayerParams& layerParams)
+{
+    if (layerParams.has("pad_mode"))
+    {
+        layerParams.set("ceil_mode", true);
+    }
+    else if (!layerParams.has("ceil_mode"))
+    {
+        layerParams.set("ceil_mode", false);
+    }
+}
+
 void ONNXImporter::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Pooling";
     layerParams.set("pool", "MAX");
-    layerParams.set("ceil_mode", layerParams.has("pad_mode"));
+    setCeilMode(layerParams);
     addLayer(layerParams, node_proto);
 }
 
@@ -624,7 +636,7 @@ void ONNXImporter::parseAveragePool(LayerParams& layerParams, const opencv_onnx:
 {
     layerParams.type = "Pooling";
     layerParams.set("pool", "AVE");
-    layerParams.set("ceil_mode", layerParams.has("pad_mode"));
+    setCeilMode(layerParams);
     layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
     addLayer(layerParams, node_proto);
 }
