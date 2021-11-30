@@ -1010,7 +1010,7 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
     }
 
     bool hasConstBlob = false;
-    for(int i = 0; i < layer.input_size() && !hasConstBlob; i++) {
+    for(int i = 0; i < layer.input_size(); i++) {
         if (value_id.find(layer.input(i)) != value_id.end())
         {
             hasConstBlob = true;
