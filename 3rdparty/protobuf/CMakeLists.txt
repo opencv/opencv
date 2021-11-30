@@ -13,7 +13,7 @@ if(MSVC)
                                        /wd4701 /wd4703     # potentially uninitialized local/pointer variable 'value' used
                                        /wd4505             # unreferenced local function has been removed
   )
-  if(MSVC_VERSION LESS 1910)  # MSVS 2015
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4309)          # 'static_cast': truncation of constant value
   endif()
 else()
