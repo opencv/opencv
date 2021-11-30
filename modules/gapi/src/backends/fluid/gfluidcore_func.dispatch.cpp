@@ -112,6 +112,32 @@ ADDC_SIMD(float, float)
 
 #undef ADDC_SIMD
 
+#define SUBC_SIMD(SRC, DST)                                               \
+int subc_simd(const SRC in[], const float scalar[], DST out[],            \
+              const int width, const int chan)                            \
+{                                                                         \
+    CV_CPU_DISPATCH(subc_simd, (in, scalar, out, width, chan),            \
+                    CV_CPU_DISPATCH_MODES_ALL);                           \
+}
+
+SUBC_SIMD(uchar, uchar)
+SUBC_SIMD(ushort, uchar)
+SUBC_SIMD(short, uchar)
+SUBC_SIMD(float, uchar)
+SUBC_SIMD(short, short)
+SUBC_SIMD(ushort, short)
+SUBC_SIMD(uchar, short)
+SUBC_SIMD(float, short)
+SUBC_SIMD(ushort, ushort)
+SUBC_SIMD(uchar, ushort)
+SUBC_SIMD(short, ushort)
+SUBC_SIMD(float, ushort)
+SUBC_SIMD(uchar, float)
+SUBC_SIMD(ushort, float)
+SUBC_SIMD(short, float)
+SUBC_SIMD(float, float)
+
+#undef SUBC_SIMD
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
