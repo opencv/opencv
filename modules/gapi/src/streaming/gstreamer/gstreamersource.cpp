@@ -339,7 +339,8 @@ bool GStreamerSource::Priv::pull(cv::gapi::wip::Data&)
 
 GMetaArg GStreamerSource::Priv::descr_of() const noexcept
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    // No need an assert here. The assert raise C4702 warning. Constructor have already got assert.
+    return GMetaArg{};
 }
 
 GStreamerSource::Priv::~Priv()

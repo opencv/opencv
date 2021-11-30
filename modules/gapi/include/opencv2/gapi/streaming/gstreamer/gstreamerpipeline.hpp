@@ -27,7 +27,7 @@ public:
     explicit GStreamerPipeline(const std::string& pipeline);
     IStreamSource::Ptr getStreamingSource(const std::string& appsinkName,
                                           const GStreamerSource::OutputType outputType =
-                                            GStreamerSource::OutputType::MAT);
+                                              GStreamerSource::OutputType::MAT);
     virtual ~GStreamerPipeline();
 
 protected:

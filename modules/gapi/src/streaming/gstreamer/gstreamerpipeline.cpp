@@ -79,7 +79,8 @@ GStreamerPipeline::Priv::Priv(const std::string&)
 IStreamSource::Ptr GStreamerPipeline::Priv::getStreamingSource(const std::string&,
                                                                const GStreamerSource::OutputType)
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    // No need an assert here. The assert raise C4702 warning. Constructor have already got assert.
+    return nullptr;
 }
 
 GStreamerPipeline::Priv::~Priv()
