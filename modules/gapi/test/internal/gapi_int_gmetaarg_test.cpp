@@ -149,7 +149,7 @@ TEST(GMetaArg, Can_Describe_RunArg)
 
     auto in_run_args = cv::gin(m, um, s, os, v);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < metas.size(); i++) {
         EXPECT_TRUE(can_describe(metas[i], in_run_args[i]));
     }
 }
@@ -185,7 +185,7 @@ TEST(GMetaArg, Can_Describe_RunArgP)
 
     auto out_run_args = cv::gout(m, um, s, os, v);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < metas.size(); i++) {
         EXPECT_TRUE(can_describe(metas[i], out_run_args[i]));
     }
 }
