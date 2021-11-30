@@ -22,7 +22,7 @@ double Utils::getCalibratedThreshold (double threshold, const Mat &K1, const Mat
  */
 void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Mat &calib_points) {
     const auto * const points_ = (float *) points.data;
-    const auto * const k1 = (double *) K1.data;
+    const auto * const k1 = K1.isContinuous() ? (double *) K1.data : (double *) K1.clone().data;
     const auto inv1_k11 = float(1 / k1[0]); // 1 / k11
     const auto inv1_k12 = float(-k1[1] / (k1[0]*k1[4])); // -k12 / (k11*k22)
     // (-k13*k22 + k12*k23) / (k11*k22)
@@ -30,7 +30,7 @@ void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Ma
     const auto inv1_k22 = float(1 / k1[4]); // 1 / k22
     const auto inv1_k23 = float(-k1[5] / k1[4]); // -k23 / k22
 
-    const auto * const k2 = (double *) K2.data;
+    const auto * const k2 = K2.isContinuous() ? (double *) K2.data : (double *) K2.clone().data;
     const auto inv2_k11 = float(1 / k2[0]);
     const auto inv2_k12 = float(-k2[1] / (k2[0]*k2[4]));
     const auto inv2_k13 = float((-k2[2]*k2[4] + k2[1]*k2[5]) / (k2[0]*k2[4]));
@@ -56,7 +56,7 @@ void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Ma
  */
 void Utils::calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &calib_norm_pts) {
     const auto * const points = (float *) pts.data;
-    const auto * const k = (double *) K.data;
+    const auto * const k = K.isContinuous() ? (double *) K.data : (double *) K.clone().data;
     const auto inv_k11 = float(1 / k[0]);
     const auto inv_k12 = float(-k[1] / (k[0]*k[4]));
     const auto inv_k13 = float((-k[2]*k[4] + k[1]*k[5]) / (k[0]*k[4]));
@@ -78,7 +78,7 @@ void Utils::calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &c
 }
 
 void Utils::normalizeAndDecalibPointsPnP (const Mat &K_, Mat &pts, Mat &calib_norm_pts) {
-    const auto * const K = (double *) K_.data;
+    const auto * const K = K_.isContinuous() ? (double *) K_.data : (double *) K_.clone().data;
     const auto k11 = (float)K[0], k12 = (float)K[1], k13 = (float)K[2],
                k22 = (float)K[4], k23 = (float)K[5];
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
