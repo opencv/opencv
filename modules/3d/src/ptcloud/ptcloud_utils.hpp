@@ -73,6 +73,92 @@ inline void _getMatFromInputArray(InputArray input_pts, Mat &mat,
 
 }
 
+/** @brief Copy the data xyz of the point by specifying the indexs.
+ *
+ * @param src CV_32F Mat with size Nx3/3xN.
+ * @param[out] dst CV_32F Mat with size Mx3/3xM.
+ * @param idxs The index of the point copied from src to dst.
+ * @param dst_size The first dst_size of idxs is valid.
+ *                 If it is less than 0 or greater than idxs.size(),
+ *                 it will be automatically adjusted to idxs.size().
+ * @param arrangement_of_points The arrangement of point data in the matrix, \n
+ *                              0 by row (Nx3, [x1, y1, z1, ..., xn, yn, zn]),  \n
+ *                              1 by column (3xN, [x1, ..., xn, y1, ..., yn, z1, ..., zn]).
+ */
+inline void
+copyPointDataByIdxs(const Mat &src, Mat &dst, const std::vector<int> &idxs, int dst_size = -1,
+        int arrangement_of_points = 1)
+{
+    CV_CheckDepth(src.depth(), src.depth() == CV_32F,
+            "Data with only depth CV_32F are supported");
+    CV_CheckChannelsEQ(src.channels(), 1, "Data with only one channel are supported");
+
+    const int idxs_size = (int) idxs.size();
+    dst_size = (dst_size < 0 || dst_size > idxs_size) ? idxs_size : dst_size;
+
+    if (arrangement_of_points == 1)
+    {
+        dst = Mat(3, dst_size, CV_32F);
+        const int src_size = src.rows * src.cols / 3;
+        const float *const src_ptr_x = (float *) src.data;
+        const float *const src_ptr_y = src_ptr_x + src_size;
+        const float *const src_ptr_z = src_ptr_y + src_size;
+
+        float *const dst_ptr_x = (float *) dst.data;
+        float *const dst_ptr_y = dst_ptr_x + dst_size;
+        float *const dst_ptr_z = dst_ptr_y + dst_size;
+
+        for (int i = 0; i < dst_size; ++i)
+        {
+            int src_idx = idxs[i];
+            dst_ptr_x[i] = src_ptr_x[src_idx];
+            dst_ptr_y[i] = src_ptr_y[src_idx];
+            dst_ptr_z[i] = src_ptr_z[src_idx];
+        }
+    }
+    else if (arrangement_of_points == 0)
+    {
+        dst = Mat(dst_size, 3, CV_32F);
+
+        const float *const src_ptr = (float *) src.data;
+        float *const dst_ptr = (float *) dst.data;
+
+        for (int i = 0; i < dst_size; ++i)
+        {
+            const float *src_ptr_base = src_ptr + 3 * idxs[i];
+            float *dst_ptr_base = dst_ptr + 3 * i;
+            dst_ptr_base[0] = src_ptr_base[0];
+            dst_ptr_base[1] = src_ptr_base[1];
+            dst_ptr_base[2] = src_ptr_base[2];
+        }
+    }
+
+}
+
+/** @overload
+ *
+ * @param src CV_32F Mat with size Nx3/3xN.
+ * @param[out] dst CV_32F Mat with size Mx3/3xM.
+ * @param flags If flags[i] is true, the i-th point will be copied from src to dst.
+ * @param arrangement_of_points The arrangement of point data in the matrix, \n
+ *                              0 by row (Nx3, [x1, y1, z1, ..., xn, yn, zn]),  \n
+ *                              1 by column (3xN, [x1, ..., xn, y1, ..., yn, z1, ..., zn]).
+ */
+inline void copyPointDataByFlags(const Mat &src, Mat &dst, const std::vector<bool> &flags,
+        int arrangement_of_points = 1)
+{
+    int pt_size = (int) flags.size();
+    std::vector<int> idxs;
+    for (int i = 0; i < pt_size; ++i)
+    {
+        if (flags[i])
+        {
+            idxs.emplace_back(i);
+        }
+    }
+    copyPointDataByIdxs(src, dst, idxs, -1, arrangement_of_points);
+}
+
 }
 
 #endif //OPENCV_3D_PTCLOUD_UTILS_HPP

@@ -11,6 +11,259 @@ namespace cv {
 //! @addtogroup _3d
 //! @{
 
+//! Custom function that take the model coefficients and return whether the model is acceptable or not
+//using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
+using ModelConstraintFunction =
+std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
+
+//! type of the robust estimation algorithm
+enum SacMethod
+{
+    /** "Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and
+     * Automated Cartography", Martin A. Fischler and Robert C. Bolles, Comm. Of the ACM 24: 381–395, June 1981.
+     */
+    SAC_METHOD_RANSAC,
+    //    SAC_METHOD_MAGSAC,
+    //    SAC_METHOD_LMEDS,
+    //    SAC_METHOD_MSAC,
+    //    SAC_METHOD_RRANSAC,
+    //    SAC_METHOD_RMSAC,
+    //    SAC_METHOD_MLESAC,
+    //    SAC_METHOD_PROSAC
+};
+
+enum SacModelType
+{
+    SAC_MODEL_PLANE,
+    SAC_MODEL_SPHERE,
+    //    SAC_MODEL_CYLINDER,
+
+};
+
+inline int sacModelMinimumSampleSize(SacModelType model_type)
+{
+    switch (model_type)
+    {
+        case SAC_MODEL_PLANE:
+            return 3;
+        case SAC_MODEL_SPHERE:
+            return 4;
+        default:
+            CV_Error(cv::Error::StsNotImplemented, "SacModel Minimum Sample Size not defined!");
+    }
+}
+
+/** @brief Sample Consensus algorithm segmentation of 3D point cloud model.
+
+@see
+Supported algorithms: enum SacMethod in ptcloud.hpp. \n
+Supported models: enum SacModelType in ptcloud.hpp.
+ */
+class CV_EXPORTS SACSegmentation : public Algorithm
+{
+public:
+
+    //! No-argument constructor using default configuration
+    SACSegmentation()
+            : sac_model_type(SAC_MODEL_PLANE), sac_method(SAC_METHOD_RANSAC), threshold(0.5),
+              radius_min(DBL_MIN), radius_max(DBL_MAX),
+              max_iterations(1000), confidence(0.999), number_of_models_expected(1),
+              number_of_threads(-1), rng_state(0),
+              custom_model_constraints(nullptr)
+    {
+    }
+
+    ~SACSegmentation() override = default;
+
+    //-------------------------- Getter and Setter -----------------------
+
+    //! Set the type of sample consensus model to use.
+    inline void setSacModelType(SacModelType sac_model_type_)
+    {
+        sac_model_type = sac_model_type_;
+    }
+
+    //! Get the type of sample consensus model used.
+    inline SacModelType getSacModelType() const
+    {
+        return sac_model_type;
+    }
+
+    //! Set the type of sample consensus method to use.
+    inline void setSacMethodType(SacMethod sac_method_)
+    {
+        sac_method = sac_method_;
+    }
+
+    //! Get the type of sample consensus method used.
+    inline SacMethod getSacMethodType() const
+    {
+        return sac_method;
+    }
+
+    //! Set the distance to the model threshold.
+    inline void setDistanceThreshold(double threshold_)
+    {
+        threshold = threshold_;
+    }
+
+    //! Get the distance to the model threshold.
+    inline double getDistanceThreshold() const
+    {
+        return threshold;
+    }
+
+    //! Set the minimum and maximum radius limits for the model.
+    //! Only used for models whose model parameters include a radius.
+    inline void setRadiusLimits(double radius_min_, double radius_max_)
+    {
+        radius_min = radius_min_;
+        radius_max = radius_max_;
+    }
+
+    //! Get the minimum and maximum radius limits for the model.
+    inline void getRadiusLimits(double &radius_min_, double &radius_max_) const
+    {
+        radius_min_ = radius_min;
+        radius_max_ = radius_max;
+    }
+
+    //! Set the maximum number of iterations to attempt.
+    inline void setMaxIterations(int max_iterations_)
+    {
+        max_iterations = max_iterations_;
+    }
+
+    //! Get the maximum number of iterations to attempt.
+    inline int getMaxIterations() const
+    {
+        return max_iterations;
+    }
+
+    //! Set the confidence that ensure at least one of selections is an error-free set of data points.
+    inline void setConfidence(double confidence_)
+    {
+        confidence = confidence_;
+    }
+
+    //! Get the confidence that ensure at least one of selections is an error-free set of data points.
+    inline double getConfidence() const
+    {
+        return confidence;
+    }
+
+    //! Set the number of models expected.
+    inline void setNumberOfModelsExpected(int number_of_models_expected_)
+    {
+        number_of_models_expected = number_of_models_expected_;
+    }
+
+    //! Get the expected number of models.
+    inline int getNumberOfModelsExpected() const
+    {
+        return number_of_models_expected;
+    }
+
+    /**
+     * @brief Set the number of threads to be used.
+     *
+     * @param number_of_threads_ The number of threads to be used.
+     * (0 sets the value automatically, a negative number turns parallelization off)
+     *
+     * @note Not all SAC methods have a parallel implementation. Some will ignore this setting.
+     */
+    inline void setNumberOfThreads(int number_of_threads_)
+    {
+        number_of_threads = number_of_threads_;
+    }
+
+    // Get the number of threads to be used.
+    inline int getNumberOfThreads() const
+    {
+        return number_of_threads;
+    }
+
+    //! Set state used to initialize the RNG(Random Number Generator).
+    inline void setRandomGeneratorState(uint64 rng_state_)
+    {
+        rng_state = rng_state_;
+    }
+
+    //! Get state used to initialize the RNG(Random Number Generator).
+    inline uint64 getRandomGeneratorState() const
+    {
+        return rng_state;
+    }
+
+    //! Set custom model coefficient constraint function
+    inline void setCustomModelConstraints(Ptr<ModelConstraintFunction> &custom_model_constraints_)
+    {
+        custom_model_constraints = custom_model_constraints_;
+    }
+
+    //! Get custom model coefficient constraint function
+    inline void getCustomModelConstraints(Ptr<ModelConstraintFunction> &custom_model_constraints_) const
+    {
+        custom_model_constraints_ = custom_model_constraints;
+    }
+
+    /**
+     * @brief Execute segmentation using the sample consensus method.
+     *
+     * @param input_pts Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
+     * @param[out] labels The label corresponds to the model number, 0 means it
+     * does not belong to any model, range [0, Number of final resultant models obtained].
+     * @param[out] models_coefficients The resultant models coefficients.
+     * @return Number of final resultant models obtained by segmentation.
+     */
+    int segment(InputArray input_pts, OutputArray labels, OutputArrayOfArrays models_coefficients);
+
+protected:
+
+    //! The type of sample consensus model used.
+    SacModelType sac_model_type;
+
+    //! The type of sample consensus method used.
+    SacMethod sac_method;
+
+    //! Considered as inlier point if distance to the model less than threshold.
+    double threshold;
+
+    //! The minimum and maximum radius limits for the model.
+    //! Only used for models whose model parameters include a radius.
+    double radius_min, radius_max;
+
+    //!  The maximum number of iterations to attempt.
+    int max_iterations;
+
+    //! Confidence that ensure at least one of selections is an error-free set of data points.
+    double confidence;
+
+    //! Expected number of models.
+    int number_of_models_expected;
+
+    //! The number of threads the scheduler should use, or a negative number if no parallelization is wanted.
+    int number_of_threads;
+
+    //! 64-bit value used to initialize the RNG(Random Number Generator).
+    uint64 rng_state;
+
+    //! A user defined function that takes model coefficients and returns whether the model is acceptable or not.
+    Ptr<ModelConstraintFunction> custom_model_constraints;
+
+    /**
+     * @brief Execute segmentation of a single model using the sample consensus method.
+     *
+     * @param model_coeffs Point cloud data, it must be a 3xN CV_32F Mat.
+     * @param label label[i] is 1 means point i is inlier point of model
+     * @param model_coefficients The resultant model coefficients.
+     * @return number of model inliers
+     */
+    int segmentSingle(Mat &model_coeffs, std::vector<bool> &label, Mat &model_coefficients);
+
+};
+
+
 /**
  * @brief Point cloud sampling by Voxel Grid filter downsampling.
  *
@@ -27,7 +280,7 @@ namespace cv {
  * @return The number of points actually sampled.
  */
 CV_EXPORTS int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
-                                  float length, float width, float height);
+        float length, float width, float height);
 
 /**
  * @brief Point cloud sampling by randomly select points.
@@ -43,7 +296,7 @@ CV_EXPORTS int voxelGridSampling(OutputArray sampled_point_flags, InputArray inp
  *                      if it is nullptr, theRNG () is used instead.
  */
 CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
-                               int sampled_pts_size, RNG *rng = nullptr);
+        int sampled_pts_size, RNG *rng = nullptr);
 
 /**
  * @overload
@@ -57,7 +310,7 @@ CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
  *                      if it is nullptr, theRNG () is used instead.
  */
 CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
-                               float sampled_scale, RNG *rng = nullptr);
+        float sampled_scale, RNG *rng = nullptr);
 
 /**
  * @brief Point cloud sampling by Farthest Point Sampling(FPS).
@@ -84,7 +337,7 @@ CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
  * @return The number of points actually sampled.
  */
 CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
-                                      int sampled_pts_size, float dist_lower_limit = 0, RNG *rng = nullptr);
+        int sampled_pts_size, float dist_lower_limit = 0, RNG *rng = nullptr);
 
 /**
  * @overload
@@ -101,7 +354,7 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
  * @return The number of points actually sampled.
  */
 CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
-                                      float sampled_scale, float dist_lower_limit = 0, RNG *rng = nullptr);
+        float sampled_scale, float dist_lower_limit = 0, RNG *rng = nullptr);
 
 //! @} _3d
 } //end namespace cv

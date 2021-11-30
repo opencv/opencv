@@ -139,6 +139,18 @@ public:
     static Ptr<ReprojectionErrorAffine> create(const Mat &points);
 };
 
+// Error for plane model
+class PlaneModelError : public Error {
+public:
+    static Ptr<PlaneModelError> create(const Mat &points);
+};
+
+// Error for sphere model
+class SphereModelError : public Error {
+public:
+    static Ptr<SphereModelError> create(const Mat &points);
+};
+
 // Normalizing transformation of data points
 class NormTransform : public Algorithm {
 public:
@@ -206,6 +218,18 @@ public:
     static Ptr<AffineMinimalSolver> create(const Mat &points_);
 };
 
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<PlaneModelMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SphereModelMinimalSolver> create(const Mat &points_);
+};
+
 //////////////////////////////////////// NON MINIMAL SOLVER ///////////////////////////////////////
 class NonMinimalSolver : public Algorithm {
 public:
@@ -252,6 +276,18 @@ public:
 class AffineNonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<AffineNonMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<PlaneModelNonMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SphereModelNonMinimalSolver> create(const Mat &points_);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -464,6 +500,20 @@ class PnPEstimator : public Estimator {
 public:
     static Ptr<PnPEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_);
+};
+
+class PointCloudModelEstimator : public Estimator {
+public:
+    /** @brief Methods for creating PointCloudModelEstimator.
+     *
+     * @param min_solver_ Minimum solver for estimating the model with minimum samples.
+     * @param non_min_solver_ Non-minimum solver for estimating the model with non-minimum samples.
+     * @param custom_model_constraints_ Custom model constraints for filtering the estimated obtained model.
+     * @return Ptr\<PointCloudModelEstimator\>
+     */
+    static Ptr<PointCloudModelEstimator> create (const Ptr<MinimalSolver> &min_solver_,
+            const Ptr<NonMinimalSolver> &non_min_solver_,
+            const Ptr<ModelConstraintFunction> &custom_model_constraints_ = nullptr);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
