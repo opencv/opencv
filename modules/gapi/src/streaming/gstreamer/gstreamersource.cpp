@@ -334,7 +334,8 @@ GStreamerSource::Priv::Priv(std::shared_ptr<GStreamerPipelineFacade>, const std:
 
 bool GStreamerSource::Priv::pull(cv::gapi::wip::Data&)
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    // No need an assert here. Constructor have already got assert.
+    return false;
 }
 
 GMetaArg GStreamerSource::Priv::descr_of() const noexcept
