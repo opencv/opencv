@@ -48,7 +48,7 @@ class GCaptureSource: public IStreamSource
 {
 public:
     explicit GCaptureSource(int id) : cap(id) { prep(); }
-    explicit GCaptureSource(const std::string &path) : cap(path) { prep(); }
+    explicit GCaptureSource(const std::string &path) : cap(path,CAP_INTEL_MFX) { prep(); }
 
     // TODO: Add more constructor overloads to make it
     // fully compatible with VideoCapture's interface.

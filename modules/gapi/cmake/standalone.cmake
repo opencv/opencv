@@ -6,7 +6,7 @@ if (NOT TARGET ade )
   find_package(ade 0.1.0 REQUIRED)
 endif()
 
-if (WITH_GAPI_ONEVPL)
+if(WITH_GAPI_ONEVPL OR HAVE_MFX OR WITH_MFX)
     find_package(VPL)
     if(VPL_FOUND)
         set(HAVE_GAPI_ONEVPL TRUE)
