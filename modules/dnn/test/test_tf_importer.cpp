@@ -523,6 +523,14 @@ TEST_P(Test_TensorFlow_layers, matmul)
     double l1 = target == DNN_TARGET_MYRIAD ? 6.1e-3 : default_l1;
     runTensorFlowNet("nhwc_reshape_matmul", false, l1);
     runTensorFlowNet("matmul_layout");
+    runTensorFlowNet("two_inputs_matmul");
+}
+
+TEST_P(Test_TensorFlow_layers, batch_matmul)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    runTensorFlowNet("batch_matmul");
 }
 
 TEST_P(Test_TensorFlow_layers, reshape)

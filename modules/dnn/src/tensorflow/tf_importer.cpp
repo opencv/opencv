@@ -646,7 +646,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["Conv2D"] = dispatch["SpaceToBatchND"] = dispatch["DepthwiseConv2dNative"] =
             dispatch["Pad"] = dispatch["MirrorPad"] = dispatch["Conv3D"] = &TFImporter::parseConvolution;
     dispatch["BiasAdd"] = dispatch["Add"] = dispatch["AddV2"] = dispatch["Sub"] = dispatch["AddN"] = &TFImporter::parseBias;
-    dispatch["MatMul"] = &TFImporter::parseMatMul;
+    dispatch["MatMul"] = dispatch["BatchMatMul"] = &TFImporter::parseMatMul;
     dispatch["Reshape"] = &TFImporter::parseReshape;
     dispatch["Flatten"] = dispatch["Squeeze"] = &TFImporter::parseFlatten;
     dispatch["Transpose"] = &TFImporter::parseTranspose;
@@ -1009,7 +1009,7 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
         }
     }
 
-    bool hasConstBlob = layerParams.blobs.size() == 2 ? true : false;
+    bool hasConstBlob = false;
     for(int i = 0; i < layer.input_size() && !hasConstBlob; i++) {
         if (value_id.find(layer.input(i)) != value_id.end())
         {
@@ -1056,19 +1056,18 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
         // one input only
         int input_blob_index = kernel_blob_index == 0 ? 1 : 0;
         connect(layer_id, dstNet, parsePin(layer.input(input_blob_index)), id, 0);
+        data_layouts[name] = DATA_LAYOUT_PLANAR;
     }
     else {
         layerParams.blobs.clear();
-
         int id = dstNet.addLayer(name, "InnerProduct", layerParams);
         layer_id[name] = id;
 
-        // two input
+        // two inputs
         for(int ii=0; ii<layer.input_size(); ii++){
             connect(layer_id, dstNet, parsePin(layer.input(ii)), id, ii);
         }
     }
-    data_layouts[name] = DATA_LAYOUT_PLANAR;
 }
 
 void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
