@@ -453,6 +453,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     class CV_EXPORTS ELULayer : public ActivationLayer
     {
     public:
+        float alpha;
+
         static Ptr<ELULayer> create(const LayerParams &params);
     };
 
