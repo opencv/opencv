@@ -578,7 +578,8 @@ TEST_P(Async, create_layer_pipeline_set_and_forward_all)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    // Exception: Default implementation fallbacks in asynchronous mode
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && dtype == CV_8U)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)

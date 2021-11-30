@@ -240,9 +240,11 @@ TEST_P(LRN, Accuracy)
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((inSize.width == 5 || inSize.height == 5) && targetId == DNN_TARGET_MYRIAD &&
         nrmType == "ACROSS_CHANNELS")
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
 
     LayerParams lp;
     lp.set("norm_region", nrmType);
@@ -407,12 +409,14 @@ TEST_P(FullyConnected, Accuracy)
     bool hasBias = get<3>(GetParam());
     Backend backendId = get<0>(get<4>(GetParam()));
     Target targetId = get<1>(get<4>(GetParam()));
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (targetId == DNN_TARGET_OPENCL_FP16 ||
        (targetId == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X))) {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
     }
+#endif
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -430,7 +434,21 @@ TEST_P(FullyConnected, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0;
+    double lInf = 0.0;
+#if defined(INF_ENGINE_RELEASE)
+    if (targetId == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.015;
+        lInf = 0.025;
+    }
+    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.01;
+    }
+#endif
+    test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
@@ -812,18 +830,18 @@ TEST_P(Eltwise, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && numConv > 1)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_OPENCL &&
         op == "sum" && numConv == 1 && !weighted)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 #endif
 
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && numConv > 1)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
