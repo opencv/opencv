@@ -1374,6 +1374,7 @@ bool CvCapture_MSMF::checkAudioProperties()
         }
         return false;
     }
+    return true;
 }
 bool CvCapture_MSMF::grabVideoFrame()
 {
