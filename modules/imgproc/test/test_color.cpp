@@ -1840,18 +1840,19 @@ TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
-TEST(Imgproc_ColorLuv, Overflow) {
-  cv::Mat3b luv_init(1, 1), rgb;
-  luv_init(0, 0) = cv::Vec3b(49, 205, 23);
-  cvtColor(luv_init, rgb, cv::COLOR_Luv2RGB);
-  // Convert to normal Luv coordinates for floats.
-  cv::Mat3f luv_initf(1, 1), rgbf;
-  luv_initf(0, 0) = cv::Vec3f(luv_init(0, 0)[0]/255.f*100, luv_init(0, 0)[1]*354/255.f - 134,
-                              luv_init(0, 0)[2]*262/255.f - 140);
-  cvtColor(luv_initf, rgbf, cv::COLOR_Luv2RGB);
-  cv::Mat3f rgb_converted;
-  rgb.convertTo(rgb_converted, CV_32F);
-  EXPECT_EQ(cvtest::norm(255.f*rgbf - rgb_converted, NORM_INF), 0.f);
+TEST(Imgproc_ColorLuv, Overflow_21112)
+{
+    const Size sz(107, 16);  // unaligned size to run both SIMD and generic code
+    Mat luv_init(sz, CV_8UC3, Scalar(49, 205, 23));
+    Mat rgb;
+    cvtColor(luv_init, rgb, COLOR_Luv2RGB);
+    // Convert to normal Luv coordinates for floats.
+    Mat luv_initf(sz, CV_32FC3, Scalar(49.0f/255.f*100, 205.0f*354/255.f - 134, 23.0f*262/255.f - 140));
+    Mat rgbf;
+    cvtColor(luv_initf, rgbf, COLOR_Luv2RGB);
+    Mat rgb_converted;
+    rgb.convertTo(rgb_converted, CV_32F);
+    EXPECT_LE(cvtest::norm(255.f*rgbf, rgb_converted, NORM_INF), 1e-5);
 }
 
 TEST(Imgproc_ColorBayer, regression)
