@@ -13,15 +13,15 @@ namespace cv {
  *
  * @param input_pts Point cloud xyz data.
  * @param[out] mat Point cloud xyz data in cv::Mat with Nx3 or 3xN type CV_32FC1.
- * @param arrangement_of_points The arrangement of point data in the matrix, 
- *                              0 by row (Nx3, [x1, y1, z1, ..., xn, yn, zn]),  
+ * @param arrangement_of_points The arrangement of point data in the matrix,
+ *                              0 by row (Nx3, [x1, y1, z1, ..., xn, yn, zn]),
  *                              1 by column (3xN, [x1, ..., xn, y1, ..., yn, z1, ..., zn]).
  * @param clone_data Flag to specify whether data cloning is mandatory.
  *
  * @note The following cases will clone data even if flag clone_data is false:
- *       1. Data is discontinuous in memory 
- *       2. Data type is not float 
- *       3. The original arrangement of data is not the same as the expected new arrangement. 
+ *       1. Data is discontinuous in memory
+ *       2. Data type is not float
+ *       3. The original arrangement of data is not the same as the expected new arrangement.
  *          For example, transforming from
  *          Nx3(x1, y1, z1, ..., xn, yn, zn) to 3xN(x1, ..., xn, y1, ..., yn, z1, ..., zn)
  *
