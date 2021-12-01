@@ -1149,7 +1149,8 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
 
     if (params)
     {
-        if (!(configureHW(*params) && configureStreams(*params) && setAudioProperties(*params)))
+        configureHW(*params);
+        if (configureStreams(*params) && setAudioProperties(*params))
             return false;
     }
     if (videoStream != -1 && audioStream != -1 || videoStream == -1 && audioStream == -1)
@@ -1210,7 +1211,8 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
 
     if (params)
     {
-        if (!(configureHW(*params) && configureStreams(*params) && setAudioProperties(*params)))
+        configureHW(*params);
+        if (configureStreams(*params) && setAudioProperties(*params))
             return false;
     }
     // Set source reader parameters
