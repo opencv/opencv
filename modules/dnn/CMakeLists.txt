@@ -55,7 +55,7 @@ if(MSVC)
                                        /wd4305 /wd4127 /wd4100 /wd4512 /wd4125 /wd4389 /wd4510 /wd4610
                                        /wd4702 /wd4456 /wd4457 /wd4065 /wd4310 /wd4661 /wd4506
   )
-  if(MSVC_VERSION LESS 1910)  # MSVS 2015, .pb.cc generated files
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017, .pb.cc generated files
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4309)  # 'static_cast': truncation of constant value
   endif()
   if(MSVC_VERSION LESS 1920)  # <MSVS2019, .pb.cc generated files
