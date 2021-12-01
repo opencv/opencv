@@ -62,7 +62,7 @@ MUL_SIMD(float, float)
 
 #define ADDC_SIMD(SRC, DST)                                                              \
 int addc_simd(const SRC in[], const float scalar[], DST out[],                           \
-              const int width, const int chan);
+              const int length, const int chan);
 
 ADDC_SIMD(uchar, uchar)
 ADDC_SIMD(ushort, uchar)
@@ -82,6 +82,29 @@ ADDC_SIMD(short, float)
 ADDC_SIMD(float, float)
 
 #undef ADDC_SIMD
+
+#define SUBC_SIMD(SRC, DST)                                                              \
+int subc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan);
+
+SUBC_SIMD(uchar, uchar)
+SUBC_SIMD(ushort, uchar)
+SUBC_SIMD(short, uchar)
+SUBC_SIMD(float, uchar)
+SUBC_SIMD(short, short)
+SUBC_SIMD(ushort, short)
+SUBC_SIMD(uchar, short)
+SUBC_SIMD(float, short)
+SUBC_SIMD(ushort, ushort)
+SUBC_SIMD(uchar, ushort)
+SUBC_SIMD(short, ushort)
+SUBC_SIMD(float, ushort)
+SUBC_SIMD(uchar, float)
+SUBC_SIMD(ushort, float)
+SUBC_SIMD(short, float)
+SUBC_SIMD(float, float)
+
+#undef SUBC_SIMD
 
 }  // namespace fluid
 }  // namespace gapi
