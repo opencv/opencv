@@ -65,7 +65,6 @@ int mul_simd(const SRC in1[], const SRC in2[], DST out[],                   \
                     CV_CPU_DISPATCH_MODES_ALL);                             \
 }
 
-
 MUL_SIMD(uchar, uchar)
 MUL_SIMD(ushort, uchar)
 MUL_SIMD(short, uchar)
@@ -87,9 +86,9 @@ MUL_SIMD(float, float)
 
 #define ADDC_SIMD(SRC, DST)                                               \
 int addc_simd(const SRC in[], const float scalar[], DST out[],            \
-              const int width, const int chan)                            \
+              const int length, const int chan)                           \
 {                                                                         \
-    CV_CPU_DISPATCH(addc_simd, (in, scalar, out, width, chan),            \
+    CV_CPU_DISPATCH(addc_simd, (in, scalar, out, length, chan),           \
                     CV_CPU_DISPATCH_MODES_ALL);                           \
 }
 
@@ -114,9 +113,9 @@ ADDC_SIMD(float, float)
 
 #define SUBC_SIMD(SRC, DST)                                               \
 int subc_simd(const SRC in[], const float scalar[], DST out[],            \
-              const int width, const int chan)                            \
+              const int length, const int chan)                           \
 {                                                                         \
-    CV_CPU_DISPATCH(subc_simd, (in, scalar, out, width, chan),            \
+    CV_CPU_DISPATCH(subc_simd, (in, scalar, out, length, chan),           \
                     CV_CPU_DISPATCH_MODES_ALL);                           \
 }
 
@@ -138,6 +137,7 @@ SUBC_SIMD(short, float)
 SUBC_SIMD(float, float)
 
 #undef SUBC_SIMD
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv

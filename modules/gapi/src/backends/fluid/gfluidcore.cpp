@@ -1259,6 +1259,7 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
 
     int width  = dst.length();
     int chan   = dst.meta().chan;
+    const int length = width * chan;
 
     switch (arithm)
     {
@@ -1266,10 +1267,9 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     {
             int w = 0;
 #if CV_SIMD
-            w = addc_simd(in, scalar, out, width, chan);
+            w = addc_simd(in, scalar, out, length, chan);
 #endif
-
-            for (; w < width * chan; ++w)
+            for (; w < length; ++w)
                 out[w] = add<DST>(in[w], scalar[w % chan]);
 
         break;
@@ -1278,9 +1278,9 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     {
         int w = 0;
 #if CV_SIMD
-        w = subc_simd(in, scalar, out, width, chan);
+        w = subc_simd(in, scalar, out, length, chan);
 #endif
-        for (; w < width * chan; ++w)
+        for (; w < length; ++w)
             out[w] = sub<DST>(in[w], scalar[w % chan]);
         break;
     }
@@ -1387,6 +1387,32 @@ GAPI_FLUID_KERNEL(GFluidAbsDiffC, cv::gapi::core::GAbsDiffC, true)
     }
 };
 
+CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)
+{
+#if CV_SIMD
+    // 512 bits / 32 bits = 16 elements of float32 can contain a AVX 512 SIMD vector.
+    constexpr int maxNlanes = 16;
+
+    // +2 is offset for 3-channel case.
+    // Offset is need to right load coefficients from scalar array to SIMD vectors for 3-channel case.
+    // Scalar array looks like: scalar[] = {C1, C2, C3, C1, C2, C3, ...}
+    // The first scalar SIMD vector should looks like:
+    // C1 C2 C3 C1
+    // The second:
+    // C2 C3 C1 C2
+    // The third:
+    // C3 C1 C2 C3
+    constexpr int offset = 2;
+    constexpr int buflen = maxNlanes + offset;
+#else
+    constexpr int buflen = 4;
+#endif
+    cv::Size bufsize(buflen, 1);
+    GMatDesc bufdesc = { CV_32F, 1, bufsize };
+    Buffer buffer(bufdesc);
+    scratch = std::move(buffer);
+}
+
 GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
 {
     static const int Window = 1;
@@ -1429,31 +1455,10 @@ GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
 
     static void initScratch(const GMatDesc&, const GScalarDesc&, int, Buffer& scratch)
     {
-#if CV_SIMD
-        // 512 bits / 32 bits = 16 elements of float32 can contain a AVX 512 SIMD vector.
-        constexpr int maxNlanes = 16;
-
-        // +2 is offset for 3-channel case.
-        // Offset is need to right load coefficients from scalar array to SIMD vectors for 3-channel case.
-        // Scalar array looks like: scalar[] = {C1, C2, C3, C1, C2, C3, ...}
-        // The first scalar SIMD vector should looks like:
-        // C1 C2 C3 C1
-        // The second:
-        // C2 C3 C1 C2
-        // The third:
-        // C3 C1 C2 C3
-        constexpr int offset = 2;
-        constexpr int buflen = maxNlanes + offset;
-#else
-        constexpr int buflen = 4;
-#endif
-        cv::Size bufsize(buflen, 1);
-        GMatDesc bufdesc = { CV_32F, 1, bufsize };
-        Buffer buffer(bufdesc);
-        scratch = std::move(buffer);
+        initScratchBuffer(scratch);
     }
 
-    static void resetScratch(Buffer& /* scratch */)
+    static void resetScratch(Buffer& /*scratch*/)
     {
     }
 };
@@ -1462,7 +1467,7 @@ GAPI_FLUID_KERNEL(GFluidSubC, cv::gapi::core::GSubC, true)
 {
     static const int Window = 1;
 
-    static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst, Buffer & scratch)
+    static void run(const View& src, const cv::Scalar& _scalar, int /*dtype*/, Buffer& dst, Buffer& scratch)
     {
         GAPI_Assert(src.meta().chan <= 4);
 
@@ -1500,31 +1505,10 @@ GAPI_FLUID_KERNEL(GFluidSubC, cv::gapi::core::GSubC, true)
 
     static void initScratch(const GMatDesc&, const GScalarDesc&, int, Buffer& scratch)
     {
-#if CV_SIMD
-        // 512 bits / 32 bits = 16 elements of float32 can contain a AVX 512 SIMD vector.
-        constexpr int maxNlanes = 16;
-
-        // +2 is offset for 3-channel case.
-        // Offset is need to right load coefficients from scalar array to SIMD vectors for 3-channel case.
-        // Scalar array looks like: scalar[] = {C1, C2, C3, C1, C2, C3, ...}
-        // The first scalar SIMD vector should looks like:
-        // C1 C2 C3 C1
-        // The second:
-        // C2 C3 C1 C2
-        // The third:
-        // C3 C1 C2 C3
-        constexpr int offset = 2;
-        constexpr int buflen = maxNlanes + offset;
-#else
-        constexpr int buflen = 4;
-#endif
-        cv::Size bufsize(buflen, 1);
-        GMatDesc bufdesc = { CV_32F, 1, bufsize };
-        Buffer buffer(bufdesc);
-        scratch = std::move(buffer);
+        initScratchBuffer(scratch);
     }
 
-    static void resetScratch(Buffer& /* scratch */)
+    static void resetScratch(Buffer& /*scratch*/)
     {
     }
 };

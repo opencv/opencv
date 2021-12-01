@@ -81,12 +81,9 @@ MUL_SIMD(float, float)
 
 #undef MUL_SIMD
 
-struct add_op {};
-struct sub_op {};
-
 #define ADDC_SIMD(SRC, DST)                                                              \
 int addc_simd(const SRC in[], const float scalar[], DST out[],                           \
-              const int width, const int chan);
+              const int length, const int chan);
 
 ADDC_SIMD(uchar, uchar)
 ADDC_SIMD(ushort, uchar)
@@ -109,7 +106,7 @@ ADDC_SIMD(float, float)
 
 #define SUBC_SIMD(SRC, DST)                                                              \
 int subc_simd(const SRC in[], const float scalar[], DST out[],                           \
-              const int width, const int chan);
+              const int length, const int chan);
 
 SUBC_SIMD(uchar, uchar)
 SUBC_SIMD(ushort, uchar)
@@ -877,13 +874,13 @@ MUL_SIMD(float, float)
 //
 //-------------------------
 
-struct add_op_tag {};
-struct sub_op_tag {};
+struct add_tag {};
+struct sub_tag {};
 
-CV_ALWAYS_INLINE void addc_pack_store_c3(short* outx,       const v_int32& c1,
-                                         const v_int32& c2, const v_int32& c3,
-                                         const v_int32& c4, const v_int32& c5,
-                                         const v_int32& c6)
+CV_ALWAYS_INLINE void arithmOpScalar_pack_store_c3(short* outx,       const v_int32& c1,
+                                                   const v_int32& c2, const v_int32& c3,
+                                                   const v_int32& c4, const v_int32& c5,
+                                                   const v_int32& c6)
 {
     constexpr int nlanes = v_int16::nlanes;
     vx_store(outx,           v_pack(c1, c2));
@@ -891,10 +888,10 @@ CV_ALWAYS_INLINE void addc_pack_store_c3(short* outx,       const v_int32& c1,
     vx_store(&outx[2*nlanes], v_pack(c5, c6));
 }
 
-CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* outx,      const v_int32& c1,
-                                         const v_int32& c2, const v_int32& c3,
-                                         const v_int32& c4, const v_int32& c5,
-                                         const v_int32& c6)
+CV_ALWAYS_INLINE void arithmOpScalar_pack_store_c3(ushort* outx,      const v_int32& c1,
+                                                   const v_int32& c2, const v_int32& c3,
+                                                   const v_int32& c4, const v_int32& c5,
+                                                   const v_int32& c6)
 {
     constexpr int nlanes = v_uint16::nlanes;
     vx_store(outx,            v_pack_u(c1, c2));
@@ -902,60 +899,64 @@ CV_ALWAYS_INLINE void addc_pack_store_c3(ushort* outx,      const v_int32& c1,
     vx_store(&outx[2*nlanes], v_pack_u(c5, c6));
 }
 
-CV_ALWAYS_INLINE v_float32 op(add_op_tag, const v_float32& a, const v_float32& sc)
+CV_ALWAYS_INLINE v_float32 oper(add_tag, const v_float32& a, const v_float32& sc)
 {
     return a + sc;
 }
 
-CV_ALWAYS_INLINE v_float32 op(sub_op_tag, const v_float32& a, const v_float32& sc)
+CV_ALWAYS_INLINE v_float32 oper(sub_tag, const v_float32& a, const v_float32& sc)
 {
     return a - sc;
 }
 
-template<typename op_tag, typename SRC, typename DST>
+template<typename oper_tag, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<DST, ushort>::value ||
                          std::is_same<DST, short>::value), void>::type
-arithmOpScalar_simd_common_impl(op_tag t, const SRC* inx, DST* outx, const v_float32& sc, const int nlanes)
+arithmOpScalar_simd_common_impl(oper_tag t, const SRC* inx, DST* outx,
+                                const v_float32& sc, const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
     v_float32 a2 = vg_load_f32(&inx[nlanes/2]);
 
-    v_store_i16(outx, v_round(op(t, a1, sc)), v_round(op(t, a2, sc)));
+    v_store_i16(outx, v_round(oper(t, a1, sc)), v_round(oper(t, a2, sc)));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC>
-CV_ALWAYS_INLINE void arithmOpScalar_simd_common_impl(op_tag t, const SRC* inx, uchar* outx, const v_float32& sc, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalar_simd_common_impl(oper_tag t, const SRC* inx,
+                                                      uchar* outx, const v_float32& sc,
+                                                      const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
     v_float32 a2 = vg_load_f32(&inx[nlanes/4]);
     v_float32 a3 = vg_load_f32(&inx[nlanes/2]);
     v_float32 a4 = vg_load_f32(&inx[3 * nlanes/4]);
 
-    vx_store(outx, v_pack_u(v_pack(v_round(op(t, a1, sc)),
-                                   v_round(op(t, a2, sc))),
-                            v_pack(v_round(op(t, a3, sc)),
-                                   v_round(op(t, a4, sc)))));
+    vx_store(outx, v_pack_u(v_pack(v_round(oper(t, a1, sc)),
+                                   v_round(oper(t, a2, sc))),
+                            v_pack(v_round(oper(t, a3, sc)),
+                                   v_round(oper(t, a4, sc)))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC>
-CV_ALWAYS_INLINE void arithmOpScalar_simd_common_impl(op_tag t, const SRC* inx, float* outx, const v_float32& sc, const int)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalar_simd_common_impl(oper_tag t, const SRC* inx,
+                                                      float* outx, const v_float32& sc, const int)
 {
     v_float32 a1 = vg_load_f32(inx);
-    vx_store(outx, op(t, a1, sc));
+    vx_store(outx, oper(t, a1, sc));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC, typename DST>
+template<typename oper_tag, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
                         std::is_same<DST, ushort>::value, void>::type
-arithmOpScalar_simd_c3_impl(op_tag t, const SRC* inx, DST* outx, const v_float32& s1, const v_float32& s2,
+arithmOpScalar_simd_c3_impl(oper_tag t, const SRC* inx, DST* outx, const v_float32& s1, const v_float32& s2,
                   const v_float32& s3, const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
@@ -965,60 +966,62 @@ arithmOpScalar_simd_c3_impl(op_tag t, const SRC* inx, DST* outx, const v_float32
     v_float32 a5 = vg_load_f32(&inx[2 * nlanes]);
     v_float32 a6 = vg_load_f32(&inx[5 * nlanes / 2]);
 
-    addc_pack_store_c3(outx, v_round(op(t, a1, s1)),
-                             v_round(op(t, a2, s2)),
-                             v_round(op(t, a3, s3)),
-                             v_round(op(t, a4, s1)),
-                             v_round(op(t, a5, s2)),
-                             v_round(op(t, a6, s3)));
+    arithmOpScalar_pack_store_c3(outx, v_round(oper(t, a1, s1)),
+                                       v_round(oper(t, a2, s2)),
+                                       v_round(oper(t, a3, s3)),
+                                       v_round(oper(t, a4, s1)),
+                                       v_round(oper(t, a5, s2)),
+                                       v_round(oper(t, a6, s3)));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC>
-CV_ALWAYS_INLINE void arithmOpScalar_simd_c3_impl(op_tag t, const SRC* inx, uchar* outx,
-                                       const v_float32& s1, const v_float32& s2,
-                                       const v_float32& s3, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalar_simd_c3_impl(oper_tag t, const SRC* inx, uchar* outx,
+                                                  const v_float32& s1, const v_float32& s2,
+                                                  const v_float32& s3, const int nlanes)
 {
     vx_store(outx,
-               v_pack_u(v_pack(v_round(op(t, vg_load_f32(inx), s1)),
-                               v_round(op(t, vg_load_f32(&inx[nlanes/4]), s2))),
-                        v_pack(v_round(op(t, vg_load_f32(&inx[nlanes/2]), s3)),
-                               v_round(op(t, vg_load_f32(&inx[3*nlanes/4]), s1)))));
+               v_pack_u(v_pack(v_round(oper(t, vg_load_f32(inx), s1)),
+                               v_round(oper(t, vg_load_f32(&inx[nlanes/4]), s2))),
+                        v_pack(v_round(oper(t, vg_load_f32(&inx[nlanes/2]), s3)),
+                               v_round(oper(t, vg_load_f32(&inx[3*nlanes/4]), s1)))));
 
     vx_store(&outx[nlanes],
-                v_pack_u(v_pack(v_round(op(t, vg_load_f32(&inx[nlanes]), s2)),
-                                v_round(op(t, vg_load_f32(&inx[5*nlanes/4]), s3))),
-                         v_pack(v_round(op(t, vg_load_f32(&inx[3*nlanes/2]), s1)),
-                                v_round(op(t, vg_load_f32(&inx[7*nlanes/4]), s2)))));
+                v_pack_u(v_pack(v_round(oper(t, vg_load_f32(&inx[nlanes]), s2)),
+                                v_round(oper(t, vg_load_f32(&inx[5*nlanes/4]), s3))),
+                         v_pack(v_round(oper(t, vg_load_f32(&inx[3*nlanes/2]), s1)),
+                                v_round(oper(t, vg_load_f32(&inx[7*nlanes/4]), s2)))));
 
     vx_store(&outx[2 * nlanes],
-                v_pack_u(v_pack(v_round(op(t, vg_load_f32(&inx[2*nlanes]), s3)),
-                                v_round(op(t, vg_load_f32(&inx[9*nlanes/4]), s1))),
-                         v_pack(v_round(op(t, vg_load_f32(&inx[5*nlanes/2]), s2)),
-                                v_round(op(t, vg_load_f32(&inx[11*nlanes/4]), s3)))));
+                v_pack_u(v_pack(v_round(oper(t, vg_load_f32(&inx[2*nlanes]), s3)),
+                                v_round(oper(t, vg_load_f32(&inx[9*nlanes/4]), s1))),
+                         v_pack(v_round(oper(t, vg_load_f32(&inx[5*nlanes/2]), s2)),
+                                v_round(oper(t, vg_load_f32(&inx[11*nlanes/4]), s3)))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC>
-CV_ALWAYS_INLINE void arithmOpScalar_simd_c3_impl(op_tag t, const SRC* in, float* out,
-                                        const v_float32& s1, const v_float32& s2,
-                                        const v_float32& s3, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalar_simd_c3_impl(oper_tag t, const SRC* in, float* out,
+                                                  const v_float32& s1, const v_float32& s2,
+                                                  const v_float32& s3, const int nlanes)
 {
     v_float32 a1 = vg_load_f32(in);
     v_float32 a2 = vg_load_f32(&in[nlanes]);
     v_float32 a3 = vg_load_f32(&in[2*nlanes]);
 
-    vx_store(out, op(t, a1, s1));
-    vx_store(&out[nlanes], op(t, a2, s2));
-    vx_store(&out[2*nlanes], op(t, a3, s3));
+    vx_store(out, oper(t, a1, s1));
+    vx_store(&out[nlanes], oper(t, a2, s2));
+    vx_store(&out[2*nlanes], oper(t, a3, s3));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename op_tag, typename SRC, typename DST>
-CV_ALWAYS_INLINE int arithmOpScalar_simd_c3(op_tag t, const SRC in[], const float scalar[], DST out[], const int length)
+template<typename oper_tag, typename SRC, typename DST>
+CV_ALWAYS_INLINE int arithmOpScalar_simd_c3(oper_tag t, const SRC in[],
+                                            const float scalar[], DST out[],
+                                            const int length)
 {
     constexpr int chan = 3;
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;
@@ -1054,8 +1057,12 @@ CV_ALWAYS_INLINE int arithmOpScalar_simd_c3(op_tag t, const SRC in[], const floa
     return x;
 }
 
-template<typename op_tag, typename SRC, typename DST>
-CV_ALWAYS_INLINE int arithmOpScalar_simd_common(op_tag t, const SRC in[], const float scalar[], DST out[], const int length)
+//-------------------------------------------------------------------------------------------------
+
+template<typename oper_tag, typename SRC, typename DST>
+CV_ALWAYS_INLINE int arithmOpScalar_simd_common(oper_tag t, const SRC in[],
+                                                const float scalar[], DST out[],
+                                                const int length)
 {
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;
 
@@ -1086,17 +1093,16 @@ CV_ALWAYS_INLINE int arithmOpScalar_simd_common(op_tag t, const SRC in[], const 
 
 #define ADDC_SIMD(SRC, DST)                                                         \
 int addc_simd(const SRC in[], const float scalar[], DST out[],                      \
-              const int width, const int chan)                                      \
+              const int length, const int chan)                                     \
 {                                                                                   \
-    const int length = width * chan;                                                \
     switch (chan)                                                                   \
     {                                                                               \
     case 1:                                                                         \
     case 2:                                                                         \
     case 4:                                                                         \
-        return arithmOpScalar_simd_common(add_op_tag{}, in, scalar, out, length);   \
+        return arithmOpScalar_simd_common(add_tag{}, in, scalar, out, length);      \
     case 3:                                                                         \
-        return arithmOpScalar_simd_c3(add_op_tag{}, in, scalar, out, length);       \
+        return arithmOpScalar_simd_c3(add_tag{}, in, scalar, out, length);          \
     default:                                                                        \
         GAPI_Assert(chan <= 4);                                                     \
         break;                                                                      \
@@ -1125,17 +1131,16 @@ ADDC_SIMD(float, float)
 
 #define SUBC_SIMD(SRC, DST)                                                         \
 int subc_simd(const SRC in[], const float scalar[], DST out[],                      \
-              const int width, const int chan)                                      \
+              const int length, const int chan)                                     \
 {                                                                                   \
-    const int length = width * chan;                                                \
     switch (chan)                                                                   \
     {                                                                               \
     case 1:                                                                         \
     case 2:                                                                         \
     case 4:                                                                         \
-        return arithmOpScalar_simd_common(sub_op_tag{}, in, scalar, out, length);   \
+        return arithmOpScalar_simd_common(sub_tag{}, in, scalar, out, length);      \
     case 3:                                                                         \
-        return arithmOpScalar_simd_c3(sub_op_tag{}, in, scalar, out, length);       \
+        return arithmOpScalar_simd_c3(sub_tag{}, in, scalar, out, length);          \
     default:                                                                        \
         GAPI_Assert(chan <= 4);                                                     \
         break;                                                                      \
