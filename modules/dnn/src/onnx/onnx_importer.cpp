@@ -1645,6 +1645,16 @@ void ONNXImporter::parseTranspose(LayerParams& layerParams, const opencv_onnx::N
 {
     layerParams.type = "Permute";
     replaceLayerParam(layerParams, "perm", "order");
+    if (!layerParams.has("order")) {
+        MatShape inpShape = outShapes[node_proto.input(0)];
+        size_t dims = inpShape.size();
+        std::vector<int> perm(dims);
+        for (size_t d = 0; d < dims; ++d)
+        {
+            perm[d] = static_cast<int>(dims - 1 - d);
+        }
+        layerParams.set("order", DictValue::arrayInt(perm.data(), perm.size()));
+    }
 
     CV_Assert(node_proto.input_size() == 1);
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
