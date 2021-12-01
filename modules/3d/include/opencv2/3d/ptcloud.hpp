@@ -55,6 +55,30 @@ inline int sacModelMinimumSampleSize(SacModelType model_type)
 
 /** @brief Sample Consensus algorithm segmentation of 3D point cloud model.
 
+The following example is to use the RANSAC algorithm
+for plane segmentation of a 3D point cloud.
+
+@code{.cpp}
+using namespace cv;
+
+int planeSegmentationUsingRANSAC(const Mat &pt_cloud,
+        vector<Mat> &plane_coeffs, vector<char> &labels) {
+
+    SACSegmentation sacSegmentation;
+    sacSegmentation.setSacModelType(SAC_MODEL_PLANE);
+    sacSegmentation.setSacMethodType(SAC_METHOD_RANSAC);
+    sacSegmentation.setDistanceThreshold(0.21);
+    // The maximum number of iterations to attempt.(default 1000)
+    sacSegmentation.setMaxIterations(500);
+    sacSegmentation.setNumberOfModelsExpected(2);
+    // Number of final resultant models obtained by segmentation.
+    int model_cnt = sacSegmentation.segment(pt_cloud,
+            labels, plane_coeffs);
+
+    return model_cnt;
+}
+@endcode
+
 @see
 Supported algorithms: enum SacMethod in ptcloud.hpp. \n
 Supported models: enum SacModelType in ptcloud.hpp.
