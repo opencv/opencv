@@ -1265,12 +1265,12 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
     {
     case ARITHM_ADD:
     {
-            int w = 0;
+        int w = 0;
 #if CV_SIMD
-            w = addc_simd(in, scalar, out, length, chan);
+        w = addc_simd(in, scalar, out, length, chan);
 #endif
-            for (; w < length; ++w)
-                out[w] = add<DST>(in[w], scalar[w % chan]);
+        for (; w < length; ++w)
+            out[w] = add<DST>(in[w], scalar[w % chan]);
 
         break;
     }
@@ -1284,12 +1284,17 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
             out[w] = sub<DST>(in[w], scalar[w % chan]);
         break;
     }
-    // TODO: optimize miltiplication and division
     case ARITHM_MULTIPLY:
-        for (int w=0; w < width; w++)
-            for (int c=0; c < chan; c++)
-                out[chan*w + c] = mul<DST>(in[chan*w + c], scalar[c], scale);
+    {
+        int w = 0;
+#if CV_SIMD
+        w = mulc_simd(in, scalar, out, length, chan, scale);
+#endif
+        for (; w < width; ++w)
+            for (int c = 0; c < chan; ++c)
+                out[chan * w + c] = mul<DST>(in[chan * w + c], scalar[c], scale);
         break;
+    }
     case ARITHM_DIVIDE:
         for (int w=0; w < width; w++)
             for (int c=0; c < chan; c++)
@@ -1539,30 +1544,53 @@ GAPI_FLUID_KERNEL(GFluidSubRC, cv::gapi::core::GSubRC, false)
     }
 };
 
-GAPI_FLUID_KERNEL(GFluidMulC, cv::gapi::core::GMulC, false)
+GAPI_FLUID_KERNEL(GFluidMulC, cv::gapi::core::GMulC, true)
 {
     static const int Window = 1;
 
-    static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst)
+    static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst, Buffer &scratch)
     {
-        const float scalar[4] = {
-            static_cast<float>(_scalar[0]),
-            static_cast<float>(_scalar[1]),
-            static_cast<float>(_scalar[2]),
-            static_cast<float>(_scalar[3])
-        };
-        const float scale = 1.f;
+        GAPI_Assert(src.meta().chan <= 4);
+
+        if (dst.y() == 0)
+        {
+            const int chan = src.meta().chan;
+            float* sc = scratch.OutLine<float>();
+
+            for (int i = 0; i < scratch.length(); ++i)
+                sc[i] = static_cast<float>(_scalar[i % chan]);
+        }
+        const float* scalar = scratch.OutLine<float>();
+        const float scale = 1.0;
 
         //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_(uchar ,  short, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_(uchar ,  float, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_( short,  short, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_( float, uchar , run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_( float,  short, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
-        UNARY_( float,  float, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(uchar,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(uchar,  ushort, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(uchar,  short,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(uchar,  float,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(ushort, ushort, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(ushort, short,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(ushort, uchar,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(ushort, float,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(short,  short,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(short,  ushort, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(short,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(short,  float,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(float,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(float,  ushort, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(float,  short,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
+        UNARY_(float,  float,  run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GMatDesc&, const GScalarDesc&, int, Buffer& scratch)
+    {
+        initScratchBuffer(scratch);
+    }
+
+    static void resetScratch(Buffer& /*scratch*/)
+    {
     }
 };
 
