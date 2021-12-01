@@ -930,6 +930,14 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     opencv_onnx::NodeProto node_proto = node_proto_;
     const std::string& layer_type = node_proto.op_type();
     bool isSub = layer_type == "Sub";
+
+    if (layer_type == "Sum" && node_proto.input_size() == 1)
+    {
+        layerParams.type = "Identity";
+        addLayer(layerParams, node_proto);
+        return;
+    }
+
     CV_Assert((node_proto.input_size() == 2) || (layer_type == "Sum" && node_proto.input_size() > 2));
 
     if (layer_type == "Sum" && node_proto.input_size() > 2)
