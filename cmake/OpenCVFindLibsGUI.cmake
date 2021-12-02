@@ -47,6 +47,13 @@ if(WITH_QT)
       find_package(Qt${QT_VERSION_MAJOR} COMPONENTS OpenGL QUIET)
       if(Qt${QT_VERSION_MAJOR}OpenGL_FOUND)
         set(QT_QTOPENGL_FOUND ON)  # HAVE_QT_OPENGL is defined below
+        if(QT_VERSION_MAJOR GREATER 5) # QGL -> QOpenGL
+          find_package(Qt${QT_VERSION_MAJOR} COMPONENTS OpenGLWidgets QUIET)
+          if(NOT Qt${QT_VERSION_MAJOR}OpenGLWidgets_FOUND)
+            message(STATUS "Qt OpenGLWidgets component not found: turning off Qt OpenGL functionality")
+            set(QT_QTOPENGL_FOUND FALSE)
+          endif()
+        endif()
       endif()
     endif()
   endif()

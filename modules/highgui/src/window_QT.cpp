@@ -3227,7 +3227,9 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 
 #ifdef HAVE_QT_OPENGL
 
-OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), OCVViewPort(), size(-1, -1)
+
+// QOpenGLWidget vs QGLWidget info: https://www.qt.io/blog/2014/09/10/qt-weekly-19-qopenglwidget
+OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : OpenCVQtWidgetBase(_parent), OCVViewPort(), size(-1, -1)
 {
     glDrawCallback = 0;
     glDrawData = 0;
@@ -3281,7 +3283,11 @@ void OpenGlViewPort::makeCurrentOpenGlContext()
 
 void OpenGlViewPort::updateGl()
 {
+    #ifdef HAVE_QT6
+    QOpenGLWidget::update();
+    #else
     QGLWidget::updateGL();
+    #endif
 }
 
 void OpenGlViewPort::initializeGL()
@@ -3308,31 +3314,31 @@ void OpenGlViewPort::paintGL()
 void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
-    QGLWidget::wheelEvent(evnt);
+    OpenCVQtWidgetBase::wheelEvent(evnt);
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_down);
-    QGLWidget::mousePressEvent(evnt);
+    OpenCVQtWidgetBase::mousePressEvent(evnt);
 }
 
 void OpenGlViewPort::mouseReleaseEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_up);
-    QGLWidget::mouseReleaseEvent(evnt);
+    OpenCVQtWidgetBase::mouseReleaseEvent(evnt);
 }
 
 void OpenGlViewPort::mouseDoubleClickEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_dbclick);
-    QGLWidget::mouseDoubleClickEvent(evnt);
+    OpenCVQtWidgetBase::mouseDoubleClickEvent(evnt);
 }
 
 void OpenGlViewPort::mouseMoveEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_move);
-    QGLWidget::mouseMoveEvent(evnt);
+    OpenCVQtWidgetBase::mouseMoveEvent(evnt);
 }
 
 
@@ -3340,8 +3346,7 @@ QSize OpenGlViewPort::sizeHint() const
 {
     if (size.width() > 0 && size.height() > 0)
         return size;
-
-    return QGLWidget::sizeHint();
+    return OpenCVQtWidgetBase::sizeHint();
 }
 
 void OpenGlViewPort::setSize(QSize size_)
@@ -3350,6 +3355,6 @@ void OpenGlViewPort::setSize(QSize size_)
     updateGeometry();
 }
 
-#endif
+#endif //HAVE_QT_OPENGL
 
 #endif // HAVE_QT
