@@ -148,11 +148,11 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     acceleration_policy->init(mfx_session);
 
     // Get codec ID from data provider
-    IDataProvider::mfx_codec_id_type decoder_id = provider->get_mfx_codec_id();
+    IDataProvider::mfx_codec_id_type decoder_id_name = provider->get_mfx_codec_id();
 
     // Prepare video param
     mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = decoder_id;
+    mfxDecParams.mfx.CodecId = decoder_id_name;
 
     // set memory stream direction accroding to accelearion policy device type
     IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
@@ -189,7 +189,7 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     if (MFX_ERR_NONE != sts) {
         GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
                                   << ". Make sure data source is valid and/or "
-                                  "\"" << CfgParam::decoder_id() << "\""
+                                  "\"" << CfgParam::decoder_id_name() << "\""
                                   " has correct value in case of demultiplexed raw input");
          throw std::runtime_error("Error decode header, error: " +
                                   mfxstatus_to_string(sts));
@@ -213,7 +213,7 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     // till application is freeing unusable surface on its side.
     //
     auto queue_capacity_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() == CfgParam::queue_capacity();
+        return value.get_name() == CfgParam::frames_pool_size_name();
     });
     if (queue_capacity_it != cfg_params.end()) {
         cv::util::visit(cv::util::overload_lambdas(
@@ -233,16 +233,16 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
             }),
             queue_capacity_it->get_value());
 
-        GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::queue_capacity() << "\": " <<
+        GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
                       preallocated_frames_count << ", for session: " << mfx_session);
 
     }
     if (preallocated_frames_count < decRequest.NumFrameMin) {
-        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::queue_capacity() << "\": " <<
+        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
                                   preallocated_frames_count << ". It must be equal or greater than "
                                   "mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin);
         throw std::runtime_error(std::string("Invalid value of param: ") +
-                                 CfgParam::queue_capacity());
+                                 CfgParam::frames_pool_size_name());
     } else {
         decRequest.NumFrameSuggested = preallocated_frames_count;
         GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input for session: " << mfx_session <<

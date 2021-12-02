@@ -47,27 +47,28 @@ struct GAPI_EXPORTS CfgParam {
                                       void*,
                                       std::string>;
     /**
-     * @brief queue_capacity
+     * @brief frames_pool_size_name
      *
-     * Special configuration parameter names for onevp::GSource:
+     * Special configuration parameter name for onevp::GSource:
      *
-     * @note queue_capacity allows to allocate surfaces pool appropriate size to keep
+     * @note frames_pool_size_name allows to allocate surfaces pool appropriate size to keep
      * decoded frames in accelerator memory ready before
      * they would be consumed by onevp::GSource::pull operation. If you see
      * a lot of WARNING about lack of free surface then it's time to increase
-     * queue_capacity but be aware of accelerator free memory volume.
+     * frames_pool_size_name but be aware of accelerator free memory volume.
      * If not set then MFX implementation use
      * mfxFrameAllocRequest::NumFrameSuggested behavior
      *
      */
-    static constexpr const char *queue_capacity() { return "queue_capacity"; }
+    static constexpr const char *frames_pool_size_name() { return "frames_pool_size"; }
+    static CfgParam create_frames_pool_size(uint64_t value);
 
     /**
-     * @brief acceleration_mode
+     * @brief acceleration_mode_name
      *
      * Special configuration parameter names for onevp::GSource:
      *
-     * @note acceleration_mode allows to activate hardware acceleration &
+     * @note acceleration_mode_name allows to activate hardware acceleration &
      * device memory management.
      * Supported values:
      * - MFX_ACCEL_MODE_VIA_D3D11   Will activate DX11 acceleration and will produces
@@ -78,14 +79,16 @@ struct GAPI_EXPORTS CfgParam {
      * data allocated by using host RAM
      *
      */
-    static constexpr const char *acceleration_mode() { return "mfxImplDescription.AccelerationMode"; }
+    static constexpr const char *acceleration_mode_name() { return "mfxImplDescription.AccelerationMode"; }
+    static CfgParam create_acceleration_mode(uint32_t value);
+    static CfgParam create_acceleration_mode(const char* value);
 
     /**
-     * @brief decoder_id
+     * @brief decoder_id_name
      *
      * Special configuration parameter names for onevp::GSource:
      *
-     * @note decoder_id allows to specify VPL decoder type which MUST present
+     * @note decoder_id_name allows to specify VPL decoder type which MUST present
      * in case of RAW video input data and MUST NOT present as CfgParam if video
      * stream incapsulated into container(*.mp4, *.mkv and so on). In latter case
      * onevp::GSource will determine it automatically
@@ -99,12 +102,16 @@ struct GAPI_EXPORTS CfgParam {
      * - MFX_CODEC_AV1
      *
      */
-    static constexpr const char *decoder_id() { return "mfxImplDescription.mfxDecoderDescription.decoder.CodecID"; }
+    static constexpr const char *decoder_id_name() { return "mfxImplDescription.mfxDecoderDescription.decoder.CodecID"; }
+    static CfgParam create_decoder_id(uint32_t value);
+    static CfgParam create_decoder_id(const char* value);
 
-    static constexpr const char *implementation() { return "mfxImplDescription.Impl"; }
+    static constexpr const char *implementation_name() { return "mfxImplDescription.Impl"; }
+    static CfgParam create_implementation(uint32_t value);
+    static CfgParam create_implementation(const char* value);
 
     /**
-     * Create onevp::GSource configuration parameter.
+     * Create generic onevp::GSource configuration parameter.
      *
      *@param name           name of parameter.
      *@param value          value of parameter.

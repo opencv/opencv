@@ -44,7 +44,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
     auto accel_mode_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == CfgParam::acceleration_mode();
+            return value.get_name() == CfgParam::acceleration_mode_name();
         });
     if (accel_mode_it == cfg_params.end())
     {
@@ -128,10 +128,10 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             suggested_device = IDeviceSelector::create<Device>(hw_handle, "GPU", AccelType::DX11);
             suggested_context = IDeviceSelector::create<Context>(device_context, AccelType::DX11);
 #else
-            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode() << ": MFX_ACCEL_MODE_VIA_D3D11\""
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() << ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
-                                   CfgParam::acceleration_mode() +
+                                   CfgParam::acceleration_mode_name() +
                                    ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
@@ -143,7 +143,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
         }
         default:
             throw std::logic_error(std::string("Unsupported \"") +
-                                   CfgParam::acceleration_mode() +"\" requested: " +
+                                   CfgParam::acceleration_mode_name() +"\" requested: " +
                                    std::to_string(accel_mode.Data.U32));
             break;
     }
@@ -157,15 +157,15 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
     auto accel_mode_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == CfgParam::acceleration_mode();
+            return value.get_name() == CfgParam::acceleration_mode_name();
         });
     if (accel_mode_it == cfg_params.end()) {
         GAPI_LOG_WARNING(nullptr, "Cannot deternime \"device_ptr\" type. "
-                         "Make sure a param \"" << CfgParam::acceleration_mode() << "\" "
+                         "Make sure a param \"" << CfgParam::acceleration_mode_name() << "\" "
                          "presents in configurations and has correct value according to "
                          "\"device_ptr\" type");
         throw std::logic_error(std::string("Missing \"") +
-                               CfgParam::acceleration_mode() +
+                               CfgParam::acceleration_mode_name() +
                                "\" param");
     }
 
@@ -174,7 +174,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
                             ", context: " << ctx_ptr);
     if (!device_ptr) {
         GAPI_LOG_WARNING(nullptr, "Empty \"device_ptr\" is not allowed when "
-                         "param \"" <<  CfgParam::acceleration_mode() << "\" existed");
+                         "param \"" <<  CfgParam::acceleration_mode_name() << "\" existed");
         throw std::logic_error("Invalid param: \"device_ptr\"");
     }
 
@@ -207,24 +207,24 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
 
             dx_ctx_ptr->AddRef();
 #else
-            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode() <<
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
                                       ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
-                                    CfgParam::acceleration_mode() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
+                                    CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
             break;
         }
         case MFX_ACCEL_MODE_NA: {
-            GAPI_LOG_WARNING(nullptr, "Incompatible \"" <<  CfgParam::acceleration_mode() <<
+            GAPI_LOG_WARNING(nullptr, "Incompatible \"" <<  CfgParam::acceleration_mode_name() <<
                                       ": MFX_ACCEL_MODE_NA\" with "
                                       "\"device_ptr\" and \"ctx_ptr\" arguments. "
                                       "You should not clarify these arguments with \"MFX_ACCEL_MODE_NA\" mode");
             throw std::logic_error("Incompatible param: MFX_ACCEL_MODE_NA");
         }
         default:
-            throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode() +
+            throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode_name() +
                                    "\" requested: " +
                                    std::to_string(accel_mode.Data.U32));
             break;

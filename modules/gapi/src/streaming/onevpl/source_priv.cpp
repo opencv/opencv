@@ -249,7 +249,7 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
     std::unique_ptr<VPLAccelerationPolicy> ret;
 
     auto accel_mode_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() ==  CfgParam::acceleration_mode();
+        return value.get_name() ==  CfgParam::acceleration_mode_name();
     });
     if (accel_mode_it == cfg_params.end())
     {

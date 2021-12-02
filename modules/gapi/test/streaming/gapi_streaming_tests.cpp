@@ -2189,12 +2189,9 @@ TEST(OneVPL_Source, Init)
     using CfgParam = cv::gapi::wip::onevpl::CfgParam;
 
     std::vector<CfgParam> src_params;
-    src_params.push_back(CfgParam::create<uint32_t>(CfgParam::implementation(),
-                                                    MFX_IMPL_TYPE_HARDWARE));
-    src_params.push_back(CfgParam::create<uint32_t>(CfgParam::acceleration_mode(),
-                                                    MFX_ACCEL_MODE_VIA_D3D11, false));
-    src_params.push_back(CfgParam::create<uint32_t>(CfgParam::decoder_id(),
-                                                    MFX_CODEC_HEVC));
+    src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
+    src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+    src_params.push_back(CfgParam::create_decoder_id(MFX_CODEC_HEVC));
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 
     EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(streaming::onevpl::hevc_header)),

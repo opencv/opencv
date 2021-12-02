@@ -28,14 +28,14 @@ FileDataProvider::FileDataProvider(const std::string& file_path,
                             codec_params.size());
     auto codec_it =
         std::find_if(codec_params.begin(), codec_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == CfgParam::decoder_id();
+            return value.get_name() == CfgParam::decoder_id_name();
         });
     if (codec_it == codec_params.end())
     {
         GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
-                                  "\"" << CfgParam::decoder_id() << "\" "
+                                  "\"" << CfgParam::decoder_id_name() << "\" "
                                   "is absent, total param count" << codec_params.size());
-        throw DataProviderUnsupportedException(std::string("\"") + CfgParam::decoder_id() + "\" "
+        throw DataProviderUnsupportedException(std::string("\"") + CfgParam::decoder_id_name() + "\" "
                                                "is required for FileDataProvider");
     }
 

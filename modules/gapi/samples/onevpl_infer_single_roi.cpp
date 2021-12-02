@@ -44,7 +44,7 @@ const std::string keys =
     "{ faced                        | AUTO                                      | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
-    "{ source_queue_capacity        | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}";
+    "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}";
 
 
 namespace {
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]) {
     const std::string output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
     const auto streaming_queue_capacity = cmd.get<uint64_t>("streaming_queue_capacity");
-    const auto source_queue_capacity = cmd.get<uint64_t>("source_queue_capacity");
+    const auto source_queue_capacity = cmd.get<uint64_t>("frames_pool_size");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -276,9 +276,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (source_queue_capacity != 0) {
-        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create(
-                                    cv::gapi::wip::onevpl::CfgParam::queue_capacity(),
-                                    source_queue_capacity, false));
+        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_frames_pool_size(source_queue_capacity));
     }
 
     const std::string& device_id = cmd.get<std::string>("faced");

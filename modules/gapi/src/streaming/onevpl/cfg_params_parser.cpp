@@ -76,15 +76,15 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
         std::string value = line.substr(name_endline_pos + 2);
 
         ParamCreator<ValueType> creator;
-        if (name == CfgParam::implementation()) {
+        if (name == CfgParam::implementation_name()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
-        } else if (name == CfgParam::decoder_id()) {
+        } else if (name == CfgParam::decoder_id_name()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
-        } else if (name == CfgParam::acceleration_mode()) {
+        } else if (name == CfgParam::acceleration_mode_name()) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
-        } else if (name == CfgParam::queue_capacity()) {
+        } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
         }else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<

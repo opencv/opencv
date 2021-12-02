@@ -42,7 +42,7 @@ const char* mfx_impl_to_cstr(const mfxIMPL impl) {
 mfxIMPL cstr_to_mfx_impl(const char* cstr) {
     ONEVPL_STRINGIFY_IF(MFX_IMPL_TYPE_SOFTWARE)
     ONEVPL_STRINGIFY_IF(MFX_IMPL_TYPE_HARDWARE)
-    throw std::logic_error(std::string("Invalid \"") + CfgParam::implementation() +
+    throw std::logic_error(std::string("Invalid \"") + CfgParam::implementation_name() +
                            "\":" + cstr);
 }
 
@@ -71,7 +71,7 @@ mfxAccelerationMode cstr_to_mfx_accel_mode(const char* cstr) {
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_X11)
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND)
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_HDDLUNITE)
-    throw std::logic_error(std::string("Invalid \"") +  CfgParam::acceleration_mode() +
+    throw std::logic_error(std::string("Invalid \"") +  CfgParam::acceleration_mode_name() +
                                        "\":" + cstr);
 }
 
@@ -109,7 +109,7 @@ mfxU32 cstr_to_mfx_codec_id(const char* cstr) {
     ONEVPL_STRINGIFY_IF(MFX_CODEC_CAPTURE)
     ONEVPL_STRINGIFY_IF(MFX_CODEC_VP9)
     ONEVPL_STRINGIFY_IF(MFX_CODEC_AV1)
-    throw std::logic_error(std::string("Cannot parse \"") + CfgParam::decoder_id() +
+    throw std::logic_error(std::string("Cannot parse \"") + CfgParam::decoder_id_name() +
                            "\" value: " + cstr);
 }
 
@@ -255,8 +255,8 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
 {
     out << "mfxImplDescription.Version: " << static_cast<int>(idesc.Version.Major)
         << "." << static_cast<int>(idesc.Version.Minor) << std::endl;
-    out << "(*)" << CfgParam::implementation() << ": " << mfx_impl_to_cstr(idesc.Impl) << std::endl;
-    out << "(*)" << CfgParam::acceleration_mode() << ": " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
+    out << "(*)" << CfgParam::implementation_name() << ": " << mfx_impl_to_cstr(idesc.Impl) << std::endl;
+    out << "(*)" << CfgParam::acceleration_mode_name() << ": " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
     out << "mfxImplDescription.ApiVersion: " << idesc.ApiVersion.Major << "." << idesc.ApiVersion.Minor << std::endl;
     out << "(*)mfxImplDescription.ApiVersion.Version: " << idesc.ApiVersion.Version << std::endl;
     out << "mfxImplDescription.ImplName: " << idesc.ImplName << std::endl;
@@ -287,7 +287,7 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
         << "." << static_cast<int>(dec.Version.Minor) << std::endl;
     for (int codec = 0; codec < dec.NumCodecs; codec++) {
         auto cid = dec.Codecs[codec].CodecID;
-        out << "(*)" << CfgParam::decoder_id() << ": " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
+        out << "(*)" << CfgParam::decoder_id_name() << ": " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
         out << "mfxImplDescription.mfxDecoderDescription.decoder.MaxcodecLevel: " << dec.Codecs[codec].MaxcodecLevel << std::endl;
         for (int profile = 0; profile < dec.Codecs[codec].NumProfiles; profile++) {
             out << "mfxImplDescription.mfxDecoderDescription.decoder.Profiles: "
