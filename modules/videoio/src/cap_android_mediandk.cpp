@@ -102,7 +102,7 @@ public:
                         LOGV("output EOS");
                         sawOutputEOS = true;
                     }
-                    if (frameWidth * frameHeight * 3 / 2 > bufferSize)
+                    if ((size_t)frameWidth * frameHeight * 3 / 2 > bufferSize)
                     {
                         if (bufferSize == 3110400 && frameWidth == 1920 && frameHeight == 1088)
                         {
