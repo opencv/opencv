@@ -159,6 +159,81 @@ void not_k(const Stream& stream, Span<T> output, View<T> input) {
 }
 
 template <class T>
+void acos(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AcosFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void acosh(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AcoshFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void asin(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AsinFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void asinh(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AsinhFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void atan(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AtanFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void atanh(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, AtanhFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void cos(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, CosFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void cosh(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, CoshFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void erf(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, ErfFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void hardswish(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, HardSwishFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void sin(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, SinFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void sinh(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, SinhFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void softplus(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, SoftplusFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void softsign(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, SoftsignFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void tan(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, TanFunctor<T>>(stream, output, input);
+}
+
+template <class T>
 void abs(const Stream& stream, Span<T> output, View<T> input) {
     generic_op<T, AbsFunctor<T>>(stream, output, input);
 }
@@ -196,6 +271,21 @@ template void log<__half>(const Stream&, Span<__half>, View<__half>);
 template void rint<__half>(const Stream&, Span<__half>, View<__half>);
 template void sqrt<__half>(const Stream&, Span<__half>, View<__half>);
 template void not_k<__half>(const Stream&, Span<__half>, View<__half>);
+template void acos<__half>(const Stream&, Span<__half>, View<__half>);
+template void acosh<__half>(const Stream&, Span<__half>, View<__half>);
+template void asin<__half>(const Stream&, Span<__half>, View<__half>);
+template void asinh<__half>(const Stream&, Span<__half>, View<__half>);
+template void atan<__half>(const Stream&, Span<__half>, View<__half>);
+template void atanh<__half>(const Stream&, Span<__half>, View<__half>);
+template void cos<__half>(const Stream&, Span<__half>, View<__half>);
+template void cosh<__half>(const Stream&, Span<__half>, View<__half>);
+template void erf<__half>(const Stream&, Span<__half>, View<__half>);
+template void hardswish<__half>(const Stream&, Span<__half>, View<__half>);
+template void sin<__half>(const Stream&, Span<__half>, View<__half>);
+template void sinh<__half>(const Stream&, Span<__half>, View<__half>);
+template void softplus<__half>(const Stream&, Span<__half>, View<__half>);
+template void softsign<__half>(const Stream&, Span<__half>, View<__half>);
+template void tan<__half>(const Stream&, Span<__half>, View<__half>);
 template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
 template void exp<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 #endif
@@ -216,6 +306,21 @@ template void log<float>(const Stream&, Span<float>, View<float>);
 template void rint<float>(const Stream&, Span<float>, View<float>);
 template void sqrt<float>(const Stream&, Span<float>, View<float>);
 template void not_k<float>(const Stream&, Span<float>, View<float>);
+template void acos<float>(const Stream&, Span<float>, View<float>);
+template void acosh<float>(const Stream&, Span<float>, View<float>);
+template void asin<float>(const Stream&, Span<float>, View<float>);
+template void asinh<float>(const Stream&, Span<float>, View<float>);
+template void atan<float>(const Stream&, Span<float>, View<float>);
+template void atanh<float>(const Stream&, Span<float>, View<float>);
+template void cos<float>(const Stream&, Span<float>, View<float>);
+template void cosh<float>(const Stream&, Span<float>, View<float>);
+template void erf<float>(const Stream&, Span<float>, View<float>);
+template void hardswish<float>(const Stream&, Span<float>, View<float>);
+template void sin<float>(const Stream&, Span<float>, View<float>);
+template void sinh<float>(const Stream&, Span<float>, View<float>);
+template void softplus<float>(const Stream&, Span<float>, View<float>);
+template void softsign<float>(const Stream&, Span<float>, View<float>);
+template void tan<float>(const Stream&, Span<float>, View<float>);
 template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 template void exp<float>(const Stream&, Span<float>, View<float>, float, float);
 
