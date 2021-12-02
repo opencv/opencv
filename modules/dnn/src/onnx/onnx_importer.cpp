@@ -614,6 +614,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
 
 void setCeilMode(LayerParams& layerParams)
 {
+    // auto_pad attribute is deprecated and uses ceil
     if (layerParams.has("pad_mode"))
     {
         layerParams.set("ceil_mode", true);
