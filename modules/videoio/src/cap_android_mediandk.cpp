@@ -97,7 +97,29 @@ public:
                     LOGV("buffer size: %zu", bufferSize);
                     LOGV("width (frame): %d", frameWidth);
                     LOGV("height (frame): %d", frameHeight);
-                    if (info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) {
+                    if (frameWidth * frameHeight * 3 / 2 > bufferSize)
+                    {
+                        if (bufferSize == 3110400 && (frameWidth == 1920 && frameHeight == 1088) ||  frameWidth == 1088 && frameHeight == 1920)
+                        {
+                            if (frameWidth == 1920 && frameHeight == 1088)
+                            {
+                                frameHeight = 1080;
+                                LOGV("Buffer size is too small, force using height = %d", frameHeight);
+                            }
+                            else
+                            {
+                                frameWidth = 1080;
+                                LOGV("Buffer size is too small, force using width = %d", frameWidth);
+                            }
+                        }
+                        else
+                        {
+                            LOGE("Buffer size is too small. Frame is ignored. Enable verbose logging to see actual values of parameters");
+                            return false;
+                        }
+                    }
+                    if (info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
+                    {
                         LOGV("output EOS");
                         sawOutputEOS = true;
                     }
