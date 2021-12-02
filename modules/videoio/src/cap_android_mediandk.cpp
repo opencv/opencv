@@ -105,7 +105,7 @@ public:
                     if (frameWidth * frameHeight * 3 / 2 > bufferSize)
                     {
                         if (bufferSize == 3110400 && frameWidth == 1920 && frameHeight == 1088)
-                        {   
+                        {
                             frameHeight = 1080;
                             LOGV("Buffer size is too small, force using height = %d", frameHeight);
                         }
