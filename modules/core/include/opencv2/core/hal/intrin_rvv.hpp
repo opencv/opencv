@@ -1563,7 +1563,7 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 
 ////////////// Check all/any //////////////
 
-// use overloaded vpopc in clang, no casting like (vuint64m1_t) is needed.
+// use overloaded vcpop in clang, no casting like (vuint64m1_t) is needed.
 #ifndef __clang__
 #define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, suffix, shift, vl) \
 inline bool v_check_all(const _Tpvec& a) \
@@ -1618,11 +1618,11 @@ inline bool v_check_any(const v_float64x2& a)
 #define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, vl) \
 inline bool v_check_all(const _Tpvec& a) \
 { \
-    return vpopc(vmslt(a, 0, vl), vl) == vl; \
+    return vcpop(vmslt(a, 0, vl), vl) == vl; \
 } \
 inline bool v_check_any(const _Tpvec& a) \
 { \
-    return vpopc(vmslt(a, 0, vl), vl) != 0; \
+    return vcpop(vmslt(a, 0, vl), vl) != 0; \
 }
 
 OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int8x16, 16)
