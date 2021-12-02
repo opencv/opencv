@@ -142,7 +142,7 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
 //-------------------------- segment -----------------------
 int
 SACSegmentation::segment(InputArray input_pts, OutputArray labels,
-        OutputArrayOfArrays models_coefficients)
+        OutputArray models_coefficients)
 {
     Mat points;
     // Get Mat with 3xN CV_32F
@@ -231,22 +231,16 @@ SACSegmentation::segment(InputArray input_pts, OutputArray labels,
     }
 
 
-    // TODO
-    //    Mat(_models_coefficients).copyTo(models_coefficients);
     if (models_coefficients.needed())
     {
         if (number_of_models != 0)
         {
-
-            models_coefficients.create(number_of_models, 1, _models_coefficients[0].type());
-            /**get vector*/
-            std::vector<Mat> dst;
-            models_coefficients.getMatVector(dst);
+            Mat result;
             for (int i = 0; i < number_of_models; i++)
             {
-                Mat cur_mat = _models_coefficients[i];
-                models_coefficients.getMatRef(i) = cur_mat;
+                result.push_back(_models_coefficients[i]);
             }
+            result.copyTo(models_coefficients);
         }
         else
         {

@@ -40,6 +40,11 @@ enum SacModelType
 
 };
 
+/**
+ *
+ * @param model_type 3D Model
+ * @return At least a few are needed to determine a model.
+ */
 inline int sacModelMinimumSampleSize(SacModelType model_type)
 {
     switch (model_type)
@@ -62,14 +67,14 @@ for plane segmentation of a 3D point cloud.
 using namespace cv;
 
 int planeSegmentationUsingRANSAC(const Mat &pt_cloud,
-        vector<Mat> &plane_coeffs, vector<char> &labels) {
+        Mat &plane_coeffs, vector<char> &labels) {
 
     SACSegmentation sacSegmentation;
     sacSegmentation.setSacModelType(SAC_MODEL_PLANE);
     sacSegmentation.setSacMethodType(SAC_METHOD_RANSAC);
     sacSegmentation.setDistanceThreshold(0.21);
     // The maximum number of iterations to attempt.(default 1000)
-    sacSegmentation.setMaxIterations(500);
+    sacSegmentation.setMaxIterations(1500);
     sacSegmentation.setNumberOfModelsExpected(2);
     // Number of final resultant models obtained by segmentation.
     int model_cnt = sacSegmentation.segment(pt_cloud,
@@ -238,9 +243,12 @@ public:
      * @param[out] labels The label corresponds to the model number, 0 means it
      * does not belong to any model, range [0, Number of final resultant models obtained].
      * @param[out] models_coefficients The resultant models coefficients.
+     * Currently supports passing in cv::Mat. Models coefficients are placed in a matrix of NxK,
+     * where N is the number of models and K is the number of coefficients of one model.
      * @return Number of final resultant models obtained by segmentation.
      */
-    int segment(InputArray input_pts, OutputArray labels, OutputArrayOfArrays models_coefficients);
+    int
+    segment(InputArray input_pts, OutputArray labels, OutputArray models_coefficients = noArray());
 
 protected:
 

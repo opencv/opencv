@@ -97,8 +97,8 @@ public:
             radius = sqrt(tmp1 * tmp1 + tmp2 * tmp2 + tmp3 * tmp3);
         }
 
-        double plane_coeff[4] = {center_x, center_y, center_z, radius};
-        models.emplace_back(cv::Mat(1, 4, CV_64F, plane_coeff).clone());
+        double sphere_coeff[4] = {center_x, center_y, center_z, radius};
+        models.emplace_back(cv::Mat(1, 4, CV_64F, sphere_coeff).clone());
 
         return 1;
     }
@@ -246,8 +246,8 @@ public:
             rsqr *= inv_sample_size;
             radius = std::sqrt(rsqr);
 
-            double plane_coeff[4] = {center_x, center_y, center_z, radius};
-            models.emplace_back(cv::Mat(1, 4, CV_64F, plane_coeff).clone());
+            double sphere_coeff[4] = {center_x, center_y, center_z, radius};
+            models.emplace_back(cv::Mat(1, 4, CV_64F, sphere_coeff).clone());
 
             return 1;
         }

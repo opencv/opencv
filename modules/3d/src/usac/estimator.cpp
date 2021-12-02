@@ -620,17 +620,18 @@ public:
     inline void setModelParameters(const Mat &model) override
     {
         CV_Assert(!model.empty());
-        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+        CV_CheckTypeEQ(model.depth(), CV_64F, "Model parameter type should use double");
 
         const double * const p = (double *) model.data;
         double coeff_a = p[0], coeff_b = p[1], coeff_c = p[2], coeff_d = p[3];
         // Format for easy distance calculation
         double magnitude_abc = sqrt(coeff_a * coeff_a + coeff_b * coeff_b + coeff_c * coeff_c);
         if (0 != magnitude_abc) {
-            coeff_a = coeff_a / magnitude_abc;
-            coeff_b = coeff_b / magnitude_abc;
-            coeff_c = coeff_c / magnitude_abc;
-            coeff_d = coeff_d / magnitude_abc;
+            double inv_magnitude_abc = 1.0 / magnitude_abc;
+            coeff_a = coeff_a * inv_magnitude_abc;
+            coeff_b = coeff_b * inv_magnitude_abc;
+            coeff_c = coeff_c * inv_magnitude_abc;
+            coeff_d = coeff_d * inv_magnitude_abc;
         }
         cache_valid = cache_valid && a == (float) coeff_a && b == (float) coeff_b
                 &&  c == (float) coeff_c && d == (float) coeff_d;
@@ -690,7 +691,7 @@ public:
     inline void setModelParameters(const Mat &model) override
     {
         CV_Assert(!model.empty());
-        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+        CV_CheckTypeEQ(model.depth(), CV_64F, "Model parameter type should use double");
 
         const double *const p = (double *) model.data;
         float coeff_x = (float) p[0], coeff_y = (float) p[1],
@@ -710,9 +711,10 @@ public:
         float diff_x = center_x - pts_ptr_x[point_idx];
         float diff_y = center_y - pts_ptr_y[point_idx];
         float diff_z = center_z - pts_ptr_z[point_idx];
+        // A better way to avoid sqrt() ?
         float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
         float diff_dist = distance_from_center - radius;
-        double distance_square_from_surface = diff_dist * diff_dist; // TODO To be optimized
+        double distance_square_from_surface = diff_dist * diff_dist;
 
         return (float) distance_square_from_surface;
     }
@@ -729,9 +731,10 @@ public:
             float diff_x = center_x - pts_ptr_x[i];
             float diff_y = center_y - pts_ptr_y[i];
             float diff_z = center_z - pts_ptr_z[i];
+            // A better way to avoid sqrt() ?
             float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
             float diff_dist = distance_from_center - radius;
-            errors_cache[i] = diff_dist * diff_dist; // TODO To be optimized
+            errors_cache[i] = diff_dist * diff_dist;
         }
 
         return errors_cache;
