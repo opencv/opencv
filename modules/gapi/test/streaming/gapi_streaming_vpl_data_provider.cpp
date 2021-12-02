@@ -39,8 +39,6 @@ array_element_t files[] = {
                                     true,      true,           true},
     array_element_t {"highgui/video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4",
                                     true,      true,           true},
-    array_element_t {"highgui/video/sample_322x242_15frames.yuv420p.libx264.avi",
-                                    true,      true,           true},
     array_element_t {"highgui/video/sample_322x242_15frames.yuv420p.libx264.mp4",
                                     true,      true,           true},
     array_element_t {"highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4",
