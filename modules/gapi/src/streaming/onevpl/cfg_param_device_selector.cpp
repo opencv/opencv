@@ -196,6 +196,15 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             suggested_context = IDeviceSelector::create<Context>(ctx_ptr, AccelType::DX11);
             ID3D11DeviceContext* dx_ctx_ptr =
                 reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
+
+                        // oneVPL recommendation
+            {
+                ID3D11Multithread *pD11Multithread = nullptr;
+                dx_ctx_ptr->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
+                pD11Multithread->SetMultithreadProtected(true);
+                pD11Multithread->Release();
+            }
+
             dx_ctx_ptr->AddRef();
 #else
             GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode() <<

@@ -208,12 +208,11 @@ mfxStatus VPLDX11AccelerationPolicy::unlock_cb(mfxHDL pthis, mfxMemId mid, mfxFr
 }
 
 mfxStatus VPLDX11AccelerationPolicy::get_hdl_cb(mfxHDL pthis, mfxMemId mid, mfxHDL *handle) {
-    if (!pthis) {
-        return MFX_ERR_MEMORY_ALLOC;
-    }
-
     VPLDX11AccelerationPolicy *self = static_cast<VPLDX11AccelerationPolicy *>(pthis);
-    return self->on_get_hdl(mid, handle);
+
+    GAPI_LOG_DEBUG(nullptr, "called from: " << self ? "Policy" : "Resource");
+    cv::util::suppress_unused_warning(self);
+    return on_get_hdl(mid, handle);
 }
 
 mfxStatus VPLDX11AccelerationPolicy::free_cb(mfxHDL pthis, mfxFrameAllocResponse *response) {
@@ -272,11 +271,16 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
     }
 
-    ID3D11Texture2D *pTexture2D;
-    HRESULT err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
-    if (FAILED(err)) {
-        GAPI_LOG_WARNING(nullptr, "Cannot create texture, error: " + std::to_string(HRESULT_CODE(err)));
-        return MFX_ERR_MEMORY_ALLOC;
+    ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
+    HRESULT err = S_OK;
+    {
+        ID3D11Texture2D *pTexture2D = nullptr;
+        err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
+        if (FAILED(err)) {
+            GAPI_LOG_WARNING(nullptr, "Cannot create texture, error: " + std::to_string(HRESULT_CODE(err)));
+            return MFX_ERR_MEMORY_ALLOC;
+        }
+        main_texture.reset(pTexture2D);
     }
 
     // create  staging texture to read it from
@@ -285,7 +289,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
     desc.BindFlags      = 0;
     desc.MiscFlags      = 0;
-    std::vector<ID3D11Texture2D*> staging_textures;
+    std::vector<ComPtrGuard<ID3D11Texture2D>> staging_textures;
     staging_textures.reserve(request->NumFrameSuggested);
     for (int i = 0; i < request->NumFrameSuggested; i ++ ) {
         ID3D11Texture2D *staging_texture_2d = nullptr;
@@ -294,7 +298,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
             GAPI_LOG_WARNING(nullptr, "Cannot create staging texture, error: " + std::to_string(HRESULT_CODE(err)));
             return MFX_ERR_MEMORY_ALLOC;
         }
-        staging_textures.push_back(staging_texture_2d);
+        staging_textures.push_back(createCOMPtrGuard(staging_texture_2d));
     }
 
     // for multiple subresources initialize allocation array
@@ -306,12 +310,11 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
                                          DX11AllocationRecord::create(request->NumFrameSuggested,
                                                                       device_context,
                                                                       allocator,
-                                                                      pTexture2D,
+                                                                      std::move(main_texture),
                                                                       std::move(staging_textures)));
         if (!inserted_it.second) {
             GAPI_LOG_WARNING(nullptr, "Cannot assign allocation by id: " + std::to_string(request->AllocId) +
                                     " - aldeady exist. Total allocation size: " + std::to_string(allocation_table.size()));
-            pTexture2D->Release();
             return MFX_ERR_MEMORY_ALLOC;
         }
 
@@ -358,7 +361,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_get_hdl(mfxMemId mid, mfxHDL *handle) {
 
     mfxHDLPair *pPair = reinterpret_cast<mfxHDLPair *>(handle);
 
-    pPair->first  = data->get_texture();
+    pPair->first  = data->get_texture_ptr();
     pPair->second = (mfxHDL)reinterpret_cast<DX11AllocationItem::subresource_id_t *>(data->get_subresource());
 
     GAPI_LOG_DEBUG(nullptr, "texture : " << pPair->first << ", sub id: " << pPair->second);

@@ -41,7 +41,7 @@ const std::string keys =
     "{ input                        |                                           | Path to the input demultiplexed video file }"
     "{ output                       |                                           | Path to the output RAW video file. Use .avi extension }"
     "{ facem                        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
-    "{ faced                        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
+    "{ faced                        | AUTO                                      | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ source_queue_capacity        | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}";

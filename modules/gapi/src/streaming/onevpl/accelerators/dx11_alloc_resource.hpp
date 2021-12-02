@@ -9,6 +9,7 @@
 #ifdef HAVE_ONEVPL
 #include <vpl/mfxvideo.h>
 #include "streaming/onevpl/accelerators/utils/elastic_barrier.hpp"
+#include "streaming/onevpl/utils.hpp"
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
@@ -16,7 +17,6 @@
 
 #define D3D11_NO_HELPERS
 #define NOMINMAX
-#include <atlbase.h>
 #include <d3d11.h>
 #include <d3d11_4.h>
 #include <codecvt>
@@ -56,8 +56,17 @@ private:
     SharedLock* impl;
 };
 
+struct GAPI_EXPORTS NativeHandleAdapter {
+    NativeHandleAdapter(mfxFrameAllocator origin_allocator);
+
+    void get_handle(mfxMemId mid, mfxHDL& out);
+private:
+    mfxFrameAllocator native_handle_getter;
+};
+
 struct DX11AllocationRecord;
 struct DX11AllocationItem : public LockAdapter,
+                            public NativeHandleAdapter,
                             public elastic_barrier<DX11AllocationItem> {
     using subresource_id_t = unsigned int;
 
@@ -66,11 +75,11 @@ struct DX11AllocationItem : public LockAdapter,
     ~DX11AllocationItem();
 
     void release();
-    CComPtr<ID3D11Texture2D> get_texture();
-    CComPtr<ID3D11Texture2D> get_staging_texture();
+    ID3D11Texture2D* get_texture_ptr();
+    ID3D11Texture2D* get_staging_texture_ptr();
     DX11AllocationItem::subresource_id_t get_subresource() const;
 
-    CComPtr<ID3D11DeviceContext> get_device_ctx();
+    ID3D11DeviceContext* get_device_ctx_ptr();
 
     // public transactional access to resources.
     // implements dispatching through different access acquisition modes.
@@ -79,11 +88,11 @@ struct DX11AllocationItem : public LockAdapter,
     mfxStatus release_access(mfxFrameData *ptr);
 private:
     DX11AllocationItem(std::weak_ptr<DX11AllocationRecord> parent,
-                       CComPtr<ID3D11DeviceContext> origin_ctx,
+                       ID3D11DeviceContext* origin_ctx,
                        mfxFrameAllocator origin_allocator,
-                       CComPtr<ID3D11Texture2D> texture_ptr,
+                       ComSharedPtrGuard<ID3D11Texture2D> texture_ptr,
                        subresource_id_t subresource_id,
-                       CComPtr<ID3D11Texture2D> staging_tex_ptr);
+                       ComPtrGuard<ID3D11Texture2D>&& staging_tex_ptr);
 
     // elastic barrier interface impl
     void on_first_in_impl(mfxFrameData *ptr);
@@ -94,11 +103,11 @@ private:
     mfxStatus exclusive_access_acquire_unsafe(mfxFrameData *ptr);
     mfxStatus exclusive_access_release_unsafe(mfxFrameData *ptr);
 
-    CComPtr<ID3D11DeviceContext> shared_device_context;
+    ID3D11DeviceContext* shared_device_context;
 
-    CComPtr<ID3D11Texture2D> texture_ptr;
+    ComSharedPtrGuard<ID3D11Texture2D> texture_ptr;
     subresource_id_t subresource_id = 0;
-    CComPtr<ID3D11Texture2D> staging_texture_ptr;
+    ComPtrGuard<ID3D11Texture2D> staging_texture_ptr;
     std::weak_ptr<DX11AllocationRecord> observer;
 };
 
@@ -124,12 +133,12 @@ struct DX11AllocationRecord : public std::enable_shared_from_this<DX11Allocation
     size_t size() const;
 private:
     DX11AllocationRecord();
-    void init(unsigned int items, CComPtr<ID3D11DeviceContext> origin_ctx,
+    void init(unsigned int items, ID3D11DeviceContext* origin_ctx,
               mfxFrameAllocator origin_allocator,
-              ID3D11Texture2D* texture, std::vector<ID3D11Texture2D*> &&staging_textures);
+              ComPtrGuard<ID3D11Texture2D>&& texture, std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures);
 
     std::vector<AllocationId> resources;
-    ID3D11Texture2D* texture_ptr = nullptr;
+    ComSharedPtrGuard<ID3D11Texture2D> texture_ptr;
 };
 
 } // namespace onevpl

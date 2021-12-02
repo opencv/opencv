@@ -43,8 +43,16 @@ template <typename COMNonManageableType>
 using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
 
 template <typename COMNonManageableType>
+using ComSharedPtrGuard = std::shared_ptr<COMNonManageableType>;
+
+template <typename COMNonManageableType>
 ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
     return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
+template <typename COMNonManageableType>
+ComSharedPtrGuard<COMNonManageableType> createCOMSharedPtrGuard(ComPtrGuard<COMNonManageableType>&& unique_guard) {
+    return ComSharedPtrGuard<COMNonManageableType>(std::move(unique_guard));
 }
 
 

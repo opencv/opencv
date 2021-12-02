@@ -68,7 +68,7 @@ private:
                                mfxFrameAllocResponse *response);
     static mfxStatus on_lock(mfxMemId mid, mfxFrameData *ptr);
     static mfxStatus on_unlock(mfxMemId mid, mfxFrameData *ptr);
-    virtual mfxStatus on_get_hdl(mfxMemId mid, mfxHDL *handle);
+    static mfxStatus on_get_hdl(mfxMemId mid, mfxHDL *handle);
     virtual mfxStatus on_free(mfxFrameAllocResponse *response);
 
     using alloc_id_t = mfxU32;

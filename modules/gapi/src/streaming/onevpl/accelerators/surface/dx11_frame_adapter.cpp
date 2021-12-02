@@ -17,6 +17,11 @@
 
 #include <vpl/mfx.h>
 
+#ifdef HAVE_INF_ENGINE
+// For IE classes (ParamMap, etc)
+#include <inference_engine.hpp>
+#endif // HAVE_INF_ENGINE
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -171,8 +176,31 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 }
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
-    GAPI_Assert("VPLMediaFrameDX11Adapter::blobParams() is not implemented");
-    return {};
+#ifdef HAVE_INF_ENGINE
+    GAPI_Assert(false, "VPLMediaFrameDX11Adapter::blobParams() is not fully operable "
+                "in G-API streaming. Please waiting for future PRs");
+
+    Surface::data_t& data = parent_surface_ptr->get_data();
+    NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);
+
+    mfxHDLPair handle{};
+    native_handle_getter->get_handle(data.MemId, reinterpret_cast<mfxHDL&>(handle));
+
+    InferenceEngine::ParamMap params{{"SHARED_MEM_TYPE", "VA_SURFACE"},
+                                     {"DEV_OBJECT_HANDLE", handle.first},
+                                     {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
+                                     {"VA_PLANE",
+                                         reinterpret_cast<DX11AllocationItem::subresource_id_t>(
+                                                reinterpret_cast<DX11AllocationItem::subresource_id_t *>(handle.second))}};//,
+    const Surface::info_t& info = parent_surface_ptr->get_info();
+    InferenceEngine::TensorDesc tdesc({InferenceEngine::Precision::U8,
+                                       {1, 3, static_cast<size_t>(info.Height),
+                                        static_cast<size_t>(info.Width)},
+                                       InferenceEngine::Layout::NCHW});
+    return std::make_pair(tdesc, params);
+#else
+    GAPI_Assert(false, "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
+#endif // HAVE_INF_ENGINE
 }
 
 void VPLMediaFrameDX11Adapter::serialize(cv::gapi::s11n::IOStream&) {
