@@ -313,7 +313,7 @@ public:
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
             }
-        } else if ( (uvPixelStride == 1) && (vPixel == uPixel + uLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
+        } else if ( (uvPixelStride == 1) && (uPixel == vPixel + vLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420Planar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_YV12;
@@ -327,7 +327,7 @@ public:
 
         buffer.clear();
         buffer.insert(buffer.end(), yPixel, yPixel + yLen);
-        buffer.insert(buffer.end(), uPixel, uPixel + yLen / 2);
+        buffer.insert(buffer.end(), vPixel, vPixel + yLen / 2);
         return true;
     }
 
