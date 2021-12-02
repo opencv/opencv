@@ -71,4 +71,5 @@
 "test_softmax_large_number_expanded",  // FP16 only
 "test_sub_bcast",
 "test_sub_uint8",
+"test_tan",  // FP16 only
 "test_upsample_nearest",
