@@ -235,8 +235,7 @@ void OdometrySettingsImplCommon::setIterCounts(InputArray val)
 
 void OdometrySettingsImplCommon::getIterCounts(OutputArray val) const
 {
-    DefaultSets ds;
-    Mat(ds.defaultIterCounts).copyTo(val);
+    Mat(this->iterCounts).copyTo(val);
 }
 
 void OdometrySettingsImplCommon::setMinDepth(float val)
