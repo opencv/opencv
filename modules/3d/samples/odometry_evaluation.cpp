@@ -80,8 +80,14 @@ int main(int argc, char** argv)
     if( !file.is_open() )
         return -1;
 
-    char dlmrt = '/';
-    size_t pos = filename.rfind(dlmrt);
+    char dlmrt1 = '/';
+    char dlmrt2 = '\\';
+
+    size_t pos1 = filename.rfind(dlmrt1);
+    size_t pos2 = filename.rfind(dlmrt2);
+    size_t pos = pos1 < pos2 ? pos1 : pos2;
+    char dlmrt = pos1 < pos2 ? dlmrt1 : dlmrt2;
+
     string dirname = pos == string::npos ? "" : filename.substr(0, pos) + dlmrt;
 
     const int timestampLength = 17;
@@ -104,15 +110,26 @@ int main(int argc, char** argv)
         cameraMatrix.at<float>(1,2) = cy;
     }
 
-    Ptr<OdometryFrame> frame_prev = OdometryFrame::create(),
-                       frame_curr = OdometryFrame::create();
-    Ptr<Odometry> odometry = Odometry::createFromName(string(argv[3]) + "Odometry");
-    if(odometry.empty())
+    OdometrySettings ods;
+    ods.setCameraMatrix(cameraMatrix);
+    Odometry odometry;
+    String odname = string(argv[3]);
+    if (odname == "Rgbd")
+        odometry = Odometry(OdometryType::RGB, ods, OdometryAlgoType::COMMON);
+    else if (odname == "ICP")
+        odometry = Odometry(OdometryType::DEPTH, ods, OdometryAlgoType::COMMON);
+    else if (odname == "RgbdICP")
+        odometry = Odometry(OdometryType::RGB_DEPTH, ods, OdometryAlgoType::COMMON);
+    else if (odname == "FastICP")
+        odometry = Odometry(OdometryType::DEPTH, ods, OdometryAlgoType::FAST);
+    else
     {
-        cout << "Can not create Odometry algorithm. Check the passed odometry name." << endl;
+        std::cout << "Can not create Odometry algorithm. Check the passed odometry name." << std::endl;
         return -1;
     }
-    odometry->setCameraMatrix(cameraMatrix);
+
+    OdometryFrame frame_prev = odometry.createOdometryFrame(),
+                  frame_curr = odometry.createOdometryFrame();
 
     TickMeter gtm;
     int count = 0;
@@ -141,8 +158,6 @@ int main(int argc, char** argv)
             CV_Assert(!depth.empty());
             CV_Assert(depth.type() == CV_16UC1);
 
-            cout << i << " " << rgbFilename << " " << depthFilename << endl;
-
             // scale depth
             Mat depth_flt;
             depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
@@ -167,8 +182,8 @@ int main(int argc, char** argv)
         {
             Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            frame_curr->setImage(gray);
-            frame_curr->setDepth(depth);
+            frame_curr.setImage(gray);
+            frame_curr.setDepth(depth);
 
             Mat Rt;
             if(!Rts.empty())
@@ -176,7 +191,8 @@ int main(int argc, char** argv)
                 TickMeter tm;
                 tm.start();
                 gtm.start();
-                bool res = odometry->compute(frame_curr, frame_prev, Rt);
+                odometry.prepareFrames(frame_curr, frame_prev);
+                bool res = odometry.compute(frame_curr, frame_prev, Rt);
                 gtm.stop();
                 tm.stop();
                 count++;
@@ -197,9 +213,11 @@ int main(int argc, char** argv)
                 Rts.push_back( prevRt * Rt );
             }
 
-            if (!frame_prev.empty())
-                frame_prev.release();
-            std::swap(frame_prev, frame_curr);
+            //if (!frame_prev.empty())
+            //    frame_prev.release();
+            frame_prev = frame_curr;
+            frame_curr = odometry.createOdometryFrame();
+            //std::swap(frame_prev, frame_curr);
         }
     }
 

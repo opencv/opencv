@@ -105,6 +105,18 @@ static inline bool isNaN(const cv::v_float32x4& p)
 }
 #endif
 
+template<typename TMat>
+inline TMat getTMat(InputArray, int = -1);
+template<>
+Mat getTMat<Mat>(InputArray a, int i);
+template<>
+UMat getTMat<UMat>(InputArray a, int i);
+
+template<typename TMat>
+inline TMat& getTMatRef(InputOutputArray, int = -1);
+template<>
+Mat& getTMatRef<Mat>(InputOutputArray a, int i);
+
 inline size_t roundDownPow2(size_t x)
 {
     size_t shift = 0;
@@ -182,6 +194,18 @@ enum
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
 typedef Points Colors;
+
+typedef cv::Point3f _ptype;
+typedef cv::Mat_< _ptype > _Points;
+typedef _Points _Normals;
+typedef _Points _Colors;
+
+enum
+{
+    _DEPTH_TYPE = DataType<depthType>::type,
+    _POINT_TYPE = DataType<_ptype   >::type,
+    _COLOR_TYPE = DataType<_ptype   >::type
+};
 
 typedef cv::Mat_< depthType > Depth;
 
