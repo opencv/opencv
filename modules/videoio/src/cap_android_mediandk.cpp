@@ -109,7 +109,7 @@ public:
                             frameHeight = 1080;
                             LOGV("Buffer size is too small, force using height = %d", frameHeight);
                         }
-                        else if(bufferSize == 3110400 &&  frameWidth == 1088 && frameHeight == 1920)
+                        else if(bufferSize == 3110400 && frameWidth == 1088 && frameHeight == 1920)
                         {
                             frameWidth = 1080;
                             LOGV("Buffer size is too small, force using width = %d", frameWidth);
