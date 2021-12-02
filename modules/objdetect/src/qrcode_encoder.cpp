@@ -308,18 +308,7 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
     for(size_t i = 0; i < possible_version.size(); i++)
     {
         int version_range_index = possible_version[i];
-        if (version_range_index == 1)
-        {
-            tmp_version = 1;
-        }
-        else if (version_range_index == 2)
-        {
-            tmp_version = 10;
-        }
-        else
-        {
-            tmp_version = 27;
-        }
+
         encodeAuto(input_str, payload_tmp);
         tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level,
                                 version_range[version_range_index], version_range[version_range_index + 1]);
@@ -351,10 +340,11 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         int segment_begin = i * segment_len;
         int segemnt_end = min((i + 1) * segment_len, (int) input.length()) - 1;
         std::string input_info = input.substr(segment_begin, segemnt_end - segment_begin + 1);
-        int v = versionAuto(input_info);
+        int detected_version = versionAuto(input_info);
+        CV_Assert(detected_version != -1);
         if (version_level == 0)
-            version_level = v;
-        else if (version_level < v)
+            version_level = detected_version;
+        else if (version_level < detected_version)
             CV_Error(Error::StsBadArg, "The given version is not suitable for the given input string length ");
 
         payload.clear();
@@ -752,12 +742,14 @@ void QRCodeEncoderImpl::eccGenerate(vector<vector<uint8_t> > &data_blocks, vecto
 void QRCodeEncoderImpl::rearrangeBlocks(const vector<vector<uint8_t> > &data_blocks, const vector<vector<uint8_t> > &ecc_blocks)
 {
     rearranged_data.clear();
-    rearranged_data.reserve(MAX_PAYLOAD_LEN);
     int blocks = cur_ecc_params->num_blocks_in_G2 + cur_ecc_params->num_blocks_in_G1;
     int col_border = max(cur_ecc_params->data_codewords_in_G2, cur_ecc_params->data_codewords_in_G1);
     int total_codeword_num = version_info->total_codewords;
     int is_not_equal = cur_ecc_params->data_codewords_in_G2 - cur_ecc_params->data_codewords_in_G1;
-    for (int i = 0; i < total_codeword_num; i++)
+    int add_steps = cur_ecc_params->data_codewords_in_G2 > cur_ecc_params->data_codewords_in_G1 ?
+                   (cur_ecc_params->data_codewords_in_G2 - cur_ecc_params->data_codewords_in_G1) * cur_ecc_params->num_blocks_in_G1 : 0;
+    rearranged_data.reserve(total_codeword_num + add_steps);
+    for (int i = 0; i < total_codeword_num + add_steps; i++)
     {
         int cur_col = i / blocks;
         int cur_row = i % blocks;
@@ -782,16 +774,6 @@ void QRCodeEncoderImpl::rearrangeBlocks(const vector<vector<uint8_t> > &data_blo
             tmp = ecc_blocks[cur_row][index];
         }
         rearranged_data.push_back(tmp);
-    }
-    const int remainder_len []= {0,
-                                 0, 7, 7, 7, 7, 7, 0, 0, 0, 0,
-                                 0, 0, 0, 3, 3, 3, 3, 3, 3, 3,
-                                 4, 4, 4, 4, 4, 4, 4, 3, 3, 3,
-                                 3, 3, 3, 3, 0, 0, 0, 0, 0, 0};
-    int cur_remainder_len = remainder_len[version_level];
-    if (cur_remainder_len != 0)
-    {
-        rearranged_data.push_back(0);
     }
 }
 
@@ -1078,6 +1060,8 @@ void QRCodeEncoderImpl::writeData()
     int dir = -1;
     int count = 0;
     int codeword_value = rearranged_data[0];
+    const int limit_bits = (int)rearranged_data.size() * 8;
+    bool limit_reached = false;
     while (x > 0)
     {
         if (x == 6)
@@ -1093,10 +1077,19 @@ void QRCodeEncoderImpl::writeData()
                 continue;
             }
             count++;
+            if (count == limit_bits)
+            {
+                limit_reached = true;
+                break;
+            }
             if (count % 8 == 0)
             {
                 codeword_value = rearranged_data[count / 8];
             }
+        }
+        if (limit_reached)
+        {
+            break;
         }
         y += dir;
         if (y < 0 || y >= version_size)
