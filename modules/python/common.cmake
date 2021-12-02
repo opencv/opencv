@@ -24,6 +24,7 @@ ocv_add_library(${the_module} MODULE
   ${PYTHON_SOURCE_DIR}/src2/cv2_util.cpp
   ${PYTHON_SOURCE_DIR}/src2/cv2_numpy.cpp
   ${PYTHON_SOURCE_DIR}/src2/cv2_convert.cpp
+  ${PYTHON_SOURCE_DIR}/src2/cv2_highgui.cpp
   ${cv2_generated_hdrs}
   ${opencv_userdef_hdrs}
   ${cv2_custom_hdr}

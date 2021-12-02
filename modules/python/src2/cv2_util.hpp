@@ -129,4 +129,6 @@ void pyPopulateArgumentConversionErrors();
 
 //======================================================================================================================
 
+PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw);
+
 #endif // CV2_UTIL_HPP

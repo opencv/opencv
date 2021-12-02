@@ -6,6 +6,7 @@
 #include "cv2_numpy.hpp"
 #include <vector>
 #include <string>
+#include <type_traits>  // std::enable_if
 
 extern PyTypeObject* pyopencv_Mat_TypePtr;
 

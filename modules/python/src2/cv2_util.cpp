@@ -6,6 +6,8 @@
 PyObject* opencv_error = NULL;
 cv::TLSData<std::vector<std::string> > conversionErrorsTLS;
 
+using namespace cv;
+
 //======================================================================================================================
 
 bool isPythonBindingsDebugEnabled()
@@ -62,8 +64,6 @@ void pyRaiseCVException(const cv::Exception &e)
 }
 
 //======================================================================================================================
-
-using namespace cv;
 
 void pyRaiseCVOverloadException(const std::string& functionName)
 {
@@ -122,4 +122,57 @@ void pyPopulateArgumentConversionErrors()
         conversionErrorsTLS.getRef().push_back(message);
 #endif
     }
+}
+
+//======================================================================================================================
+
+static int OnError(int status, const char *func_name, const char *err_msg, const char *file_name, int line, void *userdata)
+{
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject *on_error = (PyObject*)userdata;
+    PyObject *args = Py_BuildValue("isssi", status, func_name, err_msg, file_name, line);
+
+    PyObject *r = PyObject_Call(on_error, args, NULL);
+    if (r == NULL) {
+        PyErr_Print();
+    } else {
+        Py_DECREF(r);
+    }
+
+    Py_DECREF(args);
+    PyGILState_Release(gstate);
+
+    return 0; // The return value isn't used
+}
+
+PyObject *pycvRedirectError(PyObject*, PyObject *args, PyObject *kw)
+{
+    const char *keywords[] = { "on_error", NULL };
+    PyObject *on_error;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", (char**)keywords, &on_error))
+        return NULL;
+
+    if ((on_error != Py_None) && !PyCallable_Check(on_error))  {
+        PyErr_SetString(PyExc_TypeError, "on_error must be callable");
+        return NULL;
+    }
+
+    // Keep track of the previous handler parameter, so we can decref it when no longer used
+    static PyObject* last_on_error = NULL;
+    if (last_on_error) {
+        Py_DECREF(last_on_error);
+        last_on_error = NULL;
+    }
+
+    if (on_error == Py_None) {
+        ERRWRAP2(redirectError(NULL));
+    } else {
+        last_on_error = on_error;
+        Py_INCREF(last_on_error);
+        ERRWRAP2(redirectError(OnError, last_on_error));
+    }
+    Py_RETURN_NONE;
 }
