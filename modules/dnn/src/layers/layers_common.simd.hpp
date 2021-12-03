@@ -819,13 +819,13 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 
             for( int k = 0; k < na; k++ )
             {
-                float32_t a0 = aptr0[k];
-                float32_t a1 = aptr1[k];
-                float32_t a2 = aptr2[k];
-                float32_t a3 = aptr3[k];
-                float32_t a4 = aptr4[k];
-                float32_t a5 = aptr5[k];
-                float32_t a6 = aptr6[k];
+                float a0 = aptr0[k];
+                float a1 = aptr1[k];
+                float a2 = aptr2[k];
+                float a3 = aptr3[k];
+                float a4 = aptr4[k];
+                float a5 = aptr5[k];
+                float a6 = aptr6[k];
 
                 vfloat32m4_t b = vle32_v_f32m4(bptr + k*bstep + n, mvl);
                 d0 = vfmacc_vf_f32m4(d0, a0, b, mvl);
@@ -904,23 +904,23 @@ void fastGEMM1T( const float* vec, const float* weights,
         }
 
         // Calculate the sum of each vector
-        float32_t sum[15];
+        float sum[15];
         vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
-        sum[0] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
-        sum[1] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
-        sum[2] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
-        sum[3] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
-        sum[4] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
-        sum[5] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
-        sum[6] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
-        sum[7] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
-        sum[8] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
-        sum[9] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
-        sum[10] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
-        sum[11] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
-        sum[12] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
-        sum[13] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
-        sum[14] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs14, zero, vlm2));
+        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
+        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
+        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
+        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
+        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
+        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
+        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
+        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
+        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
+        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
+        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
+        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
+        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
+        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
+        sum[14] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs14, zero, vlm2));
 
         vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, 15), vle32_v_f32m4(bias + i, 15), 15);
         vse32_v_f32m4(dst + i, s0, 15);
@@ -973,22 +973,22 @@ void fastGEMM1T( const float* vec, const float* weights,
             vs13 = vfmacc_vv_f32m2(vs13, vle32_v_f32m2(wptr + wstep*std::min(13, mvl-1), kvl), v, kvl);
         }
         // Calculate the sum of each vector
-        float32_t sum[14];
+        float sum[14];
         vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
-        sum[0] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
-        sum[1] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
-        sum[2] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
-        sum[3] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
-        sum[4] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
-        sum[5] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
-        sum[6] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
-        sum[7] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
-        sum[8] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
-        sum[9] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
-        sum[10] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
-        sum[11] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
-        sum[12] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
-        sum[13] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
+        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
+        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
+        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
+        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
+        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
+        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
+        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
+        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
+        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
+        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
+        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
+        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
+        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
+        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
 
         vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, mvl), vle32_v_f32m4(bias + i, mvl), mvl);
         vse32_v_f32m4(dst + i, s0, mvl);
@@ -1110,31 +1110,31 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             // compute sum of each vs
             vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm1Max);
             // vl is required here to be at least FASCONV_BASE_VECSZ, aka 8.
-            float32_t sum0[FASCONV_BASE_VECSZ], sum1[FASCONV_BASE_VECSZ], sum2[FASCONV_BASE_VECSZ];
-            sum0[0] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs00, zero, vlm1Max));
-            sum0[1] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs01, zero, vlm1Max));
-            sum0[2] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs02, zero, vlm1Max));
-            sum0[3] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs03, zero, vlm1Max));
-            sum0[4] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs04, zero, vlm1Max));
-            sum0[5] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs05, zero, vlm1Max));
-            sum0[6] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs06, zero, vlm1Max));
-            sum0[7] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs07, zero, vlm1Max));
-            sum1[0] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs10, zero, vlm1Max));
-            sum1[1] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs11, zero, vlm1Max));
-            sum1[2] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs12, zero, vlm1Max));
-            sum1[3] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs13, zero, vlm1Max));
-            sum1[4] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs14, zero, vlm1Max));
-            sum1[5] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs15, zero, vlm1Max));
-            sum1[6] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs16, zero, vlm1Max));
-            sum1[7] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs17, zero, vlm1Max));
-            sum2[0] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs20, zero, vlm1Max));
-            sum2[1] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs21, zero, vlm1Max));
-            sum2[2] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs22, zero, vlm1Max));
-            sum2[3] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs23, zero, vlm1Max));
-            sum2[4] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs24, zero, vlm1Max));
-            sum2[5] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs25, zero, vlm1Max));
-            sum2[6] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs26, zero, vlm1Max));
-            sum2[7] = vfmv_f_s_f32m1_f32(vfredsum_vs_f32m1_f32m1(zero, vs27, zero, vlm1Max));
+            float sum0[FASCONV_BASE_VECSZ], sum1[FASCONV_BASE_VECSZ], sum2[FASCONV_BASE_VECSZ];
+            sum0[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs00, zero, vlm1Max));
+            sum0[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs01, zero, vlm1Max));
+            sum0[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs02, zero, vlm1Max));
+            sum0[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs03, zero, vlm1Max));
+            sum0[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs04, zero, vlm1Max));
+            sum0[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs05, zero, vlm1Max));
+            sum0[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs06, zero, vlm1Max));
+            sum0[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs07, zero, vlm1Max));
+            sum1[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs10, zero, vlm1Max));
+            sum1[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs11, zero, vlm1Max));
+            sum1[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs12, zero, vlm1Max));
+            sum1[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs13, zero, vlm1Max));
+            sum1[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs14, zero, vlm1Max));
+            sum1[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs15, zero, vlm1Max));
+            sum1[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs16, zero, vlm1Max));
+            sum1[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs17, zero, vlm1Max));
+            sum2[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs20, zero, vlm1Max));
+            sum2[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs21, zero, vlm1Max));
+            sum2[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs22, zero, vlm1Max));
+            sum2[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs23, zero, vlm1Max));
+            sum2[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs24, zero, vlm1Max));
+            sum2[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs25, zero, vlm1Max));
+            sum2[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs26, zero, vlm1Max));
+            sum2[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m1_f32m1(zero, vs27, zero, vlm1Max));
 
             // if VLEN = 128, so LMUL = 2 for vl = 8.
             // otherwise, VLEN >=256, we only use fist 8 element of the vReg.
@@ -1217,7 +1217,7 @@ static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& 
     // a = vlmul_trunc_v_f32m4_f32m2(tempa);
     // b = vlmul_trunc_v_f32m4_f32m2(tempb);
     */
-    cv::AutoBuffer<float> cvBuffer(sizeof(float32_t)*vl*2);
+    cv::AutoBuffer<float> cvBuffer(sizeof(float)*vl*2);
     float* buffer = (float*)cvBuffer.data();
     vse32_v_f32m4(buffer, tempa, vl);
     a = vle32_v_f32m2(buffer, vl);
