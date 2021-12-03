@@ -116,6 +116,13 @@ namespace detail
         using type = std::tuple<Objs...>;
         static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
     };
+
+    template<typename... Ts>
+    struct make_void { typedef void type;};
+
+    template<typename... Ts>
+    using void_t = typename make_void<Ts...>::type;
+
 } // namespace detail
 
 namespace util
