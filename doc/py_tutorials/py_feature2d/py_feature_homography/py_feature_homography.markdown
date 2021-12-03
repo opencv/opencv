@@ -77,11 +77,11 @@ if len(good)>MIN_MATCH_COUNT:
 
     M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
     matchesMask = mask.ravel().tolist()
-
-    h,w,d = img1.shape
+    
+    h,w = img1.shape
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     dst = cv.perspectiveTransform(pts,M)
-
+    
     img2 = cv.polylines(img2,[np.int32(dst)],True,255,3, cv.LINE_AA)
 
 else:
