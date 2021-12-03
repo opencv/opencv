@@ -216,13 +216,12 @@ TEST_P(Test_TensorFlow_layers, conv_pool_nchw)
 
 TEST_P(Test_TensorFlow_layers, Convolution3D)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
-    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
+#endif
     runTensorFlowNet("conv3d");
 }
 
@@ -231,7 +230,7 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("padding_valid");
     runTensorFlowNet("spatial_padding");
     runTensorFlowNet("mirror_pad");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (target == DNN_TARGET_MYRIAD)
     {
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -344,6 +343,7 @@ TEST_P(Test_TensorFlow_layers, concat_axis_1)
 
 TEST_P(Test_TensorFlow_layers, concat_3d)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
     {
         if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
@@ -353,6 +353,7 @@ TEST_P(Test_TensorFlow_layers, concat_3d)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#endif
 
     runTensorFlowNet("concat_3d");
 }
@@ -430,22 +431,32 @@ TEST_P(Test_TensorFlow_layers, batch_norm3D)
 
 TEST_P(Test_TensorFlow_layers, slim_batch_norm)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     // Output values range: [-40.0597, 207.827]
-    double l1 =  default_l1, lInf = default_lInf;
+    double l1 = default_l1;
+    double lInf = default_lInf;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.041;
         lInf = 0.33;
     }
+#if defined(INF_ENGINE_RELEASE)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+    {
+        lInf = 0.0002;
+    }
+#endif
     else if (target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.005;
         lInf = 0.33;
     }
+
     runTensorFlowNet("slim_batch_norm", false, l1, lInf);
 }
 
@@ -572,7 +583,7 @@ TEST_P(Test_TensorFlow_layers, max_pool_grad)
 TEST_P(Test_TensorFlow_layers, ave_pool_same)
 {
     // Reference output values are in range [-0.519531, 0.112976]
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (target == DNN_TARGET_MYRIAD && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
     {
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -586,38 +597,41 @@ TEST_P(Test_TensorFlow_layers, ave_pool_same)
 
 TEST_P(Test_TensorFlow_layers, MaxPooling3D)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
-    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    if (backend == DNN_BACKEND_CUDA)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-        // ok
+        // accuracy
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+            );
+        // IE exception: [ GENERAL_ERROR ]  AssertionFailed: !expired()
+        if (target == DNN_TARGET_MYRIAD)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    else if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+#endif
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");  // FIXIT use tags
 
     runTensorFlowNet("max_pool3d");
 }
 
 TEST_P(Test_TensorFlow_layers, AvePooling3D)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
-    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    if (backend == DNN_BACKEND_CUDA)
-    {
-        // ok
-    }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    else if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+#endif
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+        throw SkipTestException("Only CPU is supported");  // FIXIT use tags
 
     runTensorFlowNet("ave_pool3d");
 }
@@ -650,10 +664,12 @@ TEST_P(Test_TensorFlow_layers, matmul)
 
 TEST_P(Test_TensorFlow_layers, reshape)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("shift_reshape_no_reorder");
     runTensorFlowNet("reshape_no_reorder");
     runTensorFlowNet("reshape_reduce");
@@ -1319,18 +1335,35 @@ TEST_P(Test_TensorFlow_layers, lstm)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* not supported */
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        // Exception: Ngraph operation Reshape with name Reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+            );
+        // Xlink
+        if (target == DNN_TARGET_MYRIAD)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    }
+#endif
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     runTensorFlowNet("lstm", true);
     runTensorFlowNet("lstm", true, 0.0, 0.0, true);
 }
 
 TEST_P(Test_TensorFlow_layers, split)
 {
+
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1360,8 +1393,10 @@ TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor_align_corners)
 
 TEST_P(Test_TensorFlow_layers, resize_nearest_neighbor_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_nearest_neighbor", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1500,12 +1535,28 @@ TEST_P(Test_TensorFlow_layers, clip_by_value)
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        // IE exception: Input prelu:StatefulPartitionedCall/StatefulPartitionedCall/sequential/p_re_lu/add hasn't been found in primitiveIDs map
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16)
+            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+                CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+            );
+        // IE exception: Eltwise node with name `StatefulPartitionedCall/StatefulPartitionedCall/sequential/p_re_lu/add` has invalid input/output dims configuration
+        if (target == DNN_TARGET_CPU)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    }
+#endif
+
     runTensorFlowNet("tf2_prelu");
 }
 

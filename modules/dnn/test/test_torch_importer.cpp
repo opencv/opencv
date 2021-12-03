@@ -236,22 +236,31 @@ TEST_P(Test_Torch_layers, net_lp_pooling_square)
 }
 TEST_P(Test_Torch_layers, net_lp_pooling_power)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     runTorchNet("net_lp_pooling_power", "", false, true);
 }
 
 TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     double l1 = 0.0, lInf = 0.0;
     if (target == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.046;
         lInf = 0.023;
+    }
+    else if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.02;
+        lInf = 0.05;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {

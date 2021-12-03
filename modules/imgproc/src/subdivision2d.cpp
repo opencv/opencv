@@ -436,7 +436,7 @@ int Subdiv2D::insert(Point2f pt)
     else
         CV_Error_(CV_StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
 
-    assert( curr_edge != 0 );
+    CV_Assert( curr_edge != 0 );
     validGeometry = false;
 
     curr_point = newPoint(pt, false);

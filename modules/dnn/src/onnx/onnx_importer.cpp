@@ -768,12 +768,25 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
     }
 }
 
+void setCeilMode(LayerParams& layerParams)
+{
+    // auto_pad attribute is deprecated and uses ceil
+    if (layerParams.has("pad_mode"))
+    {
+        layerParams.set("ceil_mode", true);
+    }
+    else if (!layerParams.has("ceil_mode"))
+    {
+        layerParams.set("ceil_mode", false);
+    }
+}
+
 void ONNXImporter::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int depth = layerParams.get<int>("depth", CV_32F);
     layerParams.type = (depth == CV_8S) ? "PoolingInt8" : "Pooling";
     layerParams.set("pool", "MAX");
-    layerParams.set("ceil_mode", layerParams.has("pad_mode"));
+    setCeilMode(layerParams);
     addLayer(layerParams, node_proto);
 }
 
@@ -781,7 +794,7 @@ void ONNXImporter::parseAveragePool(LayerParams& layerParams, const opencv_onnx:
 {
     layerParams.type = "Pooling";
     layerParams.set("pool", "AVE");
-    layerParams.set("ceil_mode", layerParams.has("pad_mode"));
+    setCeilMode(layerParams);
     layerParams.set("ave_pool_padded_area", framework_name == "pytorch");
     addLayer(layerParams, node_proto);
 }
@@ -1077,6 +1090,7 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
     }
     int depth = layerParams.get<int>("depth", CV_32F);
     layerParams.type = (depth == CV_8S) ? "SliceInt8" : "Slice";
+    layerParams.set("axis", layerParams.get<float>("axis", 0));
     addLayer(layerParams, node_proto);
 }
 
@@ -1085,6 +1099,14 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     opencv_onnx::NodeProto node_proto = node_proto_;
     const std::string& layer_type = node_proto.op_type();
     bool isSub = layer_type == "Sub";
+
+    if (layer_type == "Sum" && node_proto.input_size() == 1)
+    {
+        layerParams.type = "Identity";
+        addLayer(layerParams, node_proto);
+        return;
+    }
+
     CV_Assert((node_proto.input_size() == 2) || (layer_type == "Sum" && node_proto.input_size() > 2));
 
     if (layer_type == "Sum" && node_proto.input_size() > 2)
@@ -1382,15 +1404,15 @@ void ONNXImporter::parseImageScaler(LayerParams& layerParams, const opencv_onnx:
 void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ReLU6";
-    replaceLayerParam(layerParams, "min", "min_value");
-    replaceLayerParam(layerParams, "max", "max_value");
+    layerParams.set("min_value", layerParams.get<float>("min", -FLT_MAX));
+    layerParams.set("max_value", layerParams.get<float>("max", FLT_MAX));
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "ReLU";
-    replaceLayerParam(layerParams, "alpha", "negative_slope");
+    layerParams.set("negative_slope", layerParams.get<float>("alpha", 0.01));
     addLayer(layerParams, node_proto);
 }
 
@@ -1875,6 +1897,16 @@ void ONNXImporter::parseTranspose(LayerParams& layerParams, const opencv_onnx::N
     int depth = layerParams.get<int>("depth", CV_32F);
     layerParams.type = (depth == CV_8S) ? "PermuteInt8" : "Permute";
     replaceLayerParam(layerParams, "perm", "order");
+    if (!layerParams.has("order")) {
+        MatShape inpShape = outShapes[node_proto.input(0)];
+        size_t dims = inpShape.size();
+        std::vector<int> perm(dims);
+        for (size_t d = 0; d < dims; ++d)
+        {
+            perm[d] = static_cast<int>(dims - 1 - d);
+        }
+        layerParams.set("order", DictValue::arrayInt(perm.data(), perm.size()));
+    }
 
     CV_Assert(node_proto.input_size() == 1);
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())

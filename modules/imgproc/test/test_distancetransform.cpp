@@ -161,7 +161,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
     float delta[16];
     int tstep, count;
 
-    assert( mask_size == 3 || mask_size == 5 );
+    CV_Assert( mask_size == 3 || mask_size == 5 );
 
     if( dist_type == CV_DIST_USER )
         memcpy( mask, _mask, sizeof(mask) );

@@ -646,29 +646,26 @@ struct DataLayer : public Layer
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        // FIXIT: add wrapper without exception suppression
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (outputs_arr.depth() == CV_16S)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
+        bool isFP16 = outputs_arr.depth() == CV_16S;
 
         std::vector<Mat> outputs, internals;
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        // Supported modes:
-        // | Input type | Output type |
-        // |       fp32 |        fp32 |
-        // |      uint8 |        fp32 |
         for (int i = 0; i < inputsData.size(); ++i)
         {
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
+
             CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
-            CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
+            if (isFP16)
+                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+            else
+                CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
 
             bool singleMean = true;
             for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
@@ -678,34 +675,49 @@ struct DataLayer : public Layer
 
             if (singleMean)
             {
-                inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                if (isFP16)
+                {
+                    Mat input_f32;
+                    inputsData[i].convertTo(input_f32, CV_32F, scale, -mean[0] * scale);
+                    convertFp16(input_f32, outputs[i]);
+                }
+                else
+                {
+                    inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                }
             }
             else
             {
                 for (int n = 0; n < inputsData[i].size[0]; ++n)
+                {
                     for (int c = 0; c < inputsData[i].size[1]; ++c)
                     {
                         Mat inp = getPlane(inputsData[i], n, c);
                         Mat out = getPlane(outputs[i], n, c);
-                        inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                        if (isFP16)
+                        {
+                            Mat input_f32;
+                            inp.convertTo(input_f32, CV_32F, scale, -mean[c] * scale);
+                            convertFp16(input_f32, out);
+                        }
+                        else
+                        {
+                            inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                        }
                     }
+                }
             }
         }
     }
 
 #ifdef HAVE_OPENCL
-    std::vector<Mat> tmp_expressions;
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
-        // Supported modes:
-        // | Input type | Output type |
-        // |       fp32 |        fp32 |
-        // |       fp32 |        fp16 |
-        // |      uint8 |        fp32 |
+        bool isFP16 = outputs_.depth() == CV_16S;
+
         std::vector<UMat> outputs;
         outputs_.getUMatVector(outputs);
 
-        tmp_expressions.clear();
         for (int i = 0; i < inputsData.size(); ++i)
         {
             Mat inputData = inputsData[i];
@@ -713,58 +725,55 @@ struct DataLayer : public Layer
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
 
-            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
+            CV_Assert(mean == Scalar() || inputData.size[1] <= 4);
+            if (isFP16)
+                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+            else
+                CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
+
             bool singleMean = true;
-            for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
+            for (int j = 1; j < std::min(4, inputData.size[1]) && singleMean; ++j)
             {
                 singleMean = mean[j] == mean[j - 1];
             }
 
-            if (outputs_.depth() == CV_16S)
+            if (singleMean)
             {
-                if (singleMean)
+                if (isFP16)
                 {
-                    tmp_expressions.push_back(Mat(scale * (inputsData[i] - mean[0])));
-                    convertFp16(tmp_expressions.back(), outputs[i]);
+                    UMat input_i;
+                    inputData.convertTo(input_i, CV_32F, scale, -mean[0] * scale);
+                    convertFp16(input_i, outputs[i]);
                 }
                 else
                 {
-                    for (int n = 0; n < inputsData[i].size[0]; ++n)
-                        for (int c = 0; c < inputsData[i].size[1]; ++c)
-                        {
-                            Mat inp = getPlane(inputsData[i], n, c);
-
-                            std::vector<cv::Range> plane(4, Range::all());
-                            plane[0] = Range(n, n + 1);
-                            plane[1] = Range(c, c + 1);
-                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
-
-                            tmp_expressions.push_back(scale * (inp - mean[c]));
-                            convertFp16(tmp_expressions.back(), out);
-                        }
+                    inputData.convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
                 }
             }
             else
             {
-                CV_Assert(outputs_.depth() == CV_32F);
-                if (singleMean)
+                for (int n = 0; n < inputData.size[0]; ++n)
                 {
-                    inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
-                }
-                else
-                {
-                    for (int n = 0; n < inputsData[i].size[0]; ++n)
-                        for (int c = 0; c < inputsData[i].size[1]; ++c)
+                    for (int c = 0; c < inputData.size[1]; ++c)
+                    {
+                        Mat inp = getPlane(inputData, n, c);
+
+                        std::vector<cv::Range> plane(4, Range::all());
+                        plane[0] = Range(n, n + 1);
+                        plane[1] = Range(c, c + 1);
+                        UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
+
+                        if (isFP16)
                         {
-                            Mat inp = getPlane(inputsData[i], n, c);
-
-                            std::vector<cv::Range> plane(4, Range::all());
-                            plane[0] = Range(n, n + 1);
-                            plane[1] = Range(c, c + 1);
-                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
-
+                            UMat input_i;
+                            inp.convertTo(input_i, CV_32F, scale, -mean[c] * scale);
+                            convertFp16(input_i, out);
+                        }
+                        else
+                        {
                             inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
                         }
+                    }
                 }
             }
         }
