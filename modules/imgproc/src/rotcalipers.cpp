@@ -407,16 +407,6 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
 }
 
 
-CV_IMPL CvBox2D
-cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
-{
-    cv::AutoBuffer<double> abuf;
-    cv::Mat points = cv::cvarrToMat(array, false, false, 0, &abuf);
-
-    cv::RotatedRect rr = cv::minAreaRect(points);
-    return cvBox2D(rr);
-}
-
 void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
 {
     CV_INSTRUMENT_REGION();

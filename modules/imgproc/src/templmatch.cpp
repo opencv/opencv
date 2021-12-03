@@ -1193,15 +1193,4 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     common_matchTemplate(img, templ, result, method, cn);
 }
 
-CV_IMPL void
-cvMatchTemplate( const CvArr* _img, const CvArr* _templ, CvArr* _result, int method )
-{
-    cv::Mat img = cv::cvarrToMat(_img), templ = cv::cvarrToMat(_templ),
-        result = cv::cvarrToMat(_result);
-    CV_Assert( result.size() == cv::Size(std::abs(img.cols - templ.cols) + 1,
-                                         std::abs(img.rows - templ.rows) + 1) &&
-              result.type() == CV_32F );
-    matchTemplate(img, templ, result, method);
-}
-
 /* End of file. */

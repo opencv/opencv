@@ -170,16 +170,4 @@ double cv::matchShapes(InputArray contour1, InputArray contour2, int method, dou
     return result;
 }
 
-
-CV_IMPL  double
-cvMatchShapes( const void* _contour1, const void* _contour2,
-               int method, double parameter )
-{
-    cv::AutoBuffer<double> abuf1, abuf2;
-    cv::Mat contour1 = cv::cvarrToMat(_contour1, false, false, 0, &abuf1);
-    cv::Mat contour2 = cv::cvarrToMat(_contour2, false, false, 0, &abuf2);
-
-    return cv::matchShapes(contour1, contour2, method, parameter);
-}
-
 /* End of file. */

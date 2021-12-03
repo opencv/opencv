@@ -41,57 +41,6 @@
 #include "precomp.hpp"
 
 
-CV_IMPL CvRect
-cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
-{
-    if( rect1 && rect2 )
-    {
-        cv::Rect max_rect;
-        int a, b;
-
-        max_rect.x = a = rect1->x;
-        b = rect2->x;
-        if( max_rect.x > b )
-            max_rect.x = b;
-
-        max_rect.width = a += rect1->width;
-        b += rect2->width;
-
-        if( max_rect.width < b )
-            max_rect.width = b;
-        max_rect.width -= max_rect.x;
-
-        max_rect.y = a = rect1->y;
-        b = rect2->y;
-        if( max_rect.y > b )
-            max_rect.y = b;
-
-        max_rect.height = a += rect1->height;
-        b += rect2->height;
-
-        if( max_rect.height < b )
-            max_rect.height = b;
-        max_rect.height -= max_rect.y;
-        return cvRect(max_rect);
-    }
-    else if( rect1 )
-        return *rect1;
-    else if( rect2 )
-        return *rect2;
-    else
-        return cvRect(0,0,0,0);
-}
-
-
-CV_IMPL void
-cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
-{
-    if( !pt )
-        CV_Error( CV_StsNullPtr, "NULL vertex array pointer" );
-    cv::RotatedRect(box).points((cv::Point2f*)pt);
-}
-
-
 double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
 {
     CV_INSTRUMENT_REGION();
@@ -243,14 +192,6 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     return result;
 }
 
-
-CV_IMPL double
-cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
-{
-    cv::AutoBuffer<double> abuf;
-    cv::Mat contour = cv::cvarrToMat(_contour, false, false, 0, &abuf);
-    return cv::pointPolygonTest(contour, pt, measure_dist != 0);
-}
 
 /*
  This code is described in "Computational Geometry in C" (Second Edition),
