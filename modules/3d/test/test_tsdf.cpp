@@ -284,7 +284,7 @@ public:
     Size frameSize;
     Vec3f lightPose;
 
-    Ptr<Volume> volume;
+    Ptr<_Volume> volume;
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 

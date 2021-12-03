@@ -52,7 +52,7 @@ class TSDFVolumeCPU : public TSDFVolume
 
 TSDFVolume::TSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
                        int _maxWeight, Point3i _resolution, bool zFirstMemOrder)
-    : Volume(_voxelSize, _pose, _raycastStepFactor),
+    : _Volume(_voxelSize, _pose, _raycastStepFactor),
       volResolution(_resolution),
       maxWeight( WeightType(_maxWeight) )
 {

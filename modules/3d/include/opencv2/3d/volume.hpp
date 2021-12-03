@@ -5,21 +5,57 @@
 #ifndef OPENCV_3D_VOLUME_HPP
 #define OPENCV_3D_VOLUME_HPP
 
+#include "volume_settings.hpp"
+
 #include "opencv2/core/affine.hpp"
 
 namespace cv
 {
-class CV_EXPORTS_W Volume
+
+
+enum class VolumeType
+{
+    TSDF = 0,
+    HashTSDF = 1,
+    ColorTSDF = 2
+};
+
+
+class Volume
+{
+public:
+    Volume();
+    Volume(VolumeType vtype, VolumeSettings settings);
+    ~Volume();
+
+    void integrate();
+    void raycast() const;
+
+    void fetchNormals() const;
+    void fetchPointsNormals() const;
+
+    void reset();
+    int getVisibleBlocks() const;
+    size_t getTotalVolumeUnits() const;
+
+
+    class Impl;
+private:
+    Ptr<Impl> impl;
+};
+
+
+class CV_EXPORTS_W _Volume
 {
    public:
-    Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor) :
+    _Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor) :
         voxelSize(_voxelSize),
         voxelSizeInv(1.0f / voxelSize),
         pose(_pose),
         raycastStepFactor(_raycastStepFactor)
     { }
 
-    virtual ~Volume(){};
+    virtual ~_Volume(){};
 
     CV_WRAP
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
@@ -118,11 +154,10 @@ struct CV_EXPORTS_W VolumeParams
 };
 
 
-CV_EXPORTS_W Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams);
-CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
+CV_EXPORTS_W Ptr<_Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams);
+CV_EXPORTS_W Ptr<_Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
                                     float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
                                     int _resolutionX, int _resolutionY, int _resolutionZ);
 
 }  // namespace cv
-
 #endif // include guard

@@ -14,7 +14,7 @@
 namespace cv
 {
 
-class TSDFVolume : public Volume
+class TSDFVolume : public _Volume
 {
    public:
     // dimension in voxels, size in meters

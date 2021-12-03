@@ -10,6 +10,7 @@
 namespace cv
 {
 
+
 Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeKind)
 {
     VolumeParams params;
@@ -85,7 +86,7 @@ Ptr<VolumeParams> VolumeParams::coarseParams(int _volumeKind)
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams)
+Ptr<_Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams)
 {
     int kind = _volumeParams->kind;
     if(kind == VolumeParams::VolumeKind::TSDF)
@@ -97,7 +98,7 @@ Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams)
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-Ptr<Volume> makeVolume(int _volumeKind, float _voxelSize, Matx44f _pose,
+Ptr<_Volume> makeVolume(int _volumeKind, float _voxelSize, Matx44f _pose,
                        float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
                        int _resolutionX, int _resolutionY, int _resolutionZ)
 {

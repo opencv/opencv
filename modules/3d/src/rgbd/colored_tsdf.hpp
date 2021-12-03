@@ -11,7 +11,7 @@
 namespace cv
 {
 
-class ColoredTSDFVolume : public Volume
+class ColoredTSDFVolume : public _Volume
 {
    public:
     // dimension in voxels, size in meters
