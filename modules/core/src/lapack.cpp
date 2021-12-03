@@ -1020,7 +1020,7 @@ double invert( InputArray _src, OutputArray _dst, int method )
         }
         else
         {
-            assert( n == 1 );
+            CV_Assert( n == 1 );
 
             if( type == CV_32FC1 )
             {
@@ -1208,7 +1208,7 @@ bool solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
         }
         else
         {
-            assert( src.rows == 1 );
+            CV_Assert( src.rows == 1 );
 
             if( type == CV_32FC1 )
             {

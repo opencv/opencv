@@ -869,7 +869,7 @@ DTreesImpl::WSplit DTreesImpl::findSplitCatClass( int vi, const vector<int>& _si
     }
     else
     {
-        assert( m == 2 );
+        CV_Assert( m == 2 );
         dbl_ptr = (double**)(c_weights + _mi);
         for( j = 0; j < mi; j++ )
             dbl_ptr[j] = cjk + j*2 + 1;

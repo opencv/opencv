@@ -62,7 +62,6 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
-#include <assert.h>
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>

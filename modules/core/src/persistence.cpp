@@ -175,7 +175,7 @@ int decodeFormat( const char* dt, int* fmt_pairs, int max_len )
     if( !dt || !len )
         return 0;
 
-    assert( fmt_pairs != 0 && max_len > 0 );
+    CV_Assert( fmt_pairs != 0 && max_len > 0 );
     fmt_pairs[0] = 0;
     max_len *= 2;
 

@@ -131,13 +131,14 @@ __kernel void PowForward(const int n, __global const T* in, __global T* out,
     out[index] = pow(shift + scale * in[index], power);
 }
 
-__kernel void ELUForward(const int n, __global const T* in, __global T* out)
+__kernel void ELUForward(const int n, __global const T* in, __global T* out,
+                         const KERNEL_ARG_DTYPE alpha)
 {
   int index = get_global_id(0);
   if (index < n)
   {
     T src = in[index];
-    out[index] = (src >= 0.f) ? src : exp(src) - 1;
+    out[index] = (src >= 0.f) ? src : alpha * (exp(src) - 1);
   }
 }
 

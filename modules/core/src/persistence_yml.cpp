@@ -98,7 +98,7 @@ public:
         /*
         if( !FileNode::isFlow(parent_flags) )
             fs->struct_indent -= CV_YML_INDENT + FileNode::isFlow(struct_flags);
-        assert( fs->struct_indent >= 0 );*/
+        CV_Assert( fs->struct_indent >= 0 );*/
     }
 
     void write(const char* key, int value)

@@ -47,7 +47,6 @@ using namespace cv;
 #if !(defined(_WIN32) || defined(WINCE))
 # include <pthread.h>
 #endif
-#include <assert.h>
 #include <algorithm>
 #include <limits>
 
@@ -400,7 +399,7 @@ static
 inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
 {
     AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
-    assert(metadata);
+    CV_Assert(metadata);
 
     if (metadata->timeout_after_ms == 0)
     {
@@ -2165,7 +2164,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
     }
     else {
-        assert(false);
+        CV_Assert(false);
     }
 
     if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
@@ -2218,7 +2217,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
 #endif
     if ( sw_pix_fmt != input_pix_fmt ) {
-        assert( input_picture );
+        CV_Assert( input_picture );
         // let input_picture point to the raw data buffer of 'image'
         _opencv_ffmpeg_av_image_fill_arrays(input_picture, (uint8_t *) data,
                        (AVPixelFormat)input_pix_fmt, width, height);
@@ -2592,7 +2591,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     // alloc memory for context
     oc = avformat_alloc_context();
-    assert (oc);
+    CV_Assert(oc);
 
     /* set file name */
     oc->oformat = fmt;

@@ -545,6 +545,8 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ELULayer : public ActivationLayer
     {
     public:
+        float alpha;
+
         static Ptr<ELULayer> create(const LayerParams &params);
     };
 

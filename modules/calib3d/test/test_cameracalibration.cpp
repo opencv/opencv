@@ -1072,7 +1072,7 @@ void CV_ProjectPointsTest::run(int)
         imgPoints, dpdrot, dpdt, dpdf, dpdc, dpddist, 0 );
 
     // calculate and check image points
-    assert( (int)imgPoints.size() == pointCount );
+    CV_Assert( (int)imgPoints.size() == pointCount );
     vector<Point2f>::const_iterator it = imgPoints.begin();
     for( int i = 0; i < pointCount; i++, ++it )
     {

@@ -2122,7 +2122,7 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
             return CMP_EPS_BIG_DIFF;
         }
         if(_realmaxdiff)
@@ -2733,7 +2733,7 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
     if( _aperture_size < 0 )
     {
         static const int scharr[8] = { 3, 10, 3, -1, 0, 1, 0, 0 };  // extra elements to eliminate "-Warray-bounds" bogus warning
-        assert( size == 3 );
+        CV_Assert( size == 3 && order < 2 );
         for( i = 0; i < size; i++ )
             kernel[i] = scharr[order*3 + i];
         return;
@@ -3057,7 +3057,7 @@ void threshold( const Mat& _src, Mat& _dst,
         imaxval = cvRound(maxval);
     }
 
-    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
+    CV_Assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
 
     switch( thresh_type )
     {
@@ -3219,7 +3219,7 @@ void threshold( const Mat& _src, Mat& _dst,
         }
         break;
     default:
-        assert(0);
+        CV_Assert(0);
     }
 }
 

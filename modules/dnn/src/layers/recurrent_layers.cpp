@@ -46,6 +46,8 @@
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include "layers_common.hpp"
+
 namespace cv
 {
 namespace dnn
@@ -118,10 +120,23 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     ActivationFunction g_activation;
     ActivationFunction h_activation;
 
+#if CV_TRY_AVX
+    bool useAVX;
+#endif
+#if CV_TRY_AVX2
+    bool useAVX2;
+#endif
+
 public:
 
     LSTMLayerImpl(const LayerParams& params)
         : numTimeStamps(0), numSamples(0)
+#if CV_TRY_AVX
+          , useAVX(checkHardwareSupport(CPU_AVX))
+#endif
+#if CV_TRY_AVX2
+          , useAVX2(checkHardwareSupport(CPU_AVX2))
+#endif
     {
         setParamsFrom(params);
 
@@ -343,6 +358,15 @@ public:
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
             Mat cOutTs = produceCellOutput ? output[1].reshape(1, numSamplesTotal) : Mat();
 
+#if CV_TRY_AVX2 || CV_TRY_AVX
+            bool canUseAvx = gates.isContinuous() && bias.isContinuous()
+                && Wx.depth() == CV_32F && gates.depth() == CV_32F
+                && bias.depth() == CV_32F && Wx.cols >= 8;
+            bool canUseAvx_hInternal = hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F
+                && Wh.cols >= 8;
+#endif
+
             int tsStart, tsEnd, tsInc;
             if (reverse || i == 1) {
                 tsStart = numTimeStamps - 1;
@@ -359,9 +383,82 @@ public:
                 Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
                 Mat xCurr = xTs.rowRange(curRowRange);
 
-                gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
-                gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
-                gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
+#if CV_TRY_AVX2
+                if (useAVX2 && canUseAvx && xCurr.isContinuous())
+                {
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_AVX2::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                }
+                else
+#endif
+#if CV_TRY_AVX
+                if (useAVX && canUseAvx && xCurr.isContinuous())
+                {
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_AVX::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                }
+                else
+#endif
+                {
+                    gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
+                    gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
+                }
+
+#if CV_TRY_AVX2
+                if (useAVX2 && canUseAvx_hInternal)
+                {
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_AVX2::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                }
+                else
+#endif
+#if CV_TRY_AVX
+                if (useAVX && canUseAvx_hInternal)
+                {
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_AVX::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                }
+                else
+#endif
+                {
+                    gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
+                }
 
                 Mat gateI = gates.colRange(0*numOut, 1*numOut);
                 Mat gateF = gates.colRange(1*numOut, 2*numOut);
