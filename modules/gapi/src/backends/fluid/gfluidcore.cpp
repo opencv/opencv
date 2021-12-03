@@ -1548,7 +1548,8 @@ GAPI_FLUID_KERNEL(GFluidMulC, cv::gapi::core::GMulC, true)
 {
     static const int Window = 1;
 
-    static void run(const View &src, const cv::Scalar &_scalar, int /*dtype*/, Buffer &dst, Buffer &scratch)
+    static void run(const View& src, const cv::Scalar& _scalar, int /*dtype*/,
+                    Buffer& dst, Buffer& scratch)
     {
         GAPI_Assert(src.meta().chan <= 4);
 
@@ -1594,18 +1595,22 @@ GAPI_FLUID_KERNEL(GFluidMulC, cv::gapi::core::GMulC, true)
     }
 };
 
-GAPI_FLUID_KERNEL(GFluidMulCOld, cv::gapi::core::GMulCOld, false)
+GAPI_FLUID_KERNEL(GFluidMulCOld, cv::gapi::core::GMulCOld, true)
 {
     static const int Window = 1;
 
-    static void run(const View &src, double _scalar, int /*dtype*/, Buffer &dst)
+    static void run(const View &src, double _scalar, int /*dtype*/, Buffer &dst, Buffer& scratch)
     {
-        const float scalar[4] = {
-            static_cast<float>(_scalar),
-            static_cast<float>(_scalar),
-            static_cast<float>(_scalar),
-            static_cast<float>(_scalar)
-        };
+        GAPI_Assert(src.meta().chan <= 4);
+
+        if (dst.y() == 0)
+        {
+            float* sc = scratch.OutLine<float>();
+
+            for (int i = 0; i < scratch.length(); ++i)
+                sc[i] = static_cast<float>(_scalar);
+        }
+        const float* scalar = scratch.OutLine<float>();
         const float scale = 1.f;
 
         //     DST     SRC     OP            __VA_ARGS__
@@ -1618,6 +1623,15 @@ GAPI_FLUID_KERNEL(GFluidMulCOld, cv::gapi::core::GMulCOld, false)
         UNARY_( float,  float, run_arithm_s, dst, src, scalar, ARITHM_MULTIPLY, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GMatDesc&, double, int, Buffer& scratch)
+    {
+        initScratchBuffer(scratch);
+    }
+
+    static void resetScratch(Buffer& /*scratch*/)
+    {
     }
 };
 
