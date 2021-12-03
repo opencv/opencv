@@ -33,10 +33,10 @@ namespace wip {
 namespace onevpl {
 
 class SharedLock;
+// GAPI_EXPORTS for tests
 struct GAPI_EXPORTS LockAdapter {
     LockAdapter(mfxFrameAllocator origin_allocator);
 
-    // GAPI_EXPORTS for tests
     size_t read_lock(mfxMemId mid, mfxFrameData &data);
     size_t unlock_read(mfxMemId mid, mfxFrameData &data);
 

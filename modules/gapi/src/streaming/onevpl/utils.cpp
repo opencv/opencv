@@ -71,8 +71,9 @@ mfxAccelerationMode cstr_to_mfx_accel_mode(const char* cstr) {
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_X11)
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND)
     ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_HDDLUNITE)
-    throw std::logic_error(std::string("Invalid \"") +  CfgParam::acceleration_mode_name() +
-                                       "\":" + cstr);
+    throw std::logic_error(std::string("Invalid \"") +
+                           CfgParam::acceleration_mode_name() +
+                           "\":" + cstr);
 }
 
 const char* mfx_resource_type_to_cstr (const mfxResourceType type) {
@@ -362,6 +363,10 @@ std::string ext_mem_frame_type_to_cstr(int type) {
     std::stringstream ss;
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_DECODER_TARGET);
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_PROCESSOR_TARGET);
+    // NB: accoring to VPL source the commented MFX_* constane below are belong to the
+    // same actual integral value as condition abobe. So it is impossible
+    // to distinct them in condition branch.  Just put this comment and possible
+    // constans here...
     //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET);
     //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET);
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SYSTEM_MEMORY);

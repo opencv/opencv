@@ -7,7 +7,6 @@
 #include <thread>
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 
-
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -24,9 +23,9 @@ size_t SharedLock::shared_lock() {
     bool pred_excl = exclusive_lock.load();
     do {
         if (!pred_excl) {
-            // if no exclusive lock than start shared lock transaction
+            // if no exclusive lock then start shared lock transaction
             prev = shared_counter.fetch_add(1);
-            in_progress = true; //transaction is in progress
+            in_progress = true; // transaction is in progress
         } else {
             if (in_progress) {
                 in_progress = false;

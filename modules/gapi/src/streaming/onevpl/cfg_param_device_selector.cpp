@@ -197,7 +197,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             ID3D11DeviceContext* dx_ctx_ptr =
                 reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
 
-                        // oneVPL recommendation
+            // oneVPL recommendation
             {
                 ID3D11Multithread *pD11Multithread = nullptr;
                 dx_ctx_ptr->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
@@ -211,7 +211,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
                                       ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
-                                    CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
+                                   CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
             break;

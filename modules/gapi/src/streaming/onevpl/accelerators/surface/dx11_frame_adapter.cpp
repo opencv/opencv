@@ -74,7 +74,6 @@ VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> surf
 }
 
 VPLMediaFrameDX11Adapter::~VPLMediaFrameDX11Adapter() {
-
     // Each VPLMediaFrameDX11Adapter releases mfx surface counter
     // The last VPLMediaFrameDX11Adapter releases shared Surface pointer
     // The last surface pointer releases workspace memory
@@ -90,7 +89,6 @@ cv::GFrameDesc VPLMediaFrameDX11Adapter::meta() const {
 }
 
 MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
-
     Surface::data_t& data = parent_surface_ptr->get_data();
     const Surface::info_t& info = parent_surface_ptr->get_info();
     void* frame_id = reinterpret_cast<void*>(this);
@@ -106,23 +104,15 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
     using stride_t = typename cv::MediaFrame::View::Strides::value_type;
     stride_t pitch = static_cast<stride_t>(data.Pitch);
 
-    //TODO
+    // NB: make copy for some copyable object, because access release may be happened
+    // after source/pool destruction, so we need a copy
     auto parent_surface_ptr_copy = parent_surface_ptr;
     switch(info.FourCC) {
         case MFX_FOURCC_I420:
         {
             GAPI_Assert(data.Y && data.U && data.V && "MFX_FOURCC_I420 frame data is nullptr");
-            cv::MediaFrame::View::Ptrs pp = {
-                data.Y,
-                data.U,
-                data.V,
-                nullptr
-                };
-            cv::MediaFrame::View::Strides ss = {
-                    pitch,
-                    pitch / 2,
-                    pitch / 2, 0u
-                };
+            cv::MediaFrame::View::Ptrs pp = { data.Y, data.U, data.V, nullptr };
+            cv::MediaFrame::View::Strides ss = { pitch, pitch / 2, pitch / 2, 0u };
             return cv::MediaFrame::View(std::move(pp), std::move(ss),
                                         [parent_surface_ptr_copy,
                                          frame_id, mode] () {
@@ -146,17 +136,11 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
                                           ", frame id: " << frame_id);
             }
             GAPI_Assert(data.Y && data.UV && "MFX_FOURCC_NV12 frame data is nullptr");
-            cv::MediaFrame::View::Ptrs pp = {
-                data.Y,
-                data.UV, nullptr, nullptr
-                };
-            cv::MediaFrame::View::Strides ss = {
-                    pitch,
-                    pitch, 0u, 0u
-                };
+            cv::MediaFrame::View::Ptrs pp = { data.Y, data.UV, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { pitch, pitch, 0u, 0u };
             return cv::MediaFrame::View(std::move(pp), std::move(ss),
                                         [parent_surface_ptr_copy,
-                                         frame_id, mode] () {
+                                        frame_id, mode] () {
                 parent_surface_ptr_copy->obtain_lock();
 
                 auto& data = parent_surface_ptr_copy->get_data();

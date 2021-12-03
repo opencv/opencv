@@ -86,7 +86,7 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
-        }else {
+        } else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
                                     ", value: " << value);
         }

@@ -30,7 +30,7 @@ mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     switch (FourCC) {
         case MFX_FOURCC_I420:
         case MFX_FOURCC_NV12:
-            nbytes = width * height +  2 * half_width * half_height;
+            nbytes = width * height + 2 * half_width * half_height;
             break;
         case MFX_FOURCC_I010:
         case MFX_FOURCC_P010:
@@ -48,9 +48,9 @@ mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
 }
 
 surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
-                                  std::shared_ptr<void> out_buf_ptr,
-                                  size_t out_buf_ptr_offset,
-                                  size_t out_buf_size)
+                                   std::shared_ptr<void> out_buf_ptr,
+                                   size_t out_buf_ptr_offset,
+                                   size_t out_buf_size)
 {
     mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfW = frameInfo.Width * 4;
@@ -81,9 +81,9 @@ surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
 }
 
 surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
-                                   std::shared_ptr<void> out_buf_ptr,
-                                   size_t out_buf_ptr_offset,
-                                   size_t out_buf_size)
+                                    std::shared_ptr<void> out_buf_ptr,
+                                    size_t out_buf_ptr_offset,
+                                    size_t out_buf_size)
 {
     mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfH = frameInfo.Height;
@@ -220,7 +220,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_
                                                       param.mfx.FrameInfo.Width,
                                                       param.mfx.FrameInfo.Height);
     if (!singleSurfaceSize) {
-        throw std::runtime_error("Cannot determine surface size for: fourCC" +
+        throw std::runtime_error("Cannot determine surface size for: fourCC: " +
                                  std::to_string(param.mfx.FrameInfo.FourCC) +
                                  ", width: " + std::to_string(param.mfx.FrameInfo.Width) +
                                  ", height: " + std::to_string(param.mfx.FrameInfo.Height));

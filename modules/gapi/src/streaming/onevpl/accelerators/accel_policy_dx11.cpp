@@ -74,7 +74,8 @@ VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
 }
 
 void VPLDX11AccelerationPolicy::init(session_t session) {
-    mfxStatus sts = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE, (mfxHDL) hw_handle);
+    mfxStatus sts = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE,
+                                           static_cast<mfxHDL>(hw_handle));
     if (sts != MFX_ERR_NONE)
     {
         throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_SetHandle error: " +
@@ -102,21 +103,18 @@ VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc
 
     // allocate textures by explicit request
     mfxFrameAllocResponse mfxResponse;
-    //TODO
-    mfxFrameAllocRequest alloc_request = alloc_req;
-    alloc_request.NumFrameSuggested = alloc_request.NumFrameSuggested;
-    mfxStatus sts = on_alloc(&alloc_request, &mfxResponse);
+    mfxStatus sts = on_alloc(&alloc_req, &mfxResponse);
     if (sts != MFX_ERR_NONE)
     {
-        throw std::logic_error("Cannot create allocate memory for surfaces, error: " +
+        throw std::logic_error("Cannot create allocated memory for surfaces, error: " +
                                mfxstatus_to_string(sts));
     }
 
     // get reference pointer
-    auto table_it = allocation_table.find(alloc_request.AllocId);
+    auto table_it = allocation_table.find(alloc_req.AllocId);
     GAPI_DbgAssert (allocation_table.end() != table_it);
 
-    mfxU16 numSurfaces = alloc_request.NumFrameSuggested;
+    mfxU16 numSurfaces = alloc_req.NumFrameSuggested;
 
     // NB: create pool with numSurfaces reservation
     pool_t pool(numSurfaces);
@@ -143,8 +141,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc
     return key;
 }
 
-VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key)
-{
+VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -168,8 +165,7 @@ size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
 
 cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
                                                                            mfxFrameSurface1* surface) {
-
-auto pool_it = pool_table.find(key);
+    auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
         ss << "key is not found: " << key << ", table size: " << pool_table.size();
@@ -226,14 +222,14 @@ mfxStatus VPLDX11AccelerationPolicy::free_cb(mfxHDL pthis, mfxFrameAllocResponse
 
 mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *request,
                                               mfxFrameAllocResponse *response) {
-    GAPI_LOG_DEBUG(nullptr, "Requestend allocation id: " << std::to_string(request->AllocId) <<
+    GAPI_LOG_DEBUG(nullptr, "Requested allocation id: " << std::to_string(request->AllocId) <<
                             ", type: " << ext_mem_frame_type_to_cstr(request->Type) <<
                             ", size: " << request->Info.Width << "x" << request->Info.Height <<
                             ", frames minimum count: " << request->NumFrameMin <<
-                            ", frames sugested count: " << request->NumFrameSuggested);
+                            ", frames suggested count: " << request->NumFrameSuggested);
     auto table_it = allocation_table.find(request->AllocId);
     if (allocation_table.end() != table_it) {
-        GAPI_LOG_WARNING(nullptr, "Allocation already exist, id: " + std::to_string(request->AllocId) +
+        GAPI_LOG_WARNING(nullptr, "Allocation already exists, id: " + std::to_string(request->AllocId) +
                                    ". Total allocation size: " + std::to_string(allocation_table.size()));
 
         // TODO cache
@@ -285,7 +281,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         main_texture.reset(pTexture2D);
     }
 
-    // create  staging texture to read it from
+    // create staging texture to read it from
     desc.ArraySize      = 1;
     desc.Usage          = D3D11_USAGE_STAGING;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
@@ -293,7 +289,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     desc.MiscFlags      = 0;
     std::vector<ComPtrGuard<ID3D11Texture2D>> staging_textures;
     staging_textures.reserve(request->NumFrameSuggested);
-    for (int i = 0; i < request->NumFrameSuggested; i ++ ) {
+    for (int i = 0; i < request->NumFrameSuggested; i++ ) {
         ID3D11Texture2D *staging_texture_2d = nullptr;
         err = hw_handle->CreateTexture2D(&desc, NULL, &staging_texture_2d);
         if (FAILED(err)) {
@@ -316,7 +312,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
                                                                       std::move(staging_textures)));
         if (!inserted_it.second) {
             GAPI_LOG_WARNING(nullptr, "Cannot assign allocation by id: " + std::to_string(request->AllocId) +
-                                    " - aldeady exist. Total allocation size: " + std::to_string(allocation_table.size()));
+                                      " - aldeady exist. Total allocation size: " + std::to_string(allocation_table.size()));
             return MFX_ERR_MEMORY_ALLOC;
         }
 
@@ -325,7 +321,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         cand_resource_it = inserted_it.first;
     }
 
-    //fill out response
+    // fill out response
     GAPI_DbgAssert(cand_resource_it != allocation_table.end() && "Invalid cand_resource_it");
 
     allocation_t &resources_array = cand_resource_it->second;

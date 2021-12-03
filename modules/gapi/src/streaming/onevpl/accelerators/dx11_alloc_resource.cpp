@@ -11,19 +11,6 @@
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-#pragma comment(lib,"d3d11.lib")
-
-#define D3D11_NO_HELPERS
-#define NOMINMAX
-#include <d3d11.h>
-#include <d3d11_4.h>
-#include <codecvt>
-#include "opencv2/core/directx.hpp"
-#ifdef HAVE_OPENCL
-#include <CL/cl_d3d11.h>
-#endif // HAVE_OPENCL
-#undef D3D11_NO_HELPERS
-#undef NOMINMAX
 
 namespace cv {
 namespace gapi {
@@ -197,9 +184,10 @@ void DX11AllocationItem::on_first_in_impl(mfxFrameData *ptr) {
     UINT mapFlags = D3D11_MAP_FLAG_DO_NOT_WAIT;
 
     shared_device_context->CopySubresourceRegion(get_staging_texture_ptr(), 0,
-                                          0, 0, 0,
-                                          get_texture_ptr(), get_subresource(),
-                                          nullptr);
+                                                 0, 0, 0,
+                                                 get_texture_ptr(),
+                                                 get_subresource(),
+                                                 nullptr);
     HRESULT err = S_OK;
     D3D11_MAPPED_SUBRESOURCE lockedRect {};
     do {
@@ -224,7 +212,7 @@ void DX11AllocationItem::on_first_in_impl(mfxFrameData *ptr) {
             ptr->Y     = (mfxU8 *)lockedRect.pData;
             ptr->UV     = (mfxU8 *)lockedRect.pData + desc.Height * lockedRect.RowPitch;
 
-            GAPI_Assert(ptr->Y && ptr->UV/* && ptr->V */&& "DXGI_FORMAT_NV12 locked frame data is nullptr");
+            GAPI_Assert(ptr->Y && ptr->UV && "DXGI_FORMAT_NV12 locked frame data is nullptr");
             break;
         default:
             GAPI_LOG_WARNING(nullptr, "Unknown DXGI format: " << desc.Format);
@@ -390,7 +378,7 @@ void DX11AllocationRecord::init(unsigned int items,
     resources.reserve(items);
     // no AddRef here, because DX11AllocationRecord receive ownership it here
     texture_ptr = createCOMSharedPtrGuard(std::move(texture));
-    for(unsigned int i = 0; i < items; i++ ) {
+    for(unsigned int i = 0; i < items; i++) {
         resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
                                                       texture_ptr, i, std::move(staging_textures[i])));
     }
