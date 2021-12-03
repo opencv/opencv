@@ -177,7 +177,7 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
 #ifdef HAVE_INF_ENGINE
-    GAPI_Assert(false, "VPLMediaFrameDX11Adapter::blobParams() is not fully operable "
+    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully operable "
                 "in G-API streaming. Please waiting for future PRs");
 
     Surface::data_t& data = parent_surface_ptr->get_data();
@@ -199,16 +199,16 @@ cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
                                        InferenceEngine::Layout::NCHW});
     return std::make_pair(tdesc, params);
 #else
-    GAPI_Assert(false, "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
+    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
 #endif // HAVE_INF_ENGINE
 }
 
 void VPLMediaFrameDX11Adapter::serialize(cv::gapi::s11n::IOStream&) {
-    GAPI_Assert("VPLMediaFrameDX11Adapter::serialize() is not implemented");
+    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::serialize() is not implemented");
 }
 
 void VPLMediaFrameDX11Adapter::deserialize(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert("VPLMediaFrameDX11Adapter::deserialize() is not implemented");
+    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::deserialize() is not implemented");
 }
 
 DXGI_FORMAT VPLMediaFrameDX11Adapter::get_dx11_color_format(uint32_t mfx_fourcc) {
