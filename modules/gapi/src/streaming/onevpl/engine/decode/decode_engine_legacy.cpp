@@ -242,9 +242,16 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                   preallocated_frames_count << ". It must be equal or greater than "
                                   "mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin);
         throw std::runtime_error(std::string("Invalid value of param: ") +
-                                 CfgParam::frames_pool_size_name());
+                                 CfgParam::frames_pool_size_name() + ", underflow");
     } else {
-        decRequest.NumFrameSuggested = preallocated_frames_count;
+        if (static_cast<size_t>(std::numeric_limits<mfxU16>::max()) < preallocated_frames_count) {
+            GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
+                                  preallocated_frames_count << ". It must not be equal than " <<
+                                  std::numeric_limits<mfxU16>::max());
+            throw std::runtime_error(std::string("Invalid value of param: ") +
+                                 CfgParam::frames_pool_size_name() + ", overflow");
+        }
+        decRequest.NumFrameSuggested = static_cast<mfxU16>(preallocated_frames_count);
         GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input for session: " << mfx_session <<
                             ", mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin <<
                             ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<

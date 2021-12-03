@@ -239,7 +239,9 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         // TODO cache
         allocation_t &resources_array = table_it->second;
         response->AllocId = request->AllocId;
-        response->NumFrameActual = resources_array->size();
+        GAPI_DbgAssert(static_cast<size_t>(std::numeric_limits<mfxU16>::max()) > resources_array->size() &&
+                       "Invalid num frames: overflow");
+        response->NumFrameActual = static_cast<mfxU16>(resources_array->size());
         response->mids = reinterpret_cast<mfxMemId *>(resources_array->data());
 
         return MFX_ERR_NONE;
@@ -362,7 +364,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_get_hdl(mfxMemId mid, mfxHDL *handle) {
     mfxHDLPair *pPair = reinterpret_cast<mfxHDLPair *>(handle);
 
     pPair->first  = data->get_texture_ptr();
-    pPair->second = (mfxHDL)reinterpret_cast<DX11AllocationItem::subresource_id_t *>(data->get_subresource());
+    pPair->second = static_cast<mfxHDL>(reinterpret_cast<DX11AllocationItem::subresource_id_t *>(data->get_subresource()));
 
     GAPI_LOG_DEBUG(nullptr, "texture : " << pPair->first << ", sub id: " << pPair->second);
     return MFX_ERR_NONE;
