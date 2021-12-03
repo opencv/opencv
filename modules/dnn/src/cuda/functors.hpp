@@ -529,6 +529,84 @@ struct TanFunctor {
 };
 
 template <class T>
+struct CeluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
+    };
+
+    CUDA4DNN_DEVICE CeluFunctor() : CeluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE CeluFunctor(const Params& params) : alpha{params.alpha} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::min;
+        using csl::device::max;
+        using csl::device::expm1;
+        return max(T(0), value) + min(T(0), alpha * expm1(value / alpha));
+    }
+
+    T alpha;
+};
+
+template <class T>
+struct HardSigmoidFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(0.2), beta(0.5) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_, T beta_) : alpha(alpha_), beta(beta_) { }
+        T alpha, beta;
+    };
+
+    CUDA4DNN_DEVICE HardSigmoidFunctor() : HardSigmoidFunctor(Params{}) { }
+    CUDA4DNN_DEVICE HardSigmoidFunctor(const Params& params): alpha{params.alpha}, beta{params.beta} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::clamp;
+        return clamp(alpha * value + beta, T(0), T(1));
+    }
+
+    T alpha, beta;
+};
+
+template <class T>
+struct SeluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1.6732632423543772848170429916717),
+                                        gamma(1.0507009873554804934193349852946) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_, T gamma_) : alpha(alpha_), gamma(gamma_) { }
+        T alpha, gamma;
+    };
+
+    CUDA4DNN_DEVICE SeluFunctor() : SeluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE SeluFunctor(const Params& params): alpha{params.alpha}, gamma{params.gamma} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::expm1;
+        return gamma * (value > T(0) ? value : alpha * expm1(value));
+    }
+
+    T alpha, gamma;
+};
+
+template <class T>
+struct ThresholdedReluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
+    };
+
+    CUDA4DNN_DEVICE ThresholdedReluFunctor() : ThresholdedReluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ThresholdedReluFunctor(const Params& params) : alpha{params.alpha} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return (value > alpha) ? value : T(0);
+    }
+
+    T alpha;
+};
+
+template <class T>
 struct PowerFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() : exp(1), scale(1), shift(0) { }

@@ -272,3 +272,37 @@ __kernel void TanForward(const int n, __global T* in, __global T* out) {
     if(index < n)
         out[index] = tan(in[index]);
 }
+
+__kernel void CeluForward(const int n, __global T* in, __global T* out,
+                          const KERNEL_ARG_DTYPE alpha)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = max(0.f, in[index]) + min(0.f, alpha * expm1(in[index] / alpha));
+}
+
+__kernel void HardSigmoidForward(const int n, __global T* in, __global T* out,
+                                 const KERNEL_ARG_DTYPE alpha,
+                                 const KERNEL_ARG_DTYPE beta)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = max(0.f, min(1.f, alpha * in[index] + beta));
+}
+
+__kernel void SeluForward(const int n, __global T* in, __global T* out,
+                          const KERNEL_ARG_DTYPE alpha,
+                          const KERNEL_ARG_DTYPE gamma)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = gamma * (in[index] > 0.f ? in[index] : alpha * expm1(in[index]));
+}
+
+__kernel void ThresholdedReluForward(const int n, __global T* in, __global T* out,
+                                     const KERNEL_ARG_DTYPE alpha)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = (in[index] > alpha ? in[index] : 0.f);
+}

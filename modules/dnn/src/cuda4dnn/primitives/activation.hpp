@@ -491,6 +491,68 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     };
 
     template <class T>
+    class CeluOp final : public BaseOp<CeluOp, T> {
+    public:
+        CeluOp(csl::Stream stream_, T alpha_) : stream(std::move(stream_)), alpha{ alpha_ } { }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            kernels::celu<T>(stream, output, input, alpha);
+        }
+
+    private:
+        csl::Stream stream;
+        const T alpha;
+    };
+
+    template <class T>
+    class HardSigmoidOp final : public BaseOp<HardSigmoidOp, T> {
+    public:
+        HardSigmoidOp(csl::Stream stream_, T alpha_, T beta_)
+            : stream(std::move(stream_)), alpha{ alpha_ }, beta{ beta_ } { }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            kernels::hardsigmoid<T>(stream, output, input, alpha, beta);
+        }
+
+    private:
+        csl::Stream stream;
+        const T alpha, beta;
+    };
+
+    template <class T>
+    class SeluOp final : public BaseOp<SeluOp, T> {
+    public:
+        SeluOp(csl::Stream stream_, T alpha_, T gamma_)
+            : stream(std::move(stream_)), alpha{ alpha_ }, gamma{ gamma_ } { }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            kernels::selu<T>(stream, output, input, alpha, gamma);
+        }
+
+    private:
+        csl::Stream stream;
+        const T alpha, gamma;
+    };
+
+    template <class T>
+    class ThresholdedReluOp final : public BaseOp<ThresholdedReluOp, T> {
+    public:
+        ThresholdedReluOp(csl::Stream stream_, T alpha_) : stream(std::move(stream_)), alpha{ alpha_ } { }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            kernels::thresholdedrelu<T>(stream, output, input, alpha);
+        }
+
+    private:
+        csl::Stream stream;
+        const T alpha;
+    };
+
+    template <class T>
     class PowerOp final : public BaseOp<PowerOp, T> {
     public:
         PowerOp(csl::Stream stream_, T exp_, T scale_, T shift_)
