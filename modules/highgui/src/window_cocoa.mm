@@ -944,8 +944,6 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [[slider name] setStringValue:cvname];
     [[slider slider] setMaxValue:max];
     [[slider slider] setMinValue:0];
-    [[slider slider] setNumberOfTickMarks:(max+1)];
-    [[slider slider] setAllowsTickMarkValuesOnly:YES];
     if(value)
     {
         [[slider slider] setIntValue:*value];
