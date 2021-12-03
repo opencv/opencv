@@ -30,7 +30,7 @@
 #endif // HAVE_DIRECTX
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 
 namespace opencv_test

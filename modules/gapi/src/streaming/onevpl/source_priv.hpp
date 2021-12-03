@@ -17,14 +17,7 @@
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif // MFX_VERSION
-
-#include <vpl/mfx.h>
-
-#include <vpl/mfxvideo.h>
-
+#include "streaming/onevpl/onevpl_export.hpp"
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 
 namespace cv {

@@ -5,7 +5,7 @@
 // Copyright (C) 2021 Intel Corporation
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 

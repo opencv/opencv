@@ -284,10 +284,7 @@ if(HAVE_GAPI_ONEVPL)
   endif()
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
-  target_compile_options(${the_module} PUBLIC "/wd4201"
-                                              "/wd4302"
-                                              "/wd4311"
-                                              "/wd4312")
+
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()

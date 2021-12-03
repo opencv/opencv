@@ -13,12 +13,7 @@
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
-
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {

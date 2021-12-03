@@ -7,7 +7,7 @@
 #include <opencv2/gapi/util/compiler_hints.hpp>
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #include "streaming/onevpl/accelerators/utils/elastic_barrier.hpp"
 #include "streaming/onevpl/utils.hpp"
 

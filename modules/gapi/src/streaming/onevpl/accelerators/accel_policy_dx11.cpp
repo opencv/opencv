@@ -360,7 +360,8 @@ mfxStatus VPLDX11AccelerationPolicy::on_get_hdl(mfxMemId mid, mfxHDL *handle) {
     mfxHDLPair *pPair = reinterpret_cast<mfxHDLPair *>(handle);
 
     pPair->first  = data->get_texture_ptr();
-    pPair->second = static_cast<mfxHDL>(reinterpret_cast<DX11AllocationItem::subresource_id_t *>(data->get_subresource()));
+    pPair->second = static_cast<mfxHDL>(reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
+                                        static_cast<uint64_t>(data->get_subresource())));
 
     GAPI_LOG_DEBUG(nullptr, "texture : " << pPair->first << ", sub id: " << pPair->second);
     return MFX_ERR_NONE;

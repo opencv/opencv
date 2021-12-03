@@ -8,12 +8,7 @@
 #define GAPI_STREAMING_ONEVPL_ONEVPL_UTILS_HPP
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif // MFX_VERSION
-
-#include <vpl/mfx.h>
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #include <map>
 #include <memory>

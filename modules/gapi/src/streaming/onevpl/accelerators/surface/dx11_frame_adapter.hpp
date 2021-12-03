@@ -13,11 +13,7 @@
 
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11

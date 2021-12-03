@@ -10,12 +10,7 @@
 #include "logger.hpp"
 
 #ifdef HAVE_ONEVPL
-
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #ifdef HAVE_INF_ENGINE
 // For IE classes (ParamMap, etc)
@@ -174,8 +169,10 @@ cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
                                      {"DEV_OBJECT_HANDLE", handle.first},
                                      {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
                                      {"VA_PLANE",
-                                         reinterpret_cast<DX11AllocationItem::subresource_id_t>(
-                                                reinterpret_cast<DX11AllocationItem::subresource_id_t *>(handle.second))}};//,
+                                         static_cast<DX11AllocationItem::subresource_id_t>(
+                                            reinterpret_cast<uint64_t>(
+                                                reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
+                                                    handle.second)))}};//,
     const Surface::info_t& info = parent_surface_ptr->get_info();
     InferenceEngine::TensorDesc tdesc({InferenceEngine::Precision::U8,
                                        {1, 3, static_cast<size_t>(info.Height),

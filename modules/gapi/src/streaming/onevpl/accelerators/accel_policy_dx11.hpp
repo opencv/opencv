@@ -11,7 +11,6 @@
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 #include "streaming/onevpl/accelerators/dx11_alloc_resource.hpp"

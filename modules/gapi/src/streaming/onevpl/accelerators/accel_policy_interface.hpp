@@ -15,7 +15,7 @@
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {

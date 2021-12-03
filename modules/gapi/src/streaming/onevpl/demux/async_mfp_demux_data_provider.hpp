@@ -13,7 +13,7 @@
 #include <queue>
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #ifdef _WIN32
 #define NOMINMAX
