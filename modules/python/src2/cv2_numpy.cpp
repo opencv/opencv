@@ -1,3 +1,8 @@
+// must be defined before importing numpy headers
+// https://numpy.org/doc/1.17/reference/c-api.array.html#importing-the-api
+#define NO_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL opencv_ARRAY_API
+
 #include "cv2_numpy.hpp"
 #include "cv2_util.hpp"
 
