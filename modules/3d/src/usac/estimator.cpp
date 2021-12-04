@@ -656,7 +656,24 @@ public:
         if (cache_valid)
             return errors_cache;
 
-        for (int i = 0; i < pts_cnt; ++i) {
+        int i = 0;
+#ifdef CV_SIMD
+        int end = (pts_cnt / v_float32::nlanes) * v_float32::nlanes;
+
+        v_float32 v_a = vx_setall_f32(a);
+        v_float32 v_b = vx_setall_f32(b);
+        v_float32 v_c = vx_setall_f32(c);
+        v_float32 v_d = vx_setall_f32(d);
+
+        float* errors_cache_ptr = errors_cache.data();
+        for (; i < end; i += v_float32::nlanes)
+        {
+            v_float32 v_error = v_a * vx_load(pts_ptr_x + i) + v_b * vx_load(pts_ptr_y + i)
+                    + v_c * vx_load(pts_ptr_z + i) + v_d;
+            v_store(errors_cache_ptr + i, v_error * v_error);
+        }
+#endif
+        for (; i < pts_cnt; ++i) {
             float error = a * pts_ptr_x[i] + b * pts_ptr_y[i] + c * pts_ptr_z[i] + d;
             errors_cache[i] = error * error;
         }
@@ -726,7 +743,29 @@ public:
         if (cache_valid)
             return errors_cache;
 
-        for (int i = 0; i < pts_cnt; ++i)
+        int i = 0;
+#ifdef CV_SIMD
+        int end = (pts_cnt / v_float32::nlanes) * v_float32::nlanes;
+
+        v_float32 v_center_x = vx_setall_f32(center_x);
+        v_float32 v_center_y = vx_setall_f32(center_y);
+        v_float32 v_center_z = vx_setall_f32(center_z);
+        v_float32 v_radius = vx_setall_f32(radius);
+
+        float* errors_cache_ptr = errors_cache.data();
+        for (; i < end; i += v_float32::nlanes)
+        {
+            v_float32 v_diff_x = v_center_x - vx_load(pts_ptr_x + i);
+            v_float32 v_diff_y = v_center_y - vx_load(pts_ptr_y + i);
+            v_float32 v_diff_z = v_center_z - vx_load(pts_ptr_z + i);
+
+            v_float32 v_distance_from_center = v_sqrt(v_diff_x * v_diff_x +
+                    v_diff_y * v_diff_y + v_diff_z * v_diff_z);
+            v_float32 v_diff_dist = v_distance_from_center - v_radius;
+            v_store(errors_cache_ptr + i, v_diff_dist * v_diff_dist);
+        }
+#endif
+        for (; i < pts_cnt; ++i)
         {
             float diff_x = center_x - pts_ptr_x[i];
             float diff_y = center_y - pts_ptr_y[i];

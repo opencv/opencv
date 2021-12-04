@@ -106,7 +106,7 @@ public:
             {0,   0,   0,   15},
             {0,   0,   0,   20},
     };
-    vector<float> thrs = {0.1f, 0.2f, 0.3, 0.4f, 0.5f};
+    vector<float> thrs = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
     vector<int> pt_nums = {100, 200, 300, 400, 500};
     vector<vector<float>> limits = {
             {0,  1, 0,  1, 0,  1},
