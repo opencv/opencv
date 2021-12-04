@@ -281,4 +281,15 @@ TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
     ASSERT_FALSE(cap.isOpened());
 }
 
+TEST(AudioOpenCheck, bad_arg_invalid_audio_sample_per_second)
+{
+    std::string fileName = "audio/test_audio.mp4";
+    std::vector<int> params {   CAP_PROP_AUDIO_STREAM, 0,
+                                CAP_PROP_VIDEO_STREAM, -1,
+                                CAP_PROP_AUDIO_SAMPLES_PER_SECOND, (int)1e9   };
+    VideoCapture cap;
+    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
+    ASSERT_FALSE(cap.isOpened());
+}
+
 }} //namespace
