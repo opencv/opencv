@@ -3424,31 +3424,6 @@ cvWarpPerspective( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
         fillval );
 }
 
-CV_IMPL void
-cvRemap( const CvArr* srcarr, CvArr* dstarr,
-         const CvArr* _mapx, const CvArr* _mapy,
-         int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
-    cv::Mat mapx = cv::cvarrToMat(_mapx), mapy = cv::cvarrToMat(_mapy);
-    CV_Assert( src.type() == dst.type() && dst.size() == mapx.size() );
-    cv::remap( src, dst, mapx, mapy, flags & cv::INTER_MAX,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-    CV_Assert( dst0.data == dst.data );
-}
-
-
-CV_IMPL CvMat*
-cv2DRotationMatrix( CvPoint2D32f center, double angle,
-                    double scale, CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
 
 CV_IMPL CvMat*
 cvGetPerspectiveTransform( const CvPoint2D32f* src,

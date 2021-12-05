@@ -325,27 +325,4 @@ cvRange( CvArr* arr, double start, double end )
     return arr;
 }
 
-
-CV_IMPL void
-cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
-{
-    cv::Mat src = cv::cvarrToMat(_src);
-
-    if( _idx )
-    {
-        cv::Mat idx0 = cv::cvarrToMat(_idx), idx = idx0;
-        CV_Assert( src.size() == idx.size() && idx.type() == CV_32S && src.data != idx.data );
-        cv::sortIdx( src, idx, flags );
-        CV_Assert( idx0.data == idx.data );
-    }
-
-    if( _dst )
-    {
-        cv::Mat dst0 = cv::cvarrToMat(_dst), dst = dst0;
-        CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
-        cv::sort( src, dst, flags );
-        CV_Assert( dst0.data == dst.data );
-    }
-}
-
 #endif  // OPENCV_EXCLUDE_C_API

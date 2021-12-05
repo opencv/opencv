@@ -40,12 +40,6 @@
 //
 //M*/
 
-/* ////////////////////////////////////////////////////////////////////
-//
-//  Filling CvMat/IplImage instances with random numbers
-//
-// */
-
 #include "precomp.hpp"
 
 namespace cv
@@ -749,28 +743,6 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
 }
-
-
-#ifndef OPENCV_EXCLUDE_C_API
-
-CV_IMPL void
-cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar param2 )
-{
-    cv::Mat mat = cv::cvarrToMat(arr);
-    // !!! this will only work for current 64-bit MWC RNG !!!
-    cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
-    rng.fill(mat, disttype == CV_RAND_NORMAL ?
-        cv::RNG::NORMAL : cv::RNG::UNIFORM, cv::Scalar(param1), cv::Scalar(param2) );
-}
-
-CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
-{
-    cv::Mat dst = cv::cvarrToMat(arr);
-    cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
-    cv::randShuffle( dst, iter_factor, &rng );
-}
-
-#endif  // OPENCV_EXCLUDE_C_API
 
 
 // Mersenne Twister random number generator.
