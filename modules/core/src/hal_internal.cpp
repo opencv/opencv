@@ -110,9 +110,9 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)b, &m, info);
+                LAPACK_sgesv(&m, &n, (float*)a, &lda, piv, (float*)b, &m, info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, piv, (double*)b, &m, info);
+                LAPACK_dgesv(&m, &n, (double*)a, &lda, piv, (double*)b, &m, info);
         }
         else
         {
@@ -122,9 +122,9 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                sgesv_(&m, &n, (float*)a, &lda, piv, (float*)tmpB, &m, info);
+                LAPACK_sgesv(&m, &n, (float*)a, &lda, piv, (float*)tmpB, &m, info);
             else if(typeid(fptype) == typeid(double))
-                dgesv_(&m, &n, (double*)a, &lda, piv, (double*)tmpB, &m, info);
+                LAPACK_dgesv(&m, &n, (double*)a, &lda, piv, (double*)tmpB, &m, info);
 
             transpose(tmpB, m, b, ldb, n, m);
             delete[] tmpB;
@@ -133,9 +133,9 @@ lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int*
     else
     {
         if(typeid(fptype) == typeid(float))
-            sgetrf_(&m, &m, (float*)a, &lda, piv, info);
+            LAPACK_sgetrf(&m, &m, (float*)a, &lda, piv, info);
         else if(typeid(fptype) == typeid(double))
-            dgetrf_(&m, &m, (double*)a, &lda, piv, info);
+            LAPACK_dgetrf(&m, &m, (double*)a, &lda, piv, info);
     }
 
     if(*info == 0)
@@ -163,9 +163,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                sposv_(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
+                LAPACK_sposv(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                dposv_(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
+                LAPACK_dposv(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
         }
         else
         {
@@ -174,9 +174,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                sposv_(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
+                LAPACK_sposv(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                dposv_(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
+                LAPACK_dposv(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
 
             transpose(tmpB, m, b, ldb, n, m);
             delete[] tmpB;
@@ -185,9 +185,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
     else
     {
         if(typeid(fptype) == typeid(float))
-            spotrf_(L, &m, (float*)a, &lda, &lapackStatus);
+            LAPACK_spotrf(L, &m, (float*)a, &lda, &lapackStatus);
         else if(typeid(fptype) == typeid(double))
-            dpotrf_(L, &m, (double*)a, &lda, &lapackStatus);
+            LAPACK_dpotrf(L, &m, (double*)a, &lda, &lapackStatus);
     }
 
     if(lapackStatus == 0) *info = true;
@@ -227,17 +227,17 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     }
 
     if(typeid(fptype) == typeid(float))
-        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, info);
+        LAPACK_sgesdd(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
+        LAPACK_dgesdd(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
 
     lwork = (int)round(work1); //optimal buffer size
     fptype* buffer = new fptype[lwork + 1];
 
     if(typeid(fptype) == typeid(float))
-        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
+        LAPACK_sgesdd(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
+        LAPACK_dgesdd(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
 
     if(!(flags & CV_HAL_SVD_NO_UV))
         transpose_square_inplace(vt, ldv, n);
@@ -288,18 +288,18 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         if (k == 1 && b_step == sizeof(fptype))
         {
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
+                LAPACK_sgels(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
+                LAPACK_dgels(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
+                LAPACK_sgels(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
+                LAPACK_dgels(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
         }
         else
         {
@@ -309,18 +309,18 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             transpose(b, ldb, tmpB, m, m, k);
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
+                LAPACK_sgels(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
+                LAPACK_dgels(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
+                LAPACK_sgels(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
+                LAPACK_dgels(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
 
             transpose(tmpB, m, b, ldb, k, m);
         }
@@ -328,18 +328,18 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
     else
     {
         if (typeid(fptype) == typeid(float))
-            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
+            LAPACK_sgeqrf(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)&work1, &lwork, info);
         else if (typeid(fptype) == typeid(double))
-            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
+            LAPACK_dgeqrf(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)&work1, &lwork, info);
 
         lwork = cvRound(work1); //optimal buffer size
         std::vector<fptype> workBufMemHolder(lwork + 1);
         fptype* buffer = &workBufMemHolder.front();
 
         if (typeid(fptype) == typeid(float))
-            sgeqrf_(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
+            LAPACK_sgeqrf(&m, &n, (float*)tmpA, &ldtmpA, (float*)dst, (float*)buffer, &lwork, info);
         else if (typeid(fptype) == typeid(double))
-            dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
+            LAPACK_dgeqrf(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
     }
 
     if (m == n)
