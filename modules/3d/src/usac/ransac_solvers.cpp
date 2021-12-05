@@ -10,6 +10,8 @@ namespace cv { namespace usac {
 int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
+//! Adapter between SimpleUsacConfig and Model.
+void modelParamsToUsacConfig (Ptr<SimpleUsacConfig> &config, const Ptr<const Model> &params);
 
 class RansacOutputImpl : public RansacOutput {
 private:

@@ -11,10 +11,6 @@ enum VerificationMethod { NullVerifier, SprtVerifier };
 enum PolishingMethod { NonePolisher, LSQPolisher };
 enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
 
-//! Custom function that take the model coefficients and return whether the model is acceptable or not
-//using ModelConstraintFunction = std::function<bool(const Mat &/*model_coefficients*/)>;
-//using ModelConstraintFunctionPtr = bool (*)(const Mat &/*model_coefficients*/);
-using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
 
 class UsacConfig : public Algorithm {
 public:
@@ -504,6 +500,9 @@ public:
 
 class PointCloudModelEstimator : public Estimator {
 public:
+    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
+    //! Same as cv::SACSegmentation::ModelConstraintFunction in ptcloud.hpp.
+    using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
     /** @brief Methods for creating PointCloudModelEstimator.
      *
      * @param min_solver_ Minimum solver for estimating the model with minimum samples.

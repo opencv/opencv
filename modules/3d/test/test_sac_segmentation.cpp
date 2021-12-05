@@ -296,7 +296,7 @@ TEST_F(PlaneSacSegmentationTest, PlaneSegmentationWithConstraints)
         vector<float> constraint_normal = {models[i][0], models[i][1], models[i][2]};
 
         // Normal vector constraint function
-        ModelConstraintFunction constraint = [constraint_normal, radian_thr](
+        SACSegmentation::ModelConstraintFunction constraint = [constraint_normal, radian_thr](
                 const vector<double> &model) -> bool {
             vector<float> model_normal = {(float) model[0], (float) model[1], (float) model[2]};
             float dot12 = constraint_normal[0] * model_normal[0] +
@@ -314,7 +314,8 @@ TEST_F(PlaneSacSegmentationTest, PlaneSegmentationWithConstraints)
         };
 
         // Make a pointer to constraint function
-        Ptr<ModelConstraintFunction> constraint_ptr = makePtr<ModelConstraintFunction>(constraint);
+        Ptr<SACSegmentation::ModelConstraintFunction> constraint_ptr =
+                makePtr<SACSegmentation::ModelConstraintFunction>(constraint);
         sacSegmentation.setCustomModelConstraints(constraint_ptr);
 
         // Single plane segmentation with constraint
@@ -456,14 +457,14 @@ TEST_F(SphereSacSegmentationTest, SphereSegmentationWithConstraints)
         float constraint_radius = models[i][3] + 1;
 
         // Radius constraint function
-        ModelConstraintFunction constraint = [constraint_radius](
+        SACSegmentation::ModelConstraintFunction constraint = [constraint_radius](
                 const vector<double> &model) -> bool {
             auto model_radius = (float) model[3];
             return model_radius <= constraint_radius;
         };
 
         // Make a pointer to constraint function
-        Ptr<ModelConstraintFunction> constraint_ptr = makePtr<ModelConstraintFunction>(constraint);
+        Ptr<SACSegmentation::ModelConstraintFunction> constraint_ptr = makePtr<SACSegmentation::ModelConstraintFunction>(constraint);
         sacSegmentation.setCustomModelConstraints(constraint_ptr);
 
         // Single sphere segmentation with constraint

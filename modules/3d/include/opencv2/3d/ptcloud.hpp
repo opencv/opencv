@@ -11,10 +11,6 @@ namespace cv {
 //! @addtogroup _3d
 //! @{
 
-//! Custom function that take the model coefficients and return whether the model is acceptable or not
-//using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
-using ModelConstraintFunction =
-std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
 
 //! type of the robust estimation algorithm
 enum SacMethod
@@ -91,6 +87,11 @@ Supported models: enum SacModelType in ptcloud.hpp.
 class CV_EXPORTS SACSegmentation : public Algorithm
 {
 public:
+    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
+    //! Same as cv::usac::PointCloudModelEstimator::ModelConstraintFunction in usac.hpp.
+    //using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
+    using ModelConstraintFunction =
+    std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
 
     //! No-argument constructor using default configuration
     SACSegmentation()
