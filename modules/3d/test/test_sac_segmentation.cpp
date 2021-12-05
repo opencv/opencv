@@ -204,7 +204,7 @@ TEST_F(PlaneSacSegmentationTest, SinglePlaneSegmentation)
 
         ASSERT_EQ(1, num)
         << "Model number should be equal to 1.";
-        ASSERT_EQ(pt_cloud.rows, label.size())
+        ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
         << "Label size should be equal to point number.";
 
         Mat ans_model(1, 4, CV_32F, models[i].data()), segmented_model(segmented_plane_models);
@@ -248,7 +248,7 @@ TEST_F(PlaneSacSegmentationTest, MultiplePlaneSegmentation)
 
     ASSERT_EQ(models_num, num)
     << "Model number should be equal to " << models_num << ".";
-    ASSERT_EQ(pt_cloud.rows, label.size())
+    ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
     << "Label size should be equal to point number.";
 
     int checked_num = 0;
@@ -323,7 +323,7 @@ TEST_F(PlaneSacSegmentationTest, PlaneSegmentationWithConstraints)
 
         ASSERT_EQ(1, num)
         << "Model number should be equal to 1.";
-        ASSERT_EQ(pt_cloud.rows, label.size())
+        ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
         << "Label size should be equal to point number.";
 
         Mat ans_model(1, 4, CV_32F, models[i].data()), segmented_model(segmented_plane_models);
@@ -367,7 +367,7 @@ TEST_F(SphereSacSegmentationTest, SingleSphereSegmentation)
 
         ASSERT_EQ(1, num)
         << "Model number should be equal to 1.";
-        ASSERT_EQ(pt_cloud.rows, label.size())
+        ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
         << "Label size should be equal to point number.";
 
         Mat ans_model(1, 4, CV_32F, models[i].data()), segmented_model(segmented_sphere_models);
@@ -411,7 +411,7 @@ TEST_F(SphereSacSegmentationTest, MultipleSphereSegmentation)
 
     ASSERT_EQ(models_num, num)
     << "Model number should be equal to " << models_num << ".";
-    ASSERT_EQ(pt_cloud.rows, label.size())
+    ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
     << "Label size should be equal to point number.";
 
     int checked_num = 0;
@@ -472,7 +472,7 @@ TEST_F(SphereSacSegmentationTest, SphereSegmentationWithConstraints)
 
         ASSERT_EQ(1, num)
         << "Model number should be equal to 1.";
-        ASSERT_EQ(pt_cloud.rows, label.size())
+        ASSERT_EQ(pt_cloud.rows, (int)(label.size()))
         << "Label size should be equal to point number.";
 
         Mat ans_model(1, 4, CV_32F, models[i].data()), segmented_model(segmented_sphere_models);
