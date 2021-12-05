@@ -44,6 +44,8 @@
 #ifndef __PYCOMPAT_HPP__
 #define __PYCOMPAT_HPP__
 
+#include <string>
+
 #if PY_MAJOR_VERSION >= 3
 
 // Python3 treats all ints as longs, PyInt_X functions have been removed.
