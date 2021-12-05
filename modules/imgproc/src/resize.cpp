@@ -3320,7 +3320,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         char buf[2][32];
 
         // integer path is slower because of CPU part, so it's disabled
-        if (depth == CV_8U && ((void)0, 0))
+        // except in case of 16U depth, where other path gives invalid results
+        if (depth == CV_16U)
         {
             AutoBuffer<uchar> _buffer((dsize.width + dsize.height)*(sizeof(int) + sizeof(short)*2));
             int* xofs = (int*)_buffer.data(), * yofs = xofs + dsize.width;
