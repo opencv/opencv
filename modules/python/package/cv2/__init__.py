@@ -16,6 +16,30 @@ except ImportError:
     print('    pip install numpy')
     raise
 
+# opencv-python package extra environment
+ci_and_not_headless = False
+
+try:
+    # data is generating only for opencv-python package
+    from . import data
+    from .version import ci_build, headless
+
+    ci_and_not_headless = ci_build and not headless
+except:
+    pass
+
+# the Qt plugin is included currently only in the pre-built wheels
+if sys.platform.startswith("linux") and ci_and_not_headless:
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "qt", "plugins"
+    )
+
+# Qt will throw warning on Linux if fonts are not found
+if sys.platform.startswith("linux") and ci_and_not_headless:
+    os.environ["QT_QPA_FONTDIR"] = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "qt", "fonts"
+    )
+
 # TODO
 # is_x64 = sys.maxsize > 2**32
 
@@ -179,3 +203,13 @@ def bootstrap():
 
 
 bootstrap()
+
+# hotfix for pylint issue (https://github.com/opencv/opencv-python/issues/570)
+from . import getStructuringElement, MORPH_ELLIPSE
+
+# extra imports for a proper autocomplete work in IDE
+from . import _registerMatType
+from . import gapi
+from . import mat_wrapper
+from . import misc
+from . import utils
