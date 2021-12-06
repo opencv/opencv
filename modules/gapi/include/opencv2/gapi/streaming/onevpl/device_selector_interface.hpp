@@ -19,7 +19,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-enum class AccelType : uint8_t {
+enum class AccelType: uint8_t {
     HOST,
     DX11,
 
