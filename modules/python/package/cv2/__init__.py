@@ -184,7 +184,6 @@ bootstrap()
 from . import getStructuringElement, MORPH_ELLIPSE
 
 # extra imports for a proper autocomplete work in IDE
-from . import _registerMatType
 from . import gapi
 from . import mat_wrapper
 from . import misc
