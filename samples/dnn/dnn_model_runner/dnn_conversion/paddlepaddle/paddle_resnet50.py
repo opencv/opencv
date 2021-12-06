@@ -16,15 +16,15 @@ def preprocess(image_path):
                 variable which shape is (1, 3, 224, 224)
     '''
     transforms = T.Compose([
-            T.Resize((256, 256)),
-            T.CenterCrop(224),
-            T.Normalize(mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225])],
-            to_rgb=True)
+        T.Resize((256, 256)),
+        T.CenterCrop(224),
+        T.Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])],
+        to_rgb=True)
     return np.expand_dims(transforms(image_path), axis=0)
 
 
-def export_onnx_mobilenetv2(save_path):
+def export_onnx_resnet50(save_path):
     ''' export PaddlePaddle model to ONNX format
 
     Args:
@@ -35,7 +35,7 @@ def export_onnx_mobilenetv2(save_path):
     '''
     model = hub.Module(name="resnet50_vd_imagenet_ssld")
     input_spec = paddle.static.InputSpec(
-            [1, 3, 224, 224], "float32", "image")
+        [1, 3, 224, 224], "float32", "image")
     paddle.onnx.export(model, save_path,
                        input_spec=[input_spec],
                        opset_version=10)
@@ -45,9 +45,9 @@ if __name__ == '__main__':
     save_path = './resnet50'
     image_file = './data/cat.jpg'
     labels = open('./data/labels.txt').read().strip().split('\n')
-    model = export_onnx_mobilenetv2(save_path)
+    model = export_onnx_resnet50(save_path)
 
-    # load mobilenetv2 use cv.dnn
+    # load resnet50 use cv.dnn
     net = cv.dnn.readNetFromONNX(save_path + '.onnx')
     # read and preprocess image file
     im = preprocess(image_file)

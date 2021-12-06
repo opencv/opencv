@@ -165,7 +165,7 @@ Program Context::getProg(const ProgramSource& prog, const String& buildopt, Stri
 void Context::unloadProg(Program& prog) { }
 
 /* static */
-Context& Context::getDefault(bool initialize)
+Context& Context::getDefault()
 {
     static Context dummy;
     return dummy;

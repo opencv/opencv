@@ -499,6 +499,39 @@ inline int hal_ni_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * d
 inline int hal_ni_cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief Extended version of hal_cvtTwoPlaneYUVtoBGR.
+   @param y_data,y_step source image data and step (Y-plane)
+   @param uv_data,uv_step source image data and step (UV-plane)
+   @param dst_data,dst_step destination image data and step
+   @param dst_width,dst_height destination image size
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index in the interleaved U/V plane (0 or 1)
+   Convert from YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtTwoPlaneYUVtoBGREx(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
+                                      uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                                      int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief hal_cvtBGRtoTwoPlaneYUV
+   @param src_data,src_step source image data and step
+   @param y_data,y_step destination image data and step (Y-plane)
+   @param uv_data,uv_step destination image data and step (UV-plane)
+   @param width,height image size
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param uIdx U-channel plane index (0 or 1)
+   Convert from BGR, RGB, BGRA or RGBA to YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane).
+   Only for CV_8U.
+ */
+inline int hal_ni_cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+                                      uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step,
+                                      int width, int height,
+                                      int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
    @brief hal_cvtThreePlaneYUVtoBGR
    @param src_data,src_step source image data and step
    @param dst_data,dst_step destination image data and step
@@ -576,6 +609,8 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtBGRtoLab hal_ni_cvtBGRtoLab
 #define cv_hal_cvtLabtoBGR hal_ni_cvtLabtoBGR
 #define cv_hal_cvtTwoPlaneYUVtoBGR hal_ni_cvtTwoPlaneYUVtoBGR
+#define cv_hal_cvtTwoPlaneYUVtoBGREx hal_ni_cvtTwoPlaneYUVtoBGREx
+#define cv_hal_cvtBGRtoTwoPlaneYUV hal_ni_cvtBGRtoTwoPlaneYUV
 #define cv_hal_cvtThreePlaneYUVtoBGR hal_ni_cvtThreePlaneYUVtoBGR
 #define cv_hal_cvtBGRtoThreePlaneYUV hal_ni_cvtBGRtoThreePlaneYUV
 #define cv_hal_cvtOnePlaneYUVtoBGR hal_ni_cvtOnePlaneYUVtoBGR

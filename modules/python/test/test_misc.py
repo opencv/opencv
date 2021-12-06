@@ -4,6 +4,12 @@ from __future__ import print_function
 import ctypes
 from functools import partial
 from collections import namedtuple
+import sys
+
+if sys.version_info[0] < 3:
+    from collections import Sequence
+else:
+    from collections.abc import Sequence
 
 import numpy as np
 import cv2 as cv
@@ -463,6 +469,151 @@ class Arguments(NewOpenCVTests):
                                 (1.5, 13.5), [3, 6.7], np.array([6.3, 2.1]), '14, 4'):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpRange(not_convertible)
+
+    def test_reserved_keywords_are_transformed(self):
+        default_lambda_value = 2
+        default_from_value = 3
+        format_str = "arg={}, lambda={}, from={}"
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(20), format_str.format(20, default_lambda_value, default_from_value)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(10, lambda_=10), format_str.format(10, 10, default_from_value)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(10, from_=10), format_str.format(10, default_lambda_value, 10)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(20, lambda_=-4, from_=12), format_str.format(20, -4, 12)
+        )
+
+    def test_parse_vector_int_convertible(self):
+        np.random.seed(123098765)
+        try_to_convert = partial(self._try_to_convert, cv.utils.dumpVectorOfInt)
+        arr = np.random.randint(-20, 20, 40).astype(np.int32).reshape(10, 2, 2)
+        int_min, int_max = get_limits(ctypes.c_int)
+        for convertible in ((int_min, 1, 2, 3, int_max), [40, 50], tuple(),
+                            np.array([int_min, -10, 24, int_max], dtype=np.int32),
+                            np.array([10, 230, 12], dtype=np.uint8), arr[:, 0, 1],):
+            expected = "[" + ", ".join(map(str, convertible)) + "]"
+            actual = try_to_convert(convertible)
+            self.assertEqual(expected, actual,
+                             msg=get_conversion_error_msg(convertible, expected, actual))
+
+    def test_parse_vector_int_not_convertible(self):
+        np.random.seed(123098765)
+        arr = np.random.randint(-20, 20, 40).astype(np.float).reshape(10, 2, 2)
+        int_min, int_max = get_limits(ctypes.c_int)
+        test_dict = {1: 2, 3: 10, 10: 20}
+        for not_convertible in ((int_min, 1, 2.5, 3, int_max), [True, 50], 'test', test_dict,
+                                reversed([1, 2, 3]),
+                                np.array([int_min, -10, 24, [1, 2]], dtype=np.object),
+                                np.array([[1, 2], [3, 4]]), arr[:, 0, 1],):
+            with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
+                _ = cv.utils.dumpVectorOfInt(not_convertible)
+
+    def test_parse_vector_double_convertible(self):
+        np.random.seed(1230965)
+        try_to_convert = partial(self._try_to_convert, cv.utils.dumpVectorOfDouble)
+        arr = np.random.randint(-20, 20, 40).astype(np.int32).reshape(10, 2, 2)
+        for convertible in ((1, 2.12, 3.5), [40, 50], tuple(),
+                            np.array([-10, 24], dtype=np.int32),
+                            np.array([-12.5, 1.4], dtype=np.double),
+                            np.array([10, 230, 12], dtype=np.float), arr[:, 0, 1], ):
+            expected = "[" + ", ".join(map(lambda v: "{:.2f}".format(v), convertible)) + "]"
+            actual = try_to_convert(convertible)
+            self.assertEqual(expected, actual,
+                             msg=get_conversion_error_msg(convertible, expected, actual))
+
+    def test_parse_vector_double_not_convertible(self):
+        test_dict = {1: 2, 3: 10, 10: 20}
+        for not_convertible in (('t', 'e', 's', 't'), [True, 50.55], 'test', test_dict,
+                                np.array([-10.1, 24.5, [1, 2]], dtype=np.object),
+                                np.array([[1, 2], [3, 4]]),):
+            with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
+                _ = cv.utils.dumpVectorOfDouble(not_convertible)
+
+    def test_parse_vector_rect_convertible(self):
+        np.random.seed(1238765)
+        try_to_convert = partial(self._try_to_convert, cv.utils.dumpVectorOfRect)
+        arr_of_rect_int32 = np.random.randint(5, 20, 4 * 3).astype(np.int32).reshape(3, 4)
+        arr_of_rect_cast = np.random.randint(10, 40, 4 * 5).astype(np.uint8).reshape(5, 4)
+        for convertible in (((1, 2, 3, 4), (10, -20, 30, 10)), arr_of_rect_int32, arr_of_rect_cast,
+                            arr_of_rect_int32.astype(np.int8), [[5, 3, 1, 4]],
+                            ((np.int8(4), np.uint8(10), np.int(32), np.int16(55)),)):
+            expected = "[" + ", ".join(map(lambda v: "[x={}, y={}, w={}, h={}]".format(*v), convertible)) + "]"
+            actual = try_to_convert(convertible)
+            self.assertEqual(expected, actual,
+                             msg=get_conversion_error_msg(convertible, expected, actual))
+
+    def test_parse_vector_rect_not_convertible(self):
+        np.random.seed(1238765)
+        arr = np.random.randint(5, 20, 4 * 3).astype(np.float).reshape(3, 4)
+        for not_convertible in (((1, 2, 3, 4), (10.5, -20, 30.1, 10)), arr,
+                                [[5, 3, 1, 4], []],
+                                ((np.float(4), np.uint8(10), np.int(32), np.int16(55)),)):
+            with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
+                _ = cv.utils.dumpVectorOfRect(not_convertible)
+
+    def test_vector_general_return(self):
+        expected_number_of_mats = 5
+        expected_shape = (10, 10, 3)
+        expected_type = np.uint8
+        mats = cv.utils.generateVectorOfMat(5, 10, 10, cv.CV_8UC3)
+        self.assertTrue(isinstance(mats, tuple),
+                        "Vector of Mats objects should be returned as tuple. Got: {}".format(type(mats)))
+        self.assertEqual(len(mats), expected_number_of_mats, "Returned array has wrong length")
+        for mat in mats:
+            self.assertEqual(mat.shape, expected_shape, "Returned Mat has wrong shape")
+            self.assertEqual(mat.dtype, expected_type, "Returned Mat has wrong elements type")
+        empty_mats = cv.utils.generateVectorOfMat(0, 10, 10, cv.CV_32FC1)
+        self.assertTrue(isinstance(empty_mats, tuple),
+                        "Empty vector should be returned as empty tuple. Got: {}".format(type(mats)))
+        self.assertEqual(len(empty_mats), 0, "Vector of size 0 should be returned as tuple of length 0")
+
+    def test_vector_fast_return(self):
+        expected_shape = (5, 4)
+        rects = cv.utils.generateVectorOfRect(expected_shape[0])
+        self.assertTrue(isinstance(rects, np.ndarray),
+                        "Vector of rectangles should be returned as numpy array. Got: {}".format(type(rects)))
+        self.assertEqual(rects.dtype, np.int32, "Vector of rectangles has wrong elements type")
+        self.assertEqual(rects.shape, expected_shape, "Vector of rectangles has wrong shape")
+        empty_rects = cv.utils.generateVectorOfRect(0)
+        self.assertTrue(isinstance(empty_rects, tuple),
+                        "Empty vector should be returned as empty tuple. Got: {}".format(type(empty_rects)))
+        self.assertEqual(len(empty_rects), 0, "Vector of size 0 should be returned as tuple of length 0")
+
+        expected_shape = (10,)
+        ints = cv.utils.generateVectorOfInt(expected_shape[0])
+        self.assertTrue(isinstance(ints, np.ndarray),
+                        "Vector of integers should be returned as numpy array. Got: {}".format(type(ints)))
+        self.assertEqual(ints.dtype, np.int32, "Vector of integers has wrong elements type")
+        self.assertEqual(ints.shape, expected_shape, "Vector of integers has wrong shape.")
+
+
+class CanUsePurePythonModuleFunction(NewOpenCVTests):
+    def test_can_get_ocv_version(self):
+        import sys
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        self.assertEqual(cv.misc.get_ocv_version(), cv.__version__,
+                         "Can't get package version using Python misc module")
+
+    def test_native_method_can_be_patched(self):
+        import sys
+
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        res = cv.utils.testOverwriteNativeMethod(10)
+        self.assertTrue(isinstance(res, Sequence),
+                        msg="Overwritten method should return sequence. "
+                            "Got: {} of type {}".format(res, type(res)))
+        self.assertSequenceEqual(res, (11, 10),
+                                 msg="Failed to overwrite native method")
+        res = cv.utils._native.testOverwriteNativeMethod(123)
+        self.assertEqual(res, 123, msg="Failed to call native method implementation")
 
 
 class SamplesFindFile(NewOpenCVTests):

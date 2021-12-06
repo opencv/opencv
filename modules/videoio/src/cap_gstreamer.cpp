@@ -221,10 +221,10 @@ private:
         start_loop = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_START_MAINLOOP", false);
 
         GSafePtr<GError> err;
-        gst_init_check(NULL, NULL, err.getRef());
-        if (err)
+        gboolean gst_init_res = gst_init_check(NULL, NULL, err.getRef());
+        if (!gst_init_res)
         {
-            CV_WARN("Can't initialize GStreamer: " << err->message);
+            CV_WARN("Can't initialize GStreamer: " << (err ? err->message : "<unknown reason>"));
             isFailed = true;
             return;
         }
@@ -475,8 +475,9 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
     //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
     //     video/x-bayer             -> 8bit, 1 channel
     //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
+    //     video/x-raw, format=GRAY16_LE (BE) -> 16 bit, 1 channel
+    //     video/x-raw, format={BGRA, RGBA, BGRx, RGBx} -> 8bit, 4 channels
     // bayer data is never decoded, the user is responsible for that
-    // everything is 8 bit, so we just test the caps for bit depth
     Size sz = Size(frame_width, frame_height);
     guint n_planes = GST_VIDEO_INFO_N_PLANES(&info);
     if (name == "video/x-raw")
@@ -504,6 +505,24 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
             size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
             CV_CheckGE(step, (size_t)frame_width, "");
             Mat src(sz, CV_8UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "GRAY16_LE" || format == "GRAY16_BE")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_16UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "BGRA" || format == "RGBA" || format == "BGRX" || format == "RGBX")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_8UC4, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
             src.copyTo(dst);
             return true;
         }
@@ -841,7 +860,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
             }
             else
             {
-                CV_WARN("Error opening file: " << filename << " (" << err->message << ")");
+                CV_WARN("Error opening file: " << filename << " (" << (err ? err->message : "<unknown reason>") << ")");
                 return false;
             }
         }
@@ -849,9 +868,9 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         {
             GSafePtr<GError> err;
             uridecodebin.attach(gst_parse_launch(filename, err.getRef()));
-            if (err)
+            if (!uridecodebin)
             {
-                CV_WARN("Error opening bin: " << err->message);
+                CV_WARN("Error opening bin: " << (err ? err->message : "<unknown reason>"));
                 return false;
             }
             manualpipeline = true;
@@ -1008,7 +1027,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         sink_pad.attach(gst_element_get_static_pad(sink, "sink"));
         peer_caps.attach(gst_pad_peer_query_caps(sink_pad, NULL));
         if (!gst_caps_can_intersect(caps, peer_caps)) {
-            caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}"));
+            caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420,BGRA,RGBA,BGRx,RGBx,GRAY16_LE,GRAY16_BE}"));
             CV_Assert(caps);
         }
     }
@@ -2054,7 +2073,7 @@ void handleMessage(GstElement * pipeline)
                 gst_message_parse_error(msg, err.getRef(), debug.getRef());
                 GSafePtr<gchar> name; name.attach(gst_element_get_name(GST_MESSAGE_SRC (msg)));
                 CV_WARN("Embedded video playback halted; module " << name.get() <<
-                        " reported: " << err->message);
+                        " reported: " << (err ? err->message : "<unknown reason>"));
                 CV_LOG_DEBUG(NULL, "GStreamer debug: " << debug.get());
 
                 gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);

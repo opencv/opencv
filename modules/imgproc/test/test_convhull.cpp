@@ -43,40 +43,6 @@
 
 namespace opencv_test { namespace {
 
-/*static int
-cvTsPointConvexPolygon( CvPoint2D32f pt, CvPoint2D32f* v, int n )
-{
-    CvPoint2D32f v0 = v[n-1];
-    int i, sign = 0;
-
-    for( i = 0; i < n; i++ )
-    {
-        CvPoint2D32f v1 = v[i];
-        float dx = pt.x - v0.x, dy = pt.y - v0.y;
-        float dx1 = v1.x - v0.x, dy1 = v1.y - v0.y;
-        double t = (double)dx*dy1 - (double)dx1*dy;
-        if( fabs(t) > DBL_EPSILON )
-        {
-            if( t*sign < 0 )
-                break;
-            if( sign == 0 )
-                sign = t < 0 ? -1 : 1;
-        }
-        else if( fabs(dx) + fabs(dy) < DBL_EPSILON )
-            return i+1;
-        v0 = v1;
-    }
-
-    return i < n ? -1 : 0;
-}*/
-
-CV_INLINE double
-cvTsDist( CvPoint2D32f a, CvPoint2D32f b )
-{
-    double dx = a.x - b.x;
-    double dy = a.y - b.y;
-    return sqrt(dx*dx + dy*dy);
-}
 CV_INLINE double
 cvTsDist( const Point2f& a, const Point2f& b )
 {
@@ -86,7 +52,7 @@ cvTsDist( const Point2f& a, const Point2f& b )
 }
 
 CV_INLINE double
-cvTsPtLineDist( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b )
+cvTsPtLineDist( const Point2f& pt, const Point2f& a, const Point2f& b )
 {
     double d0 = cvTsDist( pt, a ), d1;
     double dd = cvTsDist( a, b );
@@ -99,7 +65,7 @@ cvTsPtLineDist( CvPoint2D32f pt, CvPoint2D32f a, CvPoint2D32f b )
 }
 
 static double
-cvTsPointPolygonTest( CvPoint2D32f pt, const CvPoint2D32f* vv, int n, int* _idx=0, int* _on_edge=0 )
+cvTsPointPolygonTest( Point2f pt, const Point2f* vv, int n, int* _idx=0, int* _on_edge=0 )
 {
     int i;
     Point2f v = vv[n-1], v0;
@@ -176,9 +142,9 @@ cvTsMiddlePoint(const cv::Point2f &a, const cv::Point2f &b)
 static bool
 cvTsIsPointOnLineSegment(const cv::Point2f &x, const cv::Point2f &a, const cv::Point2f &b)
 {
-    double d1 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(a.x, a.y));
-    double d2 = cvTsDist(cvPoint2D32f(x.x, x.y), cvPoint2D32f(b.x, b.y));
-    double d3 = cvTsDist(cvPoint2D32f(a.x, a.y), cvPoint2D32f(b.x, b.y));
+    double d1 = cvTsDist(x, a);
+    double d2 = cvTsDist(x, b);
+    double d3 = cvTsDist(a, b);
 
     return (abs(d1 + d2 - d3) <= (1E-5));
 }
@@ -549,7 +515,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     CvMat* hull = 0;
     CvMat* mask = 0;
     int i, point_count, hull_count;
-    CvPoint2D32f *p, *h;
+    Point2f *p, *h;
     CvSeq header, hheader, *ptseq, *hseq;
     CvSeqBlock block, hblock;
 
@@ -560,7 +526,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
             sizeof(CvSeq), CV_ELEM_SIZE(points2->type), points2->data.ptr,
             points2->rows + points2->cols - 1, &header, &block );
     point_count = ptseq->total;
-    p = (CvPoint2D32f*)(points2->data.ptr);
+    p = (Point2f*)(points2->data.ptr);
 
     if( hull1 )
         hseq = hull1;
@@ -574,7 +540,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     cvZero( mask );
     Mat _mask = cvarrToMat(mask);
 
-    h = (CvPoint2D32f*)(hull->data.ptr);
+    h = (Point2f*)(hull->data.ptr);
 
     // extract convex hull points
     if( return_points )
@@ -615,11 +581,11 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
     // check that the convex hull is a convex polygon
     if( hull_count >= 3 )
     {
-        CvPoint2D32f pt0 = h[hull_count-1];
+        Point2f pt0 = h[hull_count-1];
         for( i = 0; i < hull_count; i++ )
         {
             int j = i+1;
-            CvPoint2D32f pt1 = h[i], pt2 = h[j < hull_count ? j : 0];
+            Point2f pt1 = h[i], pt2 = h[j < hull_count ? j : 0];
             float dx0 = pt1.x - pt0.x, dy0 = pt1.y - pt0.y;
             float dx1 = pt2.x - pt1.x, dy1 = pt2.y - pt1.y;
             double t = (double)dx0*dy1 - (double)dx1*dy0;
@@ -681,8 +647,7 @@ protected:
     void run_func(void);
     int validate_test_results( int test_case_idx );
 
-    CvBox2D box;
-    CvPoint2D32f box_pt[4];
+    Point2f box_pt[4];
 };
 
 
@@ -693,17 +658,8 @@ CV_MinAreaRectTest::CV_MinAreaRectTest()
 
 void CV_MinAreaRectTest::run_func()
 {
-    if(!test_cpp)
-    {
-        box = cvMinAreaRect2( points, storage );
-        cvBoxPoints( box, box_pt );
-    }
-    else
-    {
-        cv::RotatedRect r = cv::minAreaRect(cv::cvarrToMat(points));
-        box = cvBox2D(r);
-        r.points((cv::Point2f*)box_pt);
-    }
+    cv::RotatedRect r = cv::minAreaRect(cv::cvarrToMat(points));
+    r.points(box_pt);
 }
 
 
@@ -734,25 +690,6 @@ int CV_MinAreaRectTest::validate_test_results( int test_case_idx )
             goto _exit_;
         }
     }
-
-#if 0
-    {
-    int n = 4;
-    double a = 8, c = 8, b = 100, d = 150;
-    CvPoint bp[4], *bpp = bp;
-    cvNamedWindow( "test", 1 );
-    IplImage* img = cvCreateImage( cvSize(500,500), 8, 3 );
-    cvZero(img);
-    for( i = 0; i < point_count; i++ )
-        cvCircle(img,cvPoint(cvRound(p[i].x*a+b),cvRound(p[i].y*c+d)), 3, CV_RGB(0,255,0), -1 );
-    for( i = 0; i < n; i++ )
-        bp[i] = cvPoint(cvRound(box_pt[i].x*a+b),cvRound(box_pt[i].y*c+d));
-    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, CV_AA, 0 );
-    cvShowImage( "test", img );
-    cvWaitKey();
-    cvReleaseImage(&img);
-    }
-#endif
 
     // check that the box includes all the points
     // and there is at least one point at (or very close to) every box side
@@ -844,25 +781,6 @@ int CV_MinTriangleTest::validate_test_results( int test_case_idx )
     bool errorEnclosed = false, errorMiddlePoints = false, errorFlush = true;
     double eps = 1e-4;
     int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-
-#if 0
-    {
-    int n = 3;
-    double a = 8, c = 8, b = 100, d = 150;
-    CvPoint bp[4], *bpp = bp;
-    cvNamedWindow( "test", 1 );
-    IplImage* img = cvCreateImage( cvSize(500,500), 8, 3 );
-    cvZero(img);
-    for( i = 0; i < point_count; i++ )
-        cvCircle(img,cvPoint(cvRound(p[i].x*a+b),cvRound(p[i].y*c+d)), 3, CV_RGB(0,255,0), -1 );
-    for( i = 0; i < n; i++ )
-        bp[i] = cvPoint(cvRound(triangle[i].x*a+b),cvRound(triangle[i].y*c+d));
-    cvPolyLine( img, &bpp, &n, 1, 1, CV_RGB(255,255,0), 1, CV_AA, 0 );
-    cvShowImage( "test", img );
-    cvWaitKey();
-    cvReleaseImage(&img);
-    }
-#endif
 
     int polygonVertices = (int) convexPolygon.size();
 
@@ -957,18 +875,7 @@ CV_MinCircleTest::CV_MinCircleTest()
 
 void CV_MinCircleTest::run_func()
 {
-    if(!test_cpp)
-    {
-        CvPoint2D32f c_center = cvPoint2D32f(center);
-        cvMinEnclosingCircle( points, &c_center, &radius );
-        center = c_center;
-    }
-    else
-    {
-        cv::Point2f tmpcenter;
-        cv::minEnclosingCircle(cv::cvarrToMat(points), tmpcenter, radius);
-        center = tmpcenter;
-    }
+    cv::minEnclosingCircle(cv::cvarrToMat(points), center, radius);
 }
 
 
@@ -979,22 +886,6 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     int i, j = 0, point_count = points2->rows + points2->cols - 1;
     Point2f *p = (Point2f*)(points2->data.ptr);
     Point2f v[3];
-
-#if 0
-    {
-    double a = 2, b = 200, d = 400;
-    cvNamedWindow( "test", 1 );
-    IplImage* img = cvCreateImage( cvSize(500,500), 8, 3 );
-    cvZero(img);
-    for( i = 0; i < point_count; i++ )
-        cvCircle(img,cvPoint(cvRound(p[i].x*a+b),cvRound(p[i].y*a+d)), 3, CV_RGB(0,255,0), -1 );
-    cvCircle( img, cvPoint(cvRound(center.x*a+b),cvRound(center.y*a+d)),
-              cvRound(radius*a), CV_RGB(255,255,0), 1 );
-    cvShowImage( "test", img );
-    cvWaitKey();
-    cvReleaseImage(&img);
-    }
-#endif
 
     // check that the circle contains all the points inside and
     // remember at most 3 points that are close to the boundary
@@ -1381,10 +1272,7 @@ int CV_FitEllipseTest::prepare_test_case( int test_case_idx )
 
 void CV_FitEllipseTest::run_func()
 {
-    if(!test_cpp)
-        box = cvFitEllipse2( points );
-    else
-        box = cv::fitEllipse(cv::cvarrToMat(points));
+    box = cv::fitEllipse(cv::cvarrToMat(points));
 }
 
 int CV_FitEllipseTest::validate_test_results( int test_case_idx )
@@ -1436,32 +1324,6 @@ int CV_FitEllipseTest::validate_test_results( int test_case_idx )
     }
 
 _exit_:
-
-#if 0
-    if( code < 0 )
-    {
-    cvNamedWindow( "test", 0 );
-    IplImage* img = cvCreateImage( cvSize(cvRound(low_high_range*4),
-        cvRound(low_high_range*4)), 8, 3 );
-    cvZero( img );
-
-    box.center.x += (float)low_high_range*2;
-    box.center.y += (float)low_high_range*2;
-    cvEllipseBox( img, box, CV_RGB(255,0,0), 3, 8 );
-
-    for( int i = 0; i < points2->rows + points2->cols - 1; i++ )
-    {
-        CvPoint pt;
-        pt.x = cvRound(points2->data.fl[i*2] + low_high_range*2);
-        pt.y = cvRound(points2->data.fl[i*2+1] + low_high_range*2);
-        cvCircle( img, pt, 1, CV_RGB(255,255,255), -1, 8 );
-    }
-
-    cvShowImage( "test", img );
-    cvReleaseImage( &img );
-    cvWaitKey(0);
-    }
-#endif
 
     if( code < 0 )
     {
@@ -1676,9 +1538,7 @@ int CV_FitLineTest::prepare_test_case( int test_case_idx )
 
 void CV_FitLineTest::run_func()
 {
-    if(!test_cpp)
-        cvFitLine( points, dist_type, 0, reps, aeps, line.data());
-    else if(dims == 2)
+    if(dims == 2)
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec4f&)line[0], dist_type, 0, reps, aeps);
     else
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec6f&)line[0], dist_type, 0, reps, aeps);
@@ -1899,16 +1759,8 @@ int CV_ContourMomentsTest::prepare_test_case( int test_case_idx )
 
 void CV_ContourMomentsTest::run_func()
 {
-    if(!test_cpp)
-    {
-        cvMoments( points, &moments );
-        area = cvContourArea( points );
-    }
-    else
-    {
-        moments = cvMoments(cv::moments(cv::cvarrToMat(points)));
-        area = cv::contourArea(cv::cvarrToMat(points));
-    }
+    moments = cvMoments(cv::moments(cv::cvarrToMat(points)));
+    area = cv::contourArea(cv::cvarrToMat(points));
 }
 
 
@@ -1956,12 +1808,6 @@ int CV_ContourMomentsTest::validate_test_results( int test_case_idx )
 
     if( code < 0 )
     {
-#if 0
-        cvCmpS( img, 0, img, CV_CMP_GT );
-        cvNamedWindow( "test", 1 );
-        cvShowImage( "test", img );
-        cvWaitKey();
-#endif
         ts->set_failed_test_info( code );
     }
 
@@ -2377,6 +2223,79 @@ TEST(Imgproc_minAreaRect, reproducer_18157)
         { 1928, 269 }, { 1925, 268 }, { 1921, 267 }, { 1915, 266 }
     };
 
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minAreaRect, reproducer_19769_lightweight)
+{
+    const int N = 23;
+    float pts_[N][2] = {
+            {1325, 732}, {1248, 808}, {582, 1510}, {586, 1524},
+            {595, 1541}, {599, 1547}, {789, 1745}, {829, 1786},
+            {997, 1958}, {1116, 2074}, {1207, 2066}, {1216, 2058},
+            {1231, 2044}, {1265, 2011}, {2036, 1254}, {2100, 1191},
+            {2169, 1123}, {2315, 979}, {2395, 900}, {2438, 787},
+            {2434, 782}, {2416, 762}, {2266, 610}
+    };
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minAreaRect, reproducer_19769)
+{
+    const int N = 169;
+    float pts_[N][2] = {
+            {1854, 227}, {1850, 228}, {1847, 229}, {1835, 235},
+            {1832, 237}, {1829, 239}, {1825, 242}, {1818, 248},
+            {1807, 258}, {1759, 306}, {1712, 351}, {1708, 356},
+            {1658, 404}, {1655, 408}, {1602, 459}, {1599, 463},
+            {1542, 518}, {1477, 582}, {1402, 656}, {1325, 732},
+            {1248, 808}, {1161, 894}, {1157, 898}, {1155, 900},
+            {1068, 986}, {1060, 995}, {1058, 997}, {957, 1097},
+            {956, 1097}, {814, 1238}, {810, 1242}, {805, 1248},
+            {610, 1442}, {603, 1450}, {599, 1455}, {596, 1459},
+            {594, 1462}, {592, 1465}, {590, 1470}, {588, 1472},
+            {586, 1476}, {586, 1478}, {584, 1481}, {583, 1485},
+            {582, 1490}, {582, 1510}, {583, 1515}, {584, 1518},
+            {585, 1521}, {586, 1524}, {593, 1538}, {595, 1541},
+            {597, 1544}, {599, 1547}, {603, 1552}, {609, 1559},
+            {623, 1574}, {645, 1597}, {677, 1630}, {713, 1667},
+            {753, 1707}, {789, 1744}, {789, 1745}, {829, 1786},
+            {871, 1828}, {909, 1867}, {909, 1868}, {950, 1910},
+            {953, 1912}, {997, 1958}, {1047, 2009}, {1094, 2056},
+            {1105, 2066}, {1110, 2070}, {1113, 2072}, {1116, 2074},
+            {1119, 2076}, {1122, 2077}, {1124, 2079}, {1130, 2082},
+            {1133, 2083}, {1136, 2084}, {1139, 2085}, {1142, 2086},
+            {1148, 2087}, {1166, 2087}, {1170, 2086}, {1174, 2085},
+            {1177, 2084}, {1180, 2083}, {1188, 2079}, {1190, 2077},
+            {1193, 2076}, {1196, 2074}, {1199, 2072}, {1202, 2070},
+            {1207, 2066}, {1216, 2058}, {1231, 2044}, {1265, 2011},
+            {1314, 1962}, {1360, 1917}, {1361, 1917}, {1408, 1871},
+            {1457, 1822}, {1508, 1773}, {1512, 1768}, {1560, 1722},
+            {1617, 1665}, {1671, 1613}, {1730, 1554}, {1784, 1502},
+            {1786, 1500}, {1787, 1498}, {1846, 1440}, {1850, 1437},
+            {1908, 1380}, {1974, 1314}, {2034, 1256}, {2036, 1254},
+            {2100, 1191}, {2169, 1123}, {2242, 1051}, {2315, 979},
+            {2395, 900}, {2426, 869}, {2435, 859}, {2438, 855},
+            {2440, 852}, {2442, 849}, {2443, 846}, {2445, 844},
+            {2446, 842}, {2446, 840}, {2448, 837}, {2449, 834},
+            {2450, 829}, {2450, 814}, {2449, 809}, {2448, 806},
+            {2447, 803}, {2442, 793}, {2440, 790}, {2438, 787},
+            {2434, 782}, {2428, 775}, {2416, 762}, {2411, 758},
+            {2342, 688}, {2340, 686}, {2338, 684}, {2266, 610},
+            {2260, 605}, {2170, 513}, {2075, 417}, {2073, 415},
+            {2069, 412}, {1955, 297}, {1955, 296}, {1913, 254},
+            {1904, 246}, {1897, 240}, {1894, 238}, {1891, 236},
+            {1888, 234}, {1880, 230}, {1877, 229}, {1874, 228},
+            {1870, 227}
+    };
     Mat contour(N, 1, CV_32FC2, (void*)pts_);
 
     RotatedRect rr = cv::minAreaRect(contour);

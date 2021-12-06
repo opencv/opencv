@@ -1576,7 +1576,7 @@ CV_PreCornerDetectTest::CV_PreCornerDetectTest() : CV_FeatureSelBaseTest( 1 )
 
 void CV_PreCornerDetectTest::run_func()
 {
-    cvPreCornerDetect( test_array[INPUT][0], test_array[OUTPUT][0], aperture_size );
+    preCornerDetect( cvarrToMat( test_array[INPUT][0] ), cvarrToMat( test_array[OUTPUT][0] ), aperture_size, BORDER_REPLICATE );
 }
 
 

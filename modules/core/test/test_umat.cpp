@@ -1419,4 +1419,37 @@ TEST(UMat, resize_Mat_issue_13577)
     cv::ocl::setUseOpenCL(useOCL);  // restore state
 }
 
+TEST(UMat, exceptions_refcounts_issue_20594)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        // skip test, difficult to create exception scenario without OpenCL
+        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        return;
+    }
+
+    UMat umat1(10, 10, CV_8UC1);
+    EXPECT_EQ(0, umat1.u->refcount);
+
+    // cause exception in underlying allocator
+    void* const original_handle = umat1.u->handle;
+    umat1.u->handle = NULL;
+    try
+    {
+        Mat mat1 = umat1.getMat(ACCESS_RW);
+    }
+    catch (...)
+    {
+        // nothing
+    }
+
+    // check for correct refcount, and no change of intentional bad handle
+    EXPECT_EQ(0, umat1.u->refcount);
+    EXPECT_EQ(NULL, umat1.u->handle);
+
+    // reset UMat to good state
+    umat1.u->refcount = 0;
+    umat1.u->handle = original_handle;
+}
+
 } } // namespace opencv_test::ocl

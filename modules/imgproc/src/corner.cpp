@@ -756,14 +756,4 @@ cvCornerEigenValsAndVecs( const void* srcarr, void* dstarr,
     cv::cornerEigenValsAndVecs( src, dst, block_size, aperture_size, cv::BORDER_REPLICATE );
 }
 
-
-CV_IMPL void
-cvPreCornerDetect( const void* srcarr, void* dstarr, int aperture_size )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert( src.size() == dst.size() && dst.type() == CV_32FC1 );
-    cv::preCornerDetect( src, dst, aperture_size, cv::BORDER_REPLICATE );
-}
-
 /* End of file */

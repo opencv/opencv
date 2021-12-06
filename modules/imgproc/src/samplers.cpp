@@ -422,17 +422,6 @@ void cv::getRectSubPix( InputArray _image, Size patchSize, Point2f center,
 
 
 CV_IMPL void
-cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr);
-    const cv::Mat dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.channels() == dst.channels() );
-
-    cv::getRectSubPix(src, dst.size(), center, dst, dst.type());
-}
-
-
-CV_IMPL void
 cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
 {
     const cv::Mat src = cv::cvarrToMat(srcarr), m = cv::cvarrToMat(mat);
@@ -460,28 +449,6 @@ cvGetQuadrangleSubPix( const void* srcarr, void* dstarr, const CvMat* mat )
                        cv::INTER_LINEAR + cv::WARP_INVERSE_MAP,
                        cv::BORDER_REPLICATE);
     }
-}
-
-
-CV_IMPL int
-cvSampleLine( const void* _img, CvPoint pt1, CvPoint pt2,
-              void* _buffer, int connectivity )
-{
-    cv::Mat img = cv::cvarrToMat(_img);
-    cv::LineIterator li(img, pt1, pt2, connectivity, false);
-    uchar* buffer = (uchar*)_buffer;
-    size_t pixsize = img.elemSize();
-
-    if( !buffer )
-        CV_Error( CV_StsNullPtr, "" );
-
-    for( int i = 0; i < li.count; i++, ++li )
-    {
-        for( size_t k = 0; k < pixsize; k++ )
-            *buffer++ = li.ptr[k];
-    }
-
-    return li.count;
 }
 
 

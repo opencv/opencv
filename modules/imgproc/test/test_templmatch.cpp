@@ -134,13 +134,8 @@ double CV_TemplMatchTest::get_success_error_level( int /*test_case_idx*/, int /*
 
 void CV_TemplMatchTest::run_func()
 {
-    if(!test_cpp)
-        cvMatchTemplate( test_array[INPUT][0], test_array[INPUT][1], test_array[OUTPUT][0], method );
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::matchTemplate(cv::cvarrToMat(test_array[INPUT][0]), cv::cvarrToMat(test_array[INPUT][1]), _out, method);
-    }
+    cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
+    cv::matchTemplate(cv::cvarrToMat(test_array[INPUT][0]), cv::cvarrToMat(test_array[INPUT][1]), _out, method);
 }
 
 

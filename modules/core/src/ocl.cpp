@@ -76,8 +76,11 @@
 #undef CV__ALLOCATOR_STATS_LOG
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
+#define CV_OPENCL_SHOW_BUILD_OPTIONS             0
+#define CV_OPENCL_SHOW_BUILD_KERNELS             0
 
 #define CV_OPENCL_SHOW_RUN_KERNELS               0
+#define CV_OPENCL_SYNC_RUN_KERNELS               0
 #define CV_OPENCL_TRACE_CHECK                    0
 
 #define CV_OPENCL_VALIDATE_BINARY_PROGRAMS       1
@@ -1566,6 +1569,7 @@ struct Device::Impl
         version_ = getStrProp(CL_DEVICE_VERSION);
         extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
+        halfFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
@@ -1678,6 +1682,7 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    int halfFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1827,11 +1832,7 @@ int Device::singleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
 
 int Device::halfFPConfig() const
-#ifdef CL_VERSION_1_2
-{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
-#else
-{ CV_REQUIRE_OPENCL_1_2_ERROR; }
-#endif
+{ return p ? p->halfFPConfig_ : 0; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
@@ -2157,20 +2158,22 @@ static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
         platforms.resize(numPlatforms);
     }
 
-    int selectedPlatform = -1;
     if (platform.length() > 0)
     {
-        for (size_t i = 0; i < platforms.size(); i++)
+        for (std::vector<cl_platform_id>::iterator currentPlatform = platforms.begin(); currentPlatform != platforms.end();)
         {
             std::string name;
-            CV_OCL_DBG_CHECK(getStringInfo(clGetPlatformInfo, platforms[i], CL_PLATFORM_NAME, name));
+            CV_OCL_DBG_CHECK(getStringInfo(clGetPlatformInfo, *currentPlatform, CL_PLATFORM_NAME, name));
             if (name.find(platform) != std::string::npos)
             {
-                selectedPlatform = (int)i;
-                break;
+                ++currentPlatform;
+            }
+            else
+            {
+                currentPlatform = platforms.erase(currentPlatform);
             }
         }
-        if (selectedPlatform == -1)
+        if (platforms.size() == 0)
         {
             CV_LOG_ERROR(NULL, "OpenCL: Can't find OpenCL platform by name: " << platform);
             goto not_found;
@@ -2207,13 +2210,11 @@ static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
             goto not_found;
         }
 
-        std::vector<cl_device_id> devices; // TODO Use clReleaseDevice to cleanup
-        for (int i = selectedPlatform >= 0 ? selectedPlatform : 0;
-                (selectedPlatform >= 0 ? i == selectedPlatform : true) && (i < (int)platforms.size());
-                i++)
+        std::vector<cl_device_id> devices;
+        for (std::vector<cl_platform_id>::iterator currentPlatform = platforms.begin(); currentPlatform != platforms.end(); ++currentPlatform)
         {
             cl_uint count = 0;
-            cl_int status = clGetDeviceIDs(platforms[i], deviceType, 0, NULL, &count);
+            cl_int status = clGetDeviceIDs(*currentPlatform, deviceType, 0, NULL, &count);
             if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
             {
                 CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get count");
@@ -2222,7 +2223,7 @@ static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
                 continue;
             size_t base = devices.size();
             devices.resize(base + count);
-            status = clGetDeviceIDs(platforms[i], deviceType, count, &devices[base], &count);
+            status = clGetDeviceIDs(*currentPlatform, deviceType, count, &devices[base], &count);
             if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
             {
                 CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get IDs");
@@ -2984,7 +2985,7 @@ Device& Context::device(size_t idx) const
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context& Context::getDefault(bool initialize)
+Context& Context::getDefault()
 {
     auto& c = OpenCLExecutionContext::getCurrent();
     if (!c.empty())
@@ -2993,7 +2994,6 @@ Context& Context::getDefault(bool initialize)
         return ctx;
     }
 
-    CV_UNUSED(initialize);
     static Context dummy;
     return dummy;
 }
@@ -3455,19 +3455,33 @@ struct Kernel::Impl
 
     void cleanupUMats()
     {
+        bool exceptionOccurred = false;
         for( int i = 0; i < MAX_ARRS; i++ )
+        {
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
                 {
                     u[i]->flags |= UMatData::ASYNC_CLEANUP;
-                    u[i]->currAllocator->deallocate(u[i]);
+                    try
+                    {
+                        u[i]->currAllocator->deallocate(u[i]);
+                    }
+                    catch(const std::exception& exc)
+                    {
+                        // limited by legacy before C++11, therefore log and
+                        // remember some exception occurred to throw below
+                        CV_LOG_ERROR(NULL, "OCL: Unexpected C++ exception in OpenCL Kernel::Impl::cleanupUMats(): " << exc.what());
+                        exceptionOccurred = true;
+                    }
                 }
                 u[i] = 0;
             }
+        }
         nu = 0;
         haveTempDstUMats = false;
         haveTempSrcUMats = false;
+        CV_Assert(!exceptionOccurred);
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -3498,8 +3512,16 @@ struct Kernel::Impl
     void finit(cl_event e)
     {
         CV_UNUSED(e);
-        cleanupUMats();
         isInProgress = false;
+        try
+        {
+            cleanupUMats();
+        }
+        catch(...)
+        {
+            release();
+            throw;
+        }
         release();
     }
 
@@ -3657,6 +3679,10 @@ bool Kernel::empty() const
 
 static cv::String dumpValue(size_t sz, const void* p)
 {
+    if (!p)
+        return "NULL";
+    if (sz == 2)
+        return cv::format("%d / %uu / 0x%04x", *(short*)p, *(unsigned short*)p, *(short*)p);
     if (sz == 4)
         return cv::format("%d / %uu / 0x%08x / %g", *(int*)p, *(int*)p, *(int*)p, *(float*)p);
     if (sz == 8)
@@ -3829,17 +3855,13 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
-static bool isRaiseErrorOnReuseAsyncKernel()
+bool Kernel::run_(int dims, size_t _globalsize[], size_t _localsize[],
+                  bool sync, const Queue& q)
 {
-    static bool initialized = false;
-    static bool value = false;
-    if (!initialized)
-    {
-        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR_REUSE_ASYNC_KERNEL", false);
-        initialized = true;
-    }
-    return value;
+    CV_Assert(p);
+    return p->run(dims, _globalsize, _localsize, sync, NULL, q);
 }
+
 
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
@@ -3854,20 +3876,18 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
 
     if (isAsyncRun)
     {
-        CV_LOG_ERROR(NULL, "OpenCL kernel can't be reused in async mode: " << name);
-        if (isRaiseErrorOnReuseAsyncKernel())
-            CV_Assert(0);
-        return false;  // OpenCV 5.0: raise error
+        CV_Error_(Error::StsError, ("OpenCL kernel can't be reused in async mode: %s", name.c_str()));
     }
     isAsyncRun = !sync;
 
     if (isInProgress)
     {
-        CV_LOG_ERROR(NULL, "Previous OpenCL kernel launch is not finished: " << name);
-        if (isRaiseErrorOnReuseAsyncKernel())
-            CV_Assert(0);
-        return false;  // OpenCV 5.0: raise error
+        CV_Error_(Error::StsError, ("Previous OpenCL kernel launch is not finished: %s", name.c_str()));
     }
+
+#if CV_OPENCL_SYNC_RUN_KERNELS
+    sync = true;
+#endif
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)
@@ -4316,7 +4336,28 @@ struct Program::Impl
             if (!param_buildExtraOptions.empty())
                 buildflags = joinBuildOptions(buildflags, param_buildExtraOptions);
         }
+#if CV_OPENCL_SHOW_BUILD_OPTIONS
+        CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' options:" << buildflags);
+#endif
         compile(ctx, src_, errmsg);
+#if CV_OPENCL_SHOW_BUILD_KERNELS
+        if (handle)
+        {
+            size_t retsz = 0;
+            char kernels_buffer[4096] = {0};
+            cl_int result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clGetProgramInfo(CL_PROGRAM_KERNEL_NAMES: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
+            if (result == CL_SUCCESS && retsz < sizeof(kernels_buffer))
+            {
+                kernels_buffer[retsz] = 0;
+                CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' kernels: '" << kernels_buffer << "'");
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' can't retrieve kernel names!");
+            }
+        }
+#endif
     }
 
     bool compile(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
@@ -4548,7 +4589,6 @@ struct Program::Impl
                 CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
             }
 #endif
-
         }
         return handle != NULL;
     }
@@ -6668,6 +6708,10 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
         depth = CV_32F;
         break;
 
+    case CL_HALF_FLOAT:
+        depth = CV_16F;
+        break;
+
     default:
         CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
     }
@@ -6676,8 +6720,22 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     switch (fmt.image_channel_order)
     {
     case CL_R:
+    case CL_A:
+    case CL_INTENSITY:
+    case CL_LUMINANCE:
         type = CV_MAKE_TYPE(depth, 1);
         break;
+
+    case CL_RG:
+    case CL_RA:
+        type = CV_MAKE_TYPE(depth, 2);
+        break;
+
+    // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+    // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+    /*case CL_RGB:
+        type = CV_MAKE_TYPE(depth, 3);
+        break;*/
 
     case CL_RGBA:
     case CL_BGRA:
@@ -7068,6 +7126,13 @@ static std::string kerToStr(const Mat & k)
             stream << "DIG(" << data[i] << "f)";
         stream << "DIG(" << data[width] << "f)";
     }
+    else if (depth == CV_16F)
+    {
+        stream.setf(std::ios_base::showpoint);
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << (float)data[i] << "h)";
+        stream << "DIG(" << (float)data[width] << "h)";
+    }
     else
     {
         for (int i = 0; i < width; ++i)
@@ -7091,7 +7156,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<float16_t> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
@@ -7130,14 +7195,14 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), -1 };
+        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf() };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
         vectorWidths[CV_8U] = vectorWidths[CV_8S] = 4;
-        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = vectorWidths[CV_16F] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
@@ -7225,10 +7290,12 @@ struct Image2D::Impl
     {
         cl_image_format format;
         static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
-                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, -1 };
+                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, CL_HALF_FLOAT };
         static const int channelTypesNorm[] = { CL_UNORM_INT8, CL_SNORM_INT8, CL_UNORM_INT16,
                                                 CL_SNORM_INT16, -1, -1, -1, -1 };
-        static const int channelOrders[] = { -1, CL_R, CL_RG, -1, CL_RGBA };
+        // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+        // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+        static const int channelOrders[] = { -1, CL_R, CL_RG, /*CL_RGB*/ -1, CL_RGBA };
 
         int channelType = norm ? channelTypesNorm[depth] : channelTypes[depth];
         int channelOrder = channelOrders[cn];

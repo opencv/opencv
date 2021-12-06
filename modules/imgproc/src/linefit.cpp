@@ -634,18 +634,4 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
     Mat(npoints2 >= 0 ? 4 : 6, 1, CV_32F, linebuf).copyTo(_line);
 }
 
-
-CV_IMPL void
-cvFitLine( const CvArr* array, int dist, double param,
-           double reps, double aeps, float *line )
-{
-    CV_Assert(line != 0);
-
-    cv::AutoBuffer<double> buf;
-    cv::Mat points = cv::cvarrToMat(array, false, false, 0, &buf);
-    cv::Mat linemat(points.checkVector(2) >= 0 ? 4 : 6, 1, CV_32F, line);
-
-    cv::fitLine(points, linemat, dist, param, reps, aeps);
-}
-
 /* End of file. */

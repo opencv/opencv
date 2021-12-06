@@ -1094,7 +1094,7 @@ public:
     that is, copies both parameters and train data. If emptyTrainData is true, the method creates an
     object copy with the current parameters but with empty train data.
      */
-    CV_WRAP virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
+    CV_WRAP CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
     /** @brief Creates a descriptor matcher of a given type with the default parameters (using default
     constructor).
@@ -1154,7 +1154,7 @@ protected:
     static bool isPossibleMatch( InputArray mask, int queryIdx, int trainIdx );
     static bool isMaskedOut( InputArrayOfArrays masks, int queryIdx );
 
-    static Mat clone_op( Mat m ) { return m.clone(); }
+    CV_NODISCARD_STD static Mat clone_op( Mat m ) { return m.clone(); }
     void checkMasks( InputArrayOfArrays masks, int queryDescriptorsCount ) const;
 
     //! Collection of descriptors from train images.
@@ -1195,7 +1195,7 @@ public:
      */
     CV_WRAP static Ptr<BFMatcher> create( int normType=NORM_L2, bool crossCheck=false ) ;
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
+    CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
         InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
@@ -1234,7 +1234,7 @@ public:
 
     CV_WRAP static Ptr<FlannBasedMatcher> create();
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
+    CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
                                    const Mat& indices, const Mat& distances,
@@ -1326,6 +1326,13 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              const std::vector<char>& matchesMask=std::vector<char>(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
 /** @overload */
+CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                             InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                             const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
+                             const int matchesThickness, const Scalar& matchColor=Scalar::all(-1),
+                             const Scalar& singlePointColor=Scalar::all(-1), const std::vector<char>& matchesMask=std::vector<char>(),
+                             DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+
 CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,

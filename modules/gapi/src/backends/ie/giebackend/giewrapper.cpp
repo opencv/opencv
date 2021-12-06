@@ -22,24 +22,6 @@ namespace IE = InferenceEngine;
 namespace giewrap = cv::gimpl::ie::wrap;
 using GIEParam = cv::gapi::ie::detail::ParamDesc;
 
-IE::InputsDataMap giewrap::toInputsDataMap (const IE::ConstInputsDataMap& inputs) {
-    IE::InputsDataMap transformed;
-    auto convert = [](const std::pair<std::string, IE::InputInfo::CPtr>& p) {
-        return std::make_pair(p.first, std::const_pointer_cast<IE::InputInfo>(p.second));
-    };
-    std::transform(inputs.begin(), inputs.end(), std::inserter(transformed, transformed.end()), convert);
-    return transformed;
-}
-
-IE::OutputsDataMap giewrap::toOutputsDataMap (const IE::ConstOutputsDataMap& outputs) {
-    IE::OutputsDataMap transformed;
-    auto convert = [](const std::pair<std::string, IE::CDataPtr>& p) {
-        return std::make_pair(p.first, std::const_pointer_cast<IE::Data>(p.second));
-    };
-    std::transform(outputs.begin(), outputs.end(), std::inserter(transformed, transformed.end()), convert);
-    return transformed;
-}
-
 #if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
 // Load extensions (taken from DNN module)
 std::vector<std::string> giewrap::getExtensions(const GIEParam& params) {
@@ -124,7 +106,11 @@ IE::Core giewrap::getPlugin(const GIEParam& params) {
         {
             try
             {
+#if INF_ENGINE_RELEASE >= 2021040000
+                plugin.AddExtension(std::make_shared<IE::Extension>(extlib), params.device_id);
+#else
                 plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib), params.device_id);
+#endif
                 CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
                 break;
             }

@@ -36,7 +36,7 @@ static void depthTo3d_from_uvz(const cv::Mat& in_K, const cv::Mat& u_mat, const 
     float cx = K(0, 2);
     float cy = K(1, 2);
 
-    std::vector<cv::Mat> coordinates(3);
+    std::vector<cv::Mat> coordinates(4);
 
     coordinates[0] = (u_mat - cx) / fx;
 
@@ -46,6 +46,7 @@ static void depthTo3d_from_uvz(const cv::Mat& in_K, const cv::Mat& u_mat, const 
     coordinates[0] = coordinates[0].mul(z_mat);
     coordinates[1] = (v_mat - cy).mul(z_mat) * (1. / fy);
     coordinates[2] = z_mat;
+    coordinates[3] = 0;
     cv::merge(coordinates, points3d);
 }
 
@@ -86,7 +87,7 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
     z_mat.resize(n_points);
 
     depthTo3d_from_uvz(K, u_mat, v_mat, z_mat, points3d);
-    points3d = points3d.reshape(3, 1);
+    points3d = points3d.reshape(4, 1);
 }
 
 /**
@@ -120,7 +121,7 @@ void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& poi
     y_cache_ptr = y_cache[0];
     for (int y = 0; y < in_depth.rows; ++y, ++y_cache_ptr)
     {
-        cv::Vec<T, 3>* point = points3d.ptr<cv::Vec<T, 3> >(y);
+        cv::Vec<T, 4>* point = points3d.ptr<cv::Vec<T, 4> >(y);
         const T* x_cache_ptr_end = x_cache[0] + in_depth.cols;
         const T* depth = z_mat[y];
         for (x_cache_ptr = x_cache[0]; x_cache_ptr != x_cache_ptr_end; ++x_cache_ptr, ++point, ++depth)
@@ -129,6 +130,7 @@ void depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& poi
             (*point)[0] = (*x_cache_ptr) * z;
             (*point)[1] = (*y_cache_ptr) * z;
             (*point)[2] = z;
+            (*point)[3] = 0;
         }
     }
 }
@@ -170,7 +172,7 @@ void depthTo3dSparse(InputArray depth_in, InputArray K_in, InputArray points_in,
     std::vector<cv::Mat> channels(2);
     cv::split(points_float, channels);
 
-    points3d_out.create(channels[0].rows, channels[0].cols, CV_32FC3);
+    points3d_out.create(channels[0].rows, channels[0].cols, CV_32FC4);
     cv::Mat points3d = points3d_out.getMat();
     depthTo3d_from_uvz(K_in.getMat(), channels[0], channels[1], z_mat, points3d);
 }
@@ -200,12 +202,12 @@ void depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out, I
     {
         cv::Mat points3d;
         depthTo3dMask(depth, K_new, mask, points3d);
-        points3d_out.create(points3d.size(), CV_MAKETYPE(K_new.depth(), 3));
+        points3d_out.create(points3d.size(), CV_MAKETYPE(K_new.depth(), 4));
         points3d.copyTo(points3d_out.getMat());
     }
     else
     {
-        points3d_out.create(depth.size(), CV_MAKETYPE(K_new.depth(), 3));
+        points3d_out.create(depth.size(), CV_MAKETYPE(K_new.depth(), 4));
         cv::Mat points3d = points3d_out.getMat();
         if (K_new.depth() == CV_64F)
             depthTo3dNoMask<double>(depth, K_new, points3d);

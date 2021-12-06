@@ -200,7 +200,7 @@ public:
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_weight));
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_bias));
             k1.set(argId++, ocl::KernelArg::PtrWriteOnly(outMat));
-            ret = k1.run(1, globalsize, localsize, false);
+            ret = k1.run_(1, globalsize, localsize, false);
             if (!ret)
                 return false;
         }

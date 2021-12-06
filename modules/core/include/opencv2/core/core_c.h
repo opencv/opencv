@@ -1078,37 +1078,10 @@ CVAPI(int)  cvCheckArr( const CvArr* arr, int flags CV_DEFAULT(0),
 #define CV_RAND_UNI      0
 #define CV_RAND_NORMAL   1
 
-/** @brief Fills an array with random numbers and updates the RNG state.
-
-The function fills the destination array with uniformly or normally distributed random numbers.
-@param rng CvRNG state initialized by cvRNG
-@param arr The destination array
-@param dist_type Distribution type
-> -   **CV_RAND_UNI** uniform distribution
-> -   **CV_RAND_NORMAL** normal or Gaussian distribution
-@param param1 The first parameter of the distribution. In the case of a uniform distribution it is
-the inclusive lower boundary of the random numbers range. In the case of a normal distribution it
-is the mean value of the random numbers.
-@param param2 The second parameter of the distribution. In the case of a uniform distribution it
-is the exclusive upper boundary of the random numbers range. In the case of a normal distribution
-it is the standard deviation of the random numbers.
-@sa randu, randn, RNG::fill.
- */
-CVAPI(void) cvRandArr( CvRNG* rng, CvArr* arr, int dist_type,
-                      CvScalar param1, CvScalar param2 );
-
-CVAPI(void) cvRandShuffle( CvArr* mat, CvRNG* rng,
-                           double iter_factor CV_DEFAULT(1.));
-
 #define CV_SORT_EVERY_ROW 0
 #define CV_SORT_EVERY_COLUMN 1
 #define CV_SORT_ASCENDING 0
 #define CV_SORT_DESCENDING 16
-
-CVAPI(void) cvSort( const CvArr* src, CvArr* dst CV_DEFAULT(NULL),
-                    CvArr* idxmat CV_DEFAULT(NULL),
-                    int flags CV_DEFAULT(0));
-
 
 /** Finds all real and complex roots of a polynomial equation */
 CVAPI(void) cvSolvePoly(const CvMat* coeffs, CvMat *roots2,

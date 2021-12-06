@@ -229,14 +229,14 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
 namespace cv {
 
-UMat UMat::eye(int rows, int cols, int type)
+UMat UMat::eye(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
-    return UMat::eye(Size(cols, rows), type);
+    return UMat::eye(Size(cols, rows), type, usageFlags);
 }
 
-UMat UMat::eye(Size size, int type)
+UMat UMat::eye(Size size, int type, UMatUsageFlags usageFlags)
 {
-    UMat m(size, type);
+    UMat m(size, type, usageFlags);
     setIdentity(m);
     return m;
 }
@@ -868,9 +868,9 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     int n, len;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     if( sortRows )
         n = src.rows, len = src.cols;
@@ -1013,8 +1013,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     AutoBuffer<int> ibuf;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     CV_Assert( src.data != dst.data );
 

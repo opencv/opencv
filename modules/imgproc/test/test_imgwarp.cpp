@@ -769,8 +769,8 @@ void CV_RemapTest::fill_array( int test_case_idx, int i, int j, Mat& arr )
 
 void CV_RemapTest::run_func()
 {
-    cvRemap( test_array[INPUT][0], test_array[INPUT_OUTPUT][0],
-             test_array[INPUT][1], test_array[INPUT][2], interpolation );
+    remap( cvarrToMat( test_array[INPUT][0] ), cvarrToMat( test_array[INPUT_OUTPUT][0] ),
+             cvarrToMat( test_array[INPUT][1] ), cvarrToMat( test_array[INPUT][2] ), interpolation );
 }
 
 
@@ -926,13 +926,8 @@ void CV_GetRectSubPixTest::fill_array( int test_case_idx, int i, int j, Mat& arr
 
 void CV_GetRectSubPixTest::run_func()
 {
-    if(!test_cpp)
-        cvGetRectSubPix( test_array[INPUT][0], test_array[INPUT_OUTPUT][0], center );
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[INPUT_OUTPUT][0]);
-        cv::getRectSubPix( cv::cvarrToMat(test_array[INPUT][0]), _out.size(), center, _out, _out.type());
-    }
+    cv::Mat _out = cv::cvarrToMat(test_array[INPUT_OUTPUT][0]);
+    cv::getRectSubPix( cv::cvarrToMat(test_array[INPUT][0]), _out.size(), center, _out, _out.type());
 }
 
 
@@ -1144,20 +1139,13 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
 
 TEST(Imgproc_cvWarpAffine, regression)
 {
-    IplImage* src = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
-    IplImage* dst = cvCreateImage(cvSize(100, 100), IPL_DEPTH_8U, 1);
+    Mat src(Size(100, 100), CV_8UC1);
+    Mat dst(Size(100, 100), CV_8UC1);
 
-    cvZero(src);
-
-    float m[6];
-    CvMat M = cvMat( 2, 3, CV_32F, m );
-    int w = src->width;
-    int h = src->height;
-    cv2DRotationMatrix(cvPoint2D32f(w*0.5f, h*0.5f), 45.0, 1.0, &M);
-    cvWarpAffine(src, dst, &M);
-
-    cvReleaseImage(&src);
-    cvReleaseImage(&dst);
+    int w = src.cols;
+    int h = src.rows;
+    Mat M = getRotationMatrix2D(Point2f(w*0.5f, h*0.5f), 45.0, 1.0);
+    warpAffine(src, dst, M, Size(w, h));
 }
 
 TEST(Imgproc_fitLine_vector_3d, regression)
@@ -1172,7 +1160,7 @@ TEST(Imgproc_fitLine_vector_3d, regression)
 
     std::vector<float> line;
 
-    cv::fitLine(points_vector, line, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(points_vector, line, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line.size(), (size_t)6);
 
@@ -1192,7 +1180,7 @@ TEST(Imgproc_fitLine_vector_2d, regression)
 
     std::vector<float> line;
 
-    cv::fitLine(points_vector, line, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(points_vector, line, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line.size(), (size_t)4);
 }
@@ -1202,7 +1190,7 @@ TEST(Imgproc_fitLine_Mat_2dC2, regression)
     cv::Mat mat1 = Mat::zeros(3, 1, CV_32SC2);
     std::vector<float> line1;
 
-    cv::fitLine(mat1, line1, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(mat1, line1, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line1.size(), (size_t)4);
 }
@@ -1212,7 +1200,7 @@ TEST(Imgproc_fitLine_Mat_2dC1, regression)
     cv::Matx<int, 3, 2> mat2;
     std::vector<float> line2;
 
-    cv::fitLine(mat2, line2, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(mat2, line2, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line2.size(), (size_t)4);
 }
@@ -1222,7 +1210,7 @@ TEST(Imgproc_fitLine_Mat_3dC3, regression)
     cv::Mat mat1 = Mat::zeros(2, 1, CV_32SC3);
     std::vector<float> line1;
 
-    cv::fitLine(mat1, line1, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(mat1, line1, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line1.size(), (size_t)6);
 }
@@ -1232,7 +1220,7 @@ TEST(Imgproc_fitLine_Mat_3dC1, regression)
     cv::Mat mat2 = Mat::zeros(2, 3, CV_32SC1);
     std::vector<float> line2;
 
-    cv::fitLine(mat2, line2, CV_DIST_L2, 0 ,0 ,0);
+    cv::fitLine(mat2, line2, DIST_L2, 0 ,0 ,0);
 
     ASSERT_EQ(line2.size(), (size_t)6);
 }
@@ -1527,7 +1515,7 @@ TEST(Imgproc_Remap, DISABLED_memleak)
             putchar('.');
             fflush(stdout);
         }
-        remap(src, dst, map_x, map_y, CV_INTER_LINEAR);
+        remap(src, dst, map_x, map_y, INTER_LINEAR);
     }
 }
 
@@ -1590,11 +1578,11 @@ TEST(Imgproc_logPolar, identity)
     {
         logPolar(src, dst,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR | CV_WARP_INVERSE_MAP);
+            WARP_FILL_OUTLIERS | INTER_LINEAR | WARP_INVERSE_MAP);
 
         logPolar(dst, src,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
+            WARP_FILL_OUTLIERS | INTER_LINEAR);
 
         double psnr = cvtest::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << i;
@@ -1626,11 +1614,11 @@ TEST(Imgproc_warpPolar, identity)
     Rect roi = Rect(0, 0, in.cols - ((N + 19) / 20), in.rows);
     Point2f center = Point2f((N - 1) * 0.5f, (N - 1) * 0.5f);
     double radius = N * 0.5;
-    int flags = CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR;
+    int flags = WARP_FILL_OUTLIERS | INTER_LINEAR;
     // test linearPolar
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + CV_WARP_INVERSE_MAP);
+        warpPolar(src, dst, src.size(), center, radius, flags + WARP_POLAR_LINEAR + WARP_INVERSE_MAP);
         warpPolar(dst, src, src.size(), center, radius, flags + WARP_POLAR_LINEAR);
 
         double psnr = cv::PSNR(in(roi), src(roi));
@@ -1640,7 +1628,7 @@ TEST(Imgproc_warpPolar, identity)
     src = in.clone();
     for (int ki = 1; ki <= 5; ki++)
     {
-        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + CV_WARP_INVERSE_MAP );
+        warpPolar(src, dst, src.size(),center, radius, flags + WARP_POLAR_LOG + WARP_INVERSE_MAP );
         warpPolar(dst, src, src.size(),center, radius, flags + WARP_POLAR_LOG);
 
         double psnr = cv::PSNR(in(roi), src(roi));
