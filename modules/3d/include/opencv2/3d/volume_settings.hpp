@@ -11,16 +11,37 @@
 namespace cv
 {
 
-    class VolumeSettings
-    {
-    public:
-        VolumeSettings();
-        ~VolumeSettings();
+class VolumeSettings
+{
+public:
+    VolumeSettings();
+    ~VolumeSettings();
 
-        class Impl;
-    private:
-        Ptr<Impl> impl;
-    };
+    void setVoxelSize(float  val);
+    float  getVoxelSize() const;
+
+    void  setRaycastStepFactor(float val);
+    float getRaycastStepFactor() const;
+
+    void  setTruncDist(float val);
+    float getTruncDist() const;
+
+    void setMaxWeight(int val);
+    int  getMaxWeight() const;
+
+    void setZFirstMemOrder(bool val);
+    bool getZFirstMemOrder() const;
+
+    void setPose(InputArray val);
+    void getPose(OutputArray val) const;
+
+    void setResolution(InputArray val);
+    void getResolution(OutputArray val) const;
+
+    class Impl;
+private:
+    Ptr<Impl> impl;
+};
 
 }
 
