@@ -409,11 +409,6 @@ Mat findHomography( InputArray _points1, InputArray _points2,
             solver.geodesic = true;
 
             BaseLevMarq::Report r = solver.optimize();
-
-            //std::cout << "returned: " << r << std::endl;
-            //DEBUG: remove it
-            //int r2 = LMSolver::create(makePtr<HomographyRefineCallback2>(src, dst), 10)->run(H8c);
-            //std::cout << "returned2: " << r2 << std::endl;
         }
     }
 

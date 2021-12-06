@@ -702,7 +702,7 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         int npts = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
         Mat imagePoints0 = ipoints.reshape(1, npts * 2);
         auto solvePnPRefineLMCallback = [opoints, imagePoints0, npts, cameraMatrix, distCoeffs]
-        (InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+            (InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
         {
             Mat param = _param.getMat();
             _err.create(npts * 2, 1, CV_64FC1);
@@ -742,20 +742,6 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         solver.smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
         solver.geodesic = true;
         BaseLevMarq::Report r = solver.optimize();
-
-        //TODO: try on
-        /*
-        auto callb = makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs);
-        Ptr<BaseLevMarq> solver = createLegacyLevMarq(params, _criteria.maxCount,
-            [&](Mat& param, Mat* err, Mat* J)->bool
-            {
-                return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
-                    J ? _OutputArray(*J) : _OutputArray());
-            });
-        solver->stepNormTolerance = (double)_criteria.epsilon;
-        solver->smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
-        int r = solver->optimize();
-        */
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
         params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());

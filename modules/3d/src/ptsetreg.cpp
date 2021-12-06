@@ -1003,17 +1003,6 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
             solver.geodesic = true;
             BaseLevMarq::Report r = solver.optimize();
-            //DEBUG
-            /*
-            auto callb = makePtr<Affine2DRefineCallback>(src, dst);
-            Ptr<BaseLevMarq> solver = createLegacyLevMarq(Hvec, static_cast<int>(refineIters),
-                [&](Mat& param, Mat* err, Mat* J)->bool
-                {
-                    return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
-                        J ? _OutputArray(*J) : _OutputArray());
-                });
-            int r = solver->optimize();
-            */
         }
     }
 
@@ -1155,18 +1144,6 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
             solver.geodesic = true;
             BaseLevMarq::Report r = solver.optimize();
-
-            //DEBUG
-            /*
-            auto callb = makePtr<AffinePartial2DRefineCallback>(src, dst);
-            Ptr<BaseLevMarq> solver = createLegacyLevMarq(Hvec, static_cast<int>(refineIters),
-                [&](Mat& param, Mat* err, Mat* J)->bool
-                {
-                    return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
-                        J ? _OutputArray(*J) : _OutputArray());
-                });
-            int r = solver->optimize();
-            */
 
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];

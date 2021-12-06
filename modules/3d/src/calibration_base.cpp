@@ -1272,8 +1272,6 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     _mn = _mn.reshape(2, 1);
 
     // refine extrinsic parameters using iterative algorithm
-
-    //TODO: fix interface
     auto callback = [matM, _m, matA, distCoeffs]
     (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
     {
@@ -1311,24 +1309,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     // old LMSolver calculates successful iterations only, this one calculates all iterations
     solver.maxIterations = (unsigned int)(max_iter * 2.1);
     solver.geodesic = true;
-
-    //TODO: remove it
-    //Ptr<LevMarqDenseLinear> solver = makePtr<LevMarqDenseLinear>(nvars = _param.total(), altCallback = nosuch, mask = noArray(), ltor = false, solveMethod = DECOMP_SVD);
-
     BaseLevMarq::Report r = solver.optimize();
-
-    //DEBUG
-    /*
-    Ptr<LevMarqDenseLinear::Callback> callb = makePtr<SolvePnPCallback>(matM, _m, matA, distCoeffs);
-
-    Ptr<BaseLevMarq> solver = createLegacyLevMarq(_param, max_iter,
-        [&](Mat& param, Mat* err, Mat* J)->bool
-        {
-            return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
-                                  J ? _OutputArray(*J) : _OutputArray());
-        });
-    int r = solver->optimize();
-    */
 
     _param.rowRange(0, 3).copyTo(rvec);
     _param.rowRange(3, 6).copyTo(tvec);

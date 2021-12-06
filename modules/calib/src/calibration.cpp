@@ -566,9 +566,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     // 3. run the optimization
 
-    //TODO: interface
     auto calibCameraLMCallback = [matM, _m, npoints, &allErrors, aspectRatio, &perViewErrors, flags, releaseObject]
-    (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
+        (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
     {
         Mat jterr = JtErr.getMat(), jtj = JtJ.getMat(), perViewErr = perViewErrors ? *perViewErrors : Mat();
         cameraCalcJErr(matM, _m, npoints, allErrors, _param.getMat(), /* calcJ */ JtErr.needed() && JtJ.needed(),
@@ -583,23 +582,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     solver.smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
     // geodesic not supported for normal callbacks
     BaseLevMarq::Report r = solver.optimize();
-
-    //DEBUG
-    /*
-    Ptr<BaseLevMarq> solver = createLegacyLevMarq(param0, termCrit.maxCount, nullptr,
-        [&](Mat& _param, Mat* _JtErr, Mat* _JtJ, double* _errnorm)
-        {
-            cameraCalcJErr(matM, _m, npoints, allErrors, _param, _JtErr, _JtJ, _errnorm,
-                aspectRatio, perViewErrors, flags, releaseObject);
-            return true;
-        },
-        0, false, mask0, solveMethod);
-    solver->checkMinGradient = true;
-    solver->checkRelEnergyChange = true;
-    solver->stepNormTolerance = termCrit.epsilon;
-    solver->smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
-    int r1 = solver->optimize();
-    */
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
@@ -1091,14 +1073,6 @@ static double stereoCalibrateImpl(
         BaseLevMarq::Report r = solver.optimize();
         reprojErr = r.energy;
     }
-
-    //DEBUG
-    /*
-    if (countNonZero(mask))
-    {
-        LevMarqDenseLinear::runAlt(param, mask, termCrit, DECOMP_SVD, false, lmcallback);
-    }
-    */
 
     Vec3d om_LR(param[0], param[1], param[2]);
     Vec3d T_LR(param[3], param[4], param[5]);

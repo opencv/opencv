@@ -281,10 +281,6 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     solver.geodesic = true;
     BaseLevMarq::Report r = solver.optimize();
 
-    //DEBUG
-    //LevMarqDenseLinear::run(cam_params_, noArray(), nerrs, term_criteria_, DECOMP_SVD, callb);
-
-
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
     LOGLN_CHAT("Bundle adjustment, iterations done: " << iter);
