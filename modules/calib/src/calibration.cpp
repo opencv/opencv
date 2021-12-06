@@ -786,7 +786,8 @@ static double stereoCalibrateImpl(
     // for intrinisic parameters of each camera ((fx,fy,cx,cy,k1,k2,p1,p2) ~ 8 parameters).
     nparams = 6*(nimages+1) + (recomputeIntrinsics ? NINTRINSIC*2 : 0);
 
-    std::vector<uchar> mask(nparams, (uchar)0);
+    std::vector<uchar> mask(nparams, (uchar)1);
+
     std::vector<double> param(nparams, 0.);
 
     if( recomputeIntrinsics )
