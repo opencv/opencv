@@ -91,8 +91,14 @@ TEST(GStreamerPipelineFacadeTest, CompletePrerollUnitTest)
     pipelineFacade.completePreroll();
 
     cv::gapi::wip::gst::GStreamerPtr<GstSample> prerollSample(
-    //        gst_app_sink_try_pull_preroll(GST_APP_SINK(appsink), 5 * GST_SECOND));
-            gst_app_sink_pull_preroll(GST_APP_SINK(appsink)));
+#if GST_VERSION_MINOR >= 10
+            gst_app_sink_try_pull_preroll(GST_APP_SINK(appsink), 5 * GST_SECOND)
+#else // GST_VERSION_MINOR < 10
+            // TODO: This function may cause hang with some pipelines, need to check whether these
+            // pipelines are really wrong or not?
+            gst_app_sink_pull_preroll(GST_APP_SINK(appsink))
+#endif // GST_VERSION_MINOR >= 10
+                                                             );
     GAPI_Assert(prerollSample != nullptr);
 }
 
