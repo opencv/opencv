@@ -570,7 +570,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
     {
         Mat jterr = JtErr.getMat(), jtj = JtJ.getMat(), perViewErr = perViewErrors ? *perViewErrors : Mat();
-        cameraCalcJErr(matM, _m, npoints, allErrors, _param.getMat(), /* calcJ */ JtErr.needed() && JtJ.needed(),
+        Mat param = _param.getMat();
+        cameraCalcJErr(matM, _m, npoints, allErrors, param, /* calcJ */ JtErr.needed() && JtJ.needed(),
                        jterr, jtj, errnorm,
                        aspectRatio, perViewErr, flags, releaseObject);
         return true;

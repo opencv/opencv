@@ -171,7 +171,7 @@ struct Mesh
 
         std::copy(this->lines.begin(), this->lines.end(), std::back_inserter(mo.lines));
         std::transform(m2.lines.begin(), m2.lines.end(), std::back_inserter(mo.lines),
-                       [sz1](Vec2i ab) { return Vec2i(ab[0] + sz1, ab[1] + sz1); });
+                       [sz1](Vec2i ab) { return Vec2i(ab[0] + (int)sz1, ab[1] + (int)sz1); });
 
         return mo;
     }
@@ -236,7 +236,7 @@ Mesh seg7(int d)
     return digits[d];
 }
 
-Mesh drawId(int x)
+Mesh drawId(size_t x)
 {
     vector<int> digits;
     do
@@ -263,7 +263,7 @@ Mesh drawId(int x)
 }
 
 
-Mesh drawFromTo(int f, int t)
+Mesh drawFromTo(size_t f, size_t t)
 {
     Mesh m;
 
@@ -334,7 +334,7 @@ TEST(PoseGraph, simple)
     Ptr<detail::PoseGraph> pg = detail::PoseGraph::create();
 
     DualQuatf true0(1, 0, 0, 0, 0, 0, 0, 0);
-    DualQuatf true1 = DualQuatf::createFromPitch(CV_PI / 3.0f, 10.0f, Vec3f(1, 1.5f, 1.2f), Vec3f());
+    DualQuatf true1 = DualQuatf::createFromPitch((float)CV_PI / 3.0f, 10.0f, Vec3f(1, 1.5f, 1.2f), Vec3f());
 
     DualQuatf pose0 = true0;
     vector<DualQuatf> noise(7);
