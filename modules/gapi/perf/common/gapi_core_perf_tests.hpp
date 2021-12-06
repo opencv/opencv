@@ -50,7 +50,7 @@ namespace opencv_test
     class MinPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class MaxPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class AbsDiffPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
-    class AbsDiffCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
+    class AbsDiffCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class SumPerfTest : public TestPerfParams<tuple<compare_scalar_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class CountNonZeroPerfTest : public TestPerfParams<tuple<compare_scalar_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class AddWeightedPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
