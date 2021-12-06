@@ -423,7 +423,7 @@ TEST(LevMarq, Rosenbrock)
 
     EXPECT_TRUE(r.found);
     EXPECT_LT(r.energy, 0.035);
-    EXPECT_LE(r.iters, 23);
+    EXPECT_LE(r.iters, 17);
 }
 
 
