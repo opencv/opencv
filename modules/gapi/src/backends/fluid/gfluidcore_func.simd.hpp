@@ -151,6 +151,17 @@ MULC_SIMD(float, float)
 
 #undef MULC_SIMD
 
+#define ABSDIFFC_SIMD(T)                                            \
+int absdiffc_simd(const T in[], const float scalar[], T out[],      \
+                  const int length, const int chan);
+
+ABSDIFFC_SIMD(uchar)
+ABSDIFFC_SIMD(short)
+ABSDIFFC_SIMD(ushort)
+ABSDIFFC_SIMD(float)
+
+#undef ABSDIFFC_SIMD
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 struct scale_tag {};
@@ -901,6 +912,7 @@ MUL_SIMD(float, float)
 struct add_tag {};
 struct sub_tag {};
 struct mul_tag {};
+struct absdiff_tag {};
 
 CV_ALWAYS_INLINE void arithmOpScalar_pack_store_c3(short* outx,       const v_int32& c1,
                                                    const v_int32& c2, const v_int32& c3,
@@ -938,6 +950,12 @@ CV_ALWAYS_INLINE v_float32 oper(mul_tag, const v_float32& a, const v_float32& sc
 {
     return a * sc;
 }
+
+CV_ALWAYS_INLINE v_float32 oper(absdiff_tag, const v_float32& a, const v_float32& sc)
+{
+    return v_absdiff(a, sc);
+}
+
 //-------------------------------------------------------------------------------------------------
 
 template<typename oper_tag, typename SRC, typename DST>
@@ -1449,6 +1467,38 @@ MULC_SIMD(short, float)
 MULC_SIMD(float, float)
 
 #undef MULC_SIMD
+
+//-------------------------
+//
+// Fluid kernels: AbsDiffC
+//
+//-------------------------
+
+#define ABSDIFFC_SIMD(SRC)                                                          \
+int absdiffc_simd(const SRC in[], const float scalar[], SRC out[],                  \
+              const int length, const int chan)                                     \
+{                                                                                   \
+    switch (chan)                                                                   \
+    {                                                                               \
+    case 1:                                                                         \
+    case 2:                                                                         \
+    case 4:                                                                         \
+        return arithmOpScalar_simd_common(absdiff_tag{}, in, scalar, out, length);  \
+    case 3:                                                                         \
+        return arithmOpScalar_simd_c3(absdiff_tag{}, in, scalar, out, length);      \
+    default:                                                                        \
+        GAPI_Assert(chan <= 4);                                                     \
+        break;                                                                      \
+    }                                                                               \
+    return 0;                                                                       \
+}
+
+ABSDIFFC_SIMD(uchar)
+ABSDIFFC_SIMD(short)
+ABSDIFFC_SIMD(ushort)
+ABSDIFFC_SIMD(float)
+
+#undef ABSDIFFC_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

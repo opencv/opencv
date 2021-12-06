@@ -165,6 +165,21 @@ MULC_SIMD(float, float)
 
 #undef MULC_SIMD
 
+#define ABSDIFFC_SIMD(SRC)                                               \
+int absdiffc_simd(const SRC in[], const float scalar[], SRC out[],       \
+                  const int length, const int chan)                      \
+{                                                                        \
+    CV_CPU_DISPATCH(absdiffc_simd, (in, scalar, out, length, chan),      \
+                    CV_CPU_DISPATCH_MODES_ALL);                          \
+}
+
+ABSDIFFC_SIMD(uchar)
+ABSDIFFC_SIMD(short)
+ABSDIFFC_SIMD(ushort)
+ABSDIFFC_SIMD(float)
+
+#undef ABSDIFFC_SIMD
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
