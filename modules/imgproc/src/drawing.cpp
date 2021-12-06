@@ -138,7 +138,7 @@ bool clipLine( Size2l img_size, Point2l& pt1, Point2l& pt2 )
             }
         }
 
-        assert( (c1 & c2) != 0 || (x1 | y1 | x2 | y2) >= 0 );
+        CV_Assert( (c1 & c2) != 0 || (x1 | y1 | x2 | y2) >= 0 );
     }
 
     return (c1 | c2) == 0;
@@ -648,7 +648,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
     size_t step = img.step;
     Size size = img.size();
 
-    //assert( img && (nch == 1 || nch == 3) && img.depth() == CV_8U );
+    //CV_Assert( img && (nch == 1 || nch == 3) && img.depth() == CV_8U );
 
     Size2l sizeScaled(((int64)size.width) << XY_SHIFT, ((int64)size.height) << XY_SHIFT);
     if( !clipLine( sizeScaled, pt1, pt2 ))
@@ -1120,7 +1120,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     p0.x <<= XY_SHIFT - shift;
     p0.y <<= XY_SHIFT - shift;
 
-    assert( 0 <= shift && shift <= XY_SHIFT );
+    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
     xmin = xmax = v[0].x;
     ymin = ymax = v[0].y;
 
@@ -1340,7 +1340,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
     for( i = 0; i < total; i++ )
     {
         PolyEdge& e1 = edges[i];
-        assert( e1.y0 < e1.y1 );
+        CV_Assert( e1.y0 < e1.y1 );
         // Determine x-coordinate of the end of the edge.
         // (This is not necessary x-coordinate of any vertex in the array.)
         int64 x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
@@ -1369,7 +1369,6 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
     for( y = e->y0; y < y_max; y++ )
     {
         PolyEdge *last, *prelast, *keep_prelast;
-        int sort_flag = 0;
         int draw = 0;
         int clipline = y < 0;
 
@@ -1444,6 +1443,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
         {
             prelast = &tmp;
             last = tmp.next;
+            PolyEdge *last_exchange = 0;
 
             while( last != keep_prelast && last->next != 0 )
             {
@@ -1456,7 +1456,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
                     last->next = te->next;
                     te->next = last;
                     prelast = te;
-                    sort_flag = 1;
+                    last_exchange = prelast;
                 }
                 else
                 {
@@ -1464,9 +1464,10 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
                     last = te;
                 }
             }
-            keep_prelast = prelast;
-        }
-        while( sort_flag && keep_prelast != tmp.next && keep_prelast != &tmp );
+            if (last_exchange == NULL)
+                break;
+            keep_prelast = last_exchange;
+        } while( keep_prelast != tmp.next && keep_prelast != &tmp );
     }
 }
 
@@ -2612,7 +2613,7 @@ cvDrawContours( void* _img, CvSeq* contour,
                 char code;
                 CV_READ_SEQ_ELEM( code, reader );
 
-                assert( (code & ~7) == 0 );
+                CV_Assert( (code & ~7) == 0 );
 
                 if( code != prev_code )
                 {

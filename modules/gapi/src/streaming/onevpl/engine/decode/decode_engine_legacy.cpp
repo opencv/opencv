@@ -10,6 +10,7 @@
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/engine/decode/decode_engine_legacy.hpp"
 #include "streaming/onevpl/engine/decode/decode_session.hpp"
@@ -122,41 +123,94 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
-            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.data_provider);
-            if (my_sess.last_status != MFX_ERR_NONE) {
+            if (!my_sess.data_provider) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
+                return ExecutionStatus::Continue;
+            }
+
+            my_sess.last_status = MFX_ERR_NONE;
+            if (!my_sess.data_provider->fetch_bitstream_data(my_sess.stream)) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
                 my_sess.data_provider.reset(); //close source
             }
             return ExecutionStatus::Continue;
         },
-        // 2) enqueue ASYNC decode
+        // 2) enqueue ASYNC decode operation
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
 
+            // prepare sync object for new surface
+            LegacyDecodeSession::op_handle_t sync_pair{};
+
+            // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.last_status == MFX_ERR_NONE
-                                                        ? &my_sess.stream
+                                                        ? my_sess.stream.get()
                                                         : nullptr, /* No more data to read, start decode draining mode*/
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
-                                                    &my_sess.output_surface_ptr,
-                                                    &my_sess.sync);
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+            // process wait-like statuses in-place:
+            // It had better to use up all VPL decoding resources in pipeline
+            // as soon as possible. So waiting more free-surface or device free
+            while (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
+                   my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
+                try {
+                    if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
+                        my_sess.swap_surface(*this);
+                    }
+                    my_sess.last_status =
+                    MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
+                                                    &my_sess.stream,
+                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+                } catch (const std::runtime_error& ex) {
+                    GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
+                                               "] has no surface, reason: " <<
+                                               ex.what());
+                    // TODO it is supposed to place `break;` here
+                    // to simulate `yield`-like behavior.
+                    // Further DX11 intergation logic claims more strict rules
+                    // for enqueue surfaces. If no free surface
+                    // is available it had better to wait free one by checking
+                    // for async result than waste time in spinning.
+                    //
+                    // Put it as-is at now to not break
+                    // current compatibility and avoid further merge-conflicts
+                }
+            }
+
+            if (my_sess.last_status == MFX_ERR_NONE) {
+                my_sess.sync_queue.emplace(sync_pair);
+            } else if (my_sess.last_status != MFX_ERR_MORE_DATA) /* suppress MFX_ERR_MORE_DATA warning */ {
+                GAPI_LOG_WARNING(nullptr, "pending ops count: " << my_sess.sync_queue.size() <<
+                                          ", sync id: " << sync_pair.first <<
+                                          ", status: " << mfxstatus_to_string(my_sess.last_status));
+            }
             return ExecutionStatus::Continue;
         },
         // 3) Wait for ASYNC decode result
         [this] (EngineSession& sess) -> ExecutionStatus
         {
-            if (sess.last_status == MFX_ERR_NONE) // Got 1 decoded frame
+            LegacyDecodeSession& my_sess = static_cast<LegacyDecodeSession&>(sess);
+            if (!my_sess.sync_queue.empty()) // FIFO: check the oldest async operation complete
             {
-                do {
-                    //TODO try to extract TIMESTAMP
-                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, sess.sync, 100);
-                    if (MFX_ERR_NONE == sess.last_status) {
+                LegacyDecodeSession::op_handle_t& pending_op = my_sess.sync_queue.front();
+                sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
-                        LegacyDecodeSession& my_sess = static_cast<LegacyDecodeSession&>(sess);
-                        on_frame_ready(my_sess);
-                    }
-                } while (sess.last_status == MFX_WRN_IN_EXECUTION);
+                GAPI_LOG_DEBUG(nullptr, "pending ops count: " << my_sess.sync_queue.size() <<
+                                        ", sync id:  " << pending_op.first <<
+                                        ", status: " << mfxstatus_to_string(my_sess.last_status));
+
+                // put frames in ready queue on success
+                if (MFX_ERR_NONE == sess.last_status) {
+                    on_frame_ready(my_sess, pending_op.second);
+                }
             }
             return ExecutionStatus::Continue;
         },
@@ -223,14 +277,18 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operatio
     return op(sess);
 }
 
-void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
+void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
+                                           mfxFrameSurface1* ready_surface)
 {
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
-                                                                   sess.output_surface_ptr);
+                                                                   ready_surface);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
+
+    // pop away synced out object
+    sess.sync_queue.pop();
 }
 
 ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
@@ -239,7 +297,17 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
 
     switch (status) {
         case MFX_ERR_NONE:
-            return ExecutionStatus::Continue;
+        {
+            // prepare sync object for new surface
+            try {
+                sess.swap_surface(*this);
+                return ExecutionStatus::Continue;
+            } catch (const std::runtime_error& ex) {
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
+                                          "Abort");
+                // TODO it is supposed to be `break;` here in future PR
+            }
+        }
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
             if (!sess.data_provider || sess.data_provider->empty()) {
                 // No more data to drain from decoder, start encode draining mode
@@ -256,8 +324,9 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             try {
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
-            } catch (const std::exception& ex) {
+            } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
+                // TODO it is supposed to be `break;` here in future PR
             }
             break;
         }
@@ -277,8 +346,10 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
                                     "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
+            */
+            return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
             // The function detected that video parameters provided by the application
@@ -295,8 +366,18 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
+        case MFX_WRN_IN_EXECUTION:
+            try {
+                sess.swap_surface(*this);
+                return ExecutionStatus::Continue;
+            } catch (const std::runtime_error& ex) {
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
+                                          "Abort");
+                // TODO it is supposed to be `break;` here in future PR
+            }
         default:
-            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status));
+            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status) <<
+                                      ", decoded frames: " << sess.decoded_frames_count);
             break;
     }
 

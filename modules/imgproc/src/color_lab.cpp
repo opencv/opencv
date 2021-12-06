@@ -3567,7 +3567,7 @@ struct Luv2RGBinteger
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
-        x = y*x/BASE;
+        x = ((long long int)y)*x/BASE;
 
         long long int vpl = LUVLUT.LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
@@ -3689,17 +3689,13 @@ struct Luv2RGBinteger
             vzm[i] = zm;
 
             vx[i] = (int32_t)(xv >> base_shift);
+            vx[i] = (((int64_t)y_)*vx[i]) >> base_shift;
         }
         v_int32 zm[4];
         for(int k = 0; k < 4; k++)
         {
             x[k] = vx_load_aligned(vx + k*vsize/4);
             zm[k] = vx_load_aligned(vzm + k*vsize/4);
-        }
-
-        for(int k = 0; k < 4; k++)
-        {
-            x[k] = (y[k]*x[k]) >> base_shift;
         }
 
         // z = zm/256 + zm/65536;

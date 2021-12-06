@@ -123,6 +123,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
+	  src/backends/fluid/gfluidcore_func.dispatch.cpp
 
     # OCL Backend (currently built-in)
     src/backends/ocl/goclbackend.cpp
@@ -179,6 +180,8 @@ set(gapi_srcs
     src/streaming/onevpl/engine/processing_engine_base.cpp
     src/streaming/onevpl/engine/decode/decode_engine_legacy.cpp
     src/streaming/onevpl/engine/decode/decode_session.cpp
+    src/streaming/onevpl/demux/async_mfp_demux_data_provider.cpp
+    src/streaming/onevpl/data_provider_dispatcher.cpp
 
     src/streaming/onevpl/cfg_param_device_selector.cpp
     src/streaming/onevpl/device_selector_interface.cpp
@@ -188,6 +191,7 @@ set(gapi_srcs
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
+ocv_add_dispatched_file(backends/fluid/gfluidcore_func SSE4_1 AVX2)
 
 ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
 
@@ -206,6 +210,10 @@ if(OPENCV_GAPI_INF_ENGINE)
   ocv_target_link_libraries(${the_module} PRIVATE ${INF_ENGINE_TARGET})
 endif()
 
+if (HAVE_NGRAPH)
+    ocv_target_link_libraries(${the_module} PRIVATE ngraph::ngraph)
+endif()
+
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
 endif()
@@ -221,6 +229,9 @@ set(__test_extra_deps "")
 if(OPENCV_GAPI_INF_ENGINE)
   list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
 endif()
+if(HAVE_NGRAPH)
+  list(APPEND __test_extra_deps ngraph::ngraph)
+endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
 
 # FIXME: test binary is linked with ADE directly since ADE symbols
@@ -230,6 +241,9 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+  if (HAVE_NGRAPH)
+      ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_NGRAPH)
+  endif()
 endif()
 
 if(HAVE_TBB AND TARGET opencv_test_gapi)
@@ -295,5 +309,17 @@ if (TARGET example_gapi_onevpl_infer_single_roi)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
+
+# perf test dependencies postprocessing
+if(HAVE_GAPI_ONEVPL)
+  # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
+  if(TARGET opencv_perf_gapi)
+    ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_ONEVPL)
+    ocv_target_link_libraries(opencv_perf_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+    if(HAVE_D3D11 AND HAVE_OPENCL)
+        ocv_target_include_directories(opencv_perf_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
   endif()
 endif()

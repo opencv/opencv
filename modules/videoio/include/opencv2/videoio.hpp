@@ -195,11 +195,13 @@ enum VideoCaptureProperties {
        CAP_PROP_AUDIO_POS = 59, //!< (read-only) Audio position is measured in samples. Accurate audio sample timestamp of previous grabbed fragment. See CAP_PROP_AUDIO_SAMPLES_PER_SECOND and CAP_PROP_AUDIO_SHIFT_NSEC.
        CAP_PROP_AUDIO_SHIFT_NSEC = 60, //!< (read only) Contains the time difference between the start of the audio stream and the video stream in nanoseconds. Positive value means that audio is started after the first video frame. Negative value means that audio is started before the first video frame.
        CAP_PROP_AUDIO_DATA_DEPTH = 61, //!< (open, read) Alternative definition to bits-per-sample, but with clear handling of 32F / 32S
-       CAP_PROP_AUDIO_SAMPLES_PER_SECOND = 62, //!< (read-only) determined from file/codec input. If not specified, then selected audio sample rate is 44100
+       CAP_PROP_AUDIO_SAMPLES_PER_SECOND = 62, //!< (open, read) determined from file/codec input. If not specified, then selected audio sample rate is 44100
        CAP_PROP_AUDIO_BASE_INDEX = 63, //!< (read-only) Index of the first audio channel for .retrieve() calls. That audio channel number continues enumeration after video channels.
        CAP_PROP_AUDIO_TOTAL_CHANNELS = 64, //!< (read-only) Number of audio channels in the selected audio stream (mono, stereo, etc)
        CAP_PROP_AUDIO_TOTAL_STREAMS = 65, //!< (read-only) Number of audio streams.
        CAP_PROP_AUDIO_SYNCHRONIZE = 66, //!< (open, read) Enables audio synchronization.
+       CAP_PROP_LRF_HAS_KEY_FRAME = 67, //!< FFmpeg back-end only - Indicates whether the Last Raw Frame (LRF), output from VideoCapture::read() when VideoCapture is initialized with VideoCapture::open(CAP_FFMPEG, {CAP_PROP_FORMAT, -1}) or VideoCapture::set(CAP_PROP_FORMAT,-1) is called before the first call to VideoCapture::read(), contains encoded data for a key frame.
+       CAP_PROP_CODEC_EXTRADATA_INDEX = 68, //!< Positive index indicates that returning extra data is supported by the video back end.  This can be retrieved as cap.retrieve(data, <returned index>).  E.g. When reading from a h264 encoded RTSP stream, the FFmpeg backend could return the SPS and/or PPS if available (if sent in reply to a DESCRIBE request), from calls to cap.retrieve(data, <returned index>).
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
