@@ -577,21 +577,11 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         return true;
     };
     LevMarqDenseLinear solver(param0, calibCameraLMCallback, mask0, /* LtoR */ false, solveMethod);
-    //TODO: play with them
-    solver.initialLambdaLevMarq = 0.001;
-    solver.initialLmUpFactor = 10.0;
-    solver.initialLmDownFactor = 10.0;
-    solver.upDouble = false;
-    solver.useStepQuality = false;
-    solver.clampDiagonal = false;
-    solver.stepNormInf = true;
     // old LMSolver calculates successful iterations only, this one calculates all iterations
     solver.maxIterations = (unsigned int)(termCrit.maxCount * 2.1);
-    //solver.checkStepNorm = true;
-    //solver.checkMinGradient = true;
-    //solver.checkRelEnergyChange = true;
     solver.stepNormTolerance = termCrit.epsilon;
     solver.smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
+    // geodesic not supported for normal callbacks
     BaseLevMarq::Report r = solver.optimize();
 
     //DEBUG
@@ -1092,21 +1082,11 @@ static double stereoCalibrateImpl(
     if (countNonZero(mask))
     {
         LevMarqDenseLinear solver(param, lmcallback, mask);
-        //TODO: play with them
-        solver.initialLambdaLevMarq = 0.001;
-        solver.initialLmUpFactor = 10.0;
-        solver.initialLmDownFactor = 10.0;
-        solver.upDouble = false;
-        solver.useStepQuality = false;
-        solver.clampDiagonal = false;
-        solver.checkRelEnergyChange = false;
-        solver.stepNormInf = true;
-        solver.checkMinGradient = false;
         // old LMSolver calculates successful iterations only, this one calculates all iterations
         solver.maxIterations = (unsigned int)(termCrit.maxCount * 2.1);
-        solver.checkStepNorm = true;
         solver.stepNormTolerance = termCrit.epsilon;
         solver.smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
+        // geodesic not supported for normal callbacks
         BaseLevMarq::Report r = solver.optimize();
         reprojErr = r.energy;
     }

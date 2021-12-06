@@ -999,21 +999,9 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                 return true;
             };
             LevMarqDenseLinear solver(Hvec, affine2DRefineCallback);
-            //TODO: play with them
-            solver.initialLambdaLevMarq = 0.001;
-            solver.initialLmUpFactor = 10.0;
-            solver.initialLmDownFactor = 10.0;
-            solver.upDouble = false;
-            solver.useStepQuality = false;
-            solver.clampDiagonal = false;
-            solver.checkRelEnergyChange = false;
-            solver.stepNormInf = true;
-            solver.checkMinGradient = false;
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
-            solver.checkStepNorm = true;
-            solver.stepNormTolerance = (double)FLT_EPSILON;
-            solver.smallEnergyTolerance = (double)FLT_EPSILON * (double)FLT_EPSILON;
+            solver.geodesic = true;
             BaseLevMarq::Report r = solver.optimize();
             //DEBUG
             /*
@@ -1163,21 +1151,9 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
                 return true;
             };
             LevMarqDenseLinear solver(Hvec, affinePartial2dRefineCallback);
-            //TODO: play with them
-            solver.initialLambdaLevMarq = 0.001;
-            solver.initialLmUpFactor = 10.0;
-            solver.initialLmDownFactor = 10.0;
-            solver.upDouble = false;
-            solver.useStepQuality = false;
-            solver.clampDiagonal = false;
-            solver.checkRelEnergyChange = false;
-            solver.stepNormInf = true;
-            solver.checkMinGradient = false;
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
-            solver.checkStepNorm = true;
-            solver.stepNormTolerance = (double)FLT_EPSILON;
-            solver.smallEnergyTolerance = (double)FLT_EPSILON * (double)FLT_EPSILON;
+            solver.geodesic = true;
             BaseLevMarq::Report r = solver.optimize();
 
             //DEBUG

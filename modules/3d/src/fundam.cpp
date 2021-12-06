@@ -404,21 +404,9 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                 return true;
             };
             LevMarqDenseLinear solver(H8, homographyRefineCallback);
-            //TODO: play with it
-            solver.initialLambdaLevMarq = 0.001;
-            solver.initialLmUpFactor = 10.0;
-            solver.initialLmDownFactor = 10.0;
-            solver.upDouble = false;
-            solver.useStepQuality = false;
-            solver.clampDiagonal = false;
-            solver.checkRelEnergyChange = false;
-            solver.stepNormInf = true;
-            solver.checkMinGradient = false;
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = 21; // 10 * 2.1
-            solver.checkStepNorm = true;
-            solver.stepNormTolerance = (double)FLT_EPSILON;
-            solver.smallEnergyTolerance = (double)FLT_EPSILON * (double)FLT_EPSILON;
+            solver.geodesic = true;
 
             BaseLevMarq::Report r = solver.optimize();
 

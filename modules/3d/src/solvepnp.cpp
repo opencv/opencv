@@ -736,21 +736,11 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
             return true;
         };
         LevMarqDenseLinear solver(params, solvePnPRefineLMCallback);
-        //TODO: play with them
-        solver.initialLambdaLevMarq = 0.001;
-        solver.initialLmUpFactor = 10.0;
-        solver.initialLmDownFactor = 10.0;
-        solver.upDouble = false;
-        solver.useStepQuality = false;
-        solver.clampDiagonal = false;
-        solver.checkRelEnergyChange = false;
-        solver.stepNormInf = true;
-        solver.checkMinGradient = false;
         // old LMSolver calculates successful iterations only, this one calculates all iterations
         solver.maxIterations = (unsigned int)(_criteria.maxCount * 2.1);
-        solver.checkStepNorm = true;
         solver.stepNormTolerance = (double)_criteria.epsilon;
         solver.smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
+        solver.geodesic = true;
         BaseLevMarq::Report r = solver.optimize();
 
         //TODO: try on

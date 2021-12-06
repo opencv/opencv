@@ -274,21 +274,11 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     };
 
     LevMarqDenseLinear solver(cam_params_, callb, noArray(), nerrs);
-    //TODO: play with them
-    solver.initialLambdaLevMarq = 0.001;
-    solver.initialLmUpFactor = 10.0;
-    solver.initialLmDownFactor = 10.0;
-    solver.upDouble = false;
-    solver.useStepQuality = false;
-    solver.clampDiagonal = false;
-    solver.checkRelEnergyChange = false;
-    solver.stepNormInf = true;
-    solver.checkMinGradient = false;
     // old LMSolver calculates successful iterations only, this one calculates all iterations
     solver.maxIterations = (unsigned int)(term_criteria_.maxCount * 2.1);
-    solver.checkStepNorm = true;
     solver.stepNormTolerance = term_criteria_.epsilon;
     solver.smallEnergyTolerance = term_criteria_.epsilon * term_criteria_.epsilon;
+    solver.geodesic = true;
     BaseLevMarq::Report r = solver.optimize();
 
     //DEBUG
