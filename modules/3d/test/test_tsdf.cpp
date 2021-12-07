@@ -273,10 +273,10 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = false;
+static const bool display = true;
 static const bool parallelCheck = false;
 
-class Settings
+class _Settings
 {
 public:
     float depthFactor;
@@ -288,7 +288,7 @@ public:
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 
-    Settings(bool useHashTSDF, bool onlySemisphere)
+    _Settings(bool useHashTSDF, bool onlySemisphere)
     {
         frameSize = Size(640, 480);
 
@@ -350,6 +350,7 @@ public:
     }
 };
 
+
 void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
 {
     Mat image;
@@ -397,7 +398,7 @@ int counterOfValid(Mat points)
     return count;
 }
 
-void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
 {
     auto normalCheck = [](Vec4f& vector, const int*)
     {
@@ -410,7 +411,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         }
     };
 
-    Settings settings(isHashTSDF, false);
+    _Settings settings(isHashTSDF, false);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _tmpnormals;
@@ -464,9 +465,9 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     points.release(); normals.release();
 }
 
-void valid_points_test(bool isHashTSDF)
+void _valid_points_test(bool isHashTSDF)
 {
-    Settings settings(isHashTSDF, true);
+    _Settings settings(isHashTSDF, true);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _newPoints, _newNormals;
@@ -501,72 +502,161 @@ void valid_points_test(bool isHashTSDF)
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
+
+void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+{
+    auto normalCheck = [](Vec4f& vector, const int*)
+    {
+        if (!cvIsNaN(vector[0]))
+        {
+            float length = vector[0] * vector[0] +
+                vector[1] * vector[1] +
+                vector[2] * vector[2];
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+        }
+    };
+
+
+    //VolumeSettings vs;
+    //Volume volume(VolumeType::TSDF, vs);
+    Volume volume;
+    Size frameSize = Size(640, 480);
+    float fx, fy, cx, cy;
+    fx = fy = 525.f;
+    cx = frameSize.width / 2 - 0.5f;
+    cy = frameSize.height / 2 - 0.5f;
+    Matx33f intr = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1);
+
+    // 5000 for the 16-bit PNG files
+    // 1 for the 32-bit float images in the ROS bag files
+    float depthFactor = 5000;
+    Vec3f lightPose = Vec3f::all(0.f); //meters
+
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, true);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    OdometryFrame odf;
+    Mat depth = scene->depth(poses[0]);
+    odf.setDepth(depth);
+    UMat _points, _normals, _tmpnormals;
+    UMat _newPoints, _newNormals;
+    Mat  points, normals;
+    AccessFlag af = ACCESS_READ;
+
+    volume.integrate(odf, poses[0].matrix);
+
+    if (isRaycast)
+    {
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, _points, _normals);
+    }
+
+    normals = _normals.getMat(af);
+    points = _points.getMat(af);
+
+    if (parallelCheck)
+        normals.forEach<Vec4f>(normalCheck);
+    else
+        normalsCheck(normals);
+
+    if (display)
+        displayImage(depth, points, normals, depthFactor, lightPose);
+
+    if (isRaycast)
+    {
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, _newPoints, _newNormals);
+        normals = _newNormals.getMat(af);
+        points = _newPoints.getMat(af);
+        normalsCheck(normals);
+
+        if (parallelCheck)
+            normals.forEach<Vec4f>(normalCheck);
+        else
+            normalsCheck(normals);
+
+        if (display)
+            displayImage(depth, points, normals, depthFactor, lightPose);
+    }
+
+    points.release(); normals.release();
+
+}
+
+
 #ifndef HAVE_OPENCL
-TEST(TSDF, raycast_normals) { normal_test(false, true, false, false); }
-TEST(TSDF, fetch_points_normals) { normal_test(false, false, true, false); }
-TEST(TSDF, fetch_normals) { normal_test(false, false, false, true); }
-TEST(TSDF, valid_points) { valid_points_test(false); }
+TEST(_TSDF, raycast_normals) { normal_test(false, true, false, false); }
+TEST(_TSDF, fetch_points_normals) { normal_test(false, false, true, false); }
+TEST(_TSDF, fetch_normals) { normal_test(false, false, false, true); }
+TEST(_TSDF, valid_points) { valid_points_test(false); }
 
-TEST(HashTSDF, raycast_normals) { normal_test(true, true, false, false); }
-TEST(HashTSDF, fetch_points_normals) { normal_test(true, false, true, false); }
-TEST(HashTSDF, fetch_normals) { normal_test(true, false, false, true); }
-TEST(HashTSDF, valid_points) { valid_points_test(true); }
+TEST(_HashTSDF, raycast_normals) { normal_test(true, true, false, false); }
+TEST(_HashTSDF, fetch_points_normals) { normal_test(true, false, true, false); }
+TEST(_HashTSDF, fetch_normals) { normal_test(true, false, false, true); }
+TEST(_HashTSDF, valid_points) { valid_points_test(true); }
 #else
-TEST(TSDF_CPU, raycast_normals)
+TEST(_TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, true, false, false);
+    _normal_test(false, true, false, false);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, fetch_points_normals)
+TEST(_TSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, false, true, false);
+    _normal_test(false, false, true, false);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, fetch_normals)
+TEST(_TSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, false, false, true);
+    _normal_test(false, false, false, true);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, valid_points)
+TEST(_TSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(false);
+    _valid_points_test(false);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, raycast_normals)
+TEST(_HashTSDF_CPU, raycast_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    _normal_test(true, true, false, false);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(_HashTSDF_CPU, fetch_points_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    _normal_test(true, false, true, false);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(_HashTSDF_CPU, fetch_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    _normal_test(true, false, false, true);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(_HashTSDF_CPU, valid_points)
+{
+    cv::ocl::setUseOpenCL(false);
+    _valid_points_test(true);
+    cv::ocl::setUseOpenCL(true);
+}
+
+
+TEST(new_TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
     normal_test(true, true, false, false);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, fetch_points_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test(true, false, true, false);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, fetch_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test(true, false, false, true);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, valid_points)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test(true);
-    cv::ocl::setUseOpenCL(true);
-}
 #endif
 }
 }  // namespace

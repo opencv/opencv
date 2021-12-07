@@ -21,15 +21,15 @@ enum class VolumeType
 };
 
 
-class Volume
+class CV_EXPORTS_W Volume
 {
 public:
     Volume();
     Volume(VolumeType vtype, VolumeSettings settings);
     ~Volume();
 
-    void integrate();
-    void raycast() const;
+    void integrate(OdometryFrame frame, InputArray pose);
+    void raycast(const Matx44f& cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
 
     void fetchNormals() const;
     void fetchPointsNormals() const;
@@ -37,7 +37,6 @@ public:
     void reset();
     int getVisibleBlocks() const;
     size_t getTotalVolumeUnits() const;
-
 
     class Impl;
 private:

@@ -507,7 +507,7 @@ void valid_points_test(bool isHashTSDF)
     if (display)
         displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 }
-
+/*
 TEST(TSDF_GPU, raycast_normals)      { normal_test(false, true, false, false); }
 TEST(TSDF_GPU, fetch_points_normals) { normal_test(false, false, true, false); }
 TEST(TSDF_GPU, fetch_normals)        { normal_test(false, false, false, true); }
@@ -517,7 +517,7 @@ TEST(HashTSDF_GPU, raycast_normals)      { normal_test(true, true, false, false)
 TEST(HashTSDF_GPU, fetch_points_normals) { normal_test(true, false, true, false); }
 TEST(HashTSDF_GPU, fetch_normals)        { normal_test(true, false, false, true); }
 TEST(HashTSDF_GPU, valid_points)         { valid_points_test(true); }
-
+*/
 }
 }  // namespace
 

@@ -11,20 +11,23 @@
 namespace cv
 {
 
-class VolumeSettings
+class CV_EXPORTS_W VolumeSettings
 {
 public:
     VolumeSettings();
     ~VolumeSettings();
 
-    void setVoxelSize(float  val);
-    float  getVoxelSize() const;
+    void  setVoxelSize(float  val);
+    float getVoxelSize() const;
 
     void  setRaycastStepFactor(float val);
     float getRaycastStepFactor() const;
 
     void  setTruncDist(float val);
     float getTruncDist() const;
+
+    void  setDepthFactor(float val);
+    float getDepthFactor() const;
 
     void setMaxWeight(int val);
     int  getMaxWeight() const;
@@ -37,6 +40,9 @@ public:
 
     void setResolution(InputArray val);
     void getResolution(OutputArray val) const;
+
+    void setIntrinsics(InputArray val);
+    void getIntrinsics(OutputArray val) const;
 
     class Impl;
 private:

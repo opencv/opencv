@@ -9,6 +9,8 @@
 #include "tsdf.hpp"
 #include "opencl_kernels_3d.hpp"
 
+#define USE_INTRINSICS 0
+
 namespace cv {
 
 class TSDFVolumeCPU : public TSDFVolume

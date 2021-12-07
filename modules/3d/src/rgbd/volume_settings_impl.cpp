@@ -22,6 +22,9 @@ public:
     virtual void  setTruncDist(float val) = 0;
     virtual float getTruncDist() const = 0;
 
+    virtual void  setDepthFactor(float val) = 0;
+    virtual float getDepthFactor() const = 0;
+
     virtual void setMaxWeight(int val) = 0;
     virtual int  getMaxWeight() const = 0;
 
@@ -33,6 +36,11 @@ public:
 
     virtual void setResolution(InputArray val) = 0;
     virtual void getResolution(OutputArray val) const = 0;
+
+    virtual void setIntrinsics(InputArray val) = 0;
+    virtual void getIntrinsics(OutputArray val) const = 0;
+
+
 };
 
 class VolumeSettingsImpl : public VolumeSettings::Impl
@@ -50,6 +58,9 @@ public:
     virtual void  setTruncDist(float val) override;
     virtual float getTruncDist() const override;
 
+    virtual void  setDepthFactor(float val) override;
+    virtual float getDepthFactor() const override;
+
     virtual void setMaxWeight(int val) override;
     virtual int  getMaxWeight() const override;
 
@@ -62,6 +73,9 @@ public:
     virtual void setResolution(InputArray val) override;
     virtual void getResolution(OutputArray val) const override;
 
+    virtual void setIntrinsics(InputArray val) override;
+    virtual void getIntrinsics(OutputArray val) const override;
+
 private:
     float   voxelSize;
     Matx44f pose;
@@ -70,18 +84,30 @@ private:
     int     maxWeight;
     Point3i resolution;
     bool    zFirstMemOrder;
-
+    Matx33f intrinsics;
+    float   depthFactor;
 public:
+    // duplicate classes for all volumes
     class DefaultSets {
     public:
+        static const int width  = 640;
+        static const int height = 480;
+        static constexpr float fx = 525.f;
+        static constexpr float fy = 525.f;
+        static constexpr float cx = width / 2 - 0.5f;
+        static constexpr float cy = height / 2 - 0.5f;
+        const Matx33f intr = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1);
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volSize / 2.f, -volSize / 2.f, 0.5f));
         const Matx44f pose = volumePose.matrix;
-        const Point3i resolution = Vec3i::all(128);
+        const Point3i resolution = Vec3i::all(128); //number of voxels
+        // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
+        static constexpr float depthFactor = 5000.f;
+
         static constexpr float volSize = 3.f;
         static constexpr float voxelSize = volSize / 128.f; //meters
         static constexpr float raycastStepFactor = 0.75f;
         static constexpr float truncDist = 2 * voxelSize;
-        static const int maxWeight = 64;
+        static const int maxWeight = 64; //frames
         static const bool zFirstMemOrder = true;
     };
 };
@@ -96,6 +122,8 @@ VolumeSettingsImpl::VolumeSettingsImpl()
     this->maxWeight = ds.maxWeight;
     this->resolution = ds.resolution;
     this->zFirstMemOrder = ds.zFirstMemOrder;
+    this->intrinsics = ds.intr;
+    this->depthFactor = ds.depthFactor;
 
 }
 VolumeSettingsImpl::~VolumeSettingsImpl() {}
@@ -114,6 +142,8 @@ void  VolumeSettings::setRaycastStepFactor(float val) { this->setRaycastStepFact
 float VolumeSettings::getRaycastStepFactor() const { return this->getRaycastStepFactor(); };
 void  VolumeSettings::setTruncDist(float val) { this->setTruncDist(val); };
 float VolumeSettings::getTruncDist() const { return this->getTruncDist(); };
+void  VolumeSettings::setDepthFactor(float val) { this->setDepthFactor(val); };
+float VolumeSettings::getDepthFactor() const { return this->getDepthFactor(); };
 void VolumeSettings::setMaxWeight(int val) { this->setMaxWeight(val); };
 int  VolumeSettings::getMaxWeight() const { return this->getMaxWeight(); };
 void VolumeSettings::setZFirstMemOrder(bool val) { this->setZFirstMemOrder(val); };
@@ -122,6 +152,8 @@ void VolumeSettings::setPose(InputArray val) { this->setPose(val); };
 void VolumeSettings::getPose(OutputArray val) const { this->getPose(val); };
 void VolumeSettings::setResolution(InputArray val) { this->setResolution(val); };
 void VolumeSettings::getResolution(OutputArray val) const { this->getResolution(val); };
+void VolumeSettings::setIntrinsics(InputArray val) { this->setIntrinsics(val); };
+void VolumeSettings::getIntrinsics(OutputArray val) const { this->getIntrinsics(val); };
 
 
 void VolumeSettingsImpl::setVoxelSize(float  val)
@@ -152,6 +184,16 @@ void VolumeSettingsImpl::setTruncDist(float val)
 float VolumeSettingsImpl::getTruncDist() const
 {
     return this->truncDist;
+}
+
+void VolumeSettingsImpl::setDepthFactor(float val)
+{
+    this->depthFactor = val;
+}
+
+float VolumeSettingsImpl::getDepthFactor() const
+{
+    return this->depthFactor;
 }
 
 void VolumeSettingsImpl::setMaxWeight(int val)
@@ -191,13 +233,26 @@ void VolumeSettingsImpl::setResolution(InputArray val)
 {
     if (!val.empty())
     {
-        resolution = Point3i(val.getMat());
+        this->resolution = Point3i(val.getMat());
     }
 }
 
 void VolumeSettingsImpl::getResolution(OutputArray val) const
 {
     Mat(this->resolution).copyTo(val);
+}
+
+void VolumeSettingsImpl::setIntrinsics(InputArray val)
+{
+    if (!val.empty())
+    {
+        this->intrinsics = Matx33f(val.getMat());
+    }
+}
+
+void VolumeSettingsImpl::getIntrinsics(OutputArray val) const
+{
+    Mat(this->intrinsics).copyTo(val);
 }
 
 
