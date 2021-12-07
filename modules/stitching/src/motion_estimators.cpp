@@ -279,7 +279,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     solver.stepNormTolerance = term_criteria_.epsilon;
     solver.smallEnergyTolerance = term_criteria_.epsilon * term_criteria_.epsilon;
     solver.geodesic = true;
-    BaseLevMarq::Report r = solver.optimize();
+    solver.optimize();
 
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));

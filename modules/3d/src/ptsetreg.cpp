@@ -955,13 +955,13 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
 
             auto affine2DRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
             {
-                int i, count = src.checkVector(2);
+                int i, errCount = src.checkVector(2);
                 Mat param = _param.getMat();
-                _err.create(count * 2, 1, CV_64F);
+                _err.create(errCount * 2, 1, CV_64F);
                 Mat err = _err.getMat(), J;
                 if (_Jac.needed())
                 {
-                    _Jac.create(count * 2, param.rows, CV_64F);
+                    _Jac.create(errCount * 2, param.rows, CV_64F);
                     J = _Jac.getMat();
                     CV_Assert(J.isContinuous() && J.cols == 6);
                 }
@@ -972,7 +972,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                 double* errptr = err.ptr<double>();
                 double* Jptr = J.data ? J.ptr<double>() : 0;
 
-                for (i = 0; i < count; i++)
+                for (i = 0; i < errCount; i++)
                 {
                     double Mx = M[i].x, My = M[i].y;
                     double xi = h[0] * Mx + h[1] * My + h[2];
@@ -1002,7 +1002,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
             solver.geodesic = true;
-            BaseLevMarq::Report r = solver.optimize();
+            solver.optimize();
         }
     }
 
@@ -1098,13 +1098,13 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
 
             auto affinePartial2dRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
             {
-                int i, count = src.checkVector(2);
+                int i, errCount = src.checkVector(2);
                 Mat param = _param.getMat();
-                _err.create(count * 2, 1, CV_64F);
+                _err.create(errCount * 2, 1, CV_64F);
                 Mat err = _err.getMat(), J;
                 if (_Jac.needed())
                 {
-                    _Jac.create(count * 2, param.rows, CV_64F);
+                    _Jac.create(errCount * 2, param.rows, CV_64F);
                     J = _Jac.getMat();
                     CV_Assert(J.isContinuous() && J.cols == 4);
                 }
@@ -1115,7 +1115,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
                 double* errptr = err.ptr<double>();
                 double* Jptr = J.data ? J.ptr<double>() : 0;
 
-                for (i = 0; i < count; i++)
+                for (i = 0; i < errCount; i++)
                 {
                     double Mx = M[i].x, My = M[i].y;
                     double xi = h[0] * Mx - h[1] * My + h[2];
@@ -1143,7 +1143,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = (unsigned int)(refineIters * 2.1);
             solver.geodesic = true;
-            BaseLevMarq::Report r = solver.optimize();
+            solver.optimize();
 
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];

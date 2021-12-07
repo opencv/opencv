@@ -703,9 +703,9 @@ public:
                     jtj.refBlock(srcPlace, srcPlace) += sj.t() * sj;
 
                     Vec6d jtbSrc = sj.t() * res;
-                    for (size_t i = 0; i < 6; i++)
+                    for (int i = 0; i < 6; i++)
                     {
-                        jtb(6 * (int)srcPlace + (int)i) += jtbSrc[i];
+                        jtb(6 * (int)srcPlace + i) += jtbSrc[i];
                     }
                 }
 
@@ -717,9 +717,9 @@ public:
                     jtj.refBlock(dstPlace, dstPlace) += tj.t() * tj;
 
                     Vec6d jtbDst = tj.t() * res;
-                    for (size_t i = 0; i < 6; i++)
+                    for (int i = 0; i < 6; i++)
                     {
-                        jtb(6 * (int)dstPlace + (int)i) += jtbDst[i];
+                        jtb(6 * (int)dstPlace + i) += jtbDst[i];
                     }
                 }
 
@@ -816,8 +816,8 @@ public:
             Matx<double, 6, 3> stj, ttj;
             Matx<double, 6, 4> sqj, tqj;
 
-            double err = poseError(srcP.q, srcP.t, tgtP.q, tgtP.t, e.pose.q, e.pose.t, e.sqrtInfo,
-                /* needJacobians = */ false, sqj, stj, tqj, ttj, res);
+            poseError(srcP.q, srcP.t, tgtP.q, tgtP.t, e.pose.q, e.pose.t, e.sqrtInfo,
+            /* needJacobians = */ false, sqj, stj, tqj, ttj, res);
 
             size_t srcPlace = (size_t)(-1), dstPlace = (size_t)(-1);
             Matx66d sj = jtCached[ei].first, tj = jtCached[ei].second;
@@ -827,9 +827,9 @@ public:
                 srcPlace = idToPlace.at(srcId);
 
                 Vec6d jtbSrc = sj.t() * res;
-                for (size_t i = 0; i < 6; i++)
+                for (int i = 0; i < 6; i++)
                 {
-                    jtbv(int(6 * srcPlace + i)) += jtbSrc[i];
+                    jtbv(6 * (int)srcPlace + i) += jtbSrc[i];
                 }
             }
 
@@ -838,9 +838,9 @@ public:
                 dstPlace = idToPlace.at(dstId);
 
                 Vec6d jtbDst = tj.t() * res;
-                for (size_t i = 0; i < 6; i++)
+                for (int i = 0; i < 6; i++)
                 {
-                    jtbv(int(6 * dstPlace + i)) += jtbDst[i];
+                    jtbv(6 * (int)dstPlace + i) += jtbDst[i];
                 }
             }
 

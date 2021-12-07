@@ -570,8 +570,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
     {
         Mat jterr = JtErr.getMat(), jtj = JtJ.getMat(), perViewErr = perViewErrors ? *perViewErrors : Mat();
-        Mat param = _param.getMat();
-        cameraCalcJErr(matM, _m, npoints, allErrors, param, /* calcJ */ JtErr.needed() && JtJ.needed(),
+        Mat mparam = _param.getMat();
+        cameraCalcJErr(matM, _m, npoints, allErrors, mparam, /* calcJ */ JtErr.needed() && JtJ.needed(),
                        jterr, jtj, errnorm,
                        aspectRatio, perViewErr, flags, releaseObject);
         return true;
@@ -581,8 +581,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     solver.maxIterations = (unsigned int)(termCrit.maxCount * 2.1);
     solver.stepNormTolerance = termCrit.epsilon;
     solver.smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
-    // geodesic not supported for normal callbacks
-    BaseLevMarq::Report r = solver.optimize();
+    // geodesic is not supported for normal callbacks
+    solver.optimize();
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
@@ -919,9 +919,6 @@ static double stereoCalibrateImpl(
 
     //std::cout << "param before LM: " << Mat(param, false).t() << "\n";
 
-    //DEBUG
-    //auto lmcallback = [&](Mat& _param, Mat* _JtErr, Mat* _JtJ, double* _errnorm)
-
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
         double* param_p = _param.getMat().ptr<double>();
@@ -961,7 +958,7 @@ static double stereoCalibrateImpl(
             }
         }
 
-        int pos = 0;
+        int ptPos = 0;
         for(int i = 0; i < nimages; i++ )
         {
             int ni = _npoints.at<int>(i);
@@ -976,7 +973,7 @@ static double stereoCalibrateImpl(
             else
                 composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1] );
 
-            Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + pos*3);
+            Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + ptPos*3);
             err.resize(ni*2); Je.resize(ni*2); J_LR.resize(ni*2); Ji.resize(ni*2);
 
             Mat tmpImagePoints = err.reshape(2, 1);
@@ -988,7 +985,7 @@ static double stereoCalibrateImpl(
 
             for(int k = 0; k < 2; k++ )
             {
-                Mat imgpt_ik(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + pos*2);
+                Mat imgpt_ik(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + ptPos*2);
 
                 if( JtJ_.needed() || JtErr_.needed() )
                     projectPoints(objpt_i, om[k], T[k], A[k], Dist[k],
@@ -1056,7 +1053,7 @@ static double stereoCalibrateImpl(
                 reprojErr += viewErr;
             }
 
-            pos += ni;
+            ptPos += ni;
         }
         errnorm = reprojErr;
         return true;

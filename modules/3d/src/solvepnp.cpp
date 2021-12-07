@@ -712,10 +712,10 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
                 _Jac.create(npts * 2, param.rows, CV_64FC1);
             }
 
-            Mat rvec = param(Rect(0, 0, 1, 3)), tvec = param(Rect(0, 3, 1, 3));
+            Mat prvec = param(Rect(0, 0, 1, 3)), ptvec = param(Rect(0, 3, 1, 3));
 
             Mat J, projectedPts;
-            projectPoints(opoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
+            projectPoints(opoints, prvec, ptvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
 
             if (_Jac.needed())
             {
@@ -741,7 +741,7 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
         solver.stepNormTolerance = (double)_criteria.epsilon;
         solver.smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
         solver.geodesic = true;
-        BaseLevMarq::Report r = solver.optimize();
+        solver.optimize();
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
         params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());

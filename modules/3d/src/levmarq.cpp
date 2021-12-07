@@ -236,7 +236,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 pBackend->currentOplusX(x, /*geo*/ false);
 
                 bool success = pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ false);
-                if (!success || energy < 0 || isnan(energy))
+                if (!success || energy < 0 || std::isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
                     return BaseLevMarq::Report(false, iter, oldEnergy); // not found
@@ -420,7 +420,7 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
             this->currentX = Mat_<double>((int)this->allVars, 1);
         }
 
-        CV_Assert(cb_ || cb_alt_ && !(cb_ && cb_alt_));
+        CV_Assert((cb_ || cb_alt_) && !(cb_ && cb_alt_));
         this->cb = cb_;
         this->cb_alt = cb_alt_;
 
@@ -490,7 +490,7 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         int j = 0;
         if (!mask.empty())
         {
-            for (int i = 0; i < allVars; i++)
+            for (int i = 0; i < (int)allVars; i++)
             {
                 delta.at<double>(i) = (mask.at<uchar>(i) != 0) ? x(j++) : 0.0;
             }
@@ -673,7 +673,7 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
 
             Mat_<double> jLongFiltered(jLong.rows, (int)nVars);
             int ctr = 0;
-            for (int i = 0; i < allVars; i++)
+            for (int i = 0; i < (int)allVars; i++)
             {
                 if (mask.empty() || mask(i))
                 {

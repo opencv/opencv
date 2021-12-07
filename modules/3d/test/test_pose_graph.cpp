@@ -247,7 +247,7 @@ Mesh drawId(size_t x)
     while (x > 0);
     float spacing = 0.2f;
     Mesh m;
-    for (int i = 0; i < digits.size(); i++)
+    for (size_t i = 0; i < digits.size(); i++)
     {
         Mesh digit = seg7(digits[digits.size() - 1 - i]);
         Vec6f bb = digit.getBoundingBox();
@@ -297,7 +297,7 @@ Mesh drawPoseGraph(Ptr<detail::PoseGraph> pg)
 
     // edges
     margin = Affine3f().translate(Vec3f(0.05f, 0.05f, 0));
-    for (int i = 0; i < pg->getNumEdges(); i++)
+    for (size_t i = 0; i < pg->getNumEdges(); i++)
     {
         Affine3f pose = pg->getEdgePose(i);
         size_t sid = pg->getEdgeStart(i);
@@ -338,7 +338,7 @@ TEST(PoseGraph, simple)
 
     DualQuatf pose0 = true0;
     vector<DualQuatf> noise(7);
-    for (int i = 0; i < noise.size(); i++)
+    for (size_t i = 0; i < noise.size(); i++)
     {
         float angle = cv::theRNG().uniform(-1.f, 1.f);
         float shift = cv::theRNG().uniform(-2.f, 2.f);

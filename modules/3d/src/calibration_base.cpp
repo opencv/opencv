@@ -1273,7 +1273,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
 
     // refine extrinsic parameters using iterative algorithm
     auto callback = [matM, _m, matA, distCoeffs]
-    (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
+        (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
     {
         const Mat& objpt = matM;
         const Mat& imgpt = _m;
@@ -1283,13 +1283,13 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
         double* pdata = x.ptr<double>();
         Mat rv(3, 1, CV_64F, pdata);
         Mat tv(3, 1, CV_64F, pdata + 3);
-        int count = objpt.rows + objpt.cols - 1;
-        _err.create(count * 2, 1, CV_64F);
+        int errCount = objpt.rows + objpt.cols - 1;
+        _err.create(errCount * 2, 1, CV_64F);
         Mat err = _err.getMat();
-        err = err.reshape(2, count);
+        err = err.reshape(2, errCount);
         if (_Jac.needed())
         {
-            _Jac.create(count * 2, 6, CV_64F);
+            _Jac.create(errCount * 2, 6, CV_64F);
             Mat Jac = _Jac.getMat();
             Mat dpdr = Jac.colRange(0, 3);
             Mat dpdt = Jac.colRange(3, 6);
@@ -1301,7 +1301,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
             projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs, err);
         }
         err = err - imgpt;
-        err = err.reshape(1, 2 * count);
+        err = err.reshape(1, 2 * errCount);
         return true;
     };
 
@@ -1309,7 +1309,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     // old LMSolver calculates successful iterations only, this one calculates all iterations
     solver.maxIterations = (unsigned int)(max_iter * 2.1);
     solver.geodesic = true;
-    BaseLevMarq::Report r = solver.optimize();
+    solver.optimize();
 
     _param.rowRange(0, 3).copyTo(rvec);
     _param.rowRange(3, 6).copyTo(tvec);

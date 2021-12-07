@@ -407,8 +407,7 @@ Mat findHomography( InputArray _points1, InputArray _points2,
             // old LMSolver calculates successful iterations only, this one calculates all iterations
             solver.maxIterations = 21; // 10 * 2.1
             solver.geodesic = true;
-
-            BaseLevMarq::Report r = solver.optimize();
+            solver.optimize();
         }
     }
 
