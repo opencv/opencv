@@ -180,9 +180,6 @@ def bootstrap():
 
 bootstrap()
 
-# hotfix for pylint issue (https://github.com/opencv/opencv-python/issues/570)
-from . import getStructuringElement, MORPH_ELLIPSE
-
 # extra imports for a proper autocomplete work in IDE
 from . import gapi
 from . import mat_wrapper
