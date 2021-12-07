@@ -40,8 +40,6 @@ static inline cv::Matx44d m_right(cv::Quatd q)
              z,  y, -x,  w };
 }
 
-// precaution against "unused function" warning when there's no Eigen
-#if defined(HAVE_EIGEN)
 // jacobian of quaternionic (exp(x)*q) : R_3 -> H near x == 0
 static inline cv::Matx43d expQuatJacobian(cv::Quatd q)
 {
@@ -51,7 +49,6 @@ static inline cv::Matx43d expQuatJacobian(cv::Quatd q)
                        -z,  w,  x,
                         y, -x,  w);
 }
-#endif
 
 // concatenate matrices vertically
 template<typename _Tp, int m, int n, int k> static inline
@@ -919,7 +916,7 @@ BaseLevMarq::Report PoseGraphImpl::optimize()
 }
 
 #else
-int PoseGraphImpl::optimize(const cv::TermCriteria& /*tc*/)
+BaseLevMarq::Report PoseGraphImpl::optimize()
 {
     CV_Error(Error::StsNotImplemented, "Eigen library required for sparse matrix solve during pose graph optimization, dense solver is not implemented");
 }
