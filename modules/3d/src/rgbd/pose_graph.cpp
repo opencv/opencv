@@ -100,6 +100,8 @@ namespace cv
 namespace detail
 {
 
+#if defined(HAVE_EIGEN)
+
 class PoseGraphImpl;
 class PoseGraphLevMarqBackend;
 
@@ -565,8 +567,6 @@ double PoseGraphImpl::calcEnergyNodes(const std::map<size_t, Node>& newNodes) co
     return totalErr * 0.5;
 }
 
-
-#if defined(HAVE_EIGEN)
 
 // J := J * d_inv, d_inv = make_diag(di)
 // J^T*J := (J * d_inv)^T * J * d_inv = diag(di) * (J^T * J) * diag(di) = eltwise_mul(J^T*J, di*di^T)
