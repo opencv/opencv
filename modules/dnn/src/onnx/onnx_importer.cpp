@@ -100,6 +100,7 @@ private:
     const DispatchMap dispatch;
     static const DispatchMap buildDispatchMap();
 
+    void parseArg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -766,6 +767,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
         else
             CV_Error(Error::StsError, cv::format("Node [%s]:(%s) parse error: %s", layer_type.c_str(), name.c_str(), e.what()));
     }
+}
+
+void ONNXImporter::parseArg(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& layer_type = node_proto.op_type();
+    layerParams.type = "Arg";
+    layerParams.set("op", layer_type == "ArgMax" ? "max" : "min");
+    addLayer(layerParams, node_proto);
 }
 
 void setCeilMode(LayerParams& layerParams)
@@ -2986,6 +2995,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
 {
     DispatchMap dispatch;
 
+    dispatch["ArgMax"] = dispatch["ArgMin"] = &ONNXImporter::parseArg;
     dispatch["MaxPool"] = &ONNXImporter::parseMaxPool;
     dispatch["AveragePool"] = &ONNXImporter::parseAveragePool;
     dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] =
