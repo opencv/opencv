@@ -1799,3 +1799,25 @@ class SubFromConst1(nn.Module):
 model = SubFromConst1()
 input_ = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
 save_data_and_model("sub_from_const1", input_, model)
+
+class ArgMax(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(ArgMax, self).__init__()
+
+    def forward(self, x):
+        return torch.argmax(x, dim=2, keepdims=False).to(torch.float32)
+
+model = ArgMax()
+input_ = Variable(torch.randn(2, 3, 4, 5, dtype=torch.float32))
+save_data_and_model("argmax", input_, model)
+
+class ArgMin(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(ArgMin, self).__init__()
+
+    def forward(self, x):
+        return torch.argmin(x, dim=-1, keepdims=True).to(torch.float32)
+
+model = ArgMin()
+input_ = Variable(torch.randn(2, 3, 4, 5, dtype=torch.float32))
+save_data_and_model("argmin", input_, model)
