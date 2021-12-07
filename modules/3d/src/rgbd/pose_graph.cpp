@@ -915,18 +915,19 @@ BaseLevMarq::Report PoseGraphImpl::optimize()
     return lm->optimize();
 }
 
-#else
-BaseLevMarq::Report PoseGraphImpl::optimize()
-{
-    CV_Error(Error::StsNotImplemented, "Eigen library required for sparse matrix solve during pose graph optimization, dense solver is not implemented");
-}
-#endif
-
-
 Ptr<detail::PoseGraph> detail::PoseGraph::create()
 {
     return makePtr<PoseGraphImpl>();
 }
+
+#else
+
+Ptr<detail::PoseGraph> detail::PoseGraph::create()
+{
+    CV_Error(Error::StsNotImplemented, "Eigen library required for sparse matrix solve during pose graph optimization, dense solver is not implemented");
+}
+
+#endif
 
 PoseGraph::~PoseGraph() { }
 
