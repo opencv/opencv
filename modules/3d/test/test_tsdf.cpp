@@ -516,10 +516,11 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         }
     };
 
+    VolumeSettings vs;
+    vs.getDepthFactor();
+    Volume volume(VolumeType::TSDF, vs);
 
-    //VolumeSettings vs;
-    //Volume volume(VolumeType::TSDF, vs);
-    Volume volume;
+    //Volume volume;
     Size frameSize = Size(640, 480);
     float fx, fy, cx, cy;
     fx = fy = 525.f;
@@ -559,8 +560,11 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         normalsCheck(normals);
 
     if (display)
+    {
+        std::cout << "Display_1" << std::endl;
         displayImage(depth, points, normals, depthFactor, lightPose);
-
+        
+    }
     if (isRaycast)
     {
         volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, _newPoints, _newNormals);

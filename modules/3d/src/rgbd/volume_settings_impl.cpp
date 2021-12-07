@@ -112,6 +112,34 @@ public:
     };
 };
 
+
+VolumeSettings::VolumeSettings()
+{
+    this->impl = makePtr<VolumeSettingsImpl>();
+}
+
+VolumeSettings::~VolumeSettings() {}
+
+void  VolumeSettings::setVoxelSize(float val) { this->impl->setVoxelSize(val); };
+float VolumeSettings::getVoxelSize() const { return this->impl->getVoxelSize(); };
+void  VolumeSettings::setRaycastStepFactor(float val) { this->impl->setRaycastStepFactor(val); };
+float VolumeSettings::getRaycastStepFactor() const { return this->impl->getRaycastStepFactor(); };
+void  VolumeSettings::setTruncDist(float val) { this->impl->setTruncDist(val); };
+float VolumeSettings::getTruncDist() const { return this->impl->getTruncDist(); };
+void  VolumeSettings::setDepthFactor(float val) { this->impl->setDepthFactor(val); };
+float VolumeSettings::getDepthFactor() const { return this->impl->getDepthFactor(); };
+void VolumeSettings::setMaxWeight(int val) { this->impl->setMaxWeight(val); };
+int  VolumeSettings::getMaxWeight() const { return this->impl->getMaxWeight(); };
+void VolumeSettings::setZFirstMemOrder(bool val) { this->impl->setZFirstMemOrder(val); };
+bool VolumeSettings::getZFirstMemOrder() const { return this->impl->getZFirstMemOrder(); };
+void VolumeSettings::setPose(InputArray val) { this->impl->setPose(val); };
+void VolumeSettings::getPose(OutputArray val) const { this->impl->getPose(val); };
+void VolumeSettings::setResolution(InputArray val) { this->impl->setResolution(val); };
+void VolumeSettings::getResolution(OutputArray val) const { this->impl->getResolution(val); };
+void VolumeSettings::setIntrinsics(InputArray val) { this->impl->setIntrinsics(val); };
+void VolumeSettings::getIntrinsics(OutputArray val) const { this->impl->getIntrinsics(val); };
+
+
 VolumeSettingsImpl::VolumeSettingsImpl()
 {
     DefaultSets ds;
@@ -127,33 +155,6 @@ VolumeSettingsImpl::VolumeSettingsImpl()
 
 }
 VolumeSettingsImpl::~VolumeSettingsImpl() {}
-
-
-VolumeSettings::VolumeSettings()
-{
-    this->impl = makePtr<VolumeSettingsImpl>();
-}
-
-VolumeSettings::~VolumeSettings() {}
-
-void  VolumeSettings::setVoxelSize(float val) { this->setVoxelSize(val); };
-float VolumeSettings::getVoxelSize() const { return this->getVoxelSize(); };
-void  VolumeSettings::setRaycastStepFactor(float val) { this->setRaycastStepFactor(val); };
-float VolumeSettings::getRaycastStepFactor() const { return this->getRaycastStepFactor(); };
-void  VolumeSettings::setTruncDist(float val) { this->setTruncDist(val); };
-float VolumeSettings::getTruncDist() const { return this->getTruncDist(); };
-void  VolumeSettings::setDepthFactor(float val) { this->setDepthFactor(val); };
-float VolumeSettings::getDepthFactor() const { return this->getDepthFactor(); };
-void VolumeSettings::setMaxWeight(int val) { this->setMaxWeight(val); };
-int  VolumeSettings::getMaxWeight() const { return this->getMaxWeight(); };
-void VolumeSettings::setZFirstMemOrder(bool val) { this->setZFirstMemOrder(val); };
-bool VolumeSettings::getZFirstMemOrder() const { return this->getZFirstMemOrder(); };
-void VolumeSettings::setPose(InputArray val) { this->setPose(val); };
-void VolumeSettings::getPose(OutputArray val) const { this->getPose(val); };
-void VolumeSettings::setResolution(InputArray val) { this->setResolution(val); };
-void VolumeSettings::getResolution(OutputArray val) const { this->getResolution(val); };
-void VolumeSettings::setIntrinsics(InputArray val) { this->setIntrinsics(val); };
-void VolumeSettings::getIntrinsics(OutputArray val) const { this->getIntrinsics(val); };
 
 
 void VolumeSettingsImpl::setVoxelSize(float  val)

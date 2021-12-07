@@ -324,13 +324,6 @@ struct RaycastInvoker : ParallelLoopBody
 };
 
 
-
-
-
-
-
-
-
 void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
     std::cout << "TsdfVolume::raycast()" << std::endl;
@@ -369,28 +362,6 @@ void TsdfVolume::reset()
 }
 int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
