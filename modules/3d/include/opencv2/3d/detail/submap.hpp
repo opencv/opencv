@@ -9,7 +9,7 @@
 #include <opencv2/core/affine.hpp>
 #include "opencv2/3d/detail/pose_graph.hpp"
 
-//DEBUG
+//TODO: remove it when it is rewritten to robust pose graph
 #include "opencv2/core/dualquaternion.hpp"
 
 #include <type_traits>
@@ -35,11 +35,6 @@ public:
 
         void accumulatePose(const Affine3f& _pose, int _weight = 1)
         {
-            //DEBUG
-            //Matx44f accPose = estimatedPose.matrix * weight + _pose.matrix * _weight;
-            //weight         += _weight;
-            //accPose        /= float(weight);
-            //estimatedPose   = Affine3f(accPose);
             DualQuatf accPose = DualQuatf::createFromAffine3(estimatedPose) * float(weight) + DualQuatf::createFromAffine3(_pose) * float(_weight);
             weight += _weight;
             accPose = accPose / float(weight);
@@ -288,7 +283,7 @@ bool SubmapManager<MatType>::shouldCreateSubmap(int currFrameId)
     Ptr<SubmapT> currSubmap = getSubmap(currSubmapId);
     float ratio             = currSubmap->calcVisibilityRatio(currFrameId);
 
-    //DEBUG
+    //TODO: fix this when a new pose graph is ready
     // if (ratio < 0.2f)
     if (ratio < 0.5f)
         return true;
@@ -378,7 +373,6 @@ int SubmapManager<MatType>::estimateConstraint(int fromSubmapId, int toSubmapId,
     }
 
     int localInliers = 0;
-    //DEBUG
     DualQuatf inlierConstraint;
     for (int i = 0; i < int(weights.size()); i++)
     {
