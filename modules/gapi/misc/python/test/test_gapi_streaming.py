@@ -351,7 +351,7 @@ try:
 
 
         # FIXME: Add more tests
-        def test_gstreaming_source(self):
+        def test_gstreamer_source(self):
             pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                           videorate ! videoscale ! video/x-raw,width=1920,height=1080,
                           framerate=3/1 ! appsink"""
@@ -362,12 +362,11 @@ try:
 
             ccomp = c.compileStreaming()
 
-
             # NB: Skip test in case gstreamer isn't available.
             try:
                 source = cv.gapi.wip.make_gst_src(pipeline)
-            except:
-                raise TestSkip()
+            except cv.error as e:
+                raise unittest.SkipTest(str(e))
 
             ccomp.setSource(cv.gin(source))
             ccomp.start()

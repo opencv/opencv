@@ -231,7 +231,7 @@ PyObject* pyopencv_from(const cv::GArg& value)
     {
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
-        HANDLE_CASE(INT64,   int64_t);
+        HANDLE_CASE(INT64,     int64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);
@@ -1074,7 +1074,6 @@ bool pyopencv_to(PyObject* obj, cv::GProtoOutputArgs& value, const ArgInfo& info
 #define PYOPENCV_EXTRA_METHODS_GAPI \
   {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \
   {"__op", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_op), "__op(...) -> retval\n"},
-
 
 #endif  // HAVE_OPENCV_GAPI
 #endif  // OPENCV_GAPI_PYOPENCV_GAPI_HPP
