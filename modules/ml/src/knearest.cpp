@@ -397,7 +397,11 @@ public:
             Mat _res, _nr, _d;
             tr.findNearest(test_samples.row(i), k, Emax, _res, _nr, _d, noArray());
             res.push_back(_res.t());
+            nr.push_back(_nr.t());
+            d.push_back(_d.t());
             _results.assign(res);
+            _neighborResponses.assign(nr);
+            _dists.assign(d);
         }
 
         return result; // currently always 0
