@@ -6,8 +6,6 @@
 
 #include "oak_media_adapter.hpp"
 
-#ifdef WITH_OAK_BACKEND
-
 namespace cv {
 namespace gapi {
 namespace oak {
@@ -28,7 +26,7 @@ private:
     uint8_t* m_data_ptr;
 };
 
-void OAKMediaAdapter::Priv::Priv(cv::Size sz, OAKFrameFormat fmt, uint8_t* data_ptr) {
+OAKMediaAdapter::Priv::Priv(cv::Size sz, OAKFrameFormat fmt, uint8_t* data_ptr) {
     GAPI_Assert(fmt == OAKFrameFormat::BGR && "OAKMediaAdapter only supports BGR format for now");
     m_sz = sz;
     m_fmt = fmt;
@@ -43,8 +41,7 @@ MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
 
 cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::BGR, m_sz}; }
 
-void OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt,
-                                      uint8_t* data_ptr) :
+OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt, uint8_t* data_ptr) :
     m_priv(new OAKMediaAdapter::Priv(sz, fmt, data_ptr)) {};
 
 MediaFrame::View OAKMediaAdapter::access(MediaFrame::Access access) {
@@ -59,29 +56,3 @@ OAKMediaAdapter::~OAKMediaAdapter() = default;
 } // namespace oak
 } // namespace gapi
 } // namespace cv
-
-#else
-
-namespace cv {
-namespace gapi {
-namespace oak {
-OAKMediaAdapter::OAKMediaAdapter() {
-    GAPI_Assert(false && "Built without depthai library support");
-}
-OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt,
-                                 uint8_t* data_ptr) {
-    GAPI_Assert(false && "Built without depthai library support");
-}
-cv::GFrameDesc OAKMediaAdapter::meta() const {
-    GAPI_Assert(false && "Built without depthai library support");
-}
-cv::MediaFrame::View OAKMediaAdapter::access(cv::MediaFrame::Access) {
-    GAPI_Assert(false && "Built without depthai library support");
-}
-OAKMediaAdapter::~OAKMediaAdapter() {}
-class OAKMediaAdapter::Priv {};
-} // namespace oak
-} // namespace gapi
-} // namespace cv
-
-#endif // WITH_OAK_BACKEND
