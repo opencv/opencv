@@ -8,12 +8,7 @@
 #define GAPI_STREAMING_ONEVPL_ONEVPL_UTILS_HPP
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif // MFX_VERSION
-
-#include <vpl/mfx.h>
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #include <map>
 #include <memory>
@@ -43,8 +38,16 @@ template <typename COMNonManageableType>
 using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
 
 template <typename COMNonManageableType>
+using ComSharedPtrGuard = std::shared_ptr<COMNonManageableType>;
+
+template <typename COMNonManageableType>
 ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
     return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
+template <typename COMNonManageableType>
+ComSharedPtrGuard<COMNonManageableType> createCOMSharedPtrGuard(ComPtrGuard<COMNonManageableType>&& unique_guard) {
+    return ComSharedPtrGuard<COMNonManageableType>(std::move(unique_guard));
 }
 
 
@@ -75,6 +78,7 @@ std::string mfxstatus_to_string(mfxStatus err);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
 
+std::string ext_mem_frame_type_to_cstr(int type);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

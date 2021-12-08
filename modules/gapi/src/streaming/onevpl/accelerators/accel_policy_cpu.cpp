@@ -21,8 +21,100 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+namespace utils {
+mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
+    mfxU32 nbytes = 0;
 
-VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy() {
+    mfxU32 half_width = width / 2;
+    mfxU32 half_height = height / 2;
+    switch (FourCC) {
+        case MFX_FOURCC_I420:
+        case MFX_FOURCC_NV12:
+            nbytes = width * height + 2 * half_width * half_height;
+            break;
+        case MFX_FOURCC_I010:
+        case MFX_FOURCC_P010:
+            nbytes = width * height + 2 * half_width * half_height;
+            nbytes *= 2;
+            break;
+        case MFX_FOURCC_RGB4:
+            nbytes = width * height * 4;
+            break;
+        default:
+            break;
+    }
+
+    return nbytes;
+}
+
+surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
+                                   std::shared_ptr<void> out_buf_ptr,
+                                   size_t out_buf_ptr_offset,
+                                   size_t out_buf_size)
+{
+    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
+    mfxU16 surfW = frameInfo.Width * 4;
+    mfxU16 surfH = frameInfo.Height;
+    (void)surfH;
+
+    // TODO more intelligent check
+    if (out_buf_size <= out_buf_ptr_offset) {
+        GAPI_LOG_WARNING(nullptr, "Not enough buffer, ptr: " << out_buf_ptr <<
+                                  ", size: " << out_buf_size <<
+                                  ", offset: " << out_buf_ptr_offset <<
+                                  ", W: " << surfW <<
+                                  ", H: " << surfH);
+        GAPI_Assert(false && "Invalid offset");
+    }
+
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+
+    handle->Info = frameInfo;
+    handle->Data.B = buf + out_buf_ptr_offset;
+    handle->Data.G = handle->Data.B + 1;
+    handle->Data.R = handle->Data.B + 2;
+    handle->Data.A = handle->Data.B + 3;
+    handle->Data.Pitch = surfW;
+
+    return Surface::create_surface(std::move(handle), out_buf_ptr);
+}
+
+surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
+                                    std::shared_ptr<void> out_buf_ptr,
+                                    size_t out_buf_ptr_offset,
+                                    size_t out_buf_size)
+{
+    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
+    mfxU16 surfH = frameInfo.Height;
+    mfxU16 surfW = (frameInfo.FourCC == MFX_FOURCC_P010) ? frameInfo.Width * 2 : frameInfo.Width;
+
+    // TODO more intelligent check
+    if (out_buf_size <=
+        out_buf_ptr_offset + (surfW * surfH) + ((surfW / 2) * (surfH / 2))) {
+        GAPI_LOG_WARNING(nullptr, "Not enough buffer, ptr: " << out_buf_ptr <<
+                                  ", size: " << out_buf_size <<
+                                  ", offset: " << out_buf_ptr_offset <<
+                                  ", W: " << surfW <<
+                                  ", H: " << surfH);
+        GAPI_Assert(false && "Invalid offset");
+    }
+
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+
+    handle->Info = frameInfo;
+    handle->Data.Y     = buf + out_buf_ptr_offset;
+    handle->Data.U     = buf + out_buf_ptr_offset + (surfW * surfH);
+    handle->Data.V     = handle->Data.U + ((surfW / 2) * (surfH / 2));
+    handle->Data.Pitch = surfW;
+
+    return Surface::create_surface(std::move(handle), out_buf_ptr);
+}
+} // namespace utils
+
+VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
     GAPI_LOG_INFO(nullptr, "created");
 }
 
@@ -115,6 +207,37 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     }
 
     return preallocated_pool_memory_ptr;
+}
+
+VPLCPUAccelerationPolicy::pool_key_t
+VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxVideoParam& param) {
+
+    // External (application) allocation of decode surfaces
+    GAPI_LOG_DEBUG(nullptr, "Query mfxFrameAllocRequest.NumFrameSuggested: " << alloc_request.NumFrameSuggested <<
+                            ", mfxFrameAllocRequest.Type: " << alloc_request.Type);
+
+    mfxU32 singleSurfaceSize = utils::GetSurfaceSize_(param.mfx.FrameInfo.FourCC,
+                                                      param.mfx.FrameInfo.Width,
+                                                      param.mfx.FrameInfo.Height);
+    if (!singleSurfaceSize) {
+        throw std::runtime_error("Cannot determine surface size for: fourCC: " +
+                                 std::to_string(param.mfx.FrameInfo.FourCC) +
+                                 ", width: " + std::to_string(param.mfx.FrameInfo.Width) +
+                                 ", height: " + std::to_string(param.mfx.FrameInfo.Height));
+    }
+
+    const auto &frameInfo = param.mfx.FrameInfo;
+    auto surface_creator =
+            [&frameInfo] (std::shared_ptr<void> out_buf_ptr, size_t out_buf_ptr_offset,
+                          size_t out_buf_size) -> surface_ptr_t {
+                return (frameInfo.FourCC == MFX_FOURCC_RGB4) ?
+                        utils::create_surface_RGB4_(frameInfo, out_buf_ptr, out_buf_ptr_offset,
+                                                    out_buf_size) :
+                        utils::create_surface_other_(frameInfo, out_buf_ptr, out_buf_ptr_offset,
+                                                     out_buf_size);};
+
+    return create_surface_pool(alloc_request.NumFrameSuggested,
+                               singleSurfaceSize, surface_creator);
 }
 
 VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_surface(pool_key_t key) {

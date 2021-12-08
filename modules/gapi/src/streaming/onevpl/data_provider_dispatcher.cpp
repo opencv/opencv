@@ -25,13 +25,14 @@ IDataProvider::Ptr DataProviderDispatcher::create(const std::string& file_path,
 
     // Look-up CodecId from input params
     // If set then raw data provider is preferred
-    GAPI_LOG_DEBUG(nullptr, "try find explicit cfg param\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\"");
+    GAPI_LOG_DEBUG(nullptr, "try find explicit cfg param \"" <<
+                            CfgParam::decoder_id_name() <<"\"");
     auto codec_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID";
+            return value.get_name() == CfgParam::decoder_id_name();
         });
     if (codec_it != cfg_params.end()) {
-        GAPI_LOG_DEBUG(nullptr, "Dispatcher found \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
+        GAPI_LOG_DEBUG(nullptr, "Dispatcher found \"" << CfgParam::decoder_id_name() << "\""
                                 " so try on raw data provider at first");
 
         try {

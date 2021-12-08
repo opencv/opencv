@@ -5,8 +5,7 @@
 // Copyright (C) 2021 Intel Corporation
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
-#include <vpl/mfxjpeg.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #endif // HAVE_ONEVPL
 
 #include <errno.h>

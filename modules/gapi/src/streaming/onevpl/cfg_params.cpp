@@ -86,6 +86,34 @@ CfgParam::CfgParam (const std::string& param_name, value_t&& param_value, bool i
 
 CfgParam::~CfgParam() = default;
 
+CfgParam CfgParam::create_frames_pool_size(uint64_t value) {
+    return CfgParam::create(CfgParam::frames_pool_size_name(), value, false);
+}
+
+CfgParam CfgParam::create_acceleration_mode(uint32_t value) {
+    return CfgParam::create(CfgParam::acceleration_mode_name(), value);
+}
+
+CfgParam CfgParam::create_acceleration_mode(const char* value) {
+    return CfgParam::create(CfgParam::acceleration_mode_name(), std::string(value));
+}
+
+CfgParam CfgParam::create_decoder_id(uint32_t value) {
+    return CfgParam::create(CfgParam::decoder_id_name(), value);
+}
+
+CfgParam CfgParam::create_decoder_id(const char* value) {
+    return CfgParam::create(CfgParam::decoder_id_name(), std::string(value));
+}
+
+CfgParam CfgParam::create_implementation(uint32_t value) {
+    return CfgParam::create(CfgParam::implementation_name(), value);
+}
+
+CfgParam CfgParam::create_implementation(const char* value) {
+    return CfgParam::create(CfgParam::implementation_name(), std::string(value));
+}
+
 CfgParam& CfgParam::operator=(const CfgParam& src) {
     if (this != &src) {
         m_priv = src.m_priv;

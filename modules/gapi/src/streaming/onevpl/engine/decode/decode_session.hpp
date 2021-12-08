@@ -15,10 +15,7 @@
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-    #include <vpl/mfxdispatcher.h>
-#endif
-#include <vpl/mfx.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
@@ -40,11 +37,11 @@ public:
     void swap_surface(VPLLegacyDecodeEngine& engine);
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
 
+    Data::Meta generate_frame_meta();
+    const mfxVideoParam& get_video_param() const override;
+private:
     mfxVideoParam mfx_decoder_param;
     std::shared_ptr<IDataProvider> data_provider;
-
-    Data::Meta generate_frame_meta();
-private:
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;
 

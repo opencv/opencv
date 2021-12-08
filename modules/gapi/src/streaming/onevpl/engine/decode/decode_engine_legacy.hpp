@@ -12,10 +12,7 @@
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-    #include <vpl/mfxdispatcher.h>
-#endif
-#include <vpl/mfx.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
@@ -31,8 +28,9 @@ class VPLLegacyDecodeEngine : public ProcessingEngineBase {
 public:
 
     VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
-    void initialize_session(mfxSession mfx_session, DecoderParams&& decoder_param,
-                            std::shared_ptr<IDataProvider> provider) override;
+    session_ptr initialize_session(mfxSession mfx_session,
+                                   const std::vector<CfgParam>& cfg_params,
+                                   std::shared_ptr<IDataProvider> provider) override;
 
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;

@@ -2,8 +2,7 @@
 #define GAPI_STREAMING_ONEVPL_DATA_PROVIDER_DEFINES_HPP
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxcommon.h>
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #endif // HAVE_ONEVPL
 
 #include <opencv2/gapi/own/assert.hpp>
