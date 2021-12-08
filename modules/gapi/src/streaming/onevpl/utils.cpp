@@ -14,6 +14,18 @@
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
+#define ONEVPL_STRINGIFY_CASE(value)                                           \
+    case value: return #value;
+
+#define ONEVPL_STRINGIFY_IF(value)                                             \
+    if (!strcmp(cstr, #value)) {                                               \
+        return value;                                                          \
+    }
+
+#define APPEND_STRINGIFY_MASK_N_ERASE(value, pref, mask)                       \
+    if (value & mask) { ss << pref << #mask; value ^= mask; }
+
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -21,153 +33,96 @@ namespace onevpl {
 
 const char* mfx_impl_to_cstr(const mfxIMPL impl) {
     switch (impl) {
-        case MFX_IMPL_TYPE_SOFTWARE:
-            return "MFX_IMPL_TYPE_SOFTWARE";
-        case MFX_IMPL_TYPE_HARDWARE:
-            return "MFX_IMPL_TYPE_HARDWARE";
-        default:
-            return "unknown mfxIMPL";
+        ONEVPL_STRINGIFY_CASE(MFX_IMPL_TYPE_SOFTWARE);
+        ONEVPL_STRINGIFY_CASE(MFX_IMPL_TYPE_HARDWARE);
+        default: return "unknown mfxIMPL";
     }
 }
 
 mfxIMPL cstr_to_mfx_impl(const char* cstr) {
-    if (!strcmp(cstr, "MFX_IMPL_TYPE_SOFTWARE")) {
-        return MFX_IMPL_TYPE_SOFTWARE;
-    } else if (!strcmp(cstr, "MFX_IMPL_TYPE_HARDWARE")) {
-        return MFX_IMPL_TYPE_HARDWARE;
-    }
-
-    throw std::logic_error(std::string("Invalid \"mfxImplDescription.Impl\":") + cstr);
+    ONEVPL_STRINGIFY_IF(MFX_IMPL_TYPE_SOFTWARE)
+    ONEVPL_STRINGIFY_IF(MFX_IMPL_TYPE_HARDWARE)
+    throw std::logic_error(std::string("Invalid \"") + CfgParam::implementation_name() +
+                           "\":" + cstr);
 }
 
 const char* mfx_accel_mode_to_cstr (const mfxAccelerationMode mode) {
     switch (mode) {
-        case MFX_ACCEL_MODE_NA:
-            return "MFX_ACCEL_MODE_NA";
-        case MFX_ACCEL_MODE_VIA_D3D9:
-            return "MFX_ACCEL_MODE_VIA_D3D9";
-        case MFX_ACCEL_MODE_VIA_D3D11:
-            return "MFX_ACCEL_MODE_VIA_D3D11";
-        case MFX_ACCEL_MODE_VIA_VAAPI:
-            return "MFX_ACCEL_MODE_VIA_VAAPI";
-        case MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET:
-            return "MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET";
-        case MFX_ACCEL_MODE_VIA_VAAPI_GLX:
-            return "MFX_ACCEL_MODE_VIA_VAAPI_GLX";
-        case MFX_ACCEL_MODE_VIA_VAAPI_X11:
-            return "MFX_ACCEL_MODE_VIA_VAAPI_X11";
-        case MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND:
-            return "MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND";
-        case MFX_ACCEL_MODE_VIA_HDDLUNITE:
-            return "MFX_ACCEL_MODE_VIA_HDDLUNITE";
-        default:
-            return "unknown mfxAccelerationMode";
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_NA)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_D3D9)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_D3D11)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_VAAPI)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_VAAPI_GLX)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_VAAPI_X11)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND)
+        ONEVPL_STRINGIFY_CASE(MFX_ACCEL_MODE_VIA_HDDLUNITE)
+        default: return "unknown mfxAccelerationMode";
     }
-    return "unknown mfxAccelerationMode";
 }
 
 mfxAccelerationMode cstr_to_mfx_accel_mode(const char* cstr) {
-    if (!strcmp(cstr, "MFX_ACCEL_MODE_NA")) {
-        return MFX_ACCEL_MODE_NA;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_D3D9")) {
-        return MFX_ACCEL_MODE_VIA_D3D9;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_D3D11")) {
-        return MFX_ACCEL_MODE_VIA_D3D11;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_VAAPI")) {
-        return MFX_ACCEL_MODE_VIA_VAAPI;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET")) {
-        return MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_VAAPI_GLX")) {
-        return MFX_ACCEL_MODE_VIA_VAAPI_GLX;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_VAAPI_X11")) {
-        return MFX_ACCEL_MODE_VIA_VAAPI_X11;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND")) {
-        return MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND;
-    } else if (!strcmp(cstr, "MFX_ACCEL_MODE_VIA_HDDLUNITE")) {
-        return MFX_ACCEL_MODE_VIA_HDDLUNITE;
-    }
-    throw std::logic_error(std::string("Invalid \"mfxImplDescription.AccelerationMode\":") + cstr);
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_NA)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_D3D9)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_D3D11)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_GLX)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_X11)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND)
+    ONEVPL_STRINGIFY_IF(MFX_ACCEL_MODE_VIA_HDDLUNITE)
+    throw std::logic_error(std::string("Invalid \"") +
+                           CfgParam::acceleration_mode_name() +
+                           "\":" + cstr);
 }
 
 const char* mfx_resource_type_to_cstr (const mfxResourceType type) {
     switch (type) {
-        case MFX_RESOURCE_SYSTEM_SURFACE:
-            return "MFX_RESOURCE_SYSTEM_SURFACE";
-        case MFX_RESOURCE_VA_SURFACE:
-            return "MFX_RESOURCE_VA_SURFACE";
-        case MFX_RESOURCE_VA_BUFFER:
-            return "MFX_RESOURCE_VA_BUFFER";
-        case MFX_RESOURCE_DX9_SURFACE:
-            return "MFX_RESOURCE_DX9_SURFACE";
-        case MFX_RESOURCE_DX11_TEXTURE:
-            return "MFX_RESOURCE_DX11_TEXTURE";
-        case MFX_RESOURCE_DX12_RESOURCE:
-            return "MFX_RESOURCE_DX12_RESOURCE";
-        case MFX_RESOURCE_DMA_RESOURCE:
-            return "MFX_RESOURCE_DMA_RESOURCE";
-        case MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY:
-            return "MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY";
-        default:
-            return "unknown mfxResourceType";
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_SYSTEM_SURFACE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_VA_SURFACE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_VA_BUFFER)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_DX9_SURFACE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_DX11_TEXTURE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_DX12_RESOURCE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_DMA_RESOURCE)
+        ONEVPL_STRINGIFY_CASE(MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY)
+        default: return "unknown mfxResourceType";
     }
 }
 
 mfxResourceType cstr_to_mfx_resource_type(const char* cstr) {
-     if (!strcmp(cstr, "MFX_RESOURCE_SYSTEM_SURFACE")) {
-        return MFX_RESOURCE_SYSTEM_SURFACE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_VA_SURFACE")) {
-        return MFX_RESOURCE_VA_SURFACE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_VA_BUFFER")) {
-        return MFX_RESOURCE_VA_BUFFER;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_DX9_SURFACE")) {
-        return MFX_RESOURCE_DX9_SURFACE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_DX11_TEXTURE")) {
-        return MFX_RESOURCE_DX11_TEXTURE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_DX12_RESOURCE")) {
-        return MFX_RESOURCE_DX12_RESOURCE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_DMA_RESOURCE")) {
-        return MFX_RESOURCE_DMA_RESOURCE;
-    } else if (!strcmp(cstr, "MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY")) {
-        return MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY;
-    }
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_SYSTEM_SURFACE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_VA_SURFACE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_VA_BUFFER)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_DX9_SURFACE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_DX11_TEXTURE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_DX12_RESOURCE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_DMA_RESOURCE)
+    ONEVPL_STRINGIFY_IF(MFX_RESOURCE_HDDLUNITE_REMOTE_MEMORY)
     throw std::logic_error(std::string("Invalid \"decoder.Profiles.MemDesc.MemHandleType\":") + cstr);
 }
 
 mfxU32 cstr_to_mfx_codec_id(const char* cstr) {
-    if (!strcmp(cstr, "MFX_CODEC_AVC")) {
-        return MFX_CODEC_AVC;
-    } else if (!strcmp(cstr, "MFX_CODEC_HEVC")) {
-        return MFX_CODEC_HEVC;
-    } else if (!strcmp(cstr, "MFX_CODEC_MPEG2")) {
-        return MFX_CODEC_MPEG2;
-    } else if (!strcmp(cstr, "MFX_CODEC_VC1")) {
-        return MFX_CODEC_VC1;
-    } else if (!strcmp(cstr, "MFX_CODEC_CAPTURE")) {
-        return MFX_CODEC_CAPTURE;
-    } else if (!strcmp(cstr, "MFX_CODEC_VP9")) {
-        return MFX_CODEC_VP9;
-    } else if (!strcmp(cstr, "MFX_CODEC_AV1")) {
-        return MFX_CODEC_AV1;
-    }
-    throw std::logic_error(std::string("Cannot parse \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" value: ") + cstr);
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_AVC)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_HEVC)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_MPEG2)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_VC1)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_CAPTURE)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_VP9)
+    ONEVPL_STRINGIFY_IF(MFX_CODEC_AV1)
+    throw std::logic_error(std::string("Cannot parse \"") + CfgParam::decoder_id_name() +
+                           "\" value: " + cstr);
 }
 
 const char* mfx_codec_id_to_cstr(mfxU32 mfx_id) {
     switch(mfx_id) {
-        case MFX_CODEC_AVC:
-            return "MFX_CODEC_AVC";
-        case MFX_CODEC_HEVC:
-            return "MFX_CODEC_HEVC";
-        case MFX_CODEC_MPEG2:
-            return "MFX_CODEC_MPEG2";
-        case MFX_CODEC_VC1:
-            return "MFX_CODEC_VC1";
-        case MFX_CODEC_VP9:
-            return "MFX_CODEC_VP9";
-        case MFX_CODEC_AV1:
-            return "MFX_CODEC_AV1";
-        case MFX_CODEC_JPEG:
-            return "MFX_CODEC_JPEG";
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_AVC)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_HEVC)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_MPEG2)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_VC1)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_VP9)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_AV1)
+        ONEVPL_STRINGIFY_CASE(MFX_CODEC_JPEG)
         default:
             return "<unsupported>";
     }
@@ -189,145 +144,92 @@ const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
     switch (fourcc) {
         case MFX_CODEC_JPEG: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_JPEG_BASELINE:
-                    return "MFX_PROFILE_JPEG_BASELINE";
-                default:
-                    return "<unknown MFX_CODEC_JPEG profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_JPEG_BASELINE)
+                default: return "<unknown MFX_CODEC_JPEG profile";
             }
         }
-
         case MFX_CODEC_AVC: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_AVC_BASELINE:
-                    return "MFX_PROFILE_AVC_BASELINE";
-                case MFX_PROFILE_AVC_MAIN:
-                    return "MFX_PROFILE_AVC_MAIN";
-                case MFX_PROFILE_AVC_EXTENDED:
-                    return "MFX_PROFILE_AVC_EXTENDED";
-                case MFX_PROFILE_AVC_HIGH:
-                    return "MFX_PROFILE_AVC_HIGH";
-                case MFX_PROFILE_AVC_HIGH10:
-                    return "MFX_PROFILE_AVC_HIGH10";
-                case MFX_PROFILE_AVC_HIGH_422:
-                    return "MFX_PROFILE_AVC_HIGH_422";
-                case MFX_PROFILE_AVC_CONSTRAINED_BASELINE:
-                    return "MFX_PROFILE_AVC_CONSTRAINED_BASELINE";
-                case MFX_PROFILE_AVC_CONSTRAINED_HIGH:
-                    return "MFX_PROFILE_AVC_CONSTRAINED_HIGH";
-                case MFX_PROFILE_AVC_PROGRESSIVE_HIGH:
-                    return "MFX_PROFILE_AVC_PROGRESSIVE_HIGH";
-                default:
-                    return "<unknown MFX_CODEC_AVC profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_BASELINE)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_MAIN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_EXTENDED)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_HIGH)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_HIGH10)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_HIGH_422)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_CONSTRAINED_BASELINE)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_CONSTRAINED_HIGH)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AVC_PROGRESSIVE_HIGH)
+                default: return "<unknown MFX_CODEC_AVC profile";
             }
         }
-
         case MFX_CODEC_HEVC: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_HEVC_MAIN:
-                    return "MFX_PROFILE_HEVC_MAIN";
-                case MFX_PROFILE_HEVC_MAIN10:
-                    return "MFX_PROFILE_HEVC_MAIN10";
-                case MFX_PROFILE_HEVC_MAINSP:
-                    return "MFX_PROFILE_HEVC_MAINSP";
-                case MFX_PROFILE_HEVC_REXT:
-                    return "MFX_PROFILE_HEVC_REXT";
-                case MFX_PROFILE_HEVC_SCC:
-                    return "MFX_PROFILE_HEVC_SCC";
-                default:
-                    return "<unknown MFX_CODEC_HEVC profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_HEVC_MAIN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_HEVC_MAIN10)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_HEVC_MAINSP)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_HEVC_REXT)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_HEVC_SCC)
+                default: return "<unknown MFX_CODEC_HEVC profile";
             }
         }
 
         case MFX_CODEC_MPEG2: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_MPEG2_SIMPLE:
-                    return "MFX_PROFILE_MPEG2_SIMPLE";
-                case MFX_PROFILE_MPEG2_MAIN:
-                    return "MFX_PROFILE_MPEG2_MAIN";
-                case MFX_LEVEL_MPEG2_HIGH:
-                    return "MFX_LEVEL_MPEG2_HIGH";
-                case MFX_LEVEL_MPEG2_HIGH1440:
-                    return "MFX_LEVEL_MPEG2_HIGH1440";
-                default:
-                    return "<unknown MFX_CODEC_MPEG2 profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_MPEG2_SIMPLE)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_MPEG2_MAIN)
+                ONEVPL_STRINGIFY_CASE(MFX_LEVEL_MPEG2_HIGH)
+                ONEVPL_STRINGIFY_CASE(MFX_LEVEL_MPEG2_HIGH1440)
+                default: return "<unknown MFX_CODEC_MPEG2 profile";
             }
         }
 
         case MFX_CODEC_VP8: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_VP8_0:
-                    return "MFX_PROFILE_VP8_0";
-                case MFX_PROFILE_VP8_1:
-                    return "MFX_PROFILE_VP8_1";
-                case MFX_PROFILE_VP8_2:
-                    return "MFX_PROFILE_VP8_2";
-                case MFX_PROFILE_VP8_3:
-                    return "MFX_PROFILE_VP8_3";
-                default:
-                    return "<unknown MFX_CODEC_VP8 profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP8_0)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP8_1)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP8_2)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP8_3)
+                default: return "<unknown MFX_CODEC_VP8 profile";
             }
         }
 
         case MFX_CODEC_VC1: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_VC1_SIMPLE:
-                    return "MFX_PROFILE_VC1_SIMPLE";
-                case MFX_PROFILE_VC1_MAIN:
-                    return "MFX_PROFILE_VC1_MAIN";
-                case MFX_PROFILE_VC1_ADVANCED:
-                    return "MFX_PROFILE_VC1_ADVANCED";
-                default:
-                    return "<unknown MFX_CODEC_VC1 profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VC1_SIMPLE)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VC1_MAIN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VC1_ADVANCED)
+                default: return "<unknown MFX_CODEC_VC1 profile";
             }
         }
 
         case MFX_CODEC_VP9: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_VP9_0:
-                    return "MFX_PROFILE_VP9_0";
-                case MFX_PROFILE_VP9_1:
-                    return "MFX_PROFILE_VP9_1";
-                case MFX_PROFILE_VP9_2:
-                    return "MFX_PROFILE_VP9_2";
-                case MFX_PROFILE_VP9_3:
-                    return "MFX_PROFILE_VP9_3";
-                default:
-                    return "<unknown MFX_CODEC_VP9 profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP9_0)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP9_1)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP9_2)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_VP9_3)
+                default: return "<unknown MFX_CODEC_VP9 profile";
             }
         }
 
         case MFX_CODEC_AV1: {
             switch (type) {
-                case MFX_PROFILE_UNKNOWN:
-                    return "MFX_PROFILE_UNKNOWN";
-                case MFX_PROFILE_AV1_MAIN:
-                    return "MFX_PROFILE_AV1_MAIN";
-                case MFX_PROFILE_AV1_HIGH:
-                    return "MFX_PROFILE_AV1_HIGH";
-                case MFX_PROFILE_AV1_PRO:
-                    return "MFX_PROFILE_AV1_PRO";
-
-                default:
-                    return "<unknown MFX_CODEC_AV1 profile";
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_UNKNOWN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AV1_MAIN)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AV1_HIGH)
+                ONEVPL_STRINGIFY_CASE(MFX_PROFILE_AV1_PRO)
+                default: return "<unknown MFX_CODEC_AV1 profile";
             }
         }
 
-        default:
-            return "unknown codec type :";
+        default: return "unknown codec type :";
     }
 }
 
@@ -354,8 +256,8 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
 {
     out << "mfxImplDescription.Version: " << static_cast<int>(idesc.Version.Major)
         << "." << static_cast<int>(idesc.Version.Minor) << std::endl;
-    out << "mfxImplDescription.Impl: " << mfx_impl_to_cstr(idesc.Impl) << std::endl;
-    out << "(*)mfxImplDescription.AccelerationMode: " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
+    out << "(*)" << CfgParam::implementation_name() << ": " << mfx_impl_to_cstr(idesc.Impl) << std::endl;
+    out << "(*)" << CfgParam::acceleration_mode_name() << ": " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
     out << "mfxImplDescription.ApiVersion: " << idesc.ApiVersion.Major << "." << idesc.ApiVersion.Minor << std::endl;
     out << "(*)mfxImplDescription.ApiVersion.Version: " << idesc.ApiVersion.Version << std::endl;
     out << "mfxImplDescription.ImplName: " << idesc.ImplName << std::endl;
@@ -386,7 +288,7 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
         << "." << static_cast<int>(dec.Version.Minor) << std::endl;
     for (int codec = 0; codec < dec.NumCodecs; codec++) {
         auto cid = dec.Codecs[codec].CodecID;
-        out << "(*)mfxImplDescription.mfxDecoderDescription.decoder.CodecID: " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
+        out << "(*)" << CfgParam::decoder_id_name() << ": " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
         out << "mfxImplDescription.mfxDecoderDescription.decoder.MaxcodecLevel: " << dec.Codecs[codec].MaxcodecLevel << std::endl;
         for (int profile = 0; profile < dec.Codecs[codec].NumProfiles; profile++) {
             out << "mfxImplDescription.mfxDecoderDescription.decoder.Profiles: "
@@ -422,68 +324,68 @@ std::string mfxstatus_to_string(int64_t err) {
 }
 
 std::string mfxstatus_to_string(mfxStatus err) {
-    switch(err)
-    {
-        case MFX_ERR_NONE:
-            return "MFX_ERR_NONE";
-        case MFX_ERR_UNKNOWN:
-            return "MFX_ERR_UNKNOWN";
-        case MFX_ERR_NULL_PTR:
-            return "MFX_ERR_NULL_PTR";
-        case MFX_ERR_UNSUPPORTED:
-            return "MFX_ERR_UNSUPPORTED";
-        case MFX_ERR_MEMORY_ALLOC:
-            return "MFX_ERR_MEMORY_ALLOC";
-        case MFX_ERR_NOT_ENOUGH_BUFFER:
-            return "MFX_ERR_NOT_ENOUGH_BUFFER";
-        case MFX_ERR_INVALID_HANDLE:
-            return "MFX_ERR_INVALID_HANDLE";
-        case MFX_ERR_LOCK_MEMORY:
-            return "MFX_ERR_LOCK_MEMORY";
-        case MFX_ERR_NOT_INITIALIZED:
-            return "MFX_ERR_NOT_INITIALIZED";
-        case MFX_ERR_NOT_FOUND:
-            return "MFX_ERR_NOT_FOUND";
-        case MFX_ERR_MORE_DATA:
-            return "MFX_ERR_MORE_DATA";
-        case MFX_ERR_MORE_SURFACE:
-            return "MFX_ERR_MORE_SURFACE";
-        case MFX_ERR_ABORTED:
-            return "MFX_ERR_ABORTED";
-        case MFX_ERR_DEVICE_LOST:
-            return "MFX_ERR_DEVICE_LOST";
-        case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
-            return "MFX_ERR_INCOMPATIBLE_VIDEO_PARAM";
-        case MFX_ERR_INVALID_VIDEO_PARAM:
-            return "MFX_ERR_INVALID_VIDEO_PARAM";
-        case MFX_ERR_UNDEFINED_BEHAVIOR:
-            return "MFX_ERR_UNDEFINED_BEHAVIOR";
-        case MFX_ERR_DEVICE_FAILED:
-            return "MFX_ERR_DEVICE_FAILED";
-        case MFX_ERR_MORE_BITSTREAM:
-            return "MFX_ERR_MORE_BITSTREAM";
-        case MFX_ERR_GPU_HANG:
-            return "MFX_ERR_GPU_HANG";
-        case MFX_ERR_REALLOC_SURFACE:
-            return "MFX_ERR_REALLOC_SURFACE";
-        case MFX_ERR_RESOURCE_MAPPED:
-            return "MFX_ERR_RESOURCE_MAPPED";
-        case MFX_ERR_NOT_IMPLEMENTED:
-            return "MFX_ERR_NOT_IMPLEMENTED";
-        case MFX_WRN_DEVICE_BUSY:
-            return "MFX_WRN_DEVICE_BUSY";
-        case MFX_WRN_VIDEO_PARAM_CHANGED:
-            return "MFX_WRN_VIDEO_PARAM_CHANGED";
-        case MFX_WRN_IN_EXECUTION:
-            return "MFX_WRN_IN_EXECUTION";
-
-        default:
-            break;
+    switch(err) {
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NONE)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_UNKNOWN)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NULL_PTR)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_UNSUPPORTED)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_MEMORY_ALLOC)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NOT_ENOUGH_BUFFER)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_INVALID_HANDLE)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_LOCK_MEMORY)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NOT_INITIALIZED)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NOT_FOUND)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_MORE_DATA)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_MORE_SURFACE)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_ABORTED)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_DEVICE_LOST)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_INCOMPATIBLE_VIDEO_PARAM)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_INVALID_VIDEO_PARAM)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_UNDEFINED_BEHAVIOR)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_DEVICE_FAILED)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_MORE_BITSTREAM)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_GPU_HANG)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_REALLOC_SURFACE)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_RESOURCE_MAPPED)
+        ONEVPL_STRINGIFY_CASE(MFX_ERR_NOT_IMPLEMENTED)
+        ONEVPL_STRINGIFY_CASE(MFX_WRN_DEVICE_BUSY)
+        ONEVPL_STRINGIFY_CASE(MFX_WRN_VIDEO_PARAM_CHANGED)
+        ONEVPL_STRINGIFY_CASE(MFX_WRN_IN_EXECUTION)
+        default: break;
     }
 
     std::string ret("<unknown ");
     ret += std::to_string(err) + ">";
     return ret;
+}
+
+std::string ext_mem_frame_type_to_cstr(int type) {
+    std::stringstream ss;
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_DECODER_TARGET);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_PROCESSOR_TARGET);
+    // NB: accoring to VPL source the commented MFX_* constane below are belong to the
+    // same actual integral value as condition abobe. So it is impossible
+    // to distinct them in condition branch.  Just put this comment and possible
+    // constans here...
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET);
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SYSTEM_MEMORY);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_RESERVED1);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_ENCODE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_DECODE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_VPPIN);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_VPPOUT);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_FROM_ENC);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_INTERNAL_FRAME);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_EXTERNAL_FRAME);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_EXPORT_FRAME);
+    //APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_SHARED_RESOURCE);
+    APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_VIDEO_MEMORY_ENCODER_TARGET);
+
+    if (type != 0) {
+        ss << "(rest: " << std::to_string(type) << ")";
+    }
+    return ss.str();
 }
 } // namespace onevpl
 } // namespace wip
