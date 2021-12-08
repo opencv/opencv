@@ -32,7 +32,9 @@ public:
         return makePtr<SphereModelMinimalSolverImpl>(*points_mat);
     }
 
-    //! Fitting the sphere using Cramer's Rule
+    /** [center_x, center_y, center_z, radius] <--> (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2
+     Fitting the sphere using Cramer's Rule.
+    */
     int estimate(const std::vector<int> &sample, std::vector<Mat> &models) const override
     {
         models.clear();
@@ -135,8 +137,10 @@ public:
         return makePtr<SphereModelNonMinimalSolverImpl>(*points_mat);
     }
 
-    //! Fitting Sphere Using Differences of Squared Lengths and Squared Radius
-    //! https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf section 5.2
+    /** [center_x, center_y, center_z, radius] <--> (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2
+     Fitting Sphere Using Differences of Squared Lengths and Squared Radius.
+     Reference https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf section 5.2.
+     */
     int estimate(const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
             const std::vector<double> &/*weights*/) const override
     {

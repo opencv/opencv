@@ -30,7 +30,13 @@ enum SacMethod
 
 enum SacModelType
 {
+    /** The 3D PLANE model coefficients in list [a, b, c, d],
+     corresponding to the coefficients of equation
+     ax + by + cz + d = 0. */
     SAC_MODEL_PLANE,
+    /** The 3D SPHERE model coefficients in list [center_x, center_y, center_z, radius],
+     corresponding to the coefficients of equation
+     (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2.*/
     SAC_MODEL_SPHERE,
     //    SAC_MODEL_CYLINDER,
 
@@ -87,11 +93,47 @@ Supported models: enum SacModelType in ptcloud.hpp.
 class CV_EXPORTS SACSegmentation : public Algorithm
 {
 public:
-    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
-    //! Same as cv::usac::PointCloudModelEstimator::ModelConstraintFunction in usac.hpp.
-    //using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
+    /** @brief Custom function that take the model coefficients and return whether the model is acceptable or not.
+
+     The following example shows how to construct SACSegmentation::ModelConstraintFunction.
+     @code{.cpp}
+     bool customFunc(const std::vector<double> &model_coefficients) {
+        // check model_coefficients
+        // The plane needs to pass through the origin, i.e. ax+by+cz+d=0 --> d==0
+        return model_coefficients[3] == 0;
+     } // end of function customFunc()
+
+     void example() {
+        SACSegmentation::ModelConstraintFunction func_example1 = customFunc;
+        SACSegmentation::ModelConstraintFunction func_example2 =
+            [](const std::vector<double> &model_coefficients) {
+                // check model_coefficients
+                // The plane needs to pass through the origin, i.e. ax+by+cz+d=0 --> d==0
+                return model_coefficients[3] == 0;
+            };
+
+        float x0 = 0.0, y0 = 0.0, z0 = 0.0;
+        SACSegmentation::ModelConstraintFunction func_example3 =
+            [x0, y0, z0](const std::vector<double> &model_coeffs) -> bool {
+                // check model_coefficients
+                // The plane needs to pass through the point (x0, y0, z0), i.e. ax0+by0+cz0+d == 0
+                return model_coeffs[0]*x0 + model_coeffs[1]*y0 + model_coeffs[2]*z0
+                       + model_coeffs[3] == 0;
+            };
+
+         auto constraint_func = cv::makePtr<ModelConstraintFunction>(func_example3);
+         // ......
+
+     } // end of function example()
+
+     @endcode
+
+     @note The content of model_coefficients depends on the model.
+     Refer to the comments inside enumeration type SacModelType.
+     */
     using ModelConstraintFunction =
     std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
+    //using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
 
     //! No-argument constructor using default configuration
     SACSegmentation()
@@ -246,6 +288,7 @@ public:
      * @param[out] models_coefficients The resultant models coefficients.
      * Currently supports passing in cv::Mat. Models coefficients are placed in a matrix of NxK,
      * where N is the number of models and K is the number of coefficients of one model.
+     * The coefficients for each model refer to the comments inside enumeration type SacModelType.
      * @return Number of final resultant models obtained by segmentation.
      */
     int

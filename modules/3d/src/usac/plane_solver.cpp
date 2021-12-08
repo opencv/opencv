@@ -33,8 +33,10 @@ public:
         return makePtr<PlaneModelMinimalSolverImpl>(*points_mat);
     }
 
-    //! Use the cross product of the vectors in the plane to calculate the plane normal vector
-    //! Use the plane normal vector and the points in the plane to calculate the coefficient d
+    /** [a, b, c, d] <--> ax + by + cz + d =0
+     Use the cross product of the vectors in the plane to calculate the plane normal vector.
+     Use the plane normal vector and the points in the plane to calculate the coefficient d.
+     */
     int estimate(const std::vector<int> &sample, std::vector<Mat> &models) const override
     {
         models.clear();
@@ -101,7 +103,9 @@ public:
         return makePtr<PlaneModelNonMinimalSolverImpl>(*points_mat);
     }
 
-    //! Use total least squares (PCA can achieve the same calculation) to estimate the plane model equation
+    /** [a, b, c, d] <--> ax + by + cz + d =0
+    Use total least squares (PCA can achieve the same calculation) to estimate the plane model equation.
+     */
     int estimate(const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
             const std::vector<double> &/*weights*/) const override
     {
