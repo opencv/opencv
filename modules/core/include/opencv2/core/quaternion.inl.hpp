@@ -79,35 +79,35 @@ Quat<T> Quat<T>::createFromRotMat(InputArray _R)
     T trace = R(0, 0) + R(1, 1) + R(2, 2);
     if (trace > 0)
     {
-        S = std::sqrt(trace + 1) * 2;
+        S = std::sqrt(trace + 1) * T(2);
         x = (R(1, 2) - R(2, 1)) / S;
         y = (R(2, 0) - R(0, 2)) / S;
         z = (R(0, 1) - R(1, 0)) / S;
-        w = -0.25 * S;
+        w = -T(0.25) * S;
     }
     else if (R(0, 0) > R(1, 1) && R(0, 0) > R(2, 2))
     {
 
-        S = std::sqrt(1.0 + R(0, 0) - R(1, 1) - R(2, 2)) * 2;
-        x = -0.25 * S;
+        S = std::sqrt(T(1.0) + R(0, 0) - R(1, 1) - R(2, 2)) * T(2);
+        x = -T(0.25) * S;
         y = -(R(1, 0) + R(0, 1)) / S;
         z = -(R(0, 2) + R(2, 0)) / S;
         w = (R(1, 2) - R(2, 1)) / S;
     }
     else if (R(1, 1) > R(2, 2))
     {
-        S = std::sqrt(1.0 - R(0, 0) + R(1, 1) - R(2, 2)) * 2;
+        S = std::sqrt(T(1.0) - R(0, 0) + R(1, 1) - R(2, 2)) * T(2);
         x = (R(0, 1) + R(1, 0)) / S;
-        y = 0.25 * S;
+        y = T(0.25) * S;
         z = (R(1, 2) + R(2, 1)) / S;
         w = (R(0, 2) - R(2, 0)) / S;
     }
     else
     {
-        S = std::sqrt(1.0 - R(0, 0) - R(1, 1) + R(2, 2)) * 2;
+        S = std::sqrt(1.0 - R(0, 0) - R(1, 1) + R(2, 2)) * T(2);
         x = (R(0, 2) + R(2, 0)) / S;
         y = (R(1, 2) + R(2, 1)) / S;
-        z = 0.25 * S;
+        z = T(0.25) * S;
         w = -(R(0, 1) - R(1, 0)) / S;
     }
     return Quat<T> (w, x, y, z);
