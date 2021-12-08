@@ -177,7 +177,7 @@ if(NOT ${found})
 
     if(NOT ANDROID AND NOT IOS)
       if(CMAKE_HOST_UNIX)
-        execute_process(COMMAND ${_executable} -c "from distutils.sysconfig import *; print(get_python_lib())"
+        execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
                         OUTPUT_VARIABLE _std_packages_path
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
