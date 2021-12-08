@@ -23,10 +23,7 @@ enum class OAKFrameFormat {
 class GAPI_EXPORTS OAKMediaAdapter final : public cv::MediaFrame::IAdapter {
 public:
     OAKMediaAdapter();
-    // FIXME: for internal use only
-    // FIXME: rework
-    void setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr, size_t data_sz);
-    size_t getDataSize();
+    OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt, uint8_t* data_ptr);
     cv::GFrameDesc meta() const override;
     cv::MediaFrame::View access(cv::MediaFrame::Access) override;
     ~OAKMediaAdapter();

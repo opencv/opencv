@@ -50,7 +50,7 @@ struct EncoderConfig {
     /**
      * Encoding profile, H264, H265 or MJPEG
      */
-    Profile profile = Profile::H264_BASELINE;
+    Profile profile = Profile::H265_MAIN;
     /**
      * Value between 0-100% (approximates quality)
      */
@@ -77,17 +77,24 @@ struct EncoderConfig {
     float frameRate = 30.0f;
 };
 
-G_API_OP(GEnc, <GFrame(GFrame, EncoderConfig)>, "org.opencv.oak.enc") {
-    static GFrameDesc outMeta(const GFrameDesc&, const EncoderConfig&) {
-        return cv::empty_gframe_desc();
+G_API_OP(GEncMat, <GArray<uint8_t>(GMat, EncoderConfig)>, "org.opencv.oak.enc_mat") {
+    static GArrayDesc outMeta(const GMatDesc&, const EncoderConfig&) {
+        return cv::empty_array_desc();
     }
 };
 
-GAPI_EXPORTS GFrame encode(const GFrame& in, const EncoderConfig& = {});
+G_API_OP(GEncFrame, <GArray<uint8_t>(GFrame, EncoderConfig)>, "org.opencv.oak.enc_frame") {
+    static GArrayDesc outMeta(const GFrameDesc&, const EncoderConfig&) {
+        return cv::empty_array_desc();
+    }
+};
+
+GAPI_EXPORTS GArray<uint8_t> encode(const GMat& in, const EncoderConfig& = {});
+GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& = {});
 
 // OAK backend & kernels ////////////////////////////////////////////////////////
 GAPI_EXPORTS cv::gapi::GBackend backend();
-GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
+GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
 // Camera object ///////////////////////////////////////////////////////////////
 
