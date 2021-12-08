@@ -29,12 +29,11 @@ ocv_add_module(gapi
 )
 
 if(MSVC)
-  # Disable obsollete warning C4503 popping up on MSVC <<2017
-  # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
-  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503)
-  if (OPENCV_GAPI_INF_ENGINE AND NOT INF_ENGINE_RELEASE VERSION_GREATER "2021000000")
-    # Disable IE deprecated code warning C4996 for releases < 2021.1
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+  if(MSVC_VERSION LESS 1910)
+    # Disable obsolete warning C4503 popping up on MSVC << 15 2017
+    # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
+    # and IE deprecated code warning C4996
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
 endif()
 
@@ -49,12 +48,14 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/oak/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/s11n/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/gstreamer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/onevpl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     )
 
 set(gapi_srcs
@@ -125,6 +126,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
+	  src/backends/fluid/gfluidcore_func.dispatch.cpp
 
     # OAK Backend (optional)
     src/backends/oak/goak.cpp
@@ -169,20 +171,46 @@ set(gapi_srcs
     src/backends/ie/bindings_ie.cpp
     src/backends/python/gpythonbackend.cpp
 
-    # Streaming source
+    # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
     src/streaming/onevpl/source_priv.cpp
     src/streaming/onevpl/file_data_provider.cpp
     src/streaming/onevpl/cfg_params.cpp
+    src/streaming/onevpl/cfg_params_parser.cpp
+    src/streaming/onevpl/utils.cpp
     src/streaming/onevpl/data_provider_interface_exception.cpp
     src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
+    src/streaming/onevpl/accelerators/surface/dx11_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/surface.cpp
+    src/streaming/onevpl/accelerators/surface/surface_pool.cpp
+    src/streaming/onevpl/accelerators/utils/shared_lock.cpp
+    src/streaming/onevpl/accelerators/accel_policy_cpu.cpp
+    src/streaming/onevpl/accelerators/accel_policy_dx11.cpp
+    src/streaming/onevpl/accelerators/dx11_alloc_resource.cpp
+    src/streaming/onevpl/engine/engine_session.cpp
+    src/streaming/onevpl/engine/processing_engine_base.cpp
+    src/streaming/onevpl/engine/decode/decode_engine_legacy.cpp
+    src/streaming/onevpl/engine/decode/decode_session.cpp
+    src/streaming/onevpl/demux/async_mfp_demux_data_provider.cpp
+    src/streaming/onevpl/data_provider_dispatcher.cpp
+
+    src/streaming/onevpl/cfg_param_device_selector.cpp
+    src/streaming/onevpl/device_selector_interface.cpp
+
+    # GStreamer Streaming source
+    src/streaming/gstreamer/gstreamer_pipeline_facade.cpp
+    src/streaming/gstreamer/gstreamerpipeline.cpp
+    src/streaming/gstreamer/gstreamersource.cpp
+    src/streaming/gstreamer/gstreamer_buffer_utils.cpp
+    src/streaming/gstreamer/gstreamer_media_adapter.cpp
+    src/streaming/gstreamer/gstreamerenv.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
+ocv_add_dispatched_file(backends/fluid/gfluidcore_func SSE4_1 AVX2)
 
 ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
 
@@ -201,6 +229,10 @@ if(OPENCV_GAPI_INF_ENGINE)
   ocv_target_link_libraries(${the_module} PRIVATE ${INF_ENGINE_TARGET})
 endif()
 
+if (HAVE_NGRAPH)
+    ocv_target_link_libraries(${the_module} PRIVATE ngraph::ngraph)
+endif()
+
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
 endif()
@@ -216,6 +248,9 @@ set(__test_extra_deps "")
 if(OPENCV_GAPI_INF_ENGINE)
   list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
 endif()
+if(HAVE_NGRAPH)
+  list(APPEND __test_extra_deps ngraph::ngraph)
+endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
 
 # FIXME: test binary is linked with ADE directly since ADE symbols
@@ -225,6 +260,9 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+  if (HAVE_NGRAPH)
+      ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_NGRAPH)
+  endif()
 endif()
 
 if(HAVE_TBB AND TARGET opencv_test_gapi)
@@ -260,12 +298,28 @@ if(HAVE_GAPI_ONEVPL)
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_ONEVPL)
     ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+    if(MSVC)
+        target_compile_options(opencv_test_gapi PUBLIC "/wd4201")
+    endif()
+    if(HAVE_D3D11 AND HAVE_OPENCL)
+        ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
   endif()
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
+
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
+endif()
+
+if(HAVE_GSTREAMER)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_GSTREAMER)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE ocv.3rdparty.gstreamer)
+  endif()
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_GSTREAMER)
+  ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.gstreamer)
 endif()
 
 if(WIN32)
@@ -284,3 +338,27 @@ endif()
 
 ocv_add_perf_tests()
 ocv_add_samples()
+
+
+# Required for sample with inference on host
+if (TARGET example_gapi_onevpl_infer_single_roi)
+  if(OPENCV_GAPI_INF_ENGINE)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ${INF_ENGINE_TARGET})
+    ocv_target_compile_definitions(example_gapi_onevpl_infer_single_roi PRIVATE -DHAVE_INF_ENGINE)
+  endif()
+  if(HAVE_D3D11 AND HAVE_OPENCL)
+    ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
+
+# perf test dependencies postprocessing
+if(HAVE_GAPI_ONEVPL)
+  # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
+  if(TARGET opencv_perf_gapi)
+    ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_ONEVPL)
+    ocv_target_link_libraries(opencv_perf_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+    if(HAVE_D3D11 AND HAVE_OPENCL)
+        ocv_target_include_directories(opencv_perf_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
+  endif()
+endif()

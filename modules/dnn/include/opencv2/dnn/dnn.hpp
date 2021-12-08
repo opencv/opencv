@@ -74,6 +74,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,
+        DNN_BACKEND_WEBNN,
 #ifdef __OPENCV_BUILD
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -306,6 +307,8 @@ CV__DNN_INLINE_NS_BEGIN
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
         /**
          * @brief Returns a CUDA backend node
@@ -1129,6 +1132,39 @@ CV__DNN_INLINE_NS_BEGIN
                              const float score_threshold, const float nms_threshold,
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
+
+    /**
+     * @brief Enum of Soft NMS methods.
+     * @see softNMSBoxes
+     */
+    enum class SoftNMSMethod
+    {
+        SOFTNMS_LINEAR = 1,
+        SOFTNMS_GAUSSIAN = 2
+    };
+
+    /** @brief Performs soft non maximum suppression given boxes and corresponding scores.
+     * Reference: https://arxiv.org/abs/1704.04503
+     * @param bboxes a set of bounding boxes to apply Soft NMS.
+     * @param scores a set of corresponding confidences.
+     * @param updated_scores a set of corresponding updated confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param top_k keep at most @p top_k picked indices.
+     * @param sigma parameter of Gaussian weighting.
+     * @param method Gaussian or linear.
+     * @see SoftNMSMethod
+     */
+    CV_EXPORTS_W void softNMSBoxes(const std::vector<Rect>& bboxes,
+                                   const std::vector<float>& scores,
+                                   CV_OUT std::vector<float>& updated_scores,
+                                   const float score_threshold,
+                                   const float nms_threshold,
+                                   CV_OUT std::vector<int>& indices,
+                                   size_t top_k = 0,
+                                   const float sigma = 0.5,
+                                   SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
 
 
      /** @brief This class is presented high-level API for neural networks.

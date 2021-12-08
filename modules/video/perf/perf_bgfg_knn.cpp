@@ -14,7 +14,7 @@ typedef tuple<std::string, int> VideoKNNParamType;
 typedef TestBaseWithParam<VideoKNNParamType> KNN_Apply;
 typedef TestBaseWithParam<VideoKNNParamType> KNN_GetBackgroundImage;
 
-PERF_TEST_P(KNN_Apply, KNN, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1,3)))
+PERF_TEST_P(KNN_Apply, KNN, Combine(Values("cv/video/768x576.avi", "cv/video/1920x1080.avi"), Values(1,3)))
 {
     VideoKNNParamType params = GetParam();
 
@@ -46,8 +46,8 @@ PERF_TEST_P(KNN_Apply, KNN, Combine(Values("gpu/video/768x576.avi", "gpu/video/1
 }
 
 PERF_TEST_P(KNN_GetBackgroundImage, KNN, Values(
-        std::make_pair<string, int>("gpu/video/768x576.avi", 5),
-        std::make_pair<string, int>("gpu/video/1920x1080.avi", 5)))
+        std::make_pair<string, int>("cv/video/768x576.avi", 5),
+        std::make_pair<string, int>("cv/video/1920x1080.avi", 5)))
 {
     VideoKNNParamType params = GetParam();
 

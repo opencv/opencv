@@ -798,4 +798,27 @@ TEST(Core_Allocation, alignedAllocation)
     }
 }
 
+
+#if !(defined(__GNUC__) && __GNUC__ < 5)  // GCC 4.8 emits: 'is_trivially_copyable' is not a member of 'std'
+TEST(Core_Types, trivially_copyable)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Complexd>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point3f>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Size>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Range>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Rect>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::RotatedRect>::value);
+    //EXPECT_TRUE(std::is_trivially_copyable<cv::Scalar>::value);  // derived from Vec (Matx)
+}
+
+TEST(Core_Types, trivially_copyable_extra)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::KeyPoint>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::DMatch>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::TermCriteria>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Moments>::value);
+}
+#endif
+
 }} // namespace

@@ -159,7 +159,6 @@ PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
 PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
 {
     namespace gvideo = cv::gapi::video;
-    initTestDataPath();
 
     gvideo::BackgroundSubtractorType opType;
     std::string filePath = "";

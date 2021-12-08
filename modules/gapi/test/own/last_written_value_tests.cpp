@@ -21,7 +21,7 @@ TEST(LastValue, PushPop) {
 
         int x = 1;
         v.pop(x);
-        EXPECT_EQ(x, i);
+        EXPECT_EQ(i, x);
     }
 }
 

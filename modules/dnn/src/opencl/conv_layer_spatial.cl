@@ -158,22 +158,18 @@ __kernel void ConvolveBasic(
 )
 {
     __global Dtype* convolved_image = convolved_image_base + convolved_image_base_offset;
-    const int outputX = get_global_id(0);
-    const int outputY = get_global_id(1);
-    const int kernelNum = get_global_id(2) * ZPAR;
-    if (outputX < output_width && outputY < output_height)
+    const int out_idx = get_global_id(0);  // 1D task layout: [output_width * output_height * OUTPUT_Z]
+    const int plane_size = output_width * output_height;
+    const int out_plane_idx = out_idx % plane_size;
+    const int outputZ = out_idx / plane_size;  // kernelNum
+    const int outputY = out_plane_idx / output_width;
+    const int outputX = out_plane_idx % output_width;
+    if (outputZ < OUTPUT_Z)
     {
-        Dtype sum[ZPAR];
-        for (int kern = 0; kern < ZPAR; kern++)
-        {
-            sum[kern] = 0.0f;
-        }
+        Dtype sum = 0.0f;
         const int org_y = outputY * STRIDE_Y - pad_h;
         const int org_x = outputX * STRIDE_X - pad_w;
-        const int currentKernelOffset = kernel_offset + kernelNum*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;
-#if APPLY_BIAS
-        const int biasIndex = bias_offset + kernelNum;
-#endif
+        const int currentKernelOffset = kernel_offset + outputZ*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;
         const int local_image_offset = org_y * input_width + org_x;
         const int imageSize = input_width * input_height;
         __global Dtype* image_dataPtr = (image_data + (image_offset + local_image_offset));
@@ -182,17 +178,13 @@ __kernel void ConvolveBasic(
         {
             for (int y = 0; y < KERNEL_HEIGHT; y++)
             {
+                int y_ = org_y + y * DILATION_Y;
                 for (int x = 0; x < KERNEL_WIDTH; x++)
                 {
-                    int y_ = org_y + y * DILATION_Y;
                     int x_ = org_x + x * DILATION_X;
-                    if (!(y_ >= 0 && y_ < input_height && x_ >= 0 && x_ < input_width))
+                    if (y_ >= 0 && y_ < input_height && x_ >= 0 && x_ < input_width)
                     {
-                        continue;
-                    }
-                    for (int kern = 0; kern < ZPAR; kern++)
-                    {
-                        sum[kern] += image_dataPtr[x * DILATION_X] * kernel_dataPtr[kern*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS + x];
+                        sum = mad(image_dataPtr[x * DILATION_X], kernel_dataPtr[x], sum);
                     }
                 }
                 image_dataPtr += input_width * DILATION_Y;
@@ -201,18 +193,13 @@ __kernel void ConvolveBasic(
             image_dataPtr += imageSize - input_width*KERNEL_HEIGHT*DILATION_Y;
         }
 
-        for (int kern = 0; kern < ZPAR; kern++)
-        {
-            if (kernelNum + kern < OUTPUT_Z)
-            {
-                int offset = convolved_image_offset + (kernelNum+kern)*output_height*output_width + outputY*output_width + outputX;
+        int offset = convolved_image_offset + out_idx;
 #if APPLY_BIAS
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern], biasIndex + kern);
+        int biasIndex = bias_offset + outputZ;
+        ACTIVATION_FUNCTION(convolved_image, offset, sum + bias[biasIndex], biasIndex);
 #else
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern], kernelNum + kern);
+        ACTIVATION_FUNCTION(convolved_image, offset, sum, outputZ);
 #endif
-            }
-        }
     }
 }
 
@@ -1846,10 +1833,13 @@ __kernel void DWCONV(
     const ushort output_width,
     const ushort output_height) {
   __global Dtype* convolved_image = convolved_image_base + convolved_image_offset;
-  const int outputX = get_global_id(0);
-  const int outputY = get_global_id(1);
-  const int outputZ = get_global_id(2);
-  if(outputX < output_width && outputY < output_height)
+  const int out_idx = get_global_id(0);  // 1D task layout: [output_width * output_height * OUTPUT_Z]
+  const int plane_size = output_width * output_height;
+  const int out_plane_idx = out_idx % plane_size;
+  const int outputZ = out_idx / plane_size;
+  const int outputY = out_plane_idx / output_width;
+  const int outputX = out_plane_idx % output_width;
+  if (outputZ < OUTPUT_Z)
   {
     Dtype sum = 0.;
 

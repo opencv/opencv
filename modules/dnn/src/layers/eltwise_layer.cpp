@@ -71,7 +71,8 @@ public:
         PROD = 0,
         SUM = 1,
         MAX = 2,
-        DIV = 3
+        DIV = 3,
+        MIN = 4,
     } op;
     std::vector<float> coeffs;
 
@@ -109,6 +110,8 @@ public:
                 op = SUM;
             else if (operation == "max")
                 op = MAX;
+            else if (operation == "min")
+                op = MIN;
             else if (operation == "div")
                 op = DIV;
             else
@@ -470,6 +473,13 @@ public:
                                     dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
                                 }
                             }
+                            else if (op == MIN)
+                            {
+                                for (int j = 0; j < blockSize; j++)
+                                {
+                                    dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
+                                }
+                            }
                             else if (op == SUM)
                             {
                                 if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
@@ -522,6 +532,13 @@ public:
                             for (int j = 0; j < blockSize; j++)
                             {
                                 dstptr[j] = std::max(dstptr[j], srcptrI[j]);
+                            }
+                        }
+                        else if (op == MIN)
+                        {
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] = std::min(dstptr[j], srcptrI[j]);
                             }
                         }
                         else if (op == SUM)
@@ -641,6 +658,11 @@ public:
                 for (int i = 2; i < inputs.size(); ++i)
                     max(inputs[i], outputs[0], outputs[0]);
                 break;
+            case MIN:
+                min(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    min(inputs[i], outputs[0], outputs[0]);
+                break;
             default:
                 return false;
         }
@@ -745,6 +767,7 @@ public:
         auto op_ = [this] {
             switch (op) {
             case MAX: return cuda4dnn::EltwiseOpType::MAX;
+            case MIN: return cuda4dnn::EltwiseOpType::MIN;
             case SUM: return cuda4dnn::EltwiseOpType::SUM;
             case PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
             case DIV: return cuda4dnn::EltwiseOpType::DIV;
@@ -799,6 +822,12 @@ public:
                 for (int i = 2; i < inputBuffers.size(); ++i)
                     topExpr = max(topExpr, inputBuffers[i](x, y, c, n));
                 break;
+            case MIN:
+                topExpr = min(inputBuffers[0](x, y, c, n),
+                              inputBuffers[1](x, y, c, n));
+                for (int i = 2; i < inputBuffers.size(); ++i)
+                    topExpr = min(topExpr, inputBuffers[i](x, y, c, n));
+                break;
             default:
                 return Ptr<BackendNode>();
         }
@@ -823,6 +852,8 @@ public:
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::DIV);
         else if (op == MAX)
             ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MAX);
+        else if (op == MIN)
+            ieLayer.setEltwiseType(InferenceEngine::Builder::EltwiseLayer::EltwiseType::MIN);
         else
             CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
 
@@ -857,6 +888,7 @@ public:
                 case PROD: curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
                 case DIV:  curr_node = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
                 case MAX:  curr_node = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
+                case MIN:  curr_node = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
         }

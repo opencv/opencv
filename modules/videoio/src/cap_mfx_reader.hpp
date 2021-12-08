@@ -8,7 +8,7 @@
 #include "precomp.hpp"
 
 
-class MFXVideoSession;
+class MFXVideoSession_WRAP;
 class Plugin;
 class DeviceHandler;
 class ReadBitstream;
@@ -27,7 +27,7 @@ public:
     bool isOpened() const CV_OVERRIDE;
     int getCaptureDomain() CV_OVERRIDE;
 private:
-    MFXVideoSession *session;
+    MFXVideoSession_WRAP *session;
     Plugin *plugin;
     DeviceHandler *deviceHandler;
     ReadBitstream *bs;

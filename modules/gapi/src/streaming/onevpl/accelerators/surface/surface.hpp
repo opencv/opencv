@@ -13,16 +13,12 @@
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
-
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 /**
  * @brief Inner class for managing oneVPL surface through interface `mfxFrameSurface1`.
@@ -44,24 +40,21 @@ namespace wip {
  * - @ref Surface::obtain_lock() against @ref Surface::release_lock()
  * - @ref Surface::release_lock() against @ref Surface::release_lock()
  */
-class Surface {
-    using handle_t = mfxFrameSurface1;
-
-    std::shared_ptr<void> workspace_memory_ptr;
-    std::unique_ptr<handle_t> mfx_surface;
-    std::atomic<size_t> mirrored_locked_count;
+class GAPI_EXPORTS Surface final { // GAPI_EXPORTS for tests
 public:
+    using handle_t = mfxFrameSurface1;
     using info_t = mfxFrameInfo;
     using data_t = mfxFrameData;
 
-    // GAPI_EXPORTS for tests
-    GAPI_EXPORTS static std::shared_ptr<Surface> create_surface(std::unique_ptr<handle_t>&& surf,
-                                                                std::shared_ptr<void> accociated_memory);
-    GAPI_EXPORTS ~Surface();
 
-    GAPI_EXPORTS handle_t* get_handle() const;
-    GAPI_EXPORTS const info_t& get_info() const;
-    GAPI_EXPORTS const data_t& get_data() const;
+    static std::shared_ptr<Surface> create_surface(std::unique_ptr<handle_t>&& surf,
+                                                   std::shared_ptr<void> accociated_memory);
+    ~Surface();
+
+    handle_t* get_handle() const;
+    const info_t& get_info() const;
+    const data_t& get_data() const;
+    data_t& get_data();
 
     /**
      * Extract value thread-safe lock counter (see @ref Surface description).
@@ -70,7 +63,7 @@ public:
      *
      * @return fetched locks count.
      */
-    GAPI_EXPORTS size_t get_locks_count() const;
+    size_t get_locks_count() const;
 
     /**
      * Atomically increase value of thread-safe lock counter (see @ref Surface description).
@@ -79,7 +72,7 @@ public:
      *
      * @return locks count just before its increasing.
      */
-    GAPI_EXPORTS size_t obtain_lock();
+    size_t obtain_lock();
 
     /**
      * Atomically decrease value of thread-safe lock counter (see @ref Surface description).
@@ -88,13 +81,18 @@ public:
      *
      * @return locks count just before its decreasing.
      */
-    GAPI_EXPORTS size_t release_lock();
+     size_t release_lock();
 private:
     Surface(std::unique_ptr<handle_t>&& surf, std::shared_ptr<void> accociated_memory);
+
+    std::shared_ptr<void> workspace_memory_ptr;
+    std::unique_ptr<handle_t> mfx_surface;
+    std::atomic<size_t> mirrored_locked_count;
 };
 
 using surface_ptr_t = std::shared_ptr<Surface>;
 using surface_weak_ptr_t = std::weak_ptr<Surface>;
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

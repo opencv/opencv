@@ -55,6 +55,18 @@
 
 #include <opencv2/core/utils/filesystem.private.hpp>
 
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+  #if defined(__clang__) && defined(__has_feature)
+  #if __has_feature(thread_sanitizer)
+      #define OPENCV_WITH_THREAD_SANITIZER 1
+      #include <atomic>  // assume C++11
+  #endif
+  #endif
+#endif
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+    #define OPENCV_WITH_THREAD_SANITIZER 0
+#endif
+
 namespace cv {
 
 static void _initSystem()
@@ -119,7 +131,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
-#if defined __QNXNTO__
+#if defined __QNX__
 #  include <sys/elf.h>
 #else
 #  include <elf.h>
@@ -144,6 +156,9 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # endif
 # ifndef PPC_FEATURE2_ARCH_3_00
 #   define PPC_FEATURE2_ARCH_3_00 0x00800000
+# endif
+# ifndef PPC_FEATURE_HAS_VSX
+#   define PPC_FEATURE_HAS_VSX 0x00000080
 # endif
 #endif
 
@@ -539,7 +554,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
@@ -565,7 +580,7 @@ struct HWFeatures
         CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
-    #elif defined __arm__
+    #elif defined __arm__ && !defined __FreeBSD__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -604,7 +619,7 @@ struct HWFeatures
         have[CV_CPU_MSA] = true;
     #endif
 
-    #if (defined __ppc64__ || defined __PPC64__) && defined __unix__
+    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
         unsigned int hwcap = getauxval(AT_HWCAP);
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             hwcap = getauxval(AT_HWCAP2);
@@ -614,8 +629,19 @@ struct HWFeatures
                 have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
+    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+        unsigned int hwcap = 0;
+        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        // TODO: AIX, FreeBSD
+        // TODO: AIX, OpenBSD
         #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
             have[CV_CPU_VSX] = true;
         #endif
@@ -917,6 +943,51 @@ int64 getCPUTickCount(void)
 //#endif
 
 #endif
+
+
+namespace internal {
+
+class Timestamp
+{
+public:
+    const int64 zeroTickCount;
+    const double ns_in_ticks;
+
+    Timestamp()
+        : zeroTickCount(getTickCount())
+        , ns_in_ticks(1e9 / getTickFrequency())
+    {
+        // nothing
+    }
+
+    int64 getTimestamp()
+    {
+        int64 t = getTickCount();
+        return (int64)((t - zeroTickCount) * ns_in_ticks);
+    }
+
+    static Timestamp& getInstance()
+    {
+        static Timestamp g_timestamp;
+        return g_timestamp;
+    }
+};
+
+class InitTimestamp {
+public:
+    InitTimestamp() {
+        Timestamp::getInstance();
+    }
+};
+static InitTimestamp g_initialize_timestamp;  // force zero timestamp initialization
+
+}  // namespace
+
+int64 getTimestampNS()
+{
+    return internal::Timestamp::getInstance().getTimestamp();
+}
+
 
 const String& getBuildInformation()
 {
@@ -1383,64 +1454,62 @@ namespace details {
 #endif
 #endif
 
-template <class T>
-class DisposedSingletonMark
-{
-private:
-    static bool mark;
-protected:
-    DisposedSingletonMark() {}
-    ~DisposedSingletonMark()
-    {
-        mark = true;
-    }
-public:
-    static bool isDisposed() { return mark; }
-};
-
 // TLS platform abstraction layer
-class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
+class TlsAbstraction
 {
 public:
     TlsAbstraction();
-    ~TlsAbstraction();
-    void* getData() const
+    ~TlsAbstraction()
     {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return NULL;
-        return getData_();
-    }
-    void setData(void *pData)
-    {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return;
-        return setData_(pData);
+        // TlsAbstraction singleton should not be released
+        // There is no reliable way to avoid problems caused by static initialization order fiasco
+        // NB: Do NOT use logging here
+        fprintf(stderr, "OpenCV FATAL: TlsAbstraction::~TlsAbstraction() call is not expected\n");
+        fflush(stderr);
     }
 
+    void* getData() const;
+    void setData(void *pData);
+
+    void releaseSystemResources();
+
 private:
-    void* getData_() const;
-    void setData_(void *pData);
 
 #ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
+    bool disposed;
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
+#if OPENCV_WITH_THREAD_SANITIZER
+    std::atomic<bool> disposed;
+#else
+    bool disposed;
+#endif
 #endif
 };
 
-template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
-
-static TlsAbstraction& getTlsAbstraction_()
+class TlsAbstractionReleaseGuard
 {
-    static TlsAbstraction g_tls;  // disposed in atexit() handlers (required for unregistering our callbacks)
-    return g_tls;
-}
+    TlsAbstraction& tls_;
+public:
+    TlsAbstractionReleaseGuard(TlsAbstraction& tls) : tls_(tls)
+    {
+        /* nothing */
+    }
+    ~TlsAbstractionReleaseGuard()
+    {
+        tls_.releaseSystemResources();
+    }
+};
+
+// TODO use reference
 static TlsAbstraction* getTlsAbstraction()
 {
-    static TlsAbstraction* instance = &getTlsAbstraction_();
-    return DisposedSingletonMark<TlsAbstraction>::isDisposed() ? NULL : instance;
+    static TlsAbstraction *g_tls = new TlsAbstraction();  // memory leak is intended here to avoid disposing of TLS container
+    static TlsAbstractionReleaseGuard g_tlsReleaseGuard(*g_tls);
+    return g_tls;
 }
 
 
@@ -1448,15 +1517,15 @@ static TlsAbstraction* getTlsAbstraction()
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
     cv::__termination = true;  // DllMain is missing in static builds
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
     return tlsData;
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
     tlsData = pData;
 }
@@ -1465,6 +1534,7 @@ void TlsAbstraction::setData_(void *pData)
 static void NTAPI opencv_fls_destructor(void* pData);
 #endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
 #ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
@@ -1473,9 +1543,10 @@ TlsAbstraction::TlsAbstraction()
 #endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
     cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
 #ifndef CV_USE_FLS
     TlsFree(tlsKey);
 #else // CV_USE_FLS
@@ -1483,16 +1554,20 @@ TlsAbstraction::~TlsAbstraction()
 #endif // CV_USE_FLS
     tlsKey = TLS_OUT_OF_INDEXES;
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
 #ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
 #else // CV_USE_FLS
     return FlsGetValue(tlsKey);
 #endif // CV_USE_FLS
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
 #ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 #else // CV_USE_FLS
@@ -1503,12 +1578,14 @@ void TlsAbstraction::setData_(void *pData)
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
     CV_Assert(pthread_key_create(&tlsKey, opencv_tls_destructor) == 0);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
     cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
     if (pthread_key_delete(tlsKey) != 0)
     {
         // Don't use logging here
@@ -1516,12 +1593,16 @@ TlsAbstraction::~TlsAbstraction()
         fflush(stderr);
     }
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
     return pthread_getspecific(tlsKey);
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
     CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
 }
 #endif
@@ -1549,6 +1630,7 @@ public:
     TlsStorage() :
         tlsSlotsSize(0)
     {
+        (void)getTlsAbstraction();  // ensure singeton initialization (for correct order of atexit calls)
         tlsSlots.reserve(32);
         threads.reserve(32);
         g_isTlsStorageInitialized = true;
@@ -1785,6 +1867,13 @@ static void WINAPI opencv_fls_destructor(void* pData)
 }
 #endif // CV_USE_FLS
 #endif // _WIN32
+
+static TlsStorage* const g_force_initialization_of_TlsStorage
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = &getTlsStorage();
+
 
 #else  // OPENCV_DISABLE_THREAD_SUPPORT
 

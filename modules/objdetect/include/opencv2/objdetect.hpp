@@ -667,6 +667,69 @@ public:
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
+class CV_EXPORTS_W QRCodeEncoder {
+protected:
+    QRCodeEncoder();  // use ::create()
+public:
+    virtual ~QRCodeEncoder();
+
+    enum EncodeMode {
+        MODE_AUTO              = -1,
+        MODE_NUMERIC           = 1, // 0b0001
+        MODE_ALPHANUMERIC      = 2, // 0b0010
+        MODE_BYTE              = 4, // 0b0100
+        MODE_ECI               = 7, // 0b0111
+        MODE_KANJI             = 8, // 0b1000
+        MODE_STRUCTURED_APPEND = 3  // 0b0011
+    };
+
+    enum CorrectionLevel {
+        CORRECT_LEVEL_L = 0,
+        CORRECT_LEVEL_M = 1,
+        CORRECT_LEVEL_Q = 2,
+        CORRECT_LEVEL_H = 3
+    };
+
+    enum ECIEncodings {
+        ECI_UTF8 = 26
+    };
+
+    /** @brief QR code encoder parameters.
+     @param version The optional version of QR code (by default - maximum possible depending on
+                    the length of the string).
+     @param correction_level The optional level of error correction (by default - the lowest).
+     @param mode The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
+     @param structure_number The optional number of QR codes to generate in Structured Append mode.
+    */
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW int version;
+        CV_PROP_RW CorrectionLevel correction_level;
+        CV_PROP_RW EncodeMode mode;
+        CV_PROP_RW int structure_number;
+    };
+
+    /** @brief Constructor
+    @param parameters QR code encoder parameters QRCodeEncoder::Params
+    */
+    static CV_WRAP
+    Ptr<QRCodeEncoder> create(const QRCodeEncoder::Params& parameters = QRCodeEncoder::Params());
+
+    /** @brief Generates QR code from input string.
+     @param encoded_info Input string to encode.
+     @param qrcode Generated QR code.
+    */
+    CV_WRAP virtual void encode(const String& encoded_info, OutputArray qrcode) = 0;
+
+    /** @brief Generates QR code from input string in Structured Append mode. The encoded message is splitting over a number of QR codes.
+     @param encoded_info Input string to encode.
+     @param qrcodes Vector of generated QR codes.
+    */
+    CV_WRAP virtual void encodeStructuredAppend(const String& encoded_info, OutputArrayOfArrays qrcodes) = 0;
+
+};
+
 class CV_EXPORTS_W QRCodeDetector
 {
 public:
@@ -768,5 +831,6 @@ protected:
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
+#include "opencv2/objdetect/face.hpp"
 
 #endif

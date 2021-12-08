@@ -2,12 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2020 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 
 #include "../test_precomp.hpp"
 
-#include "../common/gapi_tests_common.hpp"
+#include "../common/gapi_streaming_tests_common.hpp"
 
 #include <thread> // sleep_for (Delay)
 
@@ -24,37 +24,13 @@
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
+#include <opencv2/gapi/gstreaming.hpp>
 
-#include <opencv2/gapi/streaming/onevpl/source.hpp>
-
-#ifdef HAVE_ONEVPL
-
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
-#endif // HAVE_ONEVPL
 
 namespace opencv_test
 {
 namespace
 {
-void initTestDataPath()
-{
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath) {
-            cvtest::addDataSearchPath(testDataPath);
-        }
-        initialized = true;
-    }
-#endif // WINRT
-}
 
 enum class KernelPackage: int
 {
@@ -81,7 +57,6 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
 struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
                                                                   cv::optional<size_t>>> {
     GAPI_Streaming() {
-        initTestDataPath();
         KernelPackage pkg_kind;
         std::tie(pkg_kind, cap) = GetParam();
         pkg = getKernelPackage(pkg_kind);
@@ -131,7 +106,7 @@ struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
         using namespace cv::gapi;
         auto args = cv::compile_args(use_only{pkg});
         if (cap) {
-            args += cv::compile_args(streaming::queue_capacity{cap.value()});
+            args += cv::compile_args(cv::gapi::streaming::queue_capacity{cap.value()});
         }
         return args;
     }
@@ -284,22 +259,6 @@ void checkPullOverload(const cv::Mat& ref,
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
 }
 
-struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
-
-    StreamDataProvider(std::istream& in) : data_stream (in) {
-        EXPECT_TRUE(in);
-    }
-
-    size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
-        data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
-        return (size_t)data_stream.gcount();
-    }
-    bool empty() const override {
-        return data_stream.eof() || data_stream.bad();
-    }
-private:
-    std::istream& data_stream;
-};
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
@@ -353,7 +312,9 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
         // With constant inputs, the stream is endless so
         // the blocking pull() should never return `false`.
         EXPECT_TRUE(ccomp.pull(cv::gout(out_mat_gapi)));
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
 
     EXPECT_TRUE(ccomp.running());
@@ -405,7 +366,9 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
         frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(ccomp.running());
@@ -842,8 +805,6 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Scalar data.
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar m = cv::gapi::mean(in);
     cv::GMat tmp = cv::gapi::convertTo(in, CV_32F) - m;
@@ -910,8 +871,6 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Vector data.
 
-    initTestDataPath();
-
     cv::GMat in1, in2;
     cv::GMat in = cv::gapi::crop(in1, cv::Rect{0,0,576,576});
     cv::GScalar m = cv::gapi::mean(in);
@@ -976,8 +935,6 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     // This test verifies if Streaming works when pipeline
     // produces scalar data only
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar out = cv::gapi::mean(in);
     auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
@@ -1015,7 +972,6 @@ TEST(GAPI_Streaming_Types, OutputVector)
     // This test verifies if Streaming works when pipeline
     // produces vector data only
 
-    initTestDataPath();
     auto pkg = cv::gapi::kernels<TypesTest::OCVSumV>();
 
     cv::GMat in1, in2;
@@ -1130,7 +1086,7 @@ TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
         }
         GAPI_Assert(out_mat || out_int);
         if (out_int) {
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1177,7 +1133,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
                 return cv::GComputation(cv::GIn(a, b), cv::GOut(c));
             })
     {
-        initTestDataPath();
 
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
@@ -1192,7 +1147,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST(GAPI_Streaming, TestTwoVideosDifferentLength)
 {
-    initTestDataPath();
     auto desc = cv::GMatDesc{CV_8U,3,{768,576}};
     auto path1 = findDataFile("cv/video/768x576.avi");
     auto path2 = findDataFile("highgui/video/big_buck_bunny.avi");
@@ -1454,8 +1408,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1487,8 +1439,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1624,8 +1574,6 @@ TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
 
 TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1649,8 +1597,6 @@ TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 
 TEST(GAPI_Streaming_Desync, UseSpecialPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1748,7 +1694,7 @@ TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
         if (out_vec || out_int) {
             EXPECT_EQ(320, out_vec.value()[0]);
             EXPECT_EQ(240, out_vec.value()[1]);
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1807,7 +1753,6 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
 
 TEST(GAPI_Streaming, CopyFrame)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -1846,7 +1791,6 @@ TEST(GAPI_Streaming, CopyFrame)
 
 TEST(GAPI_Streaming, CopyMat)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GMat in;
@@ -1883,7 +1827,6 @@ TEST(GAPI_Streaming, CopyMat)
 
 TEST(GAPI_Streaming, Reshape)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -2073,8 +2016,7 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat out = accessor(in);
@@ -2125,8 +2067,7 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat gmat = accessor(in);
@@ -2242,31 +2183,21 @@ TEST(GAPI_Streaming, TestPythonAPI)
 }
 
 #ifdef HAVE_ONEVPL
-const unsigned char hevc_header[] = {
- 0x00, 0x00, 0x00, 0x01, 0x40, 0x01, 0x0C, 0x06, 0xFF, 0xFF, 0x01, 0x40, 0x00,
- 0x00, 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00,
- 0x00, 0x04, 0x02, 0x10, 0x30, 0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03,
- 0x01, 0xE5, 0x00, 0x00, 0x00, 0x01, 0x42, 0x01, 0x06, 0x01, 0x40, 0x00, 0x00,
- 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00, 0x00,
- 0xA0, 0x10, 0x20, 0x61, 0x63, 0x41, 0x00, 0x86, 0x49, 0x1B, 0x2B, 0x20, 0x00,
- 0x00, 0x00, 0x01, 0x44, 0x01, 0xC0, 0x71, 0xC0, 0xD9, 0x20, 0x00, 0x00, 0x00,
- 0x01, 0x26, 0x01, 0xAF, 0x0C
-};
+
 TEST(OneVPL_Source, Init)
 {
     using CfgParam = cv::gapi::wip::onevpl::CfgParam;
 
     std::vector<CfgParam> src_params;
-    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.Impl",
-                                                                               MFX_IMPL_TYPE_HARDWARE));
-    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                               MFX_ACCEL_MODE_VIA_D3D11, false));
-    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
-                                                                               MFX_CODEC_HEVC));
+    src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
+    src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+    src_params.push_back(CfgParam::create_decoder_id(MFX_CODEC_HEVC));
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(hevc_header)),
-                             sizeof(hevc_header)));
-    std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> stream_data_provider = std::make_shared<StreamDataProvider>(stream);
+
+    EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(streaming::onevpl::hevc_header)),
+                             sizeof(streaming::onevpl::hevc_header)));
+    std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> stream_data_provider =
+                std::make_shared<streaming::onevpl::StreamDataProvider>(stream);
 
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     bool cap_created = false;
@@ -2283,5 +2214,70 @@ TEST(OneVPL_Source, Init)
     }
     EXPECT_TRUE(stream_data_provider->empty());
 }
-#endif
+#endif // HAVE_ONEVPL
+
+TEST(GAPI_Streaming, TestDesyncRMat) {
+    cv::GMat in;
+    auto blurred = cv::gapi::blur(in, cv::Size{3,3});
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = in - blurred;
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out)).compileStreaming();
+
+    cv::Size sz(32,32);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+    pipe.setSource(cv::gin(in_mat));
+    pipe.start();
+
+    cv::optional<cv::RMat> out_desync;
+    cv::optional<cv::RMat> out_rmat;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no RMat handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_rmat)));
+        if (out_rmat) break;
+    }
+}
+
+G_API_OP(GTestBlur, <GFrame(GFrame)>, "test.blur") {
+    static GFrameDesc outMeta(GFrameDesc d) { return d; }
+};
+GAPI_OCV_KERNEL(GOcvTestBlur, GTestBlur) {
+    static void run(const cv::MediaFrame& in, cv::MediaFrame& out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat mat(d.size, CV_8UC3, view.ptr[0]);
+        cv::Mat blurred;
+        cv::blur(mat, blurred, cv::Size{3,3});
+        out = cv::MediaFrame::Create<TestMediaBGR>(blurred);
+    }
+};
+
+TEST(GAPI_Streaming, TestDesyncMediaFrame) {
+    cv::GFrame in;
+    auto blurred = GTestBlur::on(in);
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = GTestBlur::on(blurred);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GOcvTestBlur>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::optional<cv::MediaFrame> out_desync;
+    cv::optional<cv::MediaFrame> out_frame;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no MediaFrame handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
+        if (out_frame) break;
+    }
+}
+
 } // namespace opencv_test

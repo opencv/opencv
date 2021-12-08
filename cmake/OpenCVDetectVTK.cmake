@@ -1,7 +1,7 @@
 if(NOT VTK_FOUND)
   find_package(VTK QUIET NAMES vtk VTK)
   if(VTK_FOUND)
-    if(VTK_VERSION VERSION_EQUAL "9") # VTK 9.0
+    if(NOT (VTK_VERSION VERSION_LESS "9.0.0") AND (VTK_VERSION VERSION_LESS "10.0.0")) # VTK 9.x
       find_package(VTK 9 QUIET NAMES vtk COMPONENTS
               FiltersExtraction
               FiltersSources
@@ -44,30 +44,13 @@ if(VTK_VERSION VERSION_LESS "5.8.0")
 endif()
 
 # Different Qt versions can't be linked together
-if(HAVE_QT5 AND VTK_VERSION VERSION_LESS "6.0.0")
-  if(VTK_USE_QT)
-    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5 and VTK ver.${VTK_VERSION} + Qt4")
-  endif()
-endif()
-
-# Different Qt versions can't be linked together. VTK 6.0.0 doesn't provide a way to get Qt version it was linked with
-if(HAVE_QT5 AND VTK_VERSION VERSION_EQUAL "6.0.0" AND NOT DEFINED FORCE_VTK)
-  message(STATUS "VTK support is disabled. Possible incompatible combination: OpenCV+Qt5, and VTK ver.${VTK_VERSION} with Qt4")
-  message(STATUS "If it is known that VTK was compiled without Qt4, please define '-DFORCE_VTK=TRUE' flag in CMake")
+if((HAVE_QT AND VTK_USE_QT)
+    AND NOT DEFINED FORCE_VTK  # deprecated
+    AND NOT DEFINED OPENCV_FORCE_VTK
+)
+  message(STATUS "VTK support is disabled. Possible incompatible combination: OpenCV+Qt, and VTK ver.${VTK_VERSION} with Qt")
+  message(STATUS "If it is known that VTK was compiled without Qt4, please define '-DOPENCV_FORCE_VTK=TRUE' flag in CMake")
   return()
-endif()
-
-# Different Qt versions can't be linked together
-if(HAVE_QT AND VTK_VERSION VERSION_GREATER "6.0.0" AND NOT ${VTK_QT_VERSION} STREQUAL "")
-  if(HAVE_QT5 AND ${VTK_QT_VERSION} EQUAL "4")
-    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5 and VTK ver.${VTK_VERSION} + Qt4")
-    return()
-  endif()
-
-  if(NOT HAVE_QT5 AND ${VTK_QT_VERSION} EQUAL "5")
-    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt4 and VTK ver.${VTK_VERSION} + Qt5")
-    return()
-  endif()
 endif()
 
 try_compile(VTK_COMPILE_STATUS

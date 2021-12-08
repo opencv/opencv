@@ -131,13 +131,14 @@ __kernel void PowForward(const int n, __global const T* in, __global T* out,
     out[index] = pow(shift + scale * in[index], power);
 }
 
-__kernel void ELUForward(const int n, __global const T* in, __global T* out)
+__kernel void ELUForward(const int n, __global const T* in, __global T* out,
+                         const KERNEL_ARG_DTYPE alpha)
 {
   int index = get_global_id(0);
   if (index < n)
   {
     T src = in[index];
-    out[index] = (src >= 0.f) ? src : exp(src) - 1;
+    out[index] = (src >= 0.f) ? src : alpha * (exp(src) - 1);
   }
 }
 
@@ -150,4 +151,40 @@ __kernel void ExpForward(const int n, __global const T* in, __global T* out,
   {
     out[index] = exp(normShift + normScale * in[index]);
   }
+}
+
+__kernel void CeilForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = ceil(in[index]);
+}
+
+__kernel void FloorForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = floor(in[index]);
+}
+
+__kernel void LogForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = log(in[index]);
+}
+
+__kernel void RoundForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = rint(in[index]);
+}
+
+__kernel void SqrtForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sqrt(in[index]);
+}
+
+__kernel void NotForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = floor(1.0f - in[index]);
 }

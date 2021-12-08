@@ -270,7 +270,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
             if( !s[j] )
             {
                 tmp[j] = 0;
-                //assert( lls[j] != 0 );
+                //CV_Assert( lls[j] != 0 );
             }
             else
             {
