@@ -589,7 +589,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     Mat JtErr(nparams, 1, CV_64F), JtJ(nparams, nparams, CV_64F), JtJinv, JtJN;
     double reprojErr = 0;
     JtErr.setZero(); JtJ.setZero(); Mat dummy;
-    cameraCalcJErr(matM, _m, npoints, allErrors, param0, stdDevs,
+    cameraCalcJErr(matM, _m, npoints, allErrors, param0, (stdDevs != nullptr),
                    JtErr, JtJ, reprojErr,
                    aspectRatio, dummy, flags, releaseObject);
     if (stdDevs)
