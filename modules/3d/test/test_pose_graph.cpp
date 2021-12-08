@@ -109,9 +109,10 @@ TEST( PoseGraph, sphereG2O )
     // In IEEE Intl.Conf.on Robotics and Automation(ICRA), pages 4597 - 4604, 2015.
 
     std::string filename = cvtest::TS::ptr()->get_data_path() + "/cv/rgbd/sphere_bignoise_vertex3.g2o";
-    Ptr<detail::PoseGraph> pg = readG2OFile(filename);
 
 #ifdef HAVE_EIGEN
+    Ptr<detail::PoseGraph> pg = readG2OFile(filename);
+
     // You may change logging level to view detailed optimization report
     // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
 
@@ -331,6 +332,7 @@ void writeObj(const std::string& fname, const Mesh& m)
 
 TEST(PoseGraph, simple)
 {
+#ifdef HAVE_EIGEN
     Ptr<detail::PoseGraph> pg = detail::PoseGraph::create();
 
     DualQuatf true0(1, 0, 0, 0, 0, 0, 0, 0);
@@ -384,6 +386,10 @@ TEST(PoseGraph, simple)
     }
 
     EXPECT_TRUE(r.found);
+
+#else
+    throw SkipTestException("Build with Eigen required for pose graph optimization");
+#endif
 }
 
 

@@ -6,6 +6,13 @@
 #include "sparse_block_matrix.hpp"
 #include "opencv2/3d/detail/pose_graph.hpp"
 
+namespace cv
+{
+namespace detail
+{
+
+#if defined(HAVE_EIGEN)
+
 // matrix form of conjugation
 static const cv::Matx44d M_Conj{ 1,  0,  0,  0,
                                  0, -1,  0,  0,
@@ -94,13 +101,6 @@ cv::Matx<_Tp, m, n + k> concatHor(const cv::Matx<_Tp, m, n>& a, const cv::Matx<_
     }
     return res;
 }
-
-namespace cv
-{
-namespace detail
-{
-
-#if defined(HAVE_EIGEN)
 
 class PoseGraphImpl;
 class PoseGraphLevMarqBackend;
