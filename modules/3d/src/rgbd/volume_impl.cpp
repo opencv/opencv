@@ -84,6 +84,33 @@ void TsdfVolume::integrate(OdometryFrame frame, InputArray pose)
     frame.getDepth(depth);
     CV_Assert(depth.type() == DEPTH_TYPE);
     CV_Assert(!depth.empty());
+    depth = depth * 5000;
+
+    Matx33f intr;
+    settings.getIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec6f newParams((float)depth.rows, (float)depth.cols,
+        intrinsics.fx, intrinsics.fy,
+        intrinsics.cx, intrinsics.cy);
+    if (!(frameParams == newParams))
+    {
+        frameParams = newParams;
+        pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
+    }
+    Matx44f cameraPose = pose.getMat();
+    integrateVolumeUnit(truncDist, voxelSize, settings.getMaxWeight(), (this->pose).matrix, volResolution, volStrides, depth,
+        settings.getDepthFactor(), cameraPose, intrinsics, pixNorms, volume);
+
+}
+void TsdfVolume::integrate(InputArray frame, InputArray pose)
+{
+    std::cout << "TsdfVolume::integrate()" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    Depth depth = frame.getMat();
+    CV_Assert(depth.type() == DEPTH_TYPE);
+    CV_Assert(!depth.empty());
+    //depth = depth * 5000;
 
     Matx33f intr;
     settings.getIntrinsics(intr);
@@ -278,6 +305,7 @@ struct RaycastInvoker : ParallelLoopBody
                     }
                     // if ray penetrates a surface from outside
                     // linearly interpolate t between two f values
+                    //std::cout << f << " " << fnext << std::endl;
                     if (f > 0.f && fnext < 0.f)
                     {
                         Point3f tp = next - rayStep;
@@ -295,6 +323,7 @@ struct RaycastInvoker : ParallelLoopBody
 
                             if (!isNaN(nv))
                             {
+                                std::cout << "F ";
                                 //convert pv and nv to camera space
                                 normal = volRot * nv;
                                 // interpolation optimized a little
@@ -344,7 +373,8 @@ void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, Outpu
     RaycastInvoker ri(points, normals, cameraPose, Intr(intr), *this);
 
     const int nstripes = -1;
-    parallel_for_(Range(0, points.rows), ri, nstripes);
+    //parallel_for_(Range(0, points.rows), ri, nstripes);
+    ri(Range(0, points.rows));
 }
 
 void TsdfVolume::fetchNormals() const {}
@@ -374,6 +404,7 @@ HashTsdfVolume::HashTsdfVolume(VolumeSettings settings) :
 HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(OdometryFrame frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
+void HashTsdfVolume::integrate(InputArray frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
 void HashTsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
 
 void HashTsdfVolume::fetchNormals() const {}
@@ -391,6 +422,7 @@ ColorTsdfVolume::ColorTsdfVolume(VolumeSettings settings) :
 ColorTsdfVolume::~ColorTsdfVolume() {}
 
 void ColorTsdfVolume::integrate(OdometryFrame frame, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }
+void ColorTsdfVolume::integrate(InputArray frame, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }
 void ColorTsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "ColorTsdfVolume::raycast()" << std::endl; }
 
 void ColorTsdfVolume::fetchNormals() const {}

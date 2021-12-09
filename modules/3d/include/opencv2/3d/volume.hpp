@@ -29,6 +29,7 @@ public:
     ~Volume();
 
     void integrate(OdometryFrame frame, InputArray pose);
+    void integrate(InputArray frame, InputArray pose);
     void raycast(const Matx44f& cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
 
     void fetchNormals() const;

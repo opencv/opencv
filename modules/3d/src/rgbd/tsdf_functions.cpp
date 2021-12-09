@@ -70,7 +70,11 @@ void integrateVolumeUnit(
     const float dfac(1.f / depthFactor);
     TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();;
 
-#if USE_INTRINSICS
+    double min_, max_;
+    cv::minMaxLoc(depth, &min_, &max_);
+    std::cout << " info: " << min_ << " " << max_ << std::endl;
+
+#if !USE_INTRINSICS
     auto IntegrateInvoker = [&](const Range& range)
     {
         // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
@@ -291,6 +295,8 @@ void integrateVolumeUnit(
                     // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
                     if (sdf >= -truncDist)
                     {
+                        //std::cout << sdf << " " << -truncDist  << " " << truncDistInv << std::endl;
+
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
 
                         TsdfVoxel& voxel = volDataY[z * volStrides[2]];
@@ -298,6 +304,9 @@ void integrateVolumeUnit(
                         TsdfType& value = voxel.tsdf;
 
                         // update TSDF
+                        //std::cout << tsdfToFloat(tsdf) << " | ";
+                        //std::cout << pixNorm << " " << v << " " << dfac << " " << camSpacePt.z << " | ";
+                        //std::cout << sdf << " " << truncDistInv << std::endl;
                         value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
                         weight = min(int(weight + 1), int(maxWeight));
                     }
@@ -307,7 +316,8 @@ void integrateVolumeUnit(
     };
 #endif
 
-    parallel_for_(integrateRange, IntegrateInvoker);
+    //parallel_for_(integrateRange, IntegrateInvoker);
+    IntegrateInvoker(integrateRange);
 }
 
 
@@ -583,6 +593,7 @@ void integrateRGBVolumeUnit(
                     // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
                     if (sdf >= -truncDist)
                     {
+
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
 
                         RGBTsdfVoxel& voxel = volDataY[z * volStrides[2]];

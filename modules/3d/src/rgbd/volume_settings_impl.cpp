@@ -94,8 +94,11 @@ public:
         static const int height = 480;
         static constexpr float fx = 525.f;
         static constexpr float fy = 525.f;
-        static constexpr float cx = width / 2 - 0.5f;
-        static constexpr float cy = height / 2 - 0.5f;
+        static constexpr float cx = float(width) / 2.f - 0.5f;
+        static constexpr float cy = float(height) / 2.f - 0.5f;
+
+        static constexpr float volSize = 3.f;
+
         const Matx33f intr = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1);
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volSize / 2.f, -volSize / 2.f, 0.5f));
         const Matx44f pose = volumePose.matrix;
@@ -103,7 +106,6 @@ public:
         // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float depthFactor = 5000.f;
 
-        static constexpr float volSize = 3.f;
         static constexpr float voxelSize = volSize / 128.f; //meters
         static constexpr float raycastStepFactor = 0.75f;
         static constexpr float truncDist = 2 * voxelSize;

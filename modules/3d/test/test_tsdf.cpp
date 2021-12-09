@@ -413,18 +413,43 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
     _Settings settings(isHashTSDF, false);
 
+    //std::cout << "lol " << settings.frameSize << " " << settings.intr << " " << settings.depthFactor << std::endl;
+    //std::cout << settings.poses[0].matrix << std::endl;
+
+
+
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _tmpnormals;
     UMat _newPoints, _newNormals;
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    VolumeSettings vs;
+    Volume volume(VolumeType::TSDF, vs);
 
+    if (true)
+    {
+        volume.integrate(depth, settings.poses[0].matrix);
+        volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _normals);
+    }
+    else
+    {
+        settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+    }
+
+    normals = _normals.getMat(af);
+    points = _points.getMat(af);
+
+    displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+
+
+    /*
     if (isRaycast)
     {
         settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
     }
+    
     if (isFetchPointsNormals)
     {
         settings.volume->fetchPointsNormals(_points, _normals);
@@ -463,6 +488,7 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
     }
 
     points.release(); normals.release();
+    */
 }
 
 void _valid_points_test(bool isHashTSDF)
@@ -520,68 +546,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     vs.getDepthFactor();
     Volume volume(VolumeType::TSDF, vs);
 
-    //Volume volume;
-    Size frameSize = Size(640, 480);
-    float fx, fy, cx, cy;
-    fx = fy = 525.f;
-    cx = frameSize.width / 2 - 0.5f;
-    cy = frameSize.height / 2 - 0.5f;
-    Matx33f intr = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1);
-
-    // 5000 for the 16-bit PNG files
-    // 1 for the 32-bit float images in the ROS bag files
-    float depthFactor = 5000;
-    Vec3f lightPose = Vec3f::all(0.f); //meters
-
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, true);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    OdometryFrame odf;
-    Mat depth = scene->depth(poses[0]);
-    odf.setDepth(depth);
-    UMat _points, _normals, _tmpnormals;
-    UMat _newPoints, _newNormals;
-    Mat  points, normals;
-    AccessFlag af = ACCESS_READ;
-
-    volume.integrate(odf, poses[0].matrix);
-
-    if (isRaycast)
-    {
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, _points, _normals);
-    }
-
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
-
-    if (parallelCheck)
-        normals.forEach<Vec4f>(normalCheck);
-    else
-        normalsCheck(normals);
-
-    if (display)
-    {
-        std::cout << "Display_1" << std::endl;
-        displayImage(depth, points, normals, depthFactor, lightPose);
-        
-    }
-    if (isRaycast)
-    {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, _newPoints, _newNormals);
-        normals = _newNormals.getMat(af);
-        points = _newPoints.getMat(af);
-        normalsCheck(normals);
-
-        if (parallelCheck)
-            normals.forEach<Vec4f>(normalCheck);
-        else
-            normalsCheck(normals);
-
-        if (display)
-            displayImage(depth, points, normals, depthFactor, lightPose);
-    }
-
-    points.release(); normals.release();
+    _Settings settings(isHashTSDF, false);
 
 }
 
@@ -657,7 +622,7 @@ TEST(_HashTSDF_CPU, valid_points)
 TEST(new_TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(true, true, false, false);
+    normal_test(false, true, false, false);
     cv::ocl::setUseOpenCL(true);
 }
 

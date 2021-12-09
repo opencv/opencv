@@ -21,6 +21,7 @@ public:
     virtual ~Impl() {};
 
     virtual void integrate(OdometryFrame frame, InputArray pose) = 0;
+    virtual void integrate(InputArray frame, InputArray pose) = 0;
     virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
 
     virtual void fetchNormals() const = 0;
@@ -46,6 +47,7 @@ public:
     ~TsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -86,6 +88,7 @@ public:
     ~HashTsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -106,6 +109,7 @@ public:
     ~ColorTsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -150,6 +154,7 @@ Volume::Volume(VolumeType vtype, VolumeSettings settings)
 Volume::~Volume() {}
 
 void Volume::integrate(OdometryFrame frame, InputArray pose) { this->impl->integrate(frame, pose); }
+void Volume::integrate(InputArray frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
 void Volume::fetchNormals() const { this->impl->fetchNormals(); }
 void Volume::fetchPointsNormals() const { this->impl->fetchPointsNormals(); }
