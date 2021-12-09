@@ -5,12 +5,13 @@
 #include "test_precomp.hpp"
 #include <opencv2/3d/detail/pose_graph.hpp>
 
-//DEBUG
 #include <opencv2/core/dualquaternion.hpp>
 
 namespace opencv_test { namespace {
 
 using namespace cv;
+
+#ifdef HAVE_EIGEN
 
 static Affine3d readAffine(std::istream& input)
 {
@@ -97,7 +98,7 @@ static Ptr<detail::PoseGraph> readG2OFile(const std::string& g2oFileName)
 }
 
 
-TEST( PoseGraph, sphereG2O )
+TEST(PoseGraph, sphereG2O)
 {
     // Test takes 15+ sec in Release mode and 400+ sec in Debug mode
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG);
@@ -110,7 +111,6 @@ TEST( PoseGraph, sphereG2O )
 
     std::string filename = cvtest::TS::ptr()->get_data_path() + "/cv/rgbd/sphere_bignoise_vertex3.g2o";
 
-#ifdef HAVE_EIGEN
     Ptr<detail::PoseGraph> pg = readG2OFile(filename);
 
     // You may change logging level to view detailed optimization report
@@ -148,13 +148,9 @@ TEST( PoseGraph, sphereG2O )
 
         of.close();
     }
-#else
-    throw SkipTestException("Build with Eigen required for pose graph optimization");
-#endif
 }
 
 // ------------------------------------------------------------------------------------------
-
 
 // Wireframe meshes for debugging visualization purposes
 struct Mesh
@@ -330,9 +326,10 @@ void writeObj(const std::string& fname, const Mesh& m)
     of.close();
 }
 
+
 TEST(PoseGraph, simple)
 {
-#ifdef HAVE_EIGEN
+
     Ptr<detail::PoseGraph> pg = detail::PoseGraph::create();
 
     DualQuatf true0(1, 0, 0, 0, 0, 0, 0, 0);
@@ -346,8 +343,8 @@ TEST(PoseGraph, simple)
         float shift = cv::theRNG().uniform(-2.f, 2.f);
         Matx31f axis = Vec3f::randu(0.f, 1.f), moment = Vec3f::randu(0.f, 1.f);
         noise[i] = DualQuatf::createFromPitch(angle, shift,
-                                              Vec3f(axis(0), axis(1), axis(2)),
-                                              Vec3f(moment(0), moment(1), moment(2)));
+            Vec3f(axis(0), axis(1), axis(2)),
+            Vec3f(moment(0), moment(1), moment(2)));
     }
 
     DualQuatf pose1 = noise[0] * true1;
@@ -386,12 +383,19 @@ TEST(PoseGraph, simple)
     }
 
     EXPECT_TRUE(r.found);
-
+}
 #else
+
+TEST(PoseGraph, sphereG2O)
+{
     throw SkipTestException("Build with Eigen required for pose graph optimization");
-#endif
 }
 
+TEST(PoseGraph, simple)
+{
+    throw SkipTestException("Build with Eigen required for pose graph optimization");
+}
+#endif
 
 TEST(LevMarq, Rosenbrock)
 {

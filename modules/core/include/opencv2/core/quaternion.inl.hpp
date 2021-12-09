@@ -104,7 +104,7 @@ Quat<T> Quat<T>::createFromRotMat(InputArray _R)
     }
     else
     {
-        S = std::sqrt(1.0 - R(0, 0) - R(1, 1) + R(2, 2)) * T(2);
+        S = std::sqrt(T(1.0) - R(0, 0) - R(1, 1) + R(2, 2)) * T(2);
         x = (R(0, 2) + R(2, 0)) / S;
         y = (R(1, 2) + R(2, 1)) / S;
         z = T(0.25) * S;
