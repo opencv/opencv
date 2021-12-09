@@ -210,30 +210,29 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
 }
 
 VPLCPUAccelerationPolicy::pool_key_t
-VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxVideoParam& param) {
+VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxFrameInfo& info) {
 
     // External (application) allocation of decode surfaces
     GAPI_LOG_DEBUG(nullptr, "Query mfxFrameAllocRequest.NumFrameSuggested: " << alloc_request.NumFrameSuggested <<
                             ", mfxFrameAllocRequest.Type: " << alloc_request.Type);
 
-    mfxU32 singleSurfaceSize = utils::GetSurfaceSize_(param.mfx.FrameInfo.FourCC,
-                                                      param.mfx.FrameInfo.Width,
-                                                      param.mfx.FrameInfo.Height);
+    mfxU32 singleSurfaceSize = utils::GetSurfaceSize_(info.FourCC,
+                                                      info.Width,
+                                                      info.Height);
     if (!singleSurfaceSize) {
         throw std::runtime_error("Cannot determine surface size for: fourCC: " +
-                                 std::to_string(param.mfx.FrameInfo.FourCC) +
-                                 ", width: " + std::to_string(param.mfx.FrameInfo.Width) +
-                                 ", height: " + std::to_string(param.mfx.FrameInfo.Height));
+                                 std::to_string(info.FourCC) +
+                                 ", width: " + std::to_string(info.Width) +
+                                 ", height: " + std::to_string(info.Height));
     }
 
-    const auto &frameInfo = param.mfx.FrameInfo;
     auto surface_creator =
-            [&frameInfo] (std::shared_ptr<void> out_buf_ptr, size_t out_buf_ptr_offset,
+            [&info] (std::shared_ptr<void> out_buf_ptr, size_t out_buf_ptr_offset,
                           size_t out_buf_size) -> surface_ptr_t {
-                return (frameInfo.FourCC == MFX_FOURCC_RGB4) ?
-                        utils::create_surface_RGB4_(frameInfo, out_buf_ptr, out_buf_ptr_offset,
+                return (info.FourCC == MFX_FOURCC_RGB4) ?
+                        utils::create_surface_RGB4_(info, out_buf_ptr, out_buf_ptr_offset,
                                                     out_buf_size) :
-                        utils::create_surface_other_(frameInfo, out_buf_ptr, out_buf_ptr_offset,
+                        utils::create_surface_other_(info, out_buf_ptr, out_buf_ptr_offset,
                                                      out_buf_size);};
 
     return create_surface_pool(alloc_request.NumFrameSuggested,

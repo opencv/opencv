@@ -13,7 +13,16 @@
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
-#include <opencv2/gapi/infer/parsers.hpp>
+
+#ifdef HAVE_ONEVPL
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif // MFX_VERSION
+
+#include <vpl/mfx.h>
+#include <vpl/mfxvideo.h>
+#endif // HAVE_ONEVPL
+
 
 #ifdef HAVE_INF_ENGINE
 #include <inference_engine.hpp> // ParamMap
@@ -129,6 +138,12 @@ G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
     }
 };
 
+G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-ssd") {
+    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &, const cv::GOpaqueDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
 G_API_OP(BBoxes, <GPrims(GDetections, GRect)>, "sample.custom.b-boxes") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GOpaqueDesc &) {
         return cv::empty_array_desc();
@@ -160,6 +175,56 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     }
 };
 
+GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
+    static void run(const cv::Mat &in_ssd_result,
+                    const cv::Rect &in_roi,
+                    const cv::Size &in_parent_size,
+                    std::vector<cv::Rect> &out_objects) {
+        const auto &in_ssd_dims = in_ssd_result.size;
+        CV_Assert(in_ssd_dims.dims() == 4u);
+
+        const int MAX_PROPOSALS = in_ssd_dims[2];
+        const int OBJECT_SIZE   = in_ssd_dims[3];
+        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
+
+        const cv::Size up_roi = in_roi.size();
+        const cv::Rect surface({0,0}, in_parent_size);
+
+        out_objects.clear();
+
+        const float *data = in_ssd_result.ptr<float>();
+        for (int i = 0; i < MAX_PROPOSALS; i++) {
+            const float image_id   = data[i * OBJECT_SIZE + 0];
+            const float label      = data[i * OBJECT_SIZE + 1];
+            const float confidence = data[i * OBJECT_SIZE + 2];
+            const float rc_left    = data[i * OBJECT_SIZE + 3];
+            const float rc_top     = data[i * OBJECT_SIZE + 4];
+            const float rc_right   = data[i * OBJECT_SIZE + 5];
+            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
+            (void) label; // unused
+
+std::cout << __FUNCTION__ << ", image_id: " << image_id << ", confidence: "  << confidence << std::endl;
+            if (image_id < 0.f) {
+                break;    // marks end-of-detections
+            }
+            if (confidence < 0.5f) {
+                continue; // skip objects with low confidence
+            }
+
+            // map relative coordinates to the original image scale
+            // taking the ROI into account
+            cv::Rect rc;
+            rc.x      = static_cast<int>(rc_left   * up_roi.width);
+            rc.y      = static_cast<int>(rc_top    * up_roi.height);
+            rc.width  = static_cast<int>(rc_right  * up_roi.width)  - rc.x;
+            rc.height = static_cast<int>(rc_bottom * up_roi.height) - rc.y;
+            rc.x += in_roi.x;
+            rc.y += in_roi.y;
+            out_objects.emplace_back(rc & surface);
+        }
+    }
+};
+
 GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
     // This kernel converts the rectangles into G-API's
     // rendering primitives
@@ -183,6 +248,8 @@ namespace cfg {
 typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line);
 }
 
+void PrintTopResults(const InferenceEngine::Blob::Ptr &output, mfxU16 width, mfxU16 height);
+
 int main(int argc, char *argv[]) {
 
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -196,8 +263,8 @@ int main(int argc, char *argv[]) {
     std::string file_path = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
-    const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
-    const auto source_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
+    const auto streaming_queue_capacity = cmd.get<uint64_t>("streaming_queue_capacity");
+    const auto source_queue_capacity = cmd.get<uint64_t>("frames_pool_size");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -226,12 +293,48 @@ int main(int argc, char *argv[]) {
     }
 
     const std::string& device_id = cmd.get<std::string>("faced");
-    auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
-        face_model_path,                 // path to topology IR
-        get_weights_path(face_model_path),   // path to weights
-        device_id
-    };
 
+
+    //////////////////////////////////////
+    using namespace InferenceEngine;
+    Core ie;
+    CNNNetwork network;
+    std::string inputName, outputName;
+    InputInfo::Ptr inputInfo;
+    DataPtr outputInfo;
+    ExecutableNetwork executableNetwork;
+    InferRequest inferRequest;
+    SizeVector inDims;
+
+    mfxStatus lsts;
+    bool isNetworkLoaded = false;
+
+    mfxU16 oriImgWidth, oriImgHeight;
+    mfxU16 inputDimWidth, inputDimHeight;
+    mfxU16 vppInImgWidth, vppInImgHeight;
+    mfxU16 vppOutImgWidth, vppOutImgHeight;
+    //--- Setup OpenVINO Inference Engine
+    // Read network model
+
+    network = ie.ReadNetwork(face_model_path, get_weights_path(face_model_path));
+    assert(network.getInputsInfo().size() == 1 && "Sample supports topologies with 1 input only");
+    assert(network.getOutputsInfo().size() == 1 && "Sample supports topologies with 1 output only");
+
+    // Set input blob
+    inputInfo = network.getInputsInfo().begin()->second;
+    inputInfo->getPreProcess().setColorFormat(ColorFormat::NV12);
+    inputInfo->setLayout(Layout::NCHW);
+    inputInfo->setPrecision(Precision::U8);
+    inputName      = network.getInputsInfo().begin()->first;
+    inDims         = inputInfo->getTensorDesc().getDims();
+    inputDimWidth  = (mfxU16)inDims[2];
+    inputDimHeight = (mfxU16)inDims[3];
+
+    // Set output blob
+    outputInfo = network.getOutputsInfo().begin()->second;
+    outputInfo->setPrecision(Precision::FP32);
+    outputName = network.getOutputsInfo().begin()->first;
+    //////////////////////////////////////
     // Create device_ptr & context_ptr using graphic API
     // InferenceEngine requires such device & context to create its own
     // remote shared context through InferenceEngine::ParamMap in
@@ -294,23 +397,19 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
+    InferenceEngine::RemoteContext::Ptr rctx = nullptr;
     if (device_id.find("GPU") != std::string::npos) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                            {"VA_DEVICE", accel_device_ptr} });
+                                            {"VA_DEVICE", accel_device_ptr}});
 
-        face_net.cfgContextParams(ctx_config);
-        face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
+
+        rctx = ie.CreateContext(device_id, ctx_config);
+        executableNetwork = ie.LoadNetwork(network, rctx,
+                { { CLDNNConfigParams::KEY_CLDNN_NV12_TWO_INPUTS, PluginConfigParams::YES } });
+        // Create infer request
+        inferRequest = executableNetwork.CreateInferRequest();
     }
 #endif // HAVE_INF_ENGINE
-
-    auto kernels = cv::gapi::kernels
-        < custom::OCVLocateROI
-        , custom::OCVBBoxes>();
-    auto networks = cv::gapi::networks(face_net);
-    auto face_detection_args = cv::compile_args(networks, kernels);
-    if (streaming_queue_capacity != 0) {
-        face_detection_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
-    }
 
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
@@ -332,32 +431,9 @@ int main(int argc, char *argv[]) {
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
 
-    // Now build the graph
-    cv::GFrame in;
-    auto size = cv::gapi::streaming::size(in);
-    auto roi = custom::LocateROI::on(size);
-    auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-    cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
-    auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
-    auto out = cv::gapi::streaming::BGR(out_frame);
 
-    cv::GStreamingCompiled pipeline;
-    try {
-        pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
-                .compileStreaming(std::move(face_detection_args));
-    } catch (const std::exception& ex) {
-        std::cerr << "Exception occured during pipeline construction: " << ex.what() << std::endl;
-        return -1;
-    }
-    // The execution part
-
-    // TODO USE may set pool size from outside and set queue_capacity size,
-    // compile arg: cv::gapi::streaming::queue_capacity
-    pipeline.setSource(std::move(cap));
-    pipeline.start();
-
-    size_t frames = 0u;
-    cv::TickMeter tm;
+    int framesCount = 0;
+    cv::TickMeter t;
     cv::VideoWriter writer;
     if (!output.empty() && !writer.isOpened()) {
         const auto sz = cv::Size{frame_descr.size.width, frame_descr.size.height};
@@ -365,18 +441,64 @@ int main(int argc, char *argv[]) {
         CV_Assert(writer.isOpened());
     }
 
-    cv::Mat outMat;
-    tm.start();
-    while (pipeline.pull(cv::gout(outMat))) {
-        cv::imshow("Out", outMat);
+    cv::gapi::wip::Data out;
+    t.start();
+    while (cap->pull(out)) {
+        cv::MediaFrame &frame = cv::util::get<cv::MediaFrame>(out);
+        auto any_blob_params = frame.blobParams();
+        using ParamType = std::pair<InferenceEngine::TensorDesc,
+                                InferenceEngine::ParamMap>;
+
+        ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
+        if (!blob_params) {
+            std::cerr << "Incorrect type of blobParams: "
+                         "expected std::pair<InferenceEngine::TensorDesc,"
+                         "InferenceEngine::ParamMap>";
+            return -1;
+        }
+
+        auto dims = blob_params->first.getDims();
+        dims[2] = 384;
+        dims[3] = 672;
+        InferenceEngine::TensorDesc desc(InferenceEngine::Precision::U8,
+                                         {1, 1, dims[2], dims[3]},
+                                         InferenceEngine::Layout::NHWC);
+
+        InferenceEngine::ParamMap blobParams = {{"SHARED_MEM_TYPE", "VA_SURFACE"},
+                                                {"DEV_OBJECT_HANDLE", blob_params->second["DEV_OBJECT_HANDLE"]},
+                                                {"VA_PLANE", uint32_t(0)}};
+        InferenceEngine::Blob::Ptr y_blob =
+                    std::dynamic_pointer_cast<InferenceEngine::Blob>(rctx->CreateBlob(desc, blobParams));
+
+        InferenceEngine::TensorDesc uvdesc(InferenceEngine::Precision::U8,
+                                           {1, 2, dims[2] / 2, dims[3] / 2},
+                                           InferenceEngine::Layout::NHWC);
+        blobParams["MEM_HANDLE"] = blob_params->second["DEV_OBJECT_HANDLE"];
+        blobParams["VA_PLANE"] = uint32_t(1);
+        InferenceEngine::Blob::Ptr uv_blob =
+                    std::dynamic_pointer_cast<InferenceEngine::Blob>(rctx->CreateBlob(uvdesc, blobParams));
+
+        auto nv12_blob = InferenceEngine::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+        inferRequest.SetBlob(inputName, nv12_blob);
+
+        // Do inference
+        inferRequest.Infer();
+        // Process output
+        Blob::Ptr out_blob = inferRequest.GetBlob(outputName);
+
+        PrintTopResults(out_blob, frame_descr.size.width, frame_descr.size.height);
+        /*cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
             writer << outMat;
-        }
-        ++frames;
+        }*/
+        framesCount++;
     }
-    tm.stop();
-    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+    t.stop();
+    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
+    std::cout << "FPS: " << framesCount /  t.getTimeSec() << std::endl;
+    std::cout << "framesCount: " << framesCount << std::endl;
+
     return 0;
 }
 
@@ -400,4 +522,60 @@ typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &l
 
     return cv::gapi::wip::onevpl::CfgParam::create(name, value);
 }
+}
+void PrintTopResults(const InferenceEngine::Blob::Ptr &output, mfxU16 width, mfxU16 height) {
+    using namespace InferenceEngine;
+    SizeVector outputDims = output->getTensorDesc().getDims();
+    if (0 == outputDims.size() || 1 != outputDims[0]) {
+        printf("Output blob has incorrect dimensions, skipping\n");
+        return;
+    }
+
+    const int maxProposalCount = outputDims[2];
+    const int objectSize       = outputDims[3];
+    size_t batchSize           = 1;
+
+    MemoryBlob::CPtr moutput = as<MemoryBlob>(output);
+    if (!moutput) {
+        throw std::logic_error("We expect output to be inherited from MemoryBlob, "
+                               "but by fact we were not able to cast output to MemoryBlob");
+    }
+    // locked memory holder should be alive all time while access to its buffer
+    // happens
+    auto moutputHolder = moutput->rmap();
+    const float *detection =
+        moutputHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+
+    std::vector<std::vector<int>> boxes(batchSize);
+    std::vector<std::vector<int>> classes(batchSize);
+
+    /* Each detection has image_id that denotes processed image */
+    for (int curProposal = 0; curProposal < maxProposalCount; curProposal++) {
+        auto image_id = static_cast<int>(detection[curProposal * objectSize + 0]);
+        if (image_id < 0) {
+            break;
+        }
+
+        float confidence = detection[curProposal * objectSize + 2];
+        auto label       = static_cast<int>(detection[curProposal * objectSize + 1]);
+        auto xmin        = static_cast<int>(detection[curProposal * objectSize + 3] * width);
+        auto ymin        = static_cast<int>(detection[curProposal * objectSize + 4] * height);
+        auto xmax        = static_cast<int>(detection[curProposal * objectSize + 5] * width);
+        auto ymax        = static_cast<int>(detection[curProposal * objectSize + 6] * height);
+
+        std::cout << "[" << curProposal << "," << label << "] element, prob = " << confidence
+                  << "    (" << xmin << "," << ymin << ")-(" << xmax << "," << ymax << ")"
+                  << " batch id : " << image_id;
+
+        if (confidence > 0.5) {
+            /** Drawing only objects with >50% probability **/
+            classes[image_id].push_back(label);
+            boxes[image_id].push_back(xmin);
+            boxes[image_id].push_back(ymin);
+            boxes[image_id].push_back(xmax - xmin);
+            boxes[image_id].push_back(ymax - ymin);
+            std::cout << " WILL BE PRINTED!";
+        }
+        std::cout << std::endl;
+    }
 }

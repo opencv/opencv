@@ -156,9 +156,6 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
 #ifdef HAVE_INF_ENGINE
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully operable "
-                "in G-API streaming. Please waiting for future PRs");
-
     Surface::data_t& data = parent_surface_ptr->get_data();
     NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);
 

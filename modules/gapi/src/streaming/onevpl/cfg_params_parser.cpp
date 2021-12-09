@@ -53,6 +53,9 @@ private:
         ret.Data.U64 = value;
         return ret;
     }
+    mfxVariant create_impl(const std::string&, const std::string&) {
+        GAPI_Assert(false && "Something wrong: wyou should not create mfxVariant from string directly");
+    }
 };
 
 template<typename ValueType>
@@ -86,6 +89,24 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+        } else if (name == "vpp.Out.FourCC") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.ChromaFormat") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.Width") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.Height") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.CropW") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.CropH") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.PicStruct") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.FrameRateExtN") {
+            ret.push_back(creator.create(name, value, false));
+        } else if (name == "vpp.Out.FrameRateExtD") {
+            ret.push_back(creator.create(name, value, false));
         } else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
                                     ", value: " << value);

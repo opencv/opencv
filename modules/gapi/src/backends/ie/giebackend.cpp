@@ -571,6 +571,20 @@ static void setBlob(InferenceEngine::InferRequest& req,
     }
 }
 
+static void setROIBlob(InferenceEngine::InferRequest& req,
+                       const std::string&             layer_name,
+                       const IE::Blob::Ptr&           blob,
+                       const cv::Rect &roi,
+                       const IECallContext&           ctx) {
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
+        GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
+                       ctx.uu.params.device_id << ", layer: " << layer_name);
+        setBlob(req, layer_name, blob, ctx);
+    }
+    else {
+        setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
+    }
+}
 } // anonymous namespace
 
 std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInferRequests() {
@@ -1125,10 +1139,9 @@ struct InferROI: public cv::detail::KernelTag {
                         // it should be treated as image
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
-                        setBlob(req,
-                                *(ctx->uu.params.input_names.begin()),
-                                IE::make_shared_blob(this_blob, toIE(this_roi)),
-                                *ctx);
+                        setROIBlob(req,
+                                   *(ctx->uu.params.input_names.begin()),
+                                   this_blob, this_roi, *ctx);
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         req.StartAsync();

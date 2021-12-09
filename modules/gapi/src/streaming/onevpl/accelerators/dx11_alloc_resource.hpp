@@ -137,6 +137,9 @@ private:
               mfxFrameAllocator origin_allocator,
               ComPtrGuard<ID3D11Texture2D>&& texture, std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures);
 
+    void init(unsigned int items, ID3D11DeviceContext* origin_ctx,
+              mfxFrameAllocator origin_allocator,
+              std::vector<ComPtrGuard<ID3D11Texture2D>>&& textures, std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures);
     std::vector<AllocationId> resources;
     ComSharedPtrGuard<ID3D11Texture2D> texture_ptr;
 };

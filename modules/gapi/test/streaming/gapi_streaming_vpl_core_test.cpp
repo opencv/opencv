@@ -29,6 +29,7 @@
 
 #ifdef HAVE_ONEVPL
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
@@ -37,8 +38,15 @@
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/dx11_alloc_resource.hpp"
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
-#include "streaming/onevpl/engine/processing_engine_base.hpp"
-#include "streaming/onevpl/engine/engine_session.hpp"
+#define private public
+#define protected public
+#include "streaming/onevpl/engine/transcode/transcode_engine_legacy.hpp"
+#include "streaming/onevpl/engine/transcode/transcode_session.hpp"
+#undef protected
+#undef private
+#include "logger.hpp"
+
+#define ALIGN16(value)           (((value + 15) >> 4) << 4)
 
 namespace opencv_test
 {
@@ -63,9 +71,9 @@ struct TestProcessingSession : public cv::gapi::wip::onevpl::EngineSession {
         EngineSession(mfx_session, {}) {
     }
 
-    const mfxVideoParam& get_video_param() const override {
+    const mfxFrameInfo& get_video_param() const override {
         static mfxVideoParam empty;
-        return empty;
+        return empty.mfx.FrameInfo;
     }
 };
 
@@ -581,7 +589,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
 
     // Allocate surfaces for decoder
     VPLAccelerationPolicy::pool_key_t key = accel.create_surface_pool(request,
-                                                                      mfxDecParams);
+                                                                      mfxDecParams.mfx.FrameInfo);
     auto cand_surface = accel.get_free_surface(key).lock();
 
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
@@ -591,6 +599,252 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     EXPECT_NO_THROW(accel.deinit(mfx_session));
+    MFXClose(mfx_session);
+    MFXUnload(mfx_handle);
+}
+
+TEST(OneVPL_Source_DX11_Accel_VPL, Init)
+{
+    using namespace cv::gapi::wip::onevpl;
+
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+    std::unique_ptr<VPLAccelerationPolicy> acceleration_policy (new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
+
+    mfxLoader mfx_handle = MFXLoad();
+
+    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    EXPECT_TRUE(cfg_inst_0);
+    mfxVariant mfx_param_0;
+    mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_0.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation_name(),
+                                                    mfx_param_0), MFX_ERR_NONE);
+
+    mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
+    EXPECT_TRUE(cfg_inst_1);
+    mfxVariant mfx_param_1;
+    mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_1.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode_name(),
+                                                    mfx_param_1), MFX_ERR_NONE);
+
+    mfxConfig cfg_inst_2 = MFXCreateConfig(mfx_handle);
+    EXPECT_TRUE(cfg_inst_2);
+    mfxVariant mfx_param_2;
+    mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_2.Data.U32 = MFX_CODEC_HEVC;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)CfgParam::decoder_id_name(),
+                                                    mfx_param_2), MFX_ERR_NONE);
+
+    mfxConfig cfg_inst_3 = MFXCreateConfig(mfx_handle);
+    EXPECT_TRUE(cfg_inst_3);
+    mfxVariant mfx_param_3;
+    mfx_param_3.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_3.Data.U32 = MFX_EXTBUFF_VPP_SCALING;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_3,
+                                         (mfxU8 *)"mfxImplDescription.mfxVPPDescription.filter.FilterFourCC",
+                                         mfx_param_3), MFX_ERR_NONE);
+    // create session
+    mfxSession mfx_session{};
+    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // assign acceleration
+    EXPECT_NO_THROW(acceleration_policy->init(mfx_session));
+
+    // create proper bitstream
+    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider("C:\\Users\\sivanov\\github\\Putin.raw",
+                                                                      {CfgParam::create_decoder_id(MFX_CODEC_HEVC)}));
+    IDataProvider::mfx_codec_id_type decoder_id_name = data_provider->get_mfx_codec_id();
+
+    // Prepare video param
+    mfxVideoParam mfxDecParams {};
+    mfxDecParams.mfx.CodecId = decoder_id_name;
+    mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
+
+    // try fetch & decode input data
+    sts = MFX_ERR_NONE;
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
+    do {
+        EXPECT_TRUE(data_provider->fetch_bitstream_data(bitstream));
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
+        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
+    } while (sts == MFX_ERR_MORE_DATA && !data_provider->empty());
+
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    mfxFrameAllocRequest request{};
+    memset(&request, 0, sizeof(request));
+    sts = MFXVideoDECODE_QueryIOSurf(mfx_session, &mfxDecParams, &request);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // Allocate surfaces for decoder
+    request.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
+    VPLAccelerationPolicy::pool_key_t decode_pool_key = acceleration_policy->create_surface_pool(request,
+                                                                      mfxDecParams.mfx.FrameInfo);
+    sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // initialize VPLL
+    auto vppOutImgWidth  = 672;
+    auto vppOutImgHeight = 382;
+
+    mfxVideoParam mfxVPPParams{0};
+    mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
+
+    mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
+    mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
+    mfxVPPParams.vpp.Out.Width         = ALIGN16(vppOutImgWidth);
+    mfxVPPParams.vpp.Out.Height        = ALIGN16(vppOutImgHeight);
+    mfxVPPParams.vpp.Out.CropX = 0;
+    mfxVPPParams.vpp.Out.CropY = 0;
+    mfxVPPParams.vpp.Out.CropW         = vppOutImgWidth;
+    mfxVPPParams.vpp.Out.CropH         = vppOutImgHeight;
+    mfxVPPParams.vpp.Out.PicStruct     = MFX_PICSTRUCT_PROGRESSIVE;
+    mfxVPPParams.vpp.Out.FrameRateExtN = 30;
+    mfxVPPParams.vpp.Out.FrameRateExtD = 1;
+
+    mfxVPPParams.IOPattern = MFX_IOPATTERN_IN_VIDEO_MEMORY | MFX_IOPATTERN_OUT_VIDEO_MEMORY;
+
+    mfxFrameAllocRequest vppRequests[2];
+    memset(&vppRequests, 0, sizeof(mfxFrameAllocRequest) * 2);
+    EXPECT_EQ(MFXVideoVPP_QueryIOSurf(mfx_session, &mfxVPPParams, vppRequests), MFX_ERR_NONE);
+
+    vppRequests[1].AllocId = 666;
+    VPLAccelerationPolicy::pool_key_t vpp_out_pool_key =
+                acceleration_policy->create_surface_pool(vppRequests[1], mfxVPPParams.vpp.Out);
+    EXPECT_EQ(MFXVideoVPP_Init(mfx_session, &mfxVPPParams), MFX_ERR_NONE);
+
+    // finalize session creation
+    DecoderParams d_param{bitstream, mfxDecParams};
+    TranscoderParams t_param{mfxVPPParams};
+    VPLLegacyTranscodeEngine engine(std::move(acceleration_policy));
+    std::shared_ptr<LegacyTranscodeSession> sess_ptr =
+                                engine.register_session<LegacyTranscodeSession>(
+                                                        mfx_session,
+                                                        std::move(d_param),
+                                                        std::move(t_param),
+                                                        data_provider);
+
+    sess_ptr->init_surface_pool(decode_pool_key);
+    sess_ptr->init_transcode_surface_pool(vpp_out_pool_key);
+
+    // prepare working surfaces
+    sess_ptr->swap_surface(engine);
+    sess_ptr->swap_transcode_surface(engine);
+
+    // launch pipeline
+    LegacyTranscodeSession & my_sess = *sess_ptr;
+    while (true){
+        if (!my_sess.data_provider) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
+        } else {
+            my_sess.last_status = MFX_ERR_NONE;
+            if (!my_sess.data_provider->fetch_bitstream_data(my_sess.stream)) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
+                my_sess.data_provider.reset(); //close source
+            }
+        }
+
+        // 2) enqueue ASYNC decode operation
+        // prepare sync object for new surface
+        LegacyTranscodeSession::op_handle_t sync_pair{};
+
+        // enqueue decode operation with current session surface
+        {
+            my_sess.last_status =
+                    MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
+                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
+                                                        ? my_sess.stream.get()
+
+                                                        : nullptr, /* No more data to read, start decode draining mode*/
+                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+            GAPI_LOG_INFO(nullptr, "START decode: " << ", sync id:  " <<
+                                    sync_pair.first <<
+                                    ", dec in surface:  " <<
+                                    my_sess.procesing_surface_ptr.lock()->get_handle() <<
+                                    ", dec out surface: " << sync_pair.second <<
+                                    ", status: " <<
+                                    mfxstatus_to_string(my_sess.last_status));
+
+            // process wait-like statuses in-place:
+            // It had better to use up all VPL decoding resources in pipeline
+            // as soon as possible. So waiting more free-surface or device free
+            while (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
+                   my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
+                try {
+                    if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
+                        my_sess.swap_surface(engine);
+                    }
+                    my_sess.last_status =
+                    MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
+                                                    my_sess.stream.get(),
+                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+                } catch (const std::runtime_error& ex) {
+                    // NB: not an error, yield CPU ticks to check
+                    // surface availability at a next phase.
+                    // But print WARNING to notify user about pipeline stuck
+                    GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
+                                               "] has no surface, reason: " <<
+                                               ex.what());
+                    break;
+                }
+            }
+        }
+        // 4) transcode
+        {
+            auto *dec_surface = sync_pair.second;
+            if(my_sess.vpp_surface_ptr.lock())
+            {
+                mfxFrameSurface1* out_surf = my_sess.vpp_surface_ptr.lock()->get_handle();
+                my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session, dec_surface,
+                                                                out_surf,
+                                                                nullptr, &sync_pair.first);
+                sync_pair.second = out_surf;
+                GAPI_LOG_INFO(nullptr, "Init transcode: " <<
+                                        "sync id:  " <<
+                                        sync_pair.first <<
+                                        ", dec surface:  " <<
+                                        dec_surface <<
+                                        ", trans surface: " << sync_pair.second <<
+                                        ", status: " <<
+                                        mfxstatus_to_string(my_sess.last_status));
+
+                my_sess.last_status = MFXVideoCORE_SyncOperation(my_sess.session, sync_pair.first, 11000);
+                GAPI_LOG_DEBUG(nullptr, "sync : " <<
+                                        "sync id:  " <<
+                                        sync_pair.first <<
+                                        ", surface:  " <<
+                                        sync_pair.second <<
+                                        ", status: " <<
+                                        mfxstatus_to_string(my_sess.last_status));
+
+                // put frames in ready queue on success
+                if (MFX_ERR_NONE == my_sess.last_status) {
+                    // TODO
+                }
+            }
+            try {
+                my_sess.swap_transcode_surface(engine);
+            } catch (... ) {
+                my_sess.vpp_surface_ptr.reset();
+                abort();
+            }
+        }
+    }
+
+    //finalize
+    MFXVideoDECODE_Close(mfx_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    EXPECT_NO_THROW(acceleration_policy->deinit(mfx_session));
     MFXClose(mfx_session);
     MFXUnload(mfx_handle);
 }

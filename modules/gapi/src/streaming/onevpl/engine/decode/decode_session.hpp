@@ -26,9 +26,10 @@ struct IDataProvider;
 class Surface;
 struct VPLAccelerationPolicy;
 
-class LegacyDecodeSession : public EngineSession {
+class GAPI_EXPORTS LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;
+    friend class VPLLegacyTranscodeEngine; //TODO
 
     LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, std::shared_ptr<IDataProvider> provider);
     ~LegacyDecodeSession();
@@ -38,17 +39,18 @@ public:
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
 
     Data::Meta generate_frame_meta();
-    const mfxVideoParam& get_video_param() const override;
+    virtual const mfxFrameInfo& get_video_param() const override;
 private:
     mfxVideoParam mfx_decoder_param;
     std::shared_ptr<IDataProvider> data_provider;
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;
 
+protected:
     std::weak_ptr<Surface> procesing_surface_ptr;
-
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_queue;
+    op_handle_t sync_pair;
 
     int64_t decoded_frames_count;
 };

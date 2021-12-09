@@ -81,7 +81,7 @@ const char* ProcessingEngineBase::status_to_string(ExecutionStatus status)
 
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::execute_op(operation_t& op, EngineSession& sess)
 {
-     return op(sess);
+    return op(sess);
 }
 
 size_t ProcessingEngineBase::get_ready_frames_count() const

@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "streaming/onevpl/engine/decode/decode_engine_legacy.hpp"
+#include "streaming/onevpl/engine/transcode/transcode_engine_legacy.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/utils.hpp"
@@ -103,6 +104,20 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
                                       mfxstatus_to_string(sts) <<
                                       " - for \"" << cfg_param_it->get_name() << "\"");
+            GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
+        }
+
+        mfx_param.Type     = MFX_VARIANT_TYPE_U32;
+        mfx_param.Data.U32 = MFX_EXTBUFF_VPP_SCALING;
+        sts = MFXSetConfigFilterProperty(cfg_inst,
+        (mfxU8 *)"mfxImplDescription.mfxVPPDescription.filter.FilterFourCC",
+        mfx_param);
+
+        if (sts != MFX_ERR_NONE )
+        {
+            GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
+                                      mfxstatus_to_string(sts) <<
+                                      " - for \"mfxImplDescription.mfxVPPDescription.filter.FilterFourCC\"");
             GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
         }
 
@@ -204,7 +219,8 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
                         "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
                         " - is not implemented");
         } else {
-            engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
+            //engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
+            engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
         }
     }
 
@@ -212,13 +228,13 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     auto engine_session_ptr = engine->initialize_session(mfx_session, cfg_params,
                                                          provider);
 
-    const mfxVideoParam& video_param = engine_session_ptr->get_video_param();
+    const mfxFrameInfo& video_param = engine_session_ptr->get_video_param();
 
     // set valid description
     description.size = cv::Size {
-                            video_param.mfx.FrameInfo.Width,
-                            video_param.mfx.FrameInfo.Height};
-    switch(video_param.mfx.FrameInfo.FourCC) {
+                            video_param.Width,
+                            video_param.Height};
+    switch(video_param.FourCC) {
         case MFX_FOURCC_I420:
             throw std::runtime_error("Cannot parse GMetaArg description: MediaFrame doesn't support I420 type");
         case MFX_FOURCC_NV12:
@@ -226,7 +242,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             break;
         default:
             throw std::runtime_error("Cannot parse GMetaArg description: MediaFrame unknown 'fmt' type: " +
-                                     std::to_string(video_param.mfx.FrameInfo.FourCC));
+                                     std::to_string(video_param.FourCC));
     }
     description_is_valid = true;
 

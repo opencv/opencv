@@ -31,6 +31,10 @@ struct GAPI_EXPORTS DecoderParams {
     mfxVideoParam param;
 };
 
+struct GAPI_EXPORTS TranscoderParams {
+    mfxVideoParam param;
+};
+
 struct GAPI_EXPORTS EngineSession {
     mfxSession session;
     std::shared_ptr<IDataProvider::mfx_bitstream> stream;
@@ -41,7 +45,7 @@ struct GAPI_EXPORTS EngineSession {
     std::string error_code_to_str() const;
     virtual ~EngineSession();
 
-    virtual const mfxVideoParam& get_video_param() const = 0;
+    virtual const mfxFrameInfo& get_video_param() const = 0;
 };
 } // namespace onevpl
 } // namespace wip

@@ -191,6 +191,8 @@ set(gapi_srcs
     src/streaming/onevpl/engine/processing_engine_base.cpp
     src/streaming/onevpl/engine/decode/decode_engine_legacy.cpp
     src/streaming/onevpl/engine/decode/decode_session.cpp
+    src/streaming/onevpl/engine/transcode/transcode_engine_legacy.cpp
+    src/streaming/onevpl/engine/transcode/transcode_session.cpp
     src/streaming/onevpl/demux/async_mfp_demux_data_provider.cpp
     src/streaming/onevpl/data_provider_dispatcher.cpp
 
@@ -350,6 +352,16 @@ if (TARGET example_gapi_onevpl_infer_single_roi)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
+
+if (TARGET example_gapi_onevpl_infer_sync)
+  if(OPENCV_GAPI_INF_ENGINE)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_sync PRIVATE ${INF_ENGINE_TARGET} ${VPL_IMPORTED_TARGETS})
+    ocv_target_compile_definitions(example_gapi_onevpl_infer_sync PRIVATE -DHAVE_INF_ENGINE -DHAVE_ONEVPL)
+  endif()
+  if(HAVE_D3D11 AND HAVE_OPENCL)
+    ocv_target_include_directories(example_gapi_onevpl_infer_sync SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
 endif()
 

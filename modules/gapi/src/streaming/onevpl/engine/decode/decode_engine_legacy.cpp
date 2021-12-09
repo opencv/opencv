@@ -138,11 +138,12 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
     );
 }
 
-ProcessingEngineBase::session_ptr
-VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
-                                          const std::vector<CfgParam>& cfg_params,
-                                          std::shared_ptr<IDataProvider> provider) {
-    GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
+VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param(
+                                                mfxSession mfx_session,
+                                                const std::vector<CfgParam>& cfg_params,
+                                                std::shared_ptr<IDataProvider> provider) {
+
+     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
     // init session
     acceleration_policy->init(mfx_session);
@@ -258,26 +259,37 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                             ", mfxFrameAllocRequest.Type: " << decRequest.Type);
     }
 
+    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
-                acceleration_policy->create_surface_pool(decRequest, mfxDecParams);
+                acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 
     // Input parameters finished, now initialize decode
     // create decoder for session accoring to header recovered from source file
+
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error initializing Decode, error: " +
                                  mfxstatus_to_string(sts));
     }
 
-    DecoderParams decoder_param {bitstream, mfxDecParams};
+    return {decode_pool_key, {bitstream, mfxDecParams}};
+}
+
+
+ProcessingEngineBase::session_ptr
+VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
+                                          const std::vector<CfgParam>& cfg_params,
+                                          std::shared_ptr<IDataProvider> provider) {
+
+    SessionParam param = prepare_session_param(mfx_session, cfg_params, provider);
 
     // create session
     std::shared_ptr<LegacyDecodeSession> sess_ptr =
                 register_session<LegacyDecodeSession>(mfx_session,
-                                                      std::move(decoder_param),
+                                                      std::move(param.decoder_params),
                                                       provider);
 
-    sess_ptr->init_surface_pool(decode_pool_key);
+    sess_ptr->init_surface_pool(param.decode_pool_key);
     // prepare working decode surface
     sess_ptr->swap_surface(*this);
     return sess_ptr;

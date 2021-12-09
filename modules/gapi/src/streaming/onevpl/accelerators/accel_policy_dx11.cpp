@@ -98,9 +98,7 @@ void VPLDX11AccelerationPolicy::deinit(session_t session) {
 
 VPLDX11AccelerationPolicy::pool_key_t
 VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_req,
-                                               mfxVideoParam& param) {
-    param.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-
+                                               mfxFrameInfo& info) {
     // allocate textures by explicit request
     mfxFrameAllocResponse mfxResponse;
     mfxStatus sts = on_alloc(&alloc_req, &mfxResponse);
@@ -120,7 +118,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc
     pool_t pool(numSurfaces);
     for (int i = 0; i < numSurfaces; i++) {
         std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1 {});
-        handle->Info = param.mfx.FrameInfo;
+        handle->Info = info;
         handle->Data.MemId = mfxResponse.mids[i];
 
         pool.push_back(Surface::create_surface(std::move(handle), table_it->second));
@@ -261,24 +259,60 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     desc.Format = colorFormat;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+    desc.MiscFlags = 0;// D3D11_RESOURCE_MISC_SHARED;
     desc.BindFlags = D3D11_BIND_DECODER;
+
+    if ((MFX_MEMTYPE_FROM_VPPIN & request->Type) && (DXGI_FORMAT_YUY2 == desc.Format) ||
+        (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format) ||
+        (DXGI_FORMAT_R10G10B10A2_UNORM == desc.Format) ||
+        (DXGI_FORMAT_R16G16B16A16_UNORM == desc.Format)) {
+        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+        /*if (desc.ArraySize > 2)
+                return MFX_ERR_MEMORY_ALLOC;*/
+    }
+
+    if ((MFX_MEMTYPE_FROM_VPPOUT & request->Type) ||
+        (MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET & request->Type)) {
+        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+        /*if (desc.ArraySize > 2)
+            return MFX_ERR_MEMORY_ALLOC;
+        */
+    }
 
     if (request->Type & MFX_MEMTYPE_SHARED_RESOURCE) {
         desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
         desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
     }
 
-    ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
+    if (DXGI_FORMAT_P8 == desc.Format) {
+        desc.BindFlags = 0;
+    }
+
+    size_t main_textures_count = 1;
+    if (D3D11_BIND_RENDER_TARGET & desc.BindFlags) {
+        GAPI_LOG_DEBUG(nullptr, "Use array of testures instead of texture array");
+        desc.ArraySize = 1;
+        main_textures_count = request->NumFrameSuggested;
+    }
+
+    // create GPU textures
     HRESULT err = S_OK;
-    {
-        ID3D11Texture2D *pTexture2D = nullptr;
-        err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
-        if (FAILED(err)) {
-            GAPI_LOG_WARNING(nullptr, "Cannot create texture, error: " + std::to_string(HRESULT_CODE(err)));
-            return MFX_ERR_MEMORY_ALLOC;
+    std::vector<ComPtrGuard<ID3D11Texture2D>> main_textures;
+    main_textures.reserve(main_textures_count);
+    for (size_t i = 0; i < main_textures_count; i++) {
+
+        ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
+        {
+            ID3D11Texture2D *pTexture2D = nullptr;
+            err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
+            if (FAILED(err)) {
+                GAPI_LOG_WARNING(nullptr, "Cannot create texture by index: " << i <<
+                                          ", error: " << std::to_string(HRESULT_CODE(err)));
+                return MFX_ERR_MEMORY_ALLOC;
+            }
+            main_texture.reset(pTexture2D);
         }
-        main_texture.reset(pTexture2D);
+        main_textures.push_back(std::move(main_texture));
     }
 
     // create staging texture to read it from
@@ -308,7 +342,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
                                          DX11AllocationRecord::create(request->NumFrameSuggested,
                                                                       device_context,
                                                                       allocator,
-                                                                      std::move(main_texture),
+                                                                      std::move(main_textures),
                                                                       std::move(staging_textures)));
         if (!inserted_it.second) {
             GAPI_LOG_WARNING(nullptr, "Cannot assign allocation by id: " + std::to_string(request->AllocId) +
@@ -363,7 +397,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_get_hdl(mfxMemId mid, mfxHDL *handle) {
     pPair->second = static_cast<mfxHDL>(reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
                                         static_cast<uint64_t>(data->get_subresource())));
 
-    GAPI_LOG_DEBUG(nullptr, "texture : " << pPair->first << ", sub id: " << pPair->second);
+    GAPI_LOG_DEBUG(nullptr, "ID3D11Texture2D : " << pPair->first << ", sub id: " << pPair->second);
     return MFX_ERR_NONE;
 }
 
