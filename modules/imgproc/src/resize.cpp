@@ -3376,7 +3376,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            int wdepth = std::max(depth, CV_32S), wtype = CV_MAKETYPE(wdepth, cn);
+            int wdepth = depth <= CV_8S ? CV_32S : std::max(depth, CV_32F);
+            int wtype = CV_MAKETYPE(wdepth, cn);
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
                      format("-D INTER_LINEAR -D depth=%d -D T=%s -D T1=%s "
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
