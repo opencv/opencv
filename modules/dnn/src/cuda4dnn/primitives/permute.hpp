@@ -48,6 +48,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     return false;
                 }();
 
+				if (needsPermute)
+                {
+                    bool allOnes = true;
+                    auto shapeVec = input.shape_as_vector();
+                    for (size_t i = 0; i < shapeVec.size(); i++)
+                        if (shapeVec[i] != 1)
+                        {
+                            allOnes = false;
+                            break;
+                        }
+                    if (allOnes == true)
+                        needsPermute = false;
+                }
+
                 if (needsPermute)
                 {
                     kernels::permute(stream, output, input, order);
