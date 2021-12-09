@@ -329,7 +329,7 @@ void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, Outpu
     std::cout << "TsdfVolume::raycast()" << std::endl;
 
     CV_TRACE_FUNCTION();
-    Size frameSize(height, width);
+    Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
     _points.create(frameSize, POINT_TYPE);
