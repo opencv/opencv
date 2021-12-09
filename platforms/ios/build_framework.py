@@ -406,11 +406,11 @@ class Builder:
             for dirname, dirs, files in os.walk(os.path.join(dstdir, "Headers")):
                 for filename in files:
                     filepath = os.path.join(dirname, filename)
-                    with open(filepath) as file:
+                    with codecs.open(filepath,"r","utf-8") as file:
                         body = file.read()
                     body = body.replace("include \"opencv2/", "include \"" + name + "/")
                     body = body.replace("include <opencv2/", "include <" + name + "/")
-                    with open(filepath, "w") as file:
+                    with codecs.open(filepath, "w","utf-8") as file:
                         file.write(body)
         if self.build_objc_wrapper:
             copy_tree(os.path.join(builddirs[0], "install", "lib", name + ".framework", "Headers"), os.path.join(dstdir, "Headers"))
