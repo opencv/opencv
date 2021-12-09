@@ -983,6 +983,24 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
     layerParams.set("bias_term", false);
     layerParams.blobs.resize(1);
 
+    bool hasConstBlob = false;
+    for(int i = 0; i < layer.input_size(); i++) {
+        if (value_id.find(layer.input(i)) != value_id.end())
+            hasConstBlob = true;
+    }
+    if (!hasConstBlob)
+    {
+        layerParams.blobs.clear();
+        int id = dstNet.addLayer(name, "InnerProduct", layerParams);
+        layer_id[name] = id;
+
+        // two inputs
+        for(int ii=0; ii<layer.input_size(); ii++){
+            connect(layer_id, dstNet, parsePin(layer.input(ii)), id, ii);
+        }
+        return;
+    }
+
     StrIntVector next_layers = getNextLayers(net, name, "BiasAdd");  // FIXIT Use layers fusion instead
     if (next_layers.empty())
     {
@@ -1009,65 +1027,45 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
         }
     }
 
-    bool hasConstBlob = false;
-    for(int i = 0; i < layer.input_size(); i++) {
-        if (value_id.find(layer.input(i)) != value_id.end())
-        {
-            hasConstBlob = true;
-        }
-    }
-    if (hasConstBlob)
+    int kernel_blob_index = -1;
+    const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernel_blob_index);
+    const String kernelTensorName = layer.input(kernel_blob_index);
+    std::map<String, Mat>::iterator sharedWeightsIt = sharedWeights.find(kernelTensorName);
+    if (sharedWeightsIt == sharedWeights.end())
     {
-        int kernel_blob_index = -1;
-        const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernel_blob_index);
-        const String kernelTensorName = layer.input(kernel_blob_index);
-        std::map<String, Mat>::iterator sharedWeightsIt = sharedWeights.find(kernelTensorName);
-        if (sharedWeightsIt == sharedWeights.end())
-        {
-            blobFromTensor(kernelTensor, layerParams.blobs[0]);
-            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
-            sharedWeights[kernelTensorName] = layerParams.blobs[0];
-        }
-        else
-        {
-            layerParams.blobs[0] = sharedWeightsIt->second;
-        }
-
-        if (kernel_blob_index == 1) { // In this case output is computed by x*W formula - W should be transposed
-            Mat data = layerParams.blobs[0].t();
-            layerParams.blobs[0] = data.clone();
-        }
-
-        layerParams.set("num_output", layerParams.blobs[0].size[0]);
-        if (locPredTransposed)
-        {
-            CV_Assert(layerParams.blobs[0].dims == 2);
-            for (int i = 0; i < layerParams.blobs[0].size[0]; i += 2)
-            {
-                cv::Mat src = layerParams.blobs[0].row(i);
-                cv::Mat dst = layerParams.blobs[0].row(i + 1);
-                std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
-            }
-        }
-
-        int id = dstNet.addLayer(name, "InnerProduct", layerParams);
-        layer_id[name] = id;
-
-        // one input only
-        int input_blob_index = kernel_blob_index == 0 ? 1 : 0;
-        connect(layer_id, dstNet, parsePin(layer.input(input_blob_index)), id, 0);
-        data_layouts[name] = DATA_LAYOUT_PLANAR;
+        blobFromTensor(kernelTensor, layerParams.blobs[0]);
+        releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
+        sharedWeights[kernelTensorName] = layerParams.blobs[0];
     }
-    else {
-        layerParams.blobs.clear();
-        int id = dstNet.addLayer(name, "InnerProduct", layerParams);
-        layer_id[name] = id;
+    else
+    {
+        layerParams.blobs[0] = sharedWeightsIt->second;
+    }
 
-        // two inputs
-        for(int ii=0; ii<layer.input_size(); ii++){
-            connect(layer_id, dstNet, parsePin(layer.input(ii)), id, ii);
+    if (kernel_blob_index == 1) { // In this case output is computed by x*W formula - W should be transposed
+        Mat data = layerParams.blobs[0].t();
+        layerParams.blobs[0] = data.clone();
+    }
+
+    layerParams.set("num_output", layerParams.blobs[0].size[0]);
+    if (locPredTransposed)
+    {
+        CV_Assert(layerParams.blobs[0].dims == 2);
+        for (int i = 0; i < layerParams.blobs[0].size[0]; i += 2)
+        {
+            cv::Mat src = layerParams.blobs[0].row(i);
+            cv::Mat dst = layerParams.blobs[0].row(i + 1);
+            std::swap_ranges(src.begin<float>(), src.end<float>(), dst.begin<float>());
         }
     }
+
+    int id = dstNet.addLayer(name, "InnerProduct", layerParams);
+    layer_id[name] = id;
+
+    // one input only
+    int input_blob_index = kernel_blob_index == 0 ? 1 : 0;
+    connect(layer_id, dstNet, parsePin(layer.input(input_blob_index)), id, 0);
+    data_layouts[name] = DATA_LAYOUT_PLANAR;
 }
 
 void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
