@@ -121,7 +121,6 @@ public:
                        + model_coeffs[3] == 0;
             };
 
-         auto constraint_func = cv::makePtr<ModelConstraintFunction>(func_example3);
          // ......
 
      } // end of function example()
@@ -141,7 +140,7 @@ public:
               radius_min(DBL_MIN), radius_max(DBL_MAX),
               max_iterations(1000), confidence(0.999), number_of_models_expected(1),
               number_of_threads(-1), rng_state(0),
-              custom_model_constraints(nullptr)
+              custom_model_constraints()
     {
     }
 
@@ -268,15 +267,15 @@ public:
     }
 
     //! Set custom model coefficient constraint function
-    inline void setCustomModelConstraints(Ptr<ModelConstraintFunction> &custom_model_constraints_)
+    inline void setCustomModelConstraints(const ModelConstraintFunction &custom_model_constraints_)
     {
         custom_model_constraints = custom_model_constraints_;
     }
 
     //! Get custom model coefficient constraint function
-    inline void getCustomModelConstraints(Ptr<ModelConstraintFunction> &custom_model_constraints_) const
+    const ModelConstraintFunction &getCustomModelConstraints() const
     {
-        custom_model_constraints_ = custom_model_constraints;
+        return custom_model_constraints;
     }
 
     /**
@@ -325,7 +324,7 @@ protected:
     uint64 rng_state;
 
     //! A user defined function that takes model coefficients and returns whether the model is acceptable or not.
-    Ptr<ModelConstraintFunction> custom_model_constraints;
+    ModelConstraintFunction custom_model_constraints;
 
     /**
      * @brief Execute segmentation of a single model using the sample consensus method.

@@ -223,20 +223,19 @@ class PointCloudModelEstimatorImpl : public PointCloudModelEstimator {
 private:
     const Ptr<MinimalSolver> min_solver;
     const Ptr<NonMinimalSolver> non_min_solver;
-    const Ptr<ModelConstraintFunction> custom_model_constraints;
+    const ModelConstraintFunction custom_model_constraints;
 
     inline int filteringModel(std::vector<Mat> M, int models_count,
             std::vector<Mat> &valid_models) const {
         int valid_models_count = 0;
-        if (custom_model_constraints.empty()) {
+        if (!custom_model_constraints) {
             valid_models_count = models_count;
             for (int i = 0; i < models_count; ++i)
                 valid_models[i] = M[i];
         } else {
-            ModelConstraintFunction _custom_model_constraints = *custom_model_constraints;
             for (int i = 0; i < models_count; ++i)
                 // filtering Models with custom_model_constraints
-                if (_custom_model_constraints(M[i]))
+                if (custom_model_constraints(M[i]))
                     valid_models[valid_models_count++] = M[i];
         }
 
@@ -246,9 +245,9 @@ private:
 public:
     explicit PointCloudModelEstimatorImpl (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_,
-            const Ptr<ModelConstraintFunction> &custom_model_constraints_) :
+            ModelConstraintFunction custom_model_constraints_) :
             min_solver(min_solver_), non_min_solver(non_min_solver_),
-            custom_model_constraints(custom_model_constraints_) {}
+            custom_model_constraints(std::move(custom_model_constraints_)) {}
 
     int estimateModels (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         std::vector<Mat> M;
@@ -282,7 +281,7 @@ public:
 };
 Ptr<PointCloudModelEstimator> PointCloudModelEstimator::create (const Ptr<MinimalSolver> &min_solver_,
         const Ptr<NonMinimalSolver> &non_min_solver_,
-        const Ptr<ModelConstraintFunction> &custom_model_constraints_) {
+        const ModelConstraintFunction &custom_model_constraints_) {
     return makePtr<PointCloudModelEstimatorImpl>(min_solver_, non_min_solver_, custom_model_constraints_);
 }
 

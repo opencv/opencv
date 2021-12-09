@@ -512,7 +512,7 @@ public:
      */
     static Ptr<PointCloudModelEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_,
-            const Ptr<ModelConstraintFunction> &custom_model_constraints_ = nullptr);
+            const ModelConstraintFunction &custom_model_constraints_ = nullptr);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////

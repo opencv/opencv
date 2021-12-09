@@ -30,8 +30,8 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
     int state = (int) rng_state;
     const int points_size = points.rows * points.cols / 3;
     const double _radius_min = radius_min, _radius_max = radius_max;
-    const Ptr <ModelConstraintFunction> _custom_constraint = custom_model_constraints;
-    Ptr <ModelConstraintFunction> constraint_func = custom_model_constraints;
+    const ModelConstraintFunction& _custom_constraint = custom_model_constraints;
+    ModelConstraintFunction& constraint_func = custom_model_constraints;
 
     // RANSAC
     using namespace usac;
@@ -73,14 +73,12 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
             min_solver = SphereModelMinimalSolver::create(points);
             non_min_solver = SphereModelNonMinimalSolver::create(points);
             error = SphereModelError::create(points);
-            constraint_func = makePtr<ModelConstraintFunction>(
-                    [_radius_min, _radius_max, _custom_constraint]
+            constraint_func = [_radius_min, _radius_max, _custom_constraint]
                             (const std::vector<double> &model_coeffs) {
                         double radius = model_coeffs[3];
                         return radius >= _radius_min && radius <= _radius_max &&
-                               (_custom_constraint.empty() || (*_custom_constraint)(model_coeffs));
-                    }
-            );
+                               (!_custom_constraint || _custom_constraint(model_coeffs));
+                    };
             break;
         default:
             CV_Error(cv::Error::StsNotImplemented, "SAC_MODEL type is not implemented!");

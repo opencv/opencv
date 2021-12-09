@@ -313,10 +313,7 @@ TEST_F(PlaneSacSegmentationTest, PlaneSegmentationWithConstraints)
             return square_cos_theta >= cos(radian_thr) * cos(radian_thr);
         };
 
-        // Make a pointer to constraint function
-        Ptr<SACSegmentation::ModelConstraintFunction> constraint_ptr =
-                makePtr<SACSegmentation::ModelConstraintFunction>(constraint);
-        sacSegmentation.setCustomModelConstraints(constraint_ptr);
+        sacSegmentation.setCustomModelConstraints(constraint);
 
         // Single plane segmentation with constraint
         int num = sacSegmentation.segment(pt_cloud, label, segmented_plane_models);
@@ -353,7 +350,7 @@ TEST_F(PlaneSacSegmentationTest, PlaneSegmentationWithConstraints)
 
 TEST_F(SphereSacSegmentationTest, SingleSphereSegmentation)
 {
-    sacSegmentation.setMaxIterations(1000);
+    sacSegmentation.setMaxIterations(3000);
     sacSegmentation.setNumberOfModelsExpected(1);
 
     // Single sphere segmentation
@@ -396,7 +393,7 @@ TEST_F(SphereSacSegmentationTest, SingleSphereSegmentation)
 
 TEST_F(SphereSacSegmentationTest, MultipleSphereSegmentation)
 {
-    sacSegmentation.setMaxIterations(1000);
+    sacSegmentation.setMaxIterations(3000);
     sacSegmentation.setDistanceThreshold(0.55);
     sacSegmentation.setNumberOfModelsExpected(models_num);
 
@@ -463,9 +460,7 @@ TEST_F(SphereSacSegmentationTest, SphereSegmentationWithConstraints)
             return model_radius <= constraint_radius;
         };
 
-        // Make a pointer to constraint function
-        Ptr<SACSegmentation::ModelConstraintFunction> constraint_ptr = makePtr<SACSegmentation::ModelConstraintFunction>(constraint);
-        sacSegmentation.setCustomModelConstraints(constraint_ptr);
+        sacSegmentation.setCustomModelConstraints(constraint);
 
         // Single sphere segmentation with constraint
         int num = sacSegmentation.segment(pt_cloud, label, segmented_sphere_models);
