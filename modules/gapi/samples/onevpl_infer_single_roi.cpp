@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
         < custom::OCVLocateROI
         , custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(face_net);
-    auto face_detection_args = cv::compile_args(networks, kernels);
+    uint64_t face_detection_args = cv::compile_args(networks, kernels);
     if (streaming_queue_capacity != 0) {
         face_detection_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
     }
