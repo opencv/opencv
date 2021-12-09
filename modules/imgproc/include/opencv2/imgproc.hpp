@@ -2112,11 +2112,15 @@ parameters should be positive.
 Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
 Must fall between min_theta and CV_PI.
+@param use_weight True if you want to use weighted Hough transform.
+@param thre_edgeval For weighted Hough transform, only account for over this
+threthold edge for fast computation
  */
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
                               double srn = 0, double stn = 0,
-                              double min_theta = 0, double max_theta = CV_PI );
+                              double min_theta = 0, double max_theta = CV_PI,
+                              bool use_edgeval = false );
 
 /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
 
