@@ -158,7 +158,8 @@ SACSegmentation::segment(InputArray input_pts, OutputArray labels,
         pts_idx_ptr[i] = i;
 
     int min_sample_size = sacModelMinimumSampleSize(sac_model_type);
-    for (int model_num = 1; model_num <= number_of_models_expected; ++model_num)
+    for (int model_num = 1;
+         pts_size >= min_sample_size && model_num <= number_of_models_expected; ++model_num)
     {
         Mat model_coefficients;
         std::vector<bool> label;
