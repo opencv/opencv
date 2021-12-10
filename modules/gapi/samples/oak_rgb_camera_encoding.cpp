@@ -3,7 +3,6 @@
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/gframe.hpp>
-#include <opencv2/gapi/media.hpp>
 
 #include <opencv2/gapi/oak/oak.hpp>
 #include <opencv2/gapi/streaming/format.hpp> // BGR accessor
@@ -24,15 +23,10 @@ int main(int argc, char *argv[]) {
     const std::string output = cmd.get<std::string>("output");
 
     cv::GFrame in;
-    cv::GMat acc1 = cv::gapi::streaming::BGR(in);
-    cv::GMat acc2 = cv::gapi::streaming::BGR(in);
-    cv::GMat added = cv::gapi::core::add(acc1, acc2);
-    cv::GArray<uint8_t> encoded = cv::gapi::oak::encode(added, {});
+    cv::GArray<uint8_t> encoded = cv::gapi::oak::encode(in, {});
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
-                                 cv::gapi::combine(cv::gapi::oak::kernels(),
-                                                   cv::gapi::streaming::kernels(),
-                                                   cv::gapi::core::kernels()));
+                                 cv::gapi::combine(cv::gapi::oak::kernels()));
 
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(encoded)).compileStreaming(std::move(args));
 
@@ -40,7 +34,6 @@ int main(int argc, char *argv[]) {
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
     pipeline.start();
 
-    cv::MediaFrame frame;
     std::vector<uint8_t> out_h265_data;
 
     std::ofstream out_h265_file;
