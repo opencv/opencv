@@ -103,7 +103,16 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                     break;
                 }
             }
-            my_sess.sync_pair = sync_pair;
+
+            if (my_sess.last_status == MFX_ERR_NONE) {
+                my_sess.sync_queue.emplace(sync_pair);
+            } else if (my_sess.last_status != MFX_ERR_MORE_DATA) /* suppress MFX_ERR_MORE_DATA warning */ {
+                GAPI_LOG_WARNING(nullptr, "decode pending ops count: " <<
+                                          my_sess.sync_queue.size() <<
+                                          ", sync id: " << sync_pair.first <<
+                                          ", status: " <<
+                                          mfxstatus_to_string(my_sess.last_status));
+            }
             return ExecutionStatus::Continue;
         },
         // 4) transcode
@@ -111,35 +120,11 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
         {
             LegacyTranscodeSession &my_sess = static_cast<LegacyTranscodeSession&>(sess);
 
-            //if (!my_sess.vpp_queue.empty())
-            { // FIFO: check the oldest async decode operation complete
-                LegacyDecodeSession::op_handle_t pending_op = my_sess.sync_pair;//my_sess.vpp_queue.front();
-                auto *dec_surface = pending_op.second;
+            LegacyDecodeSession::op_handle_t last_op {};
+            while (!my_sess.sync_queue.empty()) {
+                LegacyDecodeSession::op_handle_t pending_op = my_sess.sync_queue.front();
 
-                my_sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 11000);
-
-
-                //my_sess.vpp_surface_ptr.lock()->get_handle()
-                if(my_sess.vpp_surface_ptr.lock())
-                {
-                    mfxFrameSurface1* out_surf = my_sess.vpp_surface_ptr.lock()->get_handle();
-                    sess.last_status = MFXVideoVPP_RunFrameVPPAsync(sess.session, dec_surface,
-                                                                    my_sess.vpp_surface_ptr.lock()->get_handle(),
-                                                                    nullptr, &pending_op.first);
-                    pending_op.second = my_sess.vpp_surface_ptr.lock()->get_handle();
-                    GAPI_LOG_INFO(nullptr, "START transcode ops count: " <<
-                                            my_sess.vpp_queue.size() <<
-                                            ", sync id:  " <<
-                                            pending_op.first <<
-                                            ", dec surface:  " <<
-                                            dec_surface <<
-                                            ", trans surface: " << pending_op.second <<
-                                            ", status: " <<
-                                            mfxstatus_to_string(my_sess.last_status));
-                    ///////////////////
-                    /*my_sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 110000);
-
-                    GAPI_LOG_DEBUG(nullptr, "SSSSSS pending ops count: " <<
+                GAPI_LOG_DEBUG(nullptr, "pending DEC ops count: " <<
                                             my_sess.sync_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<
@@ -147,26 +132,19 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                             pending_op.second <<
                                             ", status: " <<
                                             mfxstatus_to_string(my_sess.last_status));
-                    *////////////////////
 
-                    while(sess.last_status == MFX_ERR_MORE_SURFACE)
+                my_sess.sync_queue.pop();
+                auto *dec_surface = pending_op.second;
+                do {
+                    if (my_sess.vpp_surface_ptr.lock())
                     {
-                        //TODO put each operation ?
-                        my_sess.sync_queue.emplace(pending_op);
-
-
-                        try {
-                            if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                                my_sess.swap_transcode_surface(*this);
-                            }
-                            my_sess.last_status =
-                            MFXVideoVPP_RunFrameVPPAsync(sess.session, dec_surface,
-                                                         my_sess.vpp_surface_ptr.lock()->get_handle(),
-                                                         nullptr, &pending_op.first);
-
-                            // TODO uncommented pending op
-                            pending_op.second = my_sess.vpp_surface_ptr.lock()->get_handle();
-                            GAPI_LOG_INFO(nullptr, "MID transcode ops count: " <<
+                        auto *vpp_suface = my_sess.vpp_surface_ptr.lock()->get_handle();
+                        my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
+                                                                           dec_surface,
+                                                                           vpp_suface,
+                                                                           nullptr, &pending_op.first);
+                        pending_op.second = vpp_suface;
+                        GAPI_LOG_INFO(nullptr, "START transcode ops count: " <<
                                             my_sess.vpp_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<
@@ -175,63 +153,26 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                             ", trans surface: " << pending_op.second <<
                                             ", status: " <<
                                             mfxstatus_to_string(my_sess.last_status));
-                        } catch (const std::runtime_error& ex) {
-                            // NB: not an error, yield CPU ticks to check
-                            // surface availability at a next phase.
-                            // But print WARNING to notify user about pipeline stuck
-                            GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
-                                                    "] has no surface, reason: " <<
-                                                    ex.what());
-                            break;
+
+                        if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
+                            my_sess.last_status == MFX_ERR_NONE) {
+                            my_sess.vpp_queue.emplace(pending_op);
                         }
                     }
 
-
-                    GAPI_LOG_INFO(nullptr, "END transcode ops count: " <<
-                                            my_sess.vpp_queue.size() <<
-                                            ", sync id:  " <<
-                                            pending_op.first <<
-                                            ", dec surface:  " <<
-                                            dec_surface <<
-                                            ", trans surface: " << pending_op.second <<
-                                            ", status: " <<
-                                            mfxstatus_to_string(my_sess.last_status));
-
-                    if (sess.last_status == MFX_ERR_NONE ) {
-
-                        // TODO not necessary now???
-                        my_sess.sync_pair = pending_op;
-                        /*
-                        my_sess.sync_queue.emplace(std::move(pending_op));
-                        my_sess.vpp_queue.pop();
-                        */
+                    try {
+                        my_sess.swap_transcode_surface(*this);
+                    } catch (const std::runtime_error& ex) {
+                        // NB: not an error, yield CPU ticks to check
+                        // surface availability at a next phase.
+                        // But print WARNING to notify user about pipeline stuck
+                        GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
+                                                    "] has no VPP surface, reason: " <<
+                                                ex.what());
+                        my_sess.vpp_surface_ptr.reset();
+                        break;
                     }
-                }
-                else
-                {
-                    abort();
-                }
-
-                try {
-                    my_sess.swap_transcode_surface(*this);
-                }catch (... )
-                {
-                    my_sess.vpp_surface_ptr.reset();
-                }
-            }
-            return ExecutionStatus::Continue;
-        },
-        [this] (EngineSession& sess) -> ExecutionStatus
-        {
-            LegacyTranscodeSession &my_sess = static_cast<LegacyTranscodeSession&>(sess);
-            if (my_sess.last_status == MFX_ERR_NONE) {
-                my_sess.sync_queue.emplace(my_sess.sync_pair);
-            } else if (my_sess.last_status != MFX_ERR_MORE_DATA) /* suppress MFX_ERR_MORE_DATA warning */ {
-                GAPI_LOG_WARNING(nullptr, "decode pending ops count: " <<
-                                          my_sess.sync_queue.size() <<
-                                          ", sync id: " << my_sess.sync_pair.first <<
-                                          ", status: " <<
-                                          mfxstatus_to_string(my_sess.last_status));
+                } while(my_sess.last_status == MFX_ERR_MORE_SURFACE);
             }
             return ExecutionStatus::Continue;
         },
@@ -240,12 +181,12 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
         {
             LegacyTranscodeSession& my_sess = static_cast<LegacyTranscodeSession&>(sess);
             do {
-                if (!my_sess.sync_queue.empty()) { // FIFO: check the oldest async operation complete
-                    LegacyDecodeSession::op_handle_t& pending_op = my_sess.sync_queue.front();
-                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 11000);
+                if (!my_sess.vpp_queue.empty()) { // FIFO: check the oldest async operation complete
+                    LegacyDecodeSession::op_handle_t& pending_op = my_sess.vpp_queue.front();
+                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
-                    GAPI_LOG_DEBUG(nullptr, "pending ops count: " <<
-                                            my_sess.sync_queue.size() <<
+                    GAPI_LOG_DEBUG(nullptr, "pending VPP ops count: " <<
+                                            my_sess.vpp_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<
                                             ", surface:  " <<
@@ -258,7 +199,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                         on_frame_ready(my_sess, pending_op.second);
                     }
                 }
-            } while (MFX_ERR_NONE == sess.last_status && !my_sess.sync_queue.empty());
+            } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_queue.empty());
             return ExecutionStatus::Continue;
         },
         // 5) Falls back on generic status procesing
@@ -285,30 +226,19 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     auto vppOutImgHeight = 382;
 
     mfxVideoParam mfxVPPParams{0};
-    //mfxVPPParams = mfxDecParams;
-/*
-    mfxVPPParams.vpp.In.FourCC        = mfxDecParams.mfx.FrameInfo.FourCC;
-    mfxVPPParams.vpp.In.ChromaFormat  = mfxDecParams.mfx.FrameInfo.ChromaFormat;
-    mfxVPPParams.vpp.In.Width         = vppInImgWidth;
-    mfxVPPParams.vpp.In.Height        = vppInImgHeight;
-    mfxVPPParams.vpp.In.CropW         = vppInImgWidth;
-    mfxVPPParams.vpp.In.CropH         = vppInImgHeight;
-    mfxVPPParams.vpp.In.PicStruct     = MFX_PICSTRUCT_PROGRESSIVE;
-    mfxVPPParams.vpp.In.FrameRateExtN = 30;
-    mfxVPPParams.vpp.In.FrameRateExtD = 1;
-*/
+
     mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
-    mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
-    mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
+    mfxVPPParams.vpp.Out.FourCC        = mfxVPPParams.vpp.In.FourCC;//MFX_FOURCC_NV12;
+    mfxVPPParams.vpp.Out.ChromaFormat  = mfxVPPParams.vpp.In.ChromaFormat;//MFX_CHROMAFORMAT_YUV420;
     mfxVPPParams.vpp.Out.Width         = ALIGN16(vppOutImgWidth);
     mfxVPPParams.vpp.Out.Height        = ALIGN16(vppOutImgHeight);
     mfxVPPParams.vpp.Out.CropX = 0;
     mfxVPPParams.vpp.Out.CropY = 0;
     mfxVPPParams.vpp.Out.CropW         = vppOutImgWidth;
     mfxVPPParams.vpp.Out.CropH         = vppOutImgHeight;
-    mfxVPPParams.vpp.Out.PicStruct     = MFX_PICSTRUCT_PROGRESSIVE;
-    mfxVPPParams.vpp.Out.FrameRateExtN = 30;
-    mfxVPPParams.vpp.Out.FrameRateExtD = 1;
+    mfxVPPParams.vpp.Out.PicStruct     = mfxVPPParams.vpp.In.PicStruct;//MFX_PICSTRUCT_PROGRESSIVE;
+    mfxVPPParams.vpp.Out.FrameRateExtN = mfxVPPParams.vpp.In.FrameRateExtN;
+    mfxVPPParams.vpp.Out.FrameRateExtD = mfxVPPParams.vpp.In.FrameRateExtD;
 
     if (mfxDecParams.IOPattern == MFX_IOPATTERN_OUT_VIDEO_MEMORY) {
         mfxVPPParams.IOPattern = MFX_IOPATTERN_IN_VIDEO_MEMORY | MFX_IOPATTERN_OUT_VIDEO_MEMORY;
@@ -377,7 +307,7 @@ void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object
-    sess.sync_queue.pop();
+    sess.vpp_queue.pop();
 }
 } // namespace onevpl
 } // namespace wip

@@ -72,6 +72,9 @@ VPLMediaFrameDX11Adapter::~VPLMediaFrameDX11Adapter() {
     // Each VPLMediaFrameDX11Adapter releases mfx surface counter
     // The last VPLMediaFrameDX11Adapter releases shared Surface pointer
     // The last surface pointer releases workspace memory
+
+    GAPI_LOG_DEBUG(nullptr, "destroy frame id: " << reinterpret_cast<void*>(this));
+
     Surface::data_t& data = parent_surface_ptr->get_data();
     LockAdapter* alloc_data = reinterpret_cast<LockAdapter*>(data.MemId);
     alloc_data->set_adaptee(nullptr);

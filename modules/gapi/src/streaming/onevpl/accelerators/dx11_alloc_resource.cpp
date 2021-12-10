@@ -414,11 +414,11 @@ void DX11AllocationRecord::init(unsigned int items, ID3D11DeviceContext* origin_
         if (textures.size() == 1) {
             GAPI_LOG_DEBUG(nullptr, "subresources: [" << i <<", " << items << "], ID3D11Texture2D: " << texture_ptr.get());
             resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
-                                                          texture_ptr, 0, std::move(staging_textures[i])));
+                                                          texture_ptr, i, std::move(staging_textures[i])));
         } else {
             GAPI_LOG_DEBUG(nullptr, "subresources: [" << i <<", " << items << "], ID3D11Texture2D: " << textures[i].get());
             resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
-                                                          std::move(textures[i]), i, std::move(staging_textures[i])));
+                                                          std::move(textures[i]), 0, std::move(staging_textures[i])));
         }
     }
 }

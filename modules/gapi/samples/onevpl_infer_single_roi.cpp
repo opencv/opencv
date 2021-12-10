@@ -148,6 +148,7 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     static void run(const cv::Size& in_size, cv::Rect &out_rect) {
 
         // Identify the central point & square size (- some padding)
+        /*
         const auto center = cv::Point{in_size.width/2, in_size.height/2};
         auto sqside = std::min(in_size.width, in_size.height);
 
@@ -156,6 +157,12 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
                            , center.y - sqside/2
                            , sqside
                            , sqside
+                           };
+        */
+        out_rect = cv::Rect{ 0
+                           , 0
+                           , in_size.width
+                           , in_size.height
                            };
     }
 };
