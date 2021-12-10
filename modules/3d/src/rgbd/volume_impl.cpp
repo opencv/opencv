@@ -6,6 +6,7 @@
 #include <iostream>
 #include "volume_impl.hpp"
 #include "tsdf_functions.hpp"
+#include "opencv2/imgproc.hpp"
 
 namespace cv
 {
@@ -58,6 +59,7 @@ TsdfVolume::TsdfVolume(VolumeSettings settings) :
         zdim = volResolution.x * volResolution.y;
     }
     volDims = Vec4i(xdim, ydim, zdim);
+    volStrides = Vec4i(xdim, ydim, zdim);
     this->neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -84,7 +86,8 @@ void TsdfVolume::integrate(OdometryFrame frame, InputArray pose)
     frame.getDepth(depth);
     CV_Assert(depth.type() == DEPTH_TYPE);
     CV_Assert(!depth.empty());
-    depth = depth * 5000;
+    // TODO: remove this dependence from OdometryFrame
+    depth = depth * settings.getDepthFactor();
 
     Matx33f intr;
     settings.getIntrinsics(intr);
@@ -110,7 +113,6 @@ void TsdfVolume::integrate(InputArray frame, InputArray pose)
     Depth depth = frame.getMat();
     CV_Assert(depth.type() == DEPTH_TYPE);
     CV_Assert(!depth.empty());
-    //depth = depth * 5000;
 
     Matx33f intr;
     settings.getIntrinsics(intr);
@@ -124,9 +126,9 @@ void TsdfVolume::integrate(InputArray frame, InputArray pose)
         pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
     }
     Matx44f cameraPose = pose.getMat();
+
     integrateVolumeUnit(truncDist, voxelSize, settings.getMaxWeight(), (this->pose).matrix, volResolution, volStrides, depth,
         settings.getDepthFactor(), cameraPose, intrinsics, pixNorms, volume);
-
 }
 
 
@@ -305,7 +307,6 @@ struct RaycastInvoker : ParallelLoopBody
                     }
                     // if ray penetrates a surface from outside
                     // linearly interpolate t between two f values
-                    //std::cout << f << " " << fnext << std::endl;
                     if (f > 0.f && fnext < 0.f)
                     {
                         Point3f tp = next - rayStep;
@@ -323,7 +324,6 @@ struct RaycastInvoker : ParallelLoopBody
 
                             if (!isNaN(nv))
                             {
-                                std::cout << "F ";
                                 //convert pv and nv to camera space
                                 normal = volRot * nv;
                                 // interpolation optimized a little
@@ -355,7 +355,7 @@ struct RaycastInvoker : ParallelLoopBody
 
 void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    std::cout << "TsdfVolume::raycast()" << std::endl;
+    //std::cout << "TsdfVolume::raycast()" << std::endl;
 
     CV_TRACE_FUNCTION();
     Size frameSize(width, height);
@@ -369,12 +369,10 @@ void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, Outpu
 
     Matx33f intr;
     this->settings.getIntrinsics(intr);
-
     RaycastInvoker ri(points, normals, cameraPose, Intr(intr), *this);
 
     const int nstripes = -1;
-    //parallel_for_(Range(0, points.rows), ri, nstripes);
-    ri(Range(0, points.rows));
+    parallel_for_(Range(0, points.rows), ri, nstripes);
 }
 
 void TsdfVolume::fetchNormals() const {}

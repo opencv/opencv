@@ -44,6 +44,8 @@ enum class OdometryFrameStoreType
 class CV_EXPORTS_W OdometryFrame
 {
 public:
+    //TODO: make two separate functions of get depth
+    // defided depth and source depth for correct working with Volume
     OdometryFrame();
     OdometryFrame(OdometryFrameStoreType matType);
     ~OdometryFrame() {};

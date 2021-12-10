@@ -9,7 +9,6 @@
 #include "tsdf.hpp"
 #include "opencl_kernels_3d.hpp"
 
-#define USE_INTRINSICS 0
 
 namespace cv {
 
@@ -169,7 +168,6 @@ void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44
         frameParams = newParams;
         pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
     }
-
     integrateVolumeUnit(truncDist, voxelSize, maxWeight, (this->pose).matrix, volResolution, volStrides, depth,
         depthFactor, cameraPose, intrinsics, pixNorms, volume);
 }
@@ -374,9 +372,9 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(const Point3f& p) const
 }
 #endif
 
-struct RaycastInvoker : ParallelLoopBody
+struct _RaycastInvoker : ParallelLoopBody
 {
-    RaycastInvoker(Points& _points, Normals& _normals, const Matx44f& cameraPose,
+    _RaycastInvoker(Points& _points, Normals& _normals, const Matx44f& cameraPose,
                   const Intr& intrinsics, const TSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
@@ -673,7 +671,7 @@ void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& intrinsics
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
 
-    RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
+    _RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);

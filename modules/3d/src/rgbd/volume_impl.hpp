@@ -15,7 +15,8 @@ namespace cv
 class Volume::Impl
 {
 private:
-
+    // TODO: make debug function, which show histogram of volume points values
+    // make this function run with debug lvl == 10
 public:
     Impl(VolumeSettings settings);
     virtual ~Impl() {};

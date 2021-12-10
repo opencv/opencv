@@ -425,6 +425,8 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
     AccessFlag af = ACCESS_READ;
 
     VolumeSettings vs;
+    vs.setDepthFactor(settings.depthFactor);
+    vs.setIntrinsics(settings.intr);
     Volume volume(VolumeType::TSDF, vs);
 
     if (true)
@@ -440,6 +442,11 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
     normals = _normals.getMat(af);
     points = _points.getMat(af);
+
+    double min_, max_;
+    cv::minMaxLoc(points, &min_, &max_);
+    std::cout << " points info: " << min_ << " " << max_ << std::endl;
+
 
     displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
