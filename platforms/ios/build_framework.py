@@ -34,7 +34,12 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 from __future__ import print_function, unicode_literals
 import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing, codecs, io
 from subprocess import check_call, check_output, CalledProcessError
-from distutils.dir_util import copy_tree
+
+if sys.version_info >= (3, 8): # Python 3.8+
+    def copy_tree(src, dst):
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+else:
+    from distutils.dir_util import copy_tree
 
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
 from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting, get_xcode_version, get_cmake_version
