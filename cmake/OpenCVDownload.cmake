@@ -37,6 +37,44 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
+set(OPENCV_MIRROR_CSDN "codechina.csdn.net" CACHE INTERNAL "Link to mirror hosted by CSDN")
+
+function(ocv_replace_download_source)
+  string(FIND "${DL_URL}" "https://raw.githubusercontent.com" __is_found_githubusercontent)
+  string(FIND "${DL_URL}" "https://github.com" __is_found_github)
+  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
+  if(NOT ${__is_found_githubusercontent} EQUAL -1)
+    message(STATUS "ocv_replace_download_source: replacing raw.githubusercontent.com with ${OPENCV_MIRROR_CSDN}")
+  elseif(NOT ${__is_found_github} EQUAL -1) # https:;;github.com;${user};${repo};archive;
+    message(STATUS "ocv_replace_download_source: replacing github.com with ${OPENCV_MIRROR_CSDN}")
+    list(REMOVE_AT dl_url_splits 2) # remove github.com
+    list(INSERT dl_url_splits 2 ${OPENCV_MIRROR_CSDN}) # insert codechina.csdn.net to replace github.com
+    list(INSERT dl_url_splits 5 "-") # insert "-" to match CSDN's link
+    list(JOIN dl_url_splits "/" new_dl_link) # join with "/" to be a valid download link
+    message(STATUS "ocv_replace_download_source: mirrored download link: ${new_dl_link}")
+    set(DL_URL ${new_dl_link})
+  endif()
+endfunction()
+
+function(ocv_init_download)
+  execute_process(
+    COMMAND
+      git remote get-url origin
+    RESULT_VARIABLE
+      RESULT_STATUS
+    OUTPUT_VARIABLE
+      OCV_GIT_ORIGIN_URL_OUT
+    ERROR_QUIET
+  ) # it produces an empty line. If OUTPUT_QUIET is set, OCV_GIT_ORIGIN_URL_OUT will be emtpy.
+  # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
+
+  # message(STATUS "ocv_init_download: ${OCV_GIT_ORIGIN_URL_OUT}")
+  string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_CSDN}" __is_found_csdn)
+  if(NOT (${__is_found_csdn} EQUAL -1))
+    ocv_replace_download_source()
+  endif()
+endfunction()
+
 function(ocv_download)
   cmake_parse_arguments(DL "UNPACK;RELATIVE_URL" "FILENAME;HASH;DESTINATION_DIR;ID;STATUS" "URL" ${ARGN})
 
@@ -97,6 +135,7 @@ function(ocv_download)
       break()
     endif()
   endforeach()
+  ocv_init_download()
 
   # Append filename to url if needed
   if(DL_RELATIVE_URL)
@@ -115,7 +154,7 @@ function(ocv_download)
   if(DL_ID)
     set(__msg_prefix "${DL_ID}: ")
   endif()
-  message(STATUS "${__msg_prefix}Download: ${DL_FILENAME}")
+  message(STATUS "${__msg_prefix}Downloading ${DL_FILENAME} from ${DL_URL}")
 
   # Copy mode: check if copy destination exists and is correct
   if(NOT DL_UNPACK)
