@@ -9,7 +9,13 @@ import io
 from shutil import copyfile
 from pprint import pformat
 from string import Template
-from distutils.dir_util import copy_tree
+
+if sys.version_info >= (3, 8): # Python 3.8+
+    from shutil import copytree
+    def copy_tree(src, dst):
+        copytree(src, dst, dirs_exist_ok=True)
+else:
+    from distutils.dir_util import copy_tree
 
 try:
     from io import StringIO # Python 3
