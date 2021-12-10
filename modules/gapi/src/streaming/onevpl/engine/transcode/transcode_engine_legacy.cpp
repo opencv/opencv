@@ -122,29 +122,28 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
 
             LegacyDecodeSession::op_handle_t last_op {};
             while (!my_sess.sync_queue.empty()) {
-                LegacyDecodeSession::op_handle_t pending_op = my_sess.sync_queue.front();
-
-                GAPI_LOG_DEBUG(nullptr, "pending DEC ops count: " <<
-                                            my_sess.sync_queue.size() <<
-                                            ", sync id:  " <<
-                                            pending_op.first <<
-                                            ", surface:  " <<
-                                            pending_op.second <<
-                                            ", status: " <<
-                                            mfxstatus_to_string(my_sess.last_status));
-
-                my_sess.sync_queue.pop();
-                auto *dec_surface = pending_op.second;
                 do {
-                    if (my_sess.vpp_surface_ptr.lock())
-                    {
+                    if (!my_sess.vpp_surface_ptr.expired()) {
+                        LegacyDecodeSession::op_handle_t pending_op = my_sess.sync_queue.front();
+                        GAPI_LOG_DEBUG(nullptr, "pending DEC ops count: " <<
+                                                my_sess.sync_queue.size() <<
+                                                ", sync id:  " <<
+                                                pending_op.first <<
+                                                ", surface:  " <<
+                                                pending_op.second <<
+                                                ", status: " <<
+                                                mfxstatus_to_string(my_sess.last_status));
+
+                        my_sess.sync_queue.pop();
+                        auto *dec_surface = pending_op.second;
                         auto *vpp_suface = my_sess.vpp_surface_ptr.lock()->get_handle();
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,
                                                                            nullptr, &pending_op.first);
                         pending_op.second = vpp_suface;
-                        GAPI_LOG_INFO(nullptr, "START transcode ops count: " <<
+
+                        GAPI_LOG_WARNING(nullptr, "START transcode ops count: " <<
                                             my_sess.vpp_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<
@@ -156,6 +155,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
 
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
+                            pending_op.second->Data.Locked++; // TODO -S- workaround
                             my_sess.vpp_queue.emplace(pending_op);
                         }
                     }
@@ -168,11 +168,16 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                         // But print WARNING to notify user about pipeline stuck
                         GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
                                                     "] has no VPP surface, reason: " <<
-                                                ex.what());
+                                                  ex.what());
                         my_sess.vpp_surface_ptr.reset();
                         break;
                     }
                 } while(my_sess.last_status == MFX_ERR_MORE_SURFACE);
+
+                if (my_sess.vpp_surface_ptr.expired()) {
+                    // TODO break main loop
+                    break;
+                }
             }
             return ExecutionStatus::Continue;
         },
@@ -185,7 +190,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                     LegacyDecodeSession::op_handle_t& pending_op = my_sess.vpp_queue.front();
                     sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
-                    GAPI_LOG_DEBUG(nullptr, "pending VPP ops count: " <<
+                    GAPI_LOG_INFO(nullptr, "pending VPP ops count: " <<
                                             my_sess.vpp_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<
@@ -302,6 +307,7 @@ void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
+    ready_surface->Data.Locked--;  // TODO -S- workaround
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.vpp_out_pool_id,
                                                                    ready_surface);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());

@@ -96,6 +96,7 @@ void LockAdapter::unlock_write(mfxMemId mid, mfxFrameData &data) {
 
 SharedLock* LockAdapter::set_adaptee(SharedLock* new_impl) {
     SharedLock* old_impl = impl;
+    GAPI_DbgAssert(old_impl == nullptr || new_impl == nullptr && "Must not be previous impl");
     impl = new_impl;
     return old_impl;
 }

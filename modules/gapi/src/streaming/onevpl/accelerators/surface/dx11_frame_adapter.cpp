@@ -48,7 +48,8 @@ VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> surf
     Surface::data_t& data = parent_surface_ptr->get_data();
     GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
                             ", w: " << info.Width << ", h: " << info.Height <<
-                            ", p: " << data.Pitch);
+                            ", p: " << data.Pitch <<
+                            ", frame id: " << reinterpret_cast<void*>(this));
     switch(info.FourCC)
     {
         case MFX_FOURCC_I420:
