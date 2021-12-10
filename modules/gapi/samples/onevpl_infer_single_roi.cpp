@@ -196,8 +196,8 @@ int main(int argc, char *argv[]) {
     std::string file_path = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
-    const auto streaming_queue_capacity = cmd.get<uint64_t>("streaming_queue_capacity");
-    const auto source_queue_capacity = cmd.get<uint64_t>("frames_pool_size");
+    const auto streaming_queue_capacity = cmd.get<size_t>("streaming_queue_capacity");
+    const auto source_queue_capacity = cmd.get<size_t>("frames_pool_size");
 
     // check ouput file extension
     if (!output.empty()) {
