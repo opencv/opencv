@@ -226,23 +226,23 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
         }
     };
 
-    auto normalizeMat = [](Mat &d, const Mat &s) {
-        s.copyTo(d);
-        float l = (float) sqrt(s.dot(s));
-        d /= l;
-    };
-
-    float coefficient_tolerance = 0.01f;
-    CheckDiffFunction planeCheckDiff = [coefficient_tolerance, normalizeMat](const Mat &a,
+    // 1 * 3.1415926f / 180
+    float vector_radian_tolerance = 0.0174533f, ratio_tolerance = 0.1f;
+    CheckDiffFunction planeCheckDiff = [vector_radian_tolerance, ratio_tolerance](const Mat &a,
             const Mat &b) -> bool {
         Mat m1, m2;
-        normalizeMat(m1, a);
-        normalizeMat(m2, b);
-        // If the direction is the same
-        Mat d1 = m1 - m2;
-        // If the direction is not the same
-        Mat d2 = m1 + m2;
-        return (float) min(d1.dot(d1), d2.dot(d2)) <= coefficient_tolerance * coefficient_tolerance;
+        a.convertTo(m1, CV_32F);
+        b.convertTo(m2, CV_32F);
+        auto p1 = (float *) m1.data, p2 = (float *) m2.data;
+        Vec3f n1(p1[0], p1[1], p1[2]);
+        Vec3f n2(p2[0], p2[1], p2[2]);
+        float cos_theta_square = n1.dot(n2) * n1.dot(n2) / (n1.dot(n1) * n2.dot(n2));
+
+        float r1 = p1[3] * p1[3] / n1.dot(n1);
+        float r2 = p2[3] * p2[3] / n2.dot(n2);
+
+        return cos_theta_square >= cos(vector_radian_tolerance) * cos(vector_radian_tolerance)
+               && abs(r1 - r2) <= ratio_tolerance * ratio_tolerance;
     };
 
     // Single plane segmentation
