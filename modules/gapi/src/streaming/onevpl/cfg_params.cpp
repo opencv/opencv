@@ -89,6 +89,7 @@ CfgParam::~CfgParam() = default;
 CfgParam CfgParam::create_frames_pool_size(size_t value) {
     // NB: cast to uint64_t because CfgParam inner variant works over
     // uint64_t instead of size_t and mirrored VPL types variety
+    // but size_t looks more friendly for C++ high-level development
     return CfgParam::create(CfgParam::frames_pool_size_name(),
                             static_cast<uint64_t>(value), false);
 }
