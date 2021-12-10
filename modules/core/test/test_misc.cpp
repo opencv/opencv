@@ -784,4 +784,36 @@ TEST(Core_Check, testSize_1)
 }
 
 
+template <typename T> class Rect_Test : public testing::Test {};
+
+TYPED_TEST_CASE_P(Rect_Test);
+
+// Reimplement C++11 std::numeric_limits<>::lowest.
+template<typename T> T cv_numeric_limits_lowest();
+template<> int cv_numeric_limits_lowest<int>() { return INT_MIN; }
+template<> float cv_numeric_limits_lowest<float>() { return -FLT_MAX; }
+template<> double cv_numeric_limits_lowest<double>() { return -DBL_MAX; }
+
+TYPED_TEST_P(Rect_Test, Overflows) {
+  typedef Rect_<TypeParam> R;
+  TypeParam num_max = std::numeric_limits<TypeParam>::max();
+  TypeParam num_lowest = cv_numeric_limits_lowest<TypeParam>();
+  EXPECT_EQ(R(0, 0, 10, 10), R(0, 0, 10, 10) & R(0, 0, 10, 10));
+  EXPECT_EQ(R(5, 6, 4, 3), R(0, 0, 10, 10) & R(5, 6, 4, 3));
+  EXPECT_EQ(R(5, 6, 3, 2), R(0, 0, 8, 8) & R(5, 6, 4, 3));
+  // Test with overflowing dimenions.
+  EXPECT_EQ(R(5, 0, 5, 10), R(0, 0, 10, 10) & R(5, 0, num_max, num_max));
+  // Test with overflowing dimensions for floats/doubles.
+  EXPECT_EQ(R(num_max, 0, num_max / 4, 10), R(num_max, 0, num_max / 2, 10) & R(num_max, 0, num_max / 4, 10));
+  // Test with overflowing coordinates.
+  EXPECT_EQ(R(), R(20, 0, 10, 10) & R(num_lowest, 0, 10, 10));
+  EXPECT_EQ(R(), R(20, 0, 10, 10) & R(0, num_lowest, 10, 10));
+  EXPECT_EQ(R(), R(num_lowest, 0, 10, 10) & R(0, num_lowest, 10, 10));
+}
+REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows);
+
+typedef ::testing::Types<int, float, double> RectTypes;
+INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
+
+
 }} // namespace
