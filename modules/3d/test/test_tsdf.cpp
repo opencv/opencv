@@ -443,13 +443,9 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
     normals = _normals.getMat(af);
     points = _points.getMat(af);
 
-    double min_, max_;
-    cv::minMaxLoc(points, &min_, &max_);
-    std::cout << " points info: " << min_ << " " << max_ << std::endl;
-
-
     displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
+    waitKey(5000);
 
     /*
     if (isRaycast)
