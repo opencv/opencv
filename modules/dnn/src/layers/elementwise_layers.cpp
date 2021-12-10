@@ -1012,7 +1012,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
-        return make_cuda_node<cuda4dnn::ELUOp>(target, stream);
+        return make_cuda_node<cuda4dnn::ELUOp>(target, stream, alpha);
     }
 #endif
 
