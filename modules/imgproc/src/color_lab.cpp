@@ -978,8 +978,9 @@ static struct LUVLUT_T {
     const long long int *LvToVpl_b;
 } LUVLUT = {0, 0, 0};
 
+/* NB: no NaN propagation guarantee */
 #define clip(value) \
-    value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
+    value < 0.0f ? 0.0f : value <= 1.0f ? value : 1.0f;
 
 //all constants should be presented through integers to keep bit-exactness
 static const softdouble gammaThreshold    = softdouble(809)/softdouble(20000);    //  0.04045
@@ -1329,6 +1330,10 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+    CV_DbgCheck(tx, tx >= 0 && tx < LAB_LUT_DIM, "");
+    CV_DbgCheck(ty, ty >= 0 && ty < LAB_LUT_DIM, "");
+    CV_DbgCheck(tz, tz >= 0 && tz < LAB_LUT_DIM, "");
 
     const int16_t* baseLUT = &LUT[3*8*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     int aa[8], bb[8], cc[8];
@@ -1932,12 +1937,9 @@ struct RGB2Lab_f
                     else // scn == 4
                     {
                         v_float32 dummy0, dummy1;
-
                         v_load_deinterleave(src + 0*vsize, rvec0, gvec0, bvec0, dummy0);
                         v_load_deinterleave(src + 4*vsize, rvec1, gvec1, bvec1, dummy1);
                     }
-                    const v_float32 mask_not_nan0 = v_not_nan(rvec0 + gvec0 + bvec0);
-                    const v_float32 mask_not_nan1 = v_not_nan(rvec1 + gvec1 + bvec1);
 
                     if(bIdx)
                     {
@@ -1997,14 +1999,6 @@ struct RGB2Lab_f
                     b_vec0 = v_fma(b_vec0, v256dBase, vm128);
                     b_vec1 = v_fma(b_vec1, v256dBase, vm128);
 
-                    const v_float32 kAllNaN = vx_setall_f32(std::numeric_limits<float>::quiet_NaN());
-                    l_vec0 = v_select(mask_not_nan0, l_vec0, kAllNaN);
-                    a_vec0 = v_select(mask_not_nan0, a_vec0, kAllNaN);
-                    b_vec0 = v_select(mask_not_nan0, b_vec0, kAllNaN);
-                    l_vec1 = v_select(mask_not_nan1, l_vec1, kAllNaN);
-                    a_vec1 = v_select(mask_not_nan1, a_vec1, kAllNaN);
-                    b_vec1 = v_select(mask_not_nan1, b_vec1, kAllNaN);
-
                     v_store_interleave(dst + i + 0*vsize, l_vec0, a_vec0, b_vec0);
                     v_store_interleave(dst + i + 3*vsize, l_vec1, a_vec1, b_vec1);
                 }
@@ -2013,10 +2007,6 @@ struct RGB2Lab_f
 
             for(; i < n; i += 3, src += scn)
             {
-                if (cvIsNaN(src[0] + src[1] + src[2])) {
-                    dst[i] = dst[i + 1] = dst[i + 2] = std::numeric_limits<float>::quiet_NaN();
-                    continue;
-                }
                 float R = clip(src[bIdx]);
                 float G = clip(src[1]);
                 float B = clip(src[bIdx^2]);
