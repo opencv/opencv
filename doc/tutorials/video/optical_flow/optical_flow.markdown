@@ -136,9 +136,9 @@ Dense Optical Flow in OpenCV
 
 Lucas-Kanade method computes optical flow for a sparse feature set (in our example, corners detected
 using Shi-Tomasi algorithm). OpenCV provides another algorithm to find the dense optical flow. It
-computes the optical flow for all the points in the frame. It is based on Gunner Farneback's
+computes the optical flow for all the points in the frame. It is based on Gunnar Farneback's
 algorithm which is explained in "Two-Frame Motion Estimation Based on Polynomial Expansion" by
-Gunner Farneback in 2003.
+Gunnar Farneback in 2003.
 
 Below sample shows how to find the dense optical flow using above algorithm. We get a 2-channel
 array with optical flow vectors, \f$(u,v)\f$. We find their magnitude and direction. We color code the
