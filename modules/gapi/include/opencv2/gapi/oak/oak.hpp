@@ -77,19 +77,12 @@ struct EncoderConfig {
     float frameRate = 30.0f;
 };
 
-G_API_OP(GEncMat, <GArray<uint8_t>(GMat, EncoderConfig)>, "org.opencv.oak.enc_mat") {
-    static GArrayDesc outMeta(const GMatDesc&, const EncoderConfig&) {
-        return cv::empty_array_desc();
-    }
-};
-
 G_API_OP(GEncFrame, <GArray<uint8_t>(GFrame, EncoderConfig)>, "org.opencv.oak.enc_frame") {
     static GArrayDesc outMeta(const GFrameDesc&, const EncoderConfig&) {
         return cv::empty_array_desc();
     }
 };
 
-GAPI_EXPORTS GArray<uint8_t> encode(const GMat& in, const EncoderConfig& = {});
 GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& = {});
 
 // OAK backend & kernels ////////////////////////////////////////////////////////

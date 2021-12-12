@@ -309,22 +309,6 @@ public:
     struct Name: public cv::gimpl::oak::GOAKKernelImpl<Name, API>
 
 namespace {
-GAPI_OAK_KERNEL(GOAKEncMat, cv::gapi::oak::GEncMat) {
-    static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
-                    const GArgs& in_args,
-                    const GCompileArgs&,
-                    std::shared_ptr<dai::Node>& node) {
-        auto videoEnc = pipeline->create<dai::node::VideoEncoder>();
-        // FIXME: encoder params is the 2nd arg - consider a better approach here
-        auto m_enc_config = in_args[1].get<cv::gapi::oak::EncoderConfig>();
-        // FIXME: convert all the parameters to dai
-        videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
-                                          m_enc_config.frameRate,
-                                          dai::VideoEncoderProperties::Profile::H265_MAIN);
-        node = videoEnc;
-    }
-};
-
 GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
     static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
                     const GArgs& in_args,
@@ -344,8 +328,7 @@ GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
 
 cv::gapi::GKernelPackage kernels();
 cv::gapi::GKernelPackage kernels() {
-    return cv::gapi::kernels< GOAKEncMat
-                            , GOAKEncFrame
+    return cv::gapi::kernels< GOAKEncFrame
                             >();
 }
 

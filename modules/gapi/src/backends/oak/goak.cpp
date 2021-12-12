@@ -29,10 +29,6 @@ namespace oak {
 // Forward declaration in case was built w/o OAK
 class OAKMediaAdapter;
 
-GArray<uint8_t> encode(const GMat& in, const EncoderConfig& cfg) {
-    return GEncMat::on(in, cfg);
-}
-
 GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& cfg) {
     return GEncFrame::on(in, cfg);
 }
