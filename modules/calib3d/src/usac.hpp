@@ -116,7 +116,7 @@ public:
 
 class P3PSolver : public MinimalSolver {
 public:
-    static Ptr<P3PSolver> create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K);
+    static Ptr<P3PSolver> create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K);
 };
 
 //-------------------------- AFFINE -----------------------
@@ -164,7 +164,7 @@ public:
 
 class DLSPnP : public NonMinimalSolver {
 public:
-    static Ptr<DLSPnP> create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K);
+    static Ptr<DLSPnP> create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K);
 };
 
 //-------------------------- AFFINE -----------------------
@@ -571,11 +571,11 @@ namespace Utils {
      * @points is matrix N x 4.
      * @norm_points is output matrix N x 4 with calibrated points.
      */
-    void calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Mat &norm_points);
-    void calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &calib_norm_pts);
-    void normalizeAndDecalibPointsPnP (const Mat &K, Mat &pts, Mat &calib_norm_pts);
-    void decomposeProjection (const Mat &P, Mat &K_, Mat &R, Mat &t, bool same_focal=false);
-    double getCalibratedThreshold (double threshold, const Mat &K1, const Mat &K2);
+    void calibratePoints (const Matx33d &K1, const Matx33d &K2, const Mat &points, Mat &norm_points);
+    void calibrateAndNormalizePointsPnP (const Matx33d &K, const Mat &pts, Mat &calib_norm_pts);
+    void normalizeAndDecalibPointsPnP (const Matx33d &K, Mat &pts, Mat &calib_norm_pts);
+    void decomposeProjection (const Mat &P, Matx33d &K_, Mat &R, Mat &t, bool same_focal=false);
+    double getCalibratedThreshold (double threshold, const Matx33d &K1, const Matx33d &K2);
     float findMedian (std::vector<float> &array);
 }
 namespace Math {
