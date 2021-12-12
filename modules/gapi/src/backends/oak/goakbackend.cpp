@@ -49,8 +49,6 @@ class GOAKExecutable final: public GIslandExecutable {
     std::unique_ptr<dai::Device> m_device;
     std::unique_ptr<dai::Pipeline> m_pipeline;
 
-    cv::gapi::oak::EncoderConfig m_enc_config;
-
 public:
     GOAKExecutable(const ade::Graph& g,
                    const cv::GCompileArgs& args,
@@ -72,10 +70,12 @@ public:
 };
 
 struct GOAKKernel {
-    using F = std::function<void(const std::unique_ptr<dai::Pipeline>&, const GArgs&, const GCompileArgs&)>;
+    using F = std::function<void(const std::unique_ptr<dai::Pipeline>&,
+                                 const GArgs&,
+                                 const GCompileArgs&,
+                                 std::shared_ptr<dai::Node>&)>;
     explicit GOAKKernel(const F& f) : m_f(f) {}
     const F m_f;
-    std::shared_ptr<dai::Node> m_oak_node;
 };
 
 struct OAKComponent
@@ -126,25 +126,12 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         for (const auto& nh : nodes) {
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
                 const auto& op = m_gm.metadata(nh).get<Op>();
-
-                    //auto videoEnc = m_pipeline->create<dai::node::VideoEncoder>();
-                    // FIXME: encoder params is the 2nd arg - consider a better approach here
-                    //m_enc_config = op.args[1].get<cv::gapi::oak::EncoderConfig>();
-                    // FIXME: convert all the parameters to dai
-                    //videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
-                    //                                  m_enc_config.frameRate,
-                    //                                  dai::VideoEncoderProperties::Profile::H264_MAIN);
-                    // FIXME: think about proper linking:
-                    // probably, firts need to link in nodes to camera, then
-                    // for each non-input node check their in edges, get dai elements and link it there
-                    //camRgb->video.link(videoEnc->input);
-
-                    // FIXME: think about proper linking:
-                    //videoEnc->bitstream.link(xout->input);
-
-                    const auto &u = ConstOAKGraph(m_g).metadata(nh).get<OAKComponent>();
-                    u.k.m_f(m_pipeline, op.args, args); // pass kernel input args and compile args to prepare OAK node
-                    m_oak_nodes[nh] = u.k.m_oak_node;   // store OAK node to link it later
+                const auto &u = ConstOAKGraph(m_g).metadata(nh).get<OAKComponent>();
+                // pass kernel input args and compile args to prepare OAK node and
+                // store it to link later
+                m_oak_nodes[nh] = nullptr;
+                u.k.m_f(m_pipeline, op.args, args, m_oak_nodes[nh]);
+                GAPI_Assert(m_oak_nodes[nh] != nullptr);
             }
         }
 
@@ -298,8 +285,9 @@ template<typename Impl>
 struct OAKCallHelper {
     static void construct(const std::unique_ptr<dai::Pipeline>& pipeline,
                           const GArgs& in_args,
-                          const GCompileArgs& comp_args) {
-        Impl::put(pipeline, in_args, comp_args);
+                          const GCompileArgs& comp_args,
+                          std::shared_ptr<dai::Node>& node) {
+        Impl::put(pipeline, in_args, comp_args, node);
     }
 };
 
@@ -313,23 +301,51 @@ class GOAKKernelImpl: public detail::OAKCallHelper<Impl>
     using P = detail::OAKCallHelper<Impl>;
 public:
     using API = K;
-    static GBackend   backend() { return cv::gapi::oak::backend(); }
-    static GOAKKernel kernel()  { return GOAKKernel(&P::construct);     }
+    static GBackend   backend() { return cv::gapi::oak::backend();  }
+    static GOAKKernel kernel()  { return GOAKKernel(&P::construct); }
 };
 
 #define GAPI_OAK_KERNEL(Name, API) \
     struct Name: public cv::gimpl::oak::GOAKKernelImpl<Name, API>
 
-/*
-struct Encode: public cv::detail::KernelTag {
-    using API = cv::gapi::oak::GEnc;
-    static cv::gapi::GBackend backend() { return cv::gapi::oak::backend(); }
-    static GOAKKernel          kernel() { return GOAKKernel{}; }
-};*/
+namespace {
+GAPI_OAK_KERNEL(GOAKEncMat, cv::gapi::oak::GEncMat) {
+    static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const GArgs& in_args,
+                    const GCompileArgs&,
+                    std::shared_ptr<dai::Node>& node) {
+        auto videoEnc = pipeline->create<dai::node::VideoEncoder>();
+        // FIXME: encoder params is the 2nd arg - consider a better approach here
+        auto m_enc_config = in_args[1].get<cv::gapi::oak::EncoderConfig>();
+        // FIXME: convert all the parameters to dai
+        videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
+                                          m_enc_config.frameRate,
+                                          dai::VideoEncoderProperties::Profile::H265_MAIN);
+        node = videoEnc;
+    }
+};
+
+GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
+    static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const GArgs& in_args,
+                    const GCompileArgs&,
+                    std::shared_ptr<dai::Node>& node) {
+        auto videoEnc = pipeline->create<dai::node::VideoEncoder>();
+        // FIXME: encoder params is the 2nd arg - consider a better approach here
+        auto m_enc_config = in_args[1].get<cv::gapi::oak::EncoderConfig>();
+        // FIXME: convert all the parameters to dai
+        videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
+                                          m_enc_config.frameRate,
+                                          dai::VideoEncoderProperties::Profile::H265_MAIN);
+        node = videoEnc;
+    }
+};
+} // anonymous namespace
 
 cv::gapi::GKernelPackage kernels();
 cv::gapi::GKernelPackage kernels() {
-    return cv::gapi::kernels< //cv::gimpl::oak::Encode
+    return cv::gapi::kernels< GOAKEncMat
+                            , GOAKEncFrame
                             >();
 }
 
