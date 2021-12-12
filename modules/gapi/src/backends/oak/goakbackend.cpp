@@ -301,7 +301,7 @@ class GOAKKernelImpl: public detail::OAKCallHelper<Impl>
     using P = detail::OAKCallHelper<Impl>;
 public:
     using API = K;
-    static GBackend   backend() { return cv::gapi::oak::backend();  }
+    static cv::gapi::GBackend   backend() { return cv::gapi::oak::backend();  }
     static GOAKKernel kernel()  { return GOAKKernel(&P::construct); }
 };
 
