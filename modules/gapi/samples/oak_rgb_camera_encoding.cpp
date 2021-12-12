@@ -25,8 +25,7 @@ int main(int argc, char *argv[]) {
     cv::GFrame in;
     cv::GArray<uint8_t> encoded = cv::gapi::oak::encode(in, {});
 
-    auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
-                                 cv::gapi::combine(cv::gapi::oak::kernels()));
+    auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
 
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(encoded)).compileStreaming(std::move(args));
 

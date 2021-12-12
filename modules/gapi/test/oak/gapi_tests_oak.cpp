@@ -7,7 +7,6 @@
 #include "../test_precomp.hpp"
 
 #include <opencv2/gapi/oak/oak.hpp>
-#include <opencv2/gapi/oak/oak_media_adapter.hpp>
 
 namespace opencv_test
 {
@@ -15,9 +14,9 @@ namespace opencv_test
 // FIXME: consider a better solution
 TEST(OAK, Available)
 {
-    cv::GFrame in, h265;
-    h265 = cv::gapi::oak::encode(in, {});
+    cv::GFrame in;
+    auto out = cv::gapi::oak::encode(in, {});
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 }
 } // opencv_test

@@ -1,5 +1,6 @@
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/media.hpp>
 
@@ -25,12 +26,12 @@ int main(int argc, char *argv[]) {
     // OAK camera -> streaming accessor -> CPU
     cv::GFrame in;
     cv::GMat acc = cv::gapi::streaming::BGR(in);
-    cv::GMat out = cv::gapi::core::add(acc, acc);
+    cv::GMat out = cv::gapi::add(acc, acc);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
                                  cv::gapi::combine(cv::gapi::oak::kernels(),
                                                    cv::gapi::streaming::kernels(),
-                                                   cv::gapi::core::kernels()));
+                                                   cv::gapi::core::cpu::kernels()));
 
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 
