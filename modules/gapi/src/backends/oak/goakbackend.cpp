@@ -35,10 +35,10 @@ class GOAKExecutable final: public GIslandExecutable {
                        std::shared_ptr<dai::Node>,
                        ade::HandleHasher<ade::Node>> m_oak_nodes;
     // Will be reworked later when XLinkIn will be introduced as input
-    std::shared_ptr<dai::Node> m_camera_input;
+    std::shared_ptr<dai::node::ColorCamera> m_camera_input;
 
     // Backend outputs
-    std::vector<std::shared_ptr<dai::Node>> m_xlink_outputs;
+    std::vector<std::shared_ptr<dai::node::XLinkOut>> m_xlink_outputs;
     std::vector<std::shared_ptr<dai::DataOutputQueue>> m_out_queues;
     std::vector<std::string> m_out_queue_names;
 
@@ -124,7 +124,6 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
 
         // Create OAK node for each node in this backend
         for (const auto& nh : nodes) {
-            // FIXME: consider a better solution
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
                 const auto& op = m_gm.metadata(nh).get<Op>();
 
@@ -150,7 +149,64 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         }
 
         // Properly link all nodes
-        // TODO!
+        size_t out_counter = 0;
+        for (const auto& nh : nodes) {
+            if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
+                GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
+                if (nh.get()->inEdges().size() == 0) { // backend input, link with camera node
+                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() == 1);
+                    m_camera_input->video.link(m_oak_nodes[nh]->getInputs()[0]);
+                } else if (nh.get()->outEdges().size() == 0) { // backend output, link with xlinkout node
+                    GAPI_Assert(m_oak_nodes[nh]->getOutputs().size() == 1);
+                    GAPI_Assert(out_counter < m_xlink_outputs.size());
+                    m_oak_nodes[nh]->getOutputs()[0].link(m_xlink_outputs[out_counter++]->input);
+
+                    // also link with parents
+                    ade::NodeHandle parent;
+                    for (const auto& indatah : nh.get()->inNodes()) {
+                        // indatah - node's input data
+                        // need to find which other node produces that data
+                        for (const auto& nhp : nodes) {
+                            if (m_gm.metadata(nhp).get<NodeType>().t == NodeType::OP) {
+                                for (const auto& outdatah : nhp.get()->outNodes()) {
+                                    if (indatah == outdatah) {
+                                        parent = nhp;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
+                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() ==
+                                m_oak_nodes[parent]->getOutputs().size());
+                    for (size_t i = 0; i < m_oak_nodes[nh]->getInputs().size(); ++i) {
+                        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[nh]->getInputs()[i]);
+                    }
+                } else { // internally connected node in graph
+                    // Search for node's parent
+                    ade::NodeHandle parent;
+                    for (const auto& indatah : nh.get()->inNodes()) {
+                        // indatah - node's input data
+                        // need to find which other node produces that data
+                        for (const auto& nhp : nodes) {
+                            if (m_gm.metadata(nhp).get<NodeType>().t == NodeType::OP) {
+                                for (const auto& outdatah : nhp.get()->outNodes()) {
+                                    if (indatah == outdatah) {
+                                        parent = nhp;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
+                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() ==
+                                m_oak_nodes[parent]->getOutputs().size());
+                    for (size_t i = 0; i < m_oak_nodes[nh]->getInputs().size(); ++i) {
+                        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[nh]->getInputs()[i]);
+                    }
+                }
+            }
+        }
 
         m_device = std::unique_ptr<dai::Device>(new dai::Device(*m_pipeline));
 
@@ -177,31 +233,30 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         out.post(cv::gimpl::EndOfStream{});
     }
 
-    // FIXME: consider a better solution
-    /*auto packet = m_out_queue->get<dai::ImgFrame>();
+    for (size_t i = 0; i < m_out_queues.size(); ++i) {
+        auto q = m_out_queues[i];
+        auto oak_frame = q->get<dai::ImgFrame>();
 
-    // FIXME: cover all outputs
-    auto out_arg = out.get(0);
+        auto out_arg = out.get(i);
 
-    // Encoder case
-    if (util::holds_alternative<cv::detail::VectorRef>(out_arg)) {
-        /*
-        *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
-        auto frame = cv::util::get<MediaFrame*>(out_arg);
-        auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
-        adapter->setParams(cv::Size(static_cast<int>(packet->getWidth()),
-                                    static_cast<int>(packet->getHeight())),
+        if (util::holds_alternative<cv::detail::VectorRef>(out_arg)) {
+            cv::util::get<cv::detail::VectorRef>(out_arg) =
+                    cv::detail::VectorRef(oak_frame->getData());
+        } else if (util::holds_alternative<cv::MediaFrame*>(out_arg)) {
+            *cv::util::get<cv::MediaFrame*>(out_arg) =
+                    cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>(
+                            cv::Size(static_cast<int>(oak_frame->getWidth()),
+                                     static_cast<int>(oak_frame->getHeight())),
                             cv::gapi::oak::OAKFrameFormat::BGR,
-                            packet->getData().data(),
-                            packet->getData().size());
+                            oak_frame->getData().data());
+        } else {
+            GAPI_Assert(false && "Unsupported output type");
+        }
 
         // FIXME: do we need to pass meta here?
         out.meta(out_arg, {});
         out.post(std::move(out_arg));
-
-    } else {
-        util::throw_error(std::logic_error("Expected GArray at the end of the OAK pipeline"));
-    }*/
+    }
 }
 
 // Built-in kernels for OAK /////////////////////////////////////////////////////
