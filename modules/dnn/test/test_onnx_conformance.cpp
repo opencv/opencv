@@ -973,11 +973,11 @@ public:
     double default_l1;
     double default_lInf;
 
-    static std::set<std::string> parser_black_list;
-    static std::set<std::string> global_black_list;
-    static std::set<std::string> opencl_fp16_black_list;
-    static std::set<std::string> opencl_black_list;
-    static std::set<std::string> cpu_black_list;
+    static std::set<std::string> parser_deny_list;
+    static std::set<std::string> global_deny_list;
+    static std::set<std::string> opencl_fp16_deny_list;
+    static std::set<std::string> opencl_deny_list;
+    static std::set<std::string> cpu_deny_list;
 
     Test_ONNX_conformance()
     {
@@ -1020,61 +1020,65 @@ public:
         return hasFallbacks;
     }
 
+    static void initDenyList(std::set<std::string>& deny_set, const char* const deny_list[], const size_t n)
+    {
+        for (size_t i = 0; i < n; ++i)
+        {
+            deny_set.insert(deny_list[i]);
+        }
+    }
+
     static void SetUpTestCase()
     {
-        parser_black_list = {
+        const char* const parser[] = {
             #include "test_onnx_conformance_layer_parser_denylist.inl.hpp"
         };
+        initDenyList(parser_deny_list, parser, sizeof(parser)/sizeof(parser[0]));
 
-        global_black_list = {
+        const char* const global[] = {
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
         };
+        initDenyList(global_deny_list, global, sizeof(global)/sizeof(global[0]));
 
-        opencl_fp16_black_list = {
+        const char* const opencl_fp16[] = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
         };
+        initDenyList(opencl_fp16_deny_list, opencl_fp16, sizeof(opencl_fp16)/sizeof(opencl_fp16[0]));
 
-        opencl_black_list = {
+        const char* const opencl[] = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
         };
+        initDenyList(opencl_deny_list, opencl, sizeof(opencl)/sizeof(opencl[0]));
 
-        cpu_black_list = {
+        const char* const cpu[] = {
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
         };
+        initDenyList(cpu_deny_list, cpu, sizeof(cpu)/sizeof(cpu[0]));
     }
 
-    static void TearDownTestCase()
-    {
-        parser_black_list.clear();
-        global_black_list.clear();
-        opencl_fp16_black_list.clear();
-        opencl_black_list.clear();
-        cpu_black_list.clear();
-    }
-
-    void checkFilterLists()
+    void checkFilterLists() const
     {
         const std::string& name = test_case.name;
-        if(parser_black_list.find(name) != parser_black_list.end())
+        if(parser_deny_list.find(name) != parser_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
 
         if (backend == DNN_BACKEND_OPENCV)
         {
-            if(global_black_list.find(name) != global_black_list.end())
+            if(global_deny_list.find(name) != global_deny_list.end())
             {
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
             }
-            if((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_black_list.find(name) != opencl_fp16_black_list.end()))
+            if((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_deny_list.find(name) != opencl_fp16_deny_list.end()))
             {
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
             }
-            if((target == DNN_TARGET_OPENCL) && (opencl_black_list.find(name) != opencl_black_list.end()))
+            if((target == DNN_TARGET_OPENCL) && (opencl_deny_list.find(name) != opencl_deny_list.end()))
             {
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
             }
-            if((target == DNN_TARGET_CPU) && (cpu_black_list.find(name) != cpu_black_list.end()))
+            if((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
             {
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
             }
@@ -1114,11 +1118,11 @@ public:
     }
 };
 
-std::set<std::string> Test_ONNX_conformance::parser_black_list;
-std::set<std::string> Test_ONNX_conformance::global_black_list;
-std::set<std::string> Test_ONNX_conformance::opencl_fp16_black_list;
-std::set<std::string> Test_ONNX_conformance::opencl_black_list;
-std::set<std::string> Test_ONNX_conformance::cpu_black_list;
+std::set<std::string> Test_ONNX_conformance::parser_deny_list;
+std::set<std::string> Test_ONNX_conformance::global_deny_list;
+std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
+std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
+std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
 {
