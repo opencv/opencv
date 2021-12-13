@@ -133,6 +133,7 @@ struct any;
 
 /// Choosing the policy for an any type is illegal, but should never happen.
 /// This is designed to throw a compiler error.
+    
 template<>
 struct choose_policy<any>
 {
