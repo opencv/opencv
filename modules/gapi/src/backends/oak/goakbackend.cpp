@@ -47,6 +47,9 @@ class GOAKExecutable final: public GIslandExecutable {
     std::vector<std::shared_ptr<dai::DataOutputQueue>> m_out_queues;
     std::vector<std::string> m_out_queue_names;
 
+    // Backend inputs
+    std::vector<std::pair<std::string, dai::Buffer>> m_in_queues;
+
     // Note: dai::Pipeline should be the only one for the whole pipeline,
     // so there is no way to insert any non-OAK node in graph between other OAK nodes.
     // The only heterogeneous case possible is if we insert other backends after or before
@@ -77,8 +80,8 @@ public:
 struct GOAKKernel {
     using F = std::function<void(const std::unique_ptr<dai::Pipeline>&,
                                  const GArgs&,
-                                 const GCompileArgs&,
-                                 std::shared_ptr<dai::Node>&)>;
+                                 std::shared_ptr<dai::Node>&,
+                                 std::vector<std::pair<std::string, dai::Buffer>>&)>;
     explicit GOAKKernel(const F& f) : m_f(f) {}
     const F m_f;
 };
@@ -160,7 +163,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 // pass kernel input args and compile args to prepare OAK node and
                 // store it to link later
                 m_oak_nodes[nh] = nullptr;
-                u.k.m_f(m_pipeline, op.args, args, m_oak_nodes[nh]);
+                u.k.m_f(m_pipeline, op.args, m_oak_nodes[nh], m_in_queues);
                 GAPI_Assert(m_oak_nodes[nh] != nullptr);
             }
         }
@@ -248,6 +251,11 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         out.post(cv::gimpl::EndOfStream{});
     }
 
+    for (size_t i = 0; i < m_in_queues.size(); ++i) {
+        auto q = m_device->getInputQueue(m_in_queues[i].first);
+        q->send(m_in_queues[i].second);
+    }
+
     for (size_t i = 0; i < m_out_queues.size(); ++i) {
         auto q = m_out_queues[i];
         auto oak_frame = q->get<dai::ImgFrame>();
@@ -313,9 +321,9 @@ template<typename Impl>
 struct OAKCallHelper {
     static void construct(const std::unique_ptr<dai::Pipeline>& pipeline,
                           const GArgs& in_args,
-                          const GCompileArgs& comp_args,
-                          std::shared_ptr<dai::Node>& node) {
-        Impl::put(pipeline, in_args, comp_args, node);
+                          std::shared_ptr<dai::Node>& node,
+                          std::vector<std::pair<std::string, dai::Buffer>>& m_in_queues) {
+        Impl::put(pipeline, in_args, node, m_in_queues);
     }
 };
 
@@ -340,8 +348,8 @@ namespace {
 GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
     static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
                     const GArgs& in_args,
-                    const GCompileArgs&,
-                    std::shared_ptr<dai::Node>& node) {
+                    std::shared_ptr<dai::Node>& node,
+                    std::vector<std::pair<std::string, dai::Buffer>>&) {
         auto videoEnc = pipeline->create<dai::node::VideoEncoder>();
         // FIXME: encoder params is the 2nd arg - consider a better approach here
         auto m_enc_config = in_args[1].get<cv::gapi::oak::EncoderConfig>();
@@ -352,11 +360,37 @@ GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
         node = videoEnc;
     }
 };
+
+GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
+    static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const GArgs& in_args,
+                    std::shared_ptr<dai::Node>& node,
+                    std::vector<std::pair<std::string, dai::Buffer>>& m_in_queues) {
+        auto edgeDetector = pipeline->create<dai::node::EdgeDetector>();
+
+        auto xinEdgeCfg = pipeline->create<dai::node::XLinkIn>();
+        xinEdgeCfg->setStreamName("sobel_cfg");
+
+        dai::EdgeDetectorConfig cfg;
+        // FIXME: sobel params is the 2nd and 3rd args - consider a better approach here
+        auto shk = in_args[1].get<std::vector<std::vector<int>>>();
+        auto svk = in_args[2].get<std::vector<std::vector<int>>>();
+
+        cfg.setSobelFilterKernels(shk, svk);
+
+        xinEdgeCfg->out.link(edgeDetector->inputConfig);
+
+        node = edgeDetector;
+        m_in_queues.push_back({"sobel_cfg", cfg});
+    }
+};
 } // anonymous namespace
 
 cv::gapi::GKernelPackage kernels();
+
 cv::gapi::GKernelPackage kernels() {
     return cv::gapi::kernels< GOAKEncFrame
+                            , GOAKSobelXY
                             >();
 }
 

@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
     // Heterogeneous pipeline:
     // OAK camera -> streaming accessor -> CPU
     cv::GFrame in;
-    cv::GMat acc = cv::gapi::streaming::BGR(in);
+    cv::GFrame sobel = cv::gapi::oak::sobelXY(in);
+    cv::GMat acc = cv::gapi::streaming::BGR(sobel);
     cv::GMat out = cv::gapi::add(acc, acc);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
