@@ -598,7 +598,7 @@ private:
     void parseLeakyRelu          (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseActivation         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
-
+    void parseSquare             (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
 
@@ -676,6 +676,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["Abs"] = dispatch["Tanh"] = dispatch["Sigmoid"] = dispatch["Relu"] =
             dispatch["Elu"] = dispatch["Exp"] = dispatch["Identity"] = dispatch["Relu6"] = &TFImporter::parseActivation;
     dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
+    dispatch["Square"] = &TFImporter::parseSquare;
 
     return dispatch;
 }
@@ -1250,6 +1251,25 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     {
         data_layouts[name] = inpLayout;
     }
+}
+
+// "Square"
+void TFImporter::parseSquare(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+    const int num_inputs = layer.input_size();
+
+    CV_CheckEQ(num_inputs, 1, "");
+
+    int id;
+    layerParams.set("operation", "prod");
+    id = dstNet.addLayer(name, "Eltwise", layerParams);
+
+    layer_id[name] = id;
+
+    Pin inp = parsePin(layer.input(0));
+    connect(layer_id, dstNet, inp, id, 0);
+    connect(layer_id, dstNet, inp, id, 1);
 }
 
 // "Flatten" "Squeeze"
