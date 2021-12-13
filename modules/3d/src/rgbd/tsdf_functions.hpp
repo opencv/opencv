@@ -151,22 +151,24 @@ inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
     }
 }
 
-void integrateVolumeUnit(
+void _integrateVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& intrinsics, InputArray _pixNorms, InputArray _volume);
 
-void integrateRGBVolumeUnit(
+void _integrateRGBVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume);
 
-void raycastVolumeUnit(const VolumeSettings& settings,
-    const Matx44f& cameraPose,
-    InputArray _volume,
-    OutputArray _points, OutputArray _normals);
+
+void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                         InputArray _depth, InputArray _pixNorms, InputArray _volume);
+
+void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+                       InputArray _volume, OutputArray _points, OutputArray _normals);
 
 
 class CustomHashSet

@@ -23,7 +23,7 @@ public:
 
     virtual void integrate(OdometryFrame frame, InputArray pose) = 0;
     virtual void integrate(InputArray frame, InputArray pose) = 0;
-    virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
 
     virtual void fetchNormals() const = 0;
     virtual void fetchPointsNormals() const = 0;
@@ -50,7 +50,7 @@ public:
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
-    virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
     virtual void fetchPointsNormals() const override;
@@ -90,7 +90,7 @@ public:
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
-    virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
     virtual void fetchPointsNormals() const override;
@@ -110,7 +110,7 @@ public:
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
-    virtual void raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
     virtual void fetchPointsNormals() const override;
@@ -154,7 +154,7 @@ Volume::~Volume() {}
 
 void Volume::integrate(OdometryFrame frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray frame, InputArray pose) { this->impl->integrate(frame, pose); }
-void Volume::raycast(const Matx44f& cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
+void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
 void Volume::fetchNormals() const { this->impl->fetchNormals(); }
 void Volume::fetchPointsNormals() const { this->impl->fetchPointsNormals(); }
 void Volume::reset() { this->impl->reset(); }

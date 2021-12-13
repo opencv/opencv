@@ -47,7 +47,7 @@ cv::UMat preCalculationPixNormGPU(Size size, const Intr& intrinsics)
 #endif
 
 
-void integrateVolumeUnit(
+void _integrateVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, float depthFactor, const cv::Matx44f& cameraPose,
@@ -68,7 +68,7 @@ void integrateVolumeUnit(
     const cv::Affine3f vol2cam(Affine3f(cameraPose.inv()) * vpose);
     const float truncDistInv(1.f / truncDist);
     const float dfac(1.f / depthFactor);
-    TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();;
+    TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
 
 #if USE_INTRINSICS
     auto IntegrateInvoker = [&](const Range& range)
@@ -313,7 +313,7 @@ void integrateVolumeUnit(
 }
 
 
-void integrateRGBVolumeUnit(
+void _integrateRGBVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
@@ -616,6 +616,140 @@ void integrateRGBVolumeUnit(
 }
 
 
+// Integrate
+
+void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+               InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
+    std::cout << "integrateVolumeUnit(...)" << std::endl;
+
+    Depth depth = _depth.getMat();
+    Mat volume = _volume.getMat();
+    Mat pixNorms = _pixNorms.getMat();
+
+    TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
+
+    Vec4i volStrides;
+    settings.getVolumeDimentions(volStrides);
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    float voxelSize = settings.getVoxelSize();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    const Intr::Projector proj = Intr(intr).makeProjector();
+    const float dfac(1.f / settings.getDepthFactor());
+    const float truncDist = settings.getTruncatedDistance();
+    const float truncDistInv = 1.f / truncDist;
+    const int maxWeight = settings.getMaxWeight();
+
+    Range integrateRange(0, volResolution.x);
+    auto IntegrateInvoker = [&](const Range& range)
+    {
+        for (int x = range.start; x < range.end; x++)
+        {
+            TsdfVoxel* volDataX = volDataStart + x * volStrides[0];
+            for (int y = 0; y < volResolution.y; y++)
+            {
+                TsdfVoxel* volDataY = volDataX + y * volStrides[1];
+                // optimization of camSpace transformation (vector addition instead of matmul at each z)
+                Point3f basePt = vol2cam * (Point3f(float(x), float(y), 0.0f) * voxelSize);
+                Point3f camSpacePt = basePt;
+                // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
+                // zStep == vol2cam*[Point3f(x, y, 1) - Point3f(x, y, 0)]*voxelSize
+                Point3f zStep = Point3f(vol2cam.matrix(0, 2),
+                    vol2cam.matrix(1, 2),
+                    vol2cam.matrix(2, 2)) * voxelSize;
+                int startZ, endZ;
+                if (abs(zStep.z) > 1e-5)
+                {
+                    int baseZ = int(-basePt.z / zStep.z);
+                    if (zStep.z > 0)
+                    {
+                        startZ = baseZ;
+                        endZ = volResolution.z;
+                    }
+                    else
+                    {
+                        startZ = 0;
+                        endZ = baseZ;
+                    }
+                }
+                else
+                {
+                    if (basePt.z > 0)
+                    {
+                        startZ = 0;
+                        endZ = volResolution.z;
+                    }
+                    else
+                    {
+                        // z loop shouldn't be performed
+                        startZ = endZ = 0;
+                    }
+                }
+                startZ = max(0, startZ);
+                endZ = min(int(volResolution.z), endZ);
+
+                for (int z = startZ; z < endZ; z++)
+                {
+                    // optimization of the following:
+                    //Point3f volPt = Point3f(x, y, z)*volume.voxelSize;
+                    //Point3f camSpacePt = vol2cam * volPt;
+
+                    camSpacePt += zStep;
+                    if (camSpacePt.z <= 0)
+                        continue;
+
+                    Point3f camPixVec;
+                    Point2f projected = proj(camSpacePt, camPixVec);
+
+                    depthType v = bilinearDepth(depth, projected);
+                    if (v == 0) {
+                        continue;
+                    }
+
+                    int _u = projected.x;
+                    int _v = projected.y;
+                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
+                        continue;
+                    float pixNorm = pixNorms.at<float>(_v, _u);
+
+                    // difference between distances of point and of surface to camera
+                    float sdf = pixNorm * (v * dfac - camSpacePt.z);
+                    // possible alternative is:
+                    // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
+                    if (sdf >= -truncDist)
+                    {
+                        //std::cout << sdf << " " << -truncDist  << " " << truncDistInv << std::endl;
+
+                        TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
+
+                        TsdfVoxel& voxel = volDataY[z * volStrides[2]];
+                        WeightType& weight = voxel.weight;
+                        TsdfType& value = voxel.tsdf;
+
+                        // update TSDF
+                        value = floatToTsdf((tsdfToFloat(value) * weight + tsdfToFloat(tsdf)) / (weight + 1));
+                        weight = min(int(weight + 1), int(maxWeight));
+                    }
+                }
+            }
+        }
+    };
+
+    parallel_for_(integrateRange, IntegrateInvoker);
+
+}
+
+
 // Raycast
 
 inline float interpolateVoxel(
@@ -704,20 +838,16 @@ inline Point3f getNormalVoxel(
 }
 
 
-void raycastVolumeUnit(const VolumeSettings& settings,
-                   const Matx44f& cameraPose,
-                   InputArray _volume,
-                   OutputArray _points, OutputArray _normals)
+void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+                       InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    const Size frameSize(settings.getWidth(), settings.getHeight());
-    CV_Assert(frameSize.area() > 0);
-
+    const Size frameSize(width, height);
+    //CV_Assert(frameSize.area() > 0);
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
 
     Points points = _points.getMat();
     Normals normals = _normals.getMat();
-
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);

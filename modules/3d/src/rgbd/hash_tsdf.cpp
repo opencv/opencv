@@ -303,7 +303,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
             if (volumeUnit.isActive)
             {
                 //! The volume unit should already be added into the Volume from the allocator
-                integrateVolumeUnit(truncDist, voxelSize, maxWeight, volumeUnit.pose,
+                _integrateVolumeUnit(truncDist, voxelSize, maxWeight, volumeUnit.pose,
                                     Point3i(volumeUnitResolution, volumeUnitResolution, volumeUnitResolution), volStrides, depth,
                                     depthFactor, cameraPose, intrinsics, pixNorms, volUnitsData.row(volumeUnit.index));
 
