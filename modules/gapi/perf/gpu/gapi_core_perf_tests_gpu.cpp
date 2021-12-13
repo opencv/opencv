@@ -85,10 +85,10 @@ INSTANTIATE_TEST_CASE_P(DivCPerfTestGPU, DivCPerfTest,
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(cv::compile_args(CORE_GPU))));
 //TODO: DivRC test doesn't work with (CV_16SC1, -1)
-INSTANTIATE_TEST_CASE_P(DISABLED_DivRCPerfTestGPU, DivRCPerfTest,
+INSTANTIATE_TEST_CASE_P(DivRCPerfTestGPU, DivRCPerfTest,
                         Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
                                 Values( szSmall128, szVGA, sz720p, sz1080p ),
-                                Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values( CV_8UC1, CV_8UC3, CV_16UC1, /*CV_16SC1,*/ CV_32FC1 ),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(cv::compile_args(CORE_GPU))));
 //TODO: mask test doesn't work
