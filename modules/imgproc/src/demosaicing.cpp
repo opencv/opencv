@@ -603,7 +603,7 @@ public:
     virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
-        const int G2Y = 9617;
+        const unsigned G2Y = 9617;
         const int SHIFT = 14;
 
         const T* bayer0 = srcmat.ptr<T>();
