@@ -37,7 +37,9 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE INTERNAL "Link to mirror hosted by gitcode")
+set(OPENCV_MIRROR_FOR_GITHUB "" CACHE STRING "Mirror for https://github.com")
+set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE STRING "Mirror for https://raw.githubusercontent.com")
+set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
 
 function(ocv_init_download_for_gitcode new_dl_link)
   string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
@@ -66,6 +68,13 @@ function(ocv_init_download_for_gitcode new_dl_link)
 endfunction()
 
 function(ocv_init_download)
+  if(OPENCV_MIRROR_FOR_GITHUB)
+    string(REPLACE "https://github.com" "${OPENCV_MIRROR_FOR_GITHUB}" DL_URL "${DL_URL}")
+    return()
+  if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
+    string(REPLACE "https://raw.githubusercontent.com" "{OPENCV_MIRROR_FOR_GITHUBUSERCONTENT}" DL_URL "${DL_URL}")
+    return()
+
   execute_process(
     COMMAND
       git remote get-url origin
@@ -75,6 +84,8 @@ function(ocv_init_download)
       OCV_GIT_ORIGIN_URL_OUT
     ERROR_QUIET
   ) # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
+  if(NOT OCV_GIT_ORIGIN_URL_OUT)
+    message(STATUS "ocv_init_download: This is not a git repo. Download 3rd party resources from github. Or you can change to mirror using option -DOPENCV_MIRROR_FOR_GITHUB and -DOPENCV_MIRROR_FOR_GITHUBUSERCONTENT")
 
   string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
   if(NOT (${_found_gitcode} EQUAL -1))
