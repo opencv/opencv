@@ -39,8 +39,11 @@ public:
     void getVolumePose(OutputArray val) const;
     void setVolumeResolution(InputArray val);
     void getVolumeResolution(OutputArray val) const;
+    void setVolumeDimentions(InputArray val);
+    void getVolumeDimentions(OutputArray val) const;
     void setCameraIntrinsics(InputArray val);
     void getCameraIntrinsics(OutputArray val) const;
+
 
     class Impl;
 private:

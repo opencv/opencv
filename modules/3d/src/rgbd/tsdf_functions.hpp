@@ -163,6 +163,11 @@ void integrateRGBVolumeUnit(
     InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume);
 
+void raycastVolumeUnit(const VolumeSettings& settings,
+    const Matx44f& cameraPose,
+    InputArray _volume,
+    OutputArray _points, OutputArray _normals);
+
 
 class CustomHashSet
 {

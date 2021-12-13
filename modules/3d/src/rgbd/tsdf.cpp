@@ -372,9 +372,9 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(const Point3f& p) const
 }
 #endif
 
-struct _RaycastInvoker : ParallelLoopBody
+struct RaycastInvoker : ParallelLoopBody
 {
-    _RaycastInvoker(Points& _points, Normals& _normals, const Matx44f& cameraPose,
+    RaycastInvoker(Points& _points, Normals& _normals, const Matx44f& cameraPose,
                   const Intr& intrinsics, const TSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
@@ -671,7 +671,7 @@ void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& intrinsics
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
 
-    _RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
+    RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);

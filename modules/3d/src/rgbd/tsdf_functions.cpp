@@ -615,4 +615,304 @@ void integrateRGBVolumeUnit(
     parallel_for_(integrateRange, IntegrateInvoker);
 }
 
+
+// Raycast
+
+inline float interpolateVoxel(
+    const VolumeSettings& settings, const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords,
+    const Point3f& p)
+{
+    int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+
+    int ix = cvFloor(p.x);
+    int iy = cvFloor(p.y);
+    int iz = cvFloor(p.z);
+
+    float tx = p.x - ix;
+    float ty = p.y - iy;
+    float tz = p.z - iz;
+
+    int coordBase = ix * xdim + iy * ydim + iz * zdim;
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
+
+    float vx[8];
+    for (int i = 0; i < 8; i++)
+        vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase].tsdf);
+
+    float v00 = vx[0] + tz * (vx[1] - vx[0]);
+    float v01 = vx[2] + tz * (vx[3] - vx[2]);
+    float v10 = vx[4] + tz * (vx[5] - vx[4]);
+    float v11 = vx[6] + tz * (vx[7] - vx[6]);
+
+    float v0 = v00 + ty * (v01 - v00);
+    float v1 = v10 + ty * (v11 - v10);
+
+    return v0 + tx * (v1 - v0);
+
+}
+
+inline Point3f getNormalVoxel(
+    const VolumeSettings& settings, const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const Point3f& p)
+{
+    int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
+
+    if (p.x < 1 || p.x >= volResolution.x - 2 ||
+        p.y < 1 || p.y >= volResolution.y - 2 ||
+        p.z < 1 || p.z >= volResolution.z - 2)
+        return nan3;
+
+    int ix = cvFloor(p.x);
+    int iy = cvFloor(p.y);
+    int iz = cvFloor(p.z);
+
+    float tx = p.x - ix;
+    float ty = p.y - iy;
+    float tz = p.z - iz;
+
+    int coordBase = ix * xdim + iy * ydim + iz * zdim;
+
+    Vec3f an;
+    for (int c = 0; c < 3; c++)
+    {
+        const int dim = volDims[c];
+        float& nv = an[c];
+
+        float vx[8];
+        for (int i = 0; i < 8; i++)
+            vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase + 1 * dim].tsdf) -
+            tsdfToFloat(volData[neighbourCoords[i] + coordBase - 1 * dim].tsdf);
+
+        float v00 = vx[0] + tz * (vx[1] - vx[0]);
+        float v01 = vx[2] + tz * (vx[3] - vx[2]);
+        float v10 = vx[4] + tz * (vx[5] - vx[4]);
+        float v11 = vx[6] + tz * (vx[7] - vx[6]);
+
+        float v0 = v00 + ty * (v01 - v00);
+        float v1 = v10 + ty * (v11 - v10);
+
+        nv = v0 + tx * (v1 - v0);
+    }
+
+    float nv = sqrt(an[0] * an[0] +
+        an[1] * an[1] +
+        an[2] * an[2]);
+    return nv < 0.0001f ? nan3 : an / nv;
+}
+
+struct NewRaycastInvoker : ParallelLoopBody
+{
+    NewRaycastInvoker(
+        const VolumeSettings& _settings,
+        const Matx44f& cameraPose,
+        InputArray _volume,
+        Points& _points, Normals& _normals,
+        const Intr& intrinsics,
+        const Point3f& _boxMax, const Point3f& _boxMin,
+        const Affine3f& _cam2vol, const Affine3f& _vol2cam,
+        const Vec4i& _volDims, const Vec8i& _neighbourCoords, const Point3i& _volResolution) :
+
+        ParallelLoopBody(),
+        settings(_settings),
+        points(_points),
+        normals(_normals),
+        volume(_volume.getMat()),
+        boxMax(_boxMax),
+        boxMin(_boxMin),
+        cam2vol(_cam2vol),
+        vol2cam(_vol2cam),
+        volDims(_volDims),
+        neighbourCoords(_neighbourCoords),
+        volResolution(_volResolution),
+        voxelSize(settings.getVoxelSize()),
+        voxelSizeInv(1.0f / voxelSize),
+        raycastStepFactor(settings.getRaycastStepFactor()),
+        reproj(intrinsics.makeReprojector()),
+        tstep(settings.getTruncatedDistance() * settings.getRaycastStepFactor())
+    {
+    }
+
+    virtual void operator() (const Range& range) const override
+    {
+        const Point3f camTrans = cam2vol.translation();
+        const Matx33f  camRot = cam2vol.rotation();
+        const Matx33f  volRot = vol2cam.rotation();
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            ptype* ptsRow = points[y];
+            ptype* nrmRow = normals[y];
+
+            for (int x = 0; x < points.cols; x++)
+            {
+                Point3f point = nan3, normal = nan3;
+
+                Point3f orig = camTrans;
+                // direction through pixel in volume space
+                Point3f dir = normalize(Vec3f(camRot * reproj(Point3f(float(x), float(y), 1.f))));
+
+                // compute intersection of ray with all six bbox planes
+                Vec3f rayinv(1.f / dir.x, 1.f / dir.y, 1.f / dir.z);
+                Point3f tbottom = rayinv.mul(boxMin - orig);
+                Point3f ttop = rayinv.mul(boxMax - orig);
+
+                // re-order intersections to find smallest and largest on each axis
+                Point3f minAx(min(ttop.x, tbottom.x), min(ttop.y, tbottom.y), min(ttop.z, tbottom.z));
+                Point3f maxAx(max(ttop.x, tbottom.x), max(ttop.y, tbottom.y), max(ttop.z, tbottom.z));
+
+                // near clipping plane
+                const float clip = 0.f;
+                //float tmin = max(max(max(minAx.x, minAx.y), max(minAx.x, minAx.z)), clip);
+                //float tmax =     min(min(maxAx.x, maxAx.y), min(maxAx.x, maxAx.z));
+                float tmin = max({ minAx.x, minAx.y, minAx.z, clip });
+                float tmax = min({ maxAx.x, maxAx.y, maxAx.z });
+
+                // precautions against getting coordinates out of bounds
+                tmin = tmin + tstep;
+                tmax = tmax - tstep;
+
+                if (tmin < tmax)
+                {
+                    // interpolation optimized a little
+                    orig = orig * voxelSizeInv;
+                    dir = dir * voxelSizeInv;
+
+                    Point3f rayStep = dir * tstep;
+                    Point3f next = (orig + dir * tmin);
+                    float f = interpolateVoxel(settings, volume, volDims, neighbourCoords, next);
+                    float fnext = f;
+
+                    //raymarch
+                    int steps = 0;
+                    int nSteps = int(floor((tmax - tmin) / tstep));
+                    for (; steps < nSteps; steps++)
+                    {
+                        next += rayStep;
+                        int xdim = volDims[0];
+                        int ydim = volDims[1];
+                        int zdim = volDims[2];
+                        int ix = cvRound(next.x);
+                        int iy = cvRound(next.y);
+                        int iz = cvRound(next.z);
+                        fnext = tsdfToFloat(volume.at<TsdfVoxel>(ix * xdim + iy * ydim + iz * zdim).tsdf);
+                        if (fnext != f)
+                        {
+                            fnext = interpolateVoxel(settings, volume, volDims, neighbourCoords, next);
+                            // when ray crosses a surface
+                            if (std::signbit(f) != std::signbit(fnext))
+                                break;
+
+                            f = fnext;
+                        }
+                    }
+                    // if ray penetrates a surface from outside
+                    // linearly interpolate t between two f values
+                    if (f > 0.f && fnext < 0.f)
+                    {
+                        Point3f tp = next - rayStep;
+                        float ft = interpolateVoxel(settings, volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateVoxel(settings, volume, volDims, neighbourCoords, next);
+                        // float t = tmin + steps*tstep;
+                        // float ts = t - tstep*ft/(ftdt - ft);
+                        float ts = tmin + tstep * (steps - ft / (ftdt - ft));
+
+                        // avoid division by zero
+                        if (!cvIsNaN(ts) && !cvIsInf(ts))
+                        {
+                            Point3f pv = (orig + dir * ts);
+                            Point3f nv = getNormalVoxel(settings, volume, volDims, neighbourCoords, volResolution, pv);
+
+                            if (!isNaN(nv))
+                            {
+                                //convert pv and nv to camera space
+                                normal = volRot * nv;
+                                // interpolation optimized a little
+                                point = vol2cam * (pv * voxelSize);
+                            }
+                        }
+                    }
+                }
+                ptsRow[x] = toPtype(point);
+                nrmRow[x] = toPtype(normal);
+            }
+        }
+    }
+
+    const VolumeSettings& settings;
+    Points& points;
+    Normals& normals;
+    const Mat volume;
+    const Point3f boxMax;
+    const Point3f boxMin;
+    const Affine3f cam2vol;
+    const Affine3f vol2cam;
+    const Vec4i volDims;
+    const Vec8i neighbourCoords;
+    const Point3i volResolution;
+    const float voxelSize;
+    const float voxelSizeInv;
+    const float raycastStepFactor;
+    const Intr::Reprojector reproj;
+    const float tstep;
+};
+
+
+void raycastVolumeUnit(const VolumeSettings& settings,
+                   const Matx44f& cameraPose,
+                   InputArray _volume,
+                   OutputArray _points, OutputArray _normals)
+{
+    Size frameSize(settings.getWidth(), settings.getHeight());
+    CV_Assert(frameSize.area() > 0);
+
+    Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+
+    _points.create(frameSize, POINT_TYPE);
+    _normals.create(frameSize, POINT_TYPE);
+
+    Points points = _points.getMat();
+    Normals normals = _normals.getMat();
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    Point3i volResolution = Point3i(resolution);
+    Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    Affine3f pose = Affine3f(_pose);
+
+    Point3f boxMax(volSize - Point3f(settings.getVoxelSize(), settings.getVoxelSize(), settings.getVoxelSize()));
+    Point3f boxMin = Point3f(0, 0, 0);
+    Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+    Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+
+    NewRaycastInvoker ri(settings, cameraPose, _volume, points, normals,
+                      Intr(intr), boxMax, boxMin, cam2vol, vol2cam,
+                      volDims, neighbourCoords, volResolution);
+
+    //const int nstripes = -1;
+    //parallel_for_(Range(0, points.rows), ri, nstripes);
+    ri(Range(0, points.rows));
+}
+
+
 } // namespace cv

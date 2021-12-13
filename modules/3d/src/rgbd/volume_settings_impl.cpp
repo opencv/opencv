@@ -7,6 +7,9 @@
 
 namespace cv
 {
+
+Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder);
+
 class VolumeSettings::Impl
 {
 public:
@@ -34,6 +37,8 @@ public:
     virtual void getVolumePose(OutputArray val) const = 0;
     virtual void setVolumeResolution(InputArray val) = 0;
     virtual void getVolumeResolution(OutputArray val) const = 0;
+    virtual void setVolumeDimentions(InputArray val) = 0;
+    virtual void getVolumeDimentions(OutputArray val) const = 0;
     virtual void setCameraIntrinsics(InputArray val) = 0;
     virtual void getCameraIntrinsics(OutputArray val) const = 0;
 };
@@ -65,6 +70,8 @@ public:
     virtual void getVolumePose(OutputArray val) const override;
     virtual void setVolumeResolution(InputArray val) override;
     virtual void getVolumeResolution(OutputArray val) const override;
+    virtual void setVolumeDimentions(InputArray val) override;
+    virtual void getVolumeDimentions(OutputArray val) const override;
     virtual void setCameraIntrinsics(InputArray val) override;
     virtual void getCameraIntrinsics(OutputArray val) const override;
 
@@ -80,6 +87,7 @@ private:
 
     Matx44f volumePose;
     Point3i volumeResolution;
+    Vec4i volumeDimentions;
     Matx33f cameraIntrinsics;
 
 public:
@@ -136,6 +144,8 @@ void VolumeSettings::setVolumePose(InputArray val) { this->impl->setVolumePose(v
 void VolumeSettings::getVolumePose(OutputArray val) const { this->impl->getVolumePose(val); };
 void VolumeSettings::setVolumeResolution(InputArray val) { this->impl->setVolumeResolution(val); };
 void VolumeSettings::getVolumeResolution(OutputArray val) const { this->impl->getVolumeResolution(val); };
+void VolumeSettings::setVolumeDimentions(InputArray val) { this->impl->setVolumeDimentions(val); };
+void VolumeSettings::getVolumeDimentions(OutputArray val) const { this->impl->getVolumeDimentions(val); };
 void VolumeSettings::setCameraIntrinsics(InputArray val) { this->impl->setCameraIntrinsics(val); };
 void VolumeSettings::getCameraIntrinsics(OutputArray val) const { this->impl->getCameraIntrinsics(val); };
 
@@ -154,8 +164,8 @@ VolumeSettingsImpl::VolumeSettingsImpl()
 
     this->volumePose = ds.volumePoseMatrix;
     this->volumeResolution = ds.volumeResolution;
+    this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
     this->cameraIntrinsics = ds.cameraIntrinsics;
-
 }
 VolumeSettingsImpl::~VolumeSettingsImpl() {}
 
@@ -267,6 +277,19 @@ void VolumeSettingsImpl::getVolumeResolution(OutputArray val) const
     Mat(this->volumeResolution).copyTo(val);
 }
 
+void VolumeSettingsImpl::setVolumeDimentions(InputArray val)
+{
+    if (!val.empty())
+    {
+        this->volumeDimentions = Vec4i(val.getMat());
+    }
+}
+
+void VolumeSettingsImpl::getVolumeDimentions(OutputArray val) const
+{
+    Mat(this->volumeDimentions).copyTo(val);
+}
+
 void VolumeSettingsImpl::setCameraIntrinsics(InputArray val)
 {
     if (!val.empty())
@@ -280,5 +303,23 @@ void VolumeSettingsImpl::getCameraIntrinsics(OutputArray val) const
     Mat(this->cameraIntrinsics).copyTo(val);
 }
 
+
+Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder)
+{
+    int xdim, ydim, zdim;
+    if (ZFirstMemOrder)
+    {
+        xdim = volumeResolution.z * volumeResolution.y;
+        ydim = volumeResolution.z;
+        zdim = 1;
+    }
+    else
+    {
+        xdim = 1;
+        ydim = volumeResolution.x;
+        zdim = volumeResolution.x * volumeResolution.y;
+    }
+    return Vec4i(xdim, ydim, zdim);
+}
 
 }
