@@ -703,39 +703,61 @@ inline Point3f getNormalVoxel(
     return nv < 0.0001f ? nan3 : an / nv;
 }
 
-struct NewRaycastInvoker : ParallelLoopBody
+
+void raycastVolumeUnit(const VolumeSettings& settings,
+                   const Matx44f& cameraPose,
+                   InputArray _volume,
+                   OutputArray _points, OutputArray _normals)
 {
-    NewRaycastInvoker(
-        const VolumeSettings& _settings,
-        const Matx44f& cameraPose,
-        InputArray _volume,
-        Points& _points, Normals& _normals,
-        const Intr& intrinsics,
-        const Point3f& _boxMax, const Point3f& _boxMin,
-        const Affine3f& _cam2vol, const Affine3f& _vol2cam,
-        const Vec4i& _volDims, const Vec8i& _neighbourCoords, const Point3i& _volResolution) :
+    const Size frameSize(settings.getWidth(), settings.getHeight());
+    CV_Assert(frameSize.area() > 0);
 
-        ParallelLoopBody(),
-        settings(_settings),
-        points(_points),
-        normals(_normals),
-        volume(_volume.getMat()),
-        boxMax(_boxMax),
-        boxMin(_boxMin),
-        cam2vol(_cam2vol),
-        vol2cam(_vol2cam),
-        volDims(_volDims),
-        neighbourCoords(_neighbourCoords),
-        volResolution(_volResolution),
-        voxelSize(settings.getVoxelSize()),
-        voxelSizeInv(1.0f / voxelSize),
-        raycastStepFactor(settings.getRaycastStepFactor()),
-        reproj(intrinsics.makeReprojector()),
-        tstep(settings.getTruncatedDistance() * settings.getRaycastStepFactor())
-    {
-    }
+    _points.create(frameSize, POINT_TYPE);
+    _normals.create(frameSize, POINT_TYPE);
 
-    virtual void operator() (const Range& range) const override
+    Points points = _points.getMat();
+    Normals normals = _normals.getMat();
+
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    const Point3f boxMax(volSize - Point3f(settings.getVoxelSize(), settings.getVoxelSize(), settings.getVoxelSize()));
+    const Point3f boxMin = Point3f(0, 0, 0);
+    const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+    const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+
+    const Mat volume = _volume.getMat();
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.0f / voxelSize;
+    float raycastStepFactor = settings.getRaycastStepFactor();
+    const Intr::Reprojector reproj = Intr(intr).makeReprojector();
+    float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
+
+    Range raycastRange = Range(0, points.rows);
+    auto RaycastInvoker = [&](const Range& range)
     {
         const Point3f camTrans = cam2vol.translation();
         const Matx33f  camRot = cam2vol.rotation();
@@ -839,79 +861,9 @@ struct NewRaycastInvoker : ParallelLoopBody
                 nrmRow[x] = toPtype(normal);
             }
         }
-    }
+    };
 
-    const VolumeSettings& settings;
-    Points& points;
-    Normals& normals;
-    const Mat volume;
-    const Point3f boxMax;
-    const Point3f boxMin;
-    const Affine3f cam2vol;
-    const Affine3f vol2cam;
-    const Vec4i volDims;
-    const Vec8i neighbourCoords;
-    const Point3i volResolution;
-    const float voxelSize;
-    const float voxelSizeInv;
-    const float raycastStepFactor;
-    const Intr::Reprojector reproj;
-    const float tstep;
-};
-
-
-void raycastVolumeUnit(const VolumeSettings& settings,
-                   const Matx44f& cameraPose,
-                   InputArray _volume,
-                   OutputArray _points, OutputArray _normals)
-{
-    Size frameSize(settings.getWidth(), settings.getHeight());
-    CV_Assert(frameSize.area() > 0);
-
-    Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
-    Vec8i neighbourCoords = Vec8i(
-        volDims.dot(Vec4i(0, 0, 0)),
-        volDims.dot(Vec4i(0, 0, 1)),
-        volDims.dot(Vec4i(0, 1, 0)),
-        volDims.dot(Vec4i(0, 1, 1)),
-        volDims.dot(Vec4i(1, 0, 0)),
-        volDims.dot(Vec4i(1, 0, 1)),
-        volDims.dot(Vec4i(1, 1, 0)),
-        volDims.dot(Vec4i(1, 1, 1))
-    );
-
-
-    _points.create(frameSize, POINT_TYPE);
-    _normals.create(frameSize, POINT_TYPE);
-
-    Points points = _points.getMat();
-    Normals normals = _normals.getMat();
-
-    Vec3i resolution;
-    settings.getVolumeResolution(resolution);
-    Point3i volResolution = Point3i(resolution);
-    Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
-
-    Matx33f intr;
-    settings.getCameraIntrinsics(intr);
-
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    Affine3f pose = Affine3f(_pose);
-
-    Point3f boxMax(volSize - Point3f(settings.getVoxelSize(), settings.getVoxelSize(), settings.getVoxelSize()));
-    Point3f boxMin = Point3f(0, 0, 0);
-    Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
-    Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
-
-    NewRaycastInvoker ri(settings, cameraPose, _volume, points, normals,
-                      Intr(intr), boxMax, boxMin, cam2vol, vol2cam,
-                      volDims, neighbourCoords, volResolution);
-
-    //const int nstripes = -1;
-    //parallel_for_(Range(0, points.rows), ri, nstripes);
-    ri(Range(0, points.rows));
+    parallel_for_(raycastRange, RaycastInvoker);
 }
 
 
