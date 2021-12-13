@@ -13,7 +13,6 @@
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 
@@ -25,14 +24,15 @@ namespace onevpl {
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolicy
 {
-    VPLCPUAccelerationPolicy();
+    VPLCPUAccelerationPolicy(device_selector_ptr_t selector);
     ~VPLCPUAccelerationPolicy();
 
     using pool_t = CachedPool;
 
     void init(session_t session) override;
     void deinit(session_t session) override;
-    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
+    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator);
+    pool_key_t create_surface_pool(const mfxFrameAllocRequest& alloc_request, mfxVideoParam& param) override;
     surface_weak_ptr_t get_free_surface(pool_key_t key) override;
     size_t get_free_surface_count(pool_key_t key) const override;
     size_t get_surface_count(pool_key_t key) const override;

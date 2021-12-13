@@ -28,13 +28,13 @@ namespace opencv_test
 //------------------------------------------------------------------------------
 
     class AddPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class AddCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class AddCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class SubPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class SubCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class SubCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class SubRCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MulPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
-    class MulDoublePerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class MulCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class MulDoublePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class MulCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class DivPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
     class DivCPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class DivRCPerfTest : public TestPerfParams<tuple<compare_f,cv::Size, MatType, int, cv::GCompileArgs>> {};

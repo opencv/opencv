@@ -122,7 +122,7 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
 {
     matJ = _err = 0;
 
-    assert( !err.empty() );
+    CV_Assert( !err.empty() );
     if( state == DONE )
     {
         _param = param;
@@ -155,7 +155,7 @@ bool CvLevMarq::update( const CvMat*& _param, CvMat*& matJ, CvMat*& _err )
         return true;
     }
 
-    assert( state == CHECK_ERR );
+    CV_Assert( state == CHECK_ERR );
     errNorm = cvNorm( err, 0, CV_L2 );
     if( errNorm > prevErrNorm )
     {
@@ -223,7 +223,7 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
         return true;
     }
 
-    assert( state == CHECK_ERR );
+    CV_Assert( state == CHECK_ERR );
     if( errNorm > prevErrNorm )
     {
         if( ++lambdaLg10 <= 16 )

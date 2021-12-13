@@ -2865,11 +2865,11 @@ TEST(Infer, ModelWith2DInputs)
     // NB: Define model with 2D inputs.
     auto in1 = std::make_shared<ngraph::op::Parameter>(
         ngraph::element::Type_t::u8,
-        ngraph::Shape(std::vector<size_t>{{H, W}})
+        ngraph::Shape(std::vector<size_t>{(size_t)H, (size_t)W})
     );
     auto in2 = std::make_shared<ngraph::op::Parameter>(
         ngraph::element::Type_t::u8,
-        ngraph::Shape(std::vector<size_t>{{H, W}})
+        ngraph::Shape(std::vector<size_t>{(size_t)H, (size_t)W})
     );
     auto result = std::make_shared<ngraph::op::v1::Add>(in1, in2);
     auto func   = std::make_shared<ngraph::Function>(

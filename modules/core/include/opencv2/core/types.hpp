@@ -1895,13 +1895,33 @@ Rect_<_Tp>& operator -= ( Rect_<_Tp>& a, const Size_<_Tp>& b )
 template<typename _Tp> static inline
 Rect_<_Tp>& operator &= ( Rect_<_Tp>& a, const Rect_<_Tp>& b )
 {
-    _Tp x1 = std::max(a.x, b.x);
-    _Tp y1 = std::max(a.y, b.y);
-    a.width = std::min(a.x + a.width, b.x + b.width) - x1;
-    a.height = std::min(a.y + a.height, b.y + b.height) - y1;
-    a.x = x1;
-    a.y = y1;
-    if( a.width <= 0 || a.height <= 0 )
+    if (a.empty() || b.empty()) {
+        a = Rect();
+        return a;
+    }
+    const Rect_<_Tp>& Rx_min = (a.x < b.x) ? a : b;
+    const Rect_<_Tp>& Rx_max = (a.x < b.x) ? b : a;
+    const Rect_<_Tp>& Ry_min = (a.y < b.y) ? a : b;
+    const Rect_<_Tp>& Ry_max = (a.y < b.y) ? b : a;
+    // Looking at the formula below, we will compute Rx_min.width - (Rx_max.x - Rx_min.x)
+    // but we want to avoid overflows. Rx_min.width >= 0 and (Rx_max.x - Rx_min.x) >= 0
+    // by definition so the difference does not overflow. The only thing that can overflow
+    // is (Rx_max.x - Rx_min.x). And it can only overflow if Rx_min.x < 0.
+    // Let us first deal with the following case.
+    if ((Rx_min.x < 0 && Rx_min.x + Rx_min.width < Rx_max.x) ||
+        (Ry_min.y < 0 && Ry_min.y + Ry_min.height < Ry_max.y)) {
+        a = Rect();
+        return a;
+    }
+    // We now know that either Rx_min.x >= 0, or
+    // Rx_min.x < 0 && Rx_min.x + Rx_min.width >= Rx_max.x and therefore
+    // Rx_min.width >= (Rx_max.x - Rx_min.x) which means (Rx_max.x - Rx_min.x)
+    // is inferior to a valid int and therefore does not overflow.
+    a.width = std::min(Rx_min.width - (Rx_max.x - Rx_min.x), Rx_max.width);
+    a.height = std::min(Ry_min.height - (Ry_max.y - Ry_min.y), Ry_max.height);
+    a.x = Rx_max.x;
+    a.y = Ry_max.y;
+    if (a.empty())
         a = Rect();
     return a;
 }

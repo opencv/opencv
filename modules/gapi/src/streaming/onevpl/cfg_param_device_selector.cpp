@@ -5,7 +5,7 @@
 // Copyright (C) 2021 Intel Corporation
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 
@@ -44,7 +44,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
     auto accel_mode_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == "mfxImplDescription.AccelerationMode";
+            return value.get_name() == CfgParam::acceleration_mode_name();
         });
     if (accel_mode_it == cfg_params.end())
     {
@@ -128,9 +128,11 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             suggested_device = IDeviceSelector::create<Device>(hw_handle, "GPU", AccelType::DX11);
             suggested_context = IDeviceSelector::create<Context>(device_context, AccelType::DX11);
 #else
-            GAPI_LOG_WARNING(nullptr, "Unavailable \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\""
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() << ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
-            throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\"");
+            throw std::logic_error(std::string("Unsupported \"") +
+                                   CfgParam::acceleration_mode_name() +
+                                   ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
             break;
@@ -140,7 +142,8 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             break;
         }
         default:
-            throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode\" requested: " +
+            throw std::logic_error(std::string("Unsupported \"") +
+                                   CfgParam::acceleration_mode_name() +"\" requested: " +
                                    std::to_string(accel_mode.Data.U32));
             break;
     }
@@ -154,14 +157,16 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
     auto accel_mode_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-            return value.get_name() == "mfxImplDescription.AccelerationMode";
+            return value.get_name() == CfgParam::acceleration_mode_name();
         });
     if (accel_mode_it == cfg_params.end()) {
         GAPI_LOG_WARNING(nullptr, "Cannot deternime \"device_ptr\" type. "
-                         "Make sure a param \"mfxImplDescription.AccelerationMode\" "
+                         "Make sure a param \"" << CfgParam::acceleration_mode_name() << "\" "
                          "presents in configurations and has correct value according to "
                          "\"device_ptr\" type");
-        throw std::logic_error("Missing \"mfxImplDescription.AccelerationMode\" param");
+        throw std::logic_error(std::string("Missing \"") +
+                               CfgParam::acceleration_mode_name() +
+                               "\" param");
     }
 
     GAPI_LOG_DEBUG(nullptr, "Turn on HW acceleration support for device: " <<
@@ -169,7 +174,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
                             ", context: " << ctx_ptr);
     if (!device_ptr) {
         GAPI_LOG_WARNING(nullptr, "Empty \"device_ptr\" is not allowed when "
-                         "param \"mfxImplDescription.AccelerationMode\" existed");
+                         "param \"" <<  CfgParam::acceleration_mode_name() << "\" existed");
         throw std::logic_error("Invalid param: \"device_ptr\"");
     }
 
@@ -191,23 +196,36 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             suggested_context = IDeviceSelector::create<Context>(ctx_ptr, AccelType::DX11);
             ID3D11DeviceContext* dx_ctx_ptr =
                 reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
+
+            // oneVPL recommendation
+            {
+                ID3D11Multithread *pD11Multithread = nullptr;
+                dx_ctx_ptr->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
+                pD11Multithread->SetMultithreadProtected(true);
+                pD11Multithread->Release();
+            }
+
             dx_ctx_ptr->AddRef();
 #else
-            GAPI_LOG_WARNING(nullptr, "Unavailable \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\""
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
+                                      ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
-            throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\"");
+            throw std::logic_error(std::string("Unsupported \"") +
+                                   CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
             break;
         }
         case MFX_ACCEL_MODE_NA: {
-            GAPI_LOG_WARNING(nullptr, "Incompatible \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_NA\" with "
+            GAPI_LOG_WARNING(nullptr, "Incompatible \"" <<  CfgParam::acceleration_mode_name() <<
+                                      ": MFX_ACCEL_MODE_NA\" with "
                                       "\"device_ptr\" and \"ctx_ptr\" arguments. "
                                       "You should not clarify these arguments with \"MFX_ACCEL_MODE_NA\" mode");
             throw std::logic_error("Incompatible param: MFX_ACCEL_MODE_NA");
         }
         default:
-            throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode\" requested: " +
+            throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode_name() +
+                                   "\" requested: " +
                                    std::to_string(accel_mode.Data.U32));
             break;
     }

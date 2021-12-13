@@ -60,13 +60,14 @@ if(HAVE_QT)
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
     if(QT_VERSION_MAJOR EQUAL 6)
+      add_definitions(-DHAVE_QT6) # QGLWidget deprecated for QT6, use this preprocessor to adjust window_QT.[h,cpp]
       QT6_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT6_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     elseif(QT_VERSION_MAJOR EQUAL 5)
       QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     else()
-      message(FATAL_ERROR "Unsuported QT version: ${QT_VERSION_MAJOR}")
+      message(FATAL_ERROR "Unsupported QT version: ${QT_VERSION_MAJOR}")
     endif()
 
     list(APPEND highgui_srcs
@@ -78,6 +79,10 @@ if(HAVE_QT)
     set(qt_deps Core Gui Widgets Test Concurrent)
     if(HAVE_QT_OPENGL)
       add_definitions(-DHAVE_QT_OPENGL)
+      # QOpenGLWidget requires Qt6 package component OpenGLWidgets
+      if(QT_VERSION_MAJOR GREATER 5)
+        list(APPEND qt_deps OpenGLWidgets)
+      endif()
       list(APPEND qt_deps OpenGL)
     endif()
 

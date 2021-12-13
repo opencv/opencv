@@ -646,7 +646,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["Conv2D"] = dispatch["SpaceToBatchND"] = dispatch["DepthwiseConv2dNative"] =
             dispatch["Pad"] = dispatch["MirrorPad"] = dispatch["Conv3D"] = &TFImporter::parseConvolution;
     dispatch["BiasAdd"] = dispatch["Add"] = dispatch["AddV2"] = dispatch["Sub"] = dispatch["AddN"] = &TFImporter::parseBias;
-    dispatch["MatMul"] = &TFImporter::parseMatMul;
+    dispatch["MatMul"] = dispatch["BatchMatMul"] = &TFImporter::parseMatMul;
     dispatch["Reshape"] = &TFImporter::parseReshape;
     dispatch["Flatten"] = dispatch["Squeeze"] = &TFImporter::parseFlatten;
     dispatch["Transpose"] = &TFImporter::parseTranspose;
@@ -983,6 +983,24 @@ void TFImporter::parseMatMul(tensorflow::GraphDef& net, const tensorflow::NodeDe
     layerParams.set("bias_term", false);
     layerParams.blobs.resize(1);
 
+    bool hasConstBlob = false;
+    for(int i = 0; i < layer.input_size(); i++) {
+        if (value_id.find(layer.input(i)) != value_id.end())
+            hasConstBlob = true;
+    }
+    if (!hasConstBlob)
+    {
+        layerParams.blobs.clear();
+        int id = dstNet.addLayer(name, "InnerProduct", layerParams);
+        layer_id[name] = id;
+
+        // two inputs
+        for(int ii=0; ii<layer.input_size(); ii++){
+            connect(layer_id, dstNet, parsePin(layer.input(ii)), id, ii);
+        }
+        return;
+    }
+
     StrIntVector next_layers = getNextLayers(net, name, "BiasAdd");  // FIXIT Use layers fusion instead
     if (next_layers.empty())
     {
@@ -1154,7 +1172,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     // Convert OpenCV's NHC to NCH first.
     if(outShapeSize == 3)
     {
-        // If axis equal to outShapeSize, that mean we expand in Channel dimmension, and do not add permuteLayer.
+        // If axis equal to outShapeSize, that mean we expand in Channel dimension, and do not add permuteLayer.
         if(axis != outShapeSize)
         {
             int order[] = {0, 2, 1};  // From OpenCV's NHC to NCH.

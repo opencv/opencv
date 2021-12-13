@@ -121,7 +121,7 @@ public:
         {
             SCOPED_TRACE("batch size 2");
 
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
             if (target == DNN_TARGET_MYRIAD && name == "shortcut")
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
@@ -245,13 +245,13 @@ public:
                 nms_boxes.push_back(box);
                 nms_confidences.push_back(conf);
                 nms_classIds.push_back(class_id);
-#if 0  // use to update test reference data
-                std::cout << b << ", " << class_id << ", " << conf << "f, "
-                          << box.x << "f, " << box.y << "f, "
-                          << box.x + box.width << "f, " << box.y + box.height << "f,"
-                          << std::endl;
-#endif
-
+                if (cvtest::debugLevel > 0)
+                {
+                    std::cout << b << ", " << class_id << ", " << conf << "f, "
+                              << box.x << "f, " << box.y << "f, "
+                              << box.x + box.width << "f, " << box.y + box.height << "f,"
+                              << std::endl;
+                }
             }
 
             if (cvIsNaN(iouDiff))
@@ -359,6 +359,13 @@ TEST_P(Test_Darknet_nets, YoloVoc)
         scoreDiff = 0.03;
         iouDiff = 0.018;
     }
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = std::numeric_limits<double>::quiet_NaN();
+    }
+#endif
 
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
@@ -372,6 +379,12 @@ TEST_P(Test_Darknet_nets, YoloVoc)
     SCOPED_TRACE("batch size 2");
     testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold);
     }
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 }
 
 TEST_P(Test_Darknet_nets, TinyYoloVoc)
@@ -429,21 +442,30 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
 {
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
+    std::string prefix = get<0>(GetParam());
 
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (INF_ENGINE_VER_MAJOR_LT(2019020000) && backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-
-    std::string prefix = get<0>(GetParam());
-
-    if (targetId == DNN_TARGET_MYRIAD && prefix == "yolov4")  // NC_OUT_OF_MEMORY
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
+
+#if defined(INF_ENGINE_RELEASE)
+#if INF_ENGINE_VER_MAJOR_GE(2021040000)
+    if (targetId == DNN_TARGET_MYRIAD && prefix == "yolov3")  // NC_OUT_OF_MEMORY
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#else
+    if (targetId == DNN_TARGET_MYRIAD && prefix == "yolov4")  // NC_OUT_OF_MEMORY
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+#endif
 
     const int numInputs = 2;
     std::vector<Mat> inputs(numInputs);
@@ -472,6 +494,34 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
     netAsync.setPreferableBackend(backendId);
     netAsync.setPreferableTarget(targetId);
 
+    double l1 = 0.0;
+    double lInf = 0.0;
+#if defined(INF_ENGINE_RELEASE)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (targetId == DNN_TARGET_MYRIAD && prefix == "yolo-voc")
+        {
+            l1 = 0.02;
+            lInf = 0.15;
+        }
+        if (targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolo-voc")
+        {
+            l1 = 0.02;
+            lInf = 0.1;
+        }
+        if (targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov3")
+        {
+            l1 = 0.001;
+            lInf = 0.007;
+        }
+        if (targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4")
+        {
+            l1 = 0.001;
+            lInf = 0.005;
+        }
+    }
+#endif
+
     // Run asynchronously. To make test more robust, process inputs in the reversed order.
     for (int i = numInputs - 1; i >= 0; --i)
     {
@@ -481,7 +531,7 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
         ASSERT_TRUE(out.valid());
         Mat result;
         EXPECT_TRUE(out.get(result, async_timeout));
-        normAssert(refs[i], result, format("Index: %d", i).c_str(), 0, 0);
+        normAssert(refs[i], result, format("Index: %d", i).c_str(), l1, lInf);
     }
 }
 
@@ -615,6 +665,14 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     std::string config_file = "yolov4.cfg";
     std::string weights_file = "yolov4.weights";
 
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy (batch 1)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = std::numeric_limits<double>::quiet_NaN();
+    }
+#endif
 #if defined(INF_ENGINE_RELEASE)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD &&
@@ -633,6 +691,13 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     {
         SCOPED_TRACE("batch size 2");
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy (batch 1)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        iouDiff = 0.45f;
+    }
+#endif
 #if defined(INF_ENGINE_RELEASE)
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         {
@@ -648,6 +713,12 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
         testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
     }
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 }
 
 TEST_P(Test_Darknet_nets, YOLOv4_tiny)
@@ -718,6 +789,13 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
     applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE exception: Ngraph operation Transpose with name permute_168 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -829,10 +907,23 @@ TEST_P(Test_Darknet_layers, avgpool_softmax)
 
 TEST_P(Test_Darknet_layers, region)
 {
-#if defined(INF_ENGINE_RELEASE)
-     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_GE(2020020000))
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_GE(2020020000))
+       applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy on CPU, OpenCL
+    // Expected: (normInf) <= (lInf), actual: 0.763223 vs 0.0001
+    //   |ref| = 1.207319974899292
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+
     testDarknetLayer("region");
 }
 

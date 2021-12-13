@@ -14,6 +14,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 
 namespace custom {
 
@@ -23,71 +24,12 @@ using GDetections = cv::GArray<cv::Rect>;
 using GSize       = cv::GOpaque<cv::Size>;
 using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(GetSize, <GSize(cv::GMat)>, "sample.custom.get-size") {
-    static cv::GOpaqueDesc outMeta(const cv::GMatDesc &) {
-        return cv::empty_gopaque_desc();
-    }
-};
-G_API_OP(ParseSSD, <GDetections(cv::GMat, GSize)>, "sample.custom.parse-ssd") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &) {
-        return cv::empty_array_desc();
-    }
-};
 G_API_OP(BBoxes, <GPrims(GDetections)>, "sample.custom.b-boxes") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &) {
         return cv::empty_array_desc();
     }
 };
 
-GAPI_OCV_KERNEL(OCVGetSize, GetSize) {
-    static void run(const cv::Mat &in, cv::Size &out) {
-        out = {in.cols, in.rows};
-    }
-};
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Size &in_parent_size,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Rect surface({0,0}, in_parent_size);
-
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-            (void) label; // unused
-
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-
-            // map relative coordinates to the original image scale
-            cv::Rect rc;
-            rc.x      = static_cast<int>(rc_left   * in_parent_size.width);
-            rc.y      = static_cast<int>(rc_top    * in_parent_size.height);
-            rc.width  = static_cast<int>(rc_right  * in_parent_size.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * in_parent_size.height) - rc.y;
-            out_objects.emplace_back(rc & surface);
-        }
-    }
-};
 GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
     // This kernel converts the rectangles into G-API's
     // rendering primitives
@@ -151,7 +93,6 @@ void remap_ssd_ports(const std::unordered_map<std::string, cv::Mat> &onnx,
 }
 } // anonymous namespace
 
-
 const std::string keys =
     "{ h help | | Print this help message }"
     "{ input  | | Path to the input video file }"
@@ -175,15 +116,14 @@ int main(int argc, char *argv[])
     auto obj_net = cv::gapi::onnx::Params<custom::ObjDetector>{obj_model_path}
         .cfgOutputLayers({"detection_output"})
         .cfgPostProc({cv::GMatDesc{CV_32F, {1,1,200,7}}}, remap_ssd_ports);
-    auto kernels = cv::gapi::kernels< custom::OCVGetSize
-                                    , custom::OCVParseSSD
-                                    , custom::OCVBBoxes>();
+    auto kernels = cv::gapi::kernels<custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(obj_net);
 
     // Now build the graph
     cv::GMat in;
     auto blob = cv::gapi::infer<custom::ObjDetector>(in);
-    auto  rcs = custom::ParseSSD::on(blob, custom::GetSize::on(in));
+    cv::GArray<cv::Rect> rcs =
+        cv::gapi::parseSSD(blob, cv::gapi::streaming::size(in), 0.5f, true, true);
     auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs));
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -192,12 +132,16 @@ int main(int argc, char *argv[])
 
     // The execution part
     pipeline.setSource(std::move(inputs));
-    pipeline.start();
 
+    cv::TickMeter tm;
     cv::VideoWriter writer;
-
+    size_t frames = 0u;
     cv::Mat outMat;
+
+    tm.start();
+    pipeline.start();
     while (pipeline.pull(cv::gout(outMat))) {
+        ++frames;
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
@@ -209,5 +153,7 @@ int main(int argc, char *argv[])
             writer << outMat;
         }
     }
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

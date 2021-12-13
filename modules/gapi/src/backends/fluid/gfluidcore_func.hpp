@@ -60,6 +60,75 @@ MUL_SIMD(float, float)
 
 #undef MUL_SIMD
 
+#define ADDC_SIMD(SRC, DST)                                                              \
+int addc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan);
+
+ADDC_SIMD(uchar, uchar)
+ADDC_SIMD(ushort, uchar)
+ADDC_SIMD(short, uchar)
+ADDC_SIMD(float, uchar)
+ADDC_SIMD(short, short)
+ADDC_SIMD(ushort, short)
+ADDC_SIMD(uchar, short)
+ADDC_SIMD(float, short)
+ADDC_SIMD(ushort, ushort)
+ADDC_SIMD(uchar, ushort)
+ADDC_SIMD(short, ushort)
+ADDC_SIMD(float, ushort)
+ADDC_SIMD(uchar, float)
+ADDC_SIMD(ushort, float)
+ADDC_SIMD(short, float)
+ADDC_SIMD(float, float)
+
+#undef ADDC_SIMD
+
+#define SUBC_SIMD(SRC, DST)                                                              \
+int subc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan);
+
+SUBC_SIMD(uchar, uchar)
+SUBC_SIMD(ushort, uchar)
+SUBC_SIMD(short, uchar)
+SUBC_SIMD(float, uchar)
+SUBC_SIMD(short, short)
+SUBC_SIMD(ushort, short)
+SUBC_SIMD(uchar, short)
+SUBC_SIMD(float, short)
+SUBC_SIMD(ushort, ushort)
+SUBC_SIMD(uchar, ushort)
+SUBC_SIMD(short, ushort)
+SUBC_SIMD(float, ushort)
+SUBC_SIMD(uchar, float)
+SUBC_SIMD(ushort, float)
+SUBC_SIMD(short, float)
+SUBC_SIMD(float, float)
+
+#undef SUBC_SIMD
+
+#define MULC_SIMD(SRC, DST)                                                              \
+int mulc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan, const float scale);
+
+MULC_SIMD(uchar, uchar)
+MULC_SIMD(ushort, uchar)
+MULC_SIMD(short, uchar)
+MULC_SIMD(float, uchar)
+MULC_SIMD(short, short)
+MULC_SIMD(ushort, short)
+MULC_SIMD(uchar, short)
+MULC_SIMD(float, short)
+MULC_SIMD(ushort, ushort)
+MULC_SIMD(uchar, ushort)
+MULC_SIMD(short, ushort)
+MULC_SIMD(float, ushort)
+MULC_SIMD(uchar, float)
+MULC_SIMD(ushort, float)
+MULC_SIMD(short, float)
+MULC_SIMD(float, float)
+
+#undef MULC_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv

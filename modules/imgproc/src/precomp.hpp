@@ -54,7 +54,6 @@
 #include "hal_replacement.hpp"
 
 #include <math.h>
-#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
