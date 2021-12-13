@@ -9,6 +9,7 @@
 "test_clip",
 "test_clip_default_max",
 "test_clip_default_min",
+"test_clip_inbounds",
 "test_clip_example",
 "test_clip_outbounds",
 "test_clip_splitbounds",
