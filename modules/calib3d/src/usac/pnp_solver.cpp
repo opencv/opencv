@@ -263,7 +263,8 @@ private:
      * calibrated normalized points
      * K^-1 [u v 1]^T / ||K^-1 [u v 1]^T||
      */
-    const Mat * points_mat, * calib_norm_points_mat, * K_mat, &K;
+    const Mat * points_mat, * calib_norm_points_mat;
+    const Matx33d * K_mat, &K;
     const float * const calib_norm_points, * const points;
     const double VAL_THR = 1e-4;
 public:
@@ -271,7 +272,7 @@ public:
      * @points_ is matrix N x 5
      * u v x y z. (u,v) is image point, (x y z) is world point
      */
-    P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_) :
+    P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Matx33d &K_) :
         points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K_mat (&K_),
         K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data) {}
 
@@ -362,7 +363,7 @@ public:
 
             const Matx33d R = Math::rotVec2RotMat(Math::rotMat2RotVec(Z * Zw.inv()));
 
-            Mat P, KR = K * R;
+            Mat P, KR = Mat(K * R);
             hconcat(KR, -KR * (X1 - R.t() * nX1), P);
             models.emplace_back(P);
         }
@@ -374,7 +375,7 @@ public:
         return makePtr<P3PSolverImpl>(*points_mat, *calib_norm_points_mat, *K_mat);
     }
 };
-Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K) {
+Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K) {
     return makePtr<P3PSolverImpl>(points_, calib_norm_pts, K);
 }
 }}
