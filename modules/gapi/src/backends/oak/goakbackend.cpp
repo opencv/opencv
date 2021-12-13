@@ -7,6 +7,7 @@
 #ifdef WITH_OAK_BACKEND
 
 #include <cstring>
+#include <unordered_set>
 
 #include <api/gbackend_priv.hpp>
 #include <backends/common/gbackend.hpp>
@@ -27,6 +28,9 @@ class GOAKExecutable final: public GIslandExecutable {
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
+    void LinkToParentHelper(ade::NodeHandle handle,
+                            const std::vector<ade::NodeHandle>& nodes);
+
     const ade::Graph& m_g;
     GModel::ConstGraph m_gm;
     cv::GCompileArgs m_args;
@@ -34,6 +38,7 @@ class GOAKExecutable final: public GIslandExecutable {
     std::unordered_map<ade::NodeHandle,
                        std::shared_ptr<dai::Node>,
                        ade::HandleHasher<ade::Node>> m_oak_nodes;
+    std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> m_processed_nodes;
     // Will be reworked later when XLinkIn will be introduced as input
     std::shared_ptr<dai::node::ColorCamera> m_camera_input;
 
@@ -96,10 +101,35 @@ using ConstOAKGraph = ade::ConstTypedGraph
     // FIXME: extend
     >;
 
+void cv::gimpl::GOAKExecutable::LinkToParentHelper(ade::NodeHandle handle,
+                                                   const std::vector<ade::NodeHandle>& nodes)
+{
+    ade::NodeHandle parent;
+    for (const auto& indatah : handle.get()->inNodes()) {
+        // indatah - node's input data
+        // need to find which other node produces that data
+        for (const auto& nhp : nodes) {
+            if (m_gm.metadata(nhp).get<NodeType>().t == NodeType::OP) {
+                for (const auto& outdatah : nhp.get()->outNodes()) {
+                    if (indatah == outdatah) {
+                        parent = nhp;
+                    }
+                }
+            }
+        }
+    }
+    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
+    GAPI_Assert(m_oak_nodes[handle]->getInputs().size() ==
+                m_oak_nodes[parent]->getOutputs().size());
+    for (size_t i = 0; i < m_oak_nodes[handle]->getInputs().size(); ++i) {
+        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[handle]->getInputs()[i]);
+    }
+}
+
 cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                                           const cv::GCompileArgs &args,
                                           const std::vector<ade::NodeHandle>& nodes,
-                                          const std::vector<cv::gimpl::Data>& /*ins_data*/,
+                                          const std::vector<cv::gimpl::Data>& ins_data,
                                           const std::vector<cv::gimpl::Data>& outs_data)
     : m_g(g), m_gm(m_g), m_args(args),
       m_device(nullptr), m_pipeline(new dai::Pipeline)
@@ -136,61 +166,59 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         }
 
         // Properly link all nodes
+        // 1. Link input nodes to camera
+        for (const auto& d : ins_data)
+        {
+            for (const auto& nh : nodes)
+            {
+                if (m_gm.metadata(nh).contains<cv::gimpl::Data>())
+                {
+                    auto rc = m_gm.metadata(nh).get<cv::gimpl::Data>().rc;
+                    if (rc == d.rc)
+                    {
+                        for (const auto& child : nh.get()->outNodes()) { // should be only 1 node
+                            GAPI_Assert(m_oak_nodes.find(child) != m_oak_nodes.end());
+                            GAPI_Assert(m_oak_nodes[child]->getInputs().size() == 1);
+                            m_camera_input->video.link(m_oak_nodes[child]->getInputs()[0]);
+                            m_processed_nodes.insert(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Link output nodes to XLinkOut nodes
         size_t out_counter = 0;
+        for (const auto& d : outs_data)
+        {
+            for (const auto& nh : nodes)
+            {
+                if (m_gm.metadata(nh).contains<cv::gimpl::Data>())
+                {
+                    auto rc = m_gm.metadata(nh).get<cv::gimpl::Data>().rc;
+                    if (rc == d.rc)
+                    {
+                        for (const auto& parent : nh.get()->inNodes()) { // should be only 1 node
+                            GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
+                            GAPI_Assert(m_oak_nodes[parent]->getOutputs().size() == 1);
+                            GAPI_Assert(out_counter < m_xlink_outputs.size());
+                            m_oak_nodes[parent]->getOutputs()[0].link(m_xlink_outputs[out_counter++]->input);
+
+                            LinkToParentHelper(parent, nodes);
+                            m_processed_nodes.insert(parent);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Link internal nodes to their parents
         for (const auto& nh : nodes) {
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
                 GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
-                if (nh.get()->inEdges().size() == 0) { // backend input, link with camera node
-                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() == 1);
-                    m_camera_input->video.link(m_oak_nodes[nh]->getInputs()[0]);
-                } else if (nh.get()->outEdges().size() == 0) { // backend output, link with xlinkout node
-                    GAPI_Assert(m_oak_nodes[nh]->getOutputs().size() == 1);
-                    GAPI_Assert(out_counter < m_xlink_outputs.size());
-                    m_oak_nodes[nh]->getOutputs()[0].link(m_xlink_outputs[out_counter++]->input);
-
-                    // also link with parents
-                    ade::NodeHandle parent;
-                    for (const auto& indatah : nh.get()->inNodes()) {
-                        // indatah - node's input data
-                        // need to find which other node produces that data
-                        for (const auto& nhp : nodes) {
-                            if (m_gm.metadata(nhp).get<NodeType>().t == NodeType::OP) {
-                                for (const auto& outdatah : nhp.get()->outNodes()) {
-                                    if (indatah == outdatah) {
-                                        parent = nhp;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
-                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() ==
-                                m_oak_nodes[parent]->getOutputs().size());
-                    for (size_t i = 0; i < m_oak_nodes[nh]->getInputs().size(); ++i) {
-                        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[nh]->getInputs()[i]);
-                    }
-                } else { // internally connected node in graph
-                    // Search for node's parent
-                    ade::NodeHandle parent;
-                    for (const auto& indatah : nh.get()->inNodes()) {
-                        // indatah - node's input data
-                        // need to find which other node produces that data
-                        for (const auto& nhp : nodes) {
-                            if (m_gm.metadata(nhp).get<NodeType>().t == NodeType::OP) {
-                                for (const auto& outdatah : nhp.get()->outNodes()) {
-                                    if (indatah == outdatah) {
-                                        parent = nhp;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
-                    GAPI_Assert(m_oak_nodes[nh]->getInputs().size() ==
-                                m_oak_nodes[parent]->getOutputs().size());
-                    for (size_t i = 0; i < m_oak_nodes[nh]->getInputs().size(); ++i) {
-                        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[nh]->getInputs()[i]);
-                    }
+                if (m_processed_nodes.find(nh) == m_processed_nodes.end()) {
+                    LinkToParentHelper(nh, nodes);
+                    m_processed_nodes.insert(nh);
                 }
             }
         }
