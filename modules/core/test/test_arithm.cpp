@@ -1390,7 +1390,8 @@ struct MinMaxLocOp : public BaseElemWiseOp
 
 struct reduceArgMinMaxOp : public BaseElemWiseOp
 {
-    reduceArgMinMaxOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0))
+    reduceArgMinMaxOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)),
+                          isLast(false), isMax(false), axis(0)
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
     };
