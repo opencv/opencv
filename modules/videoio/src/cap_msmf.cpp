@@ -31,6 +31,7 @@
 #endif
 #include <new>
 #include <map>
+#include <queue>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -308,8 +309,10 @@ private:
 class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
+    static const size_t MSMF_READER_MAX_QUEUE_SIZE = 3;
+
     SourceReaderCB() :
-        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0), m_lastSampleTimestamp(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
     {
     }
 
@@ -354,12 +357,19 @@ public:
             if (pSample)
             {
                 CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
-                if (m_lastSample.Get())
+                if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
                 {
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
+#if 0
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
+                    m_capturedFrames.pop();
+#else
+                    // this branch reduces latency if we drop frames due to slow processing.
+                    // avoid fetching of already outdated frames from the queue's front.
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
+                    std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
+#endif
                 }
-                m_lastSampleTimestamp = llTimestamp;
-                m_lastSample = pSample;
+                m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
             }
         }
         else
@@ -396,32 +406,45 @@ public:
         return S_OK;
     }
 
-    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& videoSample, BOOL& pbEOS)
+    HRESULT Wait(DWORD dwMilliseconds, _ComPtr<IMFSample>& mediaSample, LONGLONG& sampleTimestamp, BOOL& pbEOS)
     {
         pbEOS = FALSE;
 
-        DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
-        if (dwResult == WAIT_TIMEOUT)
+        for (;;)
         {
-            return E_PENDING;
-        }
-        else if (dwResult != WAIT_OBJECT_0)
-        {
-            return HRESULT_FROM_WIN32(GetLastError());
-        }
+            {
+                cv::AutoLock lock(m_mutex);
 
-        pbEOS = m_bEOS;
-        if (!pbEOS)
-        {
-            cv::AutoLock lock(m_mutex);
-            videoSample = m_lastSample;
-            CV_Assert(videoSample);
-            m_lastSample.Release();
-            ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
-        }
+                pbEOS = m_bEOS && m_capturedFrames.empty();
+                if (pbEOS)
+                    return m_hrStatus;
 
-        return m_hrStatus;
+                if (!m_capturedFrames.empty())
+                {
+                    CV_Assert(!m_capturedFrames.empty());
+                    CapturedFrameInfo frameInfo = m_capturedFrames.front(); m_capturedFrames.pop();
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): handle frame at " << frameInfo.timestamp);
+                    mediaSample = frameInfo.sample;
+                    CV_Assert(mediaSample);
+                    sampleTimestamp = frameInfo.timestamp;
+                    ResetEvent(m_hEvent);  // event is auto-reset, but we need this forced reset due time gap between wait() and mutex hold.
+                    return frameInfo.hrStatus;
+                }
+            }
+
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): waiting for frame... ");
+            DWORD dwResult = WaitForSingleObject(m_hEvent, dwMilliseconds);
+            if (dwResult == WAIT_TIMEOUT)
+            {
+                return E_PENDING;
+            }
+            else if (dwResult != WAIT_OBJECT_0)
+            {
+                return HRESULT_FROM_WIN32(GetLastError());
+            }
+        }
     }
+
 private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
@@ -438,8 +461,14 @@ public:
 
     IMFSourceReader *m_reader;
     DWORD m_dwStreamIndex;
-    LONGLONG m_lastSampleTimestamp;
-    _ComPtr<IMFSample>  m_lastSample;
+
+    struct CapturedFrameInfo {
+        LONGLONG timestamp;
+        _ComPtr<IMFSample> sample;
+        HRESULT hrStatus;
+    };
+
+    std::queue<CapturedFrameInfo> m_capturedFrames;
 };
 
 //==================================================================================================
@@ -902,7 +931,7 @@ bool CvCapture_MSMF::grabFrame()
             }
         }
         BOOL bEOS = false;
-        if (FAILED(hr = reader->Wait(10000, videoSample, bEOS)))  // 10 sec
+        if (FAILED(hr = reader->Wait(10000, videoSample, sampleTime, bEOS)))  // 10 sec
         {
             CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
             return false;
@@ -912,7 +941,7 @@ bool CvCapture_MSMF::grabFrame()
             CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
             return false;
         }
-        sampleTime = reader->m_lastSampleTimestamp;
+        CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << sampleTime);
         return true;
     }
     else if (isOpen)
@@ -991,6 +1020,7 @@ bool CvCapture_MSMF::grabFrame()
 bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
 {
     CV_TRACE_FUNCTION();
+    CV_LOG_DEBUG(NULL, "videoio(MSMF): retrieve video frame start...");
     do
     {
         if (!videoSample)
@@ -1082,6 +1112,7 @@ bool CvCapture_MSMF::retrieveFrame(int, cv::OutputArray frame)
             buffer2d->Unlock2D();
         else
             buf->Unlock();
+        CV_LOG_DEBUG(NULL, "videoio(MSMF): retrieve video frame done!");
         return !frame.empty();
     } while (0);
 
