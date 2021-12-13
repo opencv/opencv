@@ -426,7 +426,7 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
     VolumeSettings vs;
     vs.setDepthFactor(settings.depthFactor);
-    vs.setIntrinsics(settings.intr);
+    vs.setCameraIntrinsics(settings.intr);
     Volume volume(VolumeType::TSDF, vs);
 
     if (true)

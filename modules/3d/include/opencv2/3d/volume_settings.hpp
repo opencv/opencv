@@ -17,32 +17,30 @@ public:
     VolumeSettings();
     ~VolumeSettings();
 
-    void  setVoxelSize(float  val);
-    float getVoxelSize() const;
 
-    void  setRaycastStepFactor(float val);
-    float getRaycastStepFactor() const;
-
-    void  setTruncDist(float val);
-    float getTruncDist() const;
-
+    void  setWidth(int val);
+    int   getWidth() const;
+    void  setHeight(int val);
+    int   getHeight() const;
     void  setDepthFactor(float val);
     float getDepthFactor() const;
+    void  setVoxelSize(float val);
+    float getVoxelSize() const;
+    void  setTruncatedDistance(float val);
+    float getTruncatedDistance() const;
+    void  setMaxWeight(int val);
+    int   getMaxWeight() const;
+    void  setRaycastStepFactor(float val);
+    float getRaycastStepFactor() const;
+    void  setZFirstMemOrder(bool val);
+    bool  getZFirstMemOrder() const;
 
-    void setMaxWeight(int val);
-    int  getMaxWeight() const;
-
-    void setZFirstMemOrder(bool val);
-    bool getZFirstMemOrder() const;
-
-    void setPose(InputArray val);
-    void getPose(OutputArray val) const;
-
-    void setResolution(InputArray val);
-    void getResolution(OutputArray val) const;
-
-    void setIntrinsics(InputArray val);
-    void getIntrinsics(OutputArray val) const;
+    void setVolumePose(InputArray val);
+    void getVolumePose(OutputArray val) const;
+    void setVolumeResolution(InputArray val);
+    void getVolumeResolution(OutputArray val) const;
+    void setCameraIntrinsics(InputArray val);
+    void getCameraIntrinsics(OutputArray val) const;
 
     class Impl;
 private:

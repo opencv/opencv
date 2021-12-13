@@ -33,6 +33,7 @@ public:
     virtual size_t getTotalVolumeUnits() const = 0;
 
 public:
+    VolumeSettings settings;
     const float voxelSize;
     const float voxelSizeInv;
     const float raycastStepFactor;
@@ -71,7 +72,6 @@ public:
     Vec4i volDims;
     Vec8i neighbourCoords;
 
-    VolumeSettings settings;
     Vec4i volStrides;
     Vec6f frameParams;
     Mat pixNorms;
@@ -99,7 +99,6 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 private:
-    VolumeSettings settings;
 };
 
 
@@ -120,7 +119,6 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 private:
-    VolumeSettings settings;
 };
 
 

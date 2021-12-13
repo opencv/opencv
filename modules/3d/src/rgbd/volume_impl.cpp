@@ -17,9 +17,9 @@ Volume::Impl::Impl(VolumeSettings settings) :
     raycastStepFactor(settings.getRaycastStepFactor())
 {
     std::cout << "Volume::Impl::Impl()" << std::endl;
-
+    this->settings = settings;
     Matx44f _pose;
-    settings.getPose(_pose);
+    settings.getVolumePose(_pose);
     this->pose = Affine3f(_pose);
 }
 
@@ -36,10 +36,10 @@ TsdfVolume::TsdfVolume(VolumeSettings settings) :
     // Unlike original code, this should work with any volume size
     // Not only when (x,y,z % 32) == 0
     Vec3i resolution;
-    settings.getResolution(resolution);
+    settings.getVolumeResolution(resolution);
     volResolution = Point3i(resolution);
     volSize = Point3f(volResolution) * voxelSize;
-    truncDist = std::max(settings.getTruncDist(), 2.1f * voxelSize);
+    truncDist = std::max(settings.getTruncatedDistance(), 2.1f * voxelSize);
 
     // (xRes*yRes*zRes) array
     // Depending on zFirstMemOrder arg:
@@ -90,7 +90,7 @@ void TsdfVolume::integrate(OdometryFrame frame, InputArray pose)
     depth = depth * settings.getDepthFactor();
 
     Matx33f intr;
-    settings.getIntrinsics(intr);
+    settings.getCameraIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,
@@ -115,7 +115,7 @@ void TsdfVolume::integrate(InputArray frame, InputArray pose)
     CV_Assert(!depth.empty());
 
     Matx33f intr;
-    settings.getIntrinsics(intr);
+    settings.getCameraIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,
@@ -368,7 +368,7 @@ void TsdfVolume::raycast(const Matx44f& cameraPose, int height, int width, Outpu
     Normals normals = _normals.getMat();
 
     Matx33f intr;
-    this->settings.getIntrinsics(intr);
+    this->settings.getCameraIntrinsics(intr);
     RaycastInvoker ri(points, normals, cameraPose, Intr(intr), *this);
 
     const int nstripes = -1;
