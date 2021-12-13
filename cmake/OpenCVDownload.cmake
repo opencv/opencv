@@ -39,26 +39,29 @@ file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
 set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE INTERNAL "Link to mirror hosted by gitcode")
 
-function(ocv_replace_download_source)
-  string(FIND "${DL_URL}" "https://raw.githubusercontent.com" __is_found_githubusercontent)
-  string(FIND "${DL_URL}" "https://github.com" __is_found_github)
-  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-  if(NOT ${__is_found_githubusercontent} EQUAL -1) # https:;;raw.githubusercontent.com;opencv;opencv_3rdparty;a56b6ac6f030c312b2dce17430eef13aed9af274;ippicv;
-    message(STATUS "ocv_replace_download_source: replacing raw.githubusercontent.com with ${OPENCV_MIRROR_GITCODE}")
+function(ocv_init_download_for_gitcode new_dl_link)
+  string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
+  if(NOT ${_found_githubusercontent} EQUAL -1) # ffmpeg & ippicv
+    string(REPLACE "/" ";" dl_url_splits ${DL_URL})
     list(REMOVE_AT dl_url_splits 2) # remove raw.githubusercontent.com
     list(INSERT dl_url_splits 2 ${OPENCV_MIRROR_GITCODE}) # insert gitcode.com to replace github.com
     list(INSERT dl_url_splits 5 "-/raw") # insert "-/raw"
-    list(JOIN dl_url_splits "/" new_dl_link) # join with "/" to be a valid download link
-    message(STATUS "ocv_replace_download_source: mirrored download link: ${new_dl_link}")
-    set(DL_URL ${new_dl_link})
-  elseif(NOT ${__is_found_github} EQUAL -1) # https:;;github.com;${user};${repo};archive;
-    message(STATUS "ocv_replace_download_source: replacing github.com with ${OPENCV_MIRROR_GITCODE}")
+    list(JOIN dl_url_splits "/" dl_link)
+    message(STATUS "ocv_init_download_for_gitcode: mirrored download link: ${dl_link}")
+    set(new_dl_link ${dl_link} PARENT_SCOPE)
+    return()
+  endif()
+
+  string(FIND "${DL_URL}" "https://github.com" _found_github)
+  if(NOT ${_found_github} EQUAL -1) # ade & tengine (OAID) & tbb (01org)
+    string(REPLACE "/" ";" dl_url_splits ${DL_URL})
     list(REMOVE_AT dl_url_splits 2) # remove github.com
     list(INSERT dl_url_splits 2 ${OPENCV_MIRROR_GITCODE}) # insert gitcode.com to replace github.com
-    list(INSERT dl_url_splits 5 "-") # insert "-" to match gitcode's link
-    list(JOIN dl_url_splits "/" new_dl_link) # join with "/" to be a valid download link
-    message(STATUS "ocv_replace_download_source: mirrored download link: ${new_dl_link}")
-    set(DL_URL ${new_dl_link})
+    list(INSERT dl_url_splits 5 "-") # insert "-"
+    list(JOIN dl_url_splits "/" dl_link)
+    message(STATUS "ocv_init_download_for_gitcode: mirrored download link: ${dl_link}")
+    set(new_dl_link ${dl_link} PARENT_SCOPE)
+    return()
   endif()
 endfunction()
 
@@ -71,13 +74,12 @@ function(ocv_init_download)
     OUTPUT_VARIABLE
       OCV_GIT_ORIGIN_URL_OUT
     ERROR_QUIET
-  ) # it produces an empty line. If OUTPUT_QUIET is set, OCV_GIT_ORIGIN_URL_OUT will be emtpy.
-  # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
+  ) # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
 
-  # message(STATUS "ocv_init_download: ${OCV_GIT_ORIGIN_URL_OUT}")
-  string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" __is_found_gitcode)
-  if(NOT (${__is_found_gitcode} EQUAL -1))
-    ocv_replace_download_source()
+  string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
+  if(NOT (${_found_gitcode} EQUAL -1))
+    ocv_init_download_for_gitcode(new_dl_link)
+    set(DL_URL ${new_dl_link} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -141,6 +143,8 @@ function(ocv_download)
       break()
     endif()
   endforeach()
+
+  # replace download links with the mirrored one if detected
   ocv_init_download()
 
   # Append filename to url if needed
