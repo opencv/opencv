@@ -970,9 +970,10 @@ PERF_TEST_P_(AbsDiffPerfTest, TestPerformance)
 
 PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
 {
-    cv::Size sz_in = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    cv::GCompileArgs compile_args = get<2>(GetParam());
+    compare_f cmpF = get<0>(GetParam());
+    cv::Size sz_in = get<1>(GetParam());
+    MatType type = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
 
 
     initMatsRandU(type, sz_in, type, false);
@@ -997,8 +998,9 @@ PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz_in);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }

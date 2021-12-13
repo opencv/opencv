@@ -154,7 +154,8 @@ INSTANTIATE_TEST_CASE_P(AbsDiffPerfTestGPU, AbsDiffPerfTest,
                                 Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCPerfTestGPU, AbsDiffCPerfTest,
-                        Combine(Values( szSmall128, szVGA, sz720p, sz1080p ),
+                        Combine(Values(AbsExact().to_compare_f()),
+                            Values( szSmall128, szVGA, sz720p, sz1080p ),
                                 Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
                                 Values(cv::compile_args(CORE_GPU))));
 

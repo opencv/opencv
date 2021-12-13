@@ -994,244 +994,6 @@ static void run_arithm_s(DST out[], const SRC in[], int width, int chan,
         CV_Error(cv::Error::StsBadArg, "unsupported number of channels");
 }
 
-#if CV_SIMD
-CV_ALWAYS_INLINE void absdiffc_short_store_c1c2c4(short* out_ptr, const v_int32& c1, const v_int32& c2)
-{
-    vx_store(out_ptr, v_pack(c1, c2));
-}
-
-CV_ALWAYS_INLINE void absdiffc_short_store_c1c2c4(ushort* out_ptr, const v_int32& c1, const v_int32& c2)
-{
-    vx_store(out_ptr, v_pack_u(c1, c2));
-}
-
-template<typename T>
-CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4(const T in[], T out[],
-                                          const v_float32& s, const int length)
-{
-    static_assert((std::is_same<T, ushort>::value) || (std::is_same<T, short>::value),
-                  "This templated overload is only for short or ushort type combinations.");
-
-    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
-                                                              static_cast<int>(v_int16::nlanes);
-    if (length < nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            v_float32 a1 = v_load_f32(in + x);
-            v_float32 a2 = v_load_f32(in + x + nlanes / 2);
-
-            absdiffc_short_store_c1c2c4(&out[x], v_round(v_absdiff(a1, s)),
-                                                 v_round(v_absdiff(a2, s)));
-        }
-
-        if (x < length && (in != out))
-        {
-            x = length - nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
-}
-
-template<>
-CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4<uchar>(const uchar in[], uchar out[],
-                                                 const v_float32& s, const int length)
-{
-    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-    if (length < nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            v_float32 a1 = v_load_f32(in + x);
-            v_float32 a2 = v_load_f32(in + x + nlanes / 4);
-            v_float32 a3 = v_load_f32(in + x + nlanes / 2);
-            v_float32 a4 = v_load_f32(in + x + 3 * nlanes / 4);
-
-            vx_store(&out[x], v_pack_u(v_pack(v_round(v_absdiff(a1, s)),
-                                              v_round(v_absdiff(a2, s))),
-                                       v_pack(v_round(v_absdiff(a3, s)),
-                                              v_round(v_absdiff(a4, s)))));
-        }
-
-        if (x < length && (in != out))
-        {
-            x = length - nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
-}
-
-CV_ALWAYS_INLINE void absdiffc_short_store_c3(short* out_ptr, const v_int32& c1,
-                                              const v_int32& c2, const v_int32& c3,
-                                              const v_int32& c4, const v_int32& c5,
-                                              const v_int32& c6)
-{
-    constexpr int nlanes = static_cast<int>(v_int16::nlanes);
-    vx_store(out_ptr, v_pack(c1, c2));
-    vx_store(out_ptr + nlanes, v_pack(c3, c4));
-    vx_store(out_ptr + 2*nlanes, v_pack(c5, c6));
-}
-
-CV_ALWAYS_INLINE void absdiffc_short_store_c3(ushort* out_ptr, const v_int32& c1,
-                                              const v_int32& c2, const v_int32& c3,
-                                              const v_int32& c4, const v_int32& c5,
-                                              const v_int32& c6)
-{
-    constexpr int nlanes = static_cast<int>(v_uint16::nlanes);
-    vx_store(out_ptr, v_pack_u(c1, c2));
-    vx_store(out_ptr + nlanes, v_pack_u(c3, c4));
-    vx_store(out_ptr + 2*nlanes, v_pack_u(c5, c6));
-}
-
-template<typename T>
-CV_ALWAYS_INLINE int absdiffc_simd_c3_impl(const T in[], T out[],
-                                           const v_float32& s1, const v_float32& s2,
-                                           const v_float32& s3, const int length)
-{
-    static_assert((std::is_same<T, ushort>::value) || (std::is_same<T, short>::value),
-                  "This templated overload is only for short or ushort type combinations.");
-
-    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes):
-                                                              static_cast<int>(v_int16::nlanes);
-
-    if (length < 3 * nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - 3 * nlanes; x += 3 * nlanes)
-        {
-            v_float32 a1 = v_load_f32(in + x);
-            v_float32 a2 = v_load_f32(in + x + nlanes / 2);
-            v_float32 a3 = v_load_f32(in + x + nlanes);
-            v_float32 a4 = v_load_f32(in + x + 3 * nlanes / 2);
-            v_float32 a5 = v_load_f32(in + x + 2 * nlanes);
-            v_float32 a6 = v_load_f32(in + x + 5 * nlanes / 2);
-
-            absdiffc_short_store_c3(&out[x], v_round(v_absdiff(a1, s1)),
-                                             v_round(v_absdiff(a2, s2)),
-                                             v_round(v_absdiff(a3, s3)),
-                                             v_round(v_absdiff(a4, s1)),
-                                             v_round(v_absdiff(a5, s2)),
-                                             v_round(v_absdiff(a6, s3)));
-        }
-
-        if (x < length && (in != out))
-        {
-            x = length - 3 * nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
-}
-
-template<>
-CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
-                                                  const v_float32& s1, const v_float32& s2,
-                                                  const v_float32& s3, const int length)
-{
-    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-    if (length < 3 * nlanes)
-        return 0;
-
-    int x = 0;
-
-    for (;;)
-    {
-        for (; x <= length - 3 * nlanes; x += 3 * nlanes)
-        {
-            vx_store(&out[x],
-                     v_pack_u(v_pack(v_round(v_absdiff(v_load_f32(in + x), s1)),
-                                     v_round(v_absdiff(v_load_f32(in + x + nlanes/4), s2))),
-                              v_pack(v_round(v_absdiff(v_load_f32(in + x + nlanes/2), s3)),
-                                     v_round(v_absdiff(v_load_f32(in + x + 3*nlanes/4), s1)))));
-
-            vx_store(&out[x + nlanes],
-                     v_pack_u(v_pack(v_round(v_absdiff(v_load_f32(in + x + nlanes), s2)),
-                                     v_round(v_absdiff(v_load_f32(in + x + 5*nlanes/4), s3))),
-                              v_pack(v_round(v_absdiff(v_load_f32(in + x + 3*nlanes/2), s1)),
-                                     v_round(v_absdiff(v_load_f32(in + x + 7*nlanes/4), s2)))));
-
-            vx_store(&out[x + 2 * nlanes],
-                     v_pack_u(v_pack(v_round(v_absdiff(v_load_f32(in + x + 2*nlanes), s3)),
-                                     v_round(v_absdiff(v_load_f32(in + x + 9*nlanes/4), s1))),
-                              v_pack(v_round(v_absdiff(v_load_f32(in + x + 5*nlanes/2), s2)),
-                                     v_round(v_absdiff(v_load_f32(in + x + 11*nlanes/4), s3)))));
-        }
-
-        if (x < length && (in != out))
-        {
-            x = length - 3 * nlanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
-}
-
-template<typename T>
-CV_ALWAYS_INLINE int absdiffc_simd_channels(const T in[], const float scalar[], T out[],
-                                            const int width, int chan)
-{
-    int length = width * chan;
-    v_float32 s = vx_load(scalar);
-
-    return absdiffc_simd_c1c2c4(in, out, s, length);
-}
-
-template<typename T>
-CV_ALWAYS_INLINE int absdiffc_simd_c3(const T in[], const float scalar[], T out[], int width)
-{
-    constexpr int chan = 3;
-    int length = width * chan;
-
-    v_float32 s1 = vx_load(scalar);
-#if CV_SIMD_WIDTH == 32
-    v_float32 s2 = vx_load(scalar + 2);
-    v_float32 s3 = vx_load(scalar + 1);
-#else
-    v_float32 s2 = vx_load(scalar + 1);
-    v_float32 s3 = vx_load(scalar + 2);
-#endif
-
-    return absdiffc_simd_c3_impl(in, out, s1, s2, s3, length);
-}
-
-template<typename T>
-CV_ALWAYS_INLINE int absdiffc_simd(const T in[], const float scalar[], T out[], int width, int chan)
-{
-    switch (chan)
-    {
-    case 1:
-    case 2:
-    case 4:
-        return absdiffc_simd_channels(in, scalar, out, width, chan);
-    case 3:
-        return absdiffc_simd_c3(in, scalar, out, width);
-    default:
-        break;
-    }
-
-    return 0;
-}
-#endif  // CV_SIMD
-
 template<typename DST, typename SRC>
 static void run_absdiffc(Buffer &dst, const View &src, const float scalar[])
 {
@@ -1240,13 +1002,14 @@ static void run_absdiffc(Buffer &dst, const View &src, const float scalar[])
 
     int width = dst.length();
     int chan = dst.meta().chan;
+    const int length = width * chan;
 
     int w = 0;
 #if CV_SIMD
-    w = absdiffc_simd(in, scalar, out, width, chan);
+    w = absdiffc_simd(in, scalar, out, length, chan);
 #endif
 
-    for (; w < width*chan; ++w)
+    for (; w < length; ++w)
         out[w] = absdiff<DST>(in[w], scalar[w%chan]);
 }
 
@@ -1349,49 +1112,6 @@ static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], A
     }
 }
 
-GAPI_FLUID_KERNEL(GFluidAbsDiffC, cv::gapi::core::GAbsDiffC, true)
-{
-    static const int Window = 1;
-
-    static void run(const View &src, const cv::Scalar& _scalar, Buffer &dst, Buffer& scratch)
-    {
-        if (dst.y() == 0)
-        {
-            const int chan = src.meta().chan;
-            float* sc = scratch.OutLine<float>();
-
-            for (int i = 0; i < scratch.length(); ++i)
-                sc[i] = static_cast<float>(_scalar[i % chan]);
-        }
-
-        const float* scalar = scratch.OutLine<float>();
-
-        //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar, uchar, run_absdiffc, dst, src, scalar);
-        UNARY_(ushort, ushort, run_absdiffc, dst, src, scalar);
-        UNARY_(short, short, run_absdiffc, dst, src, scalar);
-
-        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
-    }
-
-    static void initScratch(const GMatDesc&, const GScalarDesc&, Buffer& scratch)
-    {
-#if CV_SIMD
-        constexpr int buflen = static_cast<int>(v_float32::nlanes) + 2; // buffer size
-#else
-        constexpr int buflen = 4;
-#endif
-        cv::Size bufsize(buflen, 1);
-        GMatDesc bufdesc = { CV_32F, 1, bufsize };
-        Buffer buffer(bufdesc);
-        scratch = std::move(buffer);
-    }
-
-    static void resetScratch(Buffer& /* scratch */)
-    {
-    }
-};
-
 CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)
 {
 #if CV_SIMD
@@ -1417,6 +1137,42 @@ CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)
     Buffer buffer(bufdesc);
     scratch = std::move(buffer);
 }
+
+GAPI_FLUID_KERNEL(GFluidAbsDiffC, cv::gapi::core::GAbsDiffC, true)
+{
+    static const int Window = 1;
+
+    static void run(const View &src, const cv::Scalar& _scalar, Buffer &dst, Buffer& scratch)
+    {
+        if (dst.y() == 0)
+        {
+            const int chan = src.meta().chan;
+            float* sc = scratch.OutLine<float>();
+
+            for (int i = 0; i < scratch.length(); ++i)
+                sc[i] = static_cast<float>(_scalar[i % chan]);
+        }
+
+        const float* scalar = scratch.OutLine<float>();
+
+        //     DST     SRC     OP            __VA_ARGS__
+        UNARY_(uchar, uchar, run_absdiffc, dst, src, scalar);
+        UNARY_(ushort, ushort, run_absdiffc, dst, src, scalar);
+        UNARY_(short, short, run_absdiffc, dst, src, scalar);
+        UNARY_(float, float, run_absdiffc, dst, src, scalar);
+
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GMatDesc&, const GScalarDesc&, Buffer& scratch)
+    {
+        initScratchBuffer(scratch);
+    }
+
+    static void resetScratch(Buffer& /* scratch */)
+    {
+    }
+};
 
 GAPI_FLUID_KERNEL(GFluidAddC, cv::gapi::core::GAddC, true)
 {
