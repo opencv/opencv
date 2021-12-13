@@ -11,67 +11,20 @@
 namespace cv
 {
 
-Volume::Impl::Impl(VolumeSettings settings) :
-    voxelSize(settings.getVoxelSize()),
-    voxelSizeInv(1.0f / voxelSize),
-    raycastStepFactor(settings.getRaycastStepFactor())
-{
-    std::cout << "Volume::Impl::Impl()" << std::endl;
-    this->settings = settings;
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    this->pose = Affine3f(_pose);
-}
+Volume::Impl::Impl(const VolumeSettings& _settings) :
+    settings(_settings)
+{}
 
 // TSDF
 
-TsdfVolume::TsdfVolume(VolumeSettings settings) :
+TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
 {
     std::cout << "TsdfVolume::TsdfVolume()" << std::endl;
 
-    this->settings = settings;
-
-    CV_Assert(settings.getMaxWeight() < 255);
-    // Unlike original code, this should work with any volume size
-    // Not only when (x,y,z % 32) == 0
-    Vec3i resolution;
-    settings.getVolumeResolution(resolution);
-    volResolution = Point3i(resolution);
-    volSize = Point3f(volResolution) * voxelSize;
-    truncDist = std::max(settings.getTruncatedDistance(), 2.1f * voxelSize);
-
-    // (xRes*yRes*zRes) array
-    // Depending on zFirstMemOrder arg:
-    // &elem(x, y, z) = data + x*zRes*yRes + y*zRes + z;
-    // &elem(x, y, z) = data + x + y*xRes + z*xRes*yRes;
-    int xdim, ydim, zdim;
-    if (settings.getMaxWeight())
-    {
-        xdim = volResolution.z * volResolution.y;
-        ydim = volResolution.z;
-        zdim = 1;
-    }
-    else
-    {
-        xdim = 1;
-        ydim = volResolution.x;
-        zdim = volResolution.x * volResolution.y;
-    }
-    volDims = Vec4i(xdim, ydim, zdim);
-    volStrides = Vec4i(xdim, ydim, zdim);
-    this->neighbourCoords = Vec8i(
-        volDims.dot(Vec4i(0, 0, 0)),
-        volDims.dot(Vec4i(0, 0, 1)),
-        volDims.dot(Vec4i(0, 1, 0)),
-        volDims.dot(Vec4i(0, 1, 1)),
-        volDims.dot(Vec4i(1, 0, 0)),
-        volDims.dot(Vec4i(1, 0, 1)),
-        volDims.dot(Vec4i(1, 1, 0)),
-        volDims.dot(Vec4i(1, 1, 1))
-    );
-
-    volume = Mat(1, volResolution.x * volResolution.y * volResolution.z, rawType<TsdfVoxel>());
+    Vec3i volResolution;
+    settings.getVolumeResolution(volResolution);
+    volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
 
     reset();
 }
@@ -107,6 +60,7 @@ void TsdfVolume::integrate(OdometryFrame frame, InputArray _cameraPose)
 void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
 {
     std::cout << "TsdfVolume::integrate()" << std::endl;
+
     CV_TRACE_FUNCTION();
     Depth depth = frame.getMat();
     CV_Assert(depth.type() == DEPTH_TYPE);
@@ -156,13 +110,11 @@ int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 
-
-
 // HASH_TSDF
 
-HashTsdfVolume::HashTsdfVolume(VolumeSettings settings) :
+HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
-{ this->settings = settings; }
+{ }
 HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(OdometryFrame frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
@@ -178,9 +130,9 @@ size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 // COLOR_TSDF
 
-ColorTsdfVolume::ColorTsdfVolume(VolumeSettings settings) :
+ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
-{ this->settings = settings; }
+{}
 ColorTsdfVolume::~ColorTsdfVolume() {}
 
 void ColorTsdfVolume::integrate(OdometryFrame frame, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }

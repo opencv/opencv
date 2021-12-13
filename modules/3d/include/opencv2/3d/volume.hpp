@@ -25,7 +25,7 @@ class CV_EXPORTS_W Volume
 {
 public:
     Volume();
-    Volume(VolumeType vtype, VolumeSettings settings);
+    Volume(VolumeType vtype, const VolumeSettings& settings);
     ~Volume();
 
     void integrate(OdometryFrame frame, InputArray pose);

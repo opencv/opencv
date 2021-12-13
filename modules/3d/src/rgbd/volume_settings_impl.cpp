@@ -111,6 +111,8 @@ public:
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
+        // Unlike original code, this should work with any volume size
+        // Not only when (x,y,z % 32) == 0
         const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
     };
 };
@@ -306,6 +308,10 @@ void VolumeSettingsImpl::getCameraIntrinsics(OutputArray val) const
 
 Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder)
 {
+    // (xRes*yRes*zRes) array
+    // Depending on zFirstMemOrder arg:
+    // &elem(x, y, z) = data + x*zRes*yRes + y*zRes + z;
+    // &elem(x, y, z) = data + x + y*xRes + z*xRes*yRes;
     int xdim, ydim, zdim;
     if (ZFirstMemOrder)
     {

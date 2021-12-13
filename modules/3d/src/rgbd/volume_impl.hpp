@@ -18,7 +18,7 @@ private:
     // TODO: make debug function, which show histogram of volume points values
     // make this function run with debug lvl == 10
 public:
-    Impl(VolumeSettings settings);
+    Impl(const VolumeSettings& settings);
     virtual ~Impl() {};
 
     virtual void integrate(OdometryFrame frame, InputArray pose) = 0;
@@ -33,19 +33,14 @@ public:
     virtual size_t getTotalVolumeUnits() const = 0;
 
 public:
-    VolumeSettings settings;
-    const float voxelSize;
-    const float voxelSizeInv;
-    const float raycastStepFactor;
-    Affine3f pose;
-
+    const VolumeSettings& settings;
 };
 
 
 class TsdfVolume : public Volume::Impl
 {
 public:
-    TsdfVolume(VolumeSettings settings);
+    TsdfVolume(const VolumeSettings& settings);
     ~TsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
@@ -65,14 +60,6 @@ public:
 
 
 public:
-    Point3i volResolution;
-
-    Point3f volSize;
-    float truncDist;
-    Vec4i volDims;
-    Vec8i neighbourCoords;
-
-    Vec4i volStrides;
     Vec6f frameParams;
     Mat pixNorms;
     // See zFirstMemOrder arg of parent class constructor
@@ -85,7 +72,7 @@ public:
 class HashTsdfVolume : public Volume::Impl
 {
 public:
-    HashTsdfVolume(VolumeSettings settings);
+    HashTsdfVolume(const VolumeSettings& settings);
     ~HashTsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
@@ -105,7 +92,7 @@ private:
 class ColorTsdfVolume : public Volume::Impl
 {
 public:
-    ColorTsdfVolume(VolumeSettings settings);
+    ColorTsdfVolume(const VolumeSettings& settings);
     ~ColorTsdfVolume();
 
     virtual void integrate(OdometryFrame frame, InputArray pose) override;
@@ -127,7 +114,7 @@ Volume::Volume()
     VolumeSettings settings;
     this->impl = makePtr<TsdfVolume>(settings);
 }
-Volume::Volume(VolumeType vtype, VolumeSettings settings)
+Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     std::cout << "Volume::Volume()" << std::endl;
 
