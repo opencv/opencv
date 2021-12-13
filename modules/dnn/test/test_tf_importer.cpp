@@ -670,6 +670,13 @@ TEST_P(Test_TensorFlow_layers, batch_matmul)
     runTensorFlowNet("batch_matmul");
 }
 
+TEST_P(Test_TensorFlow_layers, square)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    runTensorFlowNet("square");
+}
+
 TEST_P(Test_TensorFlow_layers, reshape)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
