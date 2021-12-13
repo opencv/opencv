@@ -1305,7 +1305,7 @@ void HashTSDFVolumeGPU::integrate(InputArray _depth, float depthFactor, const Ma
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
     }
 
     //! Integrate the correct volumeUnits

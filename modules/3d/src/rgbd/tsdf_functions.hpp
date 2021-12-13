@@ -75,7 +75,9 @@ inline void colorFix(Point3f& c)
 }
 
 cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics);
-cv::UMat preCalculationPixNormGPU(Size size, const Intr& intrinsics);
+#ifdef HAVE_OPENCL
+cv::UMat ocl_preCalculationPixNorm(Size size, const Intr& intrinsics);
+#endif
 
 inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
 {
@@ -167,8 +169,17 @@ void _integrateRGBVolumeUnit(
 void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
                          InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
+
 void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
                        InputArray _volume, OutputArray _points, OutputArray _normals);
+
+#ifdef HAVE_OPENCL
+void ocl_integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volume);
+
+void ocl_raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray _volume, OutputArray _points, OutputArray _normals);
+#endif
 
 
 class CustomHashSet

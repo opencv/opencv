@@ -34,7 +34,7 @@ cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics)
 }
 
 #ifdef HAVE_OPENCL
-cv::UMat preCalculationPixNormGPU(Size size, const Intr& intrinsics)
+cv::UMat ocl_preCalculationPixNorm(Size size, const Intr& intrinsics)
 {
     // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
     Mat cpuPixNorm = preCalculationPixNorm(size, intrinsics);
@@ -621,6 +621,8 @@ void _integrateRGBVolumeUnit(
 void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
                InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
+    std::cout << "integrateVolumeUnit" << std::endl;
+
     Depth depth = _depth.getMat();
     Mat volume = _volume.getMat();
     Mat pixNorms = _pixNorms.getMat();
@@ -892,6 +894,77 @@ void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPo
 
 }
 
+void ocl_integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
+    std::cout << "ocl_integrateVolumeUnit" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    //CV_UNUSED(frameId);
+    CV_Assert(!_depth.empty());
+
+    UMat depth = _depth.getUMat();
+    UMat volume = _volume.getUMat();
+    UMat pixNorms = _pixNorms.getUMat();
+
+    String errorStr;
+    String name = "integrate";
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    UMat vol2camGpu;
+    Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+    Mat(vol2cam.matrix).copyTo(vol2camGpu);
+
+    float dfac = 1.f / settings.getDepthFactor();
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+
+    const float voxelSize = settings.getVoxelSize();
+    const float truncatedDistance = settings.getTruncatedDistance();
+    const int maxWeight = settings.getMaxWeight();
+
+    // TODO: optimization possible
+    // Use sampler for depth (mask needed)
+    k.args(ocl::KernelArg::ReadOnly(depth),
+        ocl::KernelArg::PtrReadWrite(volume),
+        ocl::KernelArg::PtrReadOnly(vol2camGpu),
+        voxelSize,
+        volResGpu.val,
+        volDims.val,
+        fxy.val,
+        cxy.val,
+        dfac,
+        truncatedDistance,
+        maxWeight,
+        ocl::KernelArg::PtrReadOnly(pixNorms));
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)volResolution.x;
+    globalSize[1] = (size_t)volResolution.y;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
+}
+
+
 
 // Raycast
 
@@ -982,8 +1055,83 @@ inline float interpolateVoxel( const Mat& volume,
 
 }
 #endif
-inline Point3f getNormalVoxel(
-    const VolumeSettings& settings, const Mat& volume,
+
+
+#if USE_INTRINSICS
+//gradientDeltaFactor is fixed at 1.0 of voxel size
+inline v_float32x4 getNormalVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const v_float32x4& p)
+{
+    if (v_check_any(p < v_float32x4(1.f, 1.f, 1.f, 0.f)) ||
+        v_check_any(p >= v_float32x4((float)(volResolution.x - 2),
+            (float)(volResolution.y - 2),
+            (float)(volResolution.z - 2), 1.f))
+        )
+        return nanv;
+
+    v_int32x4 ip = v_floor(p);
+    v_float32x4 t = p - v_cvt_f32(ip);
+    float tx = t.get0();
+    t = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(t)));
+    float ty = t.get0();
+    t = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(t)));
+    float tz = t.get0();
+
+    const int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
+    const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
+
+    int ix = ip.get0(); ip = v_rotate_right<1>(ip);
+    int iy = ip.get0(); ip = v_rotate_right<1>(ip);
+    int iz = ip.get0();
+
+    int coordBase = ix * xdim + iy * ydim + iz * zdim;
+
+    float CV_DECL_ALIGNED(16) an[4];
+    an[0] = an[1] = an[2] = an[3] = 0.f;
+    for (int c = 0; c < 3; c++)
+    {
+        const int dim = volDims[c];
+        float& nv = an[c];
+
+        float vx[8];
+        for (int i = 0; i < 8; i++)
+            vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase + 1 * dim].tsdf) -
+            tsdfToFloat(volData[neighbourCoords[i] + coordBase - 1 * dim].tsdf);
+
+        v_float32x4 v0246(vx[0], vx[2], vx[4], vx[6]);
+        v_float32x4 v1357(vx[1], vx[3], vx[5], vx[7]);
+        v_float32x4 vxx = v0246 + v_setall_f32(tz) * (v1357 - v0246);
+
+        v_float32x4 v00_10 = vxx;
+        v_float32x4 v01_11 = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(vxx)));
+
+        v_float32x4 v0_1 = v00_10 + v_setall_f32(ty) * (v01_11 - v00_10);
+        float v0 = v0_1.get0();
+        v0_1 = v_reinterpret_as_f32(v_rotate_right<2>(v_reinterpret_as_u32(v0_1)));
+        float v1 = v0_1.get0();
+
+        nv = v0 + tx * (v1 - v0);
+    }
+
+    v_float32x4 n = v_load_aligned(an);
+    v_float32x4 Norm = v_sqrt(v_setall_f32(v_reduce_sum(n * n)));
+
+    return Norm.get0() < 0.0001f ? nanv : n / Norm;
+}
+
+inline Point3f getNormalVoxel( const Mat& volume,
+    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+    const Point3f& _p)
+{
+    v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
+    v_float32x4 result = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p);
+    float CV_DECL_ALIGNED(16) ares[4];
+    v_store_aligned(ares, result);
+    return Point3f(ares[0], ares[1], ares[2]);
+}
+#else
+inline Point3f getNormalVoxel( const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
     const Point3f& p)
 {
@@ -1032,11 +1180,13 @@ inline Point3f getNormalVoxel(
         an[2] * an[2]);
     return nv < 0.0001f ? nan3 : an / nv;
 }
-
+#endif
 
 void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
                        InputArray _volume, OutputArray _points, OutputArray _normals)
 {
+    std::cout << "raycastVolumeUnit" << std::endl;
+
     const Size frameSize(width, height);
     //CV_Assert(frameSize.area() > 0);
     _points.create(frameSize, POINT_TYPE);
@@ -1172,7 +1322,7 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
                         if (!cvIsNaN(ts) && !cvIsInf(ts))
                         {
                             Point3f pv = (orig + dir * ts);
-                            Point3f nv = getNormalVoxel(settings, volume, volDims, neighbourCoords, volResolution, pv);
+                            Point3f nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
 
                             if (!isNaN(nv))
                             {
@@ -1336,5 +1486,102 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
     parallel_for_(raycastRange, RaycastInvoker);
 }
 
+
+void ocl_raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray _volume, OutputArray _points, OutputArray _normals)
+{
+    std::cout << "ocl_raycastVolumeUnit" << std::endl;
+
+    CV_TRACE_FUNCTION();
+
+    const Size frameSize(width, height);
+    CV_Assert(frameSize.area() > 0);
+
+    String errorStr;
+    String name = "raycast";
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    _points.create(frameSize, CV_32FC4);
+    _normals.create(frameSize, CV_32FC4);
+
+    UMat points = _points.getUMat();
+    UMat normals = _normals.getUMat();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    UMat vol2camGpu, cam2volGpu;
+    Affine3f vol2cam = Affine3f(cameraPose.inv()) * pose;
+    Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
+    Mat(cam2vol.matrix).copyTo(cam2volGpu);
+    Mat(vol2cam.matrix).copyTo(vol2camGpu);
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    Intr intrinsics(intr);
+    Intr::Reprojector r = intrinsics.makeReprojector();
+
+    const UMat volume = _volume.getUMat();
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.0f / voxelSize;
+    float raycastStepFactor = settings.getRaycastStepFactor();
+    float truncatedDistance = settings.getTruncatedDistance();
+
+    // We do subtract voxel size to minimize checks after
+    // Note: origin of volume coordinate is placed
+    // in the center of voxel (0,0,0), not in the corner of the voxel!
+    Vec4f boxMin, boxMax(volSize.x - voxelSize,
+        volSize.y - voxelSize,
+        volSize.z - voxelSize);
+    Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
+    float tstep = truncatedDistance * raycastStepFactor;
+
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+
+    k.args(ocl::KernelArg::WriteOnlyNoSize(points),
+        ocl::KernelArg::WriteOnlyNoSize(normals),
+        frameSize,
+        ocl::KernelArg::PtrReadOnly(volume),
+        ocl::KernelArg::PtrReadOnly(vol2camGpu),
+        ocl::KernelArg::PtrReadOnly(cam2volGpu),
+        finv.val, cxy.val,
+        boxMin.val, boxMax.val,
+        tstep,
+        voxelSize,
+        volResGpu.val,
+        volDims.val,
+        neighbourCoords.val);
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)frameSize.width;
+    globalSize[1] = (size_t)frameSize.height;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+}
 
 } // namespace cv

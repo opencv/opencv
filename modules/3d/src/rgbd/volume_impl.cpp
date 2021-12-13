@@ -24,7 +24,11 @@ TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
 
     Vec3i volResolution;
     settings.getVolumeResolution(volResolution);
+#ifdef HAVE_OPENCL
+    volume = UMat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
+#else
     volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
+#endif
 
     reset();
 }
@@ -51,10 +55,19 @@ void TsdfVolume::integrate(OdometryFrame frame, InputArray _cameraPose)
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
+#ifdef HAVE_OPENCL
+        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
+#else
+        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+#endif
     }
     Matx44f cameraPose = _cameraPose.getMat();
+
+#ifdef HAVE_OPENCL
+    ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+#else
     integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+#endif
 }
 
 void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
@@ -75,11 +88,19 @@ void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
+#ifdef HAVE_OPENCL
+        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
+#else
+        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+#endif
     }
     const Matx44f cameraPose = _cameraPose.getMat();
 
+#ifdef HAVE_OPENCL
+    ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+#else
     integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+#endif
 }
 
 void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
@@ -90,7 +111,11 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
     CV_Assert(width > 0);
 
     const Matx44f cameraPose = _cameraPose.getMat();
+#ifdef HAVE_OPENCL
+    ocl_raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+#else
     raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+#endif
 }
 
 void TsdfVolume::fetchNormals() const {}
@@ -99,12 +124,16 @@ void TsdfVolume::fetchPointsNormals() const {}
 void TsdfVolume::reset()
 {
     CV_TRACE_FUNCTION();
-
+#ifdef HAVE_OPENCL
+    volume.setTo(Scalar(0, 0));
+#else
+    //TODO: use setTo(Scalar(0, 0))
     volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
             TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
             v.tsdf = floatToTsdf(0.0f); v.weight = 0;
         });
+#endif
 }
 int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }

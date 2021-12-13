@@ -412,12 +412,29 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
-    settings.volume->integrate(udepth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    VolumeSettings vs;
+    vs.setDepthFactor(settings.depthFactor);
+    vs.setCameraIntrinsics(settings.intr);
+    Volume volume(VolumeType::TSDF, vs);
 
-    if (isRaycast)
+
+    if (true)
     {
+        volume.integrate(udepth, settings.poses[0].matrix);
+        volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
+    }
+    else
+    {
+        settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
         settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, unormals);
     }
+    normals = unormals.getMat(af);
+    points = upoints.getMat(af);
+
+    displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+
+    waitKey(5000);
+/*
     if (isFetchPointsNormals)
     {
         settings.volume->fetchPointsNormals(upoints, unormals);
@@ -465,6 +482,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         if (display)
             displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
     }
+*/
 }
 
 void valid_points_test(bool isHashTSDF)
@@ -507,7 +525,7 @@ void valid_points_test(bool isHashTSDF)
     if (display)
         displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 }
-/*
+
 TEST(TSDF_GPU, raycast_normals)      { normal_test(false, true, false, false); }
 TEST(TSDF_GPU, fetch_points_normals) { normal_test(false, false, true, false); }
 TEST(TSDF_GPU, fetch_normals)        { normal_test(false, false, false, true); }
@@ -517,7 +535,7 @@ TEST(HashTSDF_GPU, raycast_normals)      { normal_test(true, true, false, false)
 TEST(HashTSDF_GPU, fetch_points_normals) { normal_test(true, false, true, false); }
 TEST(HashTSDF_GPU, fetch_normals)        { normal_test(true, false, false, true); }
 TEST(HashTSDF_GPU, valid_points)         { valid_points_test(true); }
-*/
+
 }
 }  // namespace
 

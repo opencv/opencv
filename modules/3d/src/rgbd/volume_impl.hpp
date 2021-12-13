@@ -61,11 +61,16 @@ public:
 
 public:
     Vec6f frameParams;
-    Mat pixNorms;
+#ifdef HAVE_OPENCL
+    UMat pixNorms;
     // See zFirstMemOrder arg of parent class constructor
     // for the array layout info
     // Consist of Voxel elements
+    UMat volume;
+#else
+    Mat pixNorms;
     Mat volume;
+#endif
 };
 
 

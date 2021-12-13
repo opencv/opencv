@@ -935,7 +935,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
     }
 
     // TODO: optimization possible
