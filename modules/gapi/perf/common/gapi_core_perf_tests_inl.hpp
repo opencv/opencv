@@ -969,7 +969,7 @@ PERF_TEST_P_(SelectPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));        
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
@@ -1009,7 +1009,7 @@ PERF_TEST_P_(MinPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv)); 
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
@@ -1049,7 +1049,7 @@ PERF_TEST_P_(MaxPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv)); 
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
@@ -1089,7 +1089,7 @@ PERF_TEST_P_(AbsDiffPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv)); 
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 
@@ -1617,7 +1617,7 @@ PERF_TEST_P_(Merge3PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -1662,7 +1662,7 @@ PERF_TEST_P_(Merge4PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -1705,7 +1705,7 @@ PERF_TEST_P_(RemapPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 
@@ -1745,7 +1745,7 @@ PERF_TEST_P_(FlipPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
@@ -1787,7 +1787,7 @@ PERF_TEST_P_(CropPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz_out);
     }
@@ -1827,7 +1827,7 @@ PERF_TEST_P_(CopyPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
@@ -1882,7 +1882,7 @@ PERF_TEST_P_(ConcatHorPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -1942,7 +1942,7 @@ PERF_TEST_P_(ConcatHorVecPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -1996,7 +1996,7 @@ PERF_TEST_P_(ConcatVertPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -2056,7 +2056,7 @@ PERF_TEST_P_(ConcatVertVecPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 
@@ -2101,7 +2101,7 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));    
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
         EXPECT_EQ(0, cv::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
         EXPECT_EQ(out_mat_gapi.size(), sz_in);
     }
