@@ -49,13 +49,14 @@ namespace cv { namespace usac {
 // This is the estimator class for estimating a homography matrix between two images. A model estimation method and error calculation method are implemented
 class DLSPnPImpl : public DLSPnP {
 private:
-    const Mat * points_mat, * calib_norm_points_mat, * K_mat;
+    const Mat * points_mat, * calib_norm_points_mat;
+    const Matx33d * K_mat;
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
-    const Mat &K;
+    const Matx33d &K;
     const float * const calib_norm_points, * const points;
 #endif
 public:
-    explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_) :
+    explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Matx33d &K_) :
         points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K_mat (&K_)
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
         , K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
@@ -870,7 +871,7 @@ protected:
                  2 * D[74] - 2 * D[78]);                              // s1^3
     }
 };
-Ptr<DLSPnP> DLSPnP::create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K) {
+Ptr<DLSPnP> DLSPnP::create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K) {
     return makePtr<DLSPnPImpl>(points_, calib_norm_pts, K);
 }
 }}
