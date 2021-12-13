@@ -12,6 +12,17 @@
 
 namespace opencv_test
 {
+
+INSTANTIATE_TEST_CASE_P(PhasePerfTestFluid, PhasePerfTest,
+    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+        Values(CV_32FC1, CV_64FC1),
+        Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SqrtPerfTestFluid, SqrtPerfTest,
+    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+        Values(CV_32FC1, CV_64FC1),
+        Values(cv::compile_args(CORE_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(AddPerfTestFluid, AddPerfTest,
     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),

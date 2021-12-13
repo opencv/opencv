@@ -20,6 +20,78 @@ using namespace perf;
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(PhasePerfTest, TestPerformance)
+{
+    cv::Size sz_in;
+    MatType type;
+    cv::GCompileArgs compile_args;
+    std::tie(sz_in, type, compile_args) = GetParam();
+
+    initMatsRandU(type, sz_in, type, false);
+
+    // OpenCV code ///////////////////////////////////////////////////////////
+
+    cv::phase(in_mat1, in_mat2, out_mat_ocv);
+
+    // G-API code ////////////////////////////////////////////////////////////
+    cv::GMat in1, in2;
+    auto out = cv::gapi::phase(in1, in2);
+    cv::GComputation c(cv::GIn(in1, in2), cv::GOut(out));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(gin(in_mat1, in_mat2)),
+                        std::move(compile_args));
+    cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+ //   EXPECT_EQ(out_mat_gapi, out_mat_ocv);
+ //   EXPECT_TRUE(out_mat_gapi == out_mat_ocv);
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(SqrtPerfTest, TestPerformance)
+{
+    cv::Size sz_in;
+    MatType type;
+    cv::GCompileArgs compile_args;
+    std::tie(sz_in, type, compile_args) = GetParam();
+
+    initMatrixRandU(type, sz_in, false);
+
+    // OpenCV code ///////////////////////////////////////////////////////////
+    cv::sqrt(in_mat1, out_mat_ocv);
+
+    // G-API code ////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::sqrt(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Warm-up graph engine:
+    auto cc = c.compile(descr_of(gin(in_mat1)),
+                        std::move(compile_args));
+    cc(gin(in_mat1), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1), gout(out_mat_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    // EXPECT_TRUE(out_mat_gapi == out_mat_ocv);
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(AddPerfTest, TestPerformance)
 {
     Size sz = get<0>(GetParam());

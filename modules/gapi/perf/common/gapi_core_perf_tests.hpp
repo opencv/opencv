@@ -26,7 +26,8 @@ namespace opencv_test
   };
 
 //------------------------------------------------------------------------------
-
+    class PhasePerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
+    class SqrtPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class AddPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
     class AddCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class SubPerfTest : public TestPerfParams<tuple<cv::Size, MatType, int, cv::GCompileArgs>> {};
