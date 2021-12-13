@@ -4,6 +4,8 @@
 
 
 #include "test_precomp.hpp"
+#include <set>
+#include <string>
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -971,6 +973,12 @@ public:
     double default_l1;
     double default_lInf;
 
+    static std::set<std::string> parser_black_list;
+    static std::set<std::string> global_black_list;
+    static std::set<std::string> opencl_fp16_black_list;
+    static std::set<std::string> opencl_black_list;
+    static std::set<std::string> cpu_black_list;
+
     Test_ONNX_conformance()
     {
         test_case = get<0>(GetParam());
@@ -1011,54 +1019,116 @@ public:
         }
         return hasFallbacks;
     }
+
+    static void SetUpTestCase()
+    {
+        parser_black_list = {
+            #include "test_onnx_conformance_layer_parser_denylist.inl.hpp"
+        };
+
+        global_black_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
+        };
+
+        opencl_fp16_black_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
+        };
+
+        opencl_black_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
+        };
+
+        cpu_black_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
+        };
+    }
+
+    static void TearDownTestCase()
+    {
+        parser_black_list.clear();
+        global_black_list.clear();
+        opencl_fp16_black_list.clear();
+        opencl_black_list.clear();
+        cpu_black_list.clear();
+    }
+
+    void checkFilterLists()
+    {
+        const std::string& name = test_case.name;
+        if(parser_black_list.find(name) != parser_black_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+
+        if (backend == DNN_BACKEND_OPENCV)
+        {
+            if(global_black_list.find(name) != global_black_list.end())
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            }
+            if((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_black_list.find(name) != opencl_fp16_black_list.end()))
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            }
+            if((target == DNN_TARGET_OPENCL) && (opencl_black_list.find(name) != opencl_black_list.end()))
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            }
+            if((target == DNN_TARGET_CPU) && (cpu_black_list.find(name) != cpu_black_list.end()))
+            {
+                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+            }
+        }
+#if 0 //def HAVE_HALIDE
+        else if (backend == DNN_BACKEND_HALIDE)
+        {
+            #include "test_onnx_conformance_layer_filter__halide.inl.hpp"
+        }
+#endif
+#if 0 //def HAVE_INF_ENGINE
+        else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            #include "test_onnx_conformance_layer_filter__ngraph.inl.hpp"
+        }
+#endif
+#if 0 //def HAVE_VULKAN
+        else if (backend == DNN_BACKEND_VKCOM)
+        {
+            #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
+        }
+#endif
+#if 0 //def HAVE_CUDA
+        else if (backend == DNN_BACKEND_CUDA)
+        {
+            #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
+        }
+#endif
+        else
+        {
+            std::ostringstream ss;
+            ss << "No test filter available for backend ";
+            PrintTo(backend, &ss);
+            ss << ". Run test by default";
+            std::cout << ss.str() << std::endl;
+        }
+    }
 };
+
+std::set<std::string> Test_ONNX_conformance::parser_black_list;
+std::set<std::string> Test_ONNX_conformance::global_black_list;
+std::set<std::string> Test_ONNX_conformance::opencl_fp16_black_list;
+std::set<std::string> Test_ONNX_conformance::opencl_black_list;
+std::set<std::string> Test_ONNX_conformance::cpu_black_list;
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
 {
     std::string name = test_case.name;
-    //Backend backend = ...;
-    //Target target = ...;
+    ASSERT_FALSE(name.empty());
 
     bool checkLayersFallbacks = true;
     bool checkAccuracy = true;
 
-#include "test_onnx_conformance_layer_filter_parser.inl.hpp"
-    if (backend == DNN_BACKEND_OPENCV)
-    {
-        #include "test_onnx_conformance_layer_filter__opencv.inl.hpp"
-    }
-#if 0 //def HAVE_HALIDE
-    else if (backend == DNN_BACKEND_HALIDE)
-    {
-        #include "test_onnx_conformance_layer_filter__halide.inl.hpp"
-    }
-#endif
-#if 0 //def HAVE_INF_ENGINE
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        #include "test_onnx_conformance_layer_filter__ngraph.inl.hpp"
-    }
-#endif
-#if 0 //def HAVE_VULKAN
-    else if (backend == DNN_BACKEND_VKCOM)
-    {
-        #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
-    }
-#endif
-#if 0 //def HAVE_CUDA
-    else if (backend == DNN_BACKEND_CUDA)
-    {
-        #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
-    }
-#endif
-    else
-    {
-        std::ostringstream ss;
-        ss << "No test filter available for backend ";
-        PrintTo(backend, &ss);
-        ss << ". Run test by default";
-        std::cout << ss.str() << std::endl;
-    }
+    checkFilterLists();
 
     std::vector<Mat> inputs;
     std::vector<Mat> ref_outputs;
@@ -1100,7 +1170,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         net.setPreferableTarget(target);
 
         for (int i = 0; i < inputs.size(); ++i)
+        {
             net.setInput(inputs[i], inputNames[i]);
+        }
     }
     catch (...)
     {
@@ -1124,12 +1196,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     ASSERT_GE(outputs_.size(), 1);
     const std::vector<Mat>& outputs = outputs_[0];
 
-    if (checkLayersFallbacks)
+    if (checkLayersFallbacks && checkFallbacks(net))
     {
-        if (checkFallbacks(net))
-        {
-            applyTestTag(CV_TEST_TAG_DNN_LAYER_FALLBACK);
-        }
+        applyTestTag(CV_TEST_TAG_DNN_LAYER_FALLBACK);
     }
 
     if (checkAccuracy)
