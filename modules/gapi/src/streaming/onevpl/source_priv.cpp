@@ -219,8 +219,12 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
                         "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
                         " - is not implemented");
         } else {
-            //engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
-            engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
+            const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
+            if (!transcode_params.empty()) {
+                engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
+            } else {
+                engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
+            }
         }
     }
 

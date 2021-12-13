@@ -117,6 +117,49 @@ CfgParam CfgParam::create_implementation(uint32_t value) {
 CfgParam CfgParam::create_implementation(const char* value) {
     return CfgParam::create(CfgParam::implementation_name(), std::string(value));
 }
+CfgParam CfgParam::create_vpp_out_fourcc(uint32_t value) {
+    return CfgParam::create(CfgParam::vpp_out_fourcc_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_chroma_format(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_chroma_format_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_width(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_width_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_height(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_height_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_crop_x(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_fourcc_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_crop_y(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_crop_y_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_crop_w(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_crop_w_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_crop_h(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_crop_h_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_pic_struct(uint16_t value) {
+    return CfgParam::create(CfgParam::vpp_out_pic_struct_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_framerate_n(uint32_t value) {
+    return CfgParam::create(CfgParam::vpp_out_framerate_n_name(), value, false);
+}
+
+CfgParam CfgParam::create_vpp_out_framerate_d(uint32_t value) {
+    return CfgParam::create(CfgParam::vpp_out_framerate_d_name(), value, false);
+}
 
 CfgParam& CfgParam::operator=(const CfgParam& src) {
     if (this != &src) {

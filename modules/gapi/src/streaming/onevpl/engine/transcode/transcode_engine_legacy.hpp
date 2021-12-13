@@ -31,12 +31,14 @@ public:
                                    const std::vector<CfgParam>& cfg_params,
                                    std::shared_ptr<IDataProvider> provider) override;
 
+    static std::map<std::string, mfxVariant> get_vpp_params(const std::vector<CfgParam> &cfg_params);
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
     //ExecutionStatus process_error(mfxStatus status, LegacyTranscodeSession& sess);
 
     void on_frame_ready(LegacyTranscodeSession& sess,
                         mfxFrameSurface1* ready_surface);
+    void validate_vpp_param(const mfxVideoParam& mfxVPPParams);
 };
 } // namespace onevpl
 } // namespace wip

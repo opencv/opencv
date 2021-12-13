@@ -29,6 +29,7 @@ namespace onevpl {
 struct GAPI_EXPORTS DecoderParams {
     std::shared_ptr<IDataProvider::mfx_bitstream> stream;
     mfxVideoParam param;
+    cv::optional<size_t> preallocated_frames_count;
 };
 
 struct GAPI_EXPORTS TranscoderParams {

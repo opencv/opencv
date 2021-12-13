@@ -45,7 +45,8 @@ const std::string keys =
     "{ faced                        | AUTO                                      | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
-    "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}";
+    "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
+    "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
 
 
 namespace {
@@ -190,6 +191,8 @@ namespace cfg {
 typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line);
 }
 
+static uint32_t vpl_source_preproc_enable = 0;
+
 int main(int argc, char *argv[]) {
 
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -205,6 +208,7 @@ int main(int argc, char *argv[]) {
     const auto face_model_path = cmd.get<std::string>("facem");
     const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
     const auto source_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
+    vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -221,6 +225,12 @@ int main(int argc, char *argv[]) {
     try {
         std::string line;
         while (std::getline(params_list, line, ';')) {
+            if (!vpl_source_preproc_enable) {
+                if (line.find("vpp.") != std::string::npos) {
+                    // skip VPP preprocessing primitives if not requested
+                    continue;
+                }
+            }
             source_cfgs.push_back(cfg::create_from_string(line));
         }
     } catch (const std::exception& ex) {
@@ -307,6 +317,19 @@ int main(int argc, char *argv[]) {
 
         face_net.cfgContextParams(ctx_config);
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
+
+        std::cout <<"/*******************************************************/\n"
+                    "ATTENTION: GPU Inference Engine preprocessing is not vital as expected!\n"
+                     " Please consider param \"source_preproc_enable=1\" and specify "
+                     " appropriated media frame transformation using oneVPL::VPP primitives"
+                     " which force onevpl::GSource to produce tranformed media frames.\n"
+                     " For exploring list of supported transformations please find out "
+                     " vpp_* related stuff in"
+                     " gapi/include/opencv2/gapi/streaming/onevpl/cfg_params.hpp\n"
+                     " Pay attention that to obtain expected result In this case VPP "
+                     " transformation must match network input params.\n"
+                     " Please vote/create issue about exporting network params using GAPI\n"
+                     "/******************************************************/" << std::endl;
     }
 #endif // HAVE_INF_ENGINE
 
@@ -405,6 +428,8 @@ typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &l
     std::string name = line.substr(0, name_endline_pos);
     std::string value = line.substr(name_endline_pos + 1);
 
-    return cv::gapi::wip::onevpl::CfgParam::create(name, value);
+    return cv::gapi::wip::onevpl::CfgParam::create(name, value,
+                                                   /* vpp params strongly optional */
+                                                   name.find("vpp.") == std::string::npos);
 }
 }

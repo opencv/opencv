@@ -27,6 +27,56 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+template<typename Type>
+bool set_vpp_param(const char* name, Type& out_vpp_param,
+                   const std::map<std::string, mfxVariant> &params_storage,
+                   mfxSession session);
+
+template<>
+bool set_vpp_param<uint32_t>(const char* name, uint32_t& out_vpp_param,
+                             const std::map<std::string, mfxVariant> &params_storage,
+                             mfxSession session) {
+    auto it = params_storage.find(name);
+    if (it != params_storage.end()) {
+        auto value = it->second.Data.U32;
+        GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
+                               "\": " << value);
+        out_vpp_param = value;
+        return true;
+    }
+    return false;
+}
+
+template<>
+bool set_vpp_param<uint16_t>(const char* name, uint16_t& out_vpp_param,
+                             const std::map<std::string, mfxVariant> &params_storage,
+                             mfxSession session) {
+    auto it = params_storage.find(name);
+    if (it != params_storage.end()) {
+        auto value = it->second.Data.U16;
+        GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
+                               "\": " << value);
+        out_vpp_param = value;
+        return true;
+    }
+    return false;
+}
+
+std::map<std::string, mfxVariant>
+    VPLLegacyTranscodeEngine::get_vpp_params(const std::vector<CfgParam> &cfg_params) {
+    std::map<std::string, mfxVariant> ret;
+    static const char* vpp_param_prefix {"vpp."};
+    for (const auto &param : cfg_params) {
+        const char *param_name_cptr = param.get_name().c_str();
+        if (strstr(param_name_cptr, vpp_param_prefix) == param_name_cptr) {
+            ret.emplace(param.get_name(), cfg_param_to_mfx_variant(param));
+        }
+    }
+    GAPI_LOG_INFO(nullptr, "Detected VPP params count: [" << ret.size() <<
+                            "/" << cfg_params.size() << "]");
+    return ret;
+}
+
 VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
  : VPLLegacyDecodeEngine(std::move(accel)) {
 
@@ -224,26 +274,48 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
                         prepare_session_param(mfx_session, cfg_params, provider);
 
 
-    // NB:: create transcode params
+    // NB: create transcode params
     const auto& mfxDecParams = decode_params.decoder_params.param;
 
     auto vppOutImgWidth  = 672;
     auto vppOutImgHeight = 382;
 
+    // NB: create transcode params: Out = In by default, In = initially decoded
     mfxVideoParam mfxVPPParams{0};
-
     mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
-    mfxVPPParams.vpp.Out.FourCC        = mfxVPPParams.vpp.In.FourCC;//MFX_FOURCC_NV12;
-    mfxVPPParams.vpp.Out.ChromaFormat  = mfxVPPParams.vpp.In.ChromaFormat;//MFX_CHROMAFORMAT_YUV420;
-    mfxVPPParams.vpp.Out.Width         = ALIGN16(vppOutImgWidth);
-    mfxVPPParams.vpp.Out.Height        = ALIGN16(vppOutImgHeight);
-    mfxVPPParams.vpp.Out.CropX = 0;
-    mfxVPPParams.vpp.Out.CropY = 0;
-    mfxVPPParams.vpp.Out.CropW         = vppOutImgWidth;
-    mfxVPPParams.vpp.Out.CropH         = vppOutImgHeight;
-    mfxVPPParams.vpp.Out.PicStruct     = mfxVPPParams.vpp.In.PicStruct;//MFX_PICSTRUCT_PROGRESSIVE;
-    mfxVPPParams.vpp.Out.FrameRateExtN = mfxVPPParams.vpp.In.FrameRateExtN;
-    mfxVPPParams.vpp.Out.FrameRateExtD = mfxVPPParams.vpp.In.FrameRateExtD;
+    mfxVPPParams.vpp.Out = mfxVPPParams.vpp.In;
+
+    std::map<std::string, mfxVariant> cfg_vpp_params =
+                        VPLLegacyTranscodeEngine::get_vpp_params(cfg_params);
+
+    set_vpp_param(CfgParam::vpp_out_fourcc_name(), mfxVPPParams.vpp.Out.FourCC,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_chroma_format_name(), mfxVPPParams.vpp.Out.ChromaFormat,
+                  cfg_vpp_params, mfx_session);
+    if (set_vpp_param(CfgParam::vpp_out_width_name(), mfxVPPParams.vpp.Out.Width,
+                  cfg_vpp_params, mfx_session)) {
+        mfxVPPParams.vpp.Out.Width = ALIGN16(mfxVPPParams.vpp.Out.Width);
+    }
+    if (set_vpp_param(CfgParam::vpp_out_height_name(), mfxVPPParams.vpp.Out.Height,
+                  cfg_vpp_params, mfx_session)) {
+        mfxVPPParams.vpp.Out.Height = ALIGN16(mfxVPPParams.vpp.Out.Height);
+    }
+    set_vpp_param(CfgParam::vpp_out_crop_x_name(), mfxVPPParams.vpp.Out.CropX,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_crop_y_name(), mfxVPPParams.vpp.Out.CropY,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_crop_w_name(), mfxVPPParams.vpp.Out.CropW,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_crop_h_name(), mfxVPPParams.vpp.Out.CropH,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_pic_struct_name(), mfxVPPParams.vpp.Out.PicStruct,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_framerate_n_name(), mfxVPPParams.vpp.Out.FrameRateExtN,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_out_framerate_d_name(), mfxVPPParams.vpp.Out.FrameRateExtD,
+                  cfg_vpp_params, mfx_session);
+
+    VPLLegacyTranscodeEngine::validate_vpp_param(mfxVPPParams);
 
     if (mfxDecParams.IOPattern == MFX_IOPATTERN_OUT_VIDEO_MEMORY) {
         mfxVPPParams.IOPattern = MFX_IOPATTERN_IN_VIDEO_MEMORY | MFX_IOPATTERN_OUT_VIDEO_MEMORY;
@@ -256,18 +328,17 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     memset(&vppRequests, 0, sizeof(mfxFrameAllocRequest) * 2);
     mfxStatus sts = MFXVideoVPP_QueryIOSurf(mfx_session, &mfxVPPParams, vppRequests);
     if (MFX_ERR_NONE != sts) {
-        GAPI_LOG_WARNING(nullptr, "cannot MFXVideoVPP_QueryIOSurf");
-        throw std::runtime_error("Cannot MFXVideoVPP_QueryIOSurf, error: " +
+        GAPI_LOG_WARNING(nullptr, "cannot execute MFXVideoVPP_QueryIOSurf");
+        throw std::runtime_error("Cannot execute MFXVideoVPP_QueryIOSurf, error: " +
                                   mfxstatus_to_string(sts));
     }
 
     // TODO  enough
     //vppRequests[1].NumFrameSuggested *= 2;
-/*
-    auto tmpparam = mfxVPPParams;
-    tmpparam.mfx.FrameInfo = mfxDecParams.vpp.Out;*/
 
-    vppRequests[1].AllocId = 666;
+    // NB: Assing ID as upper limit descendant to distinguish specific VPP allocation
+    // from decode allocations witch started from 0: by local module convention
+    vppRequests[1].AllocId = std::numeric_limits<uint16_t>::max();
 
     vppRequests[1].Type |= MFX_MEMTYPE_FROM_VPPIN;
     VPLAccelerationPolicy::pool_key_t vpp_out_pool_key =
@@ -295,6 +366,34 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     sess_ptr->swap_surface(*this);
     sess_ptr->swap_transcode_surface(*this);
     return sess_ptr;
+}
+
+void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPParams) {
+    GAPI_LOG_INFO(nullptr, "Starting VPP Out param validation");
+    if (mfxVPPParams.vpp.Out.Width < mfxVPPParams.vpp.Out.CropW + mfxVPPParams.vpp.Out.CropX) {
+        GAPI_LOG_WARNING(nullptr, "Invalid vonfiguration params: sum \"" <<
+                                  CfgParam::vpp_out_crop_w_name() <<
+                                  "\": " << mfxVPPParams.vpp.Out.CropW << " and \"" <<
+                                  CfgParam::vpp_out_crop_x_name() <<
+                                  "\": " << mfxVPPParams.vpp.Out.CropX <<
+                                  " must be less or equal to \"" <<
+                                  CfgParam::vpp_out_width_name() << "\": " <<
+                                  mfxVPPParams.vpp.Out.Width);
+        GAPI_Assert(false && "Invalid VPP params combination: Width & Crop");
+    }
+
+    if (mfxVPPParams.vpp.Out.Height < mfxVPPParams.vpp.Out.CropH + mfxVPPParams.vpp.Out.CropY) {
+        GAPI_LOG_WARNING(nullptr, "Invalid vonfiguration params: sum \"" <<
+                                  CfgParam::vpp_out_crop_h_name() <<
+                                  "\": " << mfxVPPParams.vpp.Out.CropH << " and \"" <<
+                                  CfgParam::vpp_out_crop_y_name() <<
+                                  "\": " << mfxVPPParams.vpp.Out.CropY <<
+                                  " must be less or equal to \"" <<
+                                  CfgParam::vpp_out_height_name() << "\": " <<
+                                  mfxVPPParams.vpp.Out.Height);
+        GAPI_Assert(false && "Invalid VPP params combination: Height & Crop");
+    }
+    GAPI_LOG_INFO(nullptr, "Finished VPP Out param validation");
 }
 
 ProcessingEngineBase::ExecutionStatus VPLLegacyTranscodeEngine::execute_op(operation_t& op, EngineSession& sess) {

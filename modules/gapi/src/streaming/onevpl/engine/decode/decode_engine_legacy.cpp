@@ -213,6 +213,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
     // to keep more free surfaces in a round. Otherwise VPL decode pipeline will be waiting
     // till application is freeing unusable surface on its side.
     //
+    cv::optional<size_t> preallocated_frames_count_cfg;
     auto queue_capacity_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
         return value.get_name() == CfgParam::frames_pool_size_name();
     });
@@ -236,7 +237,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
         GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
                       preallocated_frames_count << ", for session: " << mfx_session);
-
+        preallocated_frames_count_cfg = cv::util::make_optional(preallocated_frames_count);
     }
     if (preallocated_frames_count < decRequest.NumFrameMin) {
         GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
@@ -272,7 +273,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
                                  mfxstatus_to_string(sts));
     }
 
-    return {decode_pool_key, {bitstream, mfxDecParams}};
+    return {decode_pool_key, {bitstream, mfxDecParams, preallocated_frames_count_cfg}};
 }
 
 

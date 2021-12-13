@@ -31,6 +31,7 @@ struct ParamCreator {
 
 mfxVariant cfg_param_to_mfx_variant(const CfgParam& value);
 
+unsigned long strtoul_or_throw(const char* str);
 size_t strtoull_or_throw(const char* str);
 int64_t strtoll_or_throw(const char* str);
 

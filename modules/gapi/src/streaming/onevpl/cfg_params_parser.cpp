@@ -35,6 +35,12 @@ struct ParamCreator<mfxVariant> {
         return create_impl(name, value);
     }
 private:
+    mfxVariant create_impl(const std::string&, mfxU16 value) {
+        mfxVariant ret;
+        ret.Type = MFX_VARIANT_TYPE_U16;
+        ret.Data.U16 = value;
+        return ret;
+    }
     mfxVariant create_impl(const std::string&, mfxU32 value) {
         mfxVariant ret;
         ret.Type = MFX_VARIANT_TYPE_U32;
@@ -89,24 +95,42 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
-        } else if (name == "vpp.Out.FourCC") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.ChromaFormat") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.Width") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.Height") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.CropW") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.CropH") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.PicStruct") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.FrameRateExtN") {
-            ret.push_back(creator.create(name, value, false));
-        } else if (name == "vpp.Out.FrameRateExtD") {
-            ret.push_back(creator.create(name, value, false));
+        } else if (name == CfgParam::vpp_out_fourcc_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_chroma_format_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_width_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_height_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_crop_w_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_crop_h_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_pic_struct_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_framerate_n_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_framerate_d_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
+                                         false));
         } else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
                                     ", value: " << value);
@@ -146,6 +170,19 @@ mfxVariant cfg_param_to_mfx_variant(const CfgParam& cfg_val) {
                 }
                 ret = *parsed.begin();
             }), cfg_val.get_value());
+    return ret;
+}
+
+unsigned long strtoul_or_throw(const char* str) {
+    char *end_ptr = nullptr;
+    errno = 0;
+    unsigned long ret = strtoul(str, &end_ptr, 10);
+    if ((end_ptr == str) ||
+        ((ret == ULONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+            // nothing parsed from the string, handle errors or exit
+        GAPI_LOG_WARNING(nullptr, "strtoul failed for: " << str);
+        GAPI_Assert(false && "strtoul_or_throw");
+    }
     return ret;
 }
 
