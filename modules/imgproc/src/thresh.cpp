@@ -764,6 +764,12 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     CV_IPP_CHECK()
     {
         IppiSize sz = { roi.width, roi.height };
+
+        int *thresh_hex = reinterpret_cast<int*>(&thresh);
+        int onebit = 0x00000001;
+        (*thresh_hex) += onebit;
+        float  thresh_flt = *reinterpret_cast<float*>(thresh_hex);
+
         switch( type )
         {
         case THRESH_TRUNC:
@@ -774,16 +780,14 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             }
             setIppErrorStatus();
             break;
-#if 0  // details: https://github.com/opencv/opencv/pull/16085
         case THRESH_TOZERO:
-            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + FLT_EPSILON, 0))
+            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh_flt, 0))
             {
                 CV_IMPL_ADD(CV_IMPL_IPP);
                 return;
             }
             setIppErrorStatus();
             break;
-#endif
         case THRESH_TOZERO_INV:
             if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
             {
