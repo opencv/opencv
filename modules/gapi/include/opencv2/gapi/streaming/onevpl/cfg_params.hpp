@@ -110,6 +110,26 @@ struct GAPI_EXPORTS CfgParam {
     static CfgParam create_implementation(uint32_t value);
     static CfgParam create_implementation(const char* value);
 
+
+    static constexpr const char *vpp_in_width_name() { return "vpp.In.Width"; }
+    static CfgParam create_vpp_in_width(uint16_t value);
+
+    static constexpr const char *vpp_in_height_name() { return "vpp.In.Height"; }
+    static CfgParam create_vpp_in_height(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_x_name() { return "vpp.In.CropX"; }
+    static CfgParam create_vpp_in_crop_x(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_y_name() { return "vpp.In.CropY"; }
+    static CfgParam create_vpp_in_crop_y(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_w_name() { return "vpp.In.CropW"; }
+    static CfgParam create_vpp_in_crop_w(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_h_name() { return "vpp.In.CropH"; }
+    static CfgParam create_vpp_in_crop_h(uint16_t value);
+
+
     static constexpr const char *vpp_out_fourcc_name() { return "vpp.Out.FourCC"; }
     static CfgParam create_vpp_out_fourcc(uint32_t value);
 

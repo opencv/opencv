@@ -277,9 +277,6 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     // NB: create transcode params
     const auto& mfxDecParams = decode_params.decoder_params.param;
 
-    auto vppOutImgWidth  = 672;
-    auto vppOutImgHeight = 382;
-
     // NB: create transcode params: Out = In by default, In = initially decoded
     mfxVideoParam mfxVPPParams{0};
     mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
@@ -288,6 +285,25 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     std::map<std::string, mfxVariant> cfg_vpp_params =
                         VPLLegacyTranscodeEngine::get_vpp_params(cfg_params);
 
+    // override some in-params
+    if (set_vpp_param(CfgParam::vpp_in_width_name(), mfxVPPParams.vpp.In.Width,
+                  cfg_vpp_params, mfx_session)) {
+        mfxVPPParams.vpp.In.Width = ALIGN16(mfxVPPParams.vpp.In.Width);
+    }
+    if (set_vpp_param(CfgParam::vpp_in_height_name(), mfxVPPParams.vpp.In.Height,
+                  cfg_vpp_params, mfx_session)) {
+        mfxVPPParams.vpp.In.Height = ALIGN16(mfxVPPParams.vpp.In.Height);
+    }
+    set_vpp_param(CfgParam::vpp_in_crop_x_name(), mfxVPPParams.vpp.In.CropX,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_in_crop_y_name(), mfxVPPParams.vpp.In.CropY,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_in_crop_w_name(), mfxVPPParams.vpp.In.CropW,
+                  cfg_vpp_params, mfx_session);
+    set_vpp_param(CfgParam::vpp_in_crop_h_name(), mfxVPPParams.vpp.In.CropH,
+                  cfg_vpp_params, mfx_session);
+
+    // override out params
     set_vpp_param(CfgParam::vpp_out_fourcc_name(), mfxVPPParams.vpp.Out.FourCC,
                   cfg_vpp_params, mfx_session);
     set_vpp_param(CfgParam::vpp_out_chroma_format_name(), mfxVPPParams.vpp.Out.ChromaFormat,
@@ -369,7 +385,31 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
 }
 
 void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPParams) {
-    GAPI_LOG_INFO(nullptr, "Starting VPP Out param validation");
+    GAPI_LOG_INFO(nullptr, "Starting VPP param validation");
+    if (mfxVPPParams.vpp.In.Width < mfxVPPParams.vpp.In.CropW + mfxVPPParams.vpp.In.CropX) {
+        GAPI_LOG_WARNING(nullptr, "Invalid vonfiguration params: sum \"" <<
+                                  CfgParam::vpp_in_crop_w_name() <<
+                                  "\": " << mfxVPPParams.vpp.In.CropW << " and \"" <<
+                                  CfgParam::vpp_in_crop_x_name() <<
+                                  "\": " << mfxVPPParams.vpp.In.CropX <<
+                                  " must be less or equal to \"" <<
+                                  CfgParam::vpp_in_width_name() << "\": " <<
+                                  mfxVPPParams.vpp.In.Width);
+        GAPI_Assert(false && "Invalid VPP params combination: Width & Crop");
+    }
+
+    if (mfxVPPParams.vpp.In.Height < mfxVPPParams.vpp.In.CropH + mfxVPPParams.vpp.In.CropY) {
+        GAPI_LOG_WARNING(nullptr, "Invalid vonfiguration params: sum \"" <<
+                                  CfgParam::vpp_in_crop_h_name() <<
+                                  "\": " << mfxVPPParams.vpp.In.CropH << " and \"" <<
+                                  CfgParam::vpp_in_crop_y_name() <<
+                                  "\": " << mfxVPPParams.vpp.In.CropY <<
+                                  " must be less or equal to \"" <<
+                                  CfgParam::vpp_in_height_name() << "\": " <<
+                                  mfxVPPParams.vpp.In.Height);
+        GAPI_Assert(false && "Invalid VPP params combination: Height & Crop");
+    }
+
     if (mfxVPPParams.vpp.Out.Width < mfxVPPParams.vpp.Out.CropW + mfxVPPParams.vpp.Out.CropX) {
         GAPI_LOG_WARNING(nullptr, "Invalid vonfiguration params: sum \"" <<
                                   CfgParam::vpp_out_crop_w_name() <<
@@ -393,7 +433,8 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
                                   mfxVPPParams.vpp.Out.Height);
         GAPI_Assert(false && "Invalid VPP params combination: Height & Crop");
     }
-    GAPI_LOG_INFO(nullptr, "Finished VPP Out param validation");
+
+    GAPI_LOG_INFO(nullptr, "Finished VPP param validation");
 }
 
 ProcessingEngineBase::ExecutionStatus VPLLegacyTranscodeEngine::execute_op(operation_t& op, EngineSession& sess) {

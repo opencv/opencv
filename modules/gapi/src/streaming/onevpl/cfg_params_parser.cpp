@@ -95,6 +95,30 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+        } else if (name == CfgParam::vpp_in_width_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_in_height_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_in_crop_w_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_in_crop_h_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_in_crop_x_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_in_crop_y_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
         } else if (name == CfgParam::vpp_out_fourcc_name()) {
             ret.push_back(creator.create(name,
                                          static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
@@ -116,6 +140,14 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
                                          static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
                                          false));
         } else if (name == CfgParam::vpp_out_crop_h_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_crop_x_name()) {
+            ret.push_back(creator.create(name,
+                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
+                                         false));
+        } else if (name == CfgParam::vpp_out_crop_y_name()) {
             ret.push_back(creator.create(name,
                                          static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
                                          false));
