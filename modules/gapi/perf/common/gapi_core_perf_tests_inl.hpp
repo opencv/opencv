@@ -51,7 +51,6 @@ PERF_TEST_P_(PhasePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -90,7 +89,6 @@ PERF_TEST_P_(SqrtPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -133,7 +131,6 @@ PERF_TEST_P_(AddPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -175,7 +172,6 @@ PERF_TEST_P_(AddCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -215,7 +211,6 @@ PERF_TEST_P_(SubPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -257,7 +252,6 @@ PERF_TEST_P_(SubCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -298,7 +292,6 @@ PERF_TEST_P_(SubRCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -339,7 +332,6 @@ PERF_TEST_P_(MulPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -356,7 +348,6 @@ PERF_TEST_P_(MulDoublePerfTest, TestPerformance)
     int dtype = -1;
     double scale = 1.0;
     cv::GCompileArgs compile_args;
-
     std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
 
     auto& rng = cv::theRNG();
@@ -383,7 +374,6 @@ PERF_TEST_P_(MulDoublePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -400,7 +390,6 @@ PERF_TEST_P_(MulCPerfTest, TestPerformance)
     int dtype = -1;
     double scale = 1.0;
     cv::GCompileArgs compile_args;
-
     std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
 
     initMatsRandU(type, sz, dtype, false);
@@ -426,7 +415,6 @@ PERF_TEST_P_(MulCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -473,7 +461,6 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -488,19 +475,20 @@ PERF_TEST_P_(DivCPerfTest, TestPerformance)
     cv::Size sz;
     MatType type = -1;
     int dtype = -1;
+    double scale = 1.0;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
+    std::tie(cmpF, sz, type, dtype, scale, compile_args) = GetParam();
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::divide(in_mat1, sc, out_mat_ocv, 1.0, dtype);
+    cv::divide(in_mat1, sc, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, out;
     cv::GScalar sc1;
-    out = cv::gapi::divC(in1, sc1, 1.0, dtype);
+    out = cv::gapi::divC(in1, sc1, scale, dtype);
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
@@ -515,7 +503,6 @@ PERF_TEST_P_(DivCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -530,19 +517,20 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
     cv::Size sz;
     MatType type = -1;
     int dtype = -1;
+    double scale = 1.0;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, sz, type, dtype, compile_args) = GetParam();
+    std::tie(cmpF, sz, type, dtype, scale, compile_args) = GetParam();
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::divide(sc, in_mat1, out_mat_ocv, 1.0, dtype);
+    cv::divide(sc, in_mat1, out_mat_ocv, scale, dtype);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, out;
     cv::GScalar sc1;
-    out = cv::gapi::divRC(sc1, in1, 1.0, dtype);
+    out = cv::gapi::divRC(sc1, in1, scale, dtype);
     cv::GComputation c(GIn(in1, sc1), GOut(out));
 
     // Warm-up graph engine:
@@ -557,7 +545,6 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -600,7 +587,6 @@ PERF_TEST_P_(MaskPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -641,7 +627,6 @@ PERF_TEST_P_(MeanPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_norm.size(), out_norm_ocv.size());
         EXPECT_TRUE(cmpF(out_norm, out_norm_ocv));
     }
 
@@ -680,12 +665,8 @@ PERF_TEST_P_(Polar2CartPerfTest, TestPerformance)
     }
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
         EXPECT_TRUE(cmpF(out_mat2, out_mat_ocv2));
-
     }
 
     SANITY_CHECK_NOTHING();
@@ -724,10 +705,7 @@ PERF_TEST_P_(Cart2PolarPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
         EXPECT_TRUE(cmpF(out_mat2, out_mat_ocv2));
     }
 
@@ -743,7 +721,7 @@ PERF_TEST_P_(CmpPerfTest, TestPerformance)
     cv::Size sz;
     MatType type = -1;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, opType, sz, type, compile_args) = GetParam();;
+    std::tie(cmpF, opType, sz, type, compile_args) = GetParam();
 
     initMatsRandU(type, sz, CV_8U, false);
 
@@ -776,7 +754,6 @@ PERF_TEST_P_(CmpPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -826,7 +803,6 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -838,7 +814,7 @@ PERF_TEST_P_(CmpWithScalarPerfTest, TestPerformance)
 PERF_TEST_P_(BitwisePerfTest, TestPerformance)
 {
     compare_f cmpF;
-    bitwiseOp opType;
+    bitwiseOp opType = AND;
     bool testWithScalar = false;
     cv::Size sz;
     MatType type = -1;
@@ -911,7 +887,6 @@ PERF_TEST_P_(BitwisePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -950,7 +925,6 @@ PERF_TEST_P_(BitwiseNotPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -992,7 +966,6 @@ PERF_TEST_P_(SelectPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1031,7 +1004,6 @@ PERF_TEST_P_(MinPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1070,7 +1042,6 @@ PERF_TEST_P_(MaxPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1109,7 +1080,6 @@ PERF_TEST_P_(AbsDiffPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1149,7 +1119,6 @@ PERF_TEST_P_(AbsDiffCPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1190,7 +1159,6 @@ PERF_TEST_P_(SumPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_sum.size(), out_sum_ocv.size());
         EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 
@@ -1229,7 +1197,6 @@ PERF_TEST_P_(CountNonZeroPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_cnz_gapi.size(), out_cnz_ocv.size());
         EXPECT_TRUE(cmpF(out_cnz_gapi, out_cnz_ocv));
     }
 
@@ -1273,7 +1240,6 @@ PERF_TEST_P_(AddWeightedPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1322,7 +1288,6 @@ PERF_TEST_P_(NormPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_norm.size(), out_norm_ocv.size());
         EXPECT_TRUE(cmpF(out_norm, out_norm_ocv));
     }
 
@@ -1371,10 +1336,7 @@ PERF_TEST_P_(IntegralPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat1.size(), out_mat_ocv1.size());
         EXPECT_TRUE(cmpF(out_mat1, out_mat_ocv1));
-
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
         EXPECT_TRUE(cmpF(out_mat2, out_mat_ocv2));
     }
 
@@ -1418,7 +1380,6 @@ PERF_TEST_P_(ThresholdPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1462,9 +1423,7 @@ PERF_TEST_P_(ThresholdOTPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-
         EXPECT_EQ(ocv_res, out_gapi_scalar.val[0]);
     }
 
@@ -1506,7 +1465,6 @@ PERF_TEST_P_(InRangePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1549,13 +1507,8 @@ PERF_TEST_P_(Split3PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
         EXPECT_TRUE(cmpF(out_mat2, out_mat_ocv2));
-
-        EXPECT_EQ(out_mat3.size(), out_mat_ocv3.size());
         EXPECT_TRUE(cmpF(out_mat3, out_mat_ocv3));
     }
 
@@ -1600,17 +1553,10 @@ PERF_TEST_P_(Split4PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
-        EXPECT_EQ(out_mat2.size(), out_mat_ocv2.size());
-
-        EXPECT_EQ(out_mat3.size(), out_mat_ocv3.size());
-        EXPECT_EQ(out_mat3.size(), out_mat_ocv3.size());
-
-        EXPECT_EQ(out_mat4.size(), out_mat_ocv4.size());
-        EXPECT_EQ(out_mat4.size(), out_mat_ocv4.size());
+        EXPECT_TRUE(cmpF(out_mat2, out_mat_ocv2));
+        EXPECT_TRUE(cmpF(out_mat3, out_mat_ocv3));
+        EXPECT_TRUE(cmpF(out_mat4, out_mat_ocv4));
     }
 
     SANITY_CHECK_NOTHING();
@@ -1652,7 +1598,6 @@ PERF_TEST_P_(Merge3PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1697,7 +1642,6 @@ PERF_TEST_P_(Merge4PerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1740,7 +1684,6 @@ PERF_TEST_P_(RemapPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1780,7 +1723,6 @@ PERF_TEST_P_(FlipPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1799,7 +1741,6 @@ PERF_TEST_P_(CropPerfTest, TestPerformance)
     std::tie(cmpF, sz, type, rect_to, compile_args) = GetParam();
 
     initMatrixRandU(type, sz, type, false);
-    cv::Size sz_out = cv::Size(rect_to.width, rect_to.height);
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::Mat(in_mat1, rect_to).copyTo(out_mat_ocv);
@@ -1821,7 +1762,6 @@ PERF_TEST_P_(CropPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1860,7 +1800,6 @@ PERF_TEST_P_(CopyPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1914,7 +1853,6 @@ PERF_TEST_P_(ConcatHorPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -1974,7 +1912,6 @@ PERF_TEST_P_(ConcatHorVecPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2028,7 +1965,6 @@ PERF_TEST_P_(ConcatVertPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2088,7 +2024,6 @@ PERF_TEST_P_(ConcatVertVecPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2133,7 +2068,6 @@ PERF_TEST_P_(LUTPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2175,7 +2109,6 @@ PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2341,7 +2274,6 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2387,7 +2319,6 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2406,7 +2337,6 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     double fy = 0.0;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, interp, sz, fx, fy, compile_args) = GetParam();
-
 
     in_mat1 = cv::Mat(sz, type);
     cv::Scalar mean = cv::Scalar::all(127);
@@ -2435,7 +2365,6 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     }
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2452,6 +2381,8 @@ PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
     compare_f cmpF;
     std::string fileName = "";
     cv::GCompileArgs compile_args;
+    double fx = 0.5;
+    double fy = 0.5;
     std::tie(cmpF, fileName, compile_args) = GetParam();
 
     in_mat1 = cv::imread(findDataFile(fileName));
@@ -2460,13 +2391,13 @@ PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
     cv::Mat cvgray;
     cv::Mat cvblurred;
 
-    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
+    cv::resize(in_mat1, cvvga, cv::Size(), fx, fy);
     cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
     cv::blur(cvgray, cvblurred, cv::Size(3, 3));
     cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
 
     cv::GMat in;
-    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, INTER_LINEAR);
+    cv::GMat vga = cv::gapi::resize(in, cv::Size(), fx, fy, INTER_LINEAR);
     cv::GMat gray = cv::gapi::BGR2Gray(vga);
     cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
     cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
@@ -2483,7 +2414,6 @@ PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
@@ -2497,19 +2427,21 @@ PERF_TEST_P_(ResizeInSimpleGraphPerfTest, TestPerformance)
     compare_f cmpF;
     MatType type = -1;
     cv::Size sz;
+    double fx = 0.5;
+    double fy = 0.5;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, compile_args) = GetParam();
+    std::tie(cmpF, type, sz, fx, fy, compile_args) = GetParam();
 
     initMatsRandU(type, sz, type, false);
 
     cv::Mat add_res_ocv;
 
     cv::add(in_mat1, in_mat2, add_res_ocv);
-    cv::resize(add_res_ocv, out_mat_ocv, cv::Size(), 0.5, 0.5);
+    cv::resize(add_res_ocv, out_mat_ocv, cv::Size(), fx, fy);
 
     cv::GMat in1, in2;
     cv::GMat add_res_gapi = cv::gapi::add(in1, in2);
-    cv::GMat out = cv::gapi::resize(add_res_gapi, cv::Size(), 0.5, 0.5, INTER_LINEAR);
+    cv::GMat out = cv::gapi::resize(add_res_gapi, cv::Size(), fx, fy, INTER_LINEAR);
     cv::GComputation ac(GIn(in1, in2), GOut(out));
 
     auto cc = ac.compile(descr_of(gin(in_mat1, in_mat2)),
@@ -2523,7 +2455,6 @@ PERF_TEST_P_(ResizeInSimpleGraphPerfTest, TestPerformance)
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_EQ(out_mat_gapi.size(), out_mat_ocv.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 

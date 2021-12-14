@@ -37,8 +37,8 @@ namespace opencv_test
     class MulDoublePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class MulCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
     class DivPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
-    class DivCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
-    class DivRCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, cv::GCompileArgs>> {};
+    class DivCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
+    class DivRCPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, int, double, cv::GCompileArgs>> {};
     class MaskPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class MeanPerfTest : public TestPerfParams<tuple<compare_scalar_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class Polar2CartPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
@@ -74,17 +74,14 @@ namespace opencv_test
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<compare_f, MatType, MatType, cv::Size, cv::GCompileArgs>> {};
     class ConvertToPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
-    class KMeansNDPerfTest : public TestPerfParams<tuple<cv::Size, CompareMats, int,
-                                                         cv::KmeansFlags, cv::GCompileArgs>> {};
-    class KMeans2DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags,
-                                                         cv::GCompileArgs>> {};
-    class KMeans3DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags,
-                                                         cv::GCompileArgs>> {};
+    class KMeansNDPerfTest : public TestPerfParams<tuple<cv::Size, CompareMats, int, cv::KmeansFlags, cv::GCompileArgs>> {};
+    class KMeans2DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags, cv::GCompileArgs>> {};
+    class KMeans3DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags, cv::GCompileArgs>> {};
     class TransposePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class BottleneckKernelsConstInputPerfTest : public TestPerfParams<tuple<compare_f, std::string, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
-    class ResizeInSimpleGraphPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
+    class ResizeInSimpleGraphPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, double, double,  cv::GCompileArgs>> {};
     class ParseSSDBLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseSSDPerfTest   : public TestPerfParams<tuple<cv::Size, float, bool, bool, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseYoloPerfTest  : public TestPerfParams<tuple<cv::Size, float, float, int, cv::GCompileArgs>>, public ParserYoloTest {};
