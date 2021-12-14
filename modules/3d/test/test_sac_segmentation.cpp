@@ -395,42 +395,5 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
     multiModelSegmentation(5000, sphereCheckDiff);
 }
 
-class CylinderSacSegmentationTest : public ::testing::Test
-{
-public:
-    Mat generateCylinder(float *model, float thr, int num, float *limitVec, int seed = 0)
-    {
-        Mat pt_cloud;
-        pt_cloud = cv::Mat(num, 3, CV_32F);
-        cv::RNG rng(seed);
-        auto *pt_cloud_ptr = (float *) pt_cloud.data;
-
-        // Part of the points are generated for the specific model.
-        int cylinder_num = (int) num / 3;
-
-        Vec3f cen(model[0], model[1], model[2]);
-        Vec3f dir(model[3], model[4], model[5]);
-        for (int i = 0; i < num; i++)
-        {
-            float r = i < cylinder_num ? model[6] : rng.uniform(model[6] - thr, model[6] + thr);
-            Vec3f vec(rng.uniform(limitVec[0], limitVec[1]), rng.uniform(limitVec[2], limitVec[3]),
-                    rng.uniform(limitVec[4], limitVec[5]));
-            // The height relative to the center point.
-            float height = rng.uniform(0.0f, model[7]);
-            // Place the point on the surface of the cylinder.
-            vec = dir.cross(vec);
-            float l = sqrt(vec.dot(vec));
-            vec *= r / l;
-            vec += height * dir;
-            Vec3f p(vec + cen);
-
-            pt_cloud_ptr[3 * i] = cen[0] + vec[0];
-            pt_cloud_ptr[3 * i + 1] = cen[1] + vec[1];
-            pt_cloud_ptr[3 * i + 2] = cen[2] + vec[2];
-        }
-        return pt_cloud;
-    }
-};
-
 } // namespace
 } // opencv_test
