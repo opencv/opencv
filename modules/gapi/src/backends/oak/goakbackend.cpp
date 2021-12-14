@@ -174,16 +174,16 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         {
             for (const auto& nh : nodes)
             {
-                if (m_gm.metadata(nh).contains<cv::gimpl::Data>())
+                if (m_gm.metadata(nh).contains<cv::gimpl::Op>())
                 {
-                    auto rc = m_gm.metadata(nh).get<cv::gimpl::Data>().rc;
-                    if (rc == d.rc)
-                    {
-                        for (const auto& child : nh.get()->outNodes()) { // should be only 1 node
-                            GAPI_Assert(m_oak_nodes.find(child) != m_oak_nodes.end());
-                            GAPI_Assert(m_oak_nodes[child]->getInputs().size() == 1);
-                            m_camera_input->video.link(m_oak_nodes[child]->getInputs()[0]);
-                            m_processed_nodes.insert(child);
+                    for (const auto& indata : nh.get()->inNodes()) {
+                        auto rc = m_gm.metadata(indata).get<cv::gimpl::Data>().rc;
+                        if (rc == d.rc)
+                        {
+                            GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
+                            GAPI_Assert(m_oak_nodes[nh]->getInputs().size() == 1);
+                            m_camera_input->video.link(m_oak_nodes[nh]->getInputs()[0]);
+                            m_processed_nodes.insert(nh);
                         }
                     }
                 }
@@ -196,19 +196,21 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         {
             for (const auto& nh : nodes)
             {
-                if (m_gm.metadata(nh).contains<cv::gimpl::Data>())
+                if (m_gm.metadata(nh).contains<cv::gimpl::Op>())
                 {
-                    auto rc = m_gm.metadata(nh).get<cv::gimpl::Data>().rc;
-                    if (rc == d.rc)
-                    {
-                        for (const auto& parent : nh.get()->inNodes()) { // should be only 1 node
-                            GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
-                            GAPI_Assert(m_oak_nodes[parent]->getOutputs().size() == 1);
+                    for (const auto& outdata : nh.get()->outNodes()) {
+                        auto rc = m_gm.metadata(outdata).get<cv::gimpl::Data>().rc;
+                        if (rc == d.rc)
+                        {
+                            GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
+                            GAPI_Assert(m_oak_nodes[nh]->getOutputs().size() == 1);
                             GAPI_Assert(out_counter < m_xlink_outputs.size());
-                            m_oak_nodes[parent]->getOutputs()[0].link(m_xlink_outputs[out_counter++]->input);
+                            m_oak_nodes[nh]->getOutputs()[0].link(m_xlink_outputs[out_counter++]->input);
 
-                            LinkToParentHelper(parent, nodes);
-                            m_processed_nodes.insert(parent);
+                            if (m_processed_nodes.find(nh) == m_processed_nodes.end()) {
+                                LinkToParentHelper(nh, nodes);
+                                m_processed_nodes.insert(nh);
+                            }
                         }
                     }
                 }
