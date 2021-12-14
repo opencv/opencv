@@ -1,0 +1,14 @@
+backend-test:”
+*
+datareduced"ReduceL2*
+keepdims +test_reduce_l2_default_axes_keepdims_randomZ
+data
+
+
+
+b
+reduced
+
+
+
+B	

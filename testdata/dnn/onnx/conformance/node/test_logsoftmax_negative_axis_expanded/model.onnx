@@ -1,0 +1,32 @@
+backend-test:„
+h>LogSoftmax_test_logsoftmax_negative_axis_expanded_functionaxes"Constant*
+value*:
+ˇˇˇˇˇˇˇˇˇ†
+|
+xELogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_ReduceMax"	ReduceMax*
+axes@ˇˇˇˇˇˇˇˇˇ†*
+keepdims†
+ê
+x
+ELogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_ReduceMax?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Sub"Sub
+á
+?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Sub?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Exp"Exp
+‰
+?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Exp
+>LogSoftmax_test_logsoftmax_negative_axis_expanded_functionaxesELogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_ReduceSum"	ReduceSum*
+keepdims†
+ç
+ELogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_ReduceSum?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Log"Log
+ä
+?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Sub
+?LogSoftmax_test_logsoftmax_negative_axis_expanded_functionX_Logy"Sub&test_logsoftmax_negative_axis_expandedZ
+x
+
+
+
+b
+y
+
+
+
+B

@@ -1,0 +1,16 @@
+backend-test:¹
+N
+dataresult"ArgMax*
+axis *
+keepdims *
+select_last_index -test_argmax_keepdims_random_select_last_indexZ
+data
+
+
+
+b
+result
+
+
+
+B
