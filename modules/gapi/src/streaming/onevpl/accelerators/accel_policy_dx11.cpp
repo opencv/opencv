@@ -267,16 +267,11 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         (DXGI_FORMAT_R10G10B10A2_UNORM == desc.Format) ||
         (DXGI_FORMAT_R16G16B16A16_UNORM == desc.Format)) {
         desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-        /*if (desc.ArraySize > 2)
-                return MFX_ERR_MEMORY_ALLOC;*/
     }
 
     if ((MFX_MEMTYPE_FROM_VPPOUT & request->Type) ||
         (MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET & request->Type)) {
         desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-        /*if (desc.ArraySize > 2)
-            return MFX_ERR_MEMORY_ALLOC;
-        */
     }
 
     if (request->Type & MFX_MEMTYPE_SHARED_RESOURCE) {

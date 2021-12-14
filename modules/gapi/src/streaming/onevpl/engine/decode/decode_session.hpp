@@ -50,7 +50,6 @@ protected:
     std::weak_ptr<Surface> procesing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_queue;
-    op_handle_t sync_pair;
 
     int64_t decoded_frames_count;
 };

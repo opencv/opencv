@@ -60,7 +60,8 @@ private:
         return ret;
     }
     mfxVariant create_impl(const std::string&, const std::string&) {
-        GAPI_Assert(false && "Something wrong: wyou should not create mfxVariant from string directly");
+        GAPI_Assert(false && "Something wrong: you should not create mfxVariant "
+                             "from string directly - native type is lost in this case");
     }
 };
 

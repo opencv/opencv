@@ -31,6 +31,7 @@ LegacyTranscodeSession::LegacyTranscodeSession(mfxSession sess,
 LegacyTranscodeSession::~LegacyTranscodeSession()
 {
     GAPI_LOG_INFO(nullptr, "Close Transcode for session: " << session);
+    MFXVideoVPP_Close(session);
 }
 
 void LegacyTranscodeSession::init_transcode_surface_pool(VPLAccelerationPolicy::pool_key_t key) {

@@ -580,8 +580,7 @@ static void setROIBlob(InferenceEngine::InferRequest& req,
         GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
                        ctx.uu.params.device_id << ", layer: " << layer_name);
         setBlob(req, layer_name, blob, ctx);
-    }
-    else {
+    } else {
         setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
     }
 }

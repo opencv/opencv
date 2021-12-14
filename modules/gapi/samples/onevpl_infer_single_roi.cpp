@@ -48,6 +48,8 @@ const std::string keys =
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
     "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
 
+static uint32_t vpl_source_preproc_enable = 0;
+static std::string device_id("AUTO");
 
 namespace {
 std::string get_weights_path(const std::string &model_path) {
@@ -149,22 +151,25 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     static void run(const cv::Size& in_size, cv::Rect &out_rect) {
 
         // Identify the central point & square size (- some padding)
-        /*
-        const auto center = cv::Point{in_size.width/2, in_size.height/2};
-        auto sqside = std::min(in_size.width, in_size.height);
+        // NB: GPU plugin in InferenceEngine doesn't support ROI at now
+        if (device_id.find("GPU") == std::string::npos) {
+            const auto center = cv::Point{in_size.width/2, in_size.height/2};
+            auto sqside = std::min(in_size.width, in_size.height);
 
-        // Now build the central square ROI
-        out_rect = cv::Rect{ center.x - sqside/2
-                           , center.y - sqside/2
-                           , sqside
-                           , sqside
-                           };
-        */
-        out_rect = cv::Rect{ 0
-                           , 0
-                           , in_size.width
-                           , in_size.height
-                           };
+            // Now build the central square ROI
+            out_rect = cv::Rect{ center.x - sqside/2
+                                , center.y - sqside/2
+                                , sqside
+                                , sqside
+                                };
+        } else {
+            // use whole frame for GPU device
+            out_rect = cv::Rect{ 0
+                                , 0
+                                , in_size.width
+                                , in_size.height
+                                };
+        }
     }
 };
 
@@ -190,8 +195,6 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
 namespace cfg {
 typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line);
 }
-
-static uint32_t vpl_source_preproc_enable = 0;
 
 int main(int argc, char *argv[]) {
 
@@ -225,7 +228,7 @@ int main(int argc, char *argv[]) {
     try {
         std::string line;
         while (std::getline(params_list, line, ';')) {
-            if (!vpl_source_preproc_enable) {
+            if (vpl_source_preproc_enable == 0) {
                 if (line.find("vpp.") != std::string::npos) {
                     // skip VPP preprocessing primitives if not requested
                     continue;
@@ -242,7 +245,7 @@ int main(int argc, char *argv[]) {
         source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_frames_pool_size(source_queue_capacity));
     }
 
-    const std::string& device_id = cmd.get<std::string>("faced");
+    device_id = cmd.get<std::string>("faced");
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
         get_weights_path(face_model_path),   // path to weights

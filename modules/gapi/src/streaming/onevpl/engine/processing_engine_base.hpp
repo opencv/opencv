@@ -73,7 +73,6 @@ public:
     template<class ...Ops>
     void create_pipeline(Ops&&...ops)
     {
-        //GAPI_DbgAssert(pipeline.empty() && "Pipeline must be empty");
         std::vector<operation_t>({std::forward<Ops>(ops)...}).swap(pipeline);
     }
 

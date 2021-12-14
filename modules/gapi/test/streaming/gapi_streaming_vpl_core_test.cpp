@@ -654,7 +654,8 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     EXPECT_NO_THROW(acceleration_policy->init(mfx_session));
 
     // create proper bitstream
-    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider("C:\\Users\\sivanov\\github\\Putin.raw",
+    std::string file_path = findDataFile("highgui/video/big_buck_bunny.h265");
+    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
                                                                       {CfgParam::create_decoder_id(MFX_CODEC_HEVC)}));
     IDataProvider::mfx_codec_id_type decoder_id_name = data_provider->get_mfx_codec_id();
 
@@ -687,8 +688,8 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // initialize VPLL
-    auto vppOutImgWidth  = 672;
-    auto vppOutImgHeight = 382;
+    mfxU16 vppOutImgWidth  = 672;
+    mfxU16 vppOutImgHeight = 382;
 
     mfxVideoParam mfxVPPParams{0};
     mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
@@ -736,7 +737,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
 
     // launch pipeline
     LegacyTranscodeSession & my_sess = *sess_ptr;
-    while (true){
+    {
         if (!my_sess.data_provider) {
                 my_sess.last_status = MFX_ERR_MORE_DATA;
         } else {
@@ -763,14 +764,6 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
-            GAPI_LOG_INFO(nullptr, "START decode: " << ", sync id:  " <<
-                                    sync_pair.first <<
-                                    ", dec in surface:  " <<
-                                    my_sess.procesing_surface_ptr.lock()->get_handle() <<
-                                    ", dec out surface: " << sync_pair.second <<
-                                    ", status: " <<
-                                    mfxstatus_to_string(my_sess.last_status));
-
             // process wait-like statuses in-place:
             // It had better to use up all VPL decoding resources in pipeline
             // as soon as possible. So waiting more free-surface or device free
@@ -787,13 +780,9 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
-                } catch (const std::runtime_error& ex) {
+                } catch (const std::runtime_error&) {
                     // NB: not an error, yield CPU ticks to check
                     // surface availability at a next phase.
-                    // But print WARNING to notify user about pipeline stuck
-                    GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
-                                               "] has no surface, reason: " <<
-                                               ex.what());
                     break;
                 }
             }
@@ -808,45 +797,16 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                                                                 out_surf,
                                                                 nullptr, &sync_pair.first);
                 sync_pair.second = out_surf;
-                GAPI_LOG_INFO(nullptr, "Init transcode: " <<
-                                        "sync id:  " <<
-                                        sync_pair.first <<
-                                        ", dec surface:  " <<
-                                        dec_surface <<
-                                        ", trans surface: " << sync_pair.second <<
-                                        ", status: " <<
-                                        mfxstatus_to_string(my_sess.last_status));
 
                 my_sess.last_status = MFXVideoCORE_SyncOperation(my_sess.session, sync_pair.first, 11000);
-                GAPI_LOG_DEBUG(nullptr, "sync : " <<
-                                        "sync id:  " <<
-                                        sync_pair.first <<
-                                        ", surface:  " <<
-                                        sync_pair.second <<
-                                        ", status: " <<
-                                        mfxstatus_to_string(my_sess.last_status));
-
-                // put frames in ready queue on success
-                if (MFX_ERR_NONE == my_sess.last_status) {
-                    // TODO
-                }
             }
             try {
                 my_sess.swap_transcode_surface(engine);
             } catch (... ) {
                 my_sess.vpp_surface_ptr.reset();
-                abort();
             }
         }
     }
-
-    //finalize
-    MFXVideoDECODE_Close(mfx_session);
-    EXPECT_EQ(MFX_ERR_NONE, sts);
-
-    EXPECT_NO_THROW(acceleration_policy->deinit(mfx_session));
-    MFXClose(mfx_session);
-    MFXUnload(mfx_handle);
 }
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
