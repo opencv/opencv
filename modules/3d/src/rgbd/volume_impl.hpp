@@ -21,7 +21,7 @@ public:
     Impl(const VolumeSettings& settings);
     virtual ~Impl() {};
 
-    virtual void integrate(OdometryFrame frame, InputArray pose) = 0;
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) = 0;
     virtual void integrate(InputArray frame, InputArray pose) = 0;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
 
@@ -43,7 +43,7 @@ public:
     TsdfVolume(const VolumeSettings& settings);
     ~TsdfVolume();
 
-    virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
@@ -54,22 +54,17 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 
-
-    float interpolateVoxel(const cv::Point3f& p) const;
-    Point3f getNormalVoxel(const cv::Point3f& p) const;
-
-
 public:
     Vec6f frameParams;
-#ifdef HAVE_OPENCL
-    UMat pixNorms;
+#ifndef HAVE_OPENCL
+    Mat pixNorms;
     // See zFirstMemOrder arg of parent class constructor
     // for the array layout info
     // Consist of Voxel elements
-    UMat volume;
-#else
-    Mat pixNorms;
     Mat volume;
+#else
+    UMat pixNorms;
+    UMat volume;
 #endif
 };
 
@@ -80,7 +75,7 @@ public:
     HashTsdfVolume(const VolumeSettings& settings);
     ~HashTsdfVolume();
 
-    virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
@@ -100,7 +95,7 @@ public:
     ColorTsdfVolume(const VolumeSettings& settings);
     ~ColorTsdfVolume();
 
-    virtual void integrate(OdometryFrame frame, InputArray pose) override;
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
@@ -144,7 +139,7 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 }
 Volume::~Volume() {}
 
-void Volume::integrate(OdometryFrame frame, InputArray pose) { this->impl->integrate(frame, pose); }
+void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
 void Volume::fetchNormals() const { this->impl->fetchNormals(); }

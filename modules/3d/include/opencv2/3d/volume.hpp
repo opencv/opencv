@@ -28,7 +28,7 @@ public:
     Volume(VolumeType vtype, const VolumeSettings& settings);
     ~Volume();
 
-    void integrate(OdometryFrame frame, InputArray pose);
+    void integrate(const OdometryFrame& frame, InputArray pose);
     void integrate(InputArray frame, InputArray pose);
     void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
 
