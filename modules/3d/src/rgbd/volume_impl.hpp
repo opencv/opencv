@@ -23,6 +23,7 @@ public:
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) = 0;
     virtual void integrate(InputArray frame, InputArray pose) = 0;
+    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const = 0;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
 
     virtual void fetchNormals() const = 0;
@@ -45,6 +46,7 @@ public:
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -80,6 +82,7 @@ public:
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -100,6 +103,7 @@ public:
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
 
     virtual void fetchNormals() const override;
@@ -144,6 +148,7 @@ Volume::~Volume() {}
 
 void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray frame, InputArray pose) { this->impl->integrate(frame, pose); }
+void Volume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { this->impl->raycast(cameraPose, height, width, outFrame); }
 void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
 void Volume::fetchNormals() const { this->impl->fetchNormals(); }
 void Volume::fetchPointsNormals() const { this->impl->fetchPointsNormals(); }

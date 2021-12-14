@@ -30,6 +30,7 @@ public:
 
     void integrate(const OdometryFrame& frame, InputArray pose);
     void integrate(InputArray frame, InputArray pose);
+    void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const;
     void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
 
     void fetchNormals() const;

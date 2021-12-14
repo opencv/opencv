@@ -413,26 +413,34 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
     _Settings settings(isHashTSDF, false);
 
-    //std::cout << "lol " << settings.frameSize << " " << settings.intr << " " << settings.depthFactor << std::endl;
-    //std::cout << settings.poses[0].matrix << std::endl;
-
-
-
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _tmpnormals;
     UMat _newPoints, _newNormals;
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
+    OdometryFrame odf;
+    odf.setDepth(depth);
+
     VolumeSettings vs;
     vs.setDepthFactor(settings.depthFactor);
     vs.setCameraIntrinsics(settings.intr);
     Volume volume(VolumeType::TSDF, vs);
 
-    if (true)
+    if (true) // new or prev version of Volume
     {
-        volume.integrate(depth, settings.poses[0].matrix);
-        volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _normals);
+        if (true) // Odometry frame or Mats
+        {
+            volume.integrate(odf, settings.poses[0].matrix);
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
+            odf.getPyramidAt(_points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(_normals, OdometryFramePyramidType::PYR_NORM, 0);
+        }
+        else
+        {
+            volume.integrate(depth, settings.poses[0].matrix);
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _normals);
+        }
     }
     else
     {
@@ -565,7 +573,7 @@ TEST(_HashTSDF, fetch_points_normals) { normal_test(true, false, true, false); }
 TEST(_HashTSDF, fetch_normals) { normal_test(true, false, false, true); }
 TEST(_HashTSDF, valid_points) { valid_points_test(true); }
 #else
-TEST(_TSDF_CPU, raycast_normals)
+TEST(TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
     _normal_test(false, true, false, false);
@@ -621,13 +629,6 @@ TEST(_HashTSDF_CPU, valid_points)
     cv::ocl::setUseOpenCL(true);
 }
 
-
-TEST(new_TSDF_CPU, raycast_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test(false, true, false, false);
-    cv::ocl::setUseOpenCL(true);
-}
 
 #endif
 }

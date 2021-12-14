@@ -412,6 +412,9 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
+    OdometryFrame odf(OdometryFrameStoreType::UMAT);
+    odf.setDepth(udepth);
+
     VolumeSettings vs;
     vs.setDepthFactor(settings.depthFactor);
     vs.setCameraIntrinsics(settings.intr);
@@ -420,8 +423,18 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
 
     if (true)
     {
-        volume.integrate(udepth, settings.poses[0].matrix);
-        volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
+        if (true) // Odometry frame or Mats
+        {
+            volume.integrate(odf, settings.poses[0].matrix);
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
+            odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
+        }
+        else
+        {
+            volume.integrate(udepth, settings.poses[0].matrix);
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
+        }
     }
     else
     {
