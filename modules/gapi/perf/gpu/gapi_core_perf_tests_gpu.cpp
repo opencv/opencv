@@ -95,7 +95,7 @@ INSTANTIATE_TEST_CASE_P(DivRCPerfTestGPU, DivRCPerfTest,
             Values(1.0),
             Values(cv::compile_args(CORE_GPU))));
 
-//TODO: mask test doesn't work
+// FIXIT: mask test on GPU doesn't work [3032]
 INSTANTIATE_TEST_CASE_P(DISABLED_MaskPerfTestGPU, MaskPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values( szSmall128, szVGA, sz720p, sz1080p ),
@@ -189,7 +189,7 @@ INSTANTIATE_TEST_CASE_P(CountNonZeroPerfTestGPU, CountNonZeroPerfTest,
             Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestGPU, AddWeightedPerfTest,
-    Combine(Values(AbsExact().to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
             Values( szSmall128, szVGA, sz720p, sz1080p ),
             Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
             Values( -1, CV_8U, CV_16U, CV_32F ),
