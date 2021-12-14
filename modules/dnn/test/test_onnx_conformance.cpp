@@ -1032,26 +1032,31 @@ public:
     {
         const char* const parser[] = {
             #include "test_onnx_conformance_layer_parser_denylist.inl.hpp"
+            ""  // dummy element of non empty list
         };
         initDenyList(parser_deny_list, parser, sizeof(parser)/sizeof(parser[0]));
 
         const char* const global[] = {
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
+            ""  // dummy element of non empty list
         };
         initDenyList(global_deny_list, global, sizeof(global)/sizeof(global[0]));
 
         const char* const opencl_fp16[] = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
+            ""  // dummy element of non empty list
         };
         initDenyList(opencl_fp16_deny_list, opencl_fp16, sizeof(opencl_fp16)/sizeof(opencl_fp16[0]));
 
         const char* const opencl[] = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
+            ""  // dummy element of non empty list
         };
         initDenyList(opencl_deny_list, opencl, sizeof(opencl)/sizeof(opencl[0]));
 
         const char* const cpu[] = {
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
+            ""  // dummy element of non empty list
         };
         initDenyList(cpu_deny_list, cpu, sizeof(cpu)/sizeof(cpu[0]));
     }

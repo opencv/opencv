@@ -20,4 +20,4 @@
 "test_maxpool_with_argmax_2d_precomputed_strides",
 "test_softmax_default_axis",
 "test_sub_bcast",
-"test_upsample_nearest"
+"test_upsample_nearest",
