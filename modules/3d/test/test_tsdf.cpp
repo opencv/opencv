@@ -452,9 +452,8 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
     points = _points.getMat(af);
 
     displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
-
     waitKey(5000);
-
+    destroyAllWindows();
     /*
     if (isRaycast)
     {

@@ -22,12 +22,16 @@ public:
     virtual ~Impl() {};
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) = 0;
-    virtual void integrate(InputArray frame, InputArray pose) = 0;
+    virtual void integrate(InputArray depth, InputArray pose) = 0;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) = 0;
+
     virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const = 0;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const = 0;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
 
-    virtual void fetchNormals() const = 0;
-    virtual void fetchPointsNormals() const = 0;
+    virtual void fetchNormals(InputArray points, OutputArray normals) const = 0;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const = 0;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const = 0;
 
     virtual void reset() = 0;
     virtual int getVisibleBlocks() const = 0;
@@ -45,12 +49,15 @@ public:
     ~TsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
-    virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
-    virtual void fetchNormals() const override;
-    virtual void fetchPointsNormals() const override;
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
@@ -81,12 +88,15 @@ public:
     ~HashTsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
-    virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
-    virtual void fetchNormals() const override;
-    virtual void fetchPointsNormals() const override;
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
@@ -102,12 +112,15 @@ public:
     ~ColorTsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
-    virtual void integrate(InputArray frame, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
-    virtual void fetchNormals() const override;
-    virtual void fetchPointsNormals() const override;
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
@@ -147,11 +160,15 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 Volume::~Volume() {}
 
 void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
-void Volume::integrate(InputArray frame, InputArray pose) { this->impl->integrate(frame, pose); }
+void Volume::integrate(InputArray depth, InputArray pose) { this->impl->integrate(depth, pose); }
+void Volume::integrate(InputArray depth, InputArray image, InputArray pose) { this->impl->integrate(depth, image, pose); }
 void Volume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { this->impl->raycast(cameraPose, height, width, outFrame); }
 void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _points, _normals); }
-void Volume::fetchNormals() const { this->impl->fetchNormals(); }
-void Volume::fetchPointsNormals() const { this->impl->fetchPointsNormals(); }
+void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _points, _normals, _colors); }
+void Volume::fetchNormals(InputArray points, OutputArray normals) const { this->impl->fetchNormals(points, normals); }
+void Volume::fetchPointsNormals(OutputArray points, OutputArray normals) const { this->impl->fetchPointsNormals(points, normals); }
+void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const { this->impl->fetchPointsNormalsColors(points, normals, colors); };
+
 void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }

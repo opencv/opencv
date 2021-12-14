@@ -445,8 +445,8 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     points = upoints.getMat(af);
 
     displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
-
     waitKey(5000);
+    destroyAllWindows();
 /*
     if (isFetchPointsNormals)
     {

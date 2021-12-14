@@ -50,12 +50,12 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
     integrate(depth, _cameraPose);
 }
 
-void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
+void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
     std::cout << "TsdfVolume::integrate(Mat)" << std::endl;
 
     CV_TRACE_FUNCTION();
-    Depth depth = frame.getMat();
+    Depth depth = _depth.getMat();
     CV_Assert(depth.type() == DEPTH_TYPE);
     CV_Assert(!depth.empty());
 
@@ -88,6 +88,11 @@ void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
         integrateVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
 }
+void TsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+}
+
 
 void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
@@ -140,8 +145,14 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
 #endif
 }
 
-void TsdfVolume::fetchNormals() const {}
-void TsdfVolume::fetchPointsNormals() const {}
+void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+}
+
+void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
+void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
+void TsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
 
 void TsdfVolume::reset()
 {
@@ -177,12 +188,15 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
 HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
-void HashTsdfVolume::integrate(InputArray frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
+void HashTsdfVolume::integrate(InputArray depth, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
+void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose) {}
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
+void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const {}
 
-void HashTsdfVolume::fetchNormals() const {}
-void HashTsdfVolume::fetchPointsNormals() const {}
+void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
+void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
+void HashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
 
 void HashTsdfVolume::reset() {}
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
@@ -196,12 +210,15 @@ ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& settings) :
 ColorTsdfVolume::~ColorTsdfVolume() {}
 
 void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }
-void ColorTsdfVolume::integrate(InputArray frame, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }
+void ColorTsdfVolume::integrate(InputArray depth, InputArray pose) { std::cout << "ColorTsdfVolume::integrate()" << std::endl; }
+void ColorTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose) {}
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { std::cout << "ColorTsdfVolume::raycast()" << std::endl; }
 void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "ColorTsdfVolume::raycast()" << std::endl; }
+void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const {}
 
-void ColorTsdfVolume::fetchNormals() const {}
-void ColorTsdfVolume::fetchPointsNormals() const {}
+void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
+void ColorTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
+void ColorTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
 
 void ColorTsdfVolume::reset() {}
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }

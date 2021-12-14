@@ -29,12 +29,15 @@ public:
     ~Volume();
 
     void integrate(const OdometryFrame& frame, InputArray pose);
-    void integrate(InputArray frame, InputArray pose);
+    void integrate(InputArray depth, InputArray pose);
+    void integrate(InputArray depth, InputArray image, InputArray pose);
     void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const;
     void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
+    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const;
 
-    void fetchNormals() const;
-    void fetchPointsNormals() const;
+    void fetchNormals(InputArray points, OutputArray normals) const;
+    void fetchPointsNormals(OutputArray points, OutputArray normals) const;
+    void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
 
     void reset();
     int getVisibleBlocks() const;
