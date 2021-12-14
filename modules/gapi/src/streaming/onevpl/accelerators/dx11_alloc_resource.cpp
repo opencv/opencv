@@ -356,35 +356,6 @@ DX11AllocationRecord::~DX11AllocationRecord() {
     GAPI_LOG_DEBUG(nullptr, "release final referenced texture: " << texture_ptr.get());
 }
 
-void DX11AllocationRecord::init(unsigned int items,
-                                ID3D11DeviceContext* origin_ctx,
-                                mfxFrameAllocator origin_allocator,
-                                ComPtrGuard<ID3D11Texture2D>&& texture,
-                                std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures) {
-    GAPI_DbgAssert(items != 0 && "Cannot create DX11AllocationRecord with empty items");
-    GAPI_DbgAssert(items == staging_textures.size() && "Allocation items count and staging size are not equal");
-    GAPI_DbgAssert(origin_ctx &&
-                   "Cannot create DX11AllocationItem for empty origin_ctx");
-    auto shared_allocator_copy = origin_allocator;
-    GAPI_DbgAssert((shared_allocator_copy.Lock && shared_allocator_copy.Unlock) &&
-                   "Cannot create DX11AllocationItem for empty origin allocator");
-
-    // abandon unusable c-allocator interfaces
-    shared_allocator_copy.Alloc = nullptr;
-    shared_allocator_copy.Free = nullptr;
-    shared_allocator_copy.pthis = nullptr;
-
-
-    GAPI_LOG_DEBUG(nullptr, "subresources count: " << items << ", ID3D11Texture2D: " << texture.get());
-    resources.reserve(items);
-    // no AddRef here, because DX11AllocationRecord receive ownership it here
-    texture_ptr = createCOMSharedPtrGuard(std::move(texture));
-    for(unsigned int i = 0; i < items; i++) {
-        resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
-                                                      texture_ptr, i, std::move(staging_textures[i])));
-    }
-}
-
 void DX11AllocationRecord::init(unsigned int items, ID3D11DeviceContext* origin_ctx,
                                 mfxFrameAllocator origin_allocator,
                                 std::vector<ComPtrGuard<ID3D11Texture2D>> &&textures,
