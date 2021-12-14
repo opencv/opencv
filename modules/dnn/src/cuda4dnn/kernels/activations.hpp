@@ -34,7 +34,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void sigmoid(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
-    void elu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+    void elu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha);
 
     template <class T>
     void abs(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);

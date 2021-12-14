@@ -23,7 +23,8 @@ ProcessingEngineBase::ProcessingEngineBase(std::unique_ptr<VPLAccelerationPolicy
 }
 
 ProcessingEngineBase::~ProcessingEngineBase() {
-    GAPI_LOG_INFO(nullptr, "destroyed");
+    GAPI_LOG_INFO(nullptr, "destroyed, elapsed sessions count: " << sessions.size());
+    sessions.clear();
 }
 
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession session) {
@@ -42,6 +43,7 @@ ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession s
     {
         exec_data.op_id = 0;
     }
+    cv::util::suppress_unused_warning(old_op_id);
     GAPI_LOG_DEBUG(nullptr, "[" << session <<"] finish op id: " << old_op_id <<
                                     ", " << processing_session->error_code_to_str() <<
                                     ", " << ProcessingEngineBase::status_to_string(status) <<
@@ -57,6 +59,7 @@ ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession s
     }
 
     if (status == ExecutionStatus::Processed) {
+        GAPI_LOG_INFO(nullptr, "Processed [" << session << "]");
         sessions.erase(sess_it);
         execution_table.erase(session);
     }
@@ -90,6 +93,7 @@ void ProcessingEngineBase::get_frame(Data &data)
 {
     data = ready_frames.front();
     ready_frames.pop();
+    GAPI_LOG_DEBUG(nullptr, " elapsed ready frames count: " << ready_frames.size());
 }
 
 const VPLAccelerationPolicy* ProcessingEngineBase::get_accel() const {

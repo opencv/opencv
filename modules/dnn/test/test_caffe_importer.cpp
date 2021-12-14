@@ -112,10 +112,12 @@ TEST(Test_Caffe, read_googlenet)
 
 TEST_P(Test_Caffe_nets, Axpy)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     String proto = _tf("axpy.prototxt");
     Net net = readNetFromCaffe(proto);
@@ -156,7 +158,12 @@ TEST_P(Test_Caffe_nets, Axpy)
         l1 = 2e-4;
         lInf = 1e-3;
     }
-    else if(target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.001;
+        lInf = 0.001;
+    }
+    if(target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.0002;
         lInf = 0.0007;
@@ -688,7 +695,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         CV_TEST_TAG_DEBUG_VERYLONG
     );
 
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
 
@@ -697,6 +704,19 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE exception: Ngraph operation Reshape with name rpn_cls_score_reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:390:
+    // While validating node 'v1::Reshape bbox_pred_reshape (bbox_pred[0]:f32{1,84}, Constant_241202[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
+    // Requested output shape {1,6300,4,1} is incompatible with input shape Shape{1, 84}
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,

@@ -268,14 +268,14 @@ void ArrayTest::fill_array( int /*test_case_idx*/, int i, int j, Mat& arr )
 double ArrayTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
-    assert( i == OUTPUT || i == INPUT_OUTPUT );
+    CV_Assert( i == OUTPUT || i == INPUT_OUTPUT );
     return elem_depth < CV_32F ? 0 : elem_depth == CV_32F ? FLT_EPSILON*100: DBL_EPSILON*5000;
 }
 
 
 void ArrayTest::prepare_to_validation( int /*test_case_idx*/ )
 {
-    assert(0);
+    CV_Assert(0);
 }
 
 
@@ -293,7 +293,7 @@ int ArrayTest::validate_test_results( int test_case_idx )
         int i1 = i == 0 ? REF_OUTPUT : REF_INPUT_OUTPUT;
         size_t sizei = test_array[i0].size();
 
-        assert( sizei == test_array[i1].size() );
+        CV_Assert( sizei == test_array[i1].size() );
         for( j = 0; j < sizei; j++ )
         {
             double err_level;

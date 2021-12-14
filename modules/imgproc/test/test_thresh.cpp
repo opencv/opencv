@@ -474,7 +474,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
         }
         break;
     default:
-        assert(0);
+        CV_Assert(0);
     }
 }
 
