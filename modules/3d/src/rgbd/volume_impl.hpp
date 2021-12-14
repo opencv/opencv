@@ -63,6 +63,9 @@ public:
     // Consist of Voxel elements
     Mat volume;
 #else
+    //temporary solution
+    Mat cpu_pixNorms;
+    Mat cpu_volume;
     UMat pixNorms;
     UMat volume;
 #endif

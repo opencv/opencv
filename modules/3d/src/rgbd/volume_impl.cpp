@@ -27,7 +27,10 @@ TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
 #ifndef HAVE_OPENCL
     volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
 #else
-    volume = UMat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
+    if (ocl::useOpenCL())
+        volume = UMat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
+    else
+        cpu_volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
 #endif
 
     reset();
@@ -56,9 +59,12 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
     {
         frameParams = newParams;
 #ifndef HAVE_OPENCL
-        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+        preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
 #else
-        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
+        if (ocl::useOpenCL())
+            ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+        else
+            preCalculationPixNorm(depth.size(), intrinsics, cpu_pixNorms);
 #endif
     }
     Matx44f cameraPose = _cameraPose.getMat();
@@ -66,7 +72,10 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 #ifndef HAVE_OPENCL
     integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
 #else
-    ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+    if (ocl::useOpenCL())
+        ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+    else
+        integrateVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
 }
 
@@ -89,9 +98,12 @@ void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
     {
         frameParams = newParams;
 #ifndef HAVE_OPENCL
-        pixNorms = preCalculationPixNormGPU(depth.size(), intrinsics);
+        preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
 #else
-        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
+        if (ocl::useOpenCL())
+            ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+        else
+            preCalculationPixNorm(depth.size(), intrinsics, cpu_pixNorms);
 #endif
     }
     const Matx44f cameraPose = _cameraPose.getMat();
@@ -99,7 +111,10 @@ void TsdfVolume::integrate(InputArray frame, InputArray _cameraPose)
 #ifndef HAVE_OPENCL
     integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
 #else
-    ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+    if (ocl::useOpenCL())
+        ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+    else
+        integrateVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
 }
 
@@ -114,7 +129,10 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
 #ifndef HAVE_OPENCL
     raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
 #else
-    ocl_raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+    if (ocl::useOpenCL())
+        ocl_raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+    else
+        raycastVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
 #endif
 }
 
@@ -132,7 +150,15 @@ void TsdfVolume::reset()
             v.tsdf = floatToTsdf(0.0f); v.weight = 0;
         });
 #else
-    volume.setTo(Scalar(0, 0));
+    if (ocl::useOpenCL())
+        volume.setTo(Scalar(0, 0));
+    else
+        //TODO: use setTo(Scalar(0, 0))
+        cpu_volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
+            {
+                TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
+                v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+            });
 #endif
 }
 int TsdfVolume::getVisibleBlocks() const { return 1; }

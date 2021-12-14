@@ -11,11 +11,13 @@
 
 namespace cv {
 
-cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics)
+void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 {
+    std::cout << "preCalculationPixNorm" << std::endl;
+
     Point2f fl(intrinsics.fx, intrinsics.fy);
     Point2f pp(intrinsics.cx, intrinsics.cy);
-    Mat pixNorm(size.height, size.width, CV_32F);
+    pixNorm = Mat(size.height, size.width, CV_32F);
     std::vector<float> x(size.width);
     std::vector<float> y(size.height);
     for (int i = 0; i < size.width; i++)
@@ -30,19 +32,19 @@ cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics)
             pixNorm.at<float>(i, j) = sqrtf(x[j] * x[j] + y[i] * y[i] + 1.0f);
         }
     }
-    return pixNorm;
+
 }
 
 #ifdef HAVE_OPENCL
-cv::UMat ocl_preCalculationPixNorm(Size size, const Intr& intrinsics)
+void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 {
-    // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
-    Mat cpuPixNorm = preCalculationPixNorm(size, intrinsics);
+    std::cout << "ocl_preCalculationPixNorm" << std::endl;
 
-    UMat pixNorm(size, CV_32F);
+    // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
+    Mat cpuPixNorm;
+    preCalculationPixNorm(size, intrinsics, cpuPixNorm);
     cpuPixNorm.copyTo(pixNorm);
 
-    return pixNorm;
 }
 #endif
 
@@ -890,8 +892,8 @@ void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPo
         }
     };
 #endif
-    parallel_for_(integrateRange, IntegrateInvoker);
-
+    //parallel_for_(integrateRange, IntegrateInvoker);
+    IntegrateInvoker(integrateRange);
 }
 
 void ocl_integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,

@@ -74,9 +74,9 @@ inline void colorFix(Point3f& c)
     if (c.z > 255) c.z = 255;
 }
 
-cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics);
+void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm);
 #ifdef HAVE_OPENCL
-cv::UMat ocl_preCalculationPixNorm(Size size, const Intr& intrinsics);
+void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm);
 #endif
 
 inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)

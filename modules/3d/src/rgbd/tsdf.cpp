@@ -166,7 +166,7 @@ void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNorm(depth.size(), intrinsics);
+        preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
     }
     _integrateVolumeUnit(truncDist, voxelSize, maxWeight, (this->pose).matrix, volResolution, volStrides, depth,
         depthFactor, cameraPose, intrinsics, pixNorms, volume);
@@ -935,7 +935,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = ocl_preCalculationPixNorm(depth.size(), intrinsics);
+        ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
     }
 
     // TODO: optimization possible
