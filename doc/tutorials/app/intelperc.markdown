@@ -5,6 +5,8 @@ Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#t
 
 @prev_tutorial{tutorial_orbbec_astra}
 
+![hardwares](images/realsense.jpg)
+
 **Note**: This tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
 
 Depth sensors compatible with Intel® RealSense SDK are supported through VideoCapture
