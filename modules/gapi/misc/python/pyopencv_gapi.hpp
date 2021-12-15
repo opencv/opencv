@@ -1075,5 +1075,6 @@ bool pyopencv_to(PyObject* obj, cv::GProtoOutputArgs& value, const ArgInfo& info
   {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \
   {"__op", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_op), "__op(...) -> retval\n"},
 
+
 #endif  // HAVE_OPENCV_GAPI
 #endif  // OPENCV_GAPI_PYOPENCV_GAPI_HPP

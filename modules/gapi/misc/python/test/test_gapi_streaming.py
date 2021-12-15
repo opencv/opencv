@@ -349,7 +349,7 @@ try:
                     cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
 
 
-        def test_gstreamer_source(self):
+        def test_gst_source(self):
             pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                           videorate ! videoscale ! video/x-raw,width=1920,height=1080,
                           framerate=3/1 ! appsink"""
@@ -375,7 +375,7 @@ try:
                 has_frame, output = ccomp.pull()
 
 
-        def test_gstreamer_pipeline(self):
+        def test_gst_multiple_sources(self):
             pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                           videorate ! videoscale !
                           video/x-raw,width=1920,height=1080,framerate=3/1 !
@@ -400,8 +400,8 @@ try:
             except SystemError as e:
                 raise unittest.SkipTest(str(e.__cause__))
 
-            src1 = cv.gapi.wip.get_streaming_source(pp, "sink1")
-            src2 = cv.gapi.wip.get_streaming_source(pp, "sink2")
+            src1 = pp.get_streaming_source("sink1")
+            src2 = pp.get_streaming_source("sink2")
 
             ccomp.setSource(cv.gin(src1, src2))
             ccomp.start()

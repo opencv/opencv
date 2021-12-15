@@ -99,6 +99,12 @@ IStreamSource::Ptr GStreamerPipeline::getStreamingSource(
     return m_priv->getStreamingSource(appsinkName, outputType);
 }
 
+cv::Ptr<IStreamSource> GStreamerPipeline::get_streaming_source(
+    const std::string& appsinkName, const GStreamerSource::OutputType outputType)
+{
+    return this->m_priv->getStreamingSource(appsinkName, outputType);
+}
+
 GStreamerPipeline::~GStreamerPipeline()
 { }
 
