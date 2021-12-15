@@ -898,24 +898,16 @@ static const TestCase testConformanceConfig[] = {
 };
 
 
-struct TestCaseInput
-{
-    std::vector<std::string> input_paths;
-    std::vector<std::string> output_paths;
-    std::string model_path;
-    std::string name;
-};
-
-std::ostream& operator<<(std::ostream& os, const TestCaseInput& test_case)
+std::ostream& operator<<(std::ostream& os, const TestCase& test_case)
 {
     return os << test_case.name;
 }
 
-typedef tuple<TestCaseInput, tuple<Backend, Target> > ONNXConfParams;
+typedef tuple<TestCase, tuple<Backend, Target> > ONNXConfParams;
 
 std::string printOnnxConfParams(const testing::TestParamInfo<ONNXConfParams>& params)
 {
-    TestCaseInput test_case = get<0>(params.param);
+    TestCase test_case = get<0>(params.param);
     Backend backend = get<0>(get<1>(params.param));
     Target target = get<1>(get<1>(params.param));
 
@@ -928,45 +920,11 @@ std::string printOnnxConfParams(const testing::TestParamInfo<ONNXConfParams>& pa
     return ss.str();
 }
 
-template<typename TString>
-static std::string _tf(TString filename, bool required = true)
-{
-    return findDataFile(std::string("dnn/onnx/") + filename, required);
-}
-
-std::vector<TestCaseInput> readTestCases()
-{
-    std::vector<TestCaseInput> ret;
-    for (size_t i = 0; i < sizeof(testConformanceConfig) / sizeof(testConformanceConfig[0]); ++i)
-    {
-        const TestCase& test_case = testConformanceConfig[i];
-
-        TestCaseInput input;
-
-        std::string prefix = cv::format("conformance/node/%s", test_case.name);
-        input.name = test_case.name;
-        input.model_path = _tf(cv::format("%s/model.onnx", prefix.c_str()));
-
-        for (int i = 0; i < test_case.inputs; ++i)
-        {
-            input.input_paths.push_back(_tf(cv::format("%s/test_data_set_0/input_%d.pb", prefix.c_str(), i)));
-        }
-
-        for (int i = 0; i < test_case.outputs; ++i)
-        {
-            input.output_paths.push_back(_tf(cv::format("%s/test_data_set_0/output_%d.pb", prefix.c_str(), i)));
-        }
-
-        ret.push_back(input);
-    }
-
-    return ret;
-}
-
 class Test_ONNX_conformance : public TestWithParam<ONNXConfParams>
 {
 public:
-    TestCaseInput test_case;
+
+    TestCase test_case;
     Backend backend;
     Target target;
 
@@ -978,6 +936,9 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
+#ifdef HAVE_HALIDE
+    static std::set<std::string> halide_deny_list;
+#endif
 
     Test_ONNX_conformance()
     {
@@ -1059,68 +1020,16 @@ public:
             ""  // dummy element of non empty list
         };
         initDenyList(cpu_deny_list, cpu, sizeof(cpu)/sizeof(cpu[0]));
+
+#ifdef HAVE_HALIDE
+        const char* const halide_deny_list_[] = {
+            #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
+            ""  // dummy element of non empty list
+        };
+        initDenyList(halide_deny_list, halide_deny_list_, sizeof(halide_deny_list_)/sizeof(halide_deny_list_[0]));
+#endif
     }
 
-    void checkFilterLists() const
-    {
-        const std::string& name = test_case.name;
-        if(parser_deny_list.find(name) != parser_deny_list.end())
-        {
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-        }
-
-        if (backend == DNN_BACKEND_OPENCV)
-        {
-            if(global_deny_list.find(name) != global_deny_list.end())
-            {
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-            }
-            if((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_deny_list.find(name) != opencl_fp16_deny_list.end()))
-            {
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-            }
-            if((target == DNN_TARGET_OPENCL) && (opencl_deny_list.find(name) != opencl_deny_list.end()))
-            {
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-            }
-            if((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
-            {
-                applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
-            }
-        }
-#if 0 //def HAVE_HALIDE
-        else if (backend == DNN_BACKEND_HALIDE)
-        {
-            #include "test_onnx_conformance_layer_filter__halide.inl.hpp"
-        }
-#endif
-#if 0 //def HAVE_INF_ENGINE
-        else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        {
-            #include "test_onnx_conformance_layer_filter__ngraph.inl.hpp"
-        }
-#endif
-#if 0 //def HAVE_VULKAN
-        else if (backend == DNN_BACKEND_VKCOM)
-        {
-            #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
-        }
-#endif
-#if 0 //def HAVE_CUDA
-        else if (backend == DNN_BACKEND_CUDA)
-        {
-            #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
-        }
-#endif
-        else
-        {
-            std::ostringstream ss;
-            ss << "No test filter available for backend ";
-            PrintTo(backend, &ss);
-            ss << ". Run test by default";
-            std::cout << ss.str() << std::endl;
-        }
-    }
 };
 
 std::set<std::string> Test_ONNX_conformance::parser_deny_list;
@@ -1128,33 +1037,104 @@ std::set<std::string> Test_ONNX_conformance::global_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
+#ifdef HAVE_HALIDE
+std::set<std::string> Test_ONNX_conformance::halide_deny_list;
+#endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
 {
-    std::string name = test_case.name;
+    const std::string& name = test_case.name;
     ASSERT_FALSE(name.empty());
 
     bool checkLayersFallbacks = true;
     bool checkAccuracy = true;
 
-    checkFilterLists();
+    if (parser_deny_list.find(name) != parser_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
+    if (backend == DNN_BACKEND_OPENCV)
+    {
+        if (global_deny_list.find(name) != global_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if ((target == DNN_TARGET_OPENCL_FP16) && (opencl_fp16_deny_list.find(name) != opencl_fp16_deny_list.end()))
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if ((target == DNN_TARGET_OPENCL) && (opencl_deny_list.find(name) != opencl_deny_list.end()))
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if ((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+    }
+#ifdef HAVE_HALIDE
+    else if (backend == DNN_BACKEND_HALIDE)
+    {
+        if (halide_deny_list.find(name) != halide_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+    }
+#endif
+#ifdef HAVE_INF_ENGINE
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        #include "test_onnx_conformance_layer_filter__openvino.inl.hpp"
+    }
+#endif
+#if 0 //def HAVE_VULKAN
+    else if (backend == DNN_BACKEND_VKCOM)
+    {
+        #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
+    }
+#endif
+#if 0 //def HAVE_CUDA
+    else if (backend == DNN_BACKEND_CUDA)
+    {
+        #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
+    }
+#endif
+    else
+    {
+        std::ostringstream ss;
+        ss << "No test filter available for backend ";
+        PrintTo(backend, &ss);
+        ss << ". Run test by default";
+        std::cout << ss.str() << std::endl;
+    }
 
     std::vector<Mat> inputs;
     std::vector<Mat> ref_outputs;
 
+    std::string prefix = cv::format("dnn/onnx/conformance/node/%s", test_case.name);
+
     Net net;
     try
     {
+        std::string model_path = findDataFile(prefix + "/model.onnx");
+
         //cout << "Read ONNX inputs..." << endl;
-        std::transform(test_case.input_paths.begin(), test_case.input_paths.end(),
-                       std::back_inserter(inputs), readTensorFromONNX);
+        for (int i = 0; i < test_case.inputs; ++i)
+        {
+            Mat input = readTensorFromONNX(findDataFile(prefix + cv::format("/test_data_set_0/input_%d.pb", i)));
+            inputs.push_back(input);
+        }
 
         //cout << "Read ONNX reference outputs..." << endl;
-        std::transform(test_case.output_paths.begin(), test_case.output_paths.end(),
-                       std::back_inserter(ref_outputs), readTensorFromONNX);
+        for (int i = 0; i < test_case.outputs; ++i)
+        {
+            Mat output = readTensorFromONNX(findDataFile(prefix + cv::format("/test_data_set_0/output_%d.pb", i)));
+            ref_outputs.push_back(output);
+        }
 
         //cout << "Parse model..." << endl;
-        net = readNetFromONNX(test_case.model_path);
+        net = readNetFromONNX(model_path);
         if (net.empty())
         {
             applyTestTag(CV_TEST_TAG_DNN_ERROR_PARSER);
@@ -1244,7 +1224,11 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
-                        testing::Combine(testing::ValuesIn(readTestCases()), dnnBackendsAndTargets()),
-                        printOnnxConfParams);
+    testing::Combine(
+        testing::ValuesIn(testConformanceConfig),
+        dnnBackendsAndTargets(/*withInferenceEngine=*/true, /*withHalide=*/true)
+    ),
+    printOnnxConfParams
+);
 
 };
