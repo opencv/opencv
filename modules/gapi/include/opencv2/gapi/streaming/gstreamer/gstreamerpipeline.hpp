@@ -19,12 +19,12 @@ namespace gapi {
 namespace wip {
 namespace gst {
 
-class GAPI_EXPORTS GStreamerPipeline
+class GAPI_EXPORTS_W GStreamerPipeline
 {
 public:
     class Priv;
 
-    explicit GStreamerPipeline(const std::string& pipeline);
+    CV_WRAP explicit GStreamerPipeline(const std::string& pipeline);
     IStreamSource::Ptr getStreamingSource(const std::string& appsinkName,
                                           const GStreamerSource::OutputType outputType =
                                               GStreamerSource::OutputType::MAT);
@@ -40,6 +40,15 @@ protected:
 
 using GStreamerPipeline = gst::GStreamerPipeline;
 
+// NB: Function for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline get_streaming_source(cv::Ptr<GStreamerPipeline>& pipeline,
+                    const std::string& appsinkName,
+                    const GStreamerSource::OutputType outputType =
+                    GStreamerSource::OutputType::MAT)
+{
+    return pipeline->getStreamingSource(appsinkName, outputType);
+}
 } // namespace wip
 } // namespace gapi
 } // namespace cv

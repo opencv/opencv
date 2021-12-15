@@ -229,7 +229,6 @@ try:
 
 
         def test_gapi_streaming_meta(self):
-            ksize = 3
             path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
 
             # G-API
@@ -350,7 +349,6 @@ try:
                     cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
 
 
-        # FIXME: Add more tests
         def test_gstreamer_source(self):
             pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                           videorate ! videoscale ! video/x-raw,width=1920,height=1080,
@@ -371,11 +369,45 @@ try:
             ccomp.setSource(cv.gin(source))
             ccomp.start()
 
-            while True:
-                has_frame, output = ccomp.pull()
-                if not has_frame:
-                    break
+            has_frame, output = ccomp.pull()
+            while has_frame:
                 self.assertTrue(output.size != 0)
+                has_frame, output = ccomp.pull()
+
+
+        def test_gstreamer_pipeline(self):
+            pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
+                          videorate ! videoscale !
+                          video/x-raw,width=1920,height=1080,framerate=3/1 !
+                          appsink name=sink1
+                          videotestsrc is-live=true pattern=colors num-buffers=10 !
+                          videorate ! videoscale !
+                          video/x-raw,width=1920,height=1080,framerate=3/1 !
+                          appsink name=sink2"""
+
+            g_in1 = cv.GMat()
+            g_in2 = cv.GMat()
+            g_out = cv.gapi.add(g_in1, g_in2)
+            c = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
+
+            ccomp = c.compileStreaming()
+
+            # NB: Skip test in case gstreamer isn't available.
+            try:
+                pp = cv.gapi.wip.GStreamerPipeline(pipeline)
+            except cv.error as e:
+                raise unittest.SkipTest(str(e))
+
+            src1 = cv.gapi.wip.get_streaming_source(pp, "sink1")
+            src2 = cv.gapi.wip.get_streaming_source(pp, "sink2")
+
+            ccomp.setSource(cv.gin(src1, src2))
+            ccomp.start()
+
+            has_frame, out = ccomp.pull()
+            while has_frame:
+                self.assertTrue(out.size != 0)
+                has_frame, out = ccomp.pull()
 
 
 
