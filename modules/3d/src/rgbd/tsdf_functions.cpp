@@ -892,8 +892,7 @@ void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPo
         }
     };
 #endif
-    //parallel_for_(integrateRange, IntegrateInvoker);
-    IntegrateInvoker(integrateRange);
+    parallel_for_(integrateRange, IntegrateInvoker);
 }
 
 void ocl_integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
@@ -1059,7 +1058,7 @@ inline float interpolateVoxel( const Mat& volume,
 #endif
 
 
-#if USE_INTRINSICS && 0
+#if USE_INTRINSICS
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 inline v_float32x4 getNormalVoxel( const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
@@ -1239,6 +1238,146 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
 #if USE_INTRINSICS
     auto RaycastInvoker = [&](const Range& range)
     {
+        const v_float32x4 vfxy(reproj.fxinv, reproj.fyinv, 0, 0);
+        const v_float32x4 vcxy(reproj.cx, reproj.cy, 0, 0);
+
+        const float(&cm)[16] = cam2vol.matrix.val;
+        const v_float32x4 camRot0(cm[0], cm[4], cm[8], 0);
+        const v_float32x4 camRot1(cm[1], cm[5], cm[9], 0);
+        const v_float32x4 camRot2(cm[2], cm[6], cm[10], 0);
+        const v_float32x4 camTrans(cm[3], cm[7], cm[11], 0);
+
+        const v_float32x4 boxDown(boxMin.x, boxMin.y, boxMin.z, 0.f);
+        const v_float32x4 boxUp(boxMax.x, boxMax.y, boxMax.z, 0.f);
+
+        const v_float32x4 invVoxelSize = v_float32x4(voxelSizeInv, voxelSizeInv, voxelSizeInv, 1.f);
+
+        const float(&vm)[16] = vol2cam.matrix.val;
+        const v_float32x4 volRot0(vm[0], vm[4], vm[8], 0);
+        const v_float32x4 volRot1(vm[1], vm[5], vm[9], 0);
+        const v_float32x4 volRot2(vm[2], vm[6], vm[10], 0);
+        const v_float32x4 volTrans(vm[3], vm[7], vm[11], 0);
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            ptype* ptsRow = points[y];
+            ptype* nrmRow = normals[y];
+
+            for (int x = 0; x < points.cols; x++)
+            {
+                v_float32x4 point = nanv, normal = nanv;
+
+                v_float32x4 orig = camTrans;
+
+                // get direction through pixel in volume space:
+
+                // 1. reproject (x, y) on projecting plane where z = 1.f
+                v_float32x4 planed = (v_float32x4((float)x, (float)y, 0.f, 0.f) - vcxy) * vfxy;
+                planed = v_combine_low(planed, v_float32x4(1.f, 0.f, 0.f, 0.f));
+
+                // 2. rotate to volume space
+                planed = v_matmuladd(planed, camRot0, camRot1, camRot2, v_setzero_f32());
+
+                // 3. normalize
+                v_float32x4 invNorm = v_invsqrt(v_setall_f32(v_reduce_sum(planed * planed)));
+                v_float32x4 dir = planed * invNorm;
+
+                // compute intersection of ray with all six bbox planes
+                v_float32x4 rayinv = v_setall_f32(1.f) / dir;
+                // div by zero should be eliminated by these products
+                v_float32x4 tbottom = rayinv * (boxDown - orig);
+                v_float32x4 ttop = rayinv * (boxUp - orig);
+
+                // re-order intersections to find smallest and largest on each axis
+                v_float32x4 minAx = v_min(ttop, tbottom);
+                v_float32x4 maxAx = v_max(ttop, tbottom);
+
+                // near clipping plane
+                const float clip = 0.f;
+                float _minAx[4], _maxAx[4];
+                v_store(_minAx, minAx);
+                v_store(_maxAx, maxAx);
+                float tmin = max({ _minAx[0], _minAx[1], _minAx[2], clip });
+                float tmax = min({ _maxAx[0], _maxAx[1], _maxAx[2] });
+
+                // precautions against getting coordinates out of bounds
+                tmin = tmin + tstep;
+                tmax = tmax - tstep;
+
+                if (tmin < tmax)
+                {
+                    // interpolation optimized a little
+                    orig *= invVoxelSize;
+                    dir *= invVoxelSize;
+
+                    int xdim = volDims[0];
+                    int ydim = volDims[1];
+                    int zdim = volDims[2];
+                    v_float32x4 rayStep = dir * v_setall_f32(tstep);
+                    v_float32x4 next = (orig + dir * v_setall_f32(tmin));
+                    float f = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                    float fnext = f;
+
+                    //raymarch
+                    int steps = 0;
+                    int nSteps = cvFloor((tmax - tmin) / tstep);
+                    for (; steps < nSteps; steps++)
+                    {
+                        next += rayStep;
+                        v_int32x4 ip = v_round(next);
+                        int ix = ip.get0(); ip = v_rotate_right<1>(ip);
+                        int iy = ip.get0(); ip = v_rotate_right<1>(ip);
+                        int iz = ip.get0();
+                        int coord = ix * xdim + iy * ydim + iz * zdim;
+
+                        fnext = tsdfToFloat(volume.at<TsdfVoxel>(coord).tsdf);
+                        if (fnext != f)
+                        {
+                            fnext = interpolateVoxel(volume, volDims, neighbourCoords, next);
+
+                            // when ray crosses a surface
+                            if (std::signbit(f) != std::signbit(fnext))
+                                break;
+
+                            f = fnext;
+                        }
+                    }
+
+                    // if ray penetrates a surface from outside
+                    // linearly interpolate t between two f values
+                    if (f > 0.f && fnext < 0.f)
+                    {
+                        v_float32x4 tp = next - rayStep;
+                        float ft = interpolateVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                        float ts = tmin + tstep * (steps - ft / (ftdt - ft));
+
+                        // avoid division by zero
+                        if (!cvIsNaN(ts) && !cvIsInf(ts))
+                        {
+                            v_float32x4 pv = (orig + dir * v_setall_f32(ts));
+                            v_float32x4 nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
+
+                            if (!isNaN(nv))
+                            {
+                                //convert pv and nv to camera space
+                                normal = v_matmuladd(nv, volRot0, volRot1, volRot2, v_setzero_f32());
+                                // interpolation optimized a little
+                                point = v_matmuladd(pv * v_float32x4(voxelSize, voxelSize, voxelSize, 1.f),
+                                    volRot0, volRot1, volRot2, volTrans);
+                            }
+                        }
+                    }
+                }
+
+                v_store((float*)(&ptsRow[x]), point);
+                v_store((float*)(&nrmRow[x]), normal);
+            }
+        }
+    };
+#else
+    auto RaycastInvoker = [&](const Range& range)
+    {
         const Point3f camTrans = cam2vol.translation();
         const Matx33f  camRot = cam2vol.rotation();
         const Matx33f  volRot = vol2cam.rotation();
@@ -1342,149 +1481,7 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
             }
         }
     };
-#else
-    auto RaycastInvoker = [&](const Range& range)
-    {
-        const v_float32x4 vfxy(reproj.fxinv, reproj.fyinv, 0, 0);
-        const v_float32x4 vcxy(reproj.cx, reproj.cy, 0, 0);
 
-        const float(&cm)[16] = cam2vol.matrix.val;
-        const v_float32x4 camRot0(cm[0], cm[4], cm[8], 0);
-        const v_float32x4 camRot1(cm[1], cm[5], cm[9], 0);
-        const v_float32x4 camRot2(cm[2], cm[6], cm[10], 0);
-        const v_float32x4 camTrans(cm[3], cm[7], cm[11], 0);
-
-        const v_float32x4 boxDown(boxMin.x, boxMin.y, boxMin.z, 0.f);
-        const v_float32x4 boxUp(boxMax.x, boxMax.y, boxMax.z, 0.f);
-
-        const v_float32x4 invVoxelSize = v_float32x4(volume.voxelSizeInv,
-            volume.voxelSizeInv,
-            volume.voxelSizeInv, 1.f);
-
-        const float(&vm)[16] = vol2cam.matrix.val;
-        const v_float32x4 volRot0(vm[0], vm[4], vm[8], 0);
-        const v_float32x4 volRot1(vm[1], vm[5], vm[9], 0);
-        const v_float32x4 volRot2(vm[2], vm[6], vm[10], 0);
-        const v_float32x4 volTrans(vm[3], vm[7], vm[11], 0);
-
-        for (int y = range.start; y < range.end; y++)
-        {
-            ptype* ptsRow = points[y];
-            ptype* nrmRow = normals[y];
-
-            for (int x = 0; x < points.cols; x++)
-            {
-                v_float32x4 point = nanv, normal = nanv;
-
-                v_float32x4 orig = camTrans;
-
-                // get direction through pixel in volume space:
-
-                // 1. reproject (x, y) on projecting plane where z = 1.f
-                v_float32x4 planed = (v_float32x4((float)x, (float)y, 0.f, 0.f) - vcxy) * vfxy;
-                planed = v_combine_low(planed, v_float32x4(1.f, 0.f, 0.f, 0.f));
-
-                // 2. rotate to volume space
-                planed = v_matmuladd(planed, camRot0, camRot1, camRot2, v_setzero_f32());
-
-                // 3. normalize
-                v_float32x4 invNorm = v_invsqrt(v_setall_f32(v_reduce_sum(planed * planed)));
-                v_float32x4 dir = planed * invNorm;
-
-                // compute intersection of ray with all six bbox planes
-                v_float32x4 rayinv = v_setall_f32(1.f) / dir;
-                // div by zero should be eliminated by these products
-                v_float32x4 tbottom = rayinv * (boxDown - orig);
-                v_float32x4 ttop = rayinv * (boxUp - orig);
-
-                // re-order intersections to find smallest and largest on each axis
-                v_float32x4 minAx = v_min(ttop, tbottom);
-                v_float32x4 maxAx = v_max(ttop, tbottom);
-
-                // near clipping plane
-                const float clip = 0.f;
-                float _minAx[4], _maxAx[4];
-                v_store(_minAx, minAx);
-                v_store(_maxAx, maxAx);
-                float tmin = max({ _minAx[0], _minAx[1], _minAx[2], clip });
-                float tmax = min({ _maxAx[0], _maxAx[1], _maxAx[2] });
-
-                // precautions against getting coordinates out of bounds
-                tmin = tmin + tstep;
-                tmax = tmax - tstep;
-
-                if (tmin < tmax)
-                {
-                    // interpolation optimized a little
-                    orig *= invVoxelSize;
-                    dir *= invVoxelSize;
-
-                    int xdim = volume.volDims[0];
-                    int ydim = volume.volDims[1];
-                    int zdim = volume.volDims[2];
-                    v_float32x4 rayStep = dir * v_setall_f32(tstep);
-                    v_float32x4 next = (orig + dir * v_setall_f32(tmin));
-                    float f = volume.interpolateVoxel(next), fnext = f;
-
-                    //raymarch
-                    int steps = 0;
-                    int nSteps = cvFloor((tmax - tmin) / tstep);
-                    for (; steps < nSteps; steps++)
-                    {
-                        next += rayStep;
-                        v_int32x4 ip = v_round(next);
-                        int ix = ip.get0(); ip = v_rotate_right<1>(ip);
-                        int iy = ip.get0(); ip = v_rotate_right<1>(ip);
-                        int iz = ip.get0();
-                        int coord = ix * xdim + iy * ydim + iz * zdim;
-
-                        fnext = tsdfToFloat(volume.volume.at<TsdfVoxel>(coord).tsdf);
-                        if (fnext != f)
-                        {
-                            fnext = volume.interpolateVoxel(next);
-
-                            // when ray crosses a surface
-                            if (std::signbit(f) != std::signbit(fnext))
-                                break;
-
-                            f = fnext;
-                        }
-                    }
-
-                    // if ray penetrates a surface from outside
-                    // linearly interpolate t between two f values
-                    if (f > 0.f && fnext < 0.f)
-                    {
-                        v_float32x4 tp = next - rayStep;
-                        float ft = volume.interpolateVoxel(tp);
-                        float ftdt = volume.interpolateVoxel(next);
-                        float ts = tmin + tstep * (steps - ft / (ftdt - ft));
-
-                        // avoid division by zero
-                        if (!cvIsNaN(ts) && !cvIsInf(ts))
-                        {
-                            v_float32x4 pv = (orig + dir * v_setall_f32(ts));
-                            v_float32x4 nv = volume.getNormalVoxel(pv);
-
-                            if (!isNaN(nv))
-                            {
-                                //convert pv and nv to camera space
-                                normal = v_matmuladd(nv, volRot0, volRot1, volRot2, v_setzero_f32());
-                                // interpolation optimized a little
-                                point = v_matmuladd(pv * v_float32x4(volume.voxelSize,
-                                    volume.voxelSize,
-                                    volume.voxelSize, 1.f),
-                                    volRot0, volRot1, volRot2, volTrans);
-                            }
-                        }
-                    }
-                }
-
-                v_store((float*)(&ptsRow[x]), point);
-                v_store((float*)(&nrmRow[x]), normal);
-            }
-        }
-    }
 #endif
     //parallel_for_(raycastRange, RaycastInvoker);
     RaycastInvoker(raycastRange);

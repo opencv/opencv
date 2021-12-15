@@ -435,29 +435,25 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     vs.setCameraIntrinsics(settings.intr);
     Volume volume(VolumeType::TSDF, vs);
 
-    //TestFunction t = TestFunction::RAYCAST;
+    TestFunction t = TestFunction::RAYCAST;
     //TestFunction t = TestFunction::FETCH_NORMALS;
-    TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
+    //TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
 
     VolumeTestSrcType s = VolumeTestSrcType::MAT;
     //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
-
-    enum class TestSrcType
-    {
-        MAT = 0,
-        ODOMETRY_FRAME = 1
-    };
 
 
     if (t == TestFunction::RAYCAST)
     {
         if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
             volume.integrate(udepth, settings.poses[0].matrix);
             volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
         }
         else if (s == VolumeTestSrcType::ODOMETRY_FRAME)
         {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
             volume.integrate(odf, settings.poses[0].matrix);
             volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
             odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);

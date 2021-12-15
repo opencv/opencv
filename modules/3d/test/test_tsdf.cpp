@@ -444,9 +444,9 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
 
 
-    //TestFunction t = TestFunction::RAYCAST;
+    TestFunction t = TestFunction::RAYCAST;
     //TestFunction t = TestFunction::FETCH_NORMALS;
-    TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
+    //TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
 
     VolumeTestSrcType s = VolumeTestSrcType::MAT;
     //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
