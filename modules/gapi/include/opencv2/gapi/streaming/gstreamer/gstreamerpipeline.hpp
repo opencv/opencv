@@ -24,7 +24,7 @@ class GAPI_EXPORTS_W GStreamerPipeline
 public:
     class Priv;
 
-    CV_WRAP explicit GStreamerPipeline(const std::string& pipeline);
+    GAPI_WRAP explicit GStreamerPipeline(const std::string& pipeline);
     IStreamSource::Ptr getStreamingSource(const std::string& appsinkName,
                                           const GStreamerSource::OutputType outputType =
                                               GStreamerSource::OutputType::MAT);
@@ -43,9 +43,9 @@ using GStreamerPipeline = gst::GStreamerPipeline;
 // NB: Function for using from python
 GAPI_EXPORTS_W cv::Ptr<IStreamSource>
 inline get_streaming_source(cv::Ptr<GStreamerPipeline>& pipeline,
-                    const std::string& appsinkName,
-                    const GStreamerSource::OutputType outputType =
-                    GStreamerSource::OutputType::MAT)
+                            const std::string& appsinkName,
+                            const GStreamerSource::OutputType outputType =
+                                GStreamerSource::OutputType::MAT)
 {
     return pipeline->getStreamingSource(appsinkName, outputType);
 }

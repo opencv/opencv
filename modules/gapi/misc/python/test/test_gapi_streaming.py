@@ -397,6 +397,8 @@ try:
                 pp = cv.gapi.wip.GStreamerPipeline(pipeline)
             except cv.error as e:
                 raise unittest.SkipTest(str(e))
+            except SystemError as e:
+                raise unittest.SkipTest(str(e.__cause__))
 
             src1 = cv.gapi.wip.get_streaming_source(pp, "sink1")
             src2 = cv.gapi.wip.get_streaming_source(pp, "sink2")
