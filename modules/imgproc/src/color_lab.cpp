@@ -978,8 +978,9 @@ static struct LUVLUT_T {
     const long long int *LvToVpl_b;
 } LUVLUT = {0, 0, 0};
 
+/* NB: no NaN propagation guarantee */
 #define clip(value) \
-    value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
+    value < 0.0f ? 0.0f : value <= 1.0f ? value : 1.0f;
 
 //all constants should be presented through integers to keep bit-exactness
 static const softdouble gammaThreshold    = softdouble(809)/softdouble(20000);    //  0.04045
@@ -1329,6 +1330,10 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+    CV_DbgCheck(tx, tx >= 0 && tx < LAB_LUT_DIM, "");
+    CV_DbgCheck(ty, ty >= 0 && ty < LAB_LUT_DIM, "");
+    CV_DbgCheck(tz, tz >= 0 && tz < LAB_LUT_DIM, "");
 
     const int16_t* baseLUT = &LUT[3*8*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     int aa[8], bb[8], cc[8];

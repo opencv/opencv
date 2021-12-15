@@ -140,12 +140,13 @@ public:
                 outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
         }
-        else if (paddingType == "reflect")
+        else if (paddingType == "reflect" || paddingType == "edge")
         {
             CV_Assert(inputs.size() == 1);
             CV_Assert(outputs.size() == 1);
             CV_Assert(inputs[0].dims == 4);
             CV_Assert(outputs[0].dims == 4);
+            int borderType = paddingType == "reflect" ? BORDER_REFLECT_101 : BORDER_REPLICATE;
 
             if (inputs[0].size[0] != outputs[0].size[0] || inputs[0].size[1] != outputs[0].size[1])
                 CV_Error(Error::StsNotImplemented, "Only spatial reflection padding is supported.");
@@ -158,8 +159,8 @@ public:
             const int padBottom = outHeight - dstRanges[2].end;
             const int padLeft = dstRanges[3].start;
             const int padRight = outWidth - dstRanges[3].end;
-            CV_CheckLT(padTop, inpHeight, ""); CV_CheckLT(padBottom, inpHeight, "");
-            CV_CheckLT(padLeft, inpWidth, ""); CV_CheckLT(padRight, inpWidth, "");
+            CV_CheckLE(padTop, inpHeight, ""); CV_CheckLE(padBottom, inpHeight, "");
+            CV_CheckLE(padLeft, inpWidth, ""); CV_CheckLE(padRight, inpWidth, "");
 
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
@@ -168,7 +169,7 @@ public:
                     copyMakeBorder(getPlane(inputs[0], n, ch),
                                    getPlane(outputs[0], n, ch),
                                    padTop, padBottom, padLeft, padRight,
-                                   BORDER_REFLECT_101);
+                                   borderType);
                 }
             }
         }

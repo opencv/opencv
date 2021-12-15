@@ -1,0 +1,16 @@
+diff --git a/cmake/developer_package/vs_version/vs_version.cmake b/cmake/developer_package/vs_version/vs_version.cmake
+index 14d4c0e1e..6a44f73b9 100644
+--- a/cmake/developer_package/vs_version/vs_version.cmake
++++ b/cmake/developer_package/vs_version/vs_version.cmake
+@@ -8,9 +8,9 @@ set(IE_VS_VER_FILEVERSION_STR "${IE_VERSION_MAJOR}.${IE_VERSION_MINOR}.${IE_VERS
+ 
+ set(IE_VS_VER_COMPANY_NAME_STR "Intel Corporation")
+ set(IE_VS_VER_PRODUCTVERSION_STR "${CI_BUILD_NUMBER}")
+-set(IE_VS_VER_PRODUCTNAME_STR "OpenVINO toolkit")
++set(IE_VS_VER_PRODUCTNAME_STR "OpenVINO toolkit (for OpenCV Windows package)")
+ set(IE_VS_VER_COPYRIGHT_STR "Copyright (C) 2018-2021, Intel Corporation")
+-set(IE_VS_VER_COMMENTS_STR "https://docs.openvinotoolkit.org/")
++set(IE_VS_VER_COMMENTS_STR "https://github.com/opencv/opencv/wiki/Intel%27s-Deep-Learning-Inference-Engine-backend")
+ 
+ #
+ # ie_add_vs_version_file(NAME <name>
