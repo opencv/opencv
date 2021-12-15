@@ -368,7 +368,7 @@ void initDNNTests()
 #if defined(HAVE_HALIDE)
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_HALIDE
-    )
+    );
 #endif
 #if defined(INF_ENGINE_RELEASE)
     registerGlobalSkipTag(
