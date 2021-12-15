@@ -297,19 +297,19 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                             cv::Size(static_cast<int>(oak_frame->getWidth()),
                                      static_cast<int>(oak_frame->getHeight())),
                             cv::gapi::oak::OAKFrameFormat::NV12,
-                            nullptr,
-                            nullptr);
+                            oak_frame->getData().data(),
+                            oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2));
             // Copying data here
-            uint8_t* y_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
-                                    get<cv::gapi::oak::OAKMediaAdapter>()->
-                                        access(MediaFrame::Access::W).ptr[0]);
-            uint8_t* uv_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
-                                    get<cv::gapi::oak::OAKMediaAdapter>()->
-                                        access(MediaFrame::Access::W).ptr[1]);
-            // FIXME: add a check that buffer size is correct
-            std::memcpy(y_ptr, oak_frame->getData().data(), static_cast<long>(oak_frame->getData().size() / 3 * 2));
-            std::memcpy(uv_ptr, oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2),
-                        static_cast<long>(oak_frame->getData().size() / 3));
+            //uint8_t* y_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
+            //                        get<cv::gapi::oak::OAKMediaAdapter>()->
+            //                            access(MediaFrame::Access::W).ptr[0]);
+            //uint8_t* uv_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
+            //                        get<cv::gapi::oak::OAKMediaAdapter>()->
+            //                            access(MediaFrame::Access::W).ptr[1]);
+            //// FIXME: add a check that buffer size is correct
+            //std::memcpy(y_ptr, oak_frame->getData().data(), static_cast<long>(oak_frame->getData().size() / 3 * 2));
+            //std::memcpy(uv_ptr, oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2),
+            //            static_cast<long>(oak_frame->getData().size() / 3));
         } else {
             GAPI_Assert(false && "Unsupported output type");
         }

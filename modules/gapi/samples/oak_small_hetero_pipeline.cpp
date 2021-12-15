@@ -27,9 +27,9 @@ int main(int argc, char *argv[]) {
     cv::GFrame in;
     cv::GFrame sobel = cv::gapi::oak::sobelXY(in);
     // Default camera and then sobel work only with nv12 format
-    cv::GFrame nv12 = cv::gapi::oak::imageManip(sobel);
-    cv::GMat acc = cv::gapi::streaming::Y(nv12);
-    cv::GMat out = cv::gapi::add(acc, acc);
+    //cv::GFrame nv12 = cv::gapi::oak::imageManip(sobel);
+    cv::GMat out = cv::gapi::streaming::Y(sobel);
+    //cv::GMat out = cv::gapi::add(acc, acc);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
                                  cv::gapi::combine(cv::gapi::oak::kernels(),

@@ -41,7 +41,7 @@ MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
                             cv::MediaFrame::View::Strides{}};
 }
 
-cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::BGR, m_sz}; }
+cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::NV12, m_sz}; }
 
 OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) :
     m_priv(new OAKMediaAdapter::Priv(sz, fmt, y_ptr, uv_ptr)) {};
