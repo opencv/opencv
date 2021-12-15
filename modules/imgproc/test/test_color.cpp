@@ -3194,5 +3194,25 @@ TEST(ImgProc_cvtColorTwoPlane, y_plane_padding_differs_from_uv_plane_padding_170
     EXPECT_DOUBLE_EQ(cvtest::norm(rgb_reference_mat, rgb_uv_padded_mat, NORM_INF), .0);
 }
 
+TEST(ImgProc_RGB2Lab, NaN_21111)
+{
+    const float kNaN = std::numeric_limits<float>::quiet_NaN();
+    cv::Mat3f src(1, 111, Vec3f::all(kNaN)), dst;
+    // Make some entries with only one NaN.
+    src(0, 0) = src(0, 27) = src(0, 81) = src(0, 108) = cv::Vec3f(0, 0, kNaN);
+    src(0, 1) = src(0, 28) = src(0, 82) = src(0, 109) = cv::Vec3f(0, kNaN, 0);
+    src(0, 2) = src(0, 29) = src(0, 83) = src(0, 110) = cv::Vec3f(kNaN, 0, 0);
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_RGB2Lab));
+
+#if 0  // no NaN propagation guarantee
+    for (int i = 0; i < 20; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            EXPECT_TRUE(cvIsNaN(dst(0, i)[j]));
+        }
+    }
+#endif
+}
 
 }} // namespace
