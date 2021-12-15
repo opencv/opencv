@@ -520,6 +520,42 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
                                                       "InferenceEngine::ParamMap >>");
     }
 
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
+        GAPI_LOG_DEBUG(nullptr, "Extract remote blob for GPU DX11 device_id: " <<
+                                ctx.uu.params.device_id);
+        // despite of layout, blob dimensions always follow in N,C,H,W order
+        const auto& dims_y = blob_params->first.first.getDims();
+        InferenceEngine::TensorDesc desc(InferenceEngine::Precision::U8,
+                                         {1, 1, dims_y[2], dims_y[3]},
+                                         InferenceEngine::Layout::NHWC);
+
+
+        InferenceEngine::ParamMap blobParams = {
+                           {"SHARED_MEM_TYPE", "VA_SURFACE"},
+                           {"DEV_OBJECT_HANDLE", blob_params->first.second["DEV_OBJECT_HANDLE"]},
+                           {"VA_PLANE", blob_params->first.second["VA_PLANE"]}}; //0
+        // TODO NV12 surface supported only
+        if (blob_params->first.second["COLOR_FORMAT"] == InferenceEngine::ColorFormat::NV12) {
+            InferenceEngine::Blob::Ptr y_blob =
+                           std::dynamic_pointer_cast<InferenceEngine::Blob>(
+                                        ctx.uu.rctx->CreateBlob(desc, blobParams));
+
+            const auto& dims_uv = blob_params->second.first.getDims();
+            InferenceEngine::TensorDesc uvdesc(InferenceEngine::Precision::U8,
+                                               {1, 2, dims_uv[2] / 2, dims_uv[3] / 2},
+                                               InferenceEngine::Layout::NHWC);
+            blobParams["MEM_HANDLE"] = blob_params->second.second["DEV_OBJECT_HANDLE"];
+            blobParams["VA_PLANE"] = blob_params->second.second["VA_PLANE"]; //1
+            InferenceEngine::Blob::Ptr uv_blob =
+                            std::dynamic_pointer_cast<InferenceEngine::Blob>(
+                                        ctx.uu.rctx->CreateBlob(uvdesc, blobParams));
+
+            return InferenceEngine::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+        } else {
+            GAPI_Assert(false && "blobParams with \"COLOR_FORMAT\" other than "
+                                 "\"InferenceEngine::ColorFormat::NV12\" are not supported");
+        }
+    }
     //The parameters are TensorDesc and ParamMap for both y and uv blobs
     auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
     auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
@@ -529,7 +565,6 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
 #else
     return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
 #endif
-
 }
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
