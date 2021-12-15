@@ -5,7 +5,7 @@
 using namespace cv;
 using namespace std;
 
-int main(int, char**)
+int main()
 {
    VideoCapture capture(CAP_INTELPERC);
    for(;;)
@@ -21,7 +21,7 @@ int main(int, char**)
       capture.grab();
       capture.retrieve(depthMap,CAP_INTELPERC_DEPTH_MAP);
       capture.retrieve(image,CAP_INTELPERC_IMAGE);
-      capture.retrieve(rrImage,CAP_INTELPERC_IR_MAP);
+      capture.retrieve(irImage,CAP_INTELPERC_IR_MAP);
 
       cv::minMaxIdx(depthMap, &min, &max);
       depthMap.convertTo(adjMap,CV_8UC1, 255 / (max-min), -min);
