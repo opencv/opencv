@@ -26,7 +26,9 @@ int main(int argc, char *argv[]) {
     // OAK camera -> streaming accessor -> CPU
     cv::GFrame in;
     cv::GFrame sobel = cv::gapi::oak::sobelXY(in);
-    cv::GMat acc = cv::gapi::streaming::BGR(sobel);
+    // Default camera and then sobel work only with nv12 format
+    cv::GFrame nv12 = cv::gapi::oak::imageManip(sobel);
+    cv::GMat acc = cv::gapi::streaming::Y(nv12);
     cv::GMat out = cv::gapi::add(acc, acc);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
@@ -37,7 +39,7 @@ int main(int argc, char *argv[]) {
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
-    cv::Mat out_mat(1920, 1080, CV_8UC3);
+    cv::Mat out_mat(1920, 1080, CV_8UC1);
 
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
     pipeline.start();

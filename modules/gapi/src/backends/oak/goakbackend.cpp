@@ -134,10 +134,12 @@ void cv::gimpl::GOAKExecutable::LinkToParentHelper(ade::NodeHandle handle,
         }
     }
     GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
-    GAPI_Assert(m_oak_nodes[handle]->getInputs().size() ==
-                m_oak_nodes[parent]->getOutputs().size());
-    for (size_t i = 0; i < m_oak_nodes[handle]->getInputs().size(); ++i) {
-        m_oak_nodes[parent]->getOutputs()[i].link(m_oak_nodes[handle]->getInputs()[i]);
+    GAPI_Assert(m_oak_node_input_ids[handle].size() ==
+                m_oak_node_output_ids[parent].size());
+    for (size_t i = 0; i < m_oak_node_input_ids[handle].size(); ++i) {
+        auto out_id = m_oak_node_output_ids[parent][i];
+        auto in_id = m_oak_node_input_ids[handle][i];
+        m_oak_nodes[parent]->getOutputs()[out_id].link(m_oak_nodes[handle]->getInputs()[in_id]);
     }
 }
 
@@ -201,6 +203,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                             GAPI_Assert(m_oak_node_input_ids[nh].size() == 1);
                             auto id = m_oak_node_input_ids[nh][0];
                             GAPI_Assert(id < m_oak_nodes[nh]->getInputs().size());
+                            // FIXME: covert other camera outputs
                             m_camera_input->video.link(m_oak_nodes[nh]->getInputs()[id]);
                             m_processed_nodes.insert(nh);
                         }
@@ -222,8 +225,8 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                         if (rc == d.rc)
                         {
                             GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
-                            GAPI_Assert(m_oak_node_input_ids[nh].size() == 1);
-                            auto id = m_oak_node_input_ids[nh][0];
+                            GAPI_Assert(m_oak_node_output_ids[nh].size() == 1);
+                            auto id = m_oak_node_output_ids[nh][0];
                             GAPI_Assert(id < m_oak_nodes[nh]->getOutputs().size());
                             GAPI_Assert(out_counter < m_xlink_outputs.size());
                             m_oak_nodes[nh]->getOutputs()[id].link(m_xlink_outputs[out_counter++]->input);
@@ -293,17 +296,25 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                     cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>(
                             cv::Size(static_cast<int>(oak_frame->getWidth()),
                                      static_cast<int>(oak_frame->getHeight())),
-                            cv::gapi::oak::OAKFrameFormat::BGR,
-                            oak_frame->getData().data());
+                            cv::gapi::oak::OAKFrameFormat::NV12,
+                            nullptr,
+                            nullptr);
+            // Copying data here
+            uint8_t* y_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
+                                    get<cv::gapi::oak::OAKMediaAdapter>()->
+                                        access(MediaFrame::Access::W).ptr[0]);
+            uint8_t* uv_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
+                                    get<cv::gapi::oak::OAKMediaAdapter>()->
+                                        access(MediaFrame::Access::W).ptr[1]);
+            // FIXME: add a check that buffer size is correct
+            std::memcpy(y_ptr, oak_frame->getData().data(), static_cast<long>(oak_frame->getData().size() / 3 * 2));
+            std::memcpy(uv_ptr, oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2),
+                        static_cast<long>(oak_frame->getData().size() / 3));
         } else {
             GAPI_Assert(false && "Unsupported output type");
         }
 
-        // FIXME: do we need to pass meta here?
-        //out.meta(out_arg, {});
-        //out.post(std::move(out_arg));
-
-        out.meta(out_arg, cv::util::get<cv::GRunArgs>(in_msg)[0].meta);
+        out.meta(out_arg, cv::util::get<cv::GRunArgs>(in_msg)[i].meta);
         out.post(std::move(out_arg));
     }
 }
@@ -423,6 +434,30 @@ GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
         m_oak_node_output_ids = {0};
     }
 };
+
+// FIXME: does nothing currently
+GAPI_OAK_KERNEL(GOAKImageManip, cv::gapi::oak::GImageManip) {
+    static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const GArgs& in_args,
+                    std::shared_ptr<dai::Node>& node,
+                    std::vector<std::pair<std::string, dai::Buffer>>&,
+                    std::vector<size_t>& m_oak_node_input_ids,
+                    std::vector<size_t>& m_oak_node_output_ids) {
+        auto imageManip = pipeline->create<dai::node::ImageManip>();
+        // FIXME: imagemanip params is the 2nd arg - consider a better approach here
+        auto m_im_config = in_args[1].get<cv::gapi::oak::ImageManipConfig>();
+        // FIXME: convert all the parameters to dai
+        GAPI_Assert(m_im_config.colorFormat == cv::gapi::oak::ImageManipConfig::ColorFormat::NV12);
+        imageManip->initialConfig.setFrameType(dai::RawImgFrame::Type::NV12);
+        imageManip->initialConfig.setResize(1920, 1080);
+        imageManip->setMaxOutputFrameSize(1920 * 1080);
+
+        node = imageManip;
+
+        m_oak_node_input_ids = {1};
+        m_oak_node_output_ids = {0};
+    }
+};
 } // anonymous namespace
 
 cv::gapi::GKernelPackage kernels();
@@ -430,6 +465,7 @@ cv::gapi::GKernelPackage kernels();
 cv::gapi::GKernelPackage kernels() {
     return cv::gapi::kernels< GOAKEncFrame
                             , GOAKSobelXY
+                            , GOAKImageManip
                             >();
 }
 

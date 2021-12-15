@@ -37,6 +37,10 @@ GFrame sobelXY(const GFrame& in, const SobelFilter& hk, const SobelFilter& vk) {
     return GSobelXY::on(in, hk, vk);
 }
 
+GFrame imageManip(const GFrame& in, const ImageManipConfig& cfg) {
+    return GImageManip::on(in, cfg);
+}
+
 cv::gapi::GKernelPackage kernels() {
     return cv::gimpl::oak::kernels();
 }
