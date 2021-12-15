@@ -114,7 +114,8 @@ const param audioParams[] =
     param("test_audio.wav", 1, 132300, 0.0001, cv::CAP_MSMF),
     param("test_mono_audio.mp3", 1, 133104, 0.12, cv::CAP_MSMF),
     param("test_stereo_audio.mp3", 2, 133104, 0.12, cv::CAP_MSMF),
-    param("test_audio.mp4", 1, 133104, 0.15, cv::CAP_MSMF)
+    param("test_audio.mp4", 1, 133104, 0.15, cv::CAP_MSMF),
+    param("test_audio.wav", 1, 132300, 0.0001, cv::CAP_GSTREAMER)
 };
 
 class Audio : public AudioTestFixture{};
