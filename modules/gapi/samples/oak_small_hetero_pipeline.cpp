@@ -35,8 +35,7 @@ int main(int argc, char *argv[]) {
                                                    cv::gapi::core::cpu::kernels()));
     cv::GMetaArgs margs = {cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size{1920,1080}}}};
 
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(margs),
-                                                                                  std::move(args));
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
     cv::Mat out_mat(1920, 1080, CV_8UC1);
