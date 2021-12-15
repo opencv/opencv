@@ -131,6 +131,7 @@ private:
     typedef void (ONNXImporter::*ONNXImporterNodeParser)(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     typedef std::map<std::string, ONNXImporterNodeParser> DispatchMap;
 
+    void parseMaxUnpool            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -625,6 +626,41 @@ void setCeilMode(LayerParams& layerParams)
     }
 }
 
+void ONNXImporter::parseMaxUnpool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "MaxUnpool";
+
+    DictValue kernel_shape = layerParams.get("kernel_size");
+    CV_Assert(kernel_shape.size() == 2);
+    layerParams.set("pool_k_w", kernel_shape.get<int>(0));
+    layerParams.set("pool_k_h", kernel_shape.get<int>(1));
+
+    int pool_pad_w = 0, pool_pad_h = 0;
+    if (layerParams.has("pad"))
+    {
+        DictValue pads = layerParams.get("pad");
+        CV_CheckEQ(pads.size(), 2, "");
+        pool_pad_w = pads.get<int>(0);
+        pool_pad_h = pads.get<int>(1);
+    }
+    layerParams.set("pool_pad_w", pool_pad_w);
+    layerParams.set("pool_pad_h", pool_pad_h);
+
+
+    int pool_stride_w = 1, pool_stride_h = 1;
+    if (layerParams.has("stride"))
+    {
+        DictValue strides = layerParams.get("stride");
+        CV_CheckEQ(strides.size(), 2, "");
+        pool_stride_w = strides.get<int>(0);
+        pool_stride_h = strides.get<int>(1);
+    }
+    layerParams.set("pool_stride_w", pool_stride_w);
+    layerParams.set("pool_stride_h", pool_stride_h);
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseMaxPool(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Pooling";
@@ -659,11 +695,11 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         pool = "AVE";
     layerParams.set("pool", pool);
     layerParams.set("global_pooling", !layerParams.has("axes"));
+    bool keepdims = layerParams.get<int>("keepdims", 1) == 1;
     if (layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
     {
         MatShape inpShape = outShapes[node_proto.input(0)];
         DictValue axes = layerParams.get("axes");
-        bool keepdims = layerParams.get<int>("keepdims");
         MatShape targetShape;
         std::vector<bool> shouldDelete(inpShape.size(), false);
         for (int i = 0; i < axes.size(); i++) {
@@ -771,7 +807,10 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     }
     else if (!layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
     {
-        CV_CheckEQ(layerParams.get<int>("keepdims"), 0, "layer only supports keepdims = false");
+        IterShape_t shapeIt = outShapes.find(node_proto.input(0));
+        CV_Assert(shapeIt != outShapes.end());
+        const size_t dims = keepdims ? shapeIt->second.size() : 1;
+
         LayerParams reshapeLp;
         reshapeLp.name = layerParams.name + "/reshape";
         reshapeLp.type = "Reshape";
@@ -793,8 +832,8 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         addLayer(poolLp, node_proto);
 
         layerParams.type = "Reshape";
-        int targetShape[] = {1};
-        layerParams.set("dim", DictValue::arrayInt(&targetShape[0], 1));
+        std::vector<int> targetShape(dims, 1);
+        layerParams.set("dim", DictValue::arrayInt(targetShape.data(), targetShape.size()));
 
         node_proto.set_input(0, node_proto.output(0));
         node_proto.set_output(0, layerParams.name);
@@ -2341,6 +2380,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
 {
     DispatchMap dispatch;
 
+    dispatch["MaxUnpool"] = &ONNXImporter::parseMaxUnpool;
     dispatch["MaxPool"] = &ONNXImporter::parseMaxPool;
     dispatch["AveragePool"] = &ONNXImporter::parseAveragePool;
     dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] =
