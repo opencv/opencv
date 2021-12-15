@@ -72,11 +72,10 @@ static inline DST sub(SRC1 x, SRC2 y)
     return saturate<DST>(x - y, roundf);
 }
 
-// there is no difference between sub and subr (due to documentation)
 template<typename DST, typename SRC1, typename SRC2>
 static inline DST subr(SRC1 x, SRC2 y)
 {
-    return saturate<DST>(x - y, roundf);
+    return saturate<DST>(y - x, roundf);  // reverse sub
 }
 
 template<typename DST, typename SRC1, typename SRC2>
@@ -984,7 +983,7 @@ static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], A
         w = subrc_simd(scalar, in, out, length, chan);
 #endif
         for (; w < length; ++w)
-            out[w] = subr<DST>(scalar[w % chan], in[w]); // [can be replaced by sub]
+            out[w] = subr<DST>(in[w], scalar[w % chan]);
         break;
     }
     // TODO: optimize division
