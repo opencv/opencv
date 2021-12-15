@@ -19,7 +19,7 @@ int main( int argc, const char** argv )
       Mat adjMap;
 
       capture.grab();
-   
+ 
       capture.retrieve( depthMap, CAP_INTELPERC_DEPTH_MAP );
       capture.retrieve(    image, CAP_INTELPERC_IMAGE );
       capture.retrieve(  irImage, CAP_INTELPERC_IR_MAP);
