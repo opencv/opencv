@@ -400,6 +400,21 @@ int counterOfValid(Mat points)
     return count;
 }
 
+enum class TestFunction
+{
+    RAYCAST = 0,
+    FETCH_NORMALS = 1,
+    Fetch_POINTS_NORMALS = 2
+};
+
+enum class VolumeTestSrcType
+{
+    MAT = 0,
+    ODOMETRY_FRAME = 1
+};
+
+
+
 void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
 {
     Settings settings(isHashTSDF, false);
@@ -420,27 +435,55 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     vs.setCameraIntrinsics(settings.intr);
     Volume volume(VolumeType::TSDF, vs);
 
+    //TestFunction t = TestFunction::RAYCAST;
+    TestFunction t = TestFunction::FETCH_NORMALS;
+    //TestFunction t = TestFunction::Fetch_POINTS_NORMALS;
 
-    if (true)
+    VolumeTestSrcType s = VolumeTestSrcType::MAT;
+    //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
+
+    enum class TestSrcType
     {
-        if (true) // Odometry frame or Mats
+        MAT = 0,
+        ODOMETRY_FRAME = 1
+    };
+
+
+    if (t == TestFunction::RAYCAST)
+    {
+        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        {
+            volume.integrate(udepth, settings.poses[0].matrix);
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
+        }
+        else if (s == VolumeTestSrcType::ODOMETRY_FRAME)
         {
             volume.integrate(odf, settings.poses[0].matrix);
             volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
             odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
             odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
         }
-        else
+    }
+    else if (t == TestFunction::FETCH_NORMALS)
+    {
+        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            volume.integrate(udepth, settings.poses[0].matrix);
-            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, unormals);
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
+            volume.integrate(depth, settings.poses[0].matrix);
+            // takes only point from raycast for checking fetched normals on the display
+            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, upoints, utmpnormals);
+            volume.fetchNormals(upoints, unormals);
+
+            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, utmpnormals);
+            //settings.volume->fetchNormals(upoints, unormals);
         }
     }
-    else
-    {
-        settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, unormals);
-    }
+
+
+
+    //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, unormals);
     normals = unormals.getMat(af);
     points = upoints.getMat(af);
 

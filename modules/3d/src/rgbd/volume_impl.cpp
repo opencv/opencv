@@ -150,9 +150,24 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArr
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
+void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
+{
+    std::cout << "TsdfVolume::fetchNormals(Mat)" << std::endl;
+#ifndef HAVE_OPENCL
+    fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
+#else
+    if (ocl::useOpenCL())
+        ocl_fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
+    else
+        fetchNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
+#endif
+}
+
 void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
-void TsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
+void TsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+}
 
 void TsdfVolume::reset()
 {

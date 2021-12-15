@@ -1059,7 +1059,7 @@ inline float interpolateVoxel( const Mat& volume,
 #endif
 
 
-#if USE_INTRINSICS
+#if USE_INTRINSICS && 0
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 inline v_float32x4 getNormalVoxel( const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
@@ -1235,6 +1235,7 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
     float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
+    //TODO::  swap realization, they are missplaced :)
 #if USE_INTRINSICS
     auto RaycastInvoker = [&](const Range& range)
     {
@@ -1485,7 +1486,8 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
         }
     }
 #endif
-    parallel_for_(raycastRange, RaycastInvoker);
+    //parallel_for_(raycastRange, RaycastInvoker);
+    RaycastInvoker(raycastRange);
 }
 
 
@@ -1584,6 +1586,142 @@ void ocl_raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
     if (!k.run(2, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
+}
+
+
+// Fetch
+
+void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
+{
+    std::cout << "fetchNormalsFromTsdfVolumeUnit" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    CV_Assert(!_points.empty());
+    if (!_normals.needed())
+        return;
+
+    Points points = _points.getMat();
+    CV_Assert(points.type() == POINT_TYPE);
+
+    _normals.createSameSize(_points, _points.type());
+    Normals normals = _normals.getMat();
+
+    const Mat volume = _volume.getMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    auto PushNormals = [&](const ptype& pp, const int* position)
+    {
+        Point3f p = fromPtype(pp);
+        Point3f n = nan3;
+        if (!isNaN(p))
+        {
+            Point3f voxPt = (invPose * p);
+            voxPt = voxPt * voxelSizeInv;
+            n = r * getNormalVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
+        }
+        normals(position[0], position[1]) = toPtype(n);
+    };
+    points.forEach(PushNormals);
+}
+
+void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
+{
+    std::cout << "ocl_fetchNormalsFromTsdfVolumeUnit" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    CV_Assert(!_points.empty());
+    if (!_normals.needed())
+        return;
+
+    UMat points = _points.getUMat();
+    CV_Assert(points.type() == POINT_TYPE);
+
+    _normals.createSameSize(_points, POINT_TYPE);
+    UMat normals = _normals.getUMat();
+
+    const UMat volume = _volume.getUMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    String errorStr;
+    String name = "getNormals";
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    UMat volPoseGpu, invPoseGpu;
+    Mat(pose.matrix).copyTo(volPoseGpu);
+    Mat(pose.inv().matrix).copyTo(invPoseGpu);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+    Size frameSize = points.size();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(points),
+        ocl::KernelArg::WriteOnlyNoSize(normals),
+        frameSize,
+        ocl::KernelArg::PtrReadOnly(volume),
+        ocl::KernelArg::PtrReadOnly(volPoseGpu),
+        ocl::KernelArg::PtrReadOnly(invPoseGpu),
+        voxelSizeInv,
+        volResGpu.val,
+        volDims.val,
+        neighbourCoords.val);
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)points.cols;
+    globalSize[1] = (size_t)points.rows;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
 }
 
 } // namespace cv
