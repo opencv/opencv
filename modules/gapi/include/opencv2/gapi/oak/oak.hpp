@@ -94,8 +94,8 @@ G_API_OP(GEncFrame, <GArray<uint8_t>(GFrame, EncoderConfig)>, "org.opencv.oak.en
 using SobelFilter = std::vector<std::vector<int>>;
 
 G_API_OP(GSobelXY, <GFrame(GFrame, const SobelFilter&, const SobelFilter&)>, "org.opencv.oak.sobelxy") {
-    static GFrameDesc outMeta(const GFrameDesc&, const SobelFilter&, const SobelFilter&) {
-        return cv::empty_gframe_desc();
+    static GFrameDesc outMeta(const GFrameDesc& in, const SobelFilter&, const SobelFilter&) {
+        return in;
     }
 };
 

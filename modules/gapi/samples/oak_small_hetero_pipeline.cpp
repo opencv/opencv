@@ -23,20 +23,20 @@ int main(int argc, char *argv[]) {
     const std::string output_name = cmd.get<std::string>("output");
 
     // Heterogeneous pipeline:
-    // OAK camera -> streaming accessor -> CPU
+    // OAK camera -> Sobel -> streaming accessor (CPU)
     cv::GFrame in;
     cv::GFrame sobel = cv::gapi::oak::sobelXY(in);
     // Default camera and then sobel work only with nv12 format
-    //cv::GFrame nv12 = cv::gapi::oak::imageManip(sobel);
     cv::GMat out = cv::gapi::streaming::Y(sobel);
-    //cv::GMat out = cv::gapi::add(acc, acc);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
                                  cv::gapi::combine(cv::gapi::oak::kernels(),
                                                    cv::gapi::streaming::kernels(),
                                                    cv::gapi::core::cpu::kernels()));
+    cv::GMetaArgs margs = {cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size{1920,1080}}}};
 
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(margs),
+                                                                                  std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
     cv::Mat out_mat(1920, 1080, CV_8UC1);

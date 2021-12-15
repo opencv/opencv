@@ -291,6 +291,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
 
         if (util::holds_alternative<cv::detail::VectorRef>(out_arg)) {
             cv::util::get<cv::detail::VectorRef>(out_arg).wref<uint8_t>() = oak_frame->getData();
+            // FIXME: should we copy data instead?
         } else if (util::holds_alternative<cv::MediaFrame*>(out_arg)) {
             *cv::util::get<cv::MediaFrame*>(out_arg) =
                     cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>(
@@ -299,17 +300,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                             cv::gapi::oak::OAKFrameFormat::NV12,
                             oak_frame->getData().data(),
                             oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2));
-            // Copying data here
-            //uint8_t* y_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
-            //                        get<cv::gapi::oak::OAKMediaAdapter>()->
-            //                            access(MediaFrame::Access::W).ptr[0]);
-            //uint8_t* uv_ptr = static_cast<uint8_t*>(cv::util::get<cv::MediaFrame*>(out_arg)->
-            //                        get<cv::gapi::oak::OAKMediaAdapter>()->
-            //                            access(MediaFrame::Access::W).ptr[1]);
-            //// FIXME: add a check that buffer size is correct
-            //std::memcpy(y_ptr, oak_frame->getData().data(), static_cast<long>(oak_frame->getData().size() / 3 * 2));
-            //std::memcpy(uv_ptr, oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2),
-            //            static_cast<long>(oak_frame->getData().size() / 3));
+            // FIXME: should we copy data instead?
         } else {
             GAPI_Assert(false && "Unsupported output type");
         }
@@ -435,7 +426,7 @@ GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
     }
 };
 
-// FIXME: does nothing currently
+// FIXME: currently does nothing
 GAPI_OAK_KERNEL(GOAKImageManip, cv::gapi::oak::GImageManip) {
     static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
                     const GArgs& in_args,
