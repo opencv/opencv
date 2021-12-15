@@ -1821,7 +1821,9 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
         }
         CV_Assert(axes.getIntValue(axes.size()-1) <= dims.size());
         for (int j = 0; j < axes.size(); j++) {
-            dims.insert(dims.begin() + axes.getIntValue(j), 1);
+            const int idx = axes.getIntValue(j);
+            CV_Assert(idx <= dims.size());
+            dims.insert(dims.begin() + idx, 1);
         }
 
         Mat out = input.reshape(0, dims);
