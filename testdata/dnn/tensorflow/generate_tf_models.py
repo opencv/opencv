@@ -1065,7 +1065,11 @@ inp = tf.placeholder(tf.float32, [3, 4, 5], 'input')
 weights = tf.reshape(inp,[3, 5, 4])
 bmm = tf.matmul(inp, weights)
 save(inp, bmm, 'batch_matmul', optimize=False)
-#################################################################################
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3], 'input')
+square = tf.square(inp)
+save(inp, square, 'square')
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
