@@ -10,9 +10,6 @@ int main()
    VideoCapture capture(CAP_INTELPERC);
    for(;;)
    {
-      double min;
-      double max;
-
       Mat depthMap;
       Mat image;
       Mat irImage;
@@ -23,8 +20,7 @@ int main()
       capture.retrieve(image,CAP_INTELPERC_IMAGE);
       capture.retrieve(irImage,CAP_INTELPERC_IR_MAP);
 
-      cv::minMaxIdx(depthMap, &min, &max);
-      depthMap.convertTo(adjMap,CV_8UC1, 255 / (max-min), -min);
+      normalize(depthMap, adjMap, 0, 255, NORM_MINMAX, CV_8UC1);
       applyColorMap(adjMap, adjMap, COLORMAP_JET);
 
       imshow("RGB", image);
