@@ -75,8 +75,8 @@ public:
     //temporary solution
     Mat cpu_pixNorms;
     Mat cpu_volume;
-    UMat pixNorms;
-    UMat volume;
+    UMat gpu_pixNorms;
+    UMat gpu_volume;
 #endif
 };
 

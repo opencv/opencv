@@ -1724,4 +1724,438 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
 
 }
 
+
+
+
+
+
+struct _FetchPointsNormalsInvoker : ParallelLoopBody
+{
+    _FetchPointsNormalsInvoker(
+        const Mat& _volume,
+        std::vector<std::vector<ptype>>& _pVecs,
+        std::vector<std::vector<ptype>>& _nVecs,
+        bool _needNormals, float _voxelSize, const Affine3f _pose,
+        const Vec8i _neighbourCoords, const Vec4i _volDims, const Point3i _volResolution) :
+        ParallelLoopBody(),
+        volume(_volume),
+        pVecs(_pVecs),
+        nVecs(_nVecs),
+        volDims(_volDims),
+        volResolution(_volResolution),
+        pose(_pose),
+        neighbourCoords(_neighbourCoords),
+        voxelSize(_voxelSize),
+        voxelSizeInv(1.f / _voxelSize),
+        needNormals(_needNormals)
+    {
+        volDataStart = volume.ptr<TsdfVoxel>();
+    }
+
+    inline void coord(std::vector<ptype>& points, std::vector<ptype>& normals,
+        int x, int y, int z, Point3f V, float v0, int axis) const
+    {
+        // 0 for x, 1 for y, 2 for z
+        bool limits = false;
+        Point3i shift;
+        float Vc = 0.f;
+        if (axis == 0)
+        {
+            shift = Point3i(1, 0, 0);
+            limits = (x + 1 < volResolution.x);
+            Vc = V.x;
+        }
+        if (axis == 1)
+        {
+            shift = Point3i(0, 1, 0);
+            limits = (y + 1 < volResolution.y);
+            Vc = V.y;
+        }
+        if (axis == 2)
+        {
+            shift = Point3i(0, 0, 1);
+            limits = (z + 1 < volResolution.z);
+            Vc = V.z;
+        }
+
+        if (limits)
+        {
+            const TsdfVoxel& voxeld = volDataStart[(x + shift.x) * volDims[0] +
+                (y + shift.y) * volDims[1] +
+                (z + shift.z) * volDims[2]];
+            float vd = tsdfToFloat(voxeld.tsdf);
+            if (voxeld.weight != 0 && vd != 1.f)
+            {
+                if ((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
+                {
+                    //linearly interpolate coordinate
+                    float Vn = Vc + voxelSize;
+                    float dinv = 1.f / (abs(v0) + abs(vd));
+                    float inter = (Vc * abs(vd) + Vn * abs(v0)) * dinv;
+
+                    Point3f p(shift.x ? inter : V.x,
+                        shift.y ? inter : V.y,
+                        shift.z ? inter : V.z);
+                    {
+                        points.push_back(toPtype(pose * p));
+                        if (needNormals)
+                            normals.push_back(toPtype(pose.rotation() *
+                                getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
+                    }
+                }
+            }
+        }
+    }
+
+    virtual void operator() (const Range& range) const override
+    {
+        std::vector<ptype> points, normals;
+        for (int x = range.start; x < range.end; x++)
+        {
+            const TsdfVoxel* volDataX = volDataStart + x * volDims[0];
+            for (int y = 0; y < volResolution.y; y++)
+            {
+                const TsdfVoxel* volDataY = volDataX + y * volDims[1];
+                for (int z = 0; z < volResolution.z; z++)
+                {
+                    const TsdfVoxel& voxel0 = volDataY[z * volDims[2]];
+                    float v0 = tsdfToFloat(voxel0.tsdf);
+                    if (voxel0.weight != 0 && v0 != 1.f)
+                    {
+                        Point3f V(Point3f((float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f) * voxelSize);
+
+                        coord(points, normals, x, y, z, V, v0, 0);
+                        coord(points, normals, x, y, z, V, v0, 1);
+                        coord(points, normals, x, y, z, V, v0, 2);
+
+                    } // if voxel is not empty
+                }
+            }
+        }
+
+        AutoLock al(mutex);
+        pVecs.push_back(points);
+        nVecs.push_back(normals);
+    }
+
+    const Mat& volume;
+    std::vector<std::vector<ptype>>& pVecs;
+    std::vector<std::vector<ptype>>& nVecs;
+    const TsdfVoxel* volDataStart;
+    const Vec4i volDims;
+    const Point3i volResolution;
+    const Affine3f pose;
+    const Vec8i neighbourCoords;
+    const float voxelSize;
+    const float voxelSizeInv;
+    bool needNormals;
+    mutable Mutex mutex;
+};
+
+
+inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals,
+    const Point3i volResolution, const Vec4i volDims, const Vec8i neighbourCoords, const Affine3f pose,
+    const float voxelSize, const float voxelSizeInv, bool needNormals, int x, int y, int z, Point3f V, float v0, int axis)
+{
+    // 0 for x, 1 for y, 2 for z
+    bool limits = false;
+    Point3i shift;
+    float Vc = 0.f;
+    if (axis == 0)
+    {
+        shift = Point3i(1, 0, 0);
+        limits = (x + 1 < volResolution.x);
+        Vc = V.x;
+    }
+    if (axis == 1)
+    {
+        shift = Point3i(0, 1, 0);
+        limits = (y + 1 < volResolution.y);
+        Vc = V.y;
+    }
+    if (axis == 2)
+    {
+        shift = Point3i(0, 0, 1);
+        limits = (z + 1 < volResolution.z);
+        Vc = V.z;
+    }
+
+    if (limits)
+    {
+        const TsdfVoxel& voxeld = volDataStart[(x + shift.x) * volDims[0] +
+            (y + shift.y) * volDims[1] +
+            (z + shift.z) * volDims[2]];
+        float vd = tsdfToFloat(voxeld.tsdf);
+        if (voxeld.weight != 0 && vd != 1.f)
+        {
+            if ((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
+            {
+                //linearly interpolate coordinate
+                float Vn = Vc + voxelSize;
+                float dinv = 1.f / (abs(v0) + abs(vd));
+                float inter = (Vc * abs(vd) + Vn * abs(v0)) * dinv;
+
+                Point3f p(shift.x ? inter : V.x,
+                    shift.y ? inter : V.y,
+                    shift.z ? inter : V.z);
+                {
+                    points.push_back(toPtype(pose * p));
+                    if (needNormals)
+                        normals.push_back(toPtype(pose.rotation() *
+                            getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
+                }
+            }
+        }
+    }
+}
+
+
+void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray _points, OutputArray _normals)
+{
+    std::cout << "fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
+
+    if (!_points.needed())
+        return;
+    const Mat volume = _volume.getMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    bool needNormals = _normals.needed();
+
+    std::vector<std::vector<ptype>> pVecs, nVecs;
+    Range range(0, volResolution.x);
+    const int nstripes = -1;
+    const TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
+    Mutex mutex;
+
+    auto FetchPointsNormalsInvoker = [&](const Range& range) {
+        std::vector<ptype> points, normals;
+        for (int x = range.start; x < range.end; x++)
+        {
+            const TsdfVoxel* volDataX = volDataStart + x * volDims[0];
+            for (int y = 0; y < volResolution.y; y++)
+            {
+                const TsdfVoxel* volDataY = volDataX + y * volDims[1];
+                for (int z = 0; z < volResolution.z; z++)
+                {
+                    const TsdfVoxel& voxel0 = volDataY[z * volDims[2]];
+                    float v0 = tsdfToFloat(voxel0.tsdf);
+                    if (voxel0.weight != 0 && v0 != 1.f)
+                    {
+                        Point3f V(Point3f((float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f) * voxelSize);
+
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 0);
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 1);
+                        coord(volume, volDataStart, points, normals, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, x, y, z, V, v0, 2);
+
+                    } // if voxel is not empty
+                }
+            }
+        }
+
+        AutoLock al(mutex);
+        pVecs.push_back(points);
+        nVecs.push_back(normals);
+    };
+
+    parallel_for_(range, FetchPointsNormalsInvoker, nstripes);
+
+
+
+    std::vector<ptype> points, normals;
+    for (size_t i = 0; i < pVecs.size(); i++)
+    {
+        points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
+        normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
+    }
+
+    _points.create((int)points.size(), 1, POINT_TYPE);
+    if (!points.empty())
+        Mat((int)points.size(), 1, POINT_TYPE, &points[0]).copyTo(_points.getMat());
+
+    if (_normals.needed())
+    {
+        _normals.create((int)normals.size(), 1, POINT_TYPE);
+        if (!normals.empty())
+            Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
+    }
+
+}
+
+void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray points, OutputArray normals)
+{
+    std::cout << "ocl_fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
+
+    CV_TRACE_FUNCTION();
+
+    if (!points.needed())
+        return;
+
+
+    const UMat volume = _volume.getUMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+
+    bool needNormals = normals.needed();
+
+    // 1. scan to count points in each group and allocate output arrays
+
+    ocl::Kernel kscan;
+
+    String errorStr;
+    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+
+    kscan.create("scanSize", source, options, &errorStr);
+
+    if (kscan.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    size_t globalSize[3];
+    globalSize[0] = (size_t)volResolution.x;
+    globalSize[1] = (size_t)volResolution.y;
+    globalSize[2] = (size_t)volResolution.z;
+
+    const ocl::Device& device = ocl::Device::getDefault();
+    size_t wgsLimit = device.maxWorkGroupSize();
+    size_t memSize = device.localMemSize();
+    // local mem should keep a point (and a normal) for each thread in a group
+    // use 4 float per each point and normal
+    size_t elemSize = (sizeof(float) * 4) * (needNormals ? 2 : 1);
+    const size_t lcols = 8;
+    const size_t lrows = 8;
+    size_t lplanes = min(memSize / elemSize, wgsLimit) / lcols / lrows;
+    lplanes = roundDownPow2(lplanes);
+    size_t localSize[3] = { lcols, lrows, lplanes };
+    Vec3i ngroups((int)divUp(globalSize[0], (unsigned int)localSize[0]),
+        (int)divUp(globalSize[1], (unsigned int)localSize[1]),
+        (int)divUp(globalSize[2], (unsigned int)localSize[2]));
+
+    const size_t counterSize = sizeof(int);
+    size_t lszscan = localSize[0] * localSize[1] * localSize[2] * counterSize;
+
+    const int gsz[3] = { ngroups[2], ngroups[1], ngroups[0] };
+    UMat groupedSum(3, gsz, CV_32S, Scalar(0));
+
+    UMat volPoseGpu;
+    Mat(pose.matrix).copyTo(volPoseGpu);
+    Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+
+    kscan.args(ocl::KernelArg::PtrReadOnly(volume),
+        volResGpu.val,
+        volDims.val,
+        neighbourCoords.val,
+        ocl::KernelArg::PtrReadOnly(volPoseGpu),
+        voxelSize,
+        voxelSizeInv,
+        ocl::KernelArg::Local(lszscan),
+        ocl::KernelArg::WriteOnlyNoSize(groupedSum));
+
+    if (!kscan.run(3, globalSize, localSize, true))
+        throw std::runtime_error("Failed to run kernel");
+
+    Mat groupedSumCpu = groupedSum.getMat(ACCESS_READ);
+    int gpuSum = (int)sum(groupedSumCpu)[0];
+    // should be no CPU copies when new kernel is executing
+    groupedSumCpu.release();
+
+    // 2. fill output arrays according to per-group points count
+
+    points.create(gpuSum, 1, POINT_TYPE);
+    UMat pts = points.getUMat();
+    UMat nrm;
+    if (needNormals)
+    {
+        normals.create(gpuSum, 1, POINT_TYPE);
+        nrm = normals.getUMat();
+    }
+    else
+    {
+        // it won't be accessed but empty args are forbidden
+        nrm = UMat(1, 1, POINT_TYPE);
+    }
+
+    if (gpuSum)
+    {
+        ocl::Kernel kfill;
+        kfill.create("fillPtsNrm", source, options, &errorStr);
+
+        if (kfill.empty())
+            throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+        UMat atomicCtr(1, 1, CV_32S, Scalar(0));
+
+        // mem size to keep pts (and normals optionally) for all work-items in a group
+        size_t lszfill = localSize[0] * localSize[1] * localSize[2] * elemSize;
+
+        kfill.args(ocl::KernelArg::PtrReadOnly(volume),
+            volResGpu.val,
+            volDims.val,
+            neighbourCoords.val,
+            ocl::KernelArg::PtrReadOnly(volPoseGpu),
+            voxelSize,
+            voxelSizeInv,
+            ((int)needNormals),
+            ocl::KernelArg::Local(lszfill),
+            ocl::KernelArg::PtrReadWrite(atomicCtr),
+            ocl::KernelArg::ReadOnlyNoSize(groupedSum),
+            ocl::KernelArg::WriteOnlyNoSize(pts),
+            ocl::KernelArg::WriteOnlyNoSize(nrm)
+        );
+
+        if (!kfill.run(3, globalSize, localSize, true))
+            throw std::runtime_error("Failed to run kernel");
+    }
+}
+
+
+
+
 } // namespace cv

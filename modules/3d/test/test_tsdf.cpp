@@ -403,7 +403,7 @@ enum class TestFunction
 {
     RAYCAST = 0,
     FETCH_NORMALS = 1,
-    Fetch_POINTS_NORMALS = 2
+    FETCH_POINTS_NORMALS = 2
 };
 
 enum class VolumeTestSrcType
@@ -445,28 +445,24 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
 
 
     //TestFunction t = TestFunction::RAYCAST;
-    TestFunction t = TestFunction::FETCH_NORMALS;
-    //TestFunction t = TestFunction::Fetch_POINTS_NORMALS;
+    //TestFunction t = TestFunction::FETCH_NORMALS;
+    TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
 
     VolumeTestSrcType s = VolumeTestSrcType::MAT;
     //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
-
-    enum class TestSrcType
-    {
-        MAT = 0,
-        ODOMETRY_FRAME = 1
-    };
 
 
     if (t == TestFunction::RAYCAST)
     {
         if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
             volume.integrate(depth, settings.poses[0].matrix);
             volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _normals);
         }
         else if (s == VolumeTestSrcType::ODOMETRY_FRAME)
         {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
             volume.integrate(odf, settings.poses[0].matrix);
             volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
             odf.getPyramidAt(_points, OdometryFramePyramidType::PYR_CLOUD, 0);
@@ -488,8 +484,14 @@ void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bo
             //settings.volume->fetchNormals(_points, _normals);
         }
     }
-    else if (t == TestFunction::Fetch_POINTS_NORMALS)
+    else if (t == TestFunction::FETCH_POINTS_NORMALS)
     {
+        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
+            volume.integrate(depth, settings.poses[0].matrix);
+            volume.fetchPointsNormals(_points, _normals);
+        }
     }
 
     //else

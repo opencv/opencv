@@ -404,7 +404,7 @@ enum class TestFunction
 {
     RAYCAST = 0,
     FETCH_NORMALS = 1,
-    Fetch_POINTS_NORMALS = 2
+    FETCH_POINTS_NORMALS = 2
 };
 
 enum class VolumeTestSrcType
@@ -436,8 +436,8 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Volume volume(VolumeType::TSDF, vs);
 
     //TestFunction t = TestFunction::RAYCAST;
-    TestFunction t = TestFunction::FETCH_NORMALS;
-    //TestFunction t = TestFunction::Fetch_POINTS_NORMALS;
+    //TestFunction t = TestFunction::FETCH_NORMALS;
+    TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
 
     VolumeTestSrcType s = VolumeTestSrcType::MAT;
     //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
@@ -479,7 +479,15 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
             //settings.volume->fetchNormals(upoints, unormals);
         }
     }
-
+    else if (t == TestFunction::FETCH_POINTS_NORMALS)
+    {
+        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        {
+            std::cout << "Test: " << (int)t << (int)s << std::endl;
+            volume.integrate(depth, settings.poses[0].matrix);
+            volume.fetchPointsNormals(upoints, unormals);
+        }
+    }
 
 
     //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);

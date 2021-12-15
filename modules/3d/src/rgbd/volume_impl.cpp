@@ -28,7 +28,7 @@ TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
     volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
 #else
     if (ocl::useOpenCL())
-        volume = UMat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
+        gpu_volume = UMat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
     else
         cpu_volume = Mat(1, volResolution[0] * volResolution[1] * volResolution[2], rawType<TsdfVoxel>());
 #endif
@@ -72,7 +72,7 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
 #else
         if (ocl::useOpenCL())
-            ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+            ocl_preCalculationPixNorm(depth.size(), intrinsics, gpu_pixNorms);
         else
             preCalculationPixNorm(depth.size(), intrinsics, cpu_pixNorms);
 #endif
@@ -83,7 +83,7 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
 #else
     if (ocl::useOpenCL())
-        ocl_integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+        ocl_integrateVolumeUnit(settings, cameraPose, depth, gpu_pixNorms, gpu_volume);
     else
         integrateVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
@@ -139,7 +139,7 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
     raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
 #else
     if (ocl::useOpenCL())
-        ocl_raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+        ocl_raycastVolumeUnit(settings, cameraPose, height, width, gpu_volume, _points, _normals);
     else
         raycastVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
 #endif
@@ -157,13 +157,26 @@ void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
     fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
 #else
     if (ocl::useOpenCL())
-        ocl_fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
+        ocl_fetchNormalsFromTsdfVolumeUnit(settings, gpu_volume, points, normals);
     else
         fetchNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
 #endif
 }
 
-void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
+void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
+{
+    std::cout << "TsdfVolume::fetchPointsNormals(Mat)" << std::endl;
+#ifndef HAVE_OPENCL
+    fetchPointsNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
+#else
+    if (ocl::useOpenCL())
+        ocl_fetchPointsNormalsFromTsdfVolumeUnit(settings, gpu_volume, points, normals);
+    else
+        fetchPointsNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
+
+#endif
+}
+
 void TsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -181,7 +194,7 @@ void TsdfVolume::reset()
         });
 #else
     if (ocl::useOpenCL())
-        volume.setTo(Scalar(0, 0));
+        gpu_volume.setTo(Scalar(0, 0));
     else
         //TODO: use setTo(Scalar(0, 0))
         cpu_volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)

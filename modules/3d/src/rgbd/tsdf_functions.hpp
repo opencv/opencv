@@ -176,6 +176,9 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
                                     InputArray _points, OutputArray _normals);
 
+void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+                                          OutputArray points, OutputArray normals);
+
 
 #ifdef HAVE_OPENCL
 void ocl_integrateVolumeUnit(
@@ -190,6 +193,9 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volume,
     InputArray _points, OutputArray _normals);
 
+void ocl_fetchPointsNormalsFromTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volume,
+    OutputArray _points, OutputArray _normals);
 #endif
 
 
