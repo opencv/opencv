@@ -939,6 +939,12 @@ public:
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
+#ifdef HAVE_VULKAN
+    static std::set<std::string> vulkan_deny_list;
+#endif
+#ifdef HAVE_CUDA
+    static std::set<std::string> cuda_deny_list;
+#endif
 
     Test_ONNX_conformance()
     {
@@ -1008,6 +1014,18 @@ public:
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
         };
 #endif
+
+#ifdef HAVE_VULKAN
+        vulkan_deny_list = {
+            #include "test_onnx_conformance_layer_filter__vulkan_denylist.inl.hpp"
+        };
+#endif
+
+#ifdef HAVE_CUDA
+        cuda_deny_list = {
+            #include "test_onnx_conformance_layer_filter__cuda_denylist.inl.hpp"
+        };
+#endif
     }
 
 };
@@ -1019,6 +1037,12 @@ std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
+#endif
+#ifdef HAVE_VULKAN
+std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
+#endif
+#ifdef HAVE_CUDA
+std::set<std::string> Test_ONNX_conformance::cuda_deny_list;
 #endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
@@ -1068,16 +1092,22 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         #include "test_onnx_conformance_layer_filter__openvino.inl.hpp"
     }
 #endif
-#if 0 //def HAVE_VULKAN
+#ifdef HAVE_VULKAN
     else if (backend == DNN_BACKEND_VKCOM)
     {
-        #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
+        if (vulkan_deny_list.find(name) != vulkan_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
     }
 #endif
-#if 0 //def HAVE_CUDA
+#ifdef HAVE_CUDA
     else if (backend == DNN_BACKEND_CUDA)
     {
-        #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
+        if (cuda_deny_list.find(name) != cuda_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
     }
 #endif
     else
