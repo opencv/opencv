@@ -238,19 +238,20 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
     }
 
 void cv::gimpl::GOAKExecutable::handleNewStream() {
-    // FIXME: implement
-    GAPI_Assert(false && "Not implemented");
+    // do nothing
 }
 
 void cv::gimpl::GOAKExecutable::handleStopStream() {
-    // FIXME: implement
-    GAPI_Assert(false && "Not implemented");
+    // do nothing
 }
 
 void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                                     GIslandExecutable::IOutput &out) {
-    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in.get())) {
+    const auto  in_msg = in.get();
+
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg)) {
         out.post(cv::gimpl::EndOfStream{});
+        return;
     }
 
     for (size_t i = 0; i < m_in_queues.size(); ++i) {
@@ -265,8 +266,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         auto out_arg = out.get(i);
 
         if (util::holds_alternative<cv::detail::VectorRef>(out_arg)) {
-            cv::util::get<cv::detail::VectorRef>(out_arg) =
-                    cv::detail::VectorRef(oak_frame->getData());
+            cv::util::get<cv::detail::VectorRef>(out_arg).wref<uint8_t>() = oak_frame->getData();
         } else if (util::holds_alternative<cv::MediaFrame*>(out_arg)) {
             *cv::util::get<cv::MediaFrame*>(out_arg) =
                     cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>(
@@ -279,7 +279,10 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         }
 
         // FIXME: do we need to pass meta here?
-        out.meta(out_arg, {});
+        //out.meta(out_arg, {});
+        //out.post(std::move(out_arg));
+
+        out.meta(out_arg, cv::util::get<cv::GRunArgs>(in_msg)[0].meta);
         out.post(std::move(out_arg));
     }
 }

@@ -39,11 +39,12 @@ int main(int argc, char *argv[]) {
     out_h265_file.open(output, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 
     // Pull 300 frames from the camera
-    uint32_t frames = 300;
+    uint32_t frames = 30;
     uint32_t pulled = 0;
 
     while (pulled++ < frames &&
            pipeline.pull(cv::gout(out_h265_data))) {
+        std::cout << pulled << std::endl;
         if (out_h265_file.is_open()) {
             out_h265_file.write(reinterpret_cast<const char*>(out_h265_data.data()),
                                                               out_h265_data.size());
