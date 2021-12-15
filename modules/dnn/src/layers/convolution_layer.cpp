@@ -647,6 +647,7 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
+        CV_Assert(!blobs.empty());
         int out_channel = blobs[0].size[0];
         bool has_bias = hasBias() || fusedBias;
         int filter_size[2] = {kernel.height, kernel.width};
@@ -712,6 +713,7 @@ public:
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
+        CV_Assert(!blobs.empty());
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inpCn = inputBuffer.channels();
@@ -760,6 +762,7 @@ public:
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
         std::vector<size_t> dims = input->getDims();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
@@ -824,6 +827,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
@@ -917,6 +921,7 @@ public:
 #ifdef HAVE_WEBNN
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
         auto& webnnInpOperand = node->operand;
@@ -2156,6 +2161,7 @@ public:
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
         auto output_shape = output_wrapper->getShape();
 
+        CV_Assert(!blobs.empty());
         const auto output_feature_maps = blobs[0].size[0];
         const auto input_feature_maps = input_shape[1];
         const auto input_feature_maps_per_group = blobs[0].size[1];
@@ -2917,6 +2923,7 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        CV_Assert(!blobs.empty());
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(inputs.size() == 1);
@@ -2974,6 +2981,7 @@ public:
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
+        CV_Assert(!blobs.empty());
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         int inW, inH, inC, inN;
@@ -3027,6 +3035,7 @@ public:
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         InferenceEngine::Layout layout = blobs[0].dims == 5? InferenceEngine::Layout::NCDHW :
                                                              InferenceEngine::Layout::OIHW;
 
@@ -3086,6 +3095,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+       CV_Assert(!blobs.empty());
        const int outGroupCn = blobs[0].size[1];
        const int group = numOutput / outGroupCn;
        CV_Assert(group == 1);

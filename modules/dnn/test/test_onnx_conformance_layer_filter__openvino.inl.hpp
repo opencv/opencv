@@ -86,7 +86,9 @@ CASE(test_add_bcast)
     SKIP;
 #endif
 CASE(test_add_uint8)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_and2d)
     // no filter
 CASE(test_and3d)
@@ -104,69 +106,133 @@ CASE(test_and_bcast4v3d)
 CASE(test_and_bcast4v4d)
     // no filter
 CASE(test_argmax_default_axis_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_default_axis_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_default_axis_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_default_axis_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_negative_axis_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_negative_axis_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_negative_axis_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_negative_axis_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_no_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_no_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_no_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmax_no_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_default_axis_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_default_axis_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_default_axis_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_default_axis_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_negative_axis_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_negative_axis_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_negative_axis_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_negative_axis_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_no_keepdims_example)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_no_keepdims_example_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_no_keepdims_random)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_argmin_no_keepdims_random_select_last_index)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_asin)
     // no filter
 CASE(test_asin_example)
@@ -495,7 +561,9 @@ CASE(test_div_bcast)
 CASE(test_div_example)
     // no filter
 CASE(test_div_uint8)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_dropout_default)
     // no filter
 CASE(test_dropout_default_mask)
@@ -895,7 +963,9 @@ CASE(test_maxpool_2d_strides)
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_uint8)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_maxpool_3d_default)
 #if INF_ENGINE_VER_MAJOR_EQ(2021040000)
     SKIP_NON_CPU;
@@ -909,7 +979,9 @@ CASE(test_maxpool_with_argmax_2d_precomputed_strides)
     SKIP;
 #endif
 CASE(test_maxunpool_export_with_output_shape)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_maxunpool_export_without_output_shape)
 #if INF_ENGINE_VER_MAJOR_EQ(2021040000)
     SKIP;
@@ -987,7 +1059,9 @@ CASE(test_mul_bcast)
 CASE(test_mul_example)
     // no filter
 CASE(test_mul_uint8)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
@@ -1766,7 +1840,9 @@ CASE(test_sub_bcast)
 CASE(test_sub_example)
     // no filter
 CASE(test_sub_uint8)
-    // no filter
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    SKIP;
+#endif
 CASE(test_sum_example)
     // no filter
 CASE(test_sum_one_input)
