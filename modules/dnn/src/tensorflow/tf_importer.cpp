@@ -2639,7 +2639,7 @@ void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     layerParams.set("axis", axis[0]);
     layerParams.set("op", type == "ArgMax" ? "max" : "min");
     layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
-    
+
     int id = dstNet.addLayer(name, "Arg", layerParams);
     layer_id[name] = id;
     connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
