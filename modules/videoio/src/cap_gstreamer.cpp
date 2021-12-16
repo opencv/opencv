@@ -835,11 +835,6 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
     CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
 }
 
-/*!
- * \brief CvCapture_GStreamer::retrieveFrame
- * \return IplImage pointer. [Transfer Full]
- *  Retrieve the previously grabbed buffer, and wrap it in an IPLImage structure
- */
 bool GStreamerCapture::retrieveFrame(int index, OutputArray dst)
 {
     if (index < 0)
@@ -1533,7 +1528,7 @@ double GStreamerCapture::getProperty(int propId) const
             CV_WARN("there is no sink yet");
             return 0;
         }
-        return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));  
+        return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));
     case CAP_PROP_AUDIO_TOTAL_CHANNELS:
         return nAudioChannels;
     case CAP_PROP_AUDIO_SAMPLES_PER_SECOND:
