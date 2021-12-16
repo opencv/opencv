@@ -12,15 +12,6 @@
 namespace cv
 {
 
-
-enum class VolumeType
-{
-    TSDF = 0,
-    HashTSDF = 1,
-    ColorTSDF = 2
-};
-
-
 class CV_EXPORTS_W Volume
 {
 public:

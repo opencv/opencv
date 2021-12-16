@@ -6,6 +6,7 @@
 #include <iostream>
 #include "volume_impl.hpp"
 #include "tsdf_functions.hpp"
+#include "hash_tsdf_functions.hpp"
 #include "opencv2/imgproc.hpp"
 
 namespace cv
@@ -208,11 +209,17 @@ int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 
+
 // HASH_TSDF
 
 HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
-{ }
+{
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
+}
+
 HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
@@ -226,7 +233,17 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const 
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
 void HashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
 
-void HashTsdfVolume::reset() {}
+void HashTsdfVolume::reset()
+{
+    CV_TRACE_FUNCTION();
+    lastVolIndex = 0;
+    volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
+        {
+            TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
+            v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+        });
+    volumeUnits = VolumeUnitIndexes();
+}
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 

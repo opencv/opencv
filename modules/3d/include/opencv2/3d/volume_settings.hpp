@@ -7,16 +7,25 @@
 #define OPENCV_3D_VOLUME_SETTINGS_HPP
 
 #include <opencv2/core/cvstd.hpp>
+#include <opencv2/3d/volume.hpp>
 
 namespace cv
 {
+
+enum class VolumeType
+{
+    TSDF = 0,
+    HashTSDF = 1,
+    ColorTSDF = 2
+};
+
 
 class CV_EXPORTS_W VolumeSettings
 {
 public:
     VolumeSettings();
+    VolumeSettings(VolumeType volumeType);
     ~VolumeSettings();
-
 
     void  setWidth(int val);
     int   getWidth() const;
@@ -28,6 +37,8 @@ public:
     float getVoxelSize() const;
     void  setTruncatedDistance(float val);
     float getTruncatedDistance() const;
+    void  setTruncateThreshold(float val);
+    float getTruncateThreshold() const;
     void  setMaxWeight(int val);
     int   getMaxWeight() const;
     void  setRaycastStepFactor(float val);

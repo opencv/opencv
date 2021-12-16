@@ -26,6 +26,8 @@ public:
     virtual float getVoxelSize() const = 0;
     virtual void  setTruncatedDistance(float val) = 0;
     virtual float getTruncatedDistance() const = 0;
+    virtual void  setTruncateThreshold(float val) = 0;
+    virtual float getTruncateThreshold() const = 0;
     virtual void  setMaxWeight(int val) = 0;
     virtual int   getMaxWeight() const = 0;
     virtual void  setRaycastStepFactor(float val) = 0;
@@ -47,6 +49,7 @@ class VolumeSettingsImpl : public VolumeSettings::Impl
 {
 public:
     VolumeSettingsImpl();
+    VolumeSettingsImpl(VolumeType volumeType);
     ~VolumeSettingsImpl();
 
     virtual void  setWidth(int  val) override;
@@ -59,6 +62,8 @@ public:
     virtual float getVoxelSize() const override;
     virtual void  setTruncatedDistance(float val) override;
     virtual float getTruncatedDistance() const override;
+    virtual void  setTruncateThreshold(float val) override;
+    virtual float getTruncateThreshold() const override;
     virtual void  setMaxWeight(int val) override;
     virtual int   getMaxWeight() const override;
     virtual void  setRaycastStepFactor(float val) override;
@@ -76,11 +81,14 @@ public:
     virtual void getCameraIntrinsics(OutputArray val) const override;
 
 private:
+    VolumeType volumeType;
+
     int   width;
     int   height;
     float depthFactor;
     float voxelSize;
     float truncatedDistance;
+    float truncateThreshold;
     int   maxWeight;
     float raycastStepFactor;
     bool  zFirstMemOrder;
@@ -92,7 +100,7 @@ private:
 
 public:
     // duplicate classes for all volumes
-    class DefaultSets {
+    class DefaultTsdfSets {
     public:
         static const int width  = 640;
         static const int height = 480;
@@ -104,6 +112,7 @@ public:
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
         static constexpr float truncatedDistance = 2 * voxelSize;
+        static constexpr float truncateThreshold = 0.f;
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
@@ -115,6 +124,32 @@ public:
         // Not only when (x,y,z % 32) == 0
         const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
     };
+
+    class DefaultHashTsdfSets : public DefaultTsdfSets {
+    public:
+        static const int width = 640;
+        static const int height = 480;
+        static constexpr float fx = 525.f; // focus point x axis
+        static constexpr float fy = 525.f; // focus point y axis
+        static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
+        static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
+        static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
+        static constexpr float volumeSize = 3.f; // meters
+        static constexpr float voxelSize = volumeSize / 512.f; //meters
+        static constexpr float truncatedDistance = 7 * voxelSize;
+        static constexpr float truncateThreshold = 4.f;
+        static const int maxWeight = 64; // number of frames
+        static constexpr float raycastStepFactor = 0.25f;
+        static const bool zFirstMemOrder = true; // order of voxels in volume
+
+        const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
+        const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
+        const Matx44f  volumePoseMatrix = volumePose.matrix;
+        // Unlike original code, this should work with any volume size
+        // Not only when (x,y,z % 32) == 0
+        const Point3i  volumeResolution = Vec3i::all(512); //number of voxels
+    };
+
 };
 
 
@@ -135,6 +170,8 @@ void  VolumeSettings::setRaycastStepFactor(float val) { this->impl->setRaycastSt
 float VolumeSettings::getRaycastStepFactor() const { return this->impl->getRaycastStepFactor(); };
 void  VolumeSettings::setTruncatedDistance(float val) { this->impl->setTruncatedDistance(val); };
 float VolumeSettings::getTruncatedDistance() const { return this->impl->getTruncatedDistance(); };
+void  VolumeSettings::setTruncateThreshold(float val) { this->impl->setTruncateThreshold(val); };
+float VolumeSettings::getTruncateThreshold() const { return this->impl->getTruncateThreshold(); };
 void  VolumeSettings::setDepthFactor(float val) { this->impl->setDepthFactor(val); };
 float VolumeSettings::getDepthFactor() const { return this->impl->getDepthFactor(); };
 void  VolumeSettings::setMaxWeight(int val) { this->impl->setMaxWeight(val); };
@@ -153,22 +190,36 @@ void VolumeSettings::getCameraIntrinsics(OutputArray val) const { this->impl->ge
 
 
 VolumeSettingsImpl::VolumeSettingsImpl()
+    : VolumeSettingsImpl(VolumeType::TSDF)
 {
-    DefaultSets ds;
-    this->width = ds.width;
-    this->height = ds.height;
-    this->depthFactor = ds.depthFactor;
-    this->voxelSize = ds.voxelSize;
-    this->truncatedDistance = ds.truncatedDistance;
-    this->maxWeight = ds.maxWeight;
-    this->raycastStepFactor = ds.raycastStepFactor;
-    this->zFirstMemOrder = ds.zFirstMemOrder;
-
-    this->volumePose = ds.volumePoseMatrix;
-    this->volumeResolution = ds.volumeResolution;
-    this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
-    this->cameraIntrinsics = ds.cameraIntrinsics;
 }
+
+VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
+{
+    volumeType = _volumeType;
+    Ptr<DefaultTsdfSets> ds;
+    if (volumeType == VolumeType::TSDF)
+        ds = makePtr<DefaultTsdfSets>();
+    else if (volumeType == VolumeType::HashTSDF)
+        ds = makePtr<DefaultHashTsdfSets>();
+
+    this->width = ds->width;
+    this->height = ds->height;
+    this->depthFactor = ds->depthFactor;
+    this->voxelSize = ds->voxelSize;
+    this->truncatedDistance = ds->truncatedDistance;
+    this->truncateThreshold = ds->truncateThreshold;
+    this->maxWeight = ds->maxWeight;
+    this->raycastStepFactor = ds->raycastStepFactor;
+    this->zFirstMemOrder = ds->zFirstMemOrder;
+
+    this->volumePose = ds->volumePoseMatrix;
+    this->volumeResolution = ds->volumeResolution;
+    this->volumeDimentions = calcVolumeDimentions(ds->volumeResolution, ds->zFirstMemOrder);
+    this->cameraIntrinsics = ds->cameraIntrinsics;
+}
+
+
 VolumeSettingsImpl::~VolumeSettingsImpl() {}
 
 
@@ -218,6 +269,16 @@ void VolumeSettingsImpl::setTruncatedDistance(float val)
 }
 
 float VolumeSettingsImpl::getTruncatedDistance() const
+{
+    return this->truncatedDistance;
+}
+
+void VolumeSettingsImpl::setTruncateThreshold(float val)
+{
+    this->truncatedDistance = val;
+}
+
+float VolumeSettingsImpl::getTruncateThreshold() const
 {
     return this->truncatedDistance;
 }

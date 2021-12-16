@@ -535,7 +535,6 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 
     if (display)
         displayImage(depth, points, normals, depthFactor, lightPose);
-    std::cout << "lol" << std::endl;
 
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
     {

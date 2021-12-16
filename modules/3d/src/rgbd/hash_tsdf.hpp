@@ -6,7 +6,7 @@
 #define OPENCV_3D_HASH_TSDF_HPP
 
 #include "../precomp.hpp"
-#include "tsdf_functions.hpp"
+#include "hash_tsdf_functions.hpp"
 
 namespace cv
 {

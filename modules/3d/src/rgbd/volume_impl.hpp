@@ -81,6 +81,34 @@ public:
 };
 
 
+
+//! Spatial hashing
+struct tsdf_hash
+{
+    size_t operator()(const Vec3i& x) const noexcept
+    {
+        size_t seed = 0;
+        constexpr uint32_t GOLDEN_RATIO = 0x9e3779b9;
+        for (uint16_t i = 0; i < 3; i++)
+        {
+            seed ^= std::hash<int>()(x[i]) + GOLDEN_RATIO + (seed << 6) + (seed >> 2);
+        }
+        return seed;
+    }
+};
+
+struct VolumeUnit
+{
+    cv::Vec3i coord;
+    int index;
+    cv::Matx44f pose;
+    int lastVisibleIndex = 0;
+    bool isActive;
+};
+
+typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
+typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
+
 class HashTsdfVolume : public Volume::Impl
 {
 public:
@@ -101,7 +129,11 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
-private:
+public:
+    int lastVolIndex;
+    Mat volUnitsData;
+    Mat pixNorms;
+    VolumeUnitIndexes volumeUnits;
 };
 
 
