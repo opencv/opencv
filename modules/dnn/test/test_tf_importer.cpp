@@ -185,7 +185,7 @@ TEST_P(Test_TensorFlow_layers, reduce_sum_channel_keep_dims)
     runTensorFlowNet("reduce_sum_channel", false, 0.0, 0.0, false, "_keep_dims");
 }
 
-TEST_P(Test_TensorFlow_layers, ArgLayer) 
+TEST_P(Test_TensorFlow_layers, ArgLayer)
 {
     if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
