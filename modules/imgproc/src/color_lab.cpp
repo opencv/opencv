@@ -2979,9 +2979,9 @@ struct RGB2Luvfloat
         for( ; i < n; i++, src += scn, dst += 3 )
         {
             float R = src[0], G = src[1], B = src[2];
-            R = std::min(std::max(R, 0.f), 1.f);
-            G = std::min(std::max(G, 0.f), 1.f);
-            B = std::min(std::max(B, 0.f), 1.f);
+            R = clip(R);
+            G = clip(G);
+            B = clip(B);
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -3205,9 +3205,9 @@ struct Luv2RGBfloat
             float G = X*C3 + Y*C4 + Z*C5;
             float B = X*C6 + Y*C7 + Z*C8;
 
-            R = std::min(std::max(R, 0.f), 1.f);
-            G = std::min(std::max(G, 0.f), 1.f);
-            B = std::min(std::max(B, 0.f), 1.f);
+            R = clip(R);
+            G = clip(G);
+            B = clip(B);
 
             if( gammaTab )
             {
