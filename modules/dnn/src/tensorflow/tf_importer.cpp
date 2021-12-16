@@ -2633,10 +2633,8 @@ void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     const std::string& type = layer.op();
 
     Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
-    CV_Assert(dimension.rows == 1 && dimension.cols == 1);
-    CV_Assert(dimension.type() == CV_32SC1);
-    int* axis = (int*)dimension.data;
-    layerParams.set("axis", axis[0]);
+    CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
+    layerParams.set("axis", *dimension.ptr<int>());
     layerParams.set("op", type == "ArgMax" ? "max" : "min");
     layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
 
