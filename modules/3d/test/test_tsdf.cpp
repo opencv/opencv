@@ -273,7 +273,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = true;
+static const bool display = false;
 static const bool parallelCheck = false;
 
 class _Settings
@@ -359,6 +359,7 @@ void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f l
     renderPointsNormals(points, normals, image, lightPose);
     imshow("render", image);
     waitKey(2000);
+    destroyAllWindows();
 }
 
 void normalsCheck(Mat normals)
@@ -477,11 +478,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     }
 
     if (testFunction == VolumeTestFunction::RAYCAST && display)
-    {
         displayImage(depth, points, normals, depthFactor, lightPose);
-        waitKey(5000);
-        destroyAllWindows();
-    }
 
     normalsCheck(normals);
 }
@@ -526,6 +523,7 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 
     if (display)
         displayImage(depth, points, normals, depthFactor, lightPose);
+
     points.release();
     normals.release();
 
@@ -545,6 +543,7 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 
     if (display)
         displayImage(depth, points, normals, depthFactor, lightPose);
+
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
