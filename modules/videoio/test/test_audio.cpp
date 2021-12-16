@@ -92,7 +92,7 @@ public:
             {
                 for (int nCh = 0; nCh < numberOfChannels; nCh++)
                 {
-                    ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex));
+                    ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex + nCh));
                     ASSERT_EQ(CV_16SC1, audioFrame.type()) << audioData[nCh].size();
                     for (int i = 0; i < audioFrame.cols; i++)
                     {
@@ -111,10 +111,14 @@ public:
 
 const param audioParams[] =
 {
+#ifdef _WIN32
     param("test_audio.wav", 1, 132300, 0.0001, cv::CAP_MSMF),
     param("test_mono_audio.mp3", 1, 133104, 0.12, cv::CAP_MSMF),
     param("test_stereo_audio.mp3", 2, 133104, 0.12, cv::CAP_MSMF),
-    param("test_audio.mp4", 1, 133104, 0.15, cv::CAP_MSMF)
+    param("test_audio.mp4", 1, 133104, 0.15, cv::CAP_MSMF),
+#endif
+    param("test_audio.wav", 1, 132300, 0.0001, cv::CAP_GSTREAMER),
+    param("test_audio.mp4", 1, 132522, 0.15, cv::CAP_GSTREAMER),
 };
 
 class Audio : public AudioTestFixture{};
@@ -249,15 +253,6 @@ protected:
     const double psnrThreshold;
 };
 
-const paramCombination mediaParams[] =
-{
-    paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
-#if 0
-    // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
-    , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
-#endif
-};
-
 class Media : public MediaTestFixture{};
 
 TEST_P(Media, audio)
@@ -268,27 +263,72 @@ TEST_P(Media, audio)
     doTest();
 }
 
+#ifdef _WIN32
+const paramCombination mediaParams[] =
+{
+#ifdef _WIN32
+    paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
+#if 0
+    // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
+    , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
+#endif
+#endif  // _WIN32
+};
+
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
+#endif  // _WIN32
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {
+    std::string fileName = "audio/test_audio.wav";
+    std::vector<int> params {
+         CAP_PROP_AUDIO_STREAM, 1,
+         CAP_PROP_VIDEO_STREAM, -1,  // disabled
+         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S
+    };
+    VideoCapture cap;
+    cap.open(findDataFile(fileName), cv::CAP_ANY, params);
+    ASSERT_FALSE(cap.isOpened());
+}
+
+TEST(AudioOpenCheck, bad_arg_invalid_audio_stream_video)
+{
     std::string fileName = "audio/test_audio.mp4";
-    std::vector<int> params {   CAP_PROP_AUDIO_STREAM, 1,
-                                CAP_PROP_VIDEO_STREAM, 0,
-                                CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
+    std::vector<int> params {
+         CAP_PROP_AUDIO_STREAM, 1,
+         CAP_PROP_VIDEO_STREAM, 0,
+         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S
+    };
+    VideoCapture cap;
+    cap.open(findDataFile(fileName), cv::CAP_ANY, params);
+    ASSERT_FALSE(cap.isOpened());
+}
+
+#ifdef _WIN32
+TEST(AudioOpenCheck, MSMF_bad_arg_invalid_audio_sample_per_second)
+{
+    std::string fileName = "audio/test_audio.mp4";
+    std::vector<int> params {
+        CAP_PROP_AUDIO_STREAM, 0,
+        CAP_PROP_VIDEO_STREAM, -1,  // disabled
+        CAP_PROP_AUDIO_SAMPLES_PER_SECOND, (int)1e9
+    };
     VideoCapture cap;
     cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
     ASSERT_FALSE(cap.isOpened());
 }
+#endif
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_sample_per_second)
 {
     std::string fileName = "audio/test_audio.mp4";
-    std::vector<int> params {   CAP_PROP_AUDIO_STREAM, 0,
-                                CAP_PROP_VIDEO_STREAM, -1,
-                                CAP_PROP_AUDIO_SAMPLES_PER_SECOND, (int)1e9   };
+    std::vector<int> params {
+        CAP_PROP_AUDIO_STREAM, 0,
+        CAP_PROP_VIDEO_STREAM, -1,  // disabled
+        CAP_PROP_AUDIO_SAMPLES_PER_SECOND, -1000
+    };
     VideoCapture cap;
-    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
+    cap.open(findDataFile(fileName), cv::CAP_ANY, params);
     ASSERT_FALSE(cap.isOpened());
 }
 
