@@ -45,8 +45,8 @@ public:
     double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
-        face_feature1 /= norm(face_feature1);
-        face_feature2 /= norm(face_feature2);
+        normalize(face_feature1, face_feature1);
+        normalize(face_feature2, face_feature2);
 
         if(dis_type == DisType::FR_COSINE){
             return sum(face_feature1.mul(face_feature2))[0];
