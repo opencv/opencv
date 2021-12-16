@@ -399,7 +399,7 @@ int counterOfValid(Mat points)
 }
 
 
-enum class TestFunction
+enum class VolumeTestFunction
 {
     RAYCAST = 0,
     FETCH_NORMALS = 1,
@@ -412,175 +412,139 @@ enum class VolumeTestSrcType
     ODOMETRY_FRAME = 1
 };
 
-void _normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
-    auto normalCheck = [](Vec4f& vector, const int*)
-    {
-        if (!cvIsNaN(vector[0]))
-        {
-            float length = vector[0] * vector[0] +
-                vector[1] * vector[1] +
-                vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
-        }
-    };
+    VolumeSettings vs;
+    Volume volume(volumeType, vs);
 
-    _Settings settings(isHashTSDF, false);
+    Size frameSize(vs.getWidth(), vs.getHeight());
+    Matx33f intr;
+    vs.getCameraIntrinsics(intr);
+    bool onlySemisphere = true;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
 
-    Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _tmpnormals;
-    UMat _newPoints, _newNormals;
-    Mat  points, normals;
+    Mat depth = scene->depth(poses[0]);
+    Mat points, normals, tmpnormals;
     AccessFlag af = ACCESS_READ;
 
     OdometryFrame odf;
     odf.setDepth(depth);
 
-    VolumeSettings vs;
-    vs.setDepthFactor(settings.depthFactor);
-    vs.setCameraIntrinsics(settings.intr);
-    Volume volume(VolumeType::TSDF, vs);
-
-
-
-
-    TestFunction t = TestFunction::RAYCAST;
-    //TestFunction t = TestFunction::FETCH_NORMALS;
-    //TestFunction t = TestFunction::FETCH_POINTS_NORMALS;
-
-    VolumeTestSrcType s = VolumeTestSrcType::MAT;
-    //VolumeTestSrcType s = VolumeTestSrcType::ODOMETRY_FRAME;
-
-
-    if (t == TestFunction::RAYCAST)
+    if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)t << (int)s << std::endl;
-            volume.integrate(depth, settings.poses[0].matrix);
-            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _normals);
+            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            volume.integrate(depth, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
         }
-        else if (s == VolumeTestSrcType::ODOMETRY_FRAME)
+        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
-            std::cout << "Test: " << (int)t << (int)s << std::endl;
-            volume.integrate(odf, settings.poses[0].matrix);
-            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, odf);
-            odf.getPyramidAt(_points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(_normals, OdometryFramePyramidType::PYR_NORM, 0);
+            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            volume.integrate(odf, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
         }
     }
-    else if (t == TestFunction::FETCH_NORMALS)
+    else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
-        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)t << (int)s << std::endl;
-            volume.integrate(depth, settings.poses[0].matrix);
+            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            volume.integrate(depth, poses[0].matrix);
             // takes only point from raycast for checking fetched normals on the display
-            volume.raycast(settings.poses[0].matrix, settings.frameSize.height, settings.frameSize.width, _points, _tmpnormals);
-            volume.fetchNormals(_points, _normals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
+            volume.fetchNormals(points, normals);
 
             //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _tmpnormals);
-            //settings.volume->fetchNormals(_points, _normals);
+            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, tmpnormals);
+            //settings.volume->fetchNormals(points, normals);
         }
+
     }
-    else if (t == TestFunction::FETCH_POINTS_NORMALS)
+    else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
     {
-        if (s == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)t << (int)s << std::endl;
-            volume.integrate(depth, settings.poses[0].matrix);
-            volume.fetchPointsNormals(_points, _normals);
+            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            volume.integrate(depth, poses[0].matrix);
+            volume.fetchPointsNormals(points, normals);
         }
     }
 
-    //else
-    //{
-    //    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    //    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
-    //}
-
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
-
-    displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
-    waitKey(5000);
-    destroyAllWindows();
-    /*
-    if (isRaycast)
+    if (testFunction == VolumeTestFunction::RAYCAST && display)
     {
-        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
-    }
-    
-    if (isFetchPointsNormals)
-    {
-        settings.volume->fetchPointsNormals(_points, _normals);
-    }
-    if (isFetchNormals)
-    {
-        settings.volume->fetchPointsNormals(_points, _tmpnormals);
-        settings.volume->fetchNormals(_points, _normals);
+        displayImage(depth, points, normals, depthFactor, lightPose);
+        waitKey(5000);
+        destroyAllWindows();
     }
 
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
-
-    if (parallelCheck)
-        normals.forEach<Vec4f>(normalCheck);
-    else
-        normalsCheck(normals);
-
-    if (isRaycast && display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
-
-    if (isRaycast)
-    {
-        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
-        normals = _newNormals.getMat(af);
-        points = _newPoints.getMat(af);
-        normalsCheck(normals);
-
-        if (parallelCheck)
-            normals.forEach<Vec4f>(normalCheck);
-        else
-            normalsCheck(normals);
-
-        if (display)
-            displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
-    }
-
-    points.release(); normals.release();
-    */
+    normalsCheck(normals);
 }
 
-void _valid_points_test(bool isHashTSDF)
+void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
-    _Settings settings(isHashTSDF, true);
+    VolumeSettings vs;
+    Volume volume(volumeType, vs);
 
-    Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _newPoints, _newNormals;
+    Size frameSize(vs.getWidth(), vs.getHeight());
+    Matx33f intr;
+    vs.getCameraIntrinsics(intr);
+    bool onlySemisphere = true;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    Mat points, normals, newPoints, newNormals;
     AccessFlag af = ACCESS_READ;
-    Mat  points, normals;
     int anfas, profile;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
+    OdometryFrame odf;
+    odf.setDepth(depth);
+
+    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+    {
+        volume.integrate(depth, poses[0].matrix);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+    }
+    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+    {
+        volume.integrate(odf, poses[0].matrix);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
+        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+    }
+
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, depthFactor, lightPose);
+    points.release();
+    normals.release();
 
-    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
-    normals = _newNormals.getMat(af);
-    points = _newPoints.getMat(af);
+    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+    {
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
+    }
+    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+    {
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
+        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+    }
+
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, depthFactor, lightPose);
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
@@ -591,92 +555,96 @@ void _valid_points_test(bool isHashTSDF)
 }
 
 
-void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+#ifndef HAVE_OPENCL
+TEST(_TSDF, raycast_normals)
 {
-    auto normalCheck = [](Vec4f& vector, const int*)
-    {
-        if (!cvIsNaN(vector[0]))
-        {
-            float length = vector[0] * vector[0] +
-                vector[1] * vector[1] +
-                vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
-        }
-    };
-
-    VolumeSettings vs;
-    vs.getDepthFactor();
-    Volume volume(VolumeType::TSDF, vs);
-
-    _Settings settings(isHashTSDF, false);
-
+    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+TEST(_TSDF, fetch_points_normals)
+{
+    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+}
+TEST(_TSDF, fetch_normals)
+{
+    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+TEST(_TSDF, valid_points)
+{
+    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
-
-#ifndef HAVE_OPENCL
-TEST(_TSDF, raycast_normals) { normal_test(false, true, false, false); }
-TEST(_TSDF, fetch_points_normals) { normal_test(false, false, true, false); }
-TEST(_TSDF, fetch_normals) { normal_test(false, false, false, true); }
-TEST(_TSDF, valid_points) { valid_points_test(false); }
-
-TEST(_HashTSDF, raycast_normals) { normal_test(true, true, false, false); }
-TEST(_HashTSDF, fetch_points_normals) { normal_test(true, false, true, false); }
-TEST(_HashTSDF, fetch_normals) { normal_test(true, false, false, true); }
-TEST(_HashTSDF, valid_points) { valid_points_test(true); }
+TEST(_HashTSDF, raycast_normals)
+{
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+TEST(_HashTSDF, fetch_points_normals)
+{
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+}
+TEST(_HashTSDF, fetch_normals)
+{
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+TEST(_HashTSDF, valid_points)
+{
+    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+}
 #else
 TEST(TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(false, true, false, false);
+    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_TSDF_CPU, fetch_points_normals)
+TEST(TSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(false, false, true, false);
+    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_TSDF_CPU, fetch_normals)
+TEST(TSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(false, false, false, true);
+    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_TSDF_CPU, valid_points)
+TEST(TSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
-    _valid_points_test(false);
+    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
+    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_HashTSDF_CPU, raycast_normals)
+TEST(HashTSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(true, true, false, false);
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_HashTSDF_CPU, fetch_points_normals)
+TEST(HashTSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(true, false, true, false);
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_HashTSDF_CPU, fetch_normals)
+TEST(HashTSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    _normal_test(true, false, false, true);
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(_HashTSDF_CPU, valid_points)
+TEST(HashTSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
-    _valid_points_test(true);
+    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
