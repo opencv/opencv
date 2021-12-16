@@ -1,4 +1,4 @@
-// This file is part of OpenCV project.
+/ This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
@@ -35,6 +35,7 @@ protected:
     double getImageGeneratorProperty(int propIdx) const;
     double getIrGeneratorProperty(int propIdx) const;
     double getCommonProperty(int propIdx) const;
+    bool loadConfig(string filename) const;
 };
 
 }

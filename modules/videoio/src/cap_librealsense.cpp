@@ -27,6 +27,31 @@ VideoCapture_LibRealsense::VideoCapture_LibRealsense(int) : mAlign(RS2_STREAM_CO
 }
 VideoCapture_LibRealsense::~VideoCapture_LibRealsense(){}
 
+bool VideoCapture_LibRealsense::loadConfig(string filename) const
+{
+
+   context ctx;
+   auto devices = ctx.query_devices();
+   auto dev = devices[0];
+   if (dev.is<rs400::advanced_mode>())
+   {
+       // Get the advanced mode functionality
+       auto advanced_mode_dev = dev.as<rs400::advanced_mode>();
+
+       // Load and configure .json file to device
+       ifstream t(filename);
+       string str((istreambuf_iterator<char>(t)), istreambuf_iterator<char>());
+       advanced_mode_dev.load_json(str);
+      return true;         
+   }
+   else
+   {
+      return false;
+   }
+
+
+}
+
 double VideoCapture_LibRealsense::getProperty(int propIdx) const
 {
     double propValue = 0.0;
