@@ -1070,7 +1070,14 @@ inp = tf.placeholder(tf.float32, [2, 3], 'input')
 square = tf.square(inp)
 save(inp, square, 'square')
 ################################################################################
-
+inp = tf.placeholder(tf.float32, [2, 3, 4], 'input')
+argmax = tf.argmax(inp, -1)
+save(inp, argmax, 'argmax')
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4], 'input')
+argmin = tf.argmin(inp, 1)
+save(inp, argmin, 'argmin')
+################################################################################
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
 #     graph_def = tf.GraphDef()
