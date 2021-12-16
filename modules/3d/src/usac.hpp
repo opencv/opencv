@@ -915,6 +915,53 @@ public:
 
 /////////////////////////////////////////  UniversalRANSAC  ////////////////////////////////////////
 
+/** Implementation of the Universal RANSAC algorithm.
+
+UniversalRANSAC represents an implementation of the Universal RANSAC
+(Universal RANdom SAmple Consensus) algorithm, as described in:
+"USAC: A Universal Framework for Random Sample Consensus", Raguram, R., et al.
+IEEE Transactions on Pattern Analysis and Machine Intelligence,
+vol. 35, no. 8, 2013, pp. 2022–2038.
+
+USAC extends the simple hypothesize-and-verify structure of standard RANSAC
+to incorporate a number of important practical and computational considerations.
+The optimization of RANSAC algorithms such as NAPSAC, GroupSAC, and MAGSAC
+can be considered as a special case of the USAC framework.
+
+The algorithm works as following stages:
++ [Stage 0] Pre-filtering
+ - [**0. Pre-filtering**] Filtering of the input data, e.g. removing some noise points.
++ [Stage 1] Sample minimal subset
+ - [**1a. Sampling**] Sample minimal subset. It may be possible to incorporate prior information
+ and bias the sampling with a view toward preferentially generating models that are more
+ likely to be correct, or like the standard RANSAC, sampling uniformly at random.
+ - [**1b. Sample check**] Check whether the sample is suitable for computing model parameters.
+ Note that this simple test requires very little overhead, particularly when compared to
+ the expensive model generation and verification stages.
++ [Stage 2] Generate minimal-sample model(s)
+ - [**2a. Model generation**] Using the data points sampled in the previous step to fit the model
+ (calculate model parameters).
+ - [**2b. Model check**] A preliminary test that checks the model based on application-specific
+ constraints and then performs the verification only if required. For example, fitting
+ a sphere to a limited radius range.
++ [Stage 3] Is the model interesting?
+ - [**3a. Verification**] Verify that the current model is likely to obtain the maximum
+ objective function (in other words, better than the current best model), a score can be
+ used (e.g., the data point's voting support for this model), or conduct a statistical
+ test on a small number of data points, and discard or accept the model based on the results
+ of the test. For example, T(d, d) Test, Bail-Out Test, SPRT Test, Preemptive Verification.
+ - [**3b. Degeneracy**] Determine if sufficient constraints are provided to produce
+ a unique solution.
++ [Stage 4] Generate non-minimal sample model
+ - [**4. Model refinement**] Handle the issue of noisy models (by Local Optimization,
+ Error Propagation, etc).
++ [Stage 5] Confidence in solution achieved?
+ - [**5. Judgment termination**] Determine whether the specified maximum number of iterations
+ is reached or whether the desired model is obtained with a certain confidence level.
+
+Stage 1b, 2b, 3a, 3b, 5 may jump back to Stage 1a.
+
+ */
 class UniversalRANSAC {
 protected:
     const Ptr<const UsacConfig> config;
