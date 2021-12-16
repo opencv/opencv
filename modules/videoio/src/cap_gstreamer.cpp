@@ -593,7 +593,7 @@ bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 {
     if (index > nAudioChannels + audioBaseIndex)
         return false;
-    
+
     cv::Mat data;
     switch (outputAudioFormat)
     {
@@ -1259,7 +1259,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                 pipeline.release();
                 return false;
             }
-            g_signal_connect (uridecodebin, "pad-added", G_CALLBACK (newPad), convert.get()); 
+            g_signal_connect (uridecodebin, "pad-added", G_CALLBACK (newPad), convert.get());
         }
     }
 
@@ -1533,7 +1533,7 @@ double GStreamerCapture::getProperty(int propId) const
             CV_WARN("there is no sink yet");
             return 0;
         }
-        return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));        
+        return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));  
     case CAP_PROP_AUDIO_TOTAL_CHANNELS:
         return nAudioChannels;
     case CAP_PROP_AUDIO_SAMPLES_PER_SECOND:
