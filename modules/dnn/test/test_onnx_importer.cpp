@@ -242,6 +242,9 @@ TEST_P(Test_ONNX_layers, Deconvolution3D)
     if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     testONNXModels("deconv3d");
 }
 
@@ -259,6 +262,9 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
 
     if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("deconv3d_bias");
 }
@@ -278,6 +284,9 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
     if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     testONNXModels("deconv3d_pad");
 }
 
@@ -295,6 +304,9 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
 
     if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("deconv3d_adjpad");
 }
@@ -383,6 +395,9 @@ TEST_P(Test_ONNX_layers, ReduceMean3D)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("reduce_mean3d");
 }
@@ -671,6 +686,9 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
 
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     testONNXModels("max_pool3d", npy, 0, 0, false, false);
 }
 
@@ -685,6 +703,9 @@ TEST_P(Test_ONNX_layers, AvePooling3D)
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
 
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     testONNXModels("ave_pool3d");
 }
 
@@ -698,6 +719,9 @@ TEST_P(Test_ONNX_layers, PoolConv3D)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     testONNXModels("pool_conv_3d");
 }
@@ -1776,6 +1800,9 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
     Mat image0 = imread(findDataFile("dnn/dog416.png"));
