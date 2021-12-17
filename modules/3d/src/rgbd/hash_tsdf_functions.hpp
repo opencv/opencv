@@ -294,8 +294,16 @@ static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const int volumeUnitSiz
         cvFloor(point.z / volumeUnitSize));
 }
 
+static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const int volumeUnitSize)
+{
+    return cv::Point3f(
+        volumeUnitIdx[0] * volumeUnitSize,
+        volumeUnitIdx[1] * volumeUnitSize,
+        volumeUnitIdx[2] * volumeUnitSize);
+}
 
-void integrateHashTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+void integrateHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
 
 

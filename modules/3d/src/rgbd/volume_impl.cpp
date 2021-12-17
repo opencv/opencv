@@ -243,7 +243,8 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
     }
 
-    integrateHashTsdfVolumeUnit(settings, cameraPose, depth, pixNorms, volUnitsData, volumeUnits);
+    int frameId = lastVolIndex + 1;
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, frameId, depth, pixNorms, volUnitsData, volumeUnits);
 
 
 }
