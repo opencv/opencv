@@ -100,7 +100,6 @@ public:
         {
             outputShapeVec.push_back(inputs[0][i]);
         }
-        CV_Assert(outputShapeVec.size() <= 4);
 
         outputs.resize(inputs.size(), outputShapeVec);
 
