@@ -100,6 +100,7 @@ private:
 
 public:
     // duplicate classes for all volumes
+
     class DefaultTsdfSets {
     public:
         static const int width  = 640;
@@ -125,7 +126,7 @@ public:
         const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
     };
 
-    class DefaultHashTsdfSets : public DefaultTsdfSets {
+    class DefaultHashTsdfSets {
     public:
         static const int width = 640;
         static const int height = 480;
@@ -147,7 +148,7 @@ public:
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
         // Not only when (x,y,z % 32) == 0
-        const Point3i  volumeResolution = Vec3i::all(512); //number of voxels
+        const Point3i  volumeResolution = Vec3i::all(16); //number of voxels
     };
 
 };
@@ -156,6 +157,11 @@ public:
 VolumeSettings::VolumeSettings()
 {
     this->impl = makePtr<VolumeSettingsImpl>();
+}
+
+VolumeSettings::VolumeSettings(VolumeType volumeType)
+{
+    this->impl = makePtr<VolumeSettingsImpl>(volumeType);
 }
 
 VolumeSettings::~VolumeSettings() {}
@@ -197,26 +203,45 @@ VolumeSettingsImpl::VolumeSettingsImpl()
 VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 {
     volumeType = _volumeType;
-    Ptr<DefaultTsdfSets> ds;
     if (volumeType == VolumeType::TSDF)
-        ds = makePtr<DefaultTsdfSets>();
+    {
+        DefaultTsdfSets ds = DefaultTsdfSets();
+
+        this->width = ds.width;
+        this->height = ds.height;
+        this->depthFactor = ds.depthFactor;
+        this->voxelSize = ds.voxelSize;
+        this->truncatedDistance = ds.truncatedDistance;
+        this->truncateThreshold = ds.truncateThreshold;
+        this->maxWeight = ds.maxWeight;
+        this->raycastStepFactor = ds.raycastStepFactor;
+        this->zFirstMemOrder = ds.zFirstMemOrder;
+
+        this->volumePose = ds.volumePoseMatrix;
+        this->volumeResolution = ds.volumeResolution;
+        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->cameraIntrinsics = ds.cameraIntrinsics;
+    }
     else if (volumeType == VolumeType::HashTSDF)
-        ds = makePtr<DefaultHashTsdfSets>();
+    {
+        DefaultHashTsdfSets ds = DefaultHashTsdfSets();
 
-    this->width = ds->width;
-    this->height = ds->height;
-    this->depthFactor = ds->depthFactor;
-    this->voxelSize = ds->voxelSize;
-    this->truncatedDistance = ds->truncatedDistance;
-    this->truncateThreshold = ds->truncateThreshold;
-    this->maxWeight = ds->maxWeight;
-    this->raycastStepFactor = ds->raycastStepFactor;
-    this->zFirstMemOrder = ds->zFirstMemOrder;
+        this->width = ds.width;
+        this->height = ds.height;
+        this->depthFactor = ds.depthFactor;
+        this->voxelSize = ds.voxelSize;
+        this->truncatedDistance = ds.truncatedDistance;
+        this->truncateThreshold = ds.truncateThreshold;
+        this->maxWeight = ds.maxWeight;
+        this->raycastStepFactor = ds.raycastStepFactor;
+        this->zFirstMemOrder = ds.zFirstMemOrder;
 
-    this->volumePose = ds->volumePoseMatrix;
-    this->volumeResolution = ds->volumeResolution;
-    this->volumeDimentions = calcVolumeDimentions(ds->volumeResolution, ds->zFirstMemOrder);
-    this->cameraIntrinsics = ds->cameraIntrinsics;
+        this->volumePose = ds.volumePoseMatrix;
+        this->volumeResolution = ds.volumeResolution;
+        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->cameraIntrinsics = ds.cameraIntrinsics;
+    }
+
 }
 
 

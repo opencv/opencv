@@ -365,17 +365,20 @@ void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f l
 void normalsCheck(Mat normals)
 {
     Vec4f vector;
+    int counter = 0;
     for (auto pvector = normals.begin<Vec4f>(); pvector < normals.end<Vec4f>(); pvector++)
     {
         vector = *pvector;
         if (!cvIsNaN(vector[0]))
         {
+            counter++;
             float length = vector[0] * vector[0] +
                 vector[1] * vector[1] +
                 vector[2] * vector[2];
             ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
         }
     }
+    ASSERT_GT(counter, 0) << "There are not normals";
 }
 
 int counterOfValid(Mat points)
@@ -415,7 +418,7 @@ enum class VolumeTestSrcType
 
 void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
-    VolumeSettings vs;
+    VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getWidth(), vs.getHeight());
@@ -485,7 +488,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
 
 void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
-    VolumeSettings vs;
+    VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getWidth(), vs.getHeight());
@@ -555,36 +558,36 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 
 
 #ifndef HAVE_OPENCL
-TEST(_TSDF, raycast_normals)
+TEST(TSDF, raycast_normals)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
-TEST(_TSDF, fetch_points_normals)
+TEST(TSDF, fetch_points_normals)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(_TSDF, fetch_normals)
+TEST(TSDF, fetch_normals)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(_TSDF, valid_points)
+TEST(TSDF, valid_points)
 {
     valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(_HashTSDF, raycast_normals)
+TEST(HashTSDF, raycast_normals)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
-TEST(_HashTSDF, fetch_points_normals)
+TEST(HashTSDF, fetch_points_normals)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(_HashTSDF, fetch_normals)
+TEST(HashTSDF, fetch_normals)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(_HashTSDF, valid_points)
+TEST(HashTSDF, valid_points)
 {
     valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
 }
