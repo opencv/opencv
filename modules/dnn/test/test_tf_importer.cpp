@@ -627,6 +627,9 @@ TEST_P(Test_TensorFlow_layers, MaxPooling3D)
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
 
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     runTensorFlowNet("max_pool3d");
 }
 
@@ -640,6 +643,9 @@ TEST_P(Test_TensorFlow_layers, AvePooling3D)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");  // FIXIT use tags
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     runTensorFlowNet("ave_pool3d");
 }
