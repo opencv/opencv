@@ -107,6 +107,7 @@ public:
     virtual size_t getTotalVolumeUnits() const override;
 public:
     int lastVolIndex;
+    Vec6f frameParams;
     Mat volUnitsData;
     Mat pixNorms;
     VolumeUnitIndexes volumeUnits;

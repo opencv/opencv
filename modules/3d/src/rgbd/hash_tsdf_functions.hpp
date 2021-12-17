@@ -282,6 +282,23 @@ public:
     }
 };
 
+typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
+typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
+
+
+static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const int volumeUnitSize)
+{
+    return cv::Vec3i(
+        cvFloor(point.x / volumeUnitSize),
+        cvFloor(point.y / volumeUnitSize),
+        cvFloor(point.z / volumeUnitSize));
+}
+
+
+void integrateHashTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
+
+
 } // namespace cv
 
 #endif

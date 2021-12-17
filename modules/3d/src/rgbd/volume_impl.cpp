@@ -222,12 +222,31 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
 
 HashTsdfVolume::~HashTsdfVolume() {}
 
-void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose)
+void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
-    std::cout << "HashTsdfVolume::integrate()" << std::endl;
+    std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
+}
+void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
+{
+    std::cout << "HashTsdfVolume::integrate(Mat)" << std::endl;
+    Depth depth = _depth.getMat();
+    const Matx44f cameraPose = _cameraPose.getMat();
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec6f newParams((float)depth.rows, (float)depth.cols,
+        intrinsics.fx, intrinsics.fy,
+        intrinsics.cx, intrinsics.cy);
+    if (!(frameParams == newParams))
+    {
+        frameParams = newParams;
+        preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+    }
+
+    integrateHashTsdfVolumeUnit(settings, cameraPose, depth, pixNorms, volUnitsData, volumeUnits);
+
 
 }
-void HashTsdfVolume::integrate(InputArray depth, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
 void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose) {}
 
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }

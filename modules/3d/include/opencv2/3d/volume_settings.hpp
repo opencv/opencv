@@ -45,6 +45,8 @@ public:
     float getRaycastStepFactor() const;
     void  setZFirstMemOrder(bool val);
     bool  getZFirstMemOrder() const;
+    void  setVolumeUnitDegree(int val);
+    int   getVolumeUnitDegree() const;
 
     void setVolumePose(InputArray val);
     void getVolumePose(OutputArray val) const;

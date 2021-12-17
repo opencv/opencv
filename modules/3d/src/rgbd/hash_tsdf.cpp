@@ -117,11 +117,11 @@ public:
     Point3f getNormalVoxel(const cv::Point3f& p) const;
 
     //! Utility functions for coordinate transformations
-    Vec3i volumeToVolumeUnitIdx(const Point3f& point) const;
-    Point3f volumeUnitIdxToVolume(const Vec3i& volumeUnitIdx) const;
+    Vec3i _volumeToVolumeUnitIdx(const Point3f& point) const;
+    Point3f _volumeUnitIdxToVolume(const Vec3i& volumeUnitIdx) const;
 
-    Point3f voxelCoordToVolume(const Vec3i& voxelIdx) const;
-    Vec3i volumeToVoxelCoord(const Point3f& point) const;
+    Point3f _voxelCoordToVolume(const Vec3i& voxelIdx) const;
+    Vec3i _volumeToVoxelCoord(const Point3f& point) const;
 
 public:
     Vec6f frameParams;
@@ -190,8 +190,8 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
                 Point3f volPoint = cam2vol * camPoint;
                 //! Find accessed TSDF volume unit for valid 3D vertex
-                Vec3i lower_bound = this->volumeToVolumeUnitIdx(volPoint - truncPt);
-                Vec3i upper_bound = this->volumeToVolumeUnitIdx(volPoint + truncPt);
+                Vec3i lower_bound = this->_volumeToVolumeUnitIdx(volPoint - truncPt);
+                Vec3i upper_bound = this->_volumeToVolumeUnitIdx(volPoint + truncPt);
 
                 for (int i = lower_bound[0]; i <= upper_bound[0]; i++)
                     for (int j = lower_bound[1]; j <= upper_bound[1]; j++)
@@ -226,7 +226,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
     {
         VolumeUnit& vu = this->volumeUnits.emplace(idx, VolumeUnit()).first->second;
 
-        Matx44f subvolumePose = pose.translate(volumeUnitIdxToVolume(idx)).matrix;
+        Matx44f subvolumePose = pose.translate(_volumeUnitIdxToVolume(idx)).matrix;
 
         vu.pose = subvolumePose;
         vu.index = lastVolIndex; lastVolIndex++;
@@ -264,7 +264,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
             if (it == volumeUnits.end())
                 continue;
 
-            Point3f volumeUnitPos = volumeUnitIdxToVolume(it->first);
+            Point3f volumeUnitPos = _volumeUnitIdxToVolume(it->first);
             Point3f volUnitInCamSpace = vol2cam * volumeUnitPos;
             if (volUnitInCamSpace.z < 0 || volUnitInCamSpace.z > truncateThreshold)
             {
@@ -314,24 +314,24 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
         });
 }
 
-cv::Vec3i HashTSDFVolumeCPU::volumeToVolumeUnitIdx(const cv::Point3f& p) const
+cv::Vec3i HashTSDFVolumeCPU::_volumeToVolumeUnitIdx(const cv::Point3f& p) const
 {
     return cv::Vec3i(cvFloor(p.x / volumeUnitSize), cvFloor(p.y / volumeUnitSize),
                      cvFloor(p.z / volumeUnitSize));
 }
 
-cv::Point3f HashTSDFVolumeCPU::volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx) const
+cv::Point3f HashTSDFVolumeCPU::_volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx) const
 {
     return cv::Point3f(volumeUnitIdx[0] * volumeUnitSize, volumeUnitIdx[1] * volumeUnitSize,
                        volumeUnitIdx[2] * volumeUnitSize);
 }
 
-cv::Point3f HashTSDFVolumeCPU::voxelCoordToVolume(const cv::Vec3i& voxelIdx) const
+cv::Point3f HashTSDFVolumeCPU::_voxelCoordToVolume(const cv::Vec3i& voxelIdx) const
 {
     return cv::Point3f(voxelIdx[0] * voxelSize, voxelIdx[1] * voxelSize, voxelIdx[2] * voxelSize);
 }
 
-cv::Vec3i HashTSDFVolumeCPU::volumeToVoxelCoord(const cv::Point3f& point) const
+cv::Vec3i HashTSDFVolumeCPU::_volumeToVoxelCoord(const cv::Point3f& point) const
 {
     return cv::Vec3i(cvFloor(point.x * voxelSizeInv), cvFloor(point.y * voxelSizeInv),
                      cvFloor(point.z * voxelSizeInv));
@@ -378,7 +378,7 @@ inline TsdfVoxel HashTSDFVolumeCPU::at(const cv::Vec3i& volumeIdx) const
 
 TsdfVoxel HashTSDFVolumeCPU::at(const Point3f& point) const
 {
-    cv::Vec3i volumeUnitIdx = volumeToVolumeUnitIdx(point);
+    cv::Vec3i volumeUnitIdx = _volumeToVolumeUnitIdx(point);
     VolumeUnitIndexes::const_iterator it = volumeUnits.find(volumeUnitIdx);
 
     if (it == volumeUnits.end())
@@ -386,8 +386,8 @@ TsdfVoxel HashTSDFVolumeCPU::at(const Point3f& point) const
         return TsdfVoxel(floatToTsdf(1.f), 0);
     }
 
-    cv::Point3f volumeUnitPos = volumeUnitIdxToVolume(volumeUnitIdx);
-    cv::Vec3i volUnitLocalIdx = volumeToVoxelCoord(point - volumeUnitPos);
+    cv::Point3f volumeUnitPos = _volumeUnitIdxToVolume(volumeUnitIdx);
+    cv::Vec3i volUnitLocalIdx = _volumeToVoxelCoord(point - volumeUnitPos);
     volUnitLocalIdx =
         cv::Vec3i(abs(volUnitLocalIdx[0]), abs(volUnitLocalIdx[1]), abs(volUnitLocalIdx[2]));
     return _at(volUnitLocalIdx, it->second.index);
@@ -689,7 +689,7 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                 while (tcurr < tmax)
                 {
                     Point3f currRayPos = orig + tcurr * rayDirV;
-                    cv::Vec3i currVolumeUnitIdx = volume.volumeToVolumeUnitIdx(currRayPos);
+                    cv::Vec3i currVolumeUnitIdx = volume._volumeToVolumeUnitIdx(currRayPos);
 
                     VolumeUnitIndexes::const_iterator it = volume.volumeUnits.find(currVolumeUnitIdx);
 
@@ -703,8 +703,8 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                     if (it != volume.volumeUnits.end())
                     {
                         cv::Point3f currVolUnitPos =
-                            volume.volumeUnitIdxToVolume(currVolumeUnitIdx);
-                        volUnitLocalIdx = volume.volumeToVoxelCoord(currRayPos - currVolUnitPos);
+                            volume._volumeUnitIdxToVolume(currVolumeUnitIdx);
+                        volUnitLocalIdx = volume._volumeToVoxelCoord(currRayPos - currVolUnitPos);
 
                         //! TODO: Figure out voxel interpolation
                         TsdfVoxel currVoxel = _at(volUnitLocalIdx, it->second.index);
@@ -771,7 +771,7 @@ void HashTSDFVolumeCPU::fetchPointsNormals(OutputArray _points, OutputArray _nor
                 cv::Vec3i tsdf_idx = totalVolUnits[i];
 
                 VolumeUnitIndexes::const_iterator it = volume.volumeUnits.find(tsdf_idx);
-                Point3f base_point = volume.volumeUnitIdxToVolume(tsdf_idx);
+                Point3f base_point = volume._volumeUnitIdxToVolume(tsdf_idx);
                 if (it != volume.volumeUnits.end())
                 {
                     std::vector<ptype> localPoints;
@@ -785,7 +785,7 @@ void HashTSDFVolumeCPU::fetchPointsNormals(OutputArray _points, OutputArray _nor
 
                                 if (voxel.tsdf != -128 && voxel.weight != 0)
                                 {
-                                    Point3f point = base_point + volume.voxelCoordToVolume(voxelIdx);
+                                    Point3f point = base_point + volume._voxelCoordToVolume(voxelIdx);
                                     localPoints.push_back(toPtype(point));
                                     if (needNormals)
                                     {
@@ -915,11 +915,11 @@ public:
     Point3f getNormalVoxel(const cv::Point3f& p) const;
 
     //! Utility functions for coordinate transformations
-    Vec3i volumeToVolumeUnitIdx(const Point3f& point) const;
-    Point3f volumeUnitIdxToVolume(const Vec3i& volumeUnitIdx) const;
+    Vec3i _volumeToVolumeUnitIdx(const Point3f& point) const;
+    Point3f _volumeUnitIdxToVolume(const Vec3i& volumeUnitIdx) const;
 
-    Point3f voxelCoordToVolume(const Vec3i& voxelIdx) const;
-    Vec3i volumeToVoxelCoord(const Point3f& point) const;
+    Point3f _voxelCoordToVolume(const Vec3i& voxelIdx) const;
+    Vec3i _volumeToVoxelCoord(const Point3f& point) const;
 
 public:
     Vec6f frameParams;
@@ -1067,8 +1067,8 @@ void HashTSDFVolumeGPU::allocateVolumeUnits(const UMat& _depth, float depthFacto
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
                 Point3f volPoint = cam2vol * camPoint;
                 //! Find accessed TSDF volume unit for valid 3D vertex
-                Vec3i lower_bound = this->volumeToVolumeUnitIdx(volPoint - truncPt);
-                Vec3i upper_bound = this->volumeToVolumeUnitIdx(volPoint + truncPt);
+                Vec3i lower_bound = this->_volumeToVolumeUnitIdx(volPoint - truncPt);
+                Vec3i upper_bound = this->_volumeToVolumeUnitIdx(volPoint + truncPt);
 
                 int pixLocalCounter = 0;
                 LocalVolUnits pixLocalVolUnits;
@@ -1314,24 +1314,24 @@ void HashTSDFVolumeGPU::integrate(InputArray _depth, float depthFactor, const Ma
 
 
 //TODO: remove these functions when everything is done on GPU
-cv::Vec3i HashTSDFVolumeGPU::volumeToVolumeUnitIdx(const cv::Point3f& p) const
+cv::Vec3i HashTSDFVolumeGPU::_volumeToVolumeUnitIdx(const cv::Point3f& p) const
 {
     return cv::Vec3i(cvFloor(p.x / volumeUnitSize), cvFloor(p.y / volumeUnitSize),
         cvFloor(p.z / volumeUnitSize));
 }
 
-cv::Point3f HashTSDFVolumeGPU::volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx) const
+cv::Point3f HashTSDFVolumeGPU::_volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx) const
 {
     return cv::Point3f(volumeUnitIdx[0] * volumeUnitSize, volumeUnitIdx[1] * volumeUnitSize,
         volumeUnitIdx[2] * volumeUnitSize);
 }
 
-cv::Point3f HashTSDFVolumeGPU::voxelCoordToVolume(const cv::Vec3i& voxelIdx) const
+cv::Point3f HashTSDFVolumeGPU::_voxelCoordToVolume(const cv::Vec3i& voxelIdx) const
 {
     return cv::Point3f(voxelIdx[0] * voxelSize, voxelIdx[1] * voxelSize, voxelIdx[2] * voxelSize);
 }
 
-cv::Vec3i HashTSDFVolumeGPU::volumeToVoxelCoord(const cv::Point3f& point) const
+cv::Vec3i HashTSDFVolumeGPU::_volumeToVoxelCoord(const cv::Point3f& point) const
 {
     return cv::Vec3i(cvFloor(point.x * voxelSizeInv), cvFloor(point.y * voxelSizeInv),
         cvFloor(point.z * voxelSizeInv));
@@ -1665,7 +1665,7 @@ void HashTSDFVolumeGPU::fetchPointsNormals(OutputArray _points, OutputArray _nor
                 cv::Vec4i idx4 = hashTable.data[row];
                 cv::Vec3i idx(idx4[0], idx4[1], idx4[2]);
 
-                Point3f base_point = volume.volumeUnitIdxToVolume(idx);
+                Point3f base_point = volume._volumeUnitIdxToVolume(idx);
 
                 std::vector<ptype> localPoints;
                 std::vector<ptype> localNormals;
@@ -1678,7 +1678,7 @@ void HashTSDFVolumeGPU::fetchPointsNormals(OutputArray _points, OutputArray _nor
 
                             if (voxel.tsdf != -128 && voxel.weight != 0)
                             {
-                                Point3f point = base_point + volume.voxelCoordToVolume(voxelIdx);
+                                Point3f point = base_point + volume._voxelCoordToVolume(voxelIdx);
 
                                 localPoints.push_back(toPtype(point));
                                 if (needNormals)
