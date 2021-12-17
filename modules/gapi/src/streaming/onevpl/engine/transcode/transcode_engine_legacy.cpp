@@ -118,14 +118,14 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
-            GAPI_LOG_INFO(nullptr, "START decode: " <<
-                                            ", sync id:  " <<
-                                            sync_pair.first <<
-                                            ", dec in surface:  " <<
-                                            my_sess.procesing_surface_ptr.lock()->get_handle() <<
-                                            ", dec out surface: " << sync_pair.second <<
-                                            ", status: " <<
-                                            mfxstatus_to_string(my_sess.last_status));
+            GAPI_LOG_DEBUG(nullptr, "START decode: " <<
+                                    ", sync id:  " <<
+                                    sync_pair.first <<
+                                    ", dec in surface:  " <<
+                                    my_sess.procesing_surface_ptr.lock()->get_handle() <<
+                                    ", dec out surface: " << sync_pair.second <<
+                                    ", status: " <<
+                                    mfxstatus_to_string(my_sess.last_status));
 
             // process wait-like statuses in-place:
             // It had better to use up all VPL decoding resources in pipeline
@@ -193,15 +193,15 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                                                            nullptr, &pending_op.first);
                         pending_op.second = vpp_suface;
 
-                        GAPI_LOG_WARNING(nullptr, "START transcode ops count: " <<
-                                            my_sess.vpp_queue.size() <<
-                                            ", sync id:  " <<
-                                            pending_op.first <<
-                                            ", dec surface:  " <<
-                                            dec_surface <<
-                                            ", trans surface: " << pending_op.second <<
-                                            ", status: " <<
-                                            mfxstatus_to_string(my_sess.last_status));
+                        GAPI_LOG_DEBUG(nullptr, "START transcode ops count: " <<
+                                                my_sess.vpp_queue.size() <<
+                                                ", sync id:  " <<
+                                                pending_op.first <<
+                                                ", dec surface:  " <<
+                                                dec_surface <<
+                                                ", trans surface: " << pending_op.second <<
+                                                ", status: " <<
+                                                mfxstatus_to_string(my_sess.last_status));
 
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
@@ -240,7 +240,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                     LegacyDecodeSession::op_handle_t& pending_op = my_sess.vpp_queue.front();
                     sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
-                    GAPI_LOG_INFO(nullptr, "pending VPP ops count: " <<
+                    GAPI_LOG_DEBUG(nullptr, "pending VPP ops count: " <<
                                             my_sess.vpp_queue.size() <<
                                             ", sync id:  " <<
                                             pending_op.first <<

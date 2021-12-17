@@ -535,7 +535,8 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
                            {"DEV_OBJECT_HANDLE", blob_params->first.second["DEV_OBJECT_HANDLE"]},
                            {"VA_PLANE", blob_params->first.second["VA_PLANE"]}}; //0
         // TODO NV12 surface supported only
-        if (blob_params->first.second["COLOR_FORMAT"] == InferenceEngine::ColorFormat::NV12) {
+        if (static_cast<InferenceEngine::ColorFormat>(frame_blob_params->second["COLOR_FORMAT"]) ==
+            InferenceEngine::ColorFormat::NV12) {
             InferenceEngine::Blob::Ptr y_blob =
                            std::dynamic_pointer_cast<InferenceEngine::Blob>(
                                         ctx.uu.rctx->CreateBlob(desc, blobParams));
