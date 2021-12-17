@@ -106,8 +106,31 @@ SUBC_SIMD(float, float)
 
 #undef SUBC_SIMD
 
-#define MULC_SIMD(SRC, DST)                                                 \
-int mulc_simd(const SRC in[], const float scalar[], DST out[],              \
+#define SUBRC_SIMD(SRC, DST)                                                             \
+int subrc_simd(const float scalar[], const SRC in[], DST out[],                          \
+               const int length, const int chan);
+
+SUBRC_SIMD(uchar, uchar)
+SUBRC_SIMD(ushort, uchar)
+SUBRC_SIMD(short, uchar)
+SUBRC_SIMD(float, uchar)
+SUBRC_SIMD(short, short)
+SUBRC_SIMD(ushort, short)
+SUBRC_SIMD(uchar, short)
+SUBRC_SIMD(float, short)
+SUBRC_SIMD(ushort, ushort)
+SUBRC_SIMD(uchar, ushort)
+SUBRC_SIMD(short, ushort)
+SUBRC_SIMD(float, ushort)
+SUBRC_SIMD(uchar, float)
+SUBRC_SIMD(ushort, float)
+SUBRC_SIMD(short, float)
+SUBRC_SIMD(float, float)
+
+#undef SUBRC_SIMD
+
+#define MULC_SIMD(SRC, DST)                                                              \
+int mulc_simd(const SRC in[], const float scalar[], DST out[],                           \
               const int length, const int chan, const float scale);
 
 MULC_SIMD(uchar, uchar)
