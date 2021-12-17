@@ -181,4 +181,165 @@ void integrateHashTsdfVolumeUnit(
 }
 
 
+inline TsdfVoxel _at(Mat& volUnitsData, const cv::Vec3i& volumeIdx, int indx,
+    const int volumeUnitResolution, const Vec4i volStrides)
+{
+    //! Out of bounds
+    if ((volumeIdx[0] >= volumeUnitResolution || volumeIdx[0] < 0) ||
+        (volumeIdx[1] >= volumeUnitResolution || volumeIdx[1] < 0) ||
+        (volumeIdx[2] >= volumeUnitResolution || volumeIdx[2] < 0))
+    {
+        return TsdfVoxel(floatToTsdf(1.f), 0);
+    }
+
+    const TsdfVoxel* volData = volUnitsData.ptr<TsdfVoxel>(indx);
+    int coordBase =
+        volumeIdx[0] * volStrides[0] + volumeIdx[1] * volStrides[1] + volumeIdx[2] * volStrides[2];
+    return volData[coordBase];
+}
+
+void raycastHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
+{
+    std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    Size frameSize(width, height);
+    CV_Assert(frameSize.area() > 0);
+
+    Mat volUnitsData = _volUnitsData.getMat();
+
+    _points.create(frameSize, POINT_TYPE);
+    _normals.create(frameSize, POINT_TYPE);
+
+    Points points1 = _points.getMat();
+    Normals normals1 = _normals.getMat();
+
+    Points& points(points1);
+    Normals& normals(normals1);
+
+    const float truncDist = settings.getTruncatedDistance();
+    const float raycastStepFactor = settings.getRaycastStepFactor();
+    const float tstep(truncDist * raycastStepFactor);
+    const float truncateThreshold = settings.getTruncateThreshold();
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const int volumeUnitSize = resolution[0];
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+    const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    const Intr intrinsics(intr);
+    const Intr::Reprojector reproj(intrinsics.makeReprojector());
+
+    const int nstripes = -1;
+
+    auto _HashRaycastInvoker = [&](const Range& range)
+    {
+        const Point3f cam2volTrans = cam2vol.translation();
+        const Matx33f cam2volRot = cam2vol.rotation();
+        const Matx33f vol2camRot = vol2cam.rotation();
+
+        const float blockSize = volumeUnitSize;
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            ptype* ptsRow = points[y];
+            ptype* nrmRow = normals[y];
+
+            for (int x = 0; x < points.cols; x++)
+            {
+                //! Initialize default value
+                Point3f point = nan3, normal = nan3;
+
+                //! Ray origin and direction in the volume coordinate frame
+                Point3f orig = cam2volTrans;
+                Point3f rayDirV = normalize(Vec3f(cam2volRot * reproj(Point3f(float(x), float(y), 1.f))));
+
+                float tmin = 0;
+                float tmax = truncateThreshold;
+                float tcurr = tmin;
+
+                cv::Vec3i prevVolumeUnitIdx =
+                    cv::Vec3i(std::numeric_limits<int>::min(), std::numeric_limits<int>::min(),
+                        std::numeric_limits<int>::min());
+
+                float tprev = tcurr;
+                float prevTsdf = truncDist;
+                while (tcurr < tmax)
+                {
+                    Point3f currRayPos = orig + tcurr * rayDirV;
+                    cv::Vec3i currVolumeUnitIdx = volumeToVolumeUnitIdx(currRayPos, volumeUnitSize);
+
+                    VolumeUnitIndexes::const_iterator it = volumeUnits.find(currVolumeUnitIdx);
+
+                    float currTsdf = prevTsdf;
+                    int currWeight = 0;
+                    float stepSize = 0.5f * blockSize;
+                    cv::Vec3i volUnitLocalIdx;
+
+
+                    //! The subvolume exists in hashtable
+                    if (it != volumeUnits.end())
+                    {
+                        cv::Point3f currVolUnitPos = volumeUnitIdxToVolume(currVolumeUnitIdx, volumeUnitSize);
+                        volUnitLocalIdx = volumeToVoxelCoord(currRayPos - currVolUnitPos, voxelSizeInv);
+
+                        //! TODO: Figure out voxel interpolation
+                        TsdfVoxel currVoxel = _at(volUnitsData, volUnitLocalIdx, it->second.index, volResolution.x, volDims);
+                        currTsdf = tsdfToFloat(currVoxel.tsdf);
+                        currWeight = currVoxel.weight;
+                        stepSize = tstep;
+                    }
+                    //! Surface crossing
+                    if (prevTsdf > 0.f && currTsdf <= 0.f && currWeight > 0)
+                    {
+                        float tInterp = (tcurr * prevTsdf - tprev * currTsdf) / (prevTsdf - currTsdf);
+                        if (!cvIsNaN(tInterp) && !cvIsInf(tInterp))
+                        {
+                            Point3f pv = orig + tInterp * rayDirV;
+                            //Point3f nv = volume.getNormalVoxel(pv);
+                            Point3f nv = nan3;
+
+                            if (!isNaN(nv))
+                            {
+                                normal = vol2camRot * nv;
+                                point = vol2cam * pv;
+                            }
+                        }
+                        break;
+                    }
+                    prevVolumeUnitIdx = currVolumeUnitIdx;
+                    prevTsdf = currTsdf;
+                    tprev = tcurr;
+                    tcurr += stepSize;
+                }
+                ptsRow[x] = toPtype(point);
+                nrmRow[x] = toPtype(normal);
+            }
+        }
+    };
+
+
+
+
+
+
+
+
+    std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
+}
+
 } // namespace cv

@@ -226,6 +226,7 @@ void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPos
 {
     std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
 }
+
 void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
     std::cout << "HashTsdfVolume::integrate(Mat)" << std::endl;
@@ -248,11 +249,28 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 
 
 }
-void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose) {}
 
-void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
-void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
-void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const {}
+void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+}
+
+
+void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
+{
+    std::cout << "HashTsdfVolume::raycast()" << std::endl;
+}
+void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
+{
+    std::cout << "HashTsdfVolume::raycast()" << std::endl;
+    const Matx44f cameraPose = _cameraPose.getMat();
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
+
+}
+void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+}
 
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}

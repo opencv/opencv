@@ -302,9 +302,30 @@ static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const i
         volumeUnitIdx[2] * volumeUnitSize);
 }
 
+static cv::Point3f voxelCoordToVolume(const cv::Vec3i& voxelIdx, const float voxelSize)
+{
+    return cv::Point3f(
+        voxelIdx[0] * voxelSize,
+        voxelIdx[1] * voxelSize,
+        voxelIdx[2] * voxelSize);
+}
+
+static cv::Vec3i volumeToVoxelCoord(const cv::Point3f& point, const float voxelSizeInv)
+{
+    return cv::Vec3i(
+        cvFloor(point.x * voxelSizeInv),
+        cvFloor(point.y * voxelSizeInv),
+        cvFloor(point.z * voxelSizeInv));
+}
+
+
 void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
+
+void raycastHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals);
 
 
 } // namespace cv
