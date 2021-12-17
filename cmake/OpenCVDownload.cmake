@@ -41,36 +41,30 @@ set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "" CACHE STRING "Mirror for https://github.
 set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE STRING "Mirror for https://raw.githubusercontent.com")
 set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
 
-macro(ocv_download_link_replace)
-    string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
-    if(NOT ${_found_githubusercontent} EQUAL -1)
-        string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-        # get commit id & package name
-        list(GET dl_url_splits 5 _commit_id)
-        list(GET dl_url_splits 6 _package_name)
-        # append commit id & package name
-        list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
-        list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
-        # join to be the new link
-        list(JOIN OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "/" new_dl_url)
-        set(new_dl_url ${DL_URL} PARENT_SCOPE)
-        return()
-    endif()
+macro(ocv_download_replace_github_archive)
+  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
+  # get commit id & package name
+  list(GET dl_url_splits 5 _commit_id)
+  list(GET dl_url_splits 6 _package_name)
+  # append commit id & package name
+  list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
+  list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
+  # join to be the new link
+  list(JOIN OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "/" new_dl_url)
+  set(new_dl_url ${DL_URL} PARENT_SCOPE)
+endmacro()
 
-    string(FIND "${DL_URL}" "https://github.com" _found_github)
-    if(NOT ${_found_github} EQUAL -1)
-        string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-        # get repo owner & repo name
-        list(GET dl_url_splits 3 _repo_owner)
-        list(GET dl_url_splits 4 _repo_name)
-        # insert repo owner & repo name
-        list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 1 ${_repo_owner})
-        list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 2 ${_repo_name})
-        # join to be the new link
-        list(JOIN OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "/" new_dl_url)
-        set(new_dl_url ${DL_URL} PARENT_SCOPE)
-        return()
-    endif()
+macro(ocv_download_replace_githubusercontent)
+  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
+  # get repo owner & repo name
+  list(GET dl_url_splits 3 _repo_owner)
+  list(GET dl_url_splits 4 _repo_name)
+  # insert repo owner & repo name
+  list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 1 ${_repo_owner})
+  list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 2 ${_repo_name})
+  # join to be the new link
+  list(JOIN OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "/" new_dl_url)
+  set(new_dl_url ${DL_URL} PARENT_SCOPE)
 endmacro()
 
 function(ocv_init_download)
@@ -175,7 +169,18 @@ function(ocv_download)
   endforeach()
 
   # replace download links with the mirrored one if detected
-  ocv_download_link_replace()
+  if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
+    string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
+    if(NOT ${_found_githubusercontent} EQUAL -1)
+      ocv_download_replace_githubusercontent()
+    endif()
+  endif()
+  if(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
+    string(FIND "${DL_URL}" "https://github.com" _found_github)
+    if(NOT ${_found_github} EQUAL -1)
+        ocv_download_replace_github_archive()
+    endif()
+  endif()
 
   # Append filename to url if needed
   if(DL_RELATIVE_URL)
