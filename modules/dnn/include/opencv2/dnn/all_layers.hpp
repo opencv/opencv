@@ -648,6 +648,96 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<NotLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS AcosLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AcosLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AcoshLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AcoshLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AsinLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AsinLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AsinhLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AsinhLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AtanLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AtanLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS AtanhLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<AtanhLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS CosLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<CosLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS CoshLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<CoshLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ErfLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<ErfLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HardSwishLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<HardSwishLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SinLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SinLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SinhLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SinhLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SoftplusLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SoftplusLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SoftsignLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SoftsignLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS TanLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<TanLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:

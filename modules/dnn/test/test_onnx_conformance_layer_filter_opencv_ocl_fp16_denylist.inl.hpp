@@ -19,3 +19,4 @@
 "test_split_equal_parts_1d",
 "test_split_equal_parts_2d",
 "test_split_equal_parts_default_axis",
+"test_tan",

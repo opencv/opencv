@@ -206,6 +206,42 @@ public:
     }
 };
 
+class HardSwishSubgraph : public Subgraph
+{
+public:
+    HardSwishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int hardSigmoid = addNodeToMatch("HardSigmoid", input);
+        addNodeToMatch("Mul", input, hardSigmoid);
+        setFusedNode("HardSwish", input);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            Ptr<ImportNodeWrapper> hardSigmoid = net->getNode(matchedNodesIds[0]);
+            opencv_onnx::NodeProto* node = hardSigmoid.dynamicCast<ONNXNodeWrapper>()->node;
+
+            uint8_t matched = 0;
+            for (int i = 0; i < node->attribute_size(); i++)
+            {
+                opencv_onnx::AttributeProto attr = node->attribute(i);
+                if ((attr.name() == "alpha" && attr.f() == 1.f / 6.f) ||
+                    (attr.name() == "beta" && attr.f() == 0.5f))
+                {
+                    ++matched;
+                }
+            }
+            return matched == 2;
+        }
+        return false;
+    }
+};
+
 class NormalizeSubgraphBase : public Subgraph
 {
 public:
@@ -625,6 +661,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph2>());
     subgraphs.push_back(makePtr<LogSoftMaxSubgraph>());
+    subgraphs.push_back(makePtr<HardSwishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph1>());
     subgraphs.push_back(makePtr<NormalizeSubgraph2>());
     subgraphs.push_back(makePtr<NormalizeSubgraph2_2>());
