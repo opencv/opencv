@@ -127,6 +127,28 @@ SUBC_SIMD(float, float)
 
 #undef SUBC_SIMD
 
+#define SUBRC_SIMD(SRC, DST)                                                              \
+int subrc_simd(const float scalar[], const SRC in[], DST out[],                           \
+               const int length, const int chan);
+
+SUBRC_SIMD(uchar, uchar)
+SUBRC_SIMD(ushort, uchar)
+SUBRC_SIMD(short, uchar)
+SUBRC_SIMD(float, uchar)
+SUBRC_SIMD(short, short)
+SUBRC_SIMD(ushort, short)
+SUBRC_SIMD(uchar, short)
+SUBRC_SIMD(float, short)
+SUBRC_SIMD(ushort, ushort)
+SUBRC_SIMD(uchar, ushort)
+SUBRC_SIMD(short, ushort)
+SUBRC_SIMD(float, ushort)
+SUBRC_SIMD(uchar, float)
+SUBRC_SIMD(ushort, float)
+SUBRC_SIMD(short, float)
+SUBRC_SIMD(float, float)
+
+#undef SUBRC_SIMD
 
 #define MULC_SIMD(SRC, DST)                                                              \
 int mulc_simd(const SRC in[], const float scalar[], DST out[],                           \
@@ -905,12 +927,13 @@ MUL_SIMD(float, float)
 
 //-------------------------
 //
-// Fluid kernels: AddC, SubC
+// Fluid kernels: AddC, SubC, SubRC
 //
 //-------------------------
 
 struct add_tag {};
 struct sub_tag {};
+struct subr_tag {};
 struct mul_tag {};
 struct absdiff_tag {};
 
@@ -944,6 +967,11 @@ CV_ALWAYS_INLINE v_float32 oper(add_tag, const v_float32& a, const v_float32& sc
 CV_ALWAYS_INLINE v_float32 oper(sub_tag, const v_float32& a, const v_float32& sc)
 {
     return a - sc;
+}
+
+CV_ALWAYS_INLINE v_float32 oper(subr_tag, const v_float32& a, const v_float32& sc)
+{
+    return sc - a;
 }
 
 CV_ALWAYS_INLINE v_float32 oper(mul_tag, const v_float32& a, const v_float32& sc)
@@ -1217,6 +1245,46 @@ SUBC_SIMD(short, float)
 SUBC_SIMD(float, float)
 
 #undef SUBC_SIMD
+
+//-------------------------------------------------------------------------------------------------
+
+#define SUBRC_SIMD(SRC, DST)                                                        \
+int subrc_simd(const float scalar[], const SRC in[], DST out[],                     \
+               const int length, const int chan)                                    \
+{                                                                                   \
+    switch (chan)                                                                   \
+    {                                                                               \
+    case 1:                                                                         \
+    case 2:                                                                         \
+    case 4:                                                                         \
+        return arithmOpScalar_simd_common(subr_tag{}, in, scalar, out, length);     \
+    case 3:                                                                         \
+        return arithmOpScalar_simd_c3(subr_tag{}, in, scalar, out, length);         \
+    default:                                                                        \
+        GAPI_Assert(chan <= 4);                                                     \
+        break;                                                                      \
+    }                                                                               \
+    return 0;                                                                       \
+}
+
+SUBRC_SIMD(uchar, uchar)
+SUBRC_SIMD(ushort, uchar)
+SUBRC_SIMD(short, uchar)
+SUBRC_SIMD(float, uchar)
+SUBRC_SIMD(short, short)
+SUBRC_SIMD(ushort, short)
+SUBRC_SIMD(uchar, short)
+SUBRC_SIMD(float, short)
+SUBRC_SIMD(ushort, ushort)
+SUBRC_SIMD(uchar, ushort)
+SUBRC_SIMD(short, ushort)
+SUBRC_SIMD(float, ushort)
+SUBRC_SIMD(uchar, float)
+SUBRC_SIMD(ushort, float)
+SUBRC_SIMD(short, float)
+SUBRC_SIMD(float, float)
+
+#undef SUBRC_SIMD
 
 //-------------------------
 //
