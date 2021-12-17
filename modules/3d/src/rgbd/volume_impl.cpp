@@ -81,12 +81,12 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
-    integrateVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
+    integrateTsdfVolumeUnit(settings, cameraPose, depth, pixNorms, volume);
 #else
     if (ocl::useOpenCL())
-        ocl_integrateVolumeUnit(settings, cameraPose, depth, gpu_pixNorms, gpu_volume);
+        ocl_integrateTsdfVolumeUnit(settings, cameraPose, depth, gpu_pixNorms, gpu_volume);
     else
-        integrateVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
+        integrateTsdfVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
 }
 void TsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
@@ -137,12 +137,12 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
 
     const Matx44f cameraPose = _cameraPose.getMat();
 #ifndef HAVE_OPENCL
-    raycastVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+    raycastTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
 #else
     if (ocl::useOpenCL())
-        ocl_raycastVolumeUnit(settings, cameraPose, height, width, gpu_volume, _points, _normals);
+        ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, gpu_volume, _points, _normals);
     else
-        raycastVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
+        raycastTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
 #endif
 }
 
@@ -222,9 +222,14 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
 
 HashTsdfVolume::~HashTsdfVolume() {}
 
-void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
+void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose)
+{
+    std::cout << "HashTsdfVolume::integrate()" << std::endl;
+
+}
 void HashTsdfVolume::integrate(InputArray depth, InputArray pose) { std::cout << "HashTsdfVolume::integrate()" << std::endl; }
 void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose) {}
+
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const { std::cout << "HashTsdfVolume::raycast()" << std::endl; }
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const {}

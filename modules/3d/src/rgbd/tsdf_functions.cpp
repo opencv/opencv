@@ -620,7 +620,7 @@ void _integrateRGBVolumeUnit(
 
 // Integrate
 
-void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
                InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     std::cout << "integrateVolumeUnit" << std::endl;
@@ -895,7 +895,7 @@ void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPo
     parallel_for_(integrateRange, IntegrateInvoker);
 }
 
-void ocl_integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     std::cout << "ocl_integrateVolumeUnit" << std::endl;
@@ -1183,7 +1183,7 @@ inline Point3f getNormalVoxel( const Mat& volume,
 }
 #endif
 
-void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
                        InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     std::cout << "raycastVolumeUnit" << std::endl;
@@ -1488,7 +1488,7 @@ void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose
 }
 
 
-void ocl_raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     std::cout << "ocl_raycastVolumeUnit" << std::endl;
@@ -1720,134 +1720,6 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
         throw std::runtime_error("Failed to run kernel");
 
 }
-
-
-
-
-
-
-struct _FetchPointsNormalsInvoker : ParallelLoopBody
-{
-    _FetchPointsNormalsInvoker(
-        const Mat& _volume,
-        std::vector<std::vector<ptype>>& _pVecs,
-        std::vector<std::vector<ptype>>& _nVecs,
-        bool _needNormals, float _voxelSize, const Affine3f _pose,
-        const Vec8i _neighbourCoords, const Vec4i _volDims, const Point3i _volResolution) :
-        ParallelLoopBody(),
-        volume(_volume),
-        pVecs(_pVecs),
-        nVecs(_nVecs),
-        volDims(_volDims),
-        volResolution(_volResolution),
-        pose(_pose),
-        neighbourCoords(_neighbourCoords),
-        voxelSize(_voxelSize),
-        voxelSizeInv(1.f / _voxelSize),
-        needNormals(_needNormals)
-    {
-        volDataStart = volume.ptr<TsdfVoxel>();
-    }
-
-    inline void coord(std::vector<ptype>& points, std::vector<ptype>& normals,
-        int x, int y, int z, Point3f V, float v0, int axis) const
-    {
-        // 0 for x, 1 for y, 2 for z
-        bool limits = false;
-        Point3i shift;
-        float Vc = 0.f;
-        if (axis == 0)
-        {
-            shift = Point3i(1, 0, 0);
-            limits = (x + 1 < volResolution.x);
-            Vc = V.x;
-        }
-        if (axis == 1)
-        {
-            shift = Point3i(0, 1, 0);
-            limits = (y + 1 < volResolution.y);
-            Vc = V.y;
-        }
-        if (axis == 2)
-        {
-            shift = Point3i(0, 0, 1);
-            limits = (z + 1 < volResolution.z);
-            Vc = V.z;
-        }
-
-        if (limits)
-        {
-            const TsdfVoxel& voxeld = volDataStart[(x + shift.x) * volDims[0] +
-                (y + shift.y) * volDims[1] +
-                (z + shift.z) * volDims[2]];
-            float vd = tsdfToFloat(voxeld.tsdf);
-            if (voxeld.weight != 0 && vd != 1.f)
-            {
-                if ((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
-                {
-                    //linearly interpolate coordinate
-                    float Vn = Vc + voxelSize;
-                    float dinv = 1.f / (abs(v0) + abs(vd));
-                    float inter = (Vc * abs(vd) + Vn * abs(v0)) * dinv;
-
-                    Point3f p(shift.x ? inter : V.x,
-                        shift.y ? inter : V.y,
-                        shift.z ? inter : V.z);
-                    {
-                        points.push_back(toPtype(pose * p));
-                        if (needNormals)
-                            normals.push_back(toPtype(pose.rotation() *
-                                getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
-                    }
-                }
-            }
-        }
-    }
-
-    virtual void operator() (const Range& range) const override
-    {
-        std::vector<ptype> points, normals;
-        for (int x = range.start; x < range.end; x++)
-        {
-            const TsdfVoxel* volDataX = volDataStart + x * volDims[0];
-            for (int y = 0; y < volResolution.y; y++)
-            {
-                const TsdfVoxel* volDataY = volDataX + y * volDims[1];
-                for (int z = 0; z < volResolution.z; z++)
-                {
-                    const TsdfVoxel& voxel0 = volDataY[z * volDims[2]];
-                    float v0 = tsdfToFloat(voxel0.tsdf);
-                    if (voxel0.weight != 0 && v0 != 1.f)
-                    {
-                        Point3f V(Point3f((float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f) * voxelSize);
-
-                        coord(points, normals, x, y, z, V, v0, 0);
-                        coord(points, normals, x, y, z, V, v0, 1);
-                        coord(points, normals, x, y, z, V, v0, 2);
-
-                    } // if voxel is not empty
-                }
-            }
-        }
-
-        AutoLock al(mutex);
-        pVecs.push_back(points);
-        nVecs.push_back(normals);
-    }
-
-    const Mat& volume;
-    std::vector<std::vector<ptype>>& pVecs;
-    std::vector<std::vector<ptype>>& nVecs;
-    const TsdfVoxel* volDataStart;
-    const Vec4i volDims;
-    const Point3i volResolution;
-    const Affine3f pose;
-    const Vec8i neighbourCoords;
-    const float voxelSize;
-    const float voxelSizeInv;
-    bool needNormals;
-    mutable Mutex mutex;
-};
 
 
 inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals,

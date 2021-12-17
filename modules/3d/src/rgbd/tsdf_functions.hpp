@@ -166,11 +166,11 @@ void _integrateRGBVolumeUnit(
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume);
 
 
-void integrateVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
                          InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
 
-void raycastVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
                        InputArray _volume, OutputArray _points, OutputArray _normals);
 
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
@@ -181,11 +181,11 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
 
 
 #ifdef HAVE_OPENCL
-void ocl_integrateVolumeUnit(
+void ocl_integrateTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
-void ocl_raycastVolumeUnit(
+void ocl_raycastTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals);
 

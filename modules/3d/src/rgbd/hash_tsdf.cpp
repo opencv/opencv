@@ -49,7 +49,7 @@ HashTSDFVolume::HashTSDFVolume(float _voxelSize, cv::Matx44f _pose, float _rayca
     }
     volStrides = Vec4i(xdim, ydim, zdim);
 }
-
+/*
 //! Spatial hashing
 struct tsdf_hash
 {
@@ -73,7 +73,7 @@ struct VolumeUnit
     int lastVisibleIndex = 0;
     bool isActive;
 };
-
+*/
 typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
 typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 

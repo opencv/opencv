@@ -8,6 +8,8 @@
 #ifndef OPENCV_3D_HASH_TSDF_FUNCTIONS_HPP
 #define OPENCV_3D_HASH_TSDF_FUNCTIONS_HPP
 
+#include <unordered_set>
+
 #include "../precomp.hpp"
 #include "utils.hpp"
 #include "tsdf_functions.hpp"
@@ -17,6 +19,30 @@
 
 namespace cv
 {
+
+//! Spatial hashing
+struct tsdf_hash
+{
+    size_t operator()(const Vec3i& x) const noexcept
+    {
+        size_t seed = 0;
+        constexpr uint32_t GOLDEN_RATIO = 0x9e3779b9;
+        for (uint16_t i = 0; i < 3; i++)
+        {
+            seed ^= std::hash<int>()(x[i]) + GOLDEN_RATIO + (seed << 6) + (seed >> 2);
+        }
+        return seed;
+    }
+};
+
+struct VolumeUnit
+{
+    cv::Vec3i coord;
+    int index;
+    cv::Matx44f pose;
+    int lastVisibleIndex = 0;
+    bool isActive;
+};
 
 class CustomHashSet
 {

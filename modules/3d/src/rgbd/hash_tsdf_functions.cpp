@@ -11,5 +11,11 @@
 
 namespace cv {
 
+void integrateHashTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData)
+{
+
+}
+
 
 } // namespace cv
