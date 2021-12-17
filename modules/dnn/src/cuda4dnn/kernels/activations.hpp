@@ -61,6 +61,51 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void not_k(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
+    void acos(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void acosh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void asin(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void asinh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void atan(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void atanh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void cos(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void cosh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void erf(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void hardswish(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void sin(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void sinh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void softplus(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void softsign(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void tan(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
     void power(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T exp, T scale, T shift);
 
     template <class T>

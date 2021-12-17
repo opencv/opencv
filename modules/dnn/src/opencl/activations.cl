@@ -188,3 +188,87 @@ __kernel void NotForward(const int n, __global T* in, __global T* out) {
     if(index < n)
         out[index] = floor(1.0f - in[index]);
 }
+
+__kernel void AcosForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = acos(in[index]);
+}
+
+__kernel void AcoshForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = acosh(in[index]);
+}
+
+__kernel void AsinForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = asin(in[index]);
+}
+
+__kernel void AsinhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = asinh(in[index]);
+}
+
+__kernel void AtanForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = atan(in[index]);
+}
+
+__kernel void AtanhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = atanh(in[index]);
+}
+
+__kernel void CosForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = cos(in[index]);
+}
+
+__kernel void CoshForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = cosh(in[index]);
+}
+
+__kernel void HardSwishForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] * max(0.f, min(1.f, in[index] / 6.f + 0.5f));
+}
+
+__kernel void SinForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sin(in[index]);
+}
+
+__kernel void SinhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sinh(in[index]);
+}
+
+__kernel void SoftplusForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = log1p(exp(in[index]));
+}
+
+__kernel void SoftsignForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] / (1.f + fabs(in[index]));
+}
+
+__kernel void TanForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = tan(in[index]);
+}
