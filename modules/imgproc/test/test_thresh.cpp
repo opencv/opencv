@@ -446,10 +446,10 @@ TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_16085)
 TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_21258)
 {
     Size sz(16, 16);
-    int val =  0x5fffffff;   //all bits in mantissa are 1
-    Mat input(sz, CV_32F, Scalar::all(*reinterpret_cast<float*>(&val)));
+    float val =  1.84467441e+19 * 1.9999998807907104;   //0x5fffffff, all bits in mantissa are 1
+    Mat input(sz, CV_32F, Scalar::all(val));
     Mat result;
-    cv::threshold(input, result, *reinterpret_cast<float*>(&val), 0.0, THRESH_TOZERO);
+    cv::threshold(input, result, val, 0.0, THRESH_TOZERO);
     EXPECT_EQ(0, cv::norm(result, NORM_INF));
 }
 
