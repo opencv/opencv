@@ -96,6 +96,8 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if (name == CfgParam::frames_pool_size_name()) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+        } else if (name == CfgParam::vpp_frames_pool_size_name()) {
+            ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
         } else if (name == CfgParam::vpp_in_width_name()) {
             ret.push_back(creator.create(name,
                                          static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
@@ -204,6 +206,32 @@ mfxVariant cfg_param_to_mfx_variant(const CfgParam& cfg_val) {
                 ret = *parsed.begin();
             }), cfg_val.get_value());
     return ret;
+}
+
+void extract_optional_param_by_name(const std::string &name,
+                                    const std::vector<CfgParam> &in_params,
+                                    cv::util::optional<size_t> &out_param) {
+    auto it = std::find_if(in_params.begin(), in_params.end(), [&name] (const CfgParam& value) {
+        return value.get_name() == name;
+    });
+    if (it != in_params.end()) {
+        cv::util::visit(cv::util::overload_lambdas(
+            [&out_param](uint8_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](int8_t value)    { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](uint16_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](int16_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](uint32_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](int32_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](uint64_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](int64_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](float_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](double_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
+            [&out_param](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
+            [&out_param](const std::string& value) {
+                out_param = cv::util::make_optional(strtoull_or_throw(value.c_str()));
+            }),
+            it->get_value());
+    }
 }
 
 unsigned long strtoul_or_throw(const char* str) {

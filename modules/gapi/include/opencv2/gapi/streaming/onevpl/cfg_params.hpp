@@ -111,6 +111,9 @@ struct GAPI_EXPORTS CfgParam {
     static CfgParam create_implementation(const char* value);
 
 
+    static constexpr const char *vpp_frames_pool_size_name() { return "vpp_frames_pool_size"; }
+    static CfgParam create_vpp_frames_pool_size(size_t value);
+
     static constexpr const char *vpp_in_width_name() { return "vpp.In.Width"; }
     static CfgParam create_vpp_in_width(uint16_t value);
 

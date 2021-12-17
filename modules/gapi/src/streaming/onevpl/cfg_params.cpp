@@ -118,6 +118,15 @@ CfgParam CfgParam::create_implementation(const char* value) {
     return CfgParam::create(CfgParam::implementation_name(), std::string(value));
 }
 
+CfgParam CfgParam::create_vpp_frames_pool_size(size_t value) {
+    // NB: cast to uint64_t because CfgParam inner variant works over
+    // uint64_t instead of size_t and mirrored VPL types variety
+    // but size_t looks more friendly for C++ high-level development
+    return CfgParam::create(CfgParam::vpp_frames_pool_size_name(),
+                            static_cast<uint64_t>(value), false);
+}
+
+
 CfgParam CfgParam::create_vpp_in_width(uint16_t value) {
     return CfgParam::create(CfgParam::vpp_in_width_name(), value, false);
 }

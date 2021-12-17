@@ -46,6 +46,9 @@ protected:
 
     void on_frame_ready(LegacyDecodeSession& sess,
                         mfxFrameSurface1* ready_surface);
+    static void try_modify_pool_size_request_param(const char* param_name,
+                                                   size_t new_frames_count,
+                                                   mfxFrameAllocRequest& request);
 };
 } // namespace onevpl
 } // namespace wip

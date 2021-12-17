@@ -46,6 +46,7 @@ const std::string keys =
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
+    "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
     "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
 
 static uint32_t vpl_source_preproc_enable = 0;
@@ -210,7 +211,8 @@ int main(int argc, char *argv[]) {
     const std::string output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
     const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
-    const auto source_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
+    const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
+    const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
     vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
 
     // check ouput file extension
@@ -241,8 +243,11 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (source_queue_capacity != 0) {
-        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_frames_pool_size(source_queue_capacity));
+    if (source_decode_queue_capacity != 0) {
+        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_frames_pool_size(source_decode_queue_capacity));
+    }
+    if (source_vpp_queue_capacity != 0) {
+        source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_vpp_frames_pool_size(source_vpp_queue_capacity));
     }
 
     device_id = cmd.get<std::string>("faced");

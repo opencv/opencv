@@ -349,8 +349,23 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
                                   mfxstatus_to_string(sts));
     }
 
-    // TODO  enough
-    //vppRequests[1].NumFrameSuggested *= 2;
+    // NB: override NumFrameSuggested preallocation size (how many frames we can hold)
+    // if you see bunch of WARNING about "cannot get free surface from pool"
+    // and have abundant RAM size then increase `CfgParam::vpp_frames_pool_size_name()`
+    // to keep more free surfaces in a round. Otherwise VPL decode pipeline will be waiting
+    // till application is freeing unusable surface on its side.
+     cv::optional<size_t> preallocated_frames_count_cfg;
+    extract_optional_param_by_name(CfgParam::vpp_frames_pool_size_name(),
+                                   cfg_params,
+                                   preallocated_frames_count_cfg);
+    if (preallocated_frames_count_cfg.has_value()) {
+        GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::vpp_frames_pool_size_name() << "\": " <<
+                      preallocated_frames_count_cfg.value() << ", for session: " << mfx_session);
+        try_modify_pool_size_request_param(CfgParam::vpp_frames_pool_size_name(),
+                                           preallocated_frames_count_cfg.value(),
+                                           vppRequests[1]);
+
+    }
 
     // NB: Assing ID as upper limit descendant to distinguish specific VPP allocation
     // from decode allocations witch started from 0: by local module convention
