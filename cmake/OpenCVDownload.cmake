@@ -37,24 +37,26 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "" CACHE STRING "Mirror for https://github.com")
-set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE STRING "Mirror for https://raw.githubusercontent.com")
+set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "" CACHE INTERNAL "Mirror for https://github.com")
+set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE INTERNAL "Mirror for https://raw.githubusercontent.com")
 set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
 
-macro(ocv_download_replace_github_archive)
+macro(ocv_download_replace_githubusercontent)
   string(REPLACE "/" ";" dl_url_splits ${DL_URL})
   # get commit id & package name
   list(GET dl_url_splits 5 _commit_id)
   list(GET dl_url_splits 6 _package_name)
   # append commit id & package name
-  list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
-  list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
+  # list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
+  # list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
+  list(INSERT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT 2 ${_commit_id})
+  list(INSERT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT 3 ${_commit_id})
   # join to be the new link
   list(JOIN OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "/" new_dl_url)
-  set(new_dl_url ${DL_URL} PARENT_SCOPE)
+  set(DL_URL "${new_dl_url}")
 endmacro()
 
-macro(ocv_download_replace_githubusercontent)
+macro(ocv_download_replace_github_archive)
   string(REPLACE "/" ";" dl_url_splits ${DL_URL})
   # get repo owner & repo name
   list(GET dl_url_splits 3 _repo_owner)
@@ -64,7 +66,7 @@ macro(ocv_download_replace_githubusercontent)
   list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 2 ${_repo_name})
   # join to be the new link
   list(JOIN OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "/" new_dl_url)
-  set(new_dl_url ${DL_URL} PARENT_SCOPE)
+  set(DL_URL "${new_dl_url}")
 endmacro()
 
 function(ocv_init_download)
@@ -83,10 +85,10 @@ function(ocv_init_download)
     message(STATUS "ocv_init_download: This is not a git repo. Download 3rdparty resources from github by default. Or you can specify mirrors using option -DOPENCV_MIRROR_FOR_GITHUB_ARCHIVE and -DOPENCV_MIRROR_FOR_GITHUBUSERCONTENT")
   else()
     if(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
-        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE};archive;")
+        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE};archive;" PARENT_SCOPE)
     endif()
     if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
-        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT};opencv;opencv_3rdparty;")
+        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT};opencv/opencv_3rdparty;" PARENT_SCOPE)
     endif()
 
     string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
@@ -94,16 +96,14 @@ function(ocv_init_download)
       if(NOT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
         # e.g. https://github.com/opencv/ade/archive/
         #   -> https://codechina.csdn.net/opencv/ade/-/archive/
-        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "https://${OPENCV_MIRROR_GITCODE};-;archive;")
+        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "https://${OPENCV_MIRROR_GITCODE};-;archive;" PARENT_SCOPE)
       endif()
       if(NOT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
         # e.g. https://raw.githubusercontent.net/opencv/opencv_3rdparty/${COMMIT_ID}/${PACKAGE_NAME}/
         #   -> https://gitcode.net/opencv/opencv_3rdparty/-/raw/${COMMIT_ID}/${PACKAGE_NAME}/
-        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "https://${OPENCV_MIRROR_GITCODE};opencv;opencv_3rdparty;-;raw;")
+        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "https://${OPENCV_MIRROR_GITCODE};opencv/opencv_3rdparty/-/raw;" PARENT_SCOPE)
       endif()
     endif()
-    message(STATUS "ocv_init_download: ${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE}")
-    message(STATUS "ocv_init_download: ${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT}")
   endif()
 endfunction()
 
