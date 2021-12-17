@@ -37,44 +37,44 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-set(OPENCV_MIRROR_FOR_GITHUB "" CACHE STRING "Mirror for https://github.com")
+set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "" CACHE STRING "Mirror for https://github.com")
 set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE STRING "Mirror for https://raw.githubusercontent.com")
 set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
 
-function(ocv_init_download_for_gitcode new_dl_link)
-  string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
-  if(NOT ${_found_githubusercontent} EQUAL -1) # ffmpeg & ippicv
-    string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-    list(REMOVE_AT dl_url_splits 2) # remove raw.githubusercontent.com
-    list(INSERT dl_url_splits 2 ${OPENCV_MIRROR_GITCODE}) # insert gitcode.com to replace github.com
-    list(INSERT dl_url_splits 5 "-/raw") # insert "-/raw"
-    list(JOIN dl_url_splits "/" dl_link)
-    message(STATUS "ocv_init_download_for_gitcode: mirrored download link: ${dl_link}")
-    set(new_dl_link ${dl_link} PARENT_SCOPE)
-    return()
-  endif()
+macro(ocv_download_link_replace)
+    string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
+    if(NOT ${_found_githubusercontent} EQUAL -1)
+        string(REPLACE "/" ";" dl_url_splits ${DL_URL})
+        # get commit id & package name
+        list(GET dl_url_splits 5 _commit_id)
+        list(GET dl_url_splits 6 _package_name)
+        # append commit id & package name
+        list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
+        list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
+        # join to be the new link
+        list(JOIN OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "/" new_dl_url)
+        set(new_dl_url ${DL_URL} PARENT_SCOPE)
+        return()
+    endif()
 
-  string(FIND "${DL_URL}" "https://github.com" _found_github)
-  if(NOT ${_found_github} EQUAL -1) # ade & tengine (OAID) & tbb (01org)
-    string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-    list(REMOVE_AT dl_url_splits 2) # remove github.com
-    list(INSERT dl_url_splits 2 ${OPENCV_MIRROR_GITCODE}) # insert gitcode.com to replace github.com
-    list(INSERT dl_url_splits 5 "-") # insert "-"
-    list(JOIN dl_url_splits "/" dl_link)
-    message(STATUS "ocv_init_download_for_gitcode: mirrored download link: ${dl_link}")
-    set(new_dl_link ${dl_link} PARENT_SCOPE)
-    return()
-  endif()
-endfunction()
+    string(FIND "${DL_URL}" "https://github.com" _found_github)
+    if(NOT ${_found_github} EQUAL -1)
+        string(REPLACE "/" ";" dl_url_splits ${DL_URL})
+        # get repo owner & repo name
+        list(GET dl_url_splits 3 _repo_owner)
+        list(GET dl_url_splits 4 _repo_name)
+        # insert repo owner & repo name
+        list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 1 ${_repo_owner})
+        list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 2 ${_repo_name})
+        # join to be the new link
+        list(JOIN OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "/" new_dl_url)
+        set(new_dl_url ${DL_URL} PARENT_SCOPE)
+        return()
+    endif()
+endmacro()
 
 function(ocv_init_download)
-  if(OPENCV_MIRROR_FOR_GITHUB)
-    string(REPLACE "https://github.com" "${OPENCV_MIRROR_FOR_GITHUB}" DL_URL "${DL_URL}")
-    return()
-  if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
-    string(REPLACE "https://raw.githubusercontent.com" "{OPENCV_MIRROR_FOR_GITHUBUSERCONTENT}" DL_URL "${DL_URL}")
-    return()
-
+  # Run `git remote get-url origin` to get remote source
   execute_process(
     COMMAND
       git remote get-url origin
@@ -83,14 +83,33 @@ function(ocv_init_download)
     OUTPUT_VARIABLE
       OCV_GIT_ORIGIN_URL_OUT
     ERROR_QUIET
-  ) # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
+  )
+  # if source code is non-git, OCV_GIT_ORIGIN_URL_OUT is empty
   if(NOT OCV_GIT_ORIGIN_URL_OUT)
-    message(STATUS "ocv_init_download: This is not a git repo. Download 3rd party resources from github. Or you can change to mirror using option -DOPENCV_MIRROR_FOR_GITHUB and -DOPENCV_MIRROR_FOR_GITHUBUSERCONTENT")
+    message(STATUS "ocv_init_download: This is not a git repo. Download 3rdparty resources from github by default. Or you can specify mirrors using option -DOPENCV_MIRROR_FOR_GITHUB_ARCHIVE and -DOPENCV_MIRROR_FOR_GITHUBUSERCONTENT")
+  else()
+    if(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
+        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE};archive;")
+    endif()
+    if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
+        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT};opencv;opencv_3rdparty;")
+    endif()
 
-  string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
-  if(NOT (${_found_gitcode} EQUAL -1))
-    ocv_init_download_for_gitcode(new_dl_link)
-    set(DL_URL ${new_dl_link} PARENT_SCOPE)
+    string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
+    if(NOT ${_found_gitcode} EQUAL -1)
+      if(NOT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
+        # e.g. https://github.com/opencv/ade/archive/
+        #   -> https://codechina.csdn.net/opencv/ade/-/archive/
+        set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "https://${OPENCV_MIRROR_GITCODE};-;archive;")
+      endif()
+      if(NOT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
+        # e.g. https://raw.githubusercontent.net/opencv/opencv_3rdparty/${COMMIT_ID}/${PACKAGE_NAME}/
+        #   -> https://gitcode.net/opencv/opencv_3rdparty/-/raw/${COMMIT_ID}/${PACKAGE_NAME}/
+        set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "https://${OPENCV_MIRROR_GITCODE};opencv;opencv_3rdparty;-;raw;")
+      endif()
+    endif()
+    message(STATUS "ocv_init_download: ${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE}")
+    message(STATUS "ocv_init_download: ${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT}")
   endif()
 endfunction()
 
@@ -156,7 +175,7 @@ function(ocv_download)
   endforeach()
 
   # replace download links with the mirrored one if detected
-  ocv_init_download()
+  ocv_download_link_replace()
 
   # Append filename to url if needed
   if(DL_RELATIVE_URL)

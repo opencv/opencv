@@ -150,6 +150,10 @@ ocv_cmake_eval(DEBUG_PRE ONCE)
 ocv_clear_vars(OpenCVModules_TARGETS)
 
 include(cmake/OpenCVDownload.cmake)
+# ----------------------------------------------------------------------------
+#  Initialize download in case mirror is used
+# ----------------------------------------------------------------------------
+ocv_init_download()
 
 set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
 
