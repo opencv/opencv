@@ -500,7 +500,6 @@ public:
     };
 
     struct Settings
-    class Backend
     {
         Settings() :
             jacobiScaling(false),
@@ -582,54 +581,14 @@ public:
         double initialLambda;
         double initialLmUpFactor;
         double initialLmDownFactor;
-    public:
-        virtual ~Backend() { }
-
-        // enables geodesic acceleration support in a backend, returns true on success
-        virtual bool enableGeo() = 0;
-
-        // calculates an energy and/or jacobian at probe param vector
-        virtual bool calcFunc(double& energy, bool calcEnergy = true, bool calcJacobian = false) = 0;
-
-        // adds x to current variables and writes the sum to probe var
-        // or to geodesic acceleration var if geo flag is set
-        virtual void currentOplusX(const Mat_<double>& x, bool geo = false) = 0;
-
-        // allocates jtj, jtb and other resources for objective function calculation, sets probeX to current X
-        virtual void prepareVars() = 0;
-        // returns a J^T*b vector (aka gradient)
-        virtual const Mat_<double> getJtb() = 0;
-        // returns a J^T*J diagonal vector
-        virtual const Mat_<double> getDiag() = 0;
-        // sets a J^T*J diagonal
-        virtual void setDiag(const Mat_<double>& d) = 0;
-        // performs jacobi scaling if the option is turned on
-        virtual void doJacobiScaling(const Mat_<double>& di) = 0;
-
-        // decomposes LevMarq matrix before solution
-        virtual bool decompose() = 0;
-        // solves LevMarq equation (J^T*J + lmdiag) * x = -right for current iteration using existing decomposition
-        // right can be equal to J^T*b for LevMarq equation or J^T*rvv for geodesic acceleration equation
-        virtual bool solveDecomposed(const Mat_<double>& right, Mat_<double>& x) = 0;
-
-        // calculates J^T*f(geo) where geo is geodesic acceleration variable
-        // this is used for J^T*rvv calculation for geodesic acceleration
-        // calculates J^T*rvv where rvv is second directional derivative of the function in direction v
-        // rvv = (f(x0 + v*h) - f(x0))/h - J*v)/h
-        // where v is a LevMarq equation solution
-        virtual bool calcJtbv(Mat_<double>& jtbv) = 0;
-
-        // sets current params vector to probe params
-        virtual void acceptProbe() = 0;
     };
 
-
-    Ptr<Backend> pBackend;
-
-    BaseLevMarq(Ptr<Backend> backend_) :
-        pBackend(backend_)
+    Ptr<LevMarqBackend> pBackend;
     Settings settings;
+
+    LevMarqBase(const Ptr<LevMarqBackend>& backend) :
         settings(),
+        pBackend(backend)
     { }
 
     virtual ~BaseLevMarq() { }
