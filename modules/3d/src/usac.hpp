@@ -48,45 +48,6 @@ public:
 
 };
 
-//struct UsacConfig
-//{ // in alphabetical order
-//    UsacConfig();
-//    double confidence;
-//    int loIterations;
-//    LocalOptimMethod loMethod;
-//    int loSampleSize;
-//    int maxNumHypothesisToTestBeforeRejection;
-//    int maxIterations;
-//    int maxIterationsBeforeLO;
-//    bool needMask;
-//    NeighborSearchMethod neighborsSearch;
-//    //! The number of threads to be used.
-//    //! (0 sets the value automatically, a negative number turns parallelization off)
-//    int numberOfThreads;
-//    int randomGeneratorState;
-//    SamplingMethod sampler;
-//    ScoreMethod score;
-//    double threshold;
-//
-//};
-
-//UsacConfig::UsacConfig()
-//{
-//    confidence = 0.999;
-//    loIterations = 5;
-//    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-//    loSampleSize = 14;
-//    maxNumHypothesisToTestBeforeRejection = 15;
-//    maxIterations = 2500;
-//    maxIterationsBeforeLO = 100;
-//    needMask = true;
-//    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-//    numberOfThreads = -1;
-//    randomGeneratorState = 0;
-//    sampler = SamplingMethod::SAMPLING_UNIFORM;
-//    score = ScoreMethod::SCORE_METHOD_RANSAC;
-//    threshold = 1.5;
-//}
 
 // Abstract Error class
 class Error : public Algorithm {

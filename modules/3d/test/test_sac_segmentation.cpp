@@ -14,27 +14,27 @@ int countNum(const vector<int> &m, int num)
     return t;
 }
 
-string getHeader(const SACSegmentation &s){
+string getHeader(const Ptr<SACSegmentation> &s){
     string r;
-    if(s.getNumberOfThreads() == -1)
+    if(s->getNumberOfThreads() == -1)
         r += "One thread ";
     else
-        r += std::to_string(s.getNumberOfThreads()) + "-thread ";
+        r += std::to_string(s->getNumberOfThreads()) + "-thread ";
 
-    if(s.getNumberOfModelsExpected() == 1)
+    if(s->getNumberOfModelsExpected() == 1)
         r += "single model segmentation ";
     else
-        r += std::to_string(s.getNumberOfModelsExpected()) + " models segmentation ";
+        r += std::to_string(s->getNumberOfModelsExpected()) + " models segmentation ";
 
-    if(s.getCustomModelConstraints() == nullptr)
+    if(s->getCustomModelConstraints() == nullptr)
         r += "without constraint:\n";
     else
         r += "with constraint:\n";
 
-    r += "Confidence: " + std::to_string(s.getConfidence()) + "\n";
-    r += "Max Iterations: " + std::to_string(s.getMaxIterations()) + "\n";
-    r += "Expected Models Number: " + std::to_string(s.getNumberOfModelsExpected()) + "\n";
-    r += "Distance Threshold: " + std::to_string(s.getDistanceThreshold());
+    r += "Confidence: " + std::to_string(s->getConfidence()) + "\n";
+    r += "Max Iterations: " + std::to_string(s->getMaxIterations()) + "\n";
+    r += "Expected Models Number: " + std::to_string(s->getNumberOfModelsExpected()) + "\n";
+    r += "Distance Threshold: " + std::to_string(s->getDistanceThreshold());
 
     return r;
 }
@@ -51,20 +51,20 @@ public:
     // Used to store point cloud, generated plane and model
     Mat pt_cloud, generated_pts, segmented_models;
     vector<int> label;
-    SACSegmentation sacSegmentation;
+    Ptr<SACSegmentation> sacSegmentation = SACSegmentation::create();
     SACSegmentation::ModelConstraintFunction model_constraint = nullptr;
     using CheckDiffFunction = std::function<bool(const Mat &, const Mat &)>;
 
     void singleModelSegmentation(int iter_num, const CheckDiffFunction &checkDiff, int idx)
     {
-        sacSegmentation.setSacMethodType(SAC_METHOD_RANSAC);
-        sacSegmentation.setConfidence(1);
-        sacSegmentation.setMaxIterations(iter_num);
-        sacSegmentation.setNumberOfModelsExpected(1);
+        sacSegmentation->setSacMethodType(SAC_METHOD_RANSAC);
+        sacSegmentation->setConfidence(1);
+        sacSegmentation->setMaxIterations(iter_num);
+        sacSegmentation->setNumberOfModelsExpected(1);
         //A point with a distance equal to the threshold is not considered an inliner point
-        sacSegmentation.setDistanceThreshold(thrs[idx] + 0.01);
+        sacSegmentation->setDistanceThreshold(thrs[idx] + 0.01);
 
-        int num = sacSegmentation.segment(pt_cloud, label, segmented_models);
+        int num = sacSegmentation->segment(pt_cloud, label, segmented_models);
 
         string header = getHeader(sacSegmentation);
 
@@ -107,13 +107,13 @@ public:
 
     void multiModelSegmentation(int iter_num, const CheckDiffFunction &checkDiff)
     {
-        sacSegmentation.setSacMethodType(SAC_METHOD_RANSAC);
-        sacSegmentation.setConfidence(1);
-        sacSegmentation.setMaxIterations(iter_num);
-        sacSegmentation.setNumberOfModelsExpected(models_num);
-        sacSegmentation.setDistanceThreshold(thrs[models_num - 1] + 0.01);
+        sacSegmentation->setSacMethodType(SAC_METHOD_RANSAC);
+        sacSegmentation->setConfidence(1);
+        sacSegmentation->setMaxIterations(iter_num);
+        sacSegmentation->setNumberOfModelsExpected(models_num);
+        sacSegmentation->setDistanceThreshold(thrs[models_num - 1] + 0.01);
 
-        int num = sacSegmentation.segment(pt_cloud, label, segmented_models);
+        int num = sacSegmentation->segment(pt_cloud, label, segmented_models);
 
         string header = getHeader(sacSegmentation);
 
@@ -152,7 +152,7 @@ public:
 
 TEST_F(SacSegmentationTest, PlaneSacSegmentation)
 {
-    sacSegmentation.setSacModelType(SAC_MODEL_PLANE);
+    sacSegmentation->setSacModelType(SAC_MODEL_PLANE);
     models = {
             {0, 0, 1, 0},
             {1, 0, 0, 0},
@@ -276,13 +276,13 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
 
             return square_cos_theta >= cos(radian_thr) * cos(radian_thr);
         };
-        sacSegmentation.setCustomModelConstraints(model_constraint);
+        sacSegmentation->setCustomModelConstraints(model_constraint);
         singleModelSegmentation(5000, planeCheckDiff, i);
     }
 
     pt_cloud.release();
-    sacSegmentation.setCustomModelConstraints(nullptr);
-    sacSegmentation.setNumberOfThreads(3);
+    sacSegmentation->setCustomModelConstraints(nullptr);
+    sacSegmentation->setNumberOfThreads(3);
 
     // Multi-plane segmentation
     for (int i = 0; i < models_num; i++)
@@ -295,7 +295,7 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
 
 TEST_F(SacSegmentationTest, SphereSacSegmentation)
 {
-    sacSegmentation.setSacModelType(cv::SAC_MODEL_SPHERE);
+    sacSegmentation->setSacModelType(cv::SAC_MODEL_SPHERE);
     models = {
             {15,  15,  30,  5},
             {-15, -15, -30, 8},
@@ -378,13 +378,13 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
             auto model_radius = (float) model[3];
             return model_radius <= constraint_radius;
         };
-        sacSegmentation.setCustomModelConstraints(model_constraint);
+        sacSegmentation->setCustomModelConstraints(model_constraint);
         singleModelSegmentation(10000, sphereCheckDiff, i);
     }
 
     pt_cloud.release();
-    sacSegmentation.setCustomModelConstraints(nullptr);
-    sacSegmentation.setNumberOfThreads(3);
+    sacSegmentation->setCustomModelConstraints(nullptr);
+    sacSegmentation->setNumberOfThreads(3);
 
     // Multi-sphere segmentation
     for (int i = 0; i < models_num; i++)

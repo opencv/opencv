@@ -4,7 +4,7 @@
 
 
 #include "../precomp.hpp"
-//#include "sac_segmentation.hpp"
+#include "sac_segmentation.hpp"
 #include "opencv2/3d/ptcloud.hpp"
 #include "ptcloud_utils.hpp"
 #include "../usac.hpp"
@@ -13,11 +13,11 @@ namespace cv {
 //    namespace _3d {
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////  SACSegmentation  ////////////////////////////////////////
+////////////////////////////////  SACSegmentationImpl  //////////////////////////////////////
 
 
 int
-SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model_coefficients)
+SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model_coefficients)
 {
     CV_CheckDepth(points.depth(), points.depth() == CV_32F,
             "Data with only depth CV_32F are supported");
@@ -30,8 +30,8 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
     int state = (int) rng_state;
     const int points_size = points.rows * points.cols / 3;
     const double _radius_min = radius_min, _radius_max = radius_max;
-    const ModelConstraintFunction& _custom_constraint = custom_model_constraints;
-    ModelConstraintFunction& constraint_func = custom_model_constraints;
+    const ModelConstraintFunction &_custom_constraint = custom_model_constraints;
+    ModelConstraintFunction &constraint_func = custom_model_constraints;
 
     // RANSAC
     using namespace usac;
@@ -74,11 +74,11 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
             non_min_solver = SphereModelNonMinimalSolver::create(points);
             error = SphereModelError::create(points);
             constraint_func = [_radius_min, _radius_max, _custom_constraint]
-                            (const std::vector<double> &model_coeffs) {
-                        double radius = model_coeffs[3];
-                        return radius >= _radius_min && radius <= _radius_max &&
-                               (!_custom_constraint || _custom_constraint(model_coeffs));
-                    };
+                    (const std::vector<double> &model_coeffs) {
+                double radius = model_coeffs[3];
+                return radius >= _radius_min && radius <= _radius_max &&
+                       (!_custom_constraint || _custom_constraint(model_coeffs));
+            };
             break;
         default:
             CV_Error(cv::Error::StsNotImplemented, "SAC_MODEL type is not implemented!");
@@ -139,7 +139,7 @@ SACSegmentation::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model
 
 //-------------------------- segment -----------------------
 int
-SACSegmentation::segment(InputArray input_pts, OutputArray labels,
+SACSegmentationImpl::segment(InputArray input_pts, OutputArray labels,
         OutputArray models_coefficients)
 {
     Mat points;

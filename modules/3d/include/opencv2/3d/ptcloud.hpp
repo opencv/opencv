@@ -15,8 +15,7 @@ namespace cv {
 //! type of the robust estimation algorithm
 enum SacMethod
 {
-    /** "Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and
-     * Automated Cartography", Martin A. Fischler and Robert C. Bolles, Comm. Of the ACM 24: 381–395, June 1981.
+    /** The RANSAC algorithm described in @cite fischler1981random.
      */
     SAC_METHOD_RANSAC,
     //    SAC_METHOD_MAGSAC,
@@ -30,13 +29,13 @@ enum SacMethod
 
 enum SacModelType
 {
-    /** The 3D PLANE model coefficients in list [a, b, c, d],
+    /** The 3D PLANE model coefficients in list **[a, b, c, d]**,
      corresponding to the coefficients of equation
-     ax + by + cz + d = 0. */
+     \f$ ax + by + cz + d = 0 \f$. */
     SAC_MODEL_PLANE,
-    /** The 3D SPHERE model coefficients in list [center_x, center_y, center_z, radius],
+    /** The 3D SPHERE model coefficients in list **[center_x, center_y, center_z, radius]**,
      corresponding to the coefficients of equation
-     (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2.*/
+     \f$ (x - center\_x)^2 + (y - center\_y)^2 + (z - center\_z)^2 = radius^2 \f$.*/
     SAC_MODEL_SPHERE,
     //    SAC_MODEL_CYLINDER,
 
@@ -62,221 +61,34 @@ inline int sacModelMinimumSampleSize(SacModelType model_type)
 
 /** @brief Sample Consensus algorithm segmentation of 3D point cloud model.
 
-The following example is to use the RANSAC algorithm
-for plane segmentation of a 3D point cloud.
-
-@code{.cpp}
-using namespace cv;
-
-int planeSegmentationUsingRANSAC(const Mat &pt_cloud,
-        Mat &plane_coeffs, vector<char> &labels) {
-
-    SACSegmentation sacSegmentation;
-    sacSegmentation.setSacModelType(SAC_MODEL_PLANE);
-    sacSegmentation.setSacMethodType(SAC_METHOD_RANSAC);
-    sacSegmentation.setDistanceThreshold(0.21);
-    // The maximum number of iterations to attempt.(default 1000)
-    sacSegmentation.setMaxIterations(1500);
-    sacSegmentation.setNumberOfModelsExpected(2);
-    // Number of final resultant models obtained by segmentation.
-    int model_cnt = sacSegmentation.segment(pt_cloud,
-            labels, plane_coeffs);
-
-    return model_cnt;
-}
-@endcode
+Example of segmenting plane from a 3D point cloud using the RANSAC algorithm:
+@snippet snippets/3d_sac_segmentation.cpp planeSegmentationUsingRANSAC
 
 @see
-Supported algorithms: enum SacMethod in ptcloud.hpp. \n
-Supported models: enum SacModelType in ptcloud.hpp.
+1. Supported algorithms: enum SacMethod in ptcloud.hpp.
+2. Supported models: enum SacModelType in ptcloud.hpp.
  */
 class CV_EXPORTS SACSegmentation : public Algorithm
 {
 public:
     /** @brief Custom function that take the model coefficients and return whether the model is acceptable or not.
 
-     The following example shows how to construct SACSegmentation::ModelConstraintFunction.
-     @code{.cpp}
-     bool customFunc(const std::vector<double> &model_coefficients) {
-        // check model_coefficients
-        // The plane needs to pass through the origin, i.e. ax+by+cz+d=0 --> d==0
-        return model_coefficients[3] == 0;
-     } // end of function customFunc()
-
-     void example() {
-        SACSegmentation::ModelConstraintFunction func_example1 = customFunc;
-        SACSegmentation::ModelConstraintFunction func_example2 =
-            [](const std::vector<double> &model_coefficients) {
-                // check model_coefficients
-                // The plane needs to pass through the origin, i.e. ax+by+cz+d=0 --> d==0
-                return model_coefficients[3] == 0;
-            };
-
-        float x0 = 0.0, y0 = 0.0, z0 = 0.0;
-        SACSegmentation::ModelConstraintFunction func_example3 =
-            [x0, y0, z0](const std::vector<double> &model_coeffs) -> bool {
-                // check model_coefficients
-                // The plane needs to pass through the point (x0, y0, z0), i.e. ax0+by0+cz0+d == 0
-                return model_coeffs[0]*x0 + model_coeffs[1]*y0 + model_coeffs[2]*z0
-                       + model_coeffs[3] == 0;
-            };
-
-         // ......
-
-     } // end of function example()
-
-     @endcode
+     Example of constructing SACSegmentation::ModelConstraintFunction:
+     @snippet snippets/3d_sac_segmentation.cpp usageExampleSacModelConstraintFunction
 
      @note The content of model_coefficients depends on the model.
      Refer to the comments inside enumeration type SacModelType.
      */
     using ModelConstraintFunction =
     std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
-    //using ModelConstraintFunctionPtr = bool (*)(const std::vector<double> &/*model_coefficients*/);
 
-    //! No-argument constructor using default configuration
-    SACSegmentation()
-            : sac_model_type(SAC_MODEL_PLANE), sac_method(SAC_METHOD_RANSAC), threshold(0.5),
-              radius_min(DBL_MIN), radius_max(DBL_MAX),
-              max_iterations(1000), confidence(0.999), number_of_models_expected(1),
-              number_of_threads(-1), rng_state(0),
-              custom_model_constraints()
-    {
-    }
+    //-------------------------- CREATE -----------------------
 
-    ~SACSegmentation() override = default;
+    static Ptr<SACSegmentation> create(SacModelType sac_model_type_ = SAC_MODEL_PLANE,
+            SacMethod sac_method_ = SAC_METHOD_RANSAC,
+            double threshold_ = 0.5, int max_iterations_ = 1000);
 
-    //-------------------------- Getter and Setter -----------------------
-
-    //! Set the type of sample consensus model to use.
-    inline void setSacModelType(SacModelType sac_model_type_)
-    {
-        sac_model_type = sac_model_type_;
-    }
-
-    //! Get the type of sample consensus model used.
-    inline SacModelType getSacModelType() const
-    {
-        return sac_model_type;
-    }
-
-    //! Set the type of sample consensus method to use.
-    inline void setSacMethodType(SacMethod sac_method_)
-    {
-        sac_method = sac_method_;
-    }
-
-    //! Get the type of sample consensus method used.
-    inline SacMethod getSacMethodType() const
-    {
-        return sac_method;
-    }
-
-    //! Set the distance to the model threshold.
-    inline void setDistanceThreshold(double threshold_)
-    {
-        threshold = threshold_;
-    }
-
-    //! Get the distance to the model threshold.
-    inline double getDistanceThreshold() const
-    {
-        return threshold;
-    }
-
-    //! Set the minimum and maximum radius limits for the model.
-    //! Only used for models whose model parameters include a radius.
-    inline void setRadiusLimits(double radius_min_, double radius_max_)
-    {
-        radius_min = radius_min_;
-        radius_max = radius_max_;
-    }
-
-    //! Get the minimum and maximum radius limits for the model.
-    inline void getRadiusLimits(double &radius_min_, double &radius_max_) const
-    {
-        radius_min_ = radius_min;
-        radius_max_ = radius_max;
-    }
-
-    //! Set the maximum number of iterations to attempt.
-    inline void setMaxIterations(int max_iterations_)
-    {
-        max_iterations = max_iterations_;
-    }
-
-    //! Get the maximum number of iterations to attempt.
-    inline int getMaxIterations() const
-    {
-        return max_iterations;
-    }
-
-    //! Set the confidence that ensure at least one of selections is an error-free set of data points.
-    inline void setConfidence(double confidence_)
-    {
-        confidence = confidence_;
-    }
-
-    //! Get the confidence that ensure at least one of selections is an error-free set of data points.
-    inline double getConfidence() const
-    {
-        return confidence;
-    }
-
-    //! Set the number of models expected.
-    inline void setNumberOfModelsExpected(int number_of_models_expected_)
-    {
-        number_of_models_expected = number_of_models_expected_;
-    }
-
-    //! Get the expected number of models.
-    inline int getNumberOfModelsExpected() const
-    {
-        return number_of_models_expected;
-    }
-
-    /**
-     * @brief Set the number of threads to be used.
-     *
-     * @param number_of_threads_ The number of threads to be used.
-     * (0 sets the value automatically, a negative number turns parallelization off)
-     *
-     * @note Not all SAC methods have a parallel implementation. Some will ignore this setting.
-     */
-    inline void setNumberOfThreads(int number_of_threads_)
-    {
-        number_of_threads = number_of_threads_;
-    }
-
-    // Get the number of threads to be used.
-    inline int getNumberOfThreads() const
-    {
-        return number_of_threads;
-    }
-
-    //! Set state used to initialize the RNG(Random Number Generator).
-    inline void setRandomGeneratorState(uint64 rng_state_)
-    {
-        rng_state = rng_state_;
-    }
-
-    //! Get state used to initialize the RNG(Random Number Generator).
-    inline uint64 getRandomGeneratorState() const
-    {
-        return rng_state;
-    }
-
-    //! Set custom model coefficient constraint function
-    inline void setCustomModelConstraints(const ModelConstraintFunction &custom_model_constraints_)
-    {
-        custom_model_constraints = custom_model_constraints_;
-    }
-
-    //! Get custom model coefficient constraint function
-    const ModelConstraintFunction &getCustomModelConstraints() const
-    {
-        return custom_model_constraints;
-    }
+    //-------------------------- SEGMENT -----------------------
 
     /**
      * @brief Execute segmentation using the sample consensus method.
@@ -290,51 +102,81 @@ public:
      * The coefficients for each model refer to the comments inside enumeration type SacModelType.
      * @return Number of final resultant models obtained by segmentation.
      */
-    int
-    segment(InputArray input_pts, OutputArray labels, OutputArray models_coefficients = noArray());
+    virtual int
+    segment(InputArray input_pts, OutputArray labels, OutputArray models_coefficients) = 0;
 
-protected:
+    //-------------------------- Getter and Setter -----------------------
 
-    //! The type of sample consensus model used.
-    SacModelType sac_model_type;
+    //! Set the type of sample consensus model to use.
+    virtual void setSacModelType(SacModelType sac_model_type_) = 0;
 
-    //! The type of sample consensus method used.
-    SacMethod sac_method;
+    //! Get the type of sample consensus model used.
+    virtual SacModelType getSacModelType() const = 0;
 
+    //! Set the type of sample consensus method to use.
+    virtual void setSacMethodType(SacMethod sac_method_) = 0;
+
+    //! Get the type of sample consensus method used.
+    virtual SacMethod getSacMethodType() const = 0;
+
+    //! Set the distance to the model threshold.
     //! Considered as inlier point if distance to the model less than threshold.
-    double threshold;
+    virtual void setDistanceThreshold(double threshold_) = 0;
 
-    //! The minimum and maximum radius limits for the model.
+    //! Get the distance to the model threshold.
+    virtual double getDistanceThreshold() const = 0;
+
+    //! Set the minimum and maximum radius limits for the model.
     //! Only used for models whose model parameters include a radius.
-    double radius_min, radius_max;
+    virtual void setRadiusLimits(double radius_min_, double radius_max_) = 0;
 
-    //!  The maximum number of iterations to attempt.
-    int max_iterations;
+    //! Get the minimum and maximum radius limits for the model.
+    virtual void getRadiusLimits(double &radius_min_, double &radius_max_) const = 0;
 
-    //! Confidence that ensure at least one of selections is an error-free set of data points.
-    double confidence;
+    //! Set the maximum number of iterations to attempt.
+    virtual void setMaxIterations(int max_iterations_) = 0;
 
-    //! Expected number of models.
-    int number_of_models_expected;
+    //! Get the maximum number of iterations to attempt.
+    virtual int getMaxIterations() const = 0;
 
-    //! The number of threads the scheduler should use, or a negative number if no parallelization is wanted.
-    int number_of_threads;
+    //! Set the confidence that ensure at least one of selections is an error-free set of data points.
+    virtual void setConfidence(double confidence_) = 0;
 
-    //! 64-bit value used to initialize the RNG(Random Number Generator).
-    uint64 rng_state;
+    //! Get the confidence that ensure at least one of selections is an error-free set of data points.
+    virtual double getConfidence() const = 0;
 
-    //! A user defined function that takes model coefficients and returns whether the model is acceptable or not.
-    ModelConstraintFunction custom_model_constraints;
+    //! Set the number of models expected.
+    virtual void setNumberOfModelsExpected(int number_of_models_expected_) = 0;
+
+    //! Get the expected number of models.
+    virtual int getNumberOfModelsExpected() const = 0;
 
     /**
-     * @brief Execute segmentation of a single model using the sample consensus method.
+     * @brief Set the number of threads to be used.
      *
-     * @param model_coeffs Point cloud data, it must be a 3xN CV_32F Mat.
-     * @param label label[i] is 1 means point i is inlier point of model
-     * @param model_coefficients The resultant model coefficients.
-     * @return number of model inliers
+     * @param number_of_threads_ The number of threads to be used.
+     * (0 sets the value automatically, a negative number turns parallelization off)
+     *
+     * @note Not all SAC methods have a parallel implementation. Some will ignore this setting.
      */
-    int segmentSingle(Mat &model_coeffs, std::vector<bool> &label, Mat &model_coefficients);
+    virtual void setNumberOfThreads(int number_of_threads_) = 0;
+
+    // Get the number of threads to be used.
+    virtual int getNumberOfThreads() const = 0;
+
+    //! Set state used to initialize the RNG(Random Number Generator).
+    virtual void setRandomGeneratorState(uint64 rng_state_) = 0;
+
+    //! Get state used to initialize the RNG(Random Number Generator).
+    virtual uint64 getRandomGeneratorState() const = 0;
+
+    //! Set custom model coefficient constraint function.
+    //! A custom function that takes model coefficients and returns whether the model is acceptable or not.
+    virtual void
+    setCustomModelConstraints(const ModelConstraintFunction &custom_model_constraints_) = 0;
+
+    //! Get custom model coefficient constraint function.
+    virtual const ModelConstraintFunction &getCustomModelConstraints() const = 0;
 
 };
 
