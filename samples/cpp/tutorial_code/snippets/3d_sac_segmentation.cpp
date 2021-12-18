@@ -13,6 +13,12 @@
 #include <opencv2/core.hpp>
 #include <opencv2/3d.hpp>
 
+bool customFunc(const std::vector<double> &model_coefficients);
+
+void usageExampleSacModelConstraintFunction();
+
+int planeSegmentationUsingRANSAC(const cv::Mat &pt_cloud,
+        std::vector<cv::Vec4d> &planes_coeffs, std::vector<char> &labels);
 
 //! [usageExampleSacModelConstraintFunction]
 bool customFunc(const std::vector<double> &model_coefficients)
