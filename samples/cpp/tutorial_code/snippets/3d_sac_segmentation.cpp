@@ -83,3 +83,8 @@ int planeSegmentationUsingRANSAC(const cv::Mat &pt_cloud,
     return model_cnt;
 }
 //! [planeSegmentationUsingRANSAC]
+
+int main()
+{
+
+}
