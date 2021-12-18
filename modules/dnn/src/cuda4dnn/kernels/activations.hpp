@@ -106,6 +106,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void tan(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
+    void celu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha);
+
+    template <class T>
+    void hardsigmoid(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha, T beta);
+
+    template <class T>
+    void selu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha, T gamma);
+
+    template <class T>
+    void thresholdedrelu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T alpha);
+
+    template <class T>
     void power(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T exp, T scale, T shift);
 
     template <class T>

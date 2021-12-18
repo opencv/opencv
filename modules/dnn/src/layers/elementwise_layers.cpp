@@ -71,6 +71,7 @@ namespace dnn
 
 using std::abs;
 using std::exp;
+using std::expm1;
 using std::tanh;
 using std::pow;
 using std::ceil;
@@ -728,6 +729,20 @@ struct BaseDefaultFunctor : public BaseFunctor
         return true;
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_HALIDE
+
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
     {
@@ -746,8 +761,6 @@ struct BaseDefaultFunctor : public BaseFunctor
     ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
     {
         CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
     }
 #endif
 
@@ -758,20 +771,6 @@ struct BaseDefaultFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_HALIDE
 
 private:
     static const char* const ocl_kernel_name;
@@ -822,15 +821,6 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         return std::make_shared<ngraph::op::Tanh>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -935,15 +925,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     }
 #endif  // HAVE_DNN_NGRAPH
 
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
-
     int64 getFLOPSPerElement() const { return 3; }
 };
 
@@ -995,15 +976,6 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
         return std::make_shared<ngraph::op::Sigmoid>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
 
     int64 getFLOPSPerElement() const { return 3; }
 };
@@ -1122,15 +1094,6 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
         return std::make_shared<ngraph::op::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -1261,15 +1224,6 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
         return log(x);
     }
 
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
-
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
@@ -1366,15 +1320,6 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
         return std::make_shared<ngraph::op::v0::Sqrt>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
 
     int64 getFLOPSPerElement() const { return 1; }
 };
@@ -1822,6 +1767,156 @@ struct TanFunctor : public BaseDefaultFunctor<TanFunctor>
 template<>
 const char* const BaseDefaultFunctor<TanFunctor>::ocl_kernel_name = "TanForward";
 
+struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
+{
+    typedef CeluLayer Layer;
+
+    float alpha;
+
+    explicit CeluFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return max(0.f, x) + min(0.f, alpha * expm1(x / alpha));
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::CeluOp>(target, stream, alpha);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<CeluFunctor>::ocl_kernel_name = "CeluForward";
+
+struct HardSigmoidFunctor : public BaseDefaultFunctor<HardSigmoidFunctor>
+{
+    typedef HardSigmoidLayer Layer;
+
+    float alpha;
+    float beta;
+
+    explicit HardSigmoidFunctor(float alpha_ = 0.2f, float beta_ = 0.5f) : alpha(alpha_), beta(beta_) {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return max(0.f, min(1.f, alpha * x + beta));
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
+        kernel.set(4, beta);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::HardSigmoidOp>(target, stream, alpha, beta);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<HardSigmoidFunctor>::ocl_kernel_name = "HardSigmoidForward";
+
+struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
+{
+    typedef SeluLayer Layer;
+
+    float alpha;
+    float gamma;
+
+    explicit SeluFunctor(float alpha_ = 1.67326319217681884765625f,
+                         float gamma_ = 1.05070102214813232421875f) : alpha(alpha_), gamma(gamma_) {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return gamma * (x > 0.f ? x : alpha * expm1(x));
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
+        kernel.set(4, gamma);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::SeluOp>(target, stream, alpha, gamma);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<SeluFunctor>::ocl_kernel_name = "SeluForward";
+
+struct ThresholdedReluFunctor : public BaseDefaultFunctor<ThresholdedReluFunctor>
+{
+    typedef ThresholdedReluLayer Layer;
+
+    float alpha;
+
+    explicit ThresholdedReluFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return x > alpha ? x : 0.f;
+    }
+
+    inline void setKernelParams(ocl::Kernel& kernel) const
+    {
+        kernel.set(3, alpha);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ThresholdedReluOp>(target, stream, alpha);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<ThresholdedReluFunctor>::ocl_kernel_name = "ThresholdedReluForward";
+
 struct PowerFunctor : public BaseFunctor
 {
     typedef PowerLayer Layer;
@@ -2073,15 +2168,6 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
         return std::make_shared<ngraph::op::v0::Exp>(scale_shift);
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_WEBNN
-    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-        ml::Operand operand;
-        return operand;
-    }
-#endif
 
     int64 getFLOPSPerElement() const { return 3; }
 };
@@ -2485,6 +2571,50 @@ Ptr<TanLayer> TanLayer::create(const LayerParams& params)
 {
     Ptr<TanLayer> l(new ElementWiseLayer<TanFunctor>());
     l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<CeluLayer> CeluLayer::create(const LayerParams& params)
+{
+    float alpha = params.get<float>("alpha", 1.f);
+    Ptr<CeluLayer> l(new ElementWiseLayer<CeluFunctor>(CeluFunctor(alpha)));
+    l->setParamsFrom(params);
+    l->alpha = alpha;
+
+    return l;
+}
+
+Ptr<HardSigmoidLayer> HardSigmoidLayer::create(const LayerParams& params)
+{
+    float alpha = params.get<float>("alpha", 0.2f);
+    float beta = params.get<float>("beta", 0.5f);
+    Ptr<HardSigmoidLayer> l(new ElementWiseLayer<HardSigmoidFunctor>(HardSigmoidFunctor(alpha, beta)));
+    l->setParamsFrom(params);
+    l->alpha = alpha;
+    l->beta = beta;
+
+    return l;
+}
+
+Ptr<SeluLayer> SeluLayer::create(const LayerParams& params)
+{
+    float alpha = params.get<float>("alpha", 1.67326319217681884765625f);
+    float gamma = params.get<float>("gamma", 1.05070102214813232421875f);
+    Ptr<SeluLayer> l(new ElementWiseLayer<SeluFunctor>(SeluFunctor(alpha, gamma)));
+    l->setParamsFrom(params);
+    l->alpha = alpha;
+    l->gamma = gamma;
+
+    return l;
+}
+
+Ptr<ThresholdedReluLayer> ThresholdedReluLayer::create(const LayerParams& params)
+{
+    float alpha = params.get<float>("alpha", 1.f);
+    Ptr<ThresholdedReluLayer> l(new ElementWiseLayer<ThresholdedReluFunctor>(ThresholdedReluFunctor(alpha)));
+    l->setParamsFrom(params);
+    l->alpha = alpha;
 
     return l;
 }
