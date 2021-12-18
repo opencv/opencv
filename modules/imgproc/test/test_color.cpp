@@ -3203,6 +3203,8 @@ TEST(ImgProc_RGB2Lab, NaN_21111)
     src(0, 1) = src(0, 28) = src(0, 82) = src(0, 109) = cv::Vec3f(0, kNaN, 0);
     src(0, 2) = src(0, 29) = src(0, 83) = src(0, 110) = cv::Vec3f(kNaN, 0, 0);
     EXPECT_NO_THROW(cvtColor(src, dst, COLOR_RGB2Lab));
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_RGB2Luv));
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_Luv2RGB));
 
 #if 0  // no NaN propagation guarantee
     for (int i = 0; i < 20; ++i)

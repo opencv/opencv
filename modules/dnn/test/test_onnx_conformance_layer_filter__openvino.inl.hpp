@@ -629,35 +629,23 @@ CASE(test_eyelike_with_dtype)
 CASE(test_eyelike_without_dtype)
     // no filter
 CASE(test_flatten_axis0)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_flatten_axis1)
     // no filter
 CASE(test_flatten_axis2)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_flatten_axis3)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_flatten_default_axis)
     // no filter
 CASE(test_flatten_negative_axis1)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_flatten_negative_axis2)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_flatten_negative_axis3)
     // no filter
 CASE(test_flatten_negative_axis4)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP;
-#endif
+    // no filter
 CASE(test_floor)
     // no filter
 CASE(test_floor_example)

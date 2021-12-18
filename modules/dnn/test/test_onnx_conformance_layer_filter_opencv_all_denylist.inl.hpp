@@ -43,12 +43,6 @@
 "test_castlike_STRING_to_FLOAT_expanded",
 "test_concat_1d_axis_negative_1",
 "test_div_uint8",  // output type mismatch
-"test_flatten_axis0",
-"test_flatten_axis2",
-"test_flatten_axis3",
-"test_flatten_negative_axis1",
-"test_flatten_negative_axis2",
-"test_flatten_negative_axis4",
 "test_logsoftmax_default_axis",
 "test_maxpool_2d_dilations",
 "test_maxpool_2d_same_lower",
