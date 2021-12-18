@@ -499,8 +499,89 @@ public:
         double energy;
     };
 
+    struct Settings
     class Backend
     {
+        Settings() :
+            jacobiScaling(false),
+            upDouble(true),
+            useStepQuality(true),
+            clampDiagonal(true),
+            stepNormInf(false),
+            checkRelEnergyChange(true),
+            checkMinGradient(true),
+            checkStepNorm(true),
+            geodesic(false),
+            hGeo(1e-4),
+            geoScale(0.5),
+            stepNormTolerance(1e-6),
+            relEnergyDeltaTolerance(1e-6),
+            minGradientTolerance(1e-6),
+            smallEnergyTolerance(0), // not used by default
+            maxIterations(500),
+            initialLambda(0.0001),
+            initialLmUpFactor(2.0),
+            initialLmDownFactor(3.0)
+        { }
+
+        Settings& jacobiScalingS          (bool         v) { jacobiScaling           = v; return *this; }
+        Settings& upDoubleS               (bool         v) { upDouble                = v; return *this; }
+        Settings& useStepQualityS         (bool         v) { useStepQuality          = v; return *this; }
+        Settings& clampDiagonalS          (bool         v) { clampDiagonal           = v; return *this; }
+        Settings& stepNormInfS            (bool         v) { stepNormInf             = v; return *this; }
+        Settings& checkRelEnergyChangeS   (bool         v) { checkRelEnergyChange    = v; return *this; }
+        Settings& checkMinGradientS       (bool         v) { checkMinGradient        = v; return *this; }
+        Settings& checkStepNormS          (bool         v) { checkStepNorm           = v; return *this; }
+        Settings& geodesicS               (bool         v) { geodesic                = v; return *this; }
+        Settings& hGeoS                   (double       v) { hGeo                    = v; return *this; }
+        Settings& geoScaleS               (double       v) { geoScale                = v; return *this; }
+        Settings& stepNormToleranceS      (double       v) { stepNormTolerance       = v; return *this; }
+        Settings& relEnergyDeltaToleranceS(double       v) { relEnergyDeltaTolerance = v; return *this; }
+        Settings& minGradientToleranceS   (double       v) { minGradientTolerance    = v; return *this; }
+        Settings& smallEnergyToleranceS   (double       v) { smallEnergyTolerance    = v; return *this; }
+        Settings& maxIterationsS          (unsigned int v) { maxIterations           = v; return *this; }
+        Settings& initialLambdaS          (double       v) { initialLambda           = v; return *this; }
+        Settings& initialLmUpFactorS      (double       v) { initialLmUpFactor       = v; return *this; }
+        Settings& initialLmDownFactorS    (double       v) { initialLmDownFactor     = v; return *this; }
+
+        // normalize jacobian columns for better conditioning
+        // slows down sparse solver, but maybe this'd be useful for some other solver
+        bool jacobiScaling;
+        // double upFactor until the probe is successful
+        bool upDouble;
+        // use stepQuality metrics for steps down
+        bool useStepQuality;
+        // clamp diagonal values added to J^T*J to pre-defined range of values
+        bool clampDiagonal;
+        // to use squared L2 norm or Inf norm for step size estimation
+        bool stepNormInf;
+        // to use relEnergyDeltaTolerance or not
+        bool checkRelEnergyChange;
+        // to use minGradientTolerance or not
+        bool checkMinGradient;
+        // to use stepNormTolerance or not
+        bool checkStepNorm;
+        // to use geodesic acceleration or not
+        bool geodesic;
+        // second directional derivative approximation step for geodesic acceleration
+        double hGeo;
+        // how much of geodesic acceleration is used
+        double geoScale;
+        // optimization stops when norm2(dx) drops below this value
+        double stepNormTolerance;
+        // optimization stops when relative energy change drops below this value
+        double relEnergyDeltaTolerance;
+        // optimization stops when max gradient value (J^T*b vector) drops below this value
+        double minGradientTolerance;
+        // optimization stops when energy drops below this value
+        double smallEnergyTolerance;
+        // optimization stops after a number of iterations performed
+        unsigned int maxIterations;
+
+        // LevMarq up and down params
+        double initialLambda;
+        double initialLmUpFactor;
+        double initialLmDownFactor;
     public:
         virtual ~Backend() { }
 
@@ -542,68 +623,13 @@ public:
         virtual void acceptProbe() = 0;
     };
 
-    // normalize jacobian columns for better conditioning
-    // slows down sparse solver, but maybe this'd be useful for some other solver
-    bool jacobiScaling;
-    // double upFactor until the probe is successful
-    bool upDouble;
-    // use stepQuality metrics for steps down
-    bool useStepQuality;
-    // clamp diagonal values added to J^T*J to pre-defined range of values
-    bool clampDiagonal;
-    // to use squared L2 norm or Inf norm for step size estimation
-    bool stepNormInf;
-    // to use relEnergyDeltaTolerance or not
-    bool checkRelEnergyChange;
-    // to use minGradientTolerance or not
-    bool checkMinGradient;
-    // to use stepNormTolerance or not
-    bool checkStepNorm;
-    // to use geodesic acceleration or not
-    bool geodesic;
-    // second directional derivative approximation step for geodesic acceleration
-    double hGeo;
-    // how much of geodesic acceleration is used
-    double geoScale;
-    // optimization stops when norm2(dx) drops below this value
-    double stepNormTolerance;
-    // optimization stops when relative energy change drops below this value
-    double relEnergyDeltaTolerance;
-    // optimization stops when max gradient value (J^T*b vector) drops below this value
-    double minGradientTolerance;
-    // optimization stops when energy drops below this value
-    double smallEnergyTolerance;
-    // optimization stops after a number of iterations performed
-    unsigned int maxIterations;
-
-    // LevMarq up and down params
-    double initialLambdaLevMarq;
-    double initialLmUpFactor;
-    double initialLmDownFactor;
 
     Ptr<Backend> pBackend;
 
     BaseLevMarq(Ptr<Backend> backend_) :
-        jacobiScaling(false),
-        upDouble(true),
-        useStepQuality(true),
-        clampDiagonal(true),
-        stepNormInf(false),
-        checkRelEnergyChange(true),
-        checkMinGradient(true),
-        checkStepNorm(true),
-        geodesic(false),
-        hGeo(1e-4),
-        geoScale(0.5),
-        stepNormTolerance(1e-6),
-        relEnergyDeltaTolerance(1e-6),
-        minGradientTolerance(1e-6),
-        smallEnergyTolerance(0), // not used by default
-        maxIterations(500),
-        initialLambdaLevMarq(0.0001),
-        initialLmUpFactor(2.0),
-        initialLmDownFactor(3.0),
         pBackend(backend_)
+    Settings settings;
+        settings(),
     { }
 
     virtual ~BaseLevMarq() { }
