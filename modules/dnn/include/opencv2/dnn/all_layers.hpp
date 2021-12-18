@@ -738,6 +738,40 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TanLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CeluLayer : public ActivationLayer
+    {
+    public:
+        float alpha;
+
+        static Ptr<CeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HardSigmoidLayer : public ActivationLayer
+    {
+    public:
+        float alpha;
+        float beta;
+
+        static Ptr<HardSigmoidLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SeluLayer : public ActivationLayer
+    {
+    public:
+        float alpha;
+        float gamma;
+
+        static Ptr<SeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ThresholdedReluLayer : public ActivationLayer
+    {
+    public:
+        float alpha;
+
+        static Ptr<ThresholdedReluLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:

@@ -234,6 +234,26 @@ void tan(const Stream& stream, Span<T> output, View<T> input) {
 }
 
 template <class T>
+void celu(const Stream& stream, Span<T> output, View<T> input, T alpha) {
+    generic_op<T, CeluFunctor<T>>(stream, output, input, {alpha});
+}
+
+template <class T>
+void hardsigmoid(const Stream& stream, Span<T> output, View<T> input, T alpha, T beta) {
+    generic_op<T, HardSigmoidFunctor<T>>(stream, output, input, {alpha, beta});
+}
+
+template <class T>
+void selu(const Stream& stream, Span<T> output, View<T> input, T alpha, T gamma) {
+    generic_op<T, SeluFunctor<T>>(stream, output, input, {alpha, gamma});
+}
+
+template <class T>
+void thresholdedrelu(const Stream& stream, Span<T> output, View<T> input, T alpha) {
+    generic_op<T, ThresholdedReluFunctor<T>>(stream, output, input, {alpha});
+}
+
+template <class T>
 void abs(const Stream& stream, Span<T> output, View<T> input) {
     generic_op<T, AbsFunctor<T>>(stream, output, input);
 }
@@ -286,6 +306,10 @@ template void sinh<__half>(const Stream&, Span<__half>, View<__half>);
 template void softplus<__half>(const Stream&, Span<__half>, View<__half>);
 template void softsign<__half>(const Stream&, Span<__half>, View<__half>);
 template void tan<__half>(const Stream&, Span<__half>, View<__half>);
+template void celu<__half>(const Stream&, Span<__half>, View<__half>, __half);
+template void hardsigmoid<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
+template void selu<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
+template void thresholdedrelu<__half>(const Stream&, Span<__half>, View<__half>, __half);
 template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
 template void exp<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 #endif
@@ -321,6 +345,10 @@ template void sinh<float>(const Stream&, Span<float>, View<float>);
 template void softplus<float>(const Stream&, Span<float>, View<float>);
 template void softsign<float>(const Stream&, Span<float>, View<float>);
 template void tan<float>(const Stream&, Span<float>, View<float>);
+template void celu<float>(const Stream&, Span<float>, View<float>, float);
+template void hardsigmoid<float>(const Stream&, Span<float>, View<float>, float, float);
+template void selu<float>(const Stream&, Span<float>, View<float>, float, float);
+template void thresholdedrelu<float>(const Stream&, Span<float>, View<float>, float);
 template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 template void exp<float>(const Stream&, Span<float>, View<float>, float, float);
 
