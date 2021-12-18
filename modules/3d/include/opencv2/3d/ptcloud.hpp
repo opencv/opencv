@@ -41,23 +41,6 @@ enum SacModelType
 
 };
 
-/**
- *
- * @param model_type 3D Model
- * @return At least a few are needed to determine a model.
- */
-inline int sacModelMinimumSampleSize(SacModelType model_type)
-{
-    switch (model_type)
-    {
-        case SAC_MODEL_PLANE:
-            return 3;
-        case SAC_MODEL_SPHERE:
-            return 4;
-        default:
-            CV_Error(cv::Error::StsNotImplemented, "SacModel Minimum Sample Size not defined!");
-    }
-}
 
 /** @brief Sample Consensus algorithm segmentation of 3D point cloud model.
 
