@@ -286,7 +286,7 @@ typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
 typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 
 
-static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const int volumeUnitSize)
+static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const float volumeUnitSize)
 {
     return cv::Vec3i(
         cvFloor(point.x / volumeUnitSize),
@@ -294,7 +294,7 @@ static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const int volumeUnitSiz
         cvFloor(point.z / volumeUnitSize));
 }
 
-static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const int volumeUnitSize)
+static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const float volumeUnitSize)
 {
     return cv::Point3f(
         volumeUnitIdx[0] * volumeUnitSize,

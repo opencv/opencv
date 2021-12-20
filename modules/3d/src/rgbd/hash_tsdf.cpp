@@ -193,6 +193,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
                 Vec3i lower_bound = this->_volumeToVolumeUnitIdx(volPoint - truncPt);
                 Vec3i upper_bound = this->_volumeToVolumeUnitIdx(volPoint + truncPt);
 
+                //std::cout << volumeUnitSize << " ";
                 for (int i = lower_bound[0]; i <= upper_bound[0]; i++)
                     for (int j = lower_bound[1]; j <= upper_bound[1]; j++)
                         for (int k = lower_bound[2]; k <= upper_bound[2]; k++)

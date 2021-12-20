@@ -218,6 +218,7 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
+    reset();
 }
 
 HashTsdfVolume::~HashTsdfVolume() {}
@@ -244,9 +245,8 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
     }
 
-    int frameId = lastVolIndex + 1;
-    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, frameId, depth, pixNorms, volUnitsData, volumeUnits);
-
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, pixNorms, volUnitsData, volumeUnits);
+    lastFrameId++;
 
 }
 
@@ -280,6 +280,7 @@ void HashTsdfVolume::reset()
 {
     CV_TRACE_FUNCTION();
     lastVolIndex = 0;
+    lastFrameId = 0;
     volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
             TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);

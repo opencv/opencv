@@ -311,12 +311,12 @@ float VolumeSettingsImpl::getTruncatedDistance() const
 
 void VolumeSettingsImpl::setTruncateThreshold(float val)
 {
-    this->truncatedDistance = val;
+    this->truncateThreshold = val;
 }
 
 float VolumeSettingsImpl::getTruncateThreshold() const
 {
-    return this->truncatedDistance;
+    return this->truncateThreshold;
 }
 
 void VolumeSettingsImpl::setMaxWeight(int val)

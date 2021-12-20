@@ -620,10 +620,22 @@ void _integrateRGBVolumeUnit(
 
 // Integrate
 
+
+
 void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-               InputArray _depth, InputArray _pixNorms, InputArray _volume)
+    InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    std::cout << "integrateVolumeUnit" << std::endl;
+    Matx44f volumePose;
+    settings.getVolumePose(volumePose);
+    integrateTsdfVolumeUnit(settings, volumePose, cameraPose, _depth, _pixNorms, _volume);
+}
+
+
+void integrateTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+{
+    //std::cout << "integrateTsdfVolumeUnit" << std::endl;
 
     Depth depth = _depth.getMat();
     Mat volume = _volume.getMat();
@@ -639,9 +651,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
     const Point3i volResolution = Point3i(resolution);
     float voxelSize = settings.getVoxelSize();
 
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    const Affine3f pose = Affine3f(_pose);
+    const Affine3f pose = Affine3f(volumePose);
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
     Matx33f intr;
@@ -781,6 +791,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
                     float sdf = pixNorm * (v * dfac - zCamSpace);
                     // possible alternative is:
                     // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
+
                     if (sdf >= -truncDist)
                     {
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
@@ -862,11 +873,11 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
                     if (v == 0) {
                         continue;
                     }
-
                     int _u = projected.x;
                     int _v = projected.y;
                     if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
+
                     float pixNorm = pixNorms.at<float>(_v, _u);
 
                     // difference between distances of point and of surface to camera
@@ -875,8 +886,6 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
                     // kftype sdf = norm(camSpacePt)*(v*dfac/camSpacePt.z - 1);
                     if (sdf >= -truncDist)
                     {
-                        //std::cout << sdf << " " << -truncDist  << " " << truncDistInv << std::endl;
-
                         TsdfType tsdf = floatToTsdf(fmin(1.f, sdf * truncDistInv));
 
                         TsdfVoxel& voxel = volDataY[z * volStrides[2]];
@@ -893,12 +902,13 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
     };
 #endif
     parallel_for_(integrateRange, IntegrateInvoker);
+    //IntegrateInvoker(integrateRange);
 }
 
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    std::cout << "ocl_integrateVolumeUnit" << std::endl;
+    std::cout << "ocl_integrateTsdfVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
     //CV_UNUSED(frameId);

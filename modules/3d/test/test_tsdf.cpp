@@ -273,7 +273,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = false;
+static const bool display = true;
 static const bool parallelCheck = false;
 
 class _Settings
@@ -424,7 +424,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
     vs.getCameraIntrinsics(intr);
-    bool onlySemisphere = true;
+    bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -437,13 +437,23 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     OdometryFrame odf;
     odf.setDepth(depth);
 
+    _Settings settings(true, false);
+
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+            if (true)
+            {
+                volume.integrate(depth, poses[0].matrix);
+                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+            }
+            else
+            {
+                settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+                settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, normals);
+            }
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {

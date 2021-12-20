@@ -166,8 +166,13 @@ void _integrateRGBVolumeUnit(
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume);
 
 
-void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-                         InputArray _depth, InputArray _pixNorms, InputArray _volume);
+void integrateTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volume);
+
+void integrateTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+    InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
 
 void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
