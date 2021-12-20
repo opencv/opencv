@@ -2,12 +2,12 @@
 #include "opencv_lapack.h"
 
 #ifndef LAPACK_GLOBAL
-// If lapack version <= 3.4.0 
+// If lapack version <= 3.4.0
 #ifdef LAPACK_NAME
 // If lapack version == 3.4.0
 #define LAPACK_GLOBAL(name,NAME) LAPACK_NAME(name,NAME)
 #else
-// If lapack version < 3.4.0 
+// If lapack version < 3.4.0
 #error Developper needs to figure this out as both LAPACK_GLOBAL and LAPACK_NAME are undefined
 #endif
 #endif
