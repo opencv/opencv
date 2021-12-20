@@ -666,6 +666,10 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
             }
         }
+        if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
+        {
+            header.dwaCompressionLevel() = params[i + 1];
+        }
     }
 
     if( channels == 3 || channels == 4 )
