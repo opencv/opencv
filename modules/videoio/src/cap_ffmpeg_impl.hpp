@@ -67,6 +67,10 @@
 #ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
 #define CV_UNUSED(name) (void)name
 #endif
+#ifndef CV_Assert  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
+#include <assert.h>
+#define CV_Assert(expr) assert(expr)
+#endif
 
 #ifdef __cplusplus
 extern "C" {
