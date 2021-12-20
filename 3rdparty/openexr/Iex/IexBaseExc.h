@@ -1,37 +1,7 @@
-///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
-// Digital Ltd. LLC
-// 
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// *       Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-// *       Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-// *       Neither the name of Industrial Light & Magic nor the names of
-// its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) Contributors to the OpenEXR Project.
 //
-///////////////////////////////////////////////////////////////////////////
-
 
 #ifndef INCLUDED_IEXBASEEXC_H
 #define INCLUDED_IEXBASEEXC_H
@@ -57,7 +27,7 @@ IEX_INTERNAL_NAMESPACE_HEADER_ENTER
 // Our most basic exception class
 //-------------------------------
 
-class BaseExc: public std::exception
+class IEX_EXPORT_TYPE BaseExc: public std::exception
 {
   public:
 
@@ -65,18 +35,23 @@ class BaseExc: public std::exception
     // Constructors and destructor
     //----------------------------
 
-    IEX_EXPORT BaseExc (const char *s = 0) throw();     // std::string (s)
-    IEX_EXPORT BaseExc (const std::string &s) throw();  // std::string (s)
-    IEX_EXPORT BaseExc (std::stringstream &s) throw();  // std::string (s.str())
+    IEX_EXPORT BaseExc (const char *s = nullptr);
+    IEX_EXPORT BaseExc (const std::string &s);
+    IEX_EXPORT BaseExc (std::string &&s); // not noexcept because of stacktrace
+    IEX_EXPORT BaseExc (std::stringstream &s);
 
-    IEX_EXPORT BaseExc (const BaseExc &be) throw();
-    IEX_EXPORT virtual ~BaseExc () throw ();
+    IEX_EXPORT BaseExc (const BaseExc &be);
+    IEX_EXPORT BaseExc (BaseExc &&be) noexcept;
+    IEX_EXPORT virtual ~BaseExc () noexcept;
+
+    IEX_EXPORT BaseExc & operator = (const BaseExc& be);
+    IEX_EXPORT BaseExc & operator = (BaseExc&& be) noexcept;
 
     //---------------------------------------------------
     // what() method -- e.what() returns _message.c_str()
     //---------------------------------------------------
 
-    IEX_EXPORT virtual const char * what () const throw ();
+    IEX_EXPORT virtual const char * what () const noexcept;
 
 
     //--------------------------------------------------
@@ -105,7 +80,7 @@ class BaseExc: public std::exception
     // Access to the string representation of the message
     //---------------------------------------------------
 
-    IEX_EXPORT const std::string &  message () const;
+    IEX_EXPORT const std::string &  message () const noexcept;
 
     //--------------------------------------------------
     // Stack trace for the point at which the exception
@@ -114,12 +89,12 @@ class BaseExc: public std::exception
     // has been installed (see below, setStackTracer()).
     //--------------------------------------------------
 
-    IEX_EXPORT const std::string &  stackTrace () const;
+    IEX_EXPORT const std::string &  stackTrace () const noexcept;
 
   private:
 
-    std::string                     _message;
-    std::string                     _stackTrace;
+    std::string _message;
+    std::string _stackTrace;
 };
 
 
@@ -129,15 +104,32 @@ class BaseExc: public std::exception
 //-----------------------------------------------------
 
 #define DEFINE_EXC_EXP(exp, name, base)                             \
-    class name: public base                                         \
+    class IEX_EXPORT_TYPE name: public base                         \
     {                                                               \
       public:                                                       \
-        exp name()                         throw(): base (0)    {}  \
-        exp name (const char* text)        throw(): base (text) {}  \
-        exp name (const std::string &text) throw(): base (text) {}  \
-        exp name (std::stringstream &text) throw(): base (text) {}  \
-        exp ~name() throw() { }                                     \
+        exp name();                                                 \
+        exp name (const char* text);                                \
+        exp name (const std::string &text);                         \
+        exp name (std::string &&text);                              \
+        exp name (std::stringstream &text);                         \
+        exp name (const name &other);                               \
+        exp name (name &&other) noexcept;                           \
+        exp name& operator = (name &other);                         \
+        exp name& operator = (name &&other) noexcept;               \
+        exp ~name() noexcept;                                       \
     };
+
+#define DEFINE_EXC_EXP_IMPL(exp, name, base)                     \
+exp name::name () : base () {}                                   \
+exp name::name (const char* text) : base (text) {}               \
+exp name::name (const std::string& text) : base (text) {}        \
+exp name::name (std::string&& text) : base (std::move (text)) {} \
+exp name::name (std::stringstream& text) : base (text) {}        \
+exp name::name (const name &other) : base (other) {}             \
+exp name::name (name &&other) noexcept : base (other) {}         \
+exp name& name::operator = (name &other) { base::operator=(other); return *this; } \
+exp name& name::operator = (name &&other) noexcept { base::operator=(other); return *this; } \
+exp name::~name () noexcept {}
 
 // For backward compatibility.
 #define DEFINE_EXC(name, base) DEFINE_EXC_EXP(, name, base)

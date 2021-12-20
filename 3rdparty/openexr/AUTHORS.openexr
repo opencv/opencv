@@ -1,49 +1,67 @@
-Developers:
------------
+This is a list of contributors to the OpenEXR project, sorted
+alphabetically by first name.
 
-Florian Kainz <kainz@ilm.com>
-Rod Bogart <rgb@ilm.com>
-Drew Hess <dhess@ilm.com>
-Paul Schneider <paultschneider@mac.com>
-Bill Anderson <wja@ilm.com>
-Wojciech Jarosz <wjarosz@ucsd.edu>
-Andrew Kunz <akunz@ilm.com>
-Piotr Stanczyk <pstanczyk@ilm.com>
-Peter Hillman <peterh@weta.co.nz>
-Nick Porcino <nick.porcino@gmail.com>
-Kimball Thurston
+If you know of missing, please email: info@openexr.com.
 
-Contributors:
--------------
-
-Simon Green <SGreen@nvidia.com>
-Rito Trevino <etrevino@ilm.com>
-Josh Pines
-Christian Rouet
-Rodrigo Damazio <rdamazio@lsi.usp.br>
-Greg Ward <gward@lmi.net>
-Joseph Goldstone <joseph@lp.com>
-Loren Carpenter, Pixar Animation Studios
-Nicholas Yue <yue.nicholas@gmail.com>
-Yunfeng Bai (ILM)
-Pascal Jette (Autodesk)
-Karl Rasche, DreamWorks Animation <Karl.Rasche@dreamworks.com>
-
-Win32 build system:
--------------------
-
-Nick Porcino <NPorcino@lucasarts.com>
-Kimball Thurston
-
-Win32 port contributors:
-------------------------
-
-Dustin Graves <dgraves@computer.org>
-Jukka Liimatta <jukka.liimatta@twilight3d.com>
-Baumann Konstantin <Konstantin.Baumann@hpi.uni-potsdam.de>
-Daniel Koch <daniel@eyeonline.com>
-E. Scott Larsen <larsene@cs.unc.edu>
-stephan mantler <step@acm.org>
-Andreas Kahler <AKahler@nxn-software.com>
-Frank Jargstorff <fjargstorff@nvidia.com>
-Lutz Latta
+* Aloys Baillet
+* Andre Mazzone
+* Andrew Kunz
+* Arkady Shapkin
+* Arkell Rasiah
+* Brendan Bolles
+* Cary Phillips
+* Christina Tempelaar-Lietz
+* Christopher Horvath
+* Christopher Kulla
+* Daniel Kaneider
+* Darby Johnston
+* Drew Hess
+* Ed Hanway
+* Edward Kmett
+* Eric Sommerlade
+* Eric Wimmer
+* E Sommerlade
+* Florian Kainz
+* Halfdan Ingvarsson
+* Harry Mallon
+* Ibraheem Alhashim
+* Jack Kingsman
+* Jamie Kenyon
+* Jan Tojnar
+* Ji Hun Yu
+* John Loy
+* John Mertic
+* Jonathan Stone
+* Julian Amann
+* Juri Abramov
+* Karl Rasche
+* Kevin Wheatley
+* Kimball Thurston
+* Larry Gritz
+* Liam Fernandez
+* Lucy Wilkes
+* Matthäus G. Chajdas
+* Michael Thomas
+* Nicholas Yue
+* Nick Porcino
+* Nick Rasmussen
+* Nicolas Chauvet
+* Niklas Hambüchen
+* Owen Thompson
+* Paul Schneider
+* Peter Hillman
+* Peter Steneteg
+* Piotr Stanczyk
+* Ralph Potter
+* Reto Kromer
+* Richard Goedeken
+* Shawn Walker-Salas
+* Simon Otter
+* Srinath Ravichandran
+* Thanh Ha
+* Thorsten Kaufmann
+* Wenzel Jakob
+* Wojciech Jarosz
+* Xo Wang
+* Yining Karl Li
+* Yujie Shu

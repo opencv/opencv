@@ -35,7 +35,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
     // Check generated file size to ensure that it's compressed with proper options
-    ASSERT_EQ(396u, getFileSize(filenameOutput));
+    ASSERT_EQ(440u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());

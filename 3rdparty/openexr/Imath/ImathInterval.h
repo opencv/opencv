@@ -1,225 +1,266 @@
-///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
-// Digital Ltd. LLC
-// 
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// *       Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-// *       Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-// *       Neither the name of Industrial Light & Magic nor the names of
-// its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright Contributors to the OpenEXR Project.
 //
-///////////////////////////////////////////////////////////////////////////
 
-
+//
+// An interval class
+//
 
 #ifndef INCLUDED_IMATHINTERVAL_H
 #define INCLUDED_IMATHINTERVAL_H
 
-
-//-------------------------------------------------------------------
-//
-//	class Imath::Interval<class T>
-//	--------------------------------
-//
-//	An Interval has a min and a max and some miscellaneous
-//	functions. It is basically a Box<T> that allows T to be
-//	a scalar.
-//
-//-------------------------------------------------------------------
+#include "ImathExport.h"
+#include "ImathNamespace.h"
 
 #include "ImathVec.h"
-#include "ImathNamespace.h"
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
+///
+/// An Interval has a min and a max and some miscellaneous
+/// functions. It is basically a Box<T> that allows T to be a scalar.
+///
 
-template <class T>	
-class Interval
+template <class T> class IMATH_EXPORT_TEMPLATE_TYPE Interval
 {
   public:
 
-    //-------------------------
-    //  Data Members are public
-    //-------------------------
-
-    T				min;
-    T				max;
-
-    //-----------------------------------------------------
-    //	Constructors - an "empty" Interval is created by default
-    //-----------------------------------------------------
-
-    Interval(); 
-    Interval(const T& point);
-    Interval(const T& minT, const T& maxT);
-
-    //--------------------------------
-    //  Operators:  we get != from STL
-    //--------------------------------
+    /// @{
+    /// @name Direct access to bounds
     
-    bool                        operator == (const Interval<T> &src) const;
+    /// The minimum value of the interval
+    T min;
 
-    //------------------
-    //	Interval manipulation
-    //------------------
+    /// The minimum value of the interval
+    T max;
 
-    void			makeEmpty();
-    void			extendBy(const T& point);
-    void			extendBy(const Interval<T>& interval);
+    /// @}
+    
+    /// @{
+    /// @name Constructors
 
-    //---------------------------------------------------
-    //	Query functions - these compute results each time
-    //---------------------------------------------------
+    /// Initialize to the empty interval
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 Interval() IMATH_NOEXCEPT;
 
-    T				size() const;
-    T				center() const;
-    bool			intersects(const T &point) const;
-    bool			intersects(const Interval<T> &interval) const;
+    /// Intitialize to a single point
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 Interval (const T& point) IMATH_NOEXCEPT;
 
-    //----------------
-    //	Classification
-    //----------------
+    /// Intitialize to a given (min,max)
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 Interval (const T& minT, const T& maxT) IMATH_NOEXCEPT;
 
-    bool			hasVolume() const;
-    bool			isEmpty() const;
+    /// @}
+
+    /// @{
+    /// @name Comparison
+
+    /// Equality
+    IMATH_HOSTDEVICE constexpr bool operator== (const Interval<T>& src) const IMATH_NOEXCEPT;
+    /// Inequality
+    IMATH_HOSTDEVICE constexpr bool operator!= (const Interval<T>& src) const IMATH_NOEXCEPT;
+
+    /// @}
+
+    /// @{
+    /// @name Manipulation
+
+    /// Set the interval to be empty. An interval is empty if the
+    /// minimum is greater than the maximum.
+    IMATH_HOSTDEVICE void makeEmpty() IMATH_NOEXCEPT;
+
+    /// Extend the interval to include the given point.
+    IMATH_HOSTDEVICE void extendBy (const T& point) IMATH_NOEXCEPT;
+
+    /// Extend the interval to include the given interval
+    IMATH_HOSTDEVICE void extendBy (const Interval<T>& interval) IMATH_NOEXCEPT;
+
+    /// Make the interval include the entire range of the base type.
+    IMATH_HOSTDEVICE void makeInfinite() IMATH_NOEXCEPT;
+
+    /// @}
+
+    /// @{
+    ///	@name Query
+
+    /// Return the size of the interval. The size is (max-min). An empty box has a size of 0.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 T size() const IMATH_NOEXCEPT;
+
+    /// Return the center of the interval. The center is defined as
+    /// (max+min)/2. The center of an empty interval is undefined.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 T center() const IMATH_NOEXCEPT;
+
+    /// Return true if the given point is inside the interval, false otherwise.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 bool intersects (const T& point) const IMATH_NOEXCEPT;
+
+    /// Return true if the given interval is inside the interval, false otherwise.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 bool intersects (const Interval<T>& interval) const IMATH_NOEXCEPT;
+
+    /// Return true if the interval is empty, false otherwise. An
+    /// empty interval's minimum is greater than its maximum.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 bool isEmpty() const IMATH_NOEXCEPT;
+
+    /// Return true if the interval is larger than a single point,
+    /// false otherwise.
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 bool hasVolume() const IMATH_NOEXCEPT;
+
+    /// Return true if the interval contains all points, false
+    /// otherwise.  An infinite box has a mimimum of std::numeric_limits<T>::lowest()
+    /// and a maximum of std::numeric_limits<T>::max()
+    IMATH_HOSTDEVICE IMATH_CONSTEXPR14 bool isInfinite() const IMATH_NOEXCEPT;
+
+    /// @}
 };
 
+/// Stream output, as "(min max)"
+template <class T> std::ostream& operator<< (std::ostream& s, const Interval<T>& v);
 
-//--------------------
-// Convenient typedefs
-//--------------------
+/// Interval of type float
+typedef Interval<float> Intervalf;
 
+/// Interval of type double
+typedef Interval<double> Intervald;
 
-typedef Interval <float>  Intervalf;
-typedef Interval <double> Intervald;
-typedef Interval <short>  Intervals;
-typedef Interval <int>    Intervali;
+/// Interval of type short
+typedef Interval<short> Intervals;
 
-//----------------
-//  Implementation
-//----------------
-
+/// Interval of type integer
+typedef Interval<int> Intervali;
 
 template <class T>
-inline Interval<T>::Interval()
+IMATH_HOSTDEVICE inline IMATH_CONSTEXPR14 Interval<T>::Interval() IMATH_NOEXCEPT
 {
     makeEmpty();
 }
 
 template <class T>
-inline Interval<T>::Interval(const T& point)
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline Interval<T>::Interval (const T& point) IMATH_NOEXCEPT
 {
     min = point;
     max = point;
 }
 
 template <class T>
-inline Interval<T>::Interval(const T& minV, const T& maxV)
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline Interval<T>::Interval (const T& minV, const T& maxV) IMATH_NOEXCEPT
 {
     min = minV;
     max = maxV;
 }
 
 template <class T>
-inline bool
-Interval<T>::operator == (const Interval<T> &src) const
+IMATH_HOSTDEVICE constexpr inline bool
+Interval<T>::operator== (const Interval<T>& src) const IMATH_NOEXCEPT
 {
     return (min == src.min && max == src.max);
 }
 
 template <class T>
-inline void
-Interval<T>::makeEmpty()
+IMATH_HOSTDEVICE constexpr inline bool
+Interval<T>::operator!= (const Interval<T>& src) const IMATH_NOEXCEPT
 {
-    min = limits<T>::max();
-    max = limits<T>::min();
+    return (min != src.min || max != src.max);
 }
 
 template <class T>
-inline void
-Interval<T>::extendBy(const T& point)
+IMATH_HOSTDEVICE inline void
+Interval<T>::makeEmpty() IMATH_NOEXCEPT
 {
-    if ( point < min )
-	min = point;
-    
-    if ( point > max )
-	max = point;
+    min = std::numeric_limits<T>::max();
+    max = std::numeric_limits<T>::lowest();
 }
 
 template <class T>
-inline void
-Interval<T>::extendBy(const Interval<T>& interval)
+IMATH_HOSTDEVICE inline void
+Interval<T>::makeInfinite() IMATH_NOEXCEPT
 {
-    if ( interval.min < min )
-	min = interval.min;
+    min = std::numeric_limits<T>::lowest();
+    max = std::numeric_limits<T>::max();
+}
 
-    if ( interval.max > max )
-	max = interval.max;
+
+template <class T>
+IMATH_HOSTDEVICE inline void
+Interval<T>::extendBy (const T& point) IMATH_NOEXCEPT
+{
+    if (point < min)
+        min = point;
+
+    if (point > max)
+        max = point;
 }
 
 template <class T>
-inline bool
-Interval<T>::intersects(const T& point) const
+IMATH_HOSTDEVICE inline void
+Interval<T>::extendBy (const Interval<T>& interval) IMATH_NOEXCEPT
+{
+    if (interval.min < min)
+        min = interval.min;
+
+    if (interval.max > max)
+        max = interval.max;
+}
+
+template <class T>
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline bool
+Interval<T>::intersects (const T& point) const IMATH_NOEXCEPT
 {
     return point >= min && point <= max;
 }
 
 template <class T>
-inline bool
-Interval<T>::intersects(const Interval<T>& interval) const
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline bool
+Interval<T>::intersects (const Interval<T>& interval) const IMATH_NOEXCEPT
 {
     return interval.max >= min && interval.min <= max;
 }
 
-template <class T> 
-inline T
-Interval<T>::size() const 
-{ 
-    return max-min;
-}
-
-template <class T> 
-inline T
-Interval<T>::center() const 
-{ 
-    return (max+min)/2;
+template <class T>
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline T
+Interval<T>::size() const IMATH_NOEXCEPT
+{
+    if (isEmpty())
+        return T(0);
+    
+    return max - min;
 }
 
 template <class T>
-inline bool
-Interval<T>::isEmpty() const
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline T
+Interval<T>::center() const IMATH_NOEXCEPT
+{
+    return (max + min) / 2;
+}
+
+template <class T>
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline bool
+Interval<T>::isEmpty() const IMATH_NOEXCEPT
 {
     return max < min;
 }
 
 template <class T>
-inline bool Interval<T>::hasVolume() const
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline bool
+Interval<T>::hasVolume() const IMATH_NOEXCEPT
 {
     return max > min;
 }
 
+template <class T>
+IMATH_HOSTDEVICE IMATH_CONSTEXPR14 inline bool
+Interval<T>::isInfinite() const IMATH_NOEXCEPT
+{
+    if (min != std::numeric_limits<T>::lowest() || max != std::numeric_limits<T>::max())
+        return false;
+
+    return true;
+}
+
+/// Stream output
+template <class T>
+std::ostream&
+operator<< (std::ostream& s, const Interval<T>& v)
+{
+    return s << '(' << v.min << ' ' << v.max << ')';
+}
 
 IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
