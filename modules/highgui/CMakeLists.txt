@@ -1,5 +1,4 @@
 set(the_description "High-level GUI")
-
 if(ANDROID)
   ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
 else()
@@ -151,7 +150,7 @@ elseif(HAVE_COCOA)
 endif()
 
 if(TARGET ocv.3rdparty.win32ui)
-  if("win32ui" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
+  if("WIN32UI" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_highgui_plugin(opencv_highgui_win32 ocv.3rdparty.win32ui "window_w32.cpp")
   elseif(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
     set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WIN32UI")
@@ -273,6 +272,11 @@ endif()
 
 if(MSVC AND NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
+endif()
+
+if(HAVE_WIN32UI AND HAVE_OPENGL AND OPENGL_LIBRARIES)
+  message(${OPENGL_LIBRARIES})
+  ocv_target_link_libraries(${the_module} PRIVATE "${OPENGL_LIBRARIES}")
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
