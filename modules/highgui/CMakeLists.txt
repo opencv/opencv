@@ -150,7 +150,7 @@ elseif(HAVE_COCOA)
 endif()
 
 if(TARGET ocv.3rdparty.win32ui)
-  if("WIN32UI" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
+  if("win32ui" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_highgui_plugin(opencv_highgui_win32 ocv.3rdparty.win32ui "window_w32.cpp")
   elseif(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
     set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WIN32UI")
