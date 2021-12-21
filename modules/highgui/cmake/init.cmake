@@ -8,6 +8,7 @@ if(PROJECT_NAME STREQUAL "OpenCV")
   mark_as_advanced(HIGHGUI_PLUGIN_LIST HIGHGUI_ENABLE_PLUGINS)
 
   string(REPLACE "," ";" HIGHGUI_PLUGIN_LIST "${HIGHGUI_PLUGIN_LIST}")  # support comma-separated list (,) too
+  string(TOLOWER "${HIGHGUI_PLUGIN_LIST}" HIGHGUI_PLUGIN_LIST)
   if(NOT HIGHGUI_ENABLE_PLUGINS)
     if(HIGHGUI_PLUGIN_LIST)
       message(WARNING "HighGUI: plugins are disabled through HIGHGUI_ENABLE_PLUGINS, so HIGHGUI_PLUGIN_LIST='${HIGHGUI_PLUGIN_LIST}' is ignored")
