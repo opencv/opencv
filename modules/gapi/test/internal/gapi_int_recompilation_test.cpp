@@ -104,7 +104,7 @@ TEST(GComputationCompile, FluidReshapeResizeDownScale)
     cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
     cv::Mat out_mat1, out_mat2;
 
-    cc.apply(in_mat1, out_mat1, cv::compile_args(cv::gapi::core::fluid::kernels()));
+    cc.apply(in_mat1, out_mat1, cv::compile_args(cv::gapi::imgproc::fluid::kernels()));
     auto comp1 = cc.priv().m_lastCompiled;
 
     cc.apply(in_mat2, out_mat2);
@@ -136,7 +136,7 @@ TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
     cv::randu(in_mat3, cv::Scalar::all(0), cv::Scalar::all(255));
     cv::Mat out_mat1, out_mat2, out_mat3;
 
-    cc.apply(in_mat1, out_mat1, cv::compile_args(cv::gapi::core::fluid::kernels()));
+    cc.apply(in_mat1, out_mat1, cv::compile_args(cv::gapi::imgproc::fluid::kernels()));
     auto comp1 = cc.priv().m_lastCompiled;
 
     cc.apply(in_mat2, out_mat2);

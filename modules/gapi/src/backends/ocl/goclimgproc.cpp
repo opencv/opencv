@@ -11,6 +11,13 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 #include "backends/ocl/goclimgproc.hpp"
 
+GAPI_OCL_KERNEL(GOCLResize, cv::gapi::imgproc::GResize)
+{
+    static void run(const cv::UMat& in, cv::Size sz, double fx, double fy, int interp, cv::UMat &out)
+    {
+        cv::resize(in, out, sz, fx, fy, interp);
+    }
+};
 
 GAPI_OCL_KERNEL(GOCLSepFilter, cv::gapi::imgproc::GSepFilter)
 {
@@ -270,6 +277,7 @@ cv::GKernelPackage cv::gapi::imgproc::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GOCLFilter2D
+        , GOCLResize
         , GOCLSepFilter
         , GOCLBoxFilter
         , GOCLBlur

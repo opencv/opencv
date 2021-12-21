@@ -1,6 +1,7 @@
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/cpu/core.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 int main(int argc, char *argv[])
 {

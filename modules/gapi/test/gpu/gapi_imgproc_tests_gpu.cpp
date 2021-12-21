@@ -17,6 +17,30 @@ namespace
 namespace opencv_test
 {
 
+INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(IMGPROC_GPU),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
+                                Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
+                                Values(cv::Size(64,64),
+                                       cv::Size(30,30))));
+
+INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
+                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(IMGPROC_GPU),
+                                Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
+                                Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
+                                Values(0.5, 0.1),
+                                Values(0.5, 0.1)));
+
 INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
