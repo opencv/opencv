@@ -845,7 +845,8 @@ void HashTSDFVolumeCPU::fetchNormals(InputArray _points, OutputArray _normals) c
             Point3f n = nan3;
             if (!isNaN(p))
             {
-                Point3f voxelPoint = invPose * p;
+                //Point3f voxelPoint = invPose * p;
+                Point3f voxelPoint = p;
                 n                  = volume.pose.rotation() * volume.getNormalVoxel(voxelPoint);
             }
             normals(position[0], position[1]) = toPtype(n);

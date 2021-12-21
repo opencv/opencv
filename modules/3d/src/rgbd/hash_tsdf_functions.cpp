@@ -535,15 +535,162 @@ void raycastHashTsdfVolumeUnit(
         }
     };
 
-
-
     parallel_for_(Range(0, points.rows), _HashRaycastInvoker, nstripes);
-
-
-
-
 
     std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
 }
+
+
+void fetchNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    InputArray _points, OutputArray _normals)
+{
+    CV_TRACE_FUNCTION();
+
+    if (!_normals.needed())
+        return;
+
+    Points points = _points.getMat();
+    CV_Assert(points.type() == POINT_TYPE);
+
+    _normals.createSameSize(_points, _points.type());
+    Normals normals = _normals.getMat();
+    Mat volUnitsData = _volUnitsData.getMat();
+
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    auto HashPushNormals = [&](const ptype& point, const int* position) {
+
+        Affine3f invPose(pose.inv());
+        Point3f p = fromPtype(point);
+        Point3f n = nan3;
+        if (!isNaN(p))
+        {
+            //Point3f voxelPoint = invPose * p;
+            Point3f voxelPoint = p;
+            n = pose.rotation() * getNormalVoxel(voxelPoint, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
+        }
+        normals(position[0], position[1]) = toPtype(n);
+    };
+    points.forEach(HashPushNormals);
+
+}
+
+
+void fetchPointsNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    OutputArray _points, OutputArray _normals)
+{
+    std::cout << "fetchNormalsFromHashTsdfVolumeUnit()" << std::endl;
+    CV_TRACE_FUNCTION();
+
+    if (!_points.needed())
+        return;
+
+    std::vector<std::vector<ptype>> pVecs, nVecs;
+    Mat volUnitsData = _volUnitsData.getMat();
+
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const int volumeUnitResolution = volResolution.x;
+    const float volumeUnitSize = voxelSize * resolution[0];
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+
+    std::vector<Vec3i> totalVolUnits;
+    for (const auto& keyvalue : volumeUnits)
+    {
+        totalVolUnits.push_back(keyvalue.first);
+    }
+    Range fetchRange(0, (int)totalVolUnits.size());
+    const int nstripes = -1;
+
+    bool needNormals(_normals.needed());
+    Mutex mutex;
+
+    auto HashFetchPointsNormalsInvoker = [&](const Range& range)
+    {
+        std::vector<ptype> points, normals;
+        for (int i = range.start; i < range.end; i++)
+        {
+            cv::Vec3i tsdf_idx = totalVolUnits[i];
+
+            VolumeUnitIndexes::const_iterator it = volumeUnits.find(tsdf_idx);
+            Point3f base_point = volumeUnitIdxToVolume(tsdf_idx, volumeUnitSize);
+            if (it != volumeUnits.end())
+            {
+                std::vector<ptype> localPoints;
+                std::vector<ptype> localNormals;
+                for (int x = 0; x < volumeUnitResolution; x++)
+                    for (int y = 0; y < volumeUnitResolution; y++)
+                        for (int z = 0; z < volumeUnitResolution; z++)
+                        {
+                            cv::Vec3i voxelIdx(x, y, z);
+                            TsdfVoxel voxel = _at(volUnitsData, voxelIdx, it->second.index, volResolution.x, volDims);
+
+                            if (voxel.tsdf != -128 && voxel.weight != 0)
+                            {
+                                Point3f point = base_point + voxelCoordToVolume(voxelIdx, voxelSize);
+                                localPoints.push_back(toPtype(point));
+                                if (needNormals)
+                                {
+                                    Point3f normal = getNormalVoxel(point, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
+                                    localNormals.push_back(toPtype(normal));
+                                }
+                            }
+                        }
+
+                AutoLock al(mutex);
+                pVecs.push_back(localPoints);
+                nVecs.push_back(localNormals);
+            }
+        }
+    };
+
+    parallel_for_(fetchRange, HashFetchPointsNormalsInvoker, nstripes);
+
+    std::vector<ptype> points, normals;
+    for (size_t i = 0; i < pVecs.size(); i++)
+    {
+        points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
+        normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
+    }
+
+    _points.create((int)points.size(), 1, POINT_TYPE);
+    if (!points.empty())
+        Mat((int)points.size(), 1, POINT_TYPE, &points[0]).copyTo(_points.getMat());
+
+    if (_normals.needed())
+    {
+        _normals.create((int)normals.size(), 1, POINT_TYPE);
+        if (!normals.empty())
+            Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
+    }
+    
+    std::cout << "fetchNormalsFromHashTsdfVolumeUnit() end" << std::endl;
+
+}
+
+
 
 } // namespace cv

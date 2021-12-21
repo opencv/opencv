@@ -327,6 +327,14 @@ void raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals);
 
+void fetchNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    InputArray _points, OutputArray _normals);
+
+void fetchPointsNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    OutputArray _points, OutputArray _normals);
+
 
 } // namespace cv
 

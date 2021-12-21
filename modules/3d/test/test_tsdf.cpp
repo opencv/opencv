@@ -444,16 +444,11 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            if (true)
-            {
-                volume.integrate(depth, poses[0].matrix);
-                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
-            }
-            else
-            {
-                settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-                settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, normals);
-            }
+            volume.integrate(depth, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+
+            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, normals);
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
@@ -471,11 +466,13 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(depth, poses[0].matrix);
             // takes only point from raycast for checking fetched normals on the display
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
+            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
+            volume.fetchPointsNormals(points, tmpnormals);
             volume.fetchNormals(points, normals);
 
             //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
             //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, tmpnormals);
+            //settings.volume->fetchPointsNormals(points, tmpnormals);
             //settings.volume->fetchNormals(points, normals);
         }
 

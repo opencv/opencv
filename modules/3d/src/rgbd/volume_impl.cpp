@@ -272,8 +272,17 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Outpu
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const {}
-void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const {}
+void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
+{
+    std::cout << "HashTsdfVolume::fetchNormals()" << std::endl;
+    fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+}
+void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
+{
+    std::cout << "fetchPointsNormals()" << std::endl;
+    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+}
+
 void HashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
 
 void HashTsdfVolume::reset()
