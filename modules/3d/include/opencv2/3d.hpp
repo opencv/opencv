@@ -469,7 +469,8 @@ can be found in:
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
 
-/** Base class for Levenberg-Marquadt solvers.
+/** @brief Base class for Levenberg-Marquadt solvers.
+
 This class can be used for general local optimization using sparse linear solvers, exponential param update or fixed variables
 implemented in child classes.
 This base class does not depend on a type, layout or a group structure of a param vector or an objective function jacobian.
@@ -489,13 +490,22 @@ For more details, please refer to Wikipedia page (https://en.wikipedia.org/wiki/
 class CV_EXPORTS LevMarqBase
 {
 public:
-    struct Report
+
+    /** @brief Optimization report
+
+    The structure is returned when optimization is over.
+    */
+    struct CV_EXPORTS Report
     {
-        Report(bool found_, int iters_, double energy_) :
-            found(found_), iters(iters_), energy(energy_)
+        Report(bool isFound, int nIters, double finalEnergy) :
+            found(isFound), iters(nIters), energy(finalEnergy)
         { }
+        // true if the cost function converged to a local minimum which is checked by check* fields, thresholds and other options
+        // false if the cost function failed to converge because of error, amount of iterations exhausted or lambda explosion
         bool found;
+        // amount of iterations elapsed until the optimization stopped
         int iters;
+        // energy value reached by the optimization
         double energy;
     };
 
