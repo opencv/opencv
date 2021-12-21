@@ -7,6 +7,7 @@
 
 #include "opencv2/core/affine.hpp"
 #include "opencv2/core/quaternion.hpp"
+#include "opencv2/3d.hpp"
 
 namespace cv
 {
@@ -17,7 +18,7 @@ namespace detail
 This class provides functions required for Levenberg-Marquadt algorithm implementation.
 See LevMarqBase::optimize() source code for details.
 */
-class LevMarqBackend
+class CV_EXPORTS LevMarqBackend : public LevMarqBase::Backend
 {
 public:
     virtual ~LevMarqBackend() { }
@@ -98,10 +99,10 @@ public:
 
     // creates an optimizer and returns a pointer on it
     // this function can be omited if a user wants to run optimizer with default settings
-    virtual Ptr<BaseLevMarq> createOptimizer() = 0;
+    virtual Ptr<LevMarqBase> createOptimizer(const LevMarqBase::Settings& settings = LevMarqBase::Settings()) = 0;
 
     // Returns number of iterations elapsed or -1 if failed to optimize
-    virtual BaseLevMarq::Report optimize() = 0;
+    virtual LevMarqBase::Report optimize() = 0;
 
     // calculate cost function based on current nodes parameters
     virtual double calcEnergy() const = 0;
