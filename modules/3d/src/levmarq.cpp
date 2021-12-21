@@ -87,15 +87,15 @@ static void calcJtrvv(const Mat_<double>& jtbv, const Mat_<double>& jtb, const M
 class LevMarqBase::Impl
 {
 public:
-    Impl(const Ptr<LevMarqBase::Backend>& backend, const LevMarqBase::Settings& settings) :
-        pSettings(settings),
-        pBackend(backend)
+    Impl(const Ptr<LevMarqBase::Backend>& backendV, const LevMarqBase::Settings& settingsV) :
+        settings(settingsV),
+        backend(backendV)
     { }
 
     LevMarqBase::Report optimize();
 
-    Ptr<LevMarqBase::Backend> pBackend;
-    LevMarqBase::Settings pSettings;
+    Ptr<detail::LevMarqBackend> backend;
+    LevMarqBase::Settings settings;
 };
 
 LevMarqBase::LevMarqBase(const Ptr<Backend>& backend, const Settings& settings) :
@@ -110,9 +110,7 @@ LevMarqBase::Report LevMarqBase::optimize()
 
 LevMarqBase::Report LevMarqBase::Impl::optimize()
 {
-    Ptr<detail::LevMarqBackend> backend = backend.dynamicCast<detail::LevMarqBackend>();
-
-    if (pSettings.geodesic && !backend->enableGeo())
+    if (settings.geodesic && !backend->enableGeo())
     {
         CV_LOG_INFO(NULL, "The backend does not support geodesic acceleration, please turn off the corresponding option");
         return LevMarqBase::Report(false, 0, 0); // not found
@@ -150,7 +148,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
     Mat_<double> di;
 
     // do the jacobian conditioning improvement used in Ceres
-    if (pSettings.jacobiScaling)
+    if (settings.jacobiScaling)
     {
         // L2-normalize each jacobian column
         // vec d = {d_j = sum(J_ij^2) for each column j of J} = get_diag{ J^T * J }
@@ -161,8 +159,8 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
         di = 1.0 / (ds + 1.0);
     }
 
-    double lmUpFactor = pSettings.initialLmUpFactor;
-    double lambdaLevMarq = pSettings.initialLambda;
+    double lmUpFactor = settings.initialLmUpFactor;
+    double lambdaLevMarq = settings.initialLambda;
 
     unsigned int iter = 0;
     bool done = false;
@@ -173,7 +171,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
         CV_LOG_INFO(NULL, "#LM#s" << " energy: " << energy);
 
         // do the jacobian conditioning improvement used in Ceres
-        if (pSettings.jacobiScaling)
+        if (settings.jacobiScaling)
         {
             backend->doJacobiScaling(di);
         }
@@ -193,7 +191,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
             // form LevMarq matrix
             Mat_<double> lmDiag, jtjDiag;
             lmDiag = diag * lambdaLevMarq;
-            if (pSettings.clampDiagonal)
+            if (settings.clampDiagonal)
                 lmDiag = cv::min(cv::max(lmDiag, minDiag), maxDiag);
             jtjDiag = lmDiag + diag;
             backend->setDiag(jtjDiag);
@@ -221,23 +219,23 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
                 jacCostChange = calcJacCostChangeLm(jtb, x, lmDiag);
 
                 // x norm
-                xNorm = cv::norm(x, pSettings.stepNormInf ? NORM_INF : NORM_L2SQR);
+                xNorm = cv::norm(x, settings.stepNormInf ? NORM_INF : NORM_L2SQR);
 
                 // undo jacobi scaling
-                if (pSettings.jacobiScaling)
+                if (settings.jacobiScaling)
                 {
                     x = x.mul(di);
                 }
 
-                if (pSettings.geodesic)
+                if (settings.geodesic)
                 {
-                    backend->currentOplusX(x * pSettings.hGeo, /*geo*/ true);
+                    backend->currentOplusX(x * settings.hGeo, /*geo*/ true);
 
                     Mat_<double> jtbv(jtb.rows, 1);
                     if (backend->calcJtbv(jtbv))
                     {
                         Mat_<double> jtrvv(jtb.rows, 1);
-                        calcJtrvv(jtbv, jtb, lmDiag, x, pSettings.hGeo, jtrvv);
+                        calcJtrvv(jtbv, jtb, lmDiag, x, settings.hGeo, jtrvv);
 
                         Mat_<double> xgeo((int)jtb.rows, 1);
                         bool geoSolved = backend->solveDecomposed(jtrvv, xgeo);
@@ -247,7 +245,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
                             double truncerr = sqrt(xgeo.dot(xgeo) / x.dot(x));
                             bool geoIsGood = (truncerr < 1.0);
                             if (geoIsGood)
-                                x += xgeo * pSettings.geoScale;
+                                x += xgeo * settings.geoScale;
 
                             CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr << (geoIsGood ? ", use it" : ", skip it") );
                         }
@@ -277,17 +275,17 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
                     << " deltaEnergy: " << costChange
                     << " deltaEqEnergy: " << jacCostChange
                     << " max(J^T*b): " << gradientMax
-                    << (pSettings.stepNormInf ? " normInf(x): " : " norm2(x): ") << xNorm
+                    << (settings.stepNormInf ? " normInf(x): " : " norm2(x): ") << xNorm
                     << " deltaEnergy/energy: " << costChange / energy);
             }
 
             // zero cost change is treated like an algorithm failure if checkRelEnergyChange is off
-            if (!solved || costChange < 0 || (!pSettings.checkRelEnergyChange && abs(costChange) < DBL_EPSILON))
+            if (!solved || costChange < 0 || (!settings.checkRelEnergyChange && abs(costChange) < DBL_EPSILON))
             {
                 // failed to optimize, increase lambda and repeat
 
                 lambdaLevMarq *= lmUpFactor;
-                if (pSettings.upDouble)
+                if (settings.upDouble)
                     lmUpFactor *= 2.0;
 
                 CV_LOG_INFO(NULL, "LM goes up, lambda: " << lambdaLevMarq << ", old energy: " << oldEnergy);
@@ -297,16 +295,16 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
                 // optimized successfully, decrease lambda and set variables for next iteration
                 enoughLm = true;
 
-                if (pSettings.useStepQuality)
-                    lambdaLevMarq *= std::max(1.0 / pSettings.initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
+                if (settings.useStepQuality)
+                    lambdaLevMarq *= std::max(1.0 / settings.initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
                 else
-                    lambdaLevMarq *= 1.0 / pSettings.initialLmDownFactor;
-                lmUpFactor = pSettings.initialLmUpFactor;
+                    lambdaLevMarq *= 1.0 / settings.initialLmDownFactor;
+                lmUpFactor = settings.initialLmUpFactor;
 
-                smallGradient = (gradientMax < pSettings.minGradientTolerance);
-                smallStep = (xNorm < pSettings.stepNormTolerance);
-                smallEnergyDelta = (costChange / energy < pSettings.relEnergyDeltaTolerance);
-                smallEnergy = (energy < pSettings.smallEnergyTolerance);
+                smallGradient = (gradientMax < settings.minGradientTolerance);
+                smallStep = (xNorm < settings.stepNormTolerance);
+                smallEnergyDelta = (costChange / energy < settings.relEnergyDeltaTolerance);
+                smallEnergy = (energy < settings.smallEnergyTolerance);
 
                 backend->acceptProbe();
 
@@ -319,13 +317,13 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
 
             iter++;
 
-            tooLong = (iter >= pSettings.maxIterations);
+            tooLong = (iter >= settings.maxIterations);
             bigLambda = (lambdaLevMarq >= maxLambda);
 
             done = tooLong || bigLambda;
-            done = done || (pSettings.checkMinGradient && smallGradient);
-            done = done || (pSettings.checkStepNorm && smallStep);
-            done = done || (pSettings.checkRelEnergyChange && smallEnergyDelta);
+            done = done || (settings.checkMinGradient && smallGradient);
+            done = done || (settings.checkStepNorm && smallStep);
+            done = done || (settings.checkRelEnergyChange && smallEnergyDelta);
             done = done || (smallEnergy);
         }
 
@@ -345,11 +343,11 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
 
     CV_LOG_INFO(NULL, "Finished: " << (found ? "" : "not ") << "found");
     std::string fr = "Finish reason: ";
-    if (pSettings.checkMinGradient && smallGradient)
+    if (settings.checkMinGradient && smallGradient)
         CV_LOG_INFO(NULL, fr + "gradient max val dropped below threshold");
-    if (pSettings.checkStepNorm && smallStep)
+    if (settings.checkStepNorm && smallStep)
         CV_LOG_INFO(NULL, fr + "step size dropped below threshold");
-    if (pSettings.checkRelEnergyChange && smallEnergyDelta)
+    if (settings.checkRelEnergyChange && smallEnergyDelta)
         CV_LOG_INFO(NULL, fr + "relative energy change between iterations dropped below threshold");
     if (smallEnergy)
         CV_LOG_INFO(NULL, fr + "energy dropped below threshold");
@@ -731,7 +729,7 @@ LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback ca
 LevMarqBase::Report LevMarqDenseLinear::run(InputOutputArray param)
 {
     CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
-    pImpl->pBackend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
+    pImpl->backend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
     return optimize();
 }
 
