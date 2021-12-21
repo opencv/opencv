@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_precomp.hpp"
-#include <opencv2/3d/detail/pose_graph.hpp>
+#include <opencv2/3d/detail/optimizer.hpp>
 
 #include <opencv2/core/dualquaternion.hpp>
 

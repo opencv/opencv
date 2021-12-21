@@ -7,7 +7,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
-#include "opencv2/3d/detail/pose_graph.hpp"
+#include "opencv2/3d/detail/optimizer.hpp"
 
 //TODO: remove it when it is rewritten to robust pose graph
 #include "opencv2/core/dualquaternion.hpp"

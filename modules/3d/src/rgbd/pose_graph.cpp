@@ -4,7 +4,7 @@
 
 #include "../precomp.hpp"
 #include "sparse_block_matrix.hpp"
-#include "opencv2/3d/detail/pose_graph.hpp"
+#include "opencv2/3d/detail/optimizer.hpp"
 
 namespace cv
 {
