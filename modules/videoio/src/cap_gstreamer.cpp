@@ -527,6 +527,7 @@ bool GStreamerCapture::grabAudioFrame()
         CV_Error(Error::StsError, "GStreamer: gst_audio_info_from_caps() is failed. Can't handle unknown layout");
     }
     int bpf = GST_AUDIO_INFO_BPF(&info);
+    CV_CheckGT(bpf, 0, "");
 
     GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
     if (!structure)
