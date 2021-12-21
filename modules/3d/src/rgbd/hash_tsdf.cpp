@@ -1679,12 +1679,11 @@ void HashTSDFVolumeGPU::fetchPointsNormals(OutputArray _points, OutputArray _nor
                             if (voxel.tsdf != -128 && voxel.weight != 0)
                             {
                                 Point3f point = base_point + volume.voxelCoordToVolume(voxelIdx);
-
-                                localPoints.push_back(toPtype(point));
+                                localPoints.push_back(toPtype(this->pose * point));
                                 if (needNormals)
                                 {
                                     Point3f normal = volume.getNormalVoxel(point);
-                                    localNormals.push_back(toPtype(normal));
+                                    localNormals.push_back(toPtype(this->pose.rotation() * normal));
                                 }
                             }
                         }
