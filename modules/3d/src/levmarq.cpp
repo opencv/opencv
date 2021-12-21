@@ -84,19 +84,45 @@ static void calcJtrvv(const Mat_<double>& jtbv, const Mat_<double>& jtb, const M
 }
 
 
-BaseLevMarq::Report BaseLevMarq::optimize()
+class LevMarqBase::Impl
 {
-    if (geodesic && !pBackend->enableGeo())
+public:
+    Impl(const Ptr<LevMarqBase::Backend>& backend, const LevMarqBase::Settings& settings) :
+        pSettings(settings),
+        pBackend(backend)
+    { }
+
+    LevMarqBase::Report optimize();
+
+    Ptr<LevMarqBase::Backend> pBackend;
+    LevMarqBase::Settings pSettings;
+};
+
+LevMarqBase::LevMarqBase(const Ptr<Backend>& backend, const Settings& settings) :
+    pImpl(makePtr<LevMarqBase::Impl>(backend, settings))
+{ }
+
+LevMarqBase::Report LevMarqBase::optimize()
+{
+    return pImpl->optimize();
+}
+
+
+LevMarqBase::Report LevMarqBase::Impl::optimize()
+{
+    Ptr<detail::LevMarqBackend> backend = backend.dynamicCast<detail::LevMarqBackend>();
+
+    if (pSettings.geodesic && !backend->enableGeo())
     {
         CV_LOG_INFO(NULL, "The backend does not support geodesic acceleration, please turn off the corresponding option");
         return LevMarqBase::Report(false, 0, 0); // not found
     }
 
     // this function sets probe vars to current X
-    pBackend->prepareVars();
+    backend->prepareVars();
 
     double energy = 0.0;
-    if (!pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
+    if (!backend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
         return LevMarqBase::Report(false, 0, 0); // not found
@@ -124,19 +150,19 @@ BaseLevMarq::Report BaseLevMarq::optimize()
     Mat_<double> di;
 
     // do the jacobian conditioning improvement used in Ceres
-    if (jacobiScaling)
+    if (pSettings.jacobiScaling)
     {
         // L2-normalize each jacobian column
         // vec d = {d_j = sum(J_ij^2) for each column j of J} = get_diag{ J^T * J }
         // di = { 1/(1+sqrt(d_j)) }, extra +1 to avoid div by zero
         Mat_<double> ds;
-        const Mat_<double> diag = pBackend->getDiag();
+        const Mat_<double> diag = backend->getDiag();
         cv::sqrt(diag, ds);
         di = 1.0 / (ds + 1.0);
     }
 
-    double lmUpFactor = initialLmUpFactor;
-    double lambdaLevMarq = initialLambdaLevMarq;
+    double lmUpFactor = pSettings.initialLmUpFactor;
+    double lambdaLevMarq = pSettings.initialLambda;
 
     unsigned int iter = 0;
     bool done = false;
@@ -147,17 +173,17 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         CV_LOG_INFO(NULL, "#LM#s" << " energy: " << energy);
 
         // do the jacobian conditioning improvement used in Ceres
-        if (jacobiScaling)
+        if (pSettings.jacobiScaling)
         {
-            pBackend->doJacobiScaling(di);
+            backend->doJacobiScaling(di);
         }
 
-        const Mat_<double> jtb = pBackend->getJtb();
+        const Mat_<double> jtb = backend->getJtb();
 
         double gradientMax = cv::norm(jtb, NORM_INF);
 
         // Save original diagonal of jtj matrix for LevMarq
-        const Mat_<double> diag = pBackend->getDiag();
+        const Mat_<double> diag = backend->getDiag();
 
         // Solve using LevMarq and get delta transform
         bool enoughLm = false;
@@ -167,21 +193,21 @@ BaseLevMarq::Report BaseLevMarq::optimize()
             // form LevMarq matrix
             Mat_<double> lmDiag, jtjDiag;
             lmDiag = diag * lambdaLevMarq;
-            if (clampDiagonal)
+            if (pSettings.clampDiagonal)
                 lmDiag = cv::min(cv::max(lmDiag, minDiag), maxDiag);
             jtjDiag = lmDiag + diag;
-            pBackend->setDiag(jtjDiag);
+            backend->setDiag(jtjDiag);
 
             CV_LOG_INFO(NULL, "linear decompose...");
 
-            bool decomposed = pBackend->decompose();
+            bool decomposed = backend->decompose();
 
             CV_LOG_INFO(NULL, (decomposed ? "OK" : "FAIL"));
 
             CV_LOG_INFO(NULL, "linear solve...");
             // use double or convert everything to float
             Mat_<double> x((int)jtb.rows, 1);
-            bool solved = decomposed && pBackend->solveDecomposed(jtb, x);
+            bool solved = decomposed && backend->solveDecomposed(jtb, x);
 
             CV_LOG_INFO(NULL, (solved ? "OK" : "FAIL"));
 
@@ -195,33 +221,33 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 jacCostChange = calcJacCostChangeLm(jtb, x, lmDiag);
 
                 // x norm
-                xNorm = cv::norm(x, stepNormInf ? NORM_INF : NORM_L2SQR);
+                xNorm = cv::norm(x, pSettings.stepNormInf ? NORM_INF : NORM_L2SQR);
 
                 // undo jacobi scaling
-                if (jacobiScaling)
+                if (pSettings.jacobiScaling)
                 {
                     x = x.mul(di);
                 }
 
-                if (geodesic)
+                if (pSettings.geodesic)
                 {
-                    pBackend->currentOplusX(x * hGeo, /*geo*/ true);
+                    backend->currentOplusX(x * pSettings.hGeo, /*geo*/ true);
 
                     Mat_<double> jtbv(jtb.rows, 1);
-                    if (pBackend->calcJtbv(jtbv))
+                    if (backend->calcJtbv(jtbv))
                     {
                         Mat_<double> jtrvv(jtb.rows, 1);
-                        calcJtrvv(jtbv, jtb, lmDiag, x, hGeo, jtrvv);
+                        calcJtrvv(jtbv, jtb, lmDiag, x, pSettings.hGeo, jtrvv);
 
                         Mat_<double> xgeo((int)jtb.rows, 1);
-                        bool geoSolved = pBackend->solveDecomposed(jtrvv, xgeo);
+                        bool geoSolved = backend->solveDecomposed(jtrvv, xgeo);
 
                         if (geoSolved)
                         {
                             double truncerr = sqrt(xgeo.dot(xgeo) / x.dot(x));
                             bool geoIsGood = (truncerr < 1.0);
                             if (geoIsGood)
-                                x += xgeo * geoScale;
+                                x += xgeo * pSettings.geoScale;
 
                             CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr << (geoIsGood ? ", use it" : ", skip it") );
                         }
@@ -233,13 +259,13 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 }
 
                 // calc energy with current delta x
-                pBackend->currentOplusX(x, /*geo*/ false);
+                backend->currentOplusX(x, /*geo*/ false);
 
-                bool success = pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ false);
+                bool success = backend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ false);
                 if (!success || energy < 0 || std::isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
-                    return BaseLevMarq::Report(false, iter, oldEnergy); // not found
+                    return LevMarqBase::Report(false, iter, oldEnergy); // not found
                 }
 
                 costChange = oldEnergy - energy;
@@ -251,17 +277,17 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                     << " deltaEnergy: " << costChange
                     << " deltaEqEnergy: " << jacCostChange
                     << " max(J^T*b): " << gradientMax
-                    << (stepNormInf ? " normInf(x): " : " norm2(x): ") << xNorm
+                    << (pSettings.stepNormInf ? " normInf(x): " : " norm2(x): ") << xNorm
                     << " deltaEnergy/energy: " << costChange / energy);
             }
 
             // zero cost change is treated like an algorithm failure if checkRelEnergyChange is off
-            if (!solved || costChange < 0 || (!checkRelEnergyChange && abs(costChange) < DBL_EPSILON))
+            if (!solved || costChange < 0 || (!pSettings.checkRelEnergyChange && abs(costChange) < DBL_EPSILON))
             {
                 // failed to optimize, increase lambda and repeat
 
                 lambdaLevMarq *= lmUpFactor;
-                if (upDouble)
+                if (pSettings.upDouble)
                     lmUpFactor *= 2.0;
 
                 CV_LOG_INFO(NULL, "LM goes up, lambda: " << lambdaLevMarq << ", old energy: " << oldEnergy);
@@ -271,18 +297,18 @@ BaseLevMarq::Report BaseLevMarq::optimize()
                 // optimized successfully, decrease lambda and set variables for next iteration
                 enoughLm = true;
 
-                if (useStepQuality)
-                    lambdaLevMarq *= std::max(1.0 / initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
+                if (pSettings.useStepQuality)
+                    lambdaLevMarq *= std::max(1.0 / pSettings.initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
                 else
-                    lambdaLevMarq *= 1.0 / initialLmDownFactor;
-                lmUpFactor = initialLmUpFactor;
+                    lambdaLevMarq *= 1.0 / pSettings.initialLmDownFactor;
+                lmUpFactor = pSettings.initialLmUpFactor;
 
-                smallGradient = (gradientMax < minGradientTolerance);
-                smallStep = (xNorm < stepNormTolerance);
-                smallEnergyDelta = (costChange / energy < relEnergyDeltaTolerance);
-                smallEnergy = (energy < smallEnergyTolerance);
+                smallGradient = (gradientMax < pSettings.minGradientTolerance);
+                smallStep = (xNorm < pSettings.stepNormTolerance);
+                smallEnergyDelta = (costChange / energy < pSettings.relEnergyDeltaTolerance);
+                smallEnergy = (energy < pSettings.smallEnergyTolerance);
 
-                pBackend->acceptProbe();
+                backend->acceptProbe();
 
                 CV_LOG_INFO(NULL, "#" << iter << " energy: " << energy);
 
@@ -293,13 +319,13 @@ BaseLevMarq::Report BaseLevMarq::optimize()
 
             iter++;
 
-            tooLong = (iter >= maxIterations);
+            tooLong = (iter >= pSettings.maxIterations);
             bigLambda = (lambdaLevMarq >= maxLambda);
 
             done = tooLong || bigLambda;
-            done = done || (checkMinGradient && smallGradient);
-            done = done || (checkStepNorm && smallStep);
-            done = done || (checkRelEnergyChange && smallEnergyDelta);
+            done = done || (pSettings.checkMinGradient && smallGradient);
+            done = done || (pSettings.checkStepNorm && smallStep);
+            done = done || (pSettings.checkRelEnergyChange && smallEnergyDelta);
             done = done || (smallEnergy);
         }
 
@@ -307,7 +333,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
         if (!done)
         {
             double dummy;
-            if (!pBackend->calcFunc(dummy, /*calcEnergy*/ false, /*calcJacobian*/ true))
+            if (!backend->calcFunc(dummy, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
                 return LevMarqBase::Report(false, iter, oldEnergy); // not found
@@ -319,11 +345,11 @@ BaseLevMarq::Report BaseLevMarq::optimize()
 
     CV_LOG_INFO(NULL, "Finished: " << (found ? "" : "not ") << "found");
     std::string fr = "Finish reason: ";
-    if (checkMinGradient && smallGradient)
+    if (pSettings.checkMinGradient && smallGradient)
         CV_LOG_INFO(NULL, fr + "gradient max val dropped below threshold");
-    if (checkStepNorm && smallStep)
+    if (pSettings.checkStepNorm && smallStep)
         CV_LOG_INFO(NULL, fr + "step size dropped below threshold");
-    if (checkRelEnergyChange && smallEnergyDelta)
+    if (pSettings.checkRelEnergyChange && smallEnergyDelta)
         CV_LOG_INFO(NULL, fr + "relative energy change between iterations dropped below threshold");
     if (smallEnergy)
         CV_LOG_INFO(NULL, fr + "energy dropped below threshold");
@@ -336,7 +362,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
 }
 
 
-struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
+struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
 {
     // all variables including fixed ones
     size_t nVars;
@@ -394,7 +420,7 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
         bool LtoR_ = false,
         InputArray mask_ = noArray(),
         int solveMethod_ = DECOMP_SVD) :
-        BaseLevMarq::Backend(),
+        LevMarqBackend(),
         // these fields will be initialized at prepareVars()
         jtj(),
         jtb(),
@@ -689,23 +715,23 @@ struct LevMarqDenseLinearBackend : public BaseLevMarq::Backend
 };
 
 
-LevMarqDenseLinear::LevMarqDenseLinear(int nvars, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod))
+LevMarqDenseLinear::LevMarqDenseLinear(int nvars, LongCallback callback, const Settings& settings, InputArray mask, int nerrs, int solveMethod) :
+    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod), settings)
 { }
-LevMarqDenseLinear::LevMarqDenseLinear(int nvars, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod))
+LevMarqDenseLinear::LevMarqDenseLinear(int nvars, NormalCallback callback, const Settings& settings, InputArray mask, bool LtoR, int solveMethod) :
+    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod), settings)
 { }
-LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, LongCallback callback, InputArray mask, int nerrs, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod))
+LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, LongCallback callback, const Settings& settings, InputArray mask, int nerrs, int solveMethod) :
+    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod), settings)
 { }
-LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, InputArray mask, bool LtoR, int solveMethod) :
-    BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod))
+LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, const Settings& settings, InputArray mask, bool LtoR, int solveMethod) :
+    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod), settings)
 { }
 
 LevMarqBase::Report LevMarqDenseLinear::run(InputOutputArray param)
 {
     CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
-    pBackend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
+    pImpl->pBackend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
     return optimize();
 }
 

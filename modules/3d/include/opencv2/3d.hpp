@@ -509,7 +509,16 @@ public:
         double energy;
     };
 
-    struct Settings
+
+    /** @brief Structure to keep LevMarq settings
+    
+    The structure allows a user to pass algorithm parameters along with their names like this:
+    @code
+    MySolver solver(nVars, callback, MySolver::Settings().geodesicS(true).geoScale(1.0));
+    @endcode
+
+    */
+    struct CV_EXPORTS Settings
     {
         Settings() :
             jacobiScaling(false),
@@ -532,6 +541,37 @@ public:
             initialLmUpFactor(2.0),
             initialLmDownFactor(3.0)
         { }
+
+        bool operator==(const Settings& other) const
+        {
+            const double eps = FLT_EPSILON;
+            bool ok = true;
+            ok = ok && (this->jacobiScaling == other.jacobiScaling);
+            ok = ok && (this->upDouble == other.upDouble);
+            ok = ok && (this->useStepQuality == other.useStepQuality);
+            ok = ok && (this->clampDiagonal == other.clampDiagonal);
+            ok = ok && (this->stepNormInf == other.stepNormInf);
+            ok = ok && (this->checkRelEnergyChange == other.checkRelEnergyChange);
+            ok = ok && (this->checkMinGradient == other.checkMinGradient);
+            ok = ok && (this->checkStepNorm == other.checkStepNorm);
+
+            ok = ok && (this->geodesic == other.geodesic);
+            ok = ok && abs(this->hGeo - other.hGeo) < eps;
+            ok = ok && abs(this->geoScale - other.geoScale) < eps;
+
+            ok = ok && abs(this->stepNormTolerance - other.stepNormTolerance) < eps;
+            ok = ok && abs(this->relEnergyDeltaTolerance - other.relEnergyDeltaTolerance) < eps;
+            ok = ok && abs(this->minGradientTolerance - other.minGradientTolerance) < eps;
+            ok = ok && abs(this->smallEnergyTolerance - other.smallEnergyTolerance) < eps;
+
+            ok = ok && (this->maxIterations == other.maxIterations);
+
+            ok = ok && abs(this->initialLambda - other.initialLambda) < eps;
+            ok = ok && abs(this->initialLmUpFactor - other.initialLmUpFactor) < eps;
+            ok = ok && abs(this->initialLmDownFactor - other.initialLmDownFactor) < eps;
+
+            return ok;
+        }
 
         Settings& jacobiScalingS          (bool         v) { jacobiScaling           = v; return *this; }
         Settings& upDoubleS               (bool         v) { upDouble                = v; return *this; }
@@ -593,18 +633,25 @@ public:
         double initialLmDownFactor;
     };
 
-    Ptr<LevMarqBackend> pBackend;
-    Settings settings;
+    /*
+    Defined in details header
+    */
+    class CV_EXPORTS Backend
+    {
+    public:
+        virtual ~Backend() { }
+    };
 
-    LevMarqBase(const Ptr<LevMarqBackend>& backend) :
-        settings(),
-        pBackend(backend)
-    { }
+    LevMarqBase(const Ptr<Backend>& backend, const Settings& settings);
 
-    virtual ~BaseLevMarq() { }
+    virtual ~LevMarqBase() { }
 
     // runs optimization using given termination conditions
-    Report optimize();
+    virtual Report optimize();
+
+protected:
+    class Impl;
+    Ptr<Impl> pImpl;
 };
 
 
@@ -665,7 +712,8 @@ public:
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(int nvars, LongCallback callback, InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    LevMarqDenseLinear(int nvars, LongCallback callback, const Settings& settings = Settings(),
+                       InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
     /**
         Creates a solver
 
@@ -675,7 +723,8 @@ public:
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(int nvars, NormalCallback callback, InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
+    LevMarqDenseLinear(int nvars, NormalCallback callback, const Settings& settings = Settings(),
+                       InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
         Creates a solver
@@ -686,7 +735,8 @@ public:
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(InputOutputArray param, LongCallback callback, InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    LevMarqDenseLinear(InputOutputArray param, LongCallback callback, const Settings& settings = Settings(),
+                       InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
     /**
         Creates a solver
 
@@ -696,7 +746,8 @@ public:
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
+    LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, const Settings& settings = Settings(),
+                       InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
        Runs Levenberg-Marquardt algorithm using the passed vector of parameters as the start point.

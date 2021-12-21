@@ -1305,10 +1305,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
         return true;
     };
 
-    LevMarqDenseLinear solver(_param, callback);
-    // old LMSolver calculates successful iterations only, this one calculates all iterations
-    solver.maxIterations = (unsigned int)(max_iter * 2.1);
-    solver.geodesic = true;
+    LevMarqDenseLinear solver(_param, callback, LevMarqBase::Settings().maxIterationsS((unsigned int)max_iter).geodesicS(true));
     solver.optimize();
 
     _param.rowRange(0, 3).copyTo(rvec);

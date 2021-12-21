@@ -273,12 +273,13 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         return true;
     };
 
-    LevMarqDenseLinear solver(cam_params_, callb, noArray(), nerrs);
-    // old LMSolver calculates successful iterations only, this one calculates all iterations
-    solver.maxIterations = (unsigned int)(term_criteria_.maxCount * 2.1);
-    solver.stepNormTolerance = term_criteria_.epsilon;
-    solver.smallEnergyTolerance = term_criteria_.epsilon * term_criteria_.epsilon;
-    solver.geodesic = true;
+    LevMarqDenseLinear solver(cam_params_, callb,
+        LevMarqBase::Settings()
+        .maxIterationsS((unsigned int)term_criteria_.maxCount)
+        .stepNormToleranceS(term_criteria_.epsilon)
+        .smallEnergyToleranceS(term_criteria_.epsilon * term_criteria_.epsilon)
+        .geodesicS(true),
+        noArray(), nerrs);
     solver.optimize();
 
     LOGLN_CHAT("");

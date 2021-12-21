@@ -735,12 +735,12 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
 
             return true;
         };
-        LevMarqDenseLinear solver(params, solvePnPRefineLMCallback);
-        // old LMSolver calculates successful iterations only, this one calculates all iterations
-        solver.maxIterations = (unsigned int)(_criteria.maxCount * 2.1);
-        solver.stepNormTolerance = (double)_criteria.epsilon;
-        solver.smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
-        solver.geodesic = true;
+        LevMarqDenseLinear solver(params, solvePnPRefineLMCallback,
+            LevMarqBase::Settings()
+            .maxIterationsS((unsigned int)_criteria.maxCount)
+            .stepNormToleranceS((double)_criteria.epsilon)
+            .smallEnergyToleranceS((double)_criteria.epsilon * (double)_criteria.epsilon)
+            .geodesicS(true));
         solver.optimize();
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());

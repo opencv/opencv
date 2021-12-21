@@ -116,8 +116,13 @@ TEST(PoseGraph, sphereG2O)
     // You may change logging level to view detailed optimization report
     // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
 
-    // experimental, not guaranteed to work on other problems
-    pg->createOptimizer()->geoScale = 1.0;
+    // geoScale=1 is experimental, not guaranteed to work on other problems
+    // the rest are default params
+    pg->createOptimizer(LevMarqBase::Settings().geoScaleS(1.0)
+        .maxIterationsS(100)
+        .checkRelEnergyChangeS(true)
+        .relEnergyDeltaToleranceS(1e-6)
+        .geodesicS(true));
 
     auto r = pg->optimize();
 
@@ -423,9 +428,8 @@ TEST(LevMarq, Rosenbrock)
                 Mat(j(x, y)).copyTo(jv);
             }
             return true;
-    });
-
-    solver.geodesic = true;
+    },
+    LevMarqBase::Settings().geodesicS(true));
 
     Mat_<double> x (Vec2d(1, 3));
 

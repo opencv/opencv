@@ -108,7 +108,8 @@ class PoseGraphLevMarqBackend;
 class PoseGraphLevMarq : public LevMarqBase
 {
 public:
-    PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqBackend>(pg))
+    PoseGraphLevMarq(PoseGraphImpl* pg, const Settings& settings = Settings()) :
+        LevMarqBase(makePtr<PoseGraphLevMarqBackend>(pg), settings)
     { }
 };
 
@@ -331,20 +332,22 @@ public:
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
     // creates an optimizer
-    virtual Ptr<BaseLevMarq> createOptimizer() CV_OVERRIDE
+    virtual Ptr<LevMarqBase> createOptimizer(const LevMarqBase::Settings& settings = LevMarqBase::Settings()) CV_OVERRIDE
     {
-        lm = makePtr<PoseGraphLevMarq>(this);
-
-        lm->maxIterations = 100;
-        lm->checkRelEnergyChange = true;
-        lm->relEnergyDeltaTolerance = 1e-6;
-        lm->geodesic = true;
+        LevMarqBase::Settings newSettings;
+        if (settings == LevMarqBase::Settings())
+        {
+            newSettings = LevMarqBase::Settings().maxIterationsS(100).checkRelEnergyChangeS(true).relEnergyDeltaToleranceS(1e-6).geodesicS(true);
+        }
+        else
+            newSettings = settings;
+        lm = makePtr<PoseGraphLevMarq>(this, newSettings);
 
         return lm;
     }
 
     // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
-    virtual BaseLevMarq::Report optimize() CV_OVERRIDE;
+    virtual LevMarqBase::Report optimize() CV_OVERRIDE;
 
     std::map<size_t, Node> nodes;
     std::vector<Edge> edges;
@@ -597,7 +600,7 @@ class PoseGraphLevMarqBackend : public detail::LevMarqBackend
 {
 public:
     PoseGraphLevMarqBackend(PoseGraphImpl* pg_) :
-        BaseLevMarq::Backend(),
+        LevMarqBackend(),
         pg(pg_),
         jtj(0),
         jtb(),
