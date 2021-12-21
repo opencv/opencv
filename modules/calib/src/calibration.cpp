@@ -1068,7 +1068,7 @@ static double stereoCalibrateImpl(
         solver.stepNormTolerance = termCrit.epsilon;
         solver.smallEnergyTolerance = termCrit.epsilon * termCrit.epsilon;
         // geodesic not supported for normal callbacks
-        BaseLevMarq::Report r = solver.optimize();
+        LevMarqBase::Report r = solver.optimize();
         reprojErr = r.energy;
     }
 

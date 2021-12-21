@@ -105,7 +105,7 @@ cv::Matx<_Tp, m, n + k> concatHor(const cv::Matx<_Tp, m, n>& a, const cv::Matx<_
 class PoseGraphImpl;
 class PoseGraphLevMarqBackend;
 
-class PoseGraphLevMarq : public BaseLevMarq
+class PoseGraphLevMarq : public LevMarqBase
 {
 public:
     PoseGraphLevMarq(PoseGraphImpl* pg) : BaseLevMarq(makePtr<PoseGraphLevMarqBackend>(pg))
@@ -593,7 +593,7 @@ static void doJacobiScalingSparse(BlockSparseMat<double, 6, 6>& jtj, Mat_<double
 }
 
 //TODO: robustness
-class PoseGraphLevMarqBackend : public BaseLevMarq::Backend
+class PoseGraphLevMarqBackend : public detail::LevMarqBackend
 {
 public:
     PoseGraphLevMarqBackend(PoseGraphImpl* pg_) :
@@ -908,7 +908,7 @@ public:
 };
 
 
-BaseLevMarq::Report PoseGraphImpl::optimize()
+LevMarqBase::Report PoseGraphImpl::optimize()
 {
     if (!lm)
         createOptimizer();

@@ -486,7 +486,7 @@ a probe value. "Added" is quoted because in some groups (e.g. SO(3) group) such 
 
 For more details, please refer to Wikipedia page (https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm).
 */
-class CV_EXPORTS BaseLevMarq
+class CV_EXPORTS LevMarqBase
 {
 public:
     struct Report
@@ -604,7 +604,7 @@ Supports fixed variables and two forms of callback function:
 1. Generating ordinary jacobian J and residual vector err ("long")
 2. Generating normal equation matrix J^T*J and gradient vector J^T*err
 */
-class CV_EXPORTS LevMarqDenseLinear : public BaseLevMarq
+class CV_EXPORTS LevMarqDenseLinear : public LevMarqBase
 {
 public:
     /** "Long" callback: f(param, &err, &J) -> bool
@@ -701,7 +701,7 @@ public:
        and the dimensionality of optimized criteria is defined by the size of err vector
        computed by the callback.
     */
-    BaseLevMarq::Report run(InputOutputArray param);
+    LevMarqBase::Report run(InputOutputArray param);
 };
 
 

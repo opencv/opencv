@@ -89,7 +89,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
     if (geodesic && !pBackend->enableGeo())
     {
         CV_LOG_INFO(NULL, "The backend does not support geodesic acceleration, please turn off the corresponding option");
-        return BaseLevMarq::Report(false, 0, 0); // not found
+        return LevMarqBase::Report(false, 0, 0); // not found
     }
 
     // this function sets probe vars to current X
@@ -99,7 +99,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
     if (!pBackend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
-        return BaseLevMarq::Report(false, 0, 0); // not found
+        return LevMarqBase::Report(false, 0, 0); // not found
     }
 
     double oldEnergy = energy;
@@ -310,7 +310,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
             if (!pBackend->calcFunc(dummy, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
-                return BaseLevMarq::Report(false, iter, oldEnergy); // not found
+                return LevMarqBase::Report(false, iter, oldEnergy); // not found
             }
         }
     }
@@ -332,7 +332,7 @@ BaseLevMarq::Report BaseLevMarq::optimize()
     if (bigLambda)
         CV_LOG_INFO(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
 
-    return BaseLevMarq::Report(found, iter, oldEnergy);
+    return LevMarqBase::Report(found, iter, oldEnergy);
 }
 
 
@@ -702,7 +702,7 @@ LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback ca
     BaseLevMarq(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod))
 { }
 
-BaseLevMarq::Report LevMarqDenseLinear::run(InputOutputArray param)
+LevMarqBase::Report LevMarqDenseLinear::run(InputOutputArray param)
 {
     CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
     pBackend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
