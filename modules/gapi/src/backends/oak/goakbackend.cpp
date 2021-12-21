@@ -8,7 +8,6 @@
 
 #include <cstring>
 #include <unordered_set>
-#include <functional>
 
 #include <api/gbackend_priv.hpp>
 #include <backends/common/gbackend.hpp>
@@ -40,11 +39,13 @@ class GOAKExecutable final: public GIslandExecutable {
     public:
         using Input = dai::Node::Input;
         using Output = dai::Node::Output;
+        using InputPtr = dai::Node::Input*;
+        using OutputPtr = dai::Node::Output*;
     };
 
-    std::reference_wrapper<cv::GArg> packArg(const GArg &arg, std::vector<ExtractTypeHelper::Input*>& oak_ins,
-                                             std::vector<cv::GArg>& oak_wrapped_args);
-    void outArg(const RcDesc &rc, std::vector<ExtractTypeHelper::Output*>& oak_outs);
+    cv::GArg packArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins,
+                     std::vector<cv::GArg>& oak_wrapped_args);
+    void outArg(const RcDesc &rc, std::vector<ExtractTypeHelper::OutputPtr>& oak_outs);
 
     const ade::Graph& m_g;
     GModel::ConstGraph m_gm;
@@ -56,12 +57,13 @@ class GOAKExecutable final: public GIslandExecutable {
     std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> m_processed_nodes;
     // Will be reworked later when XLinkIn will be introduced as input
     std::shared_ptr<dai::node::ColorCamera> m_camera_input;
+    std::tuple<int, int> m_camera_wh;
 
     std::unordered_map<ade::NodeHandle,
-                       std::vector<ExtractTypeHelper::Input*>,
+                       std::vector<ExtractTypeHelper::InputPtr>,
                        ade::HandleHasher<ade::Node>> m_oak_node_inputs;
     std::unordered_map<ade::NodeHandle,
-                       std::vector<ExtractTypeHelper::Output*>,
+                       std::vector<ExtractTypeHelper::OutputPtr>,
                        ade::HandleHasher<ade::Node>> m_oak_node_outputs;
 
     // Backend outputs
@@ -106,48 +108,58 @@ public:
     // FIXME: make private?
     using Input = GOAKExecutable::ExtractTypeHelper::Input;
     using Output = GOAKExecutable::ExtractTypeHelper::Output;
+    using InputPtr = GOAKExecutable::ExtractTypeHelper::Input*;
+    using OutputPtr = GOAKExecutable::ExtractTypeHelper::Output*;
 
     GOAKContext(const std::unique_ptr<dai::Pipeline>& pipeline,
-                std::vector<std::reference_wrapper<cv::GArg>>& args,
-                std::vector<Output*>& results);
+                const std::tuple<int, int>& camera_size,
+                std::vector<cv::GArg>& args,
+                std::vector<OutputPtr>& results);
 
     // Generic accessor API
     template<typename T>
-    T& inArg(int input) { return m_args.at(input).get().get<T>(); }
+    T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // FIXME: consider not using raw pointers
-    Input*& in(int input);
-    Output*& out(int output);
+    InputPtr* in(int input);
+    OutputPtr* out(int output);
 
     const std::unique_ptr<dai::Pipeline>& pipeline();
+    const std::tuple<int, int>& camera_size() const;
 
 private:
     const std::unique_ptr<dai::Pipeline>& m_pipeline;
-    std::vector<std::reference_wrapper<cv::GArg>>& m_args;
-    std::vector<Output*>& m_outputs;
+    const std::tuple<int, int>& m_camera_size;
+    std::vector<cv::GArg>& m_args;
+    std::vector<OutputPtr>& m_outputs;
 };
 
 GOAKContext::GOAKContext(const std::unique_ptr<dai::Pipeline>& pipeline,
-                         std::vector<std::reference_wrapper<cv::GArg>>& args,
-                         std::vector<Output*>& results)
-    : m_pipeline(pipeline), m_args(args), m_outputs(results) {}
+                         const std::tuple<int, int>& camera_size,
+                         std::vector<cv::GArg>& args,
+                         std::vector<OutputPtr>& results)
+    : m_pipeline(pipeline), m_camera_size(camera_size), m_args(args), m_outputs(results) {}
 
 const std::unique_ptr<dai::Pipeline>& GOAKContext::pipeline() {
     return m_pipeline;
 }
 
-GOAKContext::Input*& GOAKContext::in(int input) {
-    return inArg<GOAKContext::Input*>(input);
+const std::tuple<int, int>& GOAKContext::camera_size() const {
+    return m_camera_size;
 }
 
-GOAKContext::Output*& GOAKContext::out(int output) {
-    return m_outputs.at(output);
+GOAKContext::InputPtr* GOAKContext::in(int input) {
+    return inArg<GOAKContext::InputPtr*>(input);
+}
+
+GOAKContext::OutputPtr* GOAKContext::out(int output) {
+    return &(m_outputs.at(output));
 }
 
 namespace detail {
 template<class T> struct get_in;
 template<> struct get_in<cv::GFrame> {
-    static GOAKContext::Input*& get(GOAKContext &ctx, int idx) { return ctx.in(idx); }
+    static GOAKContext::InputPtr* get(GOAKContext &ctx, int idx) { return ctx.in(idx); }
 };
 template<class T> struct get_in {
     static T get(GOAKContext &ctx, int idx) { return ctx.inArg<T>(idx); }
@@ -156,10 +168,10 @@ template<class T> struct get_in {
 
 template<class T> struct get_out;
 template<> struct get_out<cv::GFrame> {
-    static GOAKContext::Output*& get(GOAKContext &ctx, int idx) { return ctx.out(idx); }
+    static GOAKContext::OutputPtr* get(GOAKContext &ctx, int idx) { return ctx.out(idx); }
 };
 template<typename U> struct get_out<cv::GArray<U>> {
-    static GOAKContext::Output*& get(GOAKContext &ctx, int idx) { return ctx.out(idx); }
+    static GOAKContext::OutputPtr* get(GOAKContext &ctx, int idx) { return ctx.out(idx); }
 };
 // FIXME: add support of other types
 
@@ -175,6 +187,7 @@ struct OAKCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> > {
                                , cv::detail::Seq<IIs...>
                                , cv::detail::Seq<OIs...>) {
         Impl::put(ctx.pipeline(),
+                  ctx.camera_size(),
                   node,
                   in_queues_params,
                   get_in<Ins>::get(ctx, IIs)...,
@@ -245,9 +258,9 @@ void cv::gimpl::GOAKExecutable::LinkToParentHelper(ade::NodeHandle handle,
     }
 }
 
-std::reference_wrapper<cv::GArg>
+cv::GArg
 cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
-                                   std::vector<ExtractTypeHelper::Input*>& oak_ins,
+                                   std::vector<ExtractTypeHelper::InputPtr>& oak_ins,
                                    std::vector<cv::GArg>& oak_wrapped_args) {
     if (arg.kind != cv::detail::ArgKind::GOBJREF) {
         GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
@@ -257,13 +270,13 @@ cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
                     && arg.kind != cv::detail::ArgKind::GFRAME);
         // All other cases - pass as-is, with no transformations to
         // GArg contents.
-        return const_cast<cv::GArg&>(arg);
+        return arg;
     }
     const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
     switch (ref.shape) {
     case GShape::GFRAME:
         oak_ins.push_back(nullptr);
-        oak_wrapped_args.push_back(GArg(oak_ins.back()));
+        oak_wrapped_args.push_back(GArg(&(oak_ins.back())));
         return oak_wrapped_args.back();
         break;
     default:
@@ -273,7 +286,7 @@ cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
 }
 
 void cv::gimpl::GOAKExecutable::outArg(const RcDesc &rc,
-                                       std::vector<ExtractTypeHelper::Output*>& oak_outs) {
+                                       std::vector<ExtractTypeHelper::OutputPtr>& oak_outs) {
     switch (rc.shape) {
     case GShape::GFRAME:
         oak_outs.push_back(nullptr);
@@ -303,6 +316,8 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
 
         // Set camera output. Fixme: consider working with other camera outputs
         m_camera_input = camRgb;
+        // FIXME: change when other camera censors are introduced
+        m_camera_wh = camRgb->getVideoSize();
 
         // Prepare XLinkOut nodes for each output object in graph
         for (size_t i = 0; i < outs_data.size(); ++i) {
@@ -324,15 +339,16 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 m_oak_node_inputs[nh] = {};
                 m_oak_node_outputs[nh] = {};
 
-                std::vector<std::reference_wrapper<cv::GArg>> in_ctx_args;
+                std::vector<cv::GArg> in_ctx_args;
                 in_ctx_args.reserve(op.args.size());
                 for (auto &op_arg : op.args) in_ctx_args.push_back(packArg(op_arg,
                                                                            m_oak_node_inputs[nh],
                                                                            m_oak_wrapped_args));
                 for (auto &&op_out : op.outs) outArg(op_out, m_oak_node_outputs[nh]);
+                GAPI_Assert(!m_oak_node_inputs[nh].empty());
                 GAPI_Assert(!m_oak_node_outputs[nh].empty());
 
-                GOAKContext ctx(m_pipeline, in_ctx_args, m_oak_node_outputs[nh]);
+                GOAKContext ctx(m_pipeline, m_camera_wh, in_ctx_args, m_oak_node_outputs[nh]);
                 u.k.m_f(ctx, m_oak_nodes[nh], m_in_queues);
                 GAPI_Assert(m_oak_nodes[nh] != nullptr);
             }
@@ -518,11 +534,12 @@ public:
 namespace {
 GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
     static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const std::tuple<int, int>&,
                     std::shared_ptr<dai::Node>& node,
                     std::vector<std::pair<std::string, dai::Buffer>>&,
-                    GOAKContext::Input*& in,
+                    GOAKContext::InputPtr* in,
                     const cv::gapi::oak::EncoderConfig& cfg,
-                    GOAKContext::Output*& out) {
+                    GOAKContext::OutputPtr* out) {
         auto videoEnc = pipeline->create<dai::node::VideoEncoder>();
 
         // FIXME: convert all the parameters to dai
@@ -530,22 +547,23 @@ GAPI_OAK_KERNEL(GOAKEncFrame, cv::gapi::oak::GEncFrame) {
                                           cfg.frameRate,
                                           dai::VideoEncoderProperties::Profile::H265_MAIN);
         node = videoEnc;
-        in = &(videoEnc->input);
-        out = &(videoEnc->bitstream);
+        *in = &(videoEnc->input);
+        *out = &(videoEnc->bitstream);
     }
 };
 
 GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
     static void put(const std::unique_ptr<dai::Pipeline>& pipeline,
+                    const std::tuple<int, int>& camera_wh,
                     std::shared_ptr<dai::Node>& node,
                     std::vector<std::pair<std::string, dai::Buffer>>& m_in_queues,
-                    GOAKContext::Input*& in,
+                    GOAKContext::InputPtr* in,
                     const std::vector<std::vector<int>>& hk,
                     const std::vector<std::vector<int>>& vk,
-                    GOAKContext::Output*& out) {
+                    GOAKContext::OutputPtr* out) {
         auto edgeDetector = pipeline->create<dai::node::EdgeDetector>();
 
-        edgeDetector->setMaxOutputFrameSize(1920 * 1080);
+        edgeDetector->setMaxOutputFrameSize(std::get<0>(camera_wh) * std::get<1>(camera_wh));
 
         auto xinEdgeCfg = pipeline->create<dai::node::XLinkIn>();
         xinEdgeCfg->setStreamName("sobel_cfg");
@@ -558,8 +576,8 @@ GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
         m_in_queues.push_back({"sobel_cfg", cfg});
 
         node = edgeDetector;
-        in = &(edgeDetector->inputImage);
-        out = &(edgeDetector->outputImage);
+        *in = &(edgeDetector->inputImage);
+        *out = &(edgeDetector->outputImage);
     }
 };
 } // anonymous namespace
