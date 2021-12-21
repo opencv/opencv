@@ -57,7 +57,7 @@ namespace imgproc {
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GFindContoursOutput = std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>;
 
-    G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
+    G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>, "org.opencv.imgproc.filters.filter2D") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, Mat, Point, Scalar, int, Scalar) {
             return in.withDepth(ddepth);
         }
@@ -75,7 +75,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GBlur, <GMat(GMat,Size,Point,int,Scalar)>,         "org.opencv.imgproc.filters.blur"){
+    G_TYPED_KERNEL(GBlur, <GMat(GMat,Size,Point,int,Scalar)>, "org.opencv.imgproc.filters.blur") {
         static GMatDesc outMeta(GMatDesc in, Size, Point, int, Scalar) {
             return in;
         }
@@ -139,13 +139,13 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist"){
+    G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist") {
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
         }
     };
 
-    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny"){
+    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny") {
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
         }

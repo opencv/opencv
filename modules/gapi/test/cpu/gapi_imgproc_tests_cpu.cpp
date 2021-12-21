@@ -19,7 +19,7 @@ namespace opencv_test
 {
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
@@ -31,7 +31,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
                                        cv::Size(30,30))));
 
 INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
@@ -43,7 +43,7 @@ INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
                                        cv::Size(30,30))));
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
-                        Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),

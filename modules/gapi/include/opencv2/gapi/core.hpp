@@ -100,7 +100,7 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GMulC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.mulC"){
+    G_TYPED_KERNEL(GMulC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.mulC") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc, int ddepth) {
             return a.withDepth(ddepth);
         }
@@ -201,37 +201,37 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GCmpGTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGTScalar"){
+    G_TYPED_KERNEL(GCmpGTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGTScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpGEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGEScalar"){
+    G_TYPED_KERNEL(GCmpGEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpLEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLEScalar"){
+    G_TYPED_KERNEL(GCmpLEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpLTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLTScalar"){
+    G_TYPED_KERNEL(GCmpLTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLTScalar") {
     static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpEQScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpEQScalar"){
+    G_TYPED_KERNEL(GCmpEQScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpEQScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpNEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpNEScalar"){
+    G_TYPED_KERNEL(GCmpNEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpNEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
