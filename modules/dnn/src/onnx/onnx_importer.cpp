@@ -1472,7 +1472,16 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
         blob = blob.reshape(1, 1);
         if (blob.total() == 1) {
             float blob_value = blob.ptr<float>()[0];
-            float coeff = isDiv ? 1.0 / blob_value : blob_value;
+            float coeff = blob_value;
+            if (isDiv)
+            {
+                coeff = 1.f / blob_value;
+                if (constId == 0)
+                {
+                    // Power layer calculates (x*scale + shift)^power, so const/x -> (x * (1/const) + 0)^(-1)
+                    layerParams.set("power", -1.f);
+                }
+            }
             layerParams.set("scale", coeff);
             layerParams.type = "Power";
         }
