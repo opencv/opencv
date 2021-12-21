@@ -1056,6 +1056,11 @@ TEST_P(Test_ONNX_layers, SubFromConst)
     testONNXModels("sub_from_const_broadcast");
 }
 
+TEST_P(Test_ONNX_layers, DivConst)
+{
+    testONNXModels("div_const");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
