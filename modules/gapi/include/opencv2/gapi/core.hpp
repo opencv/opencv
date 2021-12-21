@@ -9,10 +9,10 @@
 #define OPENCV_GAPI_CORE_HPP
 
 #include <math.h>
-
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
@@ -34,6 +34,9 @@ namespace cv { namespace gapi {
  * Core module functionality.
  */
 namespace core {
+    using GResize = cv::gapi::imgproc::GResize;
+    using GResizeP = cv::gapi::imgproc::GResizeP;
+
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GMat4 = std::tuple<GMat,GMat,GMat,GMat>;
