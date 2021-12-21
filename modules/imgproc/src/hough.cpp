@@ -344,8 +344,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                     rv = r0 * std::cos( phi );
                     i = (int)rv * tn;
                     i += cvFloor( phi1 );
-                    assert( i >= 0 );
-                    assert( i < rn * tn );
+                    CV_Assert( i >= 0 );
+                    CV_Assert( i < rn * tn );
                     caccum[i] = (uchar) (caccum[i] + ((i ^ iprev) != 0));
                     iprev = i;
                     if( cmax < caccum[i] )
@@ -409,8 +409,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                         i = CV_IMAX( i, -1 );
                         i = CV_IMIN( i, sfn );
                         mcaccum[i]++;
-                        assert( i >= -1 );
-                        assert( i <= sfn );
+                        CV_Assert( i >= -1 );
+                        CV_Assert( i <= sfn );
                     }
                 }
 
