@@ -1,21 +1,26 @@
 #include <complex.h>
 #include "opencv_lapack.h"
 
-#ifndef LAPACK_GLOBAL
-// If lapack version <= 3.4.0
-#ifdef LAPACK_NAME
-// If lapack version == 3.4.0
-#define LAPACK_GLOBAL(name,NAME) LAPACK_NAME(name,NAME)
+#if defined(LAPACK_GLOBAL)
+/* This means LAPACK is netlib's reference implementation with version > 3.4.0 */
+#define OCV_LAPACK_GLOBAL(name,NAME) LAPACK_GLOBAL(name,NAME)
+#elif defined(LAPACK_NAME)
+/* This means LAPACK is netlib's reference implementation version 3.4.0 */
+#define OCV_LAPACK_GLOBAL(name,NAME) LAPACK_NAME(name,NAME)
 #else
-// If lapack version < 3.4.0
-#error Developper needs to figure this out as both LAPACK_GLOBAL and LAPACK_NAME are undefined
-#endif
+/* This means 1 of 2 things:
+ *  - either LAPACK is netlib's reference implementation with version < 3.4.0
+ *  - or another LAPACK implementation is used (Apple's Accelerate for instance)
+ *
+ *  Fall back to what opencv always assumed until now
+ */
+#define OCV_LAPACK_GLOBAL(name,NAME) name##_
 #endif
 
-static char* check_fn1 = (char*)LAPACK_GLOBAL(sgesv,SGESV);
-static char* check_fn2 = (char*)LAPACK_GLOBAL(sposv,SPOSV);
-static char* check_fn3 = (char*)LAPACK_GLOBAL(spotrf,SPOTRF);
-static char* check_fn4 = (char*)LAPACK_GLOBAL(sgesdd,SGESDD);
+static char* check_fn1 = (char*)OCV_LAPACK_GLOBAL(sgesv,SGESV);
+static char* check_fn2 = (char*)OCV_LAPACK_GLOBAL(sposv,SPOSV);
+static char* check_fn3 = (char*)OCV_LAPACK_GLOBAL(spotrf,SPOTRF);
+static char* check_fn4 = (char*)OCV_LAPACK_GLOBAL(sgesdd,SGESDD);
 
 int main(int argc, char* argv[])
 {
