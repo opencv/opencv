@@ -27,6 +27,7 @@ set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "All
 # TODO building plugins with OpenCV is not supported yet
 #set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
 #string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+#string(TOLOWER "${PARALLEL_PLUGIN_LIST}" PARALLEL_PLUGIN_LIST)
 
 
 ocv_add_module(core
