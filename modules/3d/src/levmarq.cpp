@@ -89,7 +89,7 @@ class LevMarqBase::Impl
 public:
     Impl(const Ptr<LevMarqBase::Backend>& backendV, const LevMarqBase::Settings& settingsV) :
         settings(settingsV),
-        backend(backendV)
+        backend(backendV.dynamicCast<detail::LevMarqBackend>())
     { }
 
     LevMarqBase::Report optimize();
