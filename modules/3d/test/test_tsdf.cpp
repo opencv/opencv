@@ -633,6 +633,7 @@ TEST(HashTSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -654,6 +655,7 @@ TEST(HashTSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
     valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 

@@ -226,6 +226,13 @@ HashTsdfVolume::~HashTsdfVolume() {}
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
     std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
+    CV_TRACE_FUNCTION();
+    Depth depth;
+    frame.getDepth(depth);
+    // dependence from OdometryFrame
+    depth = depth * settings.getDepthFactor();
+
+    integrate(depth, _cameraPose);
 }
 
 void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
@@ -259,6 +266,12 @@ void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray po
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
     std::cout << "HashTsdfVolume::raycast()" << std::endl;
+    Mat points, normals;
+    raycast(cameraPose, height, width, points, normals);
+    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
+    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
