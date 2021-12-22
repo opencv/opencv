@@ -335,6 +335,14 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
     OutputArray _points, OutputArray _normals);
 
+void ocl_integrateHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
+    InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy, InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags);
+
+void ocl_raycastHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals);
+
 
 } // namespace cv
 

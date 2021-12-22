@@ -109,9 +109,27 @@ public:
     int lastVolIndex;
     int lastFrameId;
     Vec6f frameParams;
+#ifndef HAVE_OPENCL
     Mat volUnitsData;
     Mat pixNorms;
     VolumeUnitIndexes volumeUnits;
+#else
+    int bufferSizeDegree;
+
+    // per-volume-unit data
+    cv::UMat lastVisibleIndices;
+
+    cv::UMat isActiveFlags;
+
+    cv::UMat volUnitsData;
+    //TODO: remove it when there's no CPU parts
+    cv::Mat volUnitsDataCopy;
+
+    cv::UMat pixNorms;
+
+    //TODO: move indexes.volumes to GPU
+    CustomHashSet hashTable;
+#endif
 };
 
 

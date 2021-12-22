@@ -215,10 +215,14 @@ size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
 {
+#ifndef HAVE_OPENCL
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
     reset();
+#else
+    reset();
+#endif
 }
 
 HashTsdfVolume::~HashTsdfVolume() {}
@@ -249,12 +253,18 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
+#ifndef HAVE_OPENCL
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+#else
+        ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+#endif
     }
-
+#ifndef HAVE_OPENCL
     integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
-
+#else
+    ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, depth, pixNorms, lastVisibleIndices, volUnitsDataCopy, volUnitsData, hashTable, isActiveFlags);
+#endif
 }
 
 void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
@@ -266,19 +276,27 @@ void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray po
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
     std::cout << "HashTsdfVolume::raycast()" << std::endl;
+#ifndef HAVE_OPENCL
     Mat points, normals;
     raycast(cameraPose, height, width, points, normals);
     outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
     outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
     outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
     outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+#else
+
+#endif
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
     std::cout << "HashTsdfVolume::raycast()" << std::endl;
     const Matx44f cameraPose = _cameraPose.getMat();
-    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
 
+#ifndef HAVE_OPENCL
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
+#else
+    ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, hashTable, volUnitsData, _points, _normals);
+#endif
 }
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
@@ -288,12 +306,20 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Outpu
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
     std::cout << "HashTsdfVolume::fetchNormals()" << std::endl;
+#ifndef HAVE_OPENCL
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+#else
+
+#endif
 }
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
     std::cout << "fetchPointsNormals()" << std::endl;
+#ifndef HAVE_OPENCL
     fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+#else
+
+#endif
 }
 
 void HashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
@@ -303,13 +329,31 @@ void HashTsdfVolume::reset()
     CV_TRACE_FUNCTION();
     lastVolIndex = 0;
     lastFrameId = 0;
+#ifndef HAVE_OPENCL
     volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
             TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
             v.tsdf = floatToTsdf(0.0f); v.weight = 0;
         });
     volumeUnits = VolumeUnitIndexes();
+#else
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+
+    bufferSizeDegree = 15;
+    int buff_lvl = (int)(1 << bufferSizeDegree);
+    int volCubed = resolution[0] * resolution[1] * resolution[2];
+
+    volUnitsDataCopy = cv::Mat(buff_lvl, volCubed, rawType<TsdfVoxel>());
+    volUnitsData = cv::UMat(buff_lvl, volCubed, CV_8UC2);
+    lastVisibleIndices = cv::UMat(buff_lvl, 1, CV_32S);
+    isActiveFlags = cv::UMat(buff_lvl, 1, CV_8U);
+    hashTable = CustomHashSet();
+    frameParams = Vec6f();
+    pixNorms = UMat();
+#endif
 }
+
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 

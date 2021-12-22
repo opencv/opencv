@@ -276,7 +276,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = false;
+static const bool display = true;
 static const bool parallelCheck = false;
 
 class Settings
@@ -416,8 +416,10 @@ enum class VolumeTestSrcType
 
 void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
-    VolumeSettings vs;
+    VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
+
+    Settings settings(true, false);
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
@@ -445,6 +447,10 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(udepth, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
+
+            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, utmpnormals);
+
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
@@ -491,7 +497,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
 
 void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
-    VolumeSettings vs;
+    VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getWidth(), vs.getHeight());

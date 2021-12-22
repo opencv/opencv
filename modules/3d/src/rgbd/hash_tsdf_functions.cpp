@@ -185,6 +185,362 @@ void integrateHashTsdfVolumeUnit(
 }
 
 
+void allocateVolumeUnits(
+    const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
+    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize)
+{
+    constexpr int pixCapacity = 16;
+    typedef std::array<Vec3i, pixCapacity> LocalVolUnits;
+
+    Depth depth = _depth.getMat(ACCESS_READ);
+
+    //! Compute volumes to be allocated
+    const int depthStride = volumeUnitDegree;
+    const float invDepthFactor = 1.f / depthFactor;
+    const Intr::Reprojector reproj(intrinsics.makeReprojector());
+    const Affine3f cam2vol(volumePose.inv() * Affine3f(cameraPose));
+    const Point3f truncPt(truncDist, truncDist, truncDist);
+    Mutex mutex;
+
+    // for new indices
+    CustomHashSet thm;
+
+    auto fillLocalAcessVolUnits = [&](const Range& xrange, const Range& yrange, CustomHashSet& ghm)
+    {
+        for (int y = yrange.start; y < yrange.end; y += depthStride)
+        {
+            const depthType* depthRow = depth[y];
+            for (int x = xrange.start; x < xrange.end; x += depthStride)
+            {
+                depthType z = depthRow[x] * invDepthFactor;
+                if (z <= 0 || z > truncateThreshold)
+                    continue;
+                Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
+                Point3f volPoint = cam2vol * camPoint;
+                //! Find accessed TSDF volume unit for valid 3D vertex
+                Vec3i lower_bound = volumeToVolumeUnitIdx(volPoint - truncPt, volumeUnitSize);
+                Vec3i upper_bound = volumeToVolumeUnitIdx(volPoint + truncPt, volumeUnitSize);
+
+                int pixLocalCounter = 0;
+                LocalVolUnits pixLocalVolUnits;
+                for (int i = lower_bound[0]; i <= upper_bound[0]; i++)
+                    for (int j = lower_bound[1]; j <= upper_bound[1]; j++)
+                        for (int k = lower_bound[2]; k <= upper_bound[2]; k++)
+                        {
+                            const Vec3i tsdf_idx = Vec3i(i, j, k);
+
+                            if (hashTable.find(tsdf_idx) < 0)
+                            {
+                                bool found = false;
+                                for (int c = 0; c < pixLocalCounter; c++)
+                                {
+                                    if (pixLocalVolUnits[c] == tsdf_idx)
+                                    {
+                                        found = true; break;
+                                    }
+                                }
+                                if (!found)
+                                {
+                                    pixLocalVolUnits[pixLocalCounter++] = tsdf_idx;
+                                    if (pixLocalCounter >= pixCapacity)
+                                    {
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+
+                // lock localAccessVolUnits somehow
+                for (int i = 0; i < pixLocalCounter; i++)
+                {
+                    Vec3i idx = pixLocalVolUnits[i];
+                    if (!ghm.insert(idx))
+                    {
+                        //return;
+                    }
+                }
+                // unlock
+            }
+        }
+    };
+
+    Rect dim(0, 0, depth.cols, depth.rows);
+    Size gsz(32, 32);
+    Size gg(divUp(dim.width, gsz.width), divUp(dim.height, gsz.height));
+
+    bool needReallocation = false;
+    auto allocateLambda = [&](const Range& r)
+    {
+
+        for (int yg = r.start; yg < r.end; yg++)
+        {
+            for (int xg = 0; xg < gg.width; xg++)
+            {
+                Rect gr(xg * gsz.width, yg * gsz.height, (xg + 1) * gsz.width, (yg + 1) * gsz.height);
+                gr = gr & dim;
+                Range xr(gr.tl().x, gr.br().x), yr(gr.tl().y, gr.br().y);
+
+                CustomHashSet ghm;
+
+                fillLocalAcessVolUnits(xr, yr, ghm);
+
+                if (ghm.last)
+                {
+                    std::lock_guard<std::recursive_mutex> al(mutex);
+
+                    for (int i = 0; i < ghm.last; i++)
+                    {
+                        Vec4i node = ghm.data[i];
+                        Vec3i idx(node[0], node[1], node[2]);
+
+                        //TODO: 1. add to separate hash map instead, then merge on GPU side
+
+                        int result = thm.insert(idx);
+                        if (!result)
+                        {
+                            needReallocation = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+    };
+
+    do
+    {
+        if (needReallocation)
+        {
+            thm.capacity *= 2;
+            thm.data.resize(thm.capacity);
+
+            needReallocation = false;
+        }
+
+        parallel_for_(Range(0, gg.height), allocateLambda);
+    } while (needReallocation);
+
+
+    auto pushToGlobal = [](const CustomHashSet _thm, CustomHashSet& _globalHashMap,
+        bool& _needReallocation, Mutex& _mutex)
+    {
+        for (int i = 0; i < _thm.last; i++)
+        {
+            Vec4i node = _thm.data[i];
+            Vec3i idx(node[0], node[1], node[2]);
+
+            std::lock_guard<std::recursive_mutex> al(_mutex);
+
+            int result = _globalHashMap.insert(idx);
+            if (result == 0)
+            {
+                _needReallocation = true;
+                return;
+            }
+        }
+    };
+
+    needReallocation = false;
+    do
+    {
+        if (needReallocation)
+        {
+            hashTable.capacity *= 2;
+            hashTable.data.resize(hashTable.capacity);
+
+            needReallocation = false;
+        }
+
+        pushToGlobal(thm, hashTable, needReallocation, mutex);
+    } while (needReallocation);
+}
+
+
+void markActive(
+    const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId,
+    const Affine3f volumePose, CustomHashSet& hashTable, UMat& isActiveFlags, UMat& lastVisibleIndices,
+    const float truncateThreshold, const float volumeUnitSize)
+{
+    //! Mark volumes in the camera frustum as active
+    String errorStr;
+    String name = "markActive";
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    const Affine3f vol2cam(Affine3f(cameraPose.inv()) * volumePose);
+    const Intr::Projector proj(intrinsics.makeProjector());
+    Vec2f fxy(proj.fx, proj.fy), cxy(proj.cx, proj.cy);
+
+    UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
+
+    k.args(
+        ocl::KernelArg::PtrReadOnly(hashDataGpu),
+        ocl::KernelArg::WriteOnly(isActiveFlags),
+        ocl::KernelArg::WriteOnly(lastVisibleIndices),
+        vol2cam.matrix,
+        fxy,
+        cxy,
+        frameSz,
+        volumeUnitSize,
+        hashTable.last,
+        truncateThreshold,
+        frameId
+    );
+
+    size_t globalSize[1] = { (size_t)hashTable.last };
+    if (!k.run(1, globalSize, nullptr, true))
+        throw std::runtime_error("Failed to run kernel");
+}
+
+
+
+void ocl_integrateHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
+    InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
+{
+    std::cout << "ocl_integrateHashTsdfVolumeUnit()" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    UMat depth = _depth.getUMat();
+    CV_Assert(!depth.empty());
+    UMat pixNorms = _pixNorms.getUMat();
+    UMat volUnitsData = _volUnitsData.getUMat();
+    Mat volUnitsDataCopy = _volUnitsDataCopy.getMat();
+    UMat isActiveFlags = _isActiveFlags.getUMat();
+    UMat lastVisibleIndices = _lastVisibleIndices.getUMat();
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    const Intr intrinsics(intr);
+
+    Vec4i volStrides;
+    settings.getVolumeDimentions(volStrides);
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const int volumeUnitResolution = resolution[0];
+    const int maxWeight = settings.getMaxWeight();
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+    const float truncDist = settings.getTruncatedDistance();
+    const float truncateThreshold = settings.getTruncateThreshold();
+    const float voxelSize = settings.getVoxelSize();
+    const float depthFactor = settings.getDepthFactor();
+    const float dfac = 1.f / depthFactor;
+    const float volumeUnitSize = voxelSize * resolution[0];
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Matx44f vol2camMatrix = (Affine3f(cameraPose).inv() * pose).matrix;
+    Matx44f camInvMatrix = Affine3f(cameraPose).inv().matrix;
+
+    // Save length to fill new data in ranges
+    int sizeBefore = hashTable.last;
+    allocateVolumeUnits(depth, depthFactor, pose, cameraPose, intrinsics, hashTable, volumeUnitDegree, truncDist, truncateThreshold, volumeUnitSize);
+    int sizeAfter = hashTable.last;
+    //! Perform the allocation
+
+    // Grow buffers
+    int buff_lvl = (int)(1 << bufferSizeDegree);
+    if (sizeAfter >= buff_lvl)
+    {
+        bufferSizeDegree = (int)(log2(sizeAfter) + 1); // clz() would be better
+        int oldBuffSize = buff_lvl;
+        buff_lvl = (int)pow(2, bufferSizeDegree);
+
+        volUnitsDataCopy.resize(buff_lvl);
+
+        Range oldr(0, oldBuffSize);
+        int volCubed = volumeUnitResolution * volumeUnitResolution * volumeUnitResolution;
+        UMat newData(buff_lvl, volCubed, CV_8UC2);
+        volUnitsData.copyTo(newData.rowRange(oldr));
+        volUnitsData = newData;
+
+        UMat newLastVisibleIndices(buff_lvl, 1, CV_32S);
+        lastVisibleIndices.copyTo(newLastVisibleIndices.rowRange(oldr));
+        lastVisibleIndices = newLastVisibleIndices;
+
+        UMat newIsActiveFlags(buff_lvl, 1, CV_8U);
+        isActiveFlags.copyTo(newIsActiveFlags.rowRange(oldr));
+        isActiveFlags = newIsActiveFlags;
+    }
+
+
+    // Fill data for new volume units
+    Range r(sizeBefore, sizeAfter);
+    if (r.start < r.end)
+    {
+        lastVisibleIndices.rowRange(r) = frameId;
+        isActiveFlags.rowRange(r) = 1;
+
+        TsdfVoxel emptyVoxel(floatToTsdf(0.0f), 0);
+        volUnitsData.rowRange(r) = Vec2b((uchar)(emptyVoxel.tsdf), (uchar)(emptyVoxel.weight));
+    }
+
+    //! Mark volumes in the camera frustum as active
+    markActive(cameraPose, intrinsics, depth.size(), frameId, pose, hashTable, isActiveFlags, lastVisibleIndices, truncateThreshold, volumeUnitSize);
+
+
+    String errorStr;
+    String name = "integrateAllVolumeUnits";
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    std::cout << "3" << std::endl;
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    std::cout << "4" << std::endl;
+
+
+    Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
+
+    UMat hashesGpu = Mat(hashTable.hashes, false).getUMat(ACCESS_READ);
+    UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
+
+    std::cout << "5" << std::endl;
+    k.args(ocl::KernelArg::ReadOnly(depth),
+        ocl::KernelArg::PtrReadOnly(hashesGpu),
+        ocl::KernelArg::PtrReadOnly(hashDataGpu),
+        ocl::KernelArg::ReadWrite(volUnitsData),
+        ocl::KernelArg::ReadOnly(pixNorms),
+        ocl::KernelArg::ReadOnly(isActiveFlags),
+        vol2camMatrix,
+        camInvMatrix,
+        voxelSize,
+        volumeUnitResolution,
+        volStrides.val,
+        fxy.val,
+        cxy.val,
+        dfac,
+        truncDist,
+        int(maxWeight)
+    );
+
+    std::cout << "6" << std::endl;
+    int resol = volumeUnitResolution;
+    size_t globalSize[3];
+    globalSize[0] = (size_t)resol;
+    globalSize[1] = (size_t)resol;
+    globalSize[2] = (size_t)hashTable.last; // num of volume units
+
+    std::cout << "7" << std::endl;
+    if (!k.run(3, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
+    std::cout << "ocl_integrateHashTsdfVolumeUnit() end" << std::endl;
+}
+
+
+
 inline TsdfVoxel _at(Mat& volUnitsData, const cv::Vec3i& volumeIdx, int indx,
     const int volumeUnitResolution, const Vec4i volStrides)
 {
@@ -538,6 +894,103 @@ void raycastHashTsdfVolumeUnit(
     parallel_for_(Range(0, points.rows), _HashRaycastInvoker, nstripes);
 
     std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
+}
+
+
+void ocl_raycastHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals)
+{
+    CV_TRACE_FUNCTION();
+    Size frameSize(width, height);
+    CV_Assert(frameSize.area() > 0);
+
+    UMat volUnitsData = _volUnitsData.getUMat();
+
+    String errorStr;
+    String name = "raycast";
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
+    String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create(name.c_str(), source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    _points.create(frameSize, CV_32FC4);
+    _normals.create(frameSize, CV_32FC4);
+
+    UMat points = _points.getUMat();
+    UMat normals = _normals.getUMat();
+
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    Intr intrinsics(intr);
+    Intr::Reprojector r = intrinsics.makeReprojector();
+    Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
+
+    const float truncDist = settings.getTruncatedDistance();
+    const float raycastStepFactor = settings.getRaycastStepFactor();
+    const float tstep = truncDist * raycastStepFactor;
+    const float truncateThreshold = settings.getTruncateThreshold();
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+
+    const Vec4i volStrides;
+    settings.getVolumeDimentions(volStrides);
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const float volumeUnitSize = voxelSize * resolution[0];
+
+    Vec4f boxMin, boxMax(volumeUnitSize - voxelSize,
+        volumeUnitSize - voxelSize,
+        volumeUnitSize - voxelSize);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+    const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+
+    Matx44f cam2volRotGPU = cam2vol.matrix;
+    Matx44f vol2camRotGPU = vol2cam.matrix;
+
+    UMat volPoseGpu = Mat(pose.matrix).getUMat(ACCESS_READ);
+    UMat invPoseGpu = Mat(pose.inv().matrix).getUMat(ACCESS_READ);
+
+    UMat hashesGpu = Mat(hashTable.hashes, false).getUMat(ACCESS_READ);
+    UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
+
+    k.args(
+        ocl::KernelArg::PtrReadOnly(hashesGpu),
+        ocl::KernelArg::PtrReadOnly(hashDataGpu),
+        ocl::KernelArg::WriteOnlyNoSize(points),
+        ocl::KernelArg::WriteOnlyNoSize(normals),
+        frameSize,
+        ocl::KernelArg::ReadOnly(volUnitsData),
+        cam2volRotGPU,
+        vol2camRotGPU,
+        float(truncateThreshold),
+        finv.val, cxy.val,
+        boxMin.val, boxMax.val,
+        tstep,
+        voxelSize,
+        voxelSizeInv,
+        volumeUnitSize,
+        truncDist,
+        volumeUnitDegree,
+        volStrides
+    );
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)frameSize.width;
+    globalSize[1] = (size_t)frameSize.height;
+
+    if (!k.run(2, globalSize, NULL, true))
+        throw std::runtime_error("Failed to run kernel");
+
 }
 
 

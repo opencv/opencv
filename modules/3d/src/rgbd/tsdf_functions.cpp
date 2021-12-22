@@ -1493,8 +1493,8 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     };
 
 #endif
-    //parallel_for_(raycastRange, RaycastInvoker);
-    RaycastInvoker(raycastRange);
+    parallel_for_(raycastRange, RaycastInvoker);
+    //RaycastInvoker(raycastRange);
 }
 
 
