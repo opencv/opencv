@@ -1338,6 +1338,11 @@ TEST_P(Test_ONNX_layers, SubFromConst)
     testONNXModels("sub_from_const_broadcast");
 }
 
+TEST_P(Test_ONNX_layers, DivConst)
+{
+    testONNXModels("div_const");
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
