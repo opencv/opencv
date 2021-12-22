@@ -38,7 +38,7 @@ There are two models (ONNX format) pre-trained and required for this module:
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detect.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/dnn/face_detect.cpp)
 
 -   **Code at glance:**
     @include samples/dnn/face_detect.cpp
@@ -46,7 +46,7 @@ There are two models (ONNX format) pre-trained and required for this module:
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detect.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/dnn/face_detect.py)
 
 -   **Code at glance:**
     @include samples/dnn/face_detect.py

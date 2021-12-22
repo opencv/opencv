@@ -313,7 +313,7 @@ Then you can start interacting with OpenCV by just referencing the fully qualifi
 classes.
 
 @note
-[Here](https://docs.opencv.org/master/javadoc/index.html) you can find the full OpenCV Java API.
+[Here](https://docs.opencv.org/4.x/javadoc/index.html) you can find the full OpenCV Java API.
 
 @code{.clojure}
 user=> (org.opencv.core.Point. 0 0)

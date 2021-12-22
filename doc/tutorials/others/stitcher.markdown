@@ -25,7 +25,7 @@ Code
 ----
 
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/stitching.cpp).
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/stitching.cpp).
 
 @include samples/cpp/stitching.cpp
 
@@ -114,11 +114,11 @@ configuration you can use stitching_detailed source code available in C++ or pyt
 
 <H4>stitching_detailed</H4>
 @add_toggle_cpp
-[stitching_detailed.cpp](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/stitching_detailed.cpp)
+[stitching_detailed.cpp](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/stitching_detailed.cpp)
 @end_toggle
 
 @add_toggle_python
-[stitching_detailed.py](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/stitching_detailed.py)
+[stitching_detailed.py](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/stitching_detailed.py)
 @end_toggle
 
 stitching_detailed program uses command line to get stitching parameter. Many parameters exists. Above examples shows some command line parameters possible :
@@ -165,4 +165,4 @@ newspaper1.jpg newspaper2.jpg --work_megapix 0.6 --features surf --matcher affin
 
 ![](images/affinepano.jpg)
 
-You can find  all images in https://github.com/opencv/opencv_extra/tree/master/testdata/stitching
+You can find  all images in https://github.com/opencv/opencv_extra/tree/4.x/testdata/stitching

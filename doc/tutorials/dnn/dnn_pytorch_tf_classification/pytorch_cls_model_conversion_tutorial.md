@@ -31,7 +31,7 @@ source <env_dir_path>/bin/activate
 
 For OpenCV-Python building from source, follow the corresponding instructions from the @ref tutorial_py_table_of_contents_setup.
 
-Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
+Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
 The below line initiates requirements installation into the previously activated virtual environment:
 
 ```console
@@ -270,7 +270,7 @@ python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --
 
 Chosen from the list classification model will be read into OpenCV cv.dnn.Net object. Evaluation results of PyTorch and OpenCV models (accuracy, inference time, L1) will be written into the log file. Inference time values will be also depicted in a chart to generalize the obtained model information.
 
-Necessary evaluation configurations are defined in the [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) and can be modified in accordance with actual paths of data location:
+Necessary evaluation configurations are defined in the [test_config.py](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) and can be modified in accordance with actual paths of data location:
 
 ```python
 @dataclass
@@ -308,7 +308,7 @@ python -m dnn_model_runner.dnn_conversion.pytorch.classification.py_to_py_cls --
 
 Here ``default_img_preprocess`` key defines whether you'd like to parametrize the model test process with some particular values or use the default values, for example, ``scale``, ``mean`` or ``std``.
 
-Test configuration is represented in [test_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestClsModuleConfig`` class:
+Test configuration is represented in [test_config.py](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestClsModuleConfig`` class:
 
 ```python
 @dataclass
@@ -331,7 +331,7 @@ class TestClsModuleConfig:
     classes: str = os.path.join(cls_test_data_dir, "dnn", "classification_classes_ILSVRC2012.txt")
 ```
 
-The default image preprocessing options are defined in [default_preprocess_config.py](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/default_preprocess_config.py). For instance:
+The default image preprocessing options are defined in [default_preprocess_config.py](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/default_preprocess_config.py). For instance:
 
 ```python
 BASE_IMG_SCALE_FACTOR = 1 / 255.0
@@ -349,7 +349,7 @@ pytorch_resize_input_blob = {
 }
 ```
 
-The basis of the model testing is represented in [samples/dnn/classification.py](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.py).  ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for cv.dnn.blobFromImage.
+The basis of the model testing is represented in [samples/dnn/classification.py](https://github.com/opencv/opencv/blob/4.x/samples/dnn/classification.py).  ``classification.py`` can be executed autonomously with provided converted model in ``--input`` and populated parameters for cv.dnn.blobFromImage.
 
 To reproduce from scratch the described in "Model Conversion Pipeline" OpenCV steps with ``dnn_model_runner`` execute the below line:
 

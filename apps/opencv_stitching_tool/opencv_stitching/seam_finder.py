@@ -6,7 +6,7 @@ from .blender import Blender
 
 
 class SeamFinder:
-    """https://docs.opencv.org/master/d7/d09/classcv_1_1detail_1_1SeamFinder.html"""  # noqa
+    """https://docs.opencv.org/4.x/d7/d09/classcv_1_1detail_1_1SeamFinder.html"""  # noqa
     SEAM_FINDER_CHOICES = OrderedDict()
     SEAM_FINDER_CHOICES['dp_color'] = cv.detail_DpSeamFinder('COLOR')
     SEAM_FINDER_CHOICES['dp_colorgrad'] = cv.detail_DpSeamFinder('COLOR_GRAD')
@@ -19,7 +19,7 @@ class SeamFinder:
         self.finder = SeamFinder.SEAM_FINDER_CHOICES[finder]
 
     def find(self, imgs, corners, masks):
-        """https://docs.opencv.org/master/d0/dd5/classcv_1_1detail_1_1DpSeamFinder.html#a7914624907986f7a94dd424209a8a609"""  # noqa
+        """https://docs.opencv.org/4.x/d0/dd5/classcv_1_1detail_1_1DpSeamFinder.html#a7914624907986f7a94dd424209a8a609"""  # noqa
         imgs_float = [img.astype(np.float32) for img in imgs]
         return self.finder.find(imgs_float, corners, masks)
 

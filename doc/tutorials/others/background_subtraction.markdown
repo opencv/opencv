@@ -51,7 +51,7 @@ The results as well as the input data are shown on the screen.
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/bg_sub.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/video/bg_sub.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/bg_sub.cpp
@@ -59,7 +59,7 @@ The results as well as the input data are shown on the screen.
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/background_subtraction/BackgroundSubtractionDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/video/background_subtraction/BackgroundSubtractionDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/video/background_subtraction/BackgroundSubtractionDemo.java
@@ -67,7 +67,7 @@ The results as well as the input data are shown on the screen.
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/video/background_subtraction/bg_sub.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/video/background_subtraction/bg_sub.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/background_subtraction/bg_sub.py
