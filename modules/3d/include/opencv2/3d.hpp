@@ -511,7 +511,7 @@ public:
 
 
     /** @brief Structure to keep LevMarq settings
-    
+
     The structure allows a user to pass algorithm parameters along with their names like this:
     @code
     MySolver solver(nVars, callback, MySolver::Settings().geodesicS(true).geoScale(1.0));
@@ -708,6 +708,7 @@ public:
 
         @param nvars Number of variables in a param vector
         @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
@@ -719,6 +720,7 @@ public:
 
         @param nvars Number of variables in a param vector
         @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
@@ -731,6 +733,7 @@ public:
 
         @param param Input/output vector containing starting param vector and resulting optimized params
         @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
@@ -742,6 +745,7 @@ public:
 
         @param param Input/output vector containing starting param vector and resulting optimized params
         @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
