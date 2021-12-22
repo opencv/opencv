@@ -26,7 +26,7 @@ Source code
 -----------
 @add_toggle_cpp
 You can [download this from here
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 
@@ -37,7 +37,7 @@ Here's a sample code of how to achieve all the stuff enumerated at the goal list
 
 @add_toggle_python
 You can [download this from here
-](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/core/file_input_output/file_input_output.py) or find it in the
+](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/core/file_input_output/file_input_output.py) or find it in the
 `samples/python/tutorial_code/core/file_input_output/file_input_output.py` of the OpenCV source code
 library.
 

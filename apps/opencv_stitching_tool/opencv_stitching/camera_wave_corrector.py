@@ -4,7 +4,7 @@ import numpy as np
 
 
 class WaveCorrector:
-    """https://docs.opencv.org/master/d7/d74/group__stitching__rotation.html#ga83b24d4c3e93584986a56d9e43b9cf7f"""  # noqa
+    """https://docs.opencv.org/4.x/d7/d74/group__stitching__rotation.html#ga83b24d4c3e93584986a56d9e43b9cf7f"""  # noqa
     WAVE_CORRECT_CHOICES = OrderedDict()
     WAVE_CORRECT_CHOICES['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
     WAVE_CORRECT_CHOICES['vert'] = cv.detail.WAVE_CORRECT_VERT

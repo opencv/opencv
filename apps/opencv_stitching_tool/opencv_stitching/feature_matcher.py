@@ -15,13 +15,13 @@ class FeatureMatcher:
                  **kwargs):
 
         if matcher_type == "affine":
-            """https://docs.opencv.org/master/d3/dda/classcv_1_1detail_1_1AffineBestOf2NearestMatcher.html"""  # noqa
+            """https://docs.opencv.org/4.x/d3/dda/classcv_1_1detail_1_1AffineBestOf2NearestMatcher.html"""  # noqa
             self.matcher = cv.detail_AffineBestOf2NearestMatcher(**kwargs)
         elif range_width == -1:
-            """https://docs.opencv.org/master/d4/d26/classcv_1_1detail_1_1BestOf2NearestMatcher.html"""  # noqa
+            """https://docs.opencv.org/4.x/d4/d26/classcv_1_1detail_1_1BestOf2NearestMatcher.html"""  # noqa
             self.matcher = cv.detail.BestOf2NearestMatcher_create(**kwargs)
         else:
-            """https://docs.opencv.org/master/d8/d72/classcv_1_1detail_1_1BestOf2NearestRangeMatcher.html"""  # noqa
+            """https://docs.opencv.org/4.x/d8/d72/classcv_1_1detail_1_1BestOf2NearestRangeMatcher.html"""  # noqa
             self.matcher = cv.detail.BestOf2NearestRangeMatcher_create(
                 range_width, **kwargs
                 )

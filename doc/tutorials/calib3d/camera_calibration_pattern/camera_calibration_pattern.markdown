@@ -13,14 +13,14 @@ Create calibration pattern {#tutorial_camera_calibration_pattern}
 
 The goal of this tutorial is to learn how to create calibration pattern.
 
-You can find a chessboard pattern in https://github.com/opencv/opencv/blob/master/doc/pattern.png
+You can find a chessboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/pattern.png
 
-You can find a circleboard pattern in https://github.com/opencv/opencv/blob/master/doc/acircles_pattern.png
+You can find a circleboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
 
 Create your own pattern
 ---------------
 
-Now, if you want to create your own pattern, you will need python to use https://github.com/opencv/opencv/blob/master/doc/pattern_tools/gen_pattern.py
+Now, if you want to create your own pattern, you will need python to use https://github.com/opencv/opencv/blob/4.x/doc/pattern_tools/gen_pattern.py
 
 Example
 

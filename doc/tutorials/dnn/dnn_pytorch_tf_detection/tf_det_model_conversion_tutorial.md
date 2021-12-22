@@ -27,7 +27,7 @@ source <env_dir_path>/bin/activate
 
 For OpenCV-Python building from source, follow the corresponding instructions from the @ref tutorial_py_table_of_contents_setup.
 
-Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
+Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
 The below line initiates requirements installation into the previously activated virtual environment:
 
 ```console
@@ -98,7 +98,7 @@ To provide model inference we will use the below [double-decker bus photo](https
 To initiate the test process we need to provide an appropriate model configuration. We will use [``ssd_mobilenet_v1_coco.config``](https://github.com/tensorflow/models/blob/master/research/object_detection/samples/configs/ssd_mobilenet_v1_coco.config) from [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection#tensorflow-object-detection-api).
 TensorFlow Object Detection API framework contains helpful mechanisms for object detection model manipulations.
 
-We will use this configuration to provide a text graph representation. To generate ``.pbtxt`` we will use the corresponding [``samples/dnn/tf_text_graph_ssd.py``](https://github.com/opencv/opencv/blob/master/samples/dnn/tf_text_graph_ssd.py) script:
+We will use this configuration to provide a text graph representation. To generate ``.pbtxt`` we will use the corresponding [``samples/dnn/tf_text_graph_ssd.py``](https://github.com/opencv/opencv/blob/4.x/samples/dnn/tf_text_graph_ssd.py) script:
 
 ```console
 python tf_text_graph_ssd.py --input ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb --config ssd_mobilenet_v1_coco_2017_11_17/ssd_mobilenet_v1_coco.config --output ssd_mobilenet_v1_coco_2017_11_17.pbtxt
@@ -106,7 +106,7 @@ python tf_text_graph_ssd.py --input ssd_mobilenet_v1_coco_2017_11_17/frozen_infe
 
 After successful execution ``ssd_mobilenet_v1_coco_2017_11_17.pbtxt`` will be created.
 
-Before we run ``object_detection.py``, let's have a look at the default values for the SSD MobileNetV1 test process configuration. They are located in [``models.yml``](https://github.com/opencv/opencv/blob/master/samples/dnn/models.yml):
+Before we run ``object_detection.py``, let's have a look at the default values for the SSD MobileNetV1 test process configuration. They are located in [``models.yml``](https://github.com/opencv/opencv/blob/4.x/samples/dnn/models.yml):
 
 ```yml
 ssd_tf:

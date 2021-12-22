@@ -102,7 +102,7 @@ QR faster than SVD, but potentially less precise
 -  *camera_resolution*: resolution of camera which is used for calibration
 
 **Note:** *charuco_dict*, *charuco_square_length* and *charuco_marker_size* are used for chAruco pattern generation
-(see Aruco module description for details: [Aruco tutorials](https://github.com/opencv/opencv_contrib/tree/master/modules/aruco/tutorials))
+(see Aruco module description for details: [Aruco tutorials](https://github.com/opencv/opencv_contrib/tree/4.x/modules/aruco/tutorials))
 
 Default chAruco pattern:
 
