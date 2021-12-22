@@ -12,106 +12,128 @@
 
 namespace opencv_test
 {
+
+INSTANTIATE_TEST_CASE_P(PhasePerfTestFluid, PhasePerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_32FC1, CV_64FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(SqrtPerfTestFluid, SqrtPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_32FC1, CV_64FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
 INSTANTIATE_TEST_CASE_P(AddPerfTestFluid, AddPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
             Values(-1, CV_8U, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(AddCPerfTestFluid, AddCPerfTest,
-     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
-         Values(szSmall128, szVGA, sz720p, sz1080p),
-         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-         Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
-         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(AddCPerfTestFluid, AddCPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
+            Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(SubPerfTestFluid, SubPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
             Values(-1, CV_8U, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(SubCPerfTestFluid, SubCPerfTest,
-     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
-         Values(szSmall128, szVGA, sz720p, sz1080p),
-         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-         Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
-         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(SubCPerfTestFluid, SubCPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(SubRCPerfTestFluid, SubRCPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(-1, CV_8U, CV_16U, CV_32F),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(SubRCPerfTestFluid, SubRCPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(MulPerfTestFluid, MulPerfTest,
-     Combine(Values(AbsExact().to_compare_f()),
-         Values(szSmall128, szVGA, sz720p, sz1080p),
-         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-         Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
-         Values(2.0),
-         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MulPerfTestFluid, MulPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
+            Values(2.0),
+            Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(MulDoublePerfTestFluid, MulDoublePerfTest,
-     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
-             Values(szSmall128, szVGA, sz720p, sz1080p),
-             Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
-             Values(-1, CV_8U, CV_32F),
-             Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MulDoublePerfTestFluid, MulDoublePerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(MulCPerfTestFluid, MulCPerfTest,
-     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
-             Values(szSmall128, szVGA, sz720p, sz1080p),
-             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-             Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
-             Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MulCPerfTestFluid, MulCPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(cv::compile_args(CORE_FLUID))));
 
- INSTANTIATE_TEST_CASE_P(DivPerfTestFluid, DivPerfTest,
-     Combine(Values(AbsExact().to_compare_f()),
-         Values(szSmall128, szVGA, sz720p, sz1080p),
-         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-         Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
-         Values(2.3),
-         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(DivPerfTestFluid, DivPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
+            Values(2.3),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(DivCPerfTestFluid, DivCPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(-1, CV_8U, CV_16U, CV_32F),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(DivCPerfTestFluid, DivCPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(1.0),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(DivRCPerfTestFluid, DivRCPerfTest,
-//     Combine(Values(AbsExact().to_compare_f()),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(-1, CV_8U, CV_16U, CV_32F),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(DivRCPerfTestFluid, DivRCPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_32FC1),
+            Values(-1, CV_8U, CV_32F),
+            Values(1.0),
+            Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(MaskPerfTestFluid, MaskPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_16UC1, CV_16SC1),
             Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(MeanPerfTestFluid, MeanPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MeanPerfTestFluid, MeanPerfTest,
+    Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(Polar2CartPerfTestFluid, Polar2CartPerfTest,
-//     Combine(Values(AbsExact().to_compare_f()),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Polar2CartPerfTestFluid, Polar2CartPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(Cart2PolarPerfTestFluid, Cart2PolarPerfTest,
-//     Combine(Values(AbsExact().to_compare_f()),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Cart2PolarPerfTestFluid, Cart2PolarPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-04, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(CmpPerfTestFluid, CmpPerfTest,
-//     Combine(Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(CmpPerfTestFluid, CmpPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(CmpWithScalarPerfTestFluid, CmpWithScalarPerfTest,
     Combine(Values(AbsSimilarPoints(1, 0.01).to_compare_f()),
@@ -121,50 +143,54 @@ INSTANTIATE_TEST_CASE_P(CmpWithScalarPerfTestFluid, CmpWithScalarPerfTest,
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(BitwisePerfTestFluid, BitwisePerfTest,
-    Combine(Values(AND, OR, XOR),
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(AND, OR, XOR),
             testing::Bool(),
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotPerfTestFluid, BitwiseNotPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
             Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(SelectPerfTestFluid, SelectPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(SelectPerfTestFluid, SelectPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(MinPerfTestFluid, MinPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MinPerfTestFluid, MinPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(MaxPerfTestFluid, MaxPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(MaxPerfTestFluid, MaxPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffPerfTestFluid, AbsDiffPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCPerfTestFluid, AbsDiffCPerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_8UC2,
-                   CV_16UC2, CV_16SC2, CV_8UC3, CV_16UC3,
-                   CV_16SC3, CV_8UC4, CV_16UC4, CV_16SC4),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(SumPerfTestFluid, SumPerfTest,
-//     Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         //Values(0.0),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(SumPerfTestFluid, SumPerfTest,
+    Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestFluid, AddWeightedPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
@@ -180,102 +206,121 @@ INSTANTIATE_TEST_CASE_P(AddWeightedPerfTestFluid_short, AddWeightedPerfTest,
             Values(-1),
             Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(NormPerfTestFluid, NormPerfTest,
-//     Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
-//         Values(NORM_INF, NORM_L1, NORM_L2),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
-
-// INSTANTIATE_TEST_CASE_P(IntegralPerfTestFluid, IntegralPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
-
-// INSTANTIATE_TEST_CASE_P(ThresholdPerfTestFluid, ThresholdPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
-//         Values(cv::compile_args(CORE_FLUID))));
-
-// INSTANTIATE_TEST_CASE_P(ThresholdPerfTestFluid, ThresholdOTPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1),
-//         Values(cv::THRESH_OTSU, cv::THRESH_TRIANGLE),
-//         Values(cv::compile_args(CORE_FLUID))));
-
-// INSTANTIATE_TEST_CASE_P(InRangePerfTestFluid, InRangePerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1),
-//         Values(cv::compile_args(CORE_FLUID))));
-
-INSTANTIATE_TEST_CASE_P(Split3PerfTestFluid, Split3PerfTest,
-    Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
+INSTANTIATE_TEST_CASE_P(NormPerfTestFluid, NormPerfTest,
+    Combine(Values(AbsToleranceScalar(0.0).to_compare_f()),
+            Values(NORM_INF, NORM_L1, NORM_L2),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(Split4PerfTestFluid, Split4PerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(IntegralPerfTestFluid, IntegralPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(Merge3PerfTestFluid, Merge3PerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(ThresholdPerfTestFluid, ThresholdPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC,
+                   cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(Merge4PerfTestFluid, Merge4PerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(ThresholdPerfTestFluid, ThresholdOTPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1),
+            Values(cv::THRESH_OTSU, cv::THRESH_TRIANGLE),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(RemapPerfTestFluid, RemapPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(InRangePerfTestFluid, InRangePerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(FlipPerfTestFluid, FlipPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(0, 1, -1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Split3PerfTestFluid, Split3PerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(CropPerfTestFluid, CropPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50)),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Split4PerfTestFluid, Split4PerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(ConcatHorPerfTestFluid, ConcatHorPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Merge3PerfTestFluid, Merge3PerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(ConcatHorVecPerfTestFluid, ConcatHorVecPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(Merge4PerfTestFluid, Merge4PerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(ConcatVertPerfTestFluid, ConcatVertPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(RemapPerfTestFluid, RemapPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(ConcatVertVecPerfTestFluid, ConcatVertVecPerfTest,
-//     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(FlipPerfTestFluid, FlipPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(0, 1, -1),
+            Values(cv::compile_args(CORE_FLUID))));
 
-// INSTANTIATE_TEST_CASE_P(LUTPerfTestFluid, LUTPerfTest,
-//     Combine(Values(CV_8UC1, CV_8UC3),
-//         Values(CV_8UC1),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+INSTANTIATE_TEST_CASE_P(CropPerfTestFluid, CropPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50)),
+            Values(cv::compile_args(CORE_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(ConcatHorPerfTestFluid, ConcatHorPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(ConcatHorVecPerfTestFluid, ConcatHorVecPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(ConcatVertPerfTestFluid, ConcatVertPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(ConcatVertVecPerfTestFluid, ConcatVertVecPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(cv::compile_args(CORE_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(LUTPerfTestFluid, LUTPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC1, CV_8UC3),
+            Values(CV_8UC1),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::compile_args(CORE_FLUID))));
+
+// FIXIT: This test case doesn't work [3030]
 // INSTANTIATE_TEST_CASE_P(LUTPerfTestCustomFluid, LUTPerfTest,
-//     Combine(Values(CV_8UC3),
-//         Values(CV_8UC3),
-//         Values(szSmall128, szVGA, sz720p, sz1080p),
-//         Values(cv::compile_args(CORE_FLUID))));
+//     Combine(Values(AbsExact().to_compare_f()),
+//             Values(CV_8UC3),
+//             Values(CV_8UC3),
+//             Values(szSmall128, szVGA, sz720p, sz1080p),
+//             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ConvertToPerfTestFluid, ConvertToPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
             Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(CV_8U, CV_16U, CV_16S, CV_32F),
             Values(szSmall128, szVGA, sz720p, sz1080p),
@@ -285,32 +330,34 @@ INSTANTIATE_TEST_CASE_P(ConvertToPerfTestFluid, ConvertToPerfTest,
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestFluid, ResizePerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
-        Values(CV_8UC3),
-        Values(cv::INTER_LINEAR),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(cv::Size(64, 64),
-               cv::Size(30, 30)),
-        Values(cv::compile_args(CORE_FLUID))));
+            Values(CV_8UC3),
+            Values(cv::INTER_LINEAR),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::Size(64, 64),
+                   cv::Size(30, 30)),
+            Values(cv::compile_args(CORE_FLUID))));
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
 INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsConstInputPerfTest,
     Combine(Values(AbsSimilarPoints(0, 1).to_compare_f()),
-        Values("cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
-               "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
-        Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
+            Values("cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
+                   "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
+            Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
-        Values(CV_8UC3),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
+            Values(CV_8UC3),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5),
+            Values(0.5),
+            Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
-        Values(CV_8UC3),
-        Values(cv::INTER_LINEAR),
-        Values(szSmall128, szVGA, sz720p, sz1080p),
-        Values(0.5, 0.1),
-        Values(0.5, 0.1),
-        Values(cv::compile_args(CORE_FLUID))));
+            Values(CV_8UC3),
+            Values(cv::INTER_LINEAR),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5, 0.1),
+            Values(0.5, 0.1),
+            Values(cv::compile_args(CORE_FLUID))));
 } // opencv_test

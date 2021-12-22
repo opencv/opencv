@@ -18,8 +18,9 @@
 #define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
-
+#define CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND      "dnn_skip_opencv_backend"
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
+#define CV_TEST_TAG_DNN_SKIP_CPU                 "dnn_skip_cpu"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER       "dnn_skip_ie_nn_builder"
@@ -43,6 +44,9 @@
 #define CV_TEST_TAG_DNN_SKIP_CUDA                "dnn_skip_cuda"
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP32           "dnn_skip_cuda_fp32"
+
+#define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
+#define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
 
 
 #ifdef HAVE_INF_ENGINE

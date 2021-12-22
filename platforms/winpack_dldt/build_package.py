@@ -471,7 +471,7 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2021.4.1'
+    dldt_src_commit = '2021.4.2'
     dldt_config = None
     dldt_release = None
 

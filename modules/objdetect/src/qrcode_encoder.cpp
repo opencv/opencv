@@ -881,6 +881,8 @@ void QRCodeEncoderImpl::findAutoMaskType()
                 total_modules += 1;
             }
         }
+        if (total_modules == 0)
+            continue; // TODO: refactor, extract functions to reduce complexity
         int modules_percent = dark_modules * 100 / total_modules;
         int lower_bound = 45;
         int upper_bound = 55;

@@ -598,6 +598,8 @@ private:
     void parseLeakyRelu          (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseActivation         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    void parseSquare             (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    void parseArg                (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
@@ -676,6 +678,8 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["Abs"] = dispatch["Tanh"] = dispatch["Sigmoid"] = dispatch["Relu"] =
             dispatch["Elu"] = dispatch["Exp"] = dispatch["Identity"] = dispatch["Relu6"] = &TFImporter::parseActivation;
     dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
+    dispatch["Square"] = &TFImporter::parseSquare;
+    dispatch["ArgMax"] = dispatch["ArgMin"] = &TFImporter::parseArg;
 
     return dispatch;
 }
@@ -1250,6 +1254,25 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     {
         data_layouts[name] = inpLayout;
     }
+}
+
+// "Square"
+void TFImporter::parseSquare(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+    const int num_inputs = layer.input_size();
+
+    CV_CheckEQ(num_inputs, 1, "");
+
+    int id;
+    layerParams.set("operation", "prod");
+    id = dstNet.addLayer(name, "Eltwise", layerParams);
+
+    layer_id[name] = id;
+
+    Pin inp = parsePin(layer.input(0));
+    connect(layer_id, dstNet, inp, id, 0);
+    connect(layer_id, dstNet, inp, id, 1);
 }
 
 // "Flatten" "Squeeze"
@@ -2602,6 +2625,22 @@ void TFImporter::parseActivation(tensorflow::GraphDef& net, const tensorflow::No
     int id = dstNet.addLayer(name, dnnType, layerParams);
     layer_id[name] = id;
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
+}
+
+void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+    const std::string& type = layer.op();
+
+    Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
+    CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
+    layerParams.set("axis", *dimension.ptr<int>());
+    layerParams.set("op", type == "ArgMax" ? "max" : "min");
+    layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
+
+    int id = dstNet.addLayer(name, "Arg", layerParams);
+    layer_id[name] = id;
+    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 }
 
 void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
