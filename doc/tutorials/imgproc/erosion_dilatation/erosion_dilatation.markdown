@@ -273,7 +273,7 @@ Results
 
 Compile the code above and execute it (or run the script if using python) with an image as argument.
 If you do not provide an image as argument the default sample image
-([LinuxLogo.jpg](https://github.com/opencv/opencv/tree/master/samples/data/LinuxLogo.jpg)) will be used.
+([LinuxLogo.jpg](https://github.com/opencv/opencv/tree/3.4/samples/data/LinuxLogo.jpg)) will be used.
 
 For instance, using this image:
 

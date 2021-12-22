@@ -7,7 +7,7 @@ Check [a wiki](https://github.com/opencv/opencv/wiki/Deep-Learning-in-OpenCV) fo
 If OpenCV is built with [Intel's Inference Engine support](https://github.com/opencv/opencv/wiki/Intel%27s-Deep-Learning-Inference-Engine-backend) you can use [Intel's pre-trained](https://github.com/opencv/open_model_zoo) models.
 
 There are different preprocessing parameters such mean subtraction or scale factors for different models.
-You may check the most popular models and their parameters at [models.yml](https://github.com/opencv/opencv/blob/master/samples/dnn/models.yml) configuration file. It might be also used for aliasing samples parameters. In example,
+You may check the most popular models and their parameters at [models.yml](https://github.com/opencv/opencv/blob/3.4/samples/dnn/models.yml) configuration file. It might be also used for aliasing samples parameters. In example,
 
 ```bash
 python object_detection.py opencv_fd --model /path/to/caffemodel --config /path/to/prototxt
@@ -27,7 +27,7 @@ You can download sample models using ```download_models.py```. For example, the 
 python download_models.py --save_dir FaceDetector opencv_fd
 ```
 
-You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
+You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/3.4/testdata/dnn).
 
 You also can use the script to download necessary files from your code. Assume you have the following code inside ```your_script.py```:
 
@@ -79,6 +79,6 @@ AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          |
 
 ## References
 * [Models downloading script](https://github.com/opencv/opencv/samples/dnn/download_models.py)
-* [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
+* [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/3.4/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
 * [Names of classes from different datasets](https://github.com/opencv/opencv/tree/3.4/samples/data/dnn)
