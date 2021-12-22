@@ -221,7 +221,17 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
     reset();
 #else
-    reset();
+    if (ocl::useOpenCL())
+    {
+        reset();
+    }
+    else
+    {
+        Vec3i resolution;
+        settings.getVolumeResolution(resolution);
+        cpu_volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
+        reset();
+    }
 #endif
 }
 
@@ -256,14 +266,25 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #ifndef HAVE_OPENCL
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
 #else
-        ocl_preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+        if (ocl::useOpenCL())
+            ocl_preCalculationPixNorm(depth.size(), intrinsics, gpu_pixNorms);
+        else
+            preCalculationPixNorm(depth.size(), intrinsics, cpu_pixNorms);
 #endif
     }
 #ifndef HAVE_OPENCL
     integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
 #else
-    ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, depth, pixNorms, lastVisibleIndices, volUnitsDataCopy, volUnitsData, hashTable, isActiveFlags);
+    if (ocl::useOpenCL())
+    {
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+    }
+    else
+    {
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        lastFrameId++;
+    }
 #endif
 }
 
@@ -284,7 +305,25 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odome
     outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
     outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
 #else
+    if (ocl::useOpenCL())
+    {
+        UMat points, normals;
+        raycast(cameraPose, height, width, points, normals);
+        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
+        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+    }
+    else
+    {
+        Mat points, normals;
+        raycast(cameraPose, height, width, points, normals);
+        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
+        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
 
+    }
 #endif
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
@@ -295,7 +334,10 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
 #ifndef HAVE_OPENCL
     raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
 #else
-    ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, hashTable, volUnitsData, _points, _normals);
+    if (ocl::useOpenCL())
+        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, hashTable, gpu_volUnitsData, _points, _normals);
+    else
+        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
 }
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
@@ -309,7 +351,11 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 #ifndef HAVE_OPENCL
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
-    olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+    if (ocl::useOpenCL())
+        olc_fetchNormalsFromHashTsdfVolumeUnit(settings, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+    else
+        fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, points, normals);
+
 #endif
 }
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
@@ -318,7 +364,10 @@ void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals)
 #ifndef HAVE_OPENCL
     fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
-
+    if (ocl::useOpenCL())
+        ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+    else
+        fetchPointsNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, points, normals);
 #endif
 }
 
@@ -337,20 +386,32 @@ void HashTsdfVolume::reset()
         });
     volumeUnits = VolumeUnitIndexes();
 #else
-    Vec3i resolution;
-    settings.getVolumeResolution(resolution);
+    if (ocl::useOpenCL())
+    {
+        Vec3i resolution;
+        settings.getVolumeResolution(resolution);
 
-    bufferSizeDegree = 15;
-    int buff_lvl = (int)(1 << bufferSizeDegree);
-    int volCubed = resolution[0] * resolution[1] * resolution[2];
+        bufferSizeDegree = 15;
+        int buff_lvl = (int)(1 << bufferSizeDegree);
+        int volCubed = resolution[0] * resolution[1] * resolution[2];
 
-    volUnitsDataCopy = cv::Mat(buff_lvl, volCubed, rawType<TsdfVoxel>());
-    volUnitsData = cv::UMat(buff_lvl, volCubed, CV_8UC2);
-    lastVisibleIndices = cv::UMat(buff_lvl, 1, CV_32S);
-    isActiveFlags = cv::UMat(buff_lvl, 1, CV_8U);
-    hashTable = CustomHashSet();
-    frameParams = Vec6f();
-    pixNorms = UMat();
+        volUnitsDataCopy = cv::Mat(buff_lvl, volCubed, rawType<TsdfVoxel>());
+        gpu_volUnitsData = cv::UMat(buff_lvl, volCubed, CV_8UC2);
+        lastVisibleIndices = cv::UMat(buff_lvl, 1, CV_32S);
+        isActiveFlags = cv::UMat(buff_lvl, 1, CV_8U);
+        hashTable = CustomHashSet();
+        frameParams = Vec6f();
+        gpu_pixNorms = UMat();
+    }
+    else
+    {
+        cpu_volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
+            {
+                TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
+                v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+            });
+        cpu_volumeUnits = VolumeUnitIndexes();
+    }
 #endif
 }
 

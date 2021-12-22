@@ -114,19 +114,19 @@ public:
     Mat pixNorms;
     VolumeUnitIndexes volumeUnits;
 #else
+    VolumeUnitIndexes cpu_volumeUnits;
+
+    Mat cpu_volUnitsData;
+    Mat cpu_pixNorms;
+    UMat gpu_volUnitsData;
+    UMat gpu_pixNorms;
+
     int bufferSizeDegree;
-
     // per-volume-unit data
-    cv::UMat lastVisibleIndices;
-
-    cv::UMat isActiveFlags;
-
-    cv::UMat volUnitsData;
+    UMat lastVisibleIndices;
+    UMat isActiveFlags;
     //TODO: remove it when there's no CPU parts
-    cv::Mat volUnitsDataCopy;
-
-    cv::UMat pixNorms;
-
+    Mat volUnitsDataCopy;
     //TODO: move indexes.volumes to GPU
     CustomHashSet hashTable;
 #endif

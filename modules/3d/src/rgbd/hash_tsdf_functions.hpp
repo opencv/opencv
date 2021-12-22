@@ -347,6 +347,11 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals);
 
+void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals);
+
+
 } // namespace cv
 
 #endif
