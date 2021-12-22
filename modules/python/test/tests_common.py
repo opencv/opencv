@@ -24,7 +24,7 @@ class NewOpenCVTests(unittest.TestCase):
     repoPath = None
     extraTestDataPath = None
     # github repository url
-    repoUrl = 'https://raw.github.com/opencv/opencv/master'
+    repoUrl = 'https://raw.github.com/opencv/opencv/3.4'
 
     def find_file(self, filename, searchPaths=[], required=True):
         searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath]
