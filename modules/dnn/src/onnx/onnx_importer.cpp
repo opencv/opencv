@@ -65,6 +65,7 @@ public:
 
     ONNXImporter(Net& net, const char *onnxFile)
         : dstNet(net), dispatch(buildDispatchMap())
+        , onnx_opset(0)
     {
         hasDynamicShapes = false;
         CV_Assert(onnxFile);
@@ -86,6 +87,7 @@ public:
 
     ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
         : dstNet(net), dispatch(buildDispatchMap())
+        , onnx_opset(0)
     {
         hasDynamicShapes = false;
         CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
@@ -178,6 +180,9 @@ private:
 
     const DispatchMap dispatch;
     static const DispatchMap buildDispatchMap();
+
+    int onnx_opset;  // OperatorSetIdProto for 'onnx' domain
+    void parseOperatorSet();
 };
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
@@ -489,8 +494,43 @@ void ONNXImporter::addNegation(const LayerParams& layerParams, opencv_onnx::Node
 
 void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
 {
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: add constant '" << name << "' shape=" << toString(shape(blob)) << ": " << toString(blob));
     constBlobs.insert(std::make_pair(name, blob));
     outShapes.insert(std::make_pair(name, shape(blob)));
+}
+
+void ONNXImporter::parseOperatorSet()
+{
+    int ir_version = model_proto.has_ir_version() ? static_cast<int>(model_proto.ir_version()) : -1;
+    if (ir_version < 3)
+        return;
+
+    int opset_size = model_proto.opset_import_size();
+    if (opset_size <= 0)
+    {
+        CV_LOG_INFO(NULL, "DNN/ONNX: missing opset information")
+        return;
+    }
+
+    for (int i = 0; i < opset_size; ++i)
+    {
+        const ::opencv_onnx::OperatorSetIdProto& opset_entry = model_proto.opset_import(i);
+        const std::string& domain = opset_entry.has_domain() ? opset_entry.domain() : std::string();
+        int version = opset_entry.has_version() ? opset_entry.version() : -1;
+        if (domain.empty() || domain == "ai.onnx")
+        {
+            // ONNX opset covered by specification: https://github.com/onnx/onnx/blob/master/docs/Operators.md
+            onnx_opset = std::max(onnx_opset, version);
+        }
+        else
+        {
+            // OpenCV don't know other opsets
+            // will fail later on unsupported node processing
+            CV_LOG_WARNING(NULL, "DNN/ONNX: unsupported opset[" << i << "]: domain='" << domain << "' version=" << version);
+        }
+    }
+
+    CV_LOG_INFO(NULL, "DNN/ONNX: ONNX opset version = " << onnx_opset);
 }
 
 void ONNXImporter::populateNet()
@@ -512,6 +552,8 @@ void ONNXImporter::populateNet()
             << ", inputs = " << graph_proto.input_size()
             << ", outputs = " << graph_proto.output_size()
             );
+
+    parseOperatorSet();
 
     simplifySubgraphs(graph_proto);
 
@@ -539,7 +581,8 @@ void ONNXImporter::populateNet()
             if (!tensorShape.dim(j).dim_param().empty() && !(j == 0 && inpShape.size() >= 3))
                 hasDynamicShapes = true;
         }
-        if (!inpShape.empty() && !hasDynamicShapes)
+        CV_LOG_DEBUG(NULL, "DNN/ONNX: input[" << i << "] shape=" << toString(inpShape));
+        if (!inpShape.empty() && !hasDynamicShapes)  // FIXIT result is not reliable for models with multiple inputs
         {
             inpShape[0] = std::max(inpShape[0], 1); // It's OK to have undetermined batch size
         }
@@ -573,6 +616,15 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
     CV_Assert(node_proto.output_size() >= 1);
     std::string name = node_proto.output(0);
     const std::string& layer_type = node_proto.op_type();
+    const std::string& layer_type_domain = node_proto.has_domain() ? node_proto.domain() : std::string();
+    if (!layer_type_domain.empty() && layer_type_domain != "ai.onnx")
+    {
+        CV_LOG_WARNING(NULL, "DNN/ONNX: can't handle node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
+                << cv::format("[%s@%s]:(%s)", layer_type.c_str(), layer_type_domain.c_str(), name.c_str())
+        );
+        CV_Error(Error::StsNotImplemented, cv::format("ONNX: unsupported domain: %s", layer_type_domain.c_str()));
+    }
+
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
             << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
     );
