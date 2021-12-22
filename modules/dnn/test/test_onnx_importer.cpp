@@ -1488,6 +1488,11 @@ TEST_P(Test_ONNX_layers, DivConst)
     testONNXModels("div_const");
 }
 
+TEST_P(Test_ONNX_layers, AddBcast)
+{
+    testONNXModels("add_bcast", npy, 0, 0, false, true, 2);
+}
+
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {

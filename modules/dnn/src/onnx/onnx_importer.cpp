@@ -73,6 +73,8 @@ class ONNXImporter
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
     void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
+    void addBroadcasting(opencv_onnx::NodeProto& node_proto, const std::vector<int>& inputs,
+                                           const LayerParams& layerParams);
 public:
     ONNXImporter(Net& net, const char *onnxFile);
     ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer);
@@ -599,6 +601,25 @@ void ONNXImporter::addNegation(const LayerParams& layerParams, opencv_onnx::Node
 
     //Replace input to Power
     node_proto.set_input(input_id, powerParams.name);
+}
+
+void ONNXImporter::addBroadcasting(opencv_onnx::NodeProto& node_proto, const std::vector<int>& inputs,
+                                                     const LayerParams& layerParams)
+{
+    LayerParams broadParams;
+    broadParams.type = "Broadcast";
+    broadParams.name = layerParams.name + "/broadcast";
+    CV_Assert(layer_id.find(broadParams.name) == layer_id.end());
+
+    opencv_onnx::NodeProto proto;
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        proto.add_input(node_proto.input(inputs[i]));
+        proto.add_output(cv::format("%s_%d", broadParams.name.data(), i));
+        node_proto.set_input(inputs[i], proto.output(i));
+    }
+
+    addLayer(broadParams, proto);
 }
 
 void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
@@ -1396,8 +1417,10 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             }
         }
     }
-    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
+    else // if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
     {
+        addBroadcasting(node_proto, {0, 1}, layerParams);
+
         layerParams.type = "Eltwise";
         if (isSub)
         {
@@ -1405,15 +1428,15 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             layerParams.set("coeff", DictValue::arrayReal<float*>(subCoeffs, 2));
         }
     }
-    else
-    {
-        if (isSub)
-        {
-            addNegation(layerParams, node_proto, 1);
-        }
-        layerParams.type = "Scale";
-        layerParams.set("bias_term", true);
-    }
+//    else
+//    {
+//        if (isSub)
+//        {
+//            addNegation(layerParams, node_proto, 1);
+//        }
+//        layerParams.type = "Scale";
+//        layerParams.set("bias_term", true);
+//    }
     addLayer(layerParams, node_proto);
 }
 

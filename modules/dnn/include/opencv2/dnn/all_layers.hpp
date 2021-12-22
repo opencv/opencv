@@ -294,6 +294,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ArgLayer> create(const LayerParams& params);
     };
 
+    /** @brief General broadcasting layer
+     */
+    class CV_EXPORTS BroadcastLayer : public Layer
+    {
+    public:
+        static Ptr<BroadcastLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PoolingLayer : public Layer
     {
     public:
