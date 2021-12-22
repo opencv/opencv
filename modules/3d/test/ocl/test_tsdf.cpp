@@ -469,6 +469,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
             volume.integrate(depth, poses[0].matrix);
             // takes only point from raycast for checking fetched normals on the display
             volume.raycast(poses[0].matrix, frameSize.height,frameSize.width, upoints, utmpnormals);
+            //volume.fetchPointsNormals(upoints, utmpnormals);
             volume.fetchNormals(upoints, unormals);
 
             //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
