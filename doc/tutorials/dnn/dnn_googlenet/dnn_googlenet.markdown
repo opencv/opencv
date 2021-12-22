@@ -23,7 +23,7 @@ Explanation
 -----------
 
 -# Firstly, download GoogLeNet model files:
-   [bvlc_googlenet.prototxt  ](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/bvlc_googlenet.prototxt) and
+   [bvlc_googlenet.prototxt](https://github.com/opencv/opencv_extra/blob/3.4/testdata/dnn/bvlc_googlenet.prototxt) and
    [bvlc_googlenet.caffemodel](http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel)
 
    Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:

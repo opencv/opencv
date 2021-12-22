@@ -4,7 +4,9 @@ Using OpenCV.js {#tutorial_js_usage}
 Steps
 -----
 
-In this tutorial, you will learn how to include and start to use `opencv.js` inside a web page. You can get a copy of `opencv.js` from `opencv-{VERSION_NUMBER}-docs.zip` in each [release](https://github.com/opencv/opencv/releases), or simply download the prebuilt script from the online documentations at "https://docs.opencv.org/{VERSION_NUMBER}/opencv.js" (For example, [https://docs.opencv.org/3.4.0/opencv.js](https://docs.opencv.org/3.4.0/opencv.js). Use `master` if you want the latest build). You can also build your own copy by following the tutorial on Build Opencv.js.
+In this tutorial, you will learn how to include and start to use `opencv.js` inside a web page.
+You can get a copy of `opencv.js` from `opencv-{VERSION_NUMBER}-docs.zip` in each [release](https://github.com/opencv/opencv/releases), or simply download the prebuilt script from the online documentations at "https://docs.opencv.org/{VERSION_NUMBER}/opencv.js" (For example, [https://docs.opencv.org/3.4.0/opencv.js](https://docs.opencv.org/3.4.0/opencv.js). Use `3.4` if you want the latest build).
+You can also build your own copy by following the tutorial @ref tutorial_js_setup.
 
 ### Create a web page
 
