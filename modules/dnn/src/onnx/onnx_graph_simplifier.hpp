@@ -8,8 +8,6 @@
 #ifndef __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__
 #define __OPENCV_DNN_ONNX_SIMPLIFIER_HPP__
 
-#include "../precomp.hpp"
-
 #if defined(__GNUC__) && __GNUC__ >= 5
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
