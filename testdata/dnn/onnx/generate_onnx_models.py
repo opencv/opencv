@@ -1821,3 +1821,29 @@ class ArgMin(nn.Module):
 model = ArgMin()
 input_ = Variable(torch.randn(2, 3, 4, 5, dtype=torch.float32))
 save_data_and_model("argmin", input_, model)
+
+########################## const / x ##########################
+
+node = onnx.helper.make_node('Div', inputs=['x', 'y'], outputs=['z'])
+
+x = np.array([2]).astype(np.float32)
+y = np.array([[4, 4], [4, 4]]).astype(np.float32)
+name = 'div_const'
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, x.data)
+np.save(input_files, y.data)
+
+z = (x / y).astype(np.float32)
+output_files =  os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(z.data))
+
+X = onnx.helper.make_tensor('x', onnx.TensorProto.FLOAT, x.shape, x)
+Y = onnx.helper.make_tensor_value_info('y', onnx.TensorProto.FLOAT, y.shape)
+Z = onnx.helper.make_tensor_value_info('z', onnx.TensorProto.FLOAT, z.shape)
+
+graph = onnx.helper.make_graph([node], 'div_const', [Y], [Z], initializer=[X])
+model = onnx.helper.make_model(graph, producer_name=name)
+models_files = os.path.join("models", name + ".onnx")
+onnx.save(model, models_files)
+
+########################## const / x ##########################
