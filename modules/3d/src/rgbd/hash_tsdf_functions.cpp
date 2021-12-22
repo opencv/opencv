@@ -471,7 +471,6 @@ void ocl_integrateHashTsdfVolumeUnit(
         isActiveFlags = newIsActiveFlags;
     }
 
-
     // Fill data for new volume units
     Range r(sizeBefore, sizeAfter);
     if (r.start < r.end)
@@ -486,7 +485,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     //! Mark volumes in the camera frustum as active
     markActive(cameraPose, intrinsics, depth.size(), frameId, pose, hashTable, isActiveFlags, lastVisibleIndices, truncateThreshold, volumeUnitSize);
 
-
+    //! Integrate the correct volumeUnits
     String errorStr;
     String name = "integrateAllVolumeUnits";
     ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
@@ -494,19 +493,14 @@ void ocl_integrateHashTsdfVolumeUnit(
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
 
-    std::cout << "3" << std::endl;
     if (k.empty())
         throw std::runtime_error("Failed to create kernel: " + errorStr);
-
-    std::cout << "4" << std::endl;
-
 
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
 
     UMat hashesGpu = Mat(hashTable.hashes, false).getUMat(ACCESS_READ);
     UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
 
-    std::cout << "5" << std::endl;
     k.args(ocl::KernelArg::ReadOnly(depth),
         ocl::KernelArg::PtrReadOnly(hashesGpu),
         ocl::KernelArg::PtrReadOnly(hashDataGpu),
@@ -525,14 +519,12 @@ void ocl_integrateHashTsdfVolumeUnit(
         int(maxWeight)
     );
 
-    std::cout << "6" << std::endl;
     int resol = volumeUnitResolution;
     size_t globalSize[3];
     globalSize[0] = (size_t)resol;
     globalSize[1] = (size_t)resol;
     globalSize[2] = (size_t)hashTable.last; // num of volume units
 
-    std::cout << "7" << std::endl;
     if (!k.run(3, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
 
@@ -611,10 +603,34 @@ TsdfVoxel atVolumeUnit(
     return volData[coordBase];
 }
 
+
+TsdfVoxel new_atVolumeUnit(
+    const Mat& volUnitsDataCopy,
+    const Vec3i& point, const Vec3i& volumeUnitIdx, const int indx,
+    const int volumeUnitDegree, const Vec4i volStrides)
+{
+    if (indx < 0)
+    {
+        return TsdfVoxel(floatToTsdf(1.f), 0);
+    }
+    Vec3i volUnitLocalIdx = point - Vec3i(volumeUnitIdx[0] << volumeUnitDegree,
+        volumeUnitIdx[1] << volumeUnitDegree,
+        volumeUnitIdx[2] << volumeUnitDegree);
+
+    // expanding at(), removing bounds check
+    const TsdfVoxel* volData = volUnitsDataCopy.ptr<TsdfVoxel>(indx);
+    int coordBase = volUnitLocalIdx[0] * volStrides[0] +
+        volUnitLocalIdx[1] * volStrides[1] +
+        volUnitLocalIdx[2] * volStrides[2];
+    return volData[coordBase];
+}
+
+
+
 Point3f getNormalVoxel(
     const Point3f& point, const float voxelSizeInv,
     const int volumeUnitDegree,  const Vec4i volStrides,
-    const Mat& volUnitsData, const VolumeUnitIndexes& volumeUnits)
+    const Mat& volUnitsDataCopy, const VolumeUnitIndexes& volumeUnits)
 {
     Vec3f normal = Vec3f(0, 0, 0);
 
@@ -665,7 +681,7 @@ Point3f getNormalVoxel(
             queried[dictIdx] = true;
         }
 
-        vals[i] = tsdfToFloat(atVolumeUnit(volUnitsData, volumeUnits, pt, volumeUnitIdx, it, volumeUnitDegree, volStrides).tsdf);
+        vals[i] = tsdfToFloat(atVolumeUnit(volUnitsDataCopy, volumeUnits, pt, volumeUnitIdx, it, volumeUnitDegree, volStrides).tsdf);
     }
 
 #if !USE_INTERPOLATION_IN_GETNORMAL
@@ -751,6 +767,149 @@ Point3f getNormalVoxel(
         normal[2] * normal[2]);
     return nv < 0.0001f ? nan3 : normal / nv;
 }
+
+
+Point3f ocl_getNormalVoxel(
+    const Point3f& point, const float voxelSizeInv,
+    const int volumeUnitDegree, const Vec4i volStrides,
+    const Mat& volUnitsData, const CustomHashSet& hashTable)
+{
+    Vec3f normal = Vec3f(0, 0, 0);
+
+    Point3f ptVox = point * voxelSizeInv;
+    Vec3i iptVox(cvFloor(ptVox.x), cvFloor(ptVox.y), cvFloor(ptVox.z));
+
+    // A small hash table to reduce a number of find() calls
+    // -2 and lower means not queried yet
+    // -1 means not found
+    // 0+ means found
+    int iterMap[8];
+    for (int i = 0; i < 8; i++)
+    {
+        iterMap[i] = -2;
+    }
+
+#if !USE_INTERPOLATION_IN_GETNORMAL
+    const Vec3i offsets[] = { { 1,  0,  0}, {-1,  0,  0}, { 0,  1,  0}, // 0-3
+                              { 0, -1,  0}, { 0,  0,  1}, { 0,  0, -1}  // 4-7
+    };
+    const int nVals = 6;
+
+#else
+    const Vec3i offsets[] = { { 0,  0,  0}, { 0,  0,  1}, { 0,  1,  0}, { 0,  1,  1}, //  0-3
+                              { 1,  0,  0}, { 1,  0,  1}, { 1,  1,  0}, { 1,  1,  1}, //  4-7
+                              {-1,  0,  0}, {-1,  0,  1}, {-1,  1,  0}, {-1,  1,  1}, //  8-11
+                              { 2,  0,  0}, { 2,  0,  1}, { 2,  1,  0}, { 2,  1,  1}, // 12-15
+                              { 0, -1,  0}, { 0, -1,  1}, { 1, -1,  0}, { 1, -1,  1}, // 16-19
+                              { 0,  2,  0}, { 0,  2,  1}, { 1,  2,  0}, { 1,  2,  1}, // 20-23
+                              { 0,  0, -1}, { 0,  1, -1}, { 1,  0, -1}, { 1,  1, -1}, // 24-27
+                              { 0,  0,  2}, { 0,  1,  2}, { 1,  0,  2}, { 1,  1,  2}, // 28-31
+    };
+    const int nVals = 32;
+#endif
+
+    float vals[nVals];
+    for (int i = 0; i < nVals; i++)
+    {
+        Vec3i pt = iptVox + offsets[i];
+
+        Vec3i volumeUnitIdx = Vec3i(pt[0] >> volumeUnitDegree, pt[1] >> volumeUnitDegree, pt[2] >> volumeUnitDegree);
+
+        int dictIdx = (volumeUnitIdx[0] & 1) + (volumeUnitIdx[1] & 1) * 2 + (volumeUnitIdx[2] & 1) * 4;
+        auto it = iterMap[dictIdx];
+        if (it < -1)
+        {
+            it = hashTable.find(volumeUnitIdx);
+            iterMap[dictIdx] = it;
+        }
+
+        vals[i] = tsdfToFloat(new_atVolumeUnit(volUnitsData, pt, volumeUnitIdx, it, volumeUnitDegree, volStrides).tsdf);
+    }
+
+#if !USE_INTERPOLATION_IN_GETNORMAL
+    for (int c = 0; c < 3; c++)
+    {
+        normal[c] = vals[c * 2] - vals[c * 2 + 1];
+    }
+#else
+
+    float cxv[8], cyv[8], czv[8];
+
+    // How these numbers were obtained:
+    // 1. Take the basic interpolation sequence:
+    // 000, 001, 010, 011, 100, 101, 110, 111
+    // where each digit corresponds to shift by x, y, z axis respectively.
+    // 2. Add +1 for next or -1 for prev to each coordinate to corresponding axis
+    // 3. Search corresponding values in offsets
+    const int idxxp[8] = { 8,  9, 10, 11,  0,  1,  2,  3 };
+    const int idxxn[8] = { 4,  5,  6,  7, 12, 13, 14, 15 };
+    const int idxyp[8] = { 16, 17,  0,  1, 18, 19,  4,  5 };
+    const int idxyn[8] = { 2,  3, 20, 21,  6,  7, 22, 23 };
+    const int idxzp[8] = { 24,  0, 25,  2, 26,  4, 27,  6 };
+    const int idxzn[8] = { 1, 28,  3, 29,  5, 30,  7, 31 };
+
+#if !USE_INTRINSICS
+    for (int i = 0; i < 8; i++)
+    {
+        cxv[i] = vals[idxxn[i]] - vals[idxxp[i]];
+        cyv[i] = vals[idxyn[i]] - vals[idxyp[i]];
+        czv[i] = vals[idxzn[i]] - vals[idxzp[i]];
+    }
+#else
+
+# if CV_SIMD >= 32
+    v_float32x8 cxp = v_lut(vals, idxxp);
+    v_float32x8 cxn = v_lut(vals, idxxn);
+
+    v_float32x8 cyp = v_lut(vals, idxyp);
+    v_float32x8 cyn = v_lut(vals, idxyn);
+
+    v_float32x8 czp = v_lut(vals, idxzp);
+    v_float32x8 czn = v_lut(vals, idxzn);
+
+    v_float32x8 vcxv = cxn - cxp;
+    v_float32x8 vcyv = cyn - cyp;
+    v_float32x8 vczv = czn - czp;
+
+    v_store(cxv, vcxv);
+    v_store(cyv, vcyv);
+    v_store(czv, vczv);
+# else
+    v_float32x4 cxp0 = v_lut(vals, idxxp + 0); v_float32x4 cxp1 = v_lut(vals, idxxp + 4);
+    v_float32x4 cxn0 = v_lut(vals, idxxn + 0); v_float32x4 cxn1 = v_lut(vals, idxxn + 4);
+
+    v_float32x4 cyp0 = v_lut(vals, idxyp + 0); v_float32x4 cyp1 = v_lut(vals, idxyp + 4);
+    v_float32x4 cyn0 = v_lut(vals, idxyn + 0); v_float32x4 cyn1 = v_lut(vals, idxyn + 4);
+
+    v_float32x4 czp0 = v_lut(vals, idxzp + 0); v_float32x4 czp1 = v_lut(vals, idxzp + 4);
+    v_float32x4 czn0 = v_lut(vals, idxzn + 0); v_float32x4 czn1 = v_lut(vals, idxzn + 4);
+
+    v_float32x4 cxv0 = cxn0 - cxp0; v_float32x4 cxv1 = cxn1 - cxp1;
+    v_float32x4 cyv0 = cyn0 - cyp0; v_float32x4 cyv1 = cyn1 - cyp1;
+    v_float32x4 czv0 = czn0 - czp0; v_float32x4 czv1 = czn1 - czp1;
+
+    v_store(cxv + 0, cxv0); v_store(cxv + 4, cxv1);
+    v_store(cyv + 0, cyv0); v_store(cyv + 4, cyv1);
+    v_store(czv + 0, czv0); v_store(czv + 4, czv1);
+#endif
+
+#endif
+
+    float tx = ptVox.x - iptVox[0];
+    float ty = ptVox.y - iptVox[1];
+    float tz = ptVox.z - iptVox[2];
+
+    normal[0] = interpolate(tx, ty, tz, cxv);
+    normal[1] = interpolate(tx, ty, tz, cyv);
+    normal[2] = interpolate(tx, ty, tz, czv);
+#endif
+
+    float nv = sqrt(normal[0] * normal[0] +
+        normal[1] * normal[1] +
+        normal[2] * normal[2]);
+    return nv < 0.0001f ? nan3 : normal / nv;
+}
+
 
 
 void raycastHashTsdfVolumeUnit(
@@ -1038,6 +1197,51 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 
 }
 
+void olc_fetchNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const CustomHashSet& hashTable, InputArray _points, OutputArray _normals)
+{
+    CV_TRACE_FUNCTION();
+    UMat volUnitsData = _volUnitsData.getUMat();
+    Mat volUnitsDataCopy = _volUnitsDataCopy.getMat();
+    if (!_normals.needed())
+        return;
+
+    //TODO: remove it when it works w/o CPU code
+    volUnitsData.copyTo(volUnitsDataCopy);
+
+    Points points = _points.getMat();
+    CV_Assert(points.type() == POINT_TYPE);
+    _normals.createSameSize(_points, _points.type());
+    Normals normals = _normals.getMat();
+
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+
+    auto HashPushNormals = [&](const ptype& point, const int* position) {
+        Affine3f invPose(pose.inv());
+        Point3f p = fromPtype(point);
+        Point3f n = nan3;
+        if (!isNaN(p))
+        {
+            Point3f voxelPoint = invPose * p;
+            n = pose.rotation() * ocl_getNormalVoxel(voxelPoint, voxelSizeInv, volumeUnitDegree, volDims, volUnitsDataCopy, hashTable);
+        }
+        normals(position[0], position[1]) = toPtype(n);
+    };
+    points.forEach(HashPushNormals);
+
+}
+
+
 
 void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
@@ -1144,6 +1348,131 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
 
 }
 
+
+inline TsdfVoxel new_at(
+    Mat& volUnitsDataCopy, const cv::Vec3i& volumeIdx, int indx,
+    const int volumeUnitResolution, const Vec4i volStrides)
+{
+    //! Out of bounds
+    if ((volumeIdx[0] >= volumeUnitResolution || volumeIdx[0] < 0) ||
+        (volumeIdx[1] >= volumeUnitResolution || volumeIdx[1] < 0) ||
+        (volumeIdx[2] >= volumeUnitResolution || volumeIdx[2] < 0))
+    {
+        return TsdfVoxel(floatToTsdf(1.0f), 0);
+    }
+
+    const TsdfVoxel* volData = volUnitsDataCopy.ptr<TsdfVoxel>(indx);
+    int coordBase =
+        volumeIdx[0] * volStrides[0] +
+        volumeIdx[1] * volStrides[1] +
+        volumeIdx[2] * volStrides[2];
+    return volData[coordBase];
+}
+
+
+void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals)
+{
+
+    CV_TRACE_FUNCTION();
+
+    if (!_points.needed())
+        return;
+
+    UMat volUnitsData = _volUnitsData.getUMat();
+    Mat volUnitsDataCopy = _volUnitsDataCopy.getMat();
+    //TODO: remove it when it works w/o CPU code
+    volUnitsData.copyTo(volUnitsDataCopy);
+    //TODO: remove it when it works w/o CPU code
+    //TODO: enable it when it's on GPU
+    //UMat hashDataGpu(hashMap.capacity, 1, CV_32SC4);
+    //Mat(hashMap.data, false).copyTo(hashDataGpu);
+
+    std::vector<std::vector<ptype>> pVecs, nVecs;
+
+    const float voxelSize = settings.getVoxelSize();
+    const float voxelSizeInv = 1.f / voxelSize;
+    const int volumeUnitDegree = settings.getVolumeUnitDegree();
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    const int volumeUnitResolution = volResolution.x;
+    const float volumeUnitSize = voxelSize * resolution[0];
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Range _fetchRange(0, hashTable.last);
+
+    const int nstripes = -1;
+
+    bool needNormals(_normals.needed());
+    Mutex mutex;
+
+    auto _HashFetchPointsNormalsInvoker = [&](const Range& range)
+    {
+        std::vector<ptype> points, normals;
+        for (int row = range.start; row < range.end; row++)
+        {
+            cv::Vec4i idx4 = hashTable.data[row];
+            cv::Vec3i idx(idx4[0], idx4[1], idx4[2]);
+
+            Point3f base_point = volumeUnitIdxToVolume(idx, volumeUnitSize);
+
+            std::vector<ptype> localPoints;
+            std::vector<ptype> localNormals;
+            for (int x = 0; x < volumeUnitResolution; x++)
+                for (int y = 0; y < volumeUnitResolution; y++)
+                    for (int z = 0; z < volumeUnitResolution; z++)
+                    {
+                        cv::Vec3i voxelIdx(x, y, z);
+                        TsdfVoxel voxel = new_at(volUnitsDataCopy, voxelIdx, row, volumeUnitResolution, volDims);
+
+                        if (voxel.tsdf != -128 && voxel.weight != 0)
+                        {
+                            Point3f point = base_point + voxelCoordToVolume(voxelIdx, voxelSize);
+
+                            localPoints.push_back(toPtype(point));
+                            if (needNormals)
+                            {
+                                Point3f normal = ocl_getNormalVoxel(point, voxelSizeInv, volumeUnitDegree, volDims, volUnitsDataCopy, hashTable);
+                                localNormals.push_back(toPtype(normal));
+                            }
+                        }
+                    }
+
+            AutoLock al(mutex);
+            pVecs.push_back(localPoints);
+            nVecs.push_back(localNormals);
+        }
+    };
+
+    parallel_for_(_fetchRange, _HashFetchPointsNormalsInvoker, nstripes);
+
+    std::vector<ptype> points, normals;
+    for (size_t i = 0; i < pVecs.size(); i++)
+    {
+        points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
+        normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
+    }
+
+    _points.create((int)points.size(), 1, POINT_TYPE);
+    if (!points.empty())
+        Mat((int)points.size(), 1, POINT_TYPE, &points[0]).copyTo(_points.getMat());
+
+    if (_normals.needed())
+    {
+        _normals.create((int)normals.size(), 1, POINT_TYPE);
+        if (!normals.empty())
+            Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
+    }
+
+}
 
 
 } // namespace cv

@@ -343,6 +343,9 @@ void ocl_raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals);
 
+void olc_fetchNormalsFromHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const CustomHashSet& hashTable, InputArray _points, OutputArray _normals);
 
 } // namespace cv
 

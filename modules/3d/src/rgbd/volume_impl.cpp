@@ -309,7 +309,7 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 #ifndef HAVE_OPENCL
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
-
+    olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volUnitsDataCopy, hashTable, points, normals);
 #endif
 }
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
