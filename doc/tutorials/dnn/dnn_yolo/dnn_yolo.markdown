@@ -29,8 +29,8 @@ Source Code
 -----------
 
 Use a universal sample for object detection models written
-[in C++](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.cpp) and
-[in Python](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.py) languages
+[in C++](https://github.com/opencv/opencv/blob/4.x/samples/dnn/object_detection.cpp) and
+[in Python](https://github.com/opencv/opencv/blob/4.x/samples/dnn/object_detection.py) languages
 
 Usage examples
 --------------

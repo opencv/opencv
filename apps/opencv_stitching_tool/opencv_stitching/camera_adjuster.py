@@ -6,7 +6,7 @@ from .stitching_error import StitchingError
 
 
 class CameraAdjuster:
-    """https://docs.opencv.org/master/d5/d56/classcv_1_1detail_1_1BundleAdjusterBase.html"""  # noqa
+    """https://docs.opencv.org/4.x/d5/d56/classcv_1_1detail_1_1BundleAdjusterBase.html"""  # noqa
 
     CAMERA_ADJUSTER_CHOICES = OrderedDict()
     CAMERA_ADJUSTER_CHOICES['ray'] = cv.detail_BundleAdjusterRay
