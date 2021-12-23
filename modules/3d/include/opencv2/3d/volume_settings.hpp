@@ -56,6 +56,8 @@ public:
     void getVolumeDimentions(OutputArray val) const;
     void setCameraIntrinsics(InputArray val);
     void getCameraIntrinsics(OutputArray val) const;
+    void setRGBCameraIntrinsics(InputArray val);
+    void getRGBCameraIntrinsics(OutputArray val) const;
 
 
     class Impl;

@@ -339,7 +339,7 @@ void _integrateRGBVolumeUnit(
     const float dfac(1.f / depthFactor);
     RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
 
-#if USE_INTRINSICS
+#if USE_INTRINSICS_
     auto IntegrateInvoker = [&](const Range& range)
     {
         // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
@@ -664,7 +664,7 @@ void integrateTsdfVolumeUnit(
 
     Range integrateRange(0, volResolution.x);
 
-#if USE_INTRINSICS
+#if USE_INTRINSICS_
     auto IntegrateInvoker = [&](const Range& range)
     {
         // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
@@ -1245,7 +1245,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
     Range raycastRange = Range(0, points.rows);
     //TODO::  swap realization, they are missplaced :)
-#if USE_INTRINSICS
+#if USE_INTRINSICS_
     auto RaycastInvoker = [&](const Range& range)
     {
         const v_float32x4 vfxy(reproj.fxinv, reproj.fyinv, 0, 0);

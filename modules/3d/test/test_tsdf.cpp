@@ -380,13 +380,14 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z)
+                        || cvIsNaN(c.x) || cvIsNaN(c.y) || cvIsNaN(c.z))
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
                     else
                     {
-                        color = Vec4b(c.x, c.y, c.z, 0);
+                        color = Vec4b((uchar)c.x, (uchar)c.y, (uchar)c.z, (uchar)0);
                     }
 
                     imgRow[x] = color;
@@ -478,9 +479,9 @@ void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f l
 {
     Mat image;
     patchNaNs(points);
-    imshow("depth", depth * (1.f / depthFactor / 4.f));
+    imshow("depth1", depth * (1.f / depthFactor / 4.f));
     renderPointsNormals(points, normals, image, lightPose);
-    imshow("render", image);
+    imshow("render1", image);
     waitKey(2000);
     destroyAllWindows();
 }
@@ -489,11 +490,11 @@ void displayColorImage(Mat depth, Mat rgb, Mat points, Mat normals, Mat colors, 
 {
     Mat image;
     patchNaNs(points);
-    imshow("depth", depth * (1.f / depthFactor / 4.f));
-    imshow("rgb", rgb * (1.f / 255.f));
+    imshow("depth2", depth * (1.f / depthFactor / 4.f));
+    imshow("rgb2", rgb * (1.f / 255.f));
     renderPointsNormalsColors(points, normals, colors, image, lightPose);
-    imshow("render", image);
-    waitKey(2000);
+    imshow("render2", image);
+    waitKey(20000);
     destroyAllWindows();
 }
 
@@ -635,6 +636,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     if (testFunction == VolumeTestFunction::RAYCAST && display)
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            //displayImage(depth, points, normals, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
 

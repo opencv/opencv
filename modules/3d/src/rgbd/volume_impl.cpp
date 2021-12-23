@@ -443,10 +443,24 @@ void ColorTsdfVolume::integrate(InputArray depth, InputArray pose)
     CV_Error(cv::Error::StsBadFunc, "There is no color data");
 }
 
-void ColorTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
+void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
 {
     std::cout << "ColorTsdfVolume::integrate(Mat, Mat)" << std::endl;
-
+    Depth depth = _depth.getMat();
+    Colors image = _image.getMat();
+    const Matx44f cameraPose = _cameraPose.getMat();
+    Matx33f intr;
+    settings.getCameraIntrinsics(intr);
+    Intr intrinsics(intr);
+    Vec6f newParams((float)depth.rows, (float)depth.cols,
+        intrinsics.fx, intrinsics.fy,
+        intrinsics.cx, intrinsics.cy);
+    if (!(frameParams == newParams))
+    {
+        frameParams = newParams;
+        preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
+    }
+    integrateColorTsdfVolumeUnit(settings, cameraPose, depth, image, pixNorms, volume);
 }
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
@@ -458,9 +472,12 @@ void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Out
 {
     std::cout << "ColorTsdfVolume::raycast()" << std::endl;
 }
-void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
+    std::cout << "ColorTsdfVolume::raycast()" << std::endl;
 
+    const Matx44f cameraPose = _cameraPose.getMat();
+    raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals, _colors);
 }
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const

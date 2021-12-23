@@ -46,6 +46,8 @@ public:
     virtual void getVolumeDimentions(OutputArray val) const = 0;
     virtual void setCameraIntrinsics(InputArray val) = 0;
     virtual void getCameraIntrinsics(OutputArray val) const = 0;
+    virtual void setRGBCameraIntrinsics(InputArray val) = 0;
+    virtual void getRGBCameraIntrinsics(OutputArray val) const = 0;
 };
 
 class VolumeSettingsImpl : public VolumeSettings::Impl
@@ -84,6 +86,8 @@ public:
     virtual void getVolumeDimentions(OutputArray val) const override;
     virtual void setCameraIntrinsics(InputArray val) override;
     virtual void getCameraIntrinsics(OutputArray val) const override;
+    virtual void setRGBCameraIntrinsics(InputArray val) override;
+    virtual void getRGBCameraIntrinsics(OutputArray val) const override;
 
 private:
     VolumeType volumeType;
@@ -103,6 +107,7 @@ private:
     Point3i volumeResolution;
     Vec4i volumeDimentions;
     Matx33f cameraIntrinsics;
+    Matx33f rgb_cameraIntrinsics;
 
 public:
     // duplicate classes for all volumes
@@ -126,6 +131,7 @@ public:
         static const int volumeUnitDegree = 0;
 
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -151,6 +157,7 @@ public:
         static const bool zFirstMemOrder = true; // order of voxels in volume
 
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -166,6 +173,10 @@ public:
         static constexpr float fy = 525.f; // focus point y axis
         static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
         static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
+        static constexpr float rgb_fx = 525.f; // focus point x axis
+        static constexpr float rgb_fy = 525.f; // focus point y axis
+        static constexpr float rgb_cx = float(width) / 2.f - 0.5f;  // central point x axis
+        static constexpr float rgb_cy = float(height) / 2.f - 0.5f; // central point y axis
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
@@ -177,6 +188,7 @@ public:
         static const int volumeUnitDegree = 0;
 
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntrinsics = Matx33f(rgb_fx, 0, rgb_cx, 0, rgb_fy, rgb_cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -228,6 +240,8 @@ void VolumeSettings::setVolumeDimentions(InputArray val) { this->impl->setVolume
 void VolumeSettings::getVolumeDimentions(OutputArray val) const { this->impl->getVolumeDimentions(val); };
 void VolumeSettings::setCameraIntrinsics(InputArray val) { this->impl->setCameraIntrinsics(val); };
 void VolumeSettings::getCameraIntrinsics(OutputArray val) const { this->impl->getCameraIntrinsics(val); };
+void VolumeSettings::setRGBCameraIntrinsics(InputArray val) { this->impl->setRGBCameraIntrinsics(val); };
+void VolumeSettings::getRGBCameraIntrinsics(OutputArray val) const { this->impl->getRGBCameraIntrinsics(val); };
 
 
 VolumeSettingsImpl::VolumeSettingsImpl()
@@ -257,6 +271,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntrinsics = ds.cameraIntrinsics;
+        this->rgb_cameraIntrinsics = ds.rgb_cameraIntrinsics;
     }
     else if (volumeType == VolumeType::HashTSDF)
     {
@@ -277,6 +292,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntrinsics = ds.cameraIntrinsics;
+        this->rgb_cameraIntrinsics = ds.rgb_cameraIntrinsics;
     }
     else if (volumeType == VolumeType::ColorTSDF)
     {
@@ -297,6 +313,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntrinsics = ds.cameraIntrinsics;
+        this->rgb_cameraIntrinsics = ds.rgb_cameraIntrinsics;
     }
 }
 
@@ -455,6 +472,19 @@ void VolumeSettingsImpl::setCameraIntrinsics(InputArray val)
 void VolumeSettingsImpl::getCameraIntrinsics(OutputArray val) const
 {
     Mat(this->cameraIntrinsics).copyTo(val);
+}
+
+void VolumeSettingsImpl::setRGBCameraIntrinsics(InputArray val)
+{
+    if (!val.empty())
+    {
+        this->rgb_cameraIntrinsics = Matx33f(val.getMat());
+    }
+}
+
+void VolumeSettingsImpl::getRGBCameraIntrinsics(OutputArray val) const
+{
+    Mat(this->rgb_cameraIntrinsics).copyTo(val);
 }
 
 

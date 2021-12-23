@@ -516,9 +516,9 @@ inline Point3f ColoredTSDFVolumeCPU::getColorVoxel(const Point3f& p) const
 }
 #endif
 
-struct ColorRaycastInvoker : ParallelLoopBody
+struct _ColorRaycastInvoker : ParallelLoopBody
 {
-    ColorRaycastInvoker(Points& _points, Normals& _normals, Colors& _colors, const Matx44f& cameraPose,
+    _ColorRaycastInvoker(Points& _points, Normals& _normals, Colors& _colors, const Matx44f& cameraPose,
                         const Intr& depth_intrinsics, const ColoredTSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
@@ -537,7 +537,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
         vol2cam(Affine3f(cameraPose.inv()) * volume.pose),
         reprojDepth(depth_intrinsics.makeReprojector())
     {  }
-#if USE_INTRINSICS
+#if USE_INTRINSICS_
     virtual void operator() (const Range& range) const override
     {
         const v_float32x4 vfxy(reprojDepth.fxinv, reprojDepth.fyinv, 0, 0);
@@ -824,7 +824,7 @@ void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& dep
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
     Colors colors = _colors.getMat();
-    ColorRaycastInvoker ri(points, normals, colors, cameraPose, Intr(depth_intrinsics), *this);
+    _ColorRaycastInvoker ri(points, normals, colors, cameraPose, Intr(depth_intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);

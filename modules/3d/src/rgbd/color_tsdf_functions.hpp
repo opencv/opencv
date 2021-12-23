@@ -24,6 +24,9 @@ void integrateColorTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
     InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume);
 
+void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors);
+
 
 } // namespace cv
 
