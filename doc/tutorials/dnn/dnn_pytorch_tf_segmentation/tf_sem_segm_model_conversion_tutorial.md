@@ -338,7 +338,7 @@ python -m dnn_model_runner.dnn_conversion.tf.segmentation.py_to_py_segm
 
 The model will be read into OpenCV ``cv.dnn_Net`` object. Evaluation results of TF and OpenCV models  (pixel accuracy, mean IoU, inference time) will be written into the log file. Inference time values will be also depicted in a chart to generalize the obtained model information.
 
-Necessary evaluation configurations are defined in the [``test_config.py``](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py):
+Necessary evaluation configurations are defined in the [``test_config.py``](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py):
 
 ```python
 @dataclass
@@ -364,7 +364,7 @@ python -m dnn_model_runner.dnn_conversion.tf.segmentation.py_to_py_segm --test T
 
 Here ``default_img_preprocess`` key defines whether you'd like to parametrize the model test process with some particular values or use the default values, for example, ``scale``, ``mean`` or ``std``.
 
-Test configuration is represented in [``test_config.py``](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestSegmModuleConfig`` class:
+Test configuration is represented in [``test_config.py``](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs/test_config.py) ``TestSegmModuleConfig`` class:
 
 ```python
 @dataclass

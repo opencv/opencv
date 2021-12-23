@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     // These descriptors are going to be detecting and computing BLOBS with 6 different params
     // Param for first BLOB detector we want all
-    typeDesc.push_back("BLOB");    // see http://docs.opencv.org/master/d0/d7a/classcv_1_1SimpleBlobDetector.html
+    typeDesc.push_back("BLOB");    // see http://docs.opencv.org/4.x/d0/d7a/classcv_1_1SimpleBlobDetector.html
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByArea = true;
     pBLOB.back().minArea = 1;

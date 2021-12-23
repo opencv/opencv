@@ -42,19 +42,19 @@ Source Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/photo/hdr_imaging/hdr_imaging.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/photo/hdr_imaging/hdr_imaging.cpp)
 @include samples/cpp/tutorial_code/photo/hdr_imaging/hdr_imaging.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/photo/hdr_imaging/HDRImagingDemo.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/photo/hdr_imaging/HDRImagingDemo.java)
 @include samples/java/tutorial_code/photo/hdr_imaging/HDRImagingDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/photo/hdr_imaging/hdr_imaging.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/photo/hdr_imaging/hdr_imaging.py)
 @include samples/python/tutorial_code/photo/hdr_imaging/hdr_imaging.py
 @end_toggle
 
@@ -62,7 +62,7 @@ Sample images
 -------------
 
 Data directory that contains images, exposure times and `list.txt` file can be downloaded from
-[here](https://github.com/opencv/opencv_extra/tree/master/testdata/cv/hdr/exposures).
+[here](https://github.com/opencv/opencv_extra/tree/4.x/testdata/cv/hdr/exposures).
 
 Explanation
 -----------
