@@ -2348,6 +2348,7 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+// https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
 void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     for (int i = 1; i < node_proto.input_size(); i++)
@@ -2368,30 +2369,38 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
         layerParams.set("mode", "opencv_linear");
 
-    // input = [X, scales], [X, roi, scales] or [x, roi, scales, sizes]
-    int foundScaleId = hasDynamicShapes ? node_proto.input_size() - 1
-                                        : node_proto.input_size() > 2 ? 2 : 1;
+    // opset-10: input = [X, scales]
+    // opset-11: input = [X, roi, scales] or [x, roi, scales, sizes]
+    int scalesInputId = node_proto.input_size() == 2 ? 1 : 2;
 
-    Mat scales = getBlob(node_proto, foundScaleId);
-    if (scales.total() == 4)
+    Mat scales = getBlob(node_proto, scalesInputId);
+    if (!scales.empty())
     {
+        CV_CheckEQ(scales.total(), (size_t)4, "HCHW layout is expected");
         layerParams.set("zoom_factor_y", scales.at<float>(2));
         layerParams.set("zoom_factor_x", scales.at<float>(3));
     }
-    else
+    else if (node_proto.input_size() >= 4)  // opset-11
     {
-        const std::string& inputLast = node_proto.input(node_proto.input_size() - 1);
-        if (constBlobs.find(inputLast) != constBlobs.end())
+        const std::string& inputSizes = node_proto.input(3);
+        if (constBlobs.find(inputSizes) != constBlobs.end())
         {
-            Mat shapes = getBlob(inputLast);
-            CV_CheckEQ(shapes.size[0], 4, "");
-            CV_CheckEQ(shapes.size[1], 1, "");
+            Mat shapes = getBlob(inputSizes);
+            CV_CheckEQ(shapes.total(), (size_t)4, "HCHW layout is expected");
             CV_CheckDepth(shapes.depth(), shapes.depth() == CV_32S || shapes.depth() == CV_32F, "");
             if (shapes.depth() == CV_32F)
                 shapes.convertTo(shapes, CV_32S);
             layerParams.set("width", shapes.at<int>(3));
             layerParams.set("height", shapes.at<int>(2));
         }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, cv::format("ONNX/Resize: doesn't support dynamic non-constant 'sizes' input: %s", inputSizes.c_str()));
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "ONNX/Resize: can't find neither 'scale' nor destination sizes parameters");
     }
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto);
