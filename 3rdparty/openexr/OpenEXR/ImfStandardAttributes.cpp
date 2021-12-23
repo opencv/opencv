@@ -96,7 +96,8 @@ IMF_STD_ATTRIBUTE_IMP (worldToCamera, WorldToCamera, M44f)
 IMF_STD_ATTRIBUTE_IMP (worldToNDC, WorldToNDC, M44f)
 IMF_STD_ATTRIBUTE_IMP (deepImageState, DeepImageState, DeepImageState)
 IMF_STD_ATTRIBUTE_IMP (originalDataWindow, OriginalDataWindow, Box2i)
-IMF_STD_ATTRIBUTE_IMP (dwaCompressionLevel, DwaCompressionLevel, float)
+IMF_STD_ATTRIBUTE_IMP (defaultZipCompressionLevel, DefaultZipCompressionLevel, int)
+IMF_STD_ATTRIBUTE_IMP (defaultDwaCompressionLevel, DefaultDwaCompressionLevel, float)
 IMF_STD_ATTRIBUTE_IMP (idManifest, IDManifest, CompressedIDManifest)
 
 OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT
