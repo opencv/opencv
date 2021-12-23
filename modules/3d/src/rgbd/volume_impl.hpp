@@ -154,6 +154,13 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 private:
+    Vec4i volStrides;
+    Vec6f frameParams;
+    Mat pixNorms;
+    // See zFirstMemOrder arg of parent class constructor
+    // for the array layout info
+    // Consist of Voxel elements
+    Mat volume;
 };
 
 

@@ -88,11 +88,78 @@ struct RenderInvoker : ParallelLoopBody
     bool onlySemisphere;
 };
 
+template<class Scene>
+struct RenderColorInvoker : ParallelLoopBody
+{
+    RenderColorInvoker(Mat_<Vec3f>& _frame, Affine3f _pose,
+        Reprojector _reproj,
+        float _depthFactor, bool _onlySemisphere) : ParallelLoopBody(),
+        frame(_frame),
+        pose(_pose),
+        reproj(_reproj),
+        depthFactor(_depthFactor),
+        onlySemisphere(_onlySemisphere)
+    { }
+
+    virtual void operator ()(const cv::Range& r) const
+    {
+        for (int y = r.start; y < r.end; y++)
+        {
+            Vec3f* frameRow = frame[y];
+            for (int x = 0; x < frame.cols; x++)
+            {
+                Vec3f pix = 0;
+
+                Point3f orig = pose.translation();
+                // direction through pixel
+                Point3f screenVec = reproj(Point3f((float)x, (float)y, 1.f));
+                Point3f dir = normalize(Vec3f(pose.rotation() * screenVec));
+                // screen space axis
+                dir.y = -dir.y;
+
+                const float maxDepth = 20.f;
+                const float maxSteps = 256;
+                float t = 0.f;
+                for (int step = 0; step < maxSteps && t < maxDepth; step++)
+                {
+                    Point3f p = orig + dir * t;
+                    float d = Scene::map(p, onlySemisphere);
+                    if (d < 0.000001f)
+                    {
+                        float m = 0.25f;
+                        float p0 = float(abs(fmod(p.x, m)) > m / 2.f);
+                        float p1 = float(abs(fmod(p.y, m)) > m / 2.f);
+                        float p2 = float(abs(fmod(p.z, m)) > m / 2.f);
+
+                        pix[0] = p0 + p1;
+                        pix[1] = p1 + p2;
+                        pix[2] = p0 + p2;
+
+                        pix *= 128.f;
+                        break;
+                    }
+                    t += d;
+                }
+
+                frameRow[x] = pix;
+            }
+        }
+    }
+
+    Mat_<Vec3f>& frame;
+    Affine3f pose;
+    Reprojector reproj;
+    float depthFactor;
+    bool onlySemisphere;
+};
+
+
 struct Scene
 {
     virtual ~Scene() {}
     static Ptr<Scene> create(Size sz, Matx33f _intr, float _depthFactor, bool onlySemisphere);
     virtual Mat depth(Affine3f pose) = 0;
+    virtual Mat rgb(Affine3f pose) = 0;
     virtual std::vector<Affine3f> getPoses() = 0;
 };
 
@@ -143,6 +210,17 @@ struct SemisphereScene : Scene
         return std::move(frame);
     }
 
+    Mat rgb(Affine3f pose) override
+    {
+        Mat_<Vec3f> frame(frameSize);
+        Reprojector reproj(intr);
+
+        Range range(0, frame.rows);
+        parallel_for_(range, RenderColorInvoker<SemisphereScene>(frame, pose, reproj, depthFactor, onlySemisphere));
+
+        return std::move(frame);
+    }
+
     std::vector<Affine3f> getPoses() override
     {
         std::vector<Affine3f> poses;
@@ -173,6 +251,7 @@ Ptr<Scene> Scene::create(Size sz, Matx33f _intr, float _depthFactor, bool _onlyS
 
 typedef cv::Vec4f ptype;
 typedef cv::Mat_< ptype > Points;
+typedef cv::Mat_< ptype > Colors;
 typedef Points Normals;
 typedef Size2i Size;
 
@@ -271,6 +350,50 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
             }
         }, nstripes);
 }
+void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose)
+{
+    Size sz = _points.size();
+    image.create(sz, CV_8UC4);
+
+    Points  points  = _points.getMat();
+    Normals normals = _normals.getMat();
+    Colors  colors  = _colors.getMat();
+
+    Mat_<Vec4b> img = image.getMat();
+
+    Range range(0, sz.height);
+    const int nstripes = -1;
+    parallel_for_(range, [&](const Range&)
+        {
+            for (int y = range.start; y < range.end; y++)
+            {
+                Vec4b* imgRow = img[y];
+                const ptype* ptsRow = points[y];
+                const ptype* nrmRow = normals[y];
+                const ptype* clrRow = colors[y];
+
+                for (int x = 0; x < sz.width; x++)
+                {
+                    Point3f p = fromPtype(ptsRow[x]);
+                    Point3f n = fromPtype(nrmRow[x]);
+                    Point3f c = fromPtype(clrRow[x]);
+
+                    Vec4b color;
+
+                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                    {
+                        color = Vec4b(0, 32, 0, 0);
+                    }
+                    else
+                    {
+                        color = Vec4b(c.x, c.y, c.z, 0);
+                    }
+
+                    imgRow[x] = color;
+                }
+            }
+        }, nstripes);
+}
 // ----------------------------
 
 static const bool display = true;
@@ -362,6 +485,18 @@ void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f l
     destroyAllWindows();
 }
 
+void displayColorImage(Mat depth, Mat rgb, Mat points, Mat normals, Mat colors, float depthFactor, Vec3f lightPose)
+{
+    Mat image;
+    patchNaNs(points);
+    imshow("depth", depth * (1.f / depthFactor / 4.f));
+    imshow("rgb", rgb * (1.f / 255.f));
+    renderPointsNormalsColors(points, normals, colors, image, lightPose);
+    imshow("render", image);
+    waitKey(2000);
+    destroyAllWindows();
+}
+
 void normalsCheck(Mat normals)
 {
     Vec4f vector;
@@ -431,7 +566,8 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
-    Mat points, normals, tmpnormals;
+    Mat rgb = scene->rgb(poses[0]);
+    Mat points, normals, tmpnormals, colors;
     AccessFlag af = ACCESS_READ;
 
     OdometryFrame odf;
@@ -443,12 +579,21 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+            if (volumeType == VolumeType::ColorTSDF)
+            {
+                std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+                volume.integrate(depth, rgb, poses[0].matrix);
+                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+            }
+            else
+            {
+                std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+                volume.integrate(depth, poses[0].matrix);
+                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
 
-            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, normals);
+                //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+                //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, points, normals);
+            }
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
@@ -488,7 +633,10 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     }
 
     if (testFunction == VolumeTestFunction::RAYCAST && display)
-        displayImage(depth, points, normals, depthFactor, lightPose);
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
 
     normalsCheck(normals);
 }
@@ -659,6 +807,13 @@ TEST(HashTSDF_CPU, valid_points)
     cv::ocl::setUseOpenCL(true);
 }
 
+TEST(ColorTSDF_CPU, raycast_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    //normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
 
 #endif
 }

@@ -158,6 +158,32 @@ public:
         const Point3i  volumeResolution = Vec3i::all(16); //number of voxels
     };
 
+    class DefaultColorTsdfSets {
+    public:
+        static const int width = 640;
+        static const int height = 480;
+        static constexpr float fx = 525.f; // focus point x axis
+        static constexpr float fy = 525.f; // focus point y axis
+        static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
+        static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
+        static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
+        static constexpr float volumeSize = 3.f; // meters
+        static constexpr float voxelSize = volumeSize / 128.f; //meters
+        static constexpr float truncatedDistance = 2 * voxelSize;
+        static constexpr float truncateThreshold = 0.f;
+        static const int maxWeight = 64; // number of frames
+        static constexpr float raycastStepFactor = 0.75f;
+        static const bool zFirstMemOrder = true; // order of voxels in volume
+        static const int volumeUnitDegree = 0;
+
+        const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
+        const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
+        const Matx44f  volumePoseMatrix = volumePose.matrix;
+        // Unlike original code, this should work with any volume size
+        // Not only when (x,y,z % 32) == 0
+        const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
+    };
+
 };
 
 
@@ -252,7 +278,26 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntrinsics = ds.cameraIntrinsics;
     }
+    else if (volumeType == VolumeType::ColorTSDF)
+    {
+        DefaultColorTsdfSets ds = DefaultColorTsdfSets();
 
+        this->width = ds.width;
+        this->height = ds.height;
+        this->depthFactor = ds.depthFactor;
+        this->voxelSize = ds.voxelSize;
+        this->truncatedDistance = ds.truncatedDistance;
+        this->truncateThreshold = ds.truncateThreshold;
+        this->maxWeight = ds.maxWeight;
+        this->raycastStepFactor = ds.raycastStepFactor;
+        this->zFirstMemOrder = ds.zFirstMemOrder;
+        this->volumeUnitDegree = ds.volumeUnitDegree;
+
+        this->volumePose = ds.volumePoseMatrix;
+        this->volumeResolution = ds.volumeResolution;
+        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->cameraIntrinsics = ds.cameraIntrinsics;
+    }
 }
 
 
