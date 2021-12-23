@@ -322,10 +322,10 @@ Pxr24Compressor::compress (const char *inPtr,
 
 		for (int j = 0; j < n; ++j)
 		{
-		    half pixel;
+            IMATH_INTERNAL_NAMESPACE::half pixel;
 
-		    pixel = *(const half *) inPtr;
-		    inPtr += sizeof (half);
+		    pixel = *(const IMATH_INTERNAL_NAMESPACE::half *) inPtr;
+		    inPtr += sizeof (IMATH_INTERNAL_NAMESPACE::half);
 
 		    unsigned int diff = pixel.bits() - previousPixel;
 		    previousPixel = pixel.bits();
@@ -476,9 +476,9 @@ Pxr24Compressor::uncompress (const char *inPtr,
 
 		    pixel += diff;
 
-		    half * hPtr = (half *) writePtr;
+            IMATH_INTERNAL_NAMESPACE::half * hPtr = (IMATH_INTERNAL_NAMESPACE::half *) writePtr;
 		    hPtr->setBits ((unsigned short) pixel);
-		    writePtr += sizeof (half);
+		    writePtr += sizeof (IMATH_INTERNAL_NAMESPACE::half);
 		}
 
 		break;
