@@ -7,6 +7,7 @@
 #include "volume_impl.hpp"
 #include "tsdf_functions.hpp"
 #include "hash_tsdf_functions.hpp"
+#include "color_tsdf_functions.hpp"
 #include "opencv2/imgproc.hpp"
 
 namespace cv
