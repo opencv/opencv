@@ -363,6 +363,6 @@ TEST(Imgcodecs, write_parameter_type)
 
 }} // namespace
 
-#ifdef HAVE_OPENEXR
+#if defined(HAVE_OPENEXR) && defined(OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS)
 #include "test_exr.impl.hpp"
 #endif
