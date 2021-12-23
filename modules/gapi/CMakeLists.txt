@@ -279,7 +279,7 @@ if(HAVE_FREETYPE)
 endif()
 
 # TODO: standalone mode???
-find_package(depthai)
+find_package(depthai QUIET)
 if(depthai_FOUND)
   ocv_target_compile_definitions(${the_module} PRIVATE -DWITH_OAK_BACKEND)
   if(TARGET opencv_test_gapi)
