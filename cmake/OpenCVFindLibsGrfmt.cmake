@@ -241,6 +241,7 @@ if(WITH_OPENEXR)
     add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/openexr")
     if(OPENEXR_VERSION)  # check via TARGET doesn't work
       set(HAVE_OPENEXR YES)
+      set(BUILD_OPENEXR ON)
     endif()
   endif()
 endif()
