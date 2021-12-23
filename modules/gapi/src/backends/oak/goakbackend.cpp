@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+
 #ifdef WITH_OAK_BACKEND
 
 #include <cstring>
@@ -588,6 +590,23 @@ cv::gapi::GKernelPackage kernels() {
     return cv::gapi::kernels< GOAKEncFrame
                             , GOAKSobelXY
                             >();
+}
+
+} // namespace oak
+} // namespace gimpl
+} // namespace cv
+
+#else
+
+namespace cv {
+namespace gimpl {
+namespace oak {
+
+cv::gapi::GKernelPackage kernels();
+
+cv::gapi::GKernelPackage kernels() {
+    GAPI_Assert(false && "Built without OAK support");
+    return {};
 }
 
 } // namespace oak

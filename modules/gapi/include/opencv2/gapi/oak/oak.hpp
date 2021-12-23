@@ -20,12 +20,12 @@ struct EncoderConfig {
     /**
      * Rate control mode specifies if constant or variable bitrate should be used (H264 / H265)
      */
-    enum class RateControlMode : int { CBR, VBR };
+    enum class RateControlMode: int { CBR, VBR };
 
     /**
      * Encoding profile, H264, H265 or MJPEG
      */
-    enum class Profile : int { H264_BASELINE, H264_HIGH, H264_MAIN, H265_MAIN, MJPEG };
+    enum class Profile: int { H264_BASELINE, H264_HIGH, H264_MAIN, H265_MAIN, MJPEG };
     /**
      * Specifies prefered bitrate (kb) of compressed output bitstream
      */

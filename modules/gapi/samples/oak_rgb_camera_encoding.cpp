@@ -13,6 +13,8 @@ const std::string keys =
     "{ h help  |              | Print this help message }"
     "{ output  | output.h265  | Path to the output .h265 video file }";
 
+#ifdef WITH_OAK_BACKEND
+
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help")) {
@@ -50,3 +52,11 @@ int main(int argc, char *argv[]) {
         }
     }
 }
+#else // WITH_OAK_BACKEND
+
+int main() {
+    GAPI_Assert(false && "Built without OAK support");
+    return -1;
+}
+
+#endif // WITH_OAK_BACKEND

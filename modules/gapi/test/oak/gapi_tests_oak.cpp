@@ -6,6 +6,8 @@
 
 #include "../test_precomp.hpp"
 
+#ifdef WITH_OAK_BACKEND
+
 #include <opencv2/gapi/oak/oak.hpp>
 
 namespace opencv_test
@@ -20,3 +22,5 @@ TEST(OAK, Available)
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 }
 } // opencv_test
+
+#endif // WITH_OAK_BACKEND
