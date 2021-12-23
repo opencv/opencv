@@ -2146,11 +2146,22 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(shapeIt != outShapes.end());
     const MatShape& inpShape = shapeIt->second;
 
-    Mat shapeMat(inpShape.size(), 1, CV_32S);
-    for (int j = 0; j < inpShape.size(); ++j)
-        shapeMat.at<int>(j) = inpShape[j];
-    shapeMat.dims = 1;
+    int dims = static_cast<int>(inpShape.size());
+    Mat shapeMat(dims, 1, CV_32S);
+    bool isDynamicShape = false;
+    for (int j = 0; j < dims; ++j)
+    {
+        int sz = inpShape[j];
+        isDynamicShape |= (sz == 0);
+        shapeMat.at<int>(j) = sz;
+    }
+    shapeMat.dims = 1;  // FIXIT Mat 1D
 
+    if (isDynamicShape)
+    {
+        CV_LOG_ERROR(NULL, "DNN/ONNX(Shape): dynamic 'zero' shapes are not supported, input " << toString(inpShape, node_proto.input(0)));
+        CV_Assert(!isDynamicShape);  // not supported
+    }
     addConstant(layerParams.name, shapeMat);
 }
 
