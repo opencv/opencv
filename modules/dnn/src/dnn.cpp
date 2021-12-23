@@ -1339,6 +1339,11 @@ struct Net::Impl : public detail::NetImplBase
 #endif
             clear();
 
+            if (hasDynamicShapes)
+            {
+                updateLayersShapes();
+            }
+
             this->blobsToKeep = blobsToKeep_;
 
             allocateLayers(blobsToKeep_);
@@ -3886,13 +3891,8 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    if (!oldShape) {
+    if (!oldShape)
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
-        if (impl->hasDynamicShapes)
-        {
-            impl->updateLayersShapes();
-        }
-    }
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {
