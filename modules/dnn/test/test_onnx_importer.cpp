@@ -908,7 +908,58 @@ TEST_P(Test_ONNX_layers, GatherMultiOutput)
     testONNXModels("gather_multi_output");
 }
 
-TEST_P(Test_ONNX_layers, DynamicAxes)
+TEST_P(Test_ONNX_layers, DynamicAxes_squeeze_and_conv)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
+    testONNXModels("squeeze_and_conv_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_unsqueeze_and_conv)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
+    testONNXModels("unsqueeze_and_conv_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_gather)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
+    testONNXModels("gather_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_gather_scalar)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // accuracy
@@ -929,17 +980,111 @@ TEST_P(Test_ONNX_layers, DynamicAxes)
     }
 #endif
 #endif
-    testONNXModels("squeeze_and_conv_dynamic_axes");
-    testONNXModels("unsqueeze_and_conv_dynamic_axes");
-    testONNXModels("gather_dynamic_axes");
     testONNXModels("gather_scalar_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_slice)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("slice_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_slice_opset_11)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("slice_opset_11_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_resize_opset11_torch16)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("resize_opset11_torch1.6_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_average_pooling)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("average_pooling_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_maxpooling_sigmoid)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("maxpooling_sigmoid_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes_dynamic_batch)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+#if INF_ENGINE_VER_MAJOR_LT(2021000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+#endif
+#endif
     testONNXModels("dynamic_batch");
 }
+
 
 TEST_P(Test_ONNX_layers, MaxPool1d)
 {
