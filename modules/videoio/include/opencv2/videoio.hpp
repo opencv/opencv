@@ -810,7 +810,7 @@ public:
 
     @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
     or one from @ref videoio_flags_others
-    @return Value for the specified property. Value 0 is returned when querying a property that is
+    @return Value for the specified property. Value -1 is returned when querying a property that is
     not supported by the backend used by the VideoCapture instance.
 
     @note Reading / writing properties involves many layers. Some unexpected result might happens

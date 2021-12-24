@@ -1893,7 +1893,7 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         if (!tryIoctl(VIDIOC_G_PARM, &sp)) {
             CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): Unable to get camera FPS");
-            return -1;
+            return -1.0;
         }
         return sp.parm.capture.timeperframe.denominator / (double)sp.parm.capture.timeperframe.numerator;
     }
@@ -1910,12 +1910,12 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
         __u32 v4l2id;
         if(!controlInfo(property_id, v4l2id, range))
             return -1.0;
-        int value = 0;
+        int value = -1;
         if(!icvControl(v4l2id, value, false))
             return -1.0;
         if (normalizePropRange && compatibleRange(property_id))
             return ((double)value - range.start) / range.size();
-        return  value;
+        return (double) value;
     }
     }
 }

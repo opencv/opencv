@@ -266,7 +266,7 @@ double CvCapture_Unicap::getProperty(int id) const
     return convert_rgb;
   }
 
-  return 0;
+  return -1.0;
 }
 
 bool CvCapture_Unicap::setProperty(int id, double value) {

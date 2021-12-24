@@ -142,7 +142,7 @@ double VideoCapture_IntelMFX::getProperty(int prop) const
             return frameSize.height;
         default:
             MSG(cerr << "MFX: unsupported property" << endl);
-            return 0;
+            return -1.0;
     }
 }
 

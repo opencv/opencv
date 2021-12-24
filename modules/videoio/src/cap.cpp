@@ -304,7 +304,7 @@ double VideoCapture::get(int propId) const
     }
     if (!icap.empty())
         return icap->getProperty(propId);
-    return cap ? cap->getProperty(propId) : 0;
+    return cap ? cap->getProperty(propId) : -1.0;
 }
 
 

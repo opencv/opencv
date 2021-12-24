@@ -1300,7 +1300,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         default:
             break;
         }
-    return -1;
+    return -1.0;
 }
 
 template <typename CtrlT>

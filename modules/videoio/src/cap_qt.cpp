@@ -314,7 +314,7 @@ static double icvGetProperty_QT_Movie (CvCapture_QT_Movie * capture, int propert
             return CV_StsBadArg;
     }
 
-    return 0;
+    return -1.0;
 }
 
 /**

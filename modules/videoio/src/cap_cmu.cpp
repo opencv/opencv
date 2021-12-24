@@ -426,7 +426,7 @@ double CvCaptureCAM_CMU::getProperty( int property_id ) const
 {
     C1394Camera* cmucam = camera();
     if( !cmucam )
-        return 0;
+        return -1.0;
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -440,7 +440,7 @@ double CvCaptureCAM_CMU::getProperty( int property_id ) const
     case CV_CAP_PROP_FORMAT:
         return cmucam->GetVideoFormat();
     }
-    return 0;
+    return -1.0;
 }
 
 bool CvCaptureCAM_CMU::setVideoSize(int, int)
