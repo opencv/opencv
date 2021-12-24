@@ -518,6 +518,10 @@ template <class T>
 struct IsRepresentableAsMatDataType<T, typename VoidType<typename DataType<T>::channel_type>::type> : TrueType
 {
 };
+
+// https://github.com/opencv/opencv/issues/20930
+template <> struct IsRepresentableAsMatDataType<RotatedRect, void> : FalseType {};
+
 } // namespace traits
 
 typedef std::vector<uchar> vector_uchar;
