@@ -10,7 +10,7 @@
 
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
-#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
 
 #ifdef HAVE_PROTOBUF
@@ -193,6 +193,53 @@ inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, co
     }
 }
 
+static
+void dumpValueInfoProto(int i, const opencv_onnx::ValueInfoProto& valueInfoProto, const std::string& prefix)
+{
+    CV_Assert(valueInfoProto.has_name());
+    CV_Assert(valueInfoProto.has_type());
+    const opencv_onnx::TypeProto& typeProto = valueInfoProto.type();
+    CV_Assert(typeProto.has_tensor_type());
+    const opencv_onnx::TypeProto::Tensor& tensor = typeProto.tensor_type();
+    CV_Assert(tensor.has_shape());
+    const opencv_onnx::TensorShapeProto& tensorShape = tensor.shape();
+
+    int dim_size = tensorShape.dim_size();
+    CV_CheckGE(dim_size, 0, "");
+    MatShape shape(dim_size);
+    for (int j = 0; j < dim_size; ++j)
+    {
+        const opencv_onnx::TensorShapeProto_Dimension& dimension = tensorShape.dim(j);
+        if (dimension.has_dim_param())
+        {
+            CV_LOG_DEBUG(NULL, "DNN/ONNX: " << prefix << "[" << i << "] dim[" << j << "] = <" << dimension.dim_param() << "> (dynamic)");
+        }
+        // https://github.com/onnx/onnx/blob/master/docs/DimensionDenotation.md#denotation-definition
+        if (dimension.has_denotation())
+        {
+            CV_LOG_INFO(NULL, "DNN/ONNX: " << prefix << "[" << i << "] dim[" << j << "] denotation is '" << dimension.denotation() << "'");
+        }
+        shape[j] = dimension.dim_value();
+    }
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: " << prefix << "[" << i << " as '" << valueInfoProto.name() << "'] shape=" << toString(shape));
+}
+
+static
+void dumpTensorProto(int i, const opencv_onnx::TensorProto& tensorProto, const std::string& prefix)
+{
+    if (utils::logging::getLogLevel() < utils::logging::LOG_LEVEL_VERBOSE)
+        return;
+    int dim_size = tensorProto.dims_size();
+    CV_CheckGE(dim_size, 0, "");
+    MatShape shape(dim_size);
+    for (int j = 0; j < dim_size; ++j)
+    {
+        int sz = static_cast<int>(tensorProto.dims(j));
+        shape[j] = sz;
+    }
+    CV_LOG_VERBOSE(NULL, 0, "DNN/ONNX: " << prefix << "[" << i << " as '" << tensorProto.name() << "'] shape=" << toString(shape) << " data_type=" << (int)tensorProto.data_type());
+}
+
 void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
 {
     if (!tensor_proto.raw_data().empty()) {
@@ -233,17 +280,17 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
 std::map<std::string, Mat> ONNXImporter::getGraphTensors(
                                         const opencv_onnx::GraphProto& graph_proto)
 {
-  opencv_onnx::TensorProto tensor_proto;
-  std::map<std::string, Mat> layers_weights;
+    std::map<std::string, Mat> layers_weights;
 
-  for (int i = 0; i < graph_proto.initializer_size(); i++)
-  {
-    tensor_proto = graph_proto.initializer(i);
-    Mat mat = getMatFromTensor(tensor_proto);
-    releaseONNXTensor(tensor_proto);
-    layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
-  }
-  return layers_weights;
+    for (int i = 0; i < graph_proto.initializer_size(); i++)
+    {
+        const opencv_onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
+        dumpTensorProto(i, tensor_proto, "initializer");
+        Mat mat = getMatFromTensor(tensor_proto);
+        releaseONNXTensor(const_cast<opencv_onnx::TensorProto&>(tensor_proto));  // drop already loaded data
+        layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
+    }
+    return layers_weights;
 }
 
 static DictValue parse(const ::google::protobuf::RepeatedField< ::google::protobuf::int64>& src) {
@@ -549,6 +596,7 @@ void ONNXImporter::populateNet()
             << " model produced by '" << framework_name << "'"
             << (framework_version.empty() ? cv::String() : cv::format(":%s", framework_version.c_str()))
             << ". Number of nodes = " << graph_proto.node_size()
+            << ", initializers = " << graph_proto.initializer_size()
             << ", inputs = " << graph_proto.input_size()
             << ", outputs = " << graph_proto.output_size()
             );
@@ -560,47 +608,66 @@ void ONNXImporter::populateNet()
     const int layersSize = graph_proto.node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: graph simplified to " << layersSize << " nodes");
 
-    constBlobs = getGraphTensors(graph_proto);
+    constBlobs = getGraphTensors(graph_proto);  // scan GraphProto.initializer
+    std::vector<String> netInputs;  // map with network inputs (without const blobs)
     // Add all the inputs shapes. It includes as constant blobs as network's inputs shapes.
     for (int i = 0; i < graph_proto.input_size(); ++i)
     {
         const opencv_onnx::ValueInfoProto& valueInfoProto = graph_proto.input(i);
         CV_Assert(valueInfoProto.has_name());
+        const std::string& name = valueInfoProto.name();
         CV_Assert(valueInfoProto.has_type());
-        opencv_onnx::TypeProto typeProto = valueInfoProto.type();
+        const opencv_onnx::TypeProto& typeProto = valueInfoProto.type();
         CV_Assert(typeProto.has_tensor_type());
-        opencv_onnx::TypeProto::Tensor tensor = typeProto.tensor_type();
+        const opencv_onnx::TypeProto::Tensor& tensor = typeProto.tensor_type();
         CV_Assert(tensor.has_shape());
-        opencv_onnx::TensorShapeProto tensorShape = tensor.shape();
+        const opencv_onnx::TensorShapeProto& tensorShape = tensor.shape();
 
-        MatShape inpShape(tensorShape.dim_size());
-        for (int j = 0; j < inpShape.size(); ++j)
+        int dim_size = tensorShape.dim_size();
+        CV_CheckGE(dim_size, 0, "");  // some inputs are scalars (dims=0), e.g. in Test_ONNX_nets.Resnet34_kinetics test
+        MatShape inpShape(dim_size);
+        for (int j = 0; j < dim_size; ++j)
         {
-            inpShape[j] = tensorShape.dim(j).dim_value();
+            const opencv_onnx::TensorShapeProto_Dimension& dimension = tensorShape.dim(j);
+            if (dimension.has_dim_param())
+            {
+                CV_LOG_DEBUG(NULL, "DNN/ONNX: input[" << i << "] dim[" << j << "] = <" << dimension.dim_param() << "> (dynamic)");
+            }
+            // https://github.com/onnx/onnx/blob/master/docs/DimensionDenotation.md#denotation-definition
+            if (dimension.has_denotation())
+            {
+                CV_LOG_INFO(NULL, "DNN/ONNX: input[" << i << "] dim[" << j << "] denotation is '" << dimension.denotation() << "'");
+            }
+            inpShape[j] = dimension.dim_value();
             // NHW, NCHW(NHWC), NCDHW(NDHWC); do not set this flag if only N is dynamic
-            if (!tensorShape.dim(j).dim_param().empty() && !(j == 0 && inpShape.size() >= 3))
+            if (dimension.has_dim_param() && !(j == 0 && inpShape.size() >= 3))
+            {
                 hasDynamicShapes = true;
+            }
         }
-        CV_LOG_DEBUG(NULL, "DNN/ONNX: input[" << i << "] shape=" << toString(inpShape));
-        if (!inpShape.empty() && !hasDynamicShapes)  // FIXIT result is not reliable for models with multiple inputs
+        bool isInitialized = ((constBlobs.find(name) != constBlobs.end()));
+        CV_LOG_IF_DEBUG(NULL, !isInitialized, "DNN/ONNX: input[" << i << " as '" << name << "'] shape=" << toString(inpShape));
+        CV_LOG_IF_VERBOSE(NULL, 0, isInitialized, "DNN/ONNX: pre-initialized input[" << i << " as '" << name << "'] shape=" << toString(inpShape));
+        if (dim_size > 0 && !hasDynamicShapes)  // FIXIT result is not reliable for models with multiple inputs
         {
             inpShape[0] = std::max(inpShape[0], 1); // It's OK to have undetermined batch size
         }
         outShapes[valueInfoProto.name()] = inpShape;
-    }
-
-    // create map with network inputs (without const blobs)
-    // fill map: push layer name, layer id and output id
-    std::vector<String> netInputs;
-    for (int j = 0; j < graph_proto.input_size(); j++)
-    {
-        const std::string& name = graph_proto.input(j).name();
-        if (constBlobs.find(name) == constBlobs.end()) {
+        // fill map: push layer name, layer id and output id
+        if (!isInitialized)
+        {
             netInputs.push_back(name);
             layer_id.insert(std::make_pair(name, LayerInfo(0, netInputs.size() - 1)));
         }
     }
+
     dstNet.setInputsNames(netInputs);
+
+    // dump outputs
+    for (int i = 0; i < graph_proto.output_size(); ++i)
+    {
+        dumpValueInfoProto(i, graph_proto.output(i), "output");
+    }
 
     for(int li = 0; li < layersSize; li++)
     {
