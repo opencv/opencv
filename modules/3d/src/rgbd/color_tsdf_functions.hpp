@@ -14,6 +14,8 @@
 #include "utils.hpp"
 #include "tsdf_functions.hpp"
 
+#define USE_INTERPOLATION_IN_GETNORMAL 1
+
 namespace cv
 {
 

@@ -339,7 +339,7 @@ void _integrateRGBVolumeUnit(
     const float dfac(1.f / depthFactor);
     RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
 
-#if USE_INTRINSICS_
+#if USE_INTRINSICS
     auto IntegrateInvoker = [&](const Range& range)
     {
         // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
