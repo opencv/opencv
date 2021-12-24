@@ -1034,5 +1034,225 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
 }
 
 
+void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    InputArray _points, OutputArray _normals)
+{
+    std::cout << "fetchNormalsFromColorTsdfVolumeUnit" << std::endl;
+
+    CV_TRACE_FUNCTION();
+    CV_Assert(!_points.empty());
+    if (!_normals.needed())
+        return;
+
+    Points points = _points.getMat();
+    CV_Assert(points.type() == POINT_TYPE);
+
+    _normals.createSameSize(_points, _points.type());
+    Normals normals = _normals.getMat();
+
+    const Mat volume = _volume.getMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    auto PushNormals = [&](const ptype& pp, const int* position)
+    {
+        Affine3f invPose(pose.inv());
+        Point3f p = fromPtype(pp);
+        Point3f n = nan3;
+        if (!isNaN(p))
+        {
+            Point3f voxPt = (invPose * p);
+            voxPt = voxPt * voxelSizeInv;
+            n = pose.rotation() * getNormalVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
+        }
+        normals(position[0], position[1]) = toPtype(n);
+    };
+    points.forEach(PushNormals);
+
+}
+
+inline void coord(
+    const Mat& volume, const RGBTsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals, std::vector<ptype>& colors,
+    const Point3i volResolution, const Vec4i volDims, const Vec8i neighbourCoords, const Affine3f pose,
+    const float voxelSize, const float voxelSizeInv, bool needNormals, bool needColors, int x, int y, int z, Point3f V, float v0, int axis)
+{
+    // 0 for x, 1 for y, 2 for z
+    bool limits = false;
+    Point3i shift;
+    float Vc = 0.f;
+    if (axis == 0)
+    {
+        shift = Point3i(1, 0, 0);
+        limits = (x + 1 < volResolution.x);
+        Vc = V.x;
+    }
+    if (axis == 1)
+    {
+        shift = Point3i(0, 1, 0);
+        limits = (y + 1 < volResolution.y);
+        Vc = V.y;
+    }
+    if (axis == 2)
+    {
+        shift = Point3i(0, 0, 1);
+        limits = (z + 1 < volResolution.z);
+        Vc = V.z;
+    }
+
+    if (limits)
+    {
+        const RGBTsdfVoxel& voxeld = volDataStart[(x + shift.x) * volDims[0] +
+            (y + shift.y) * volDims[1] +
+            (z + shift.z) * volDims[2]];
+        float vd = tsdfToFloat(voxeld.tsdf);
+
+        if (voxeld.weight != 0 && vd != 1.f)
+        {
+            if ((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
+            {
+                //linearly interpolate coordinate
+                float Vn = Vc + voxelSize;
+                float dinv = 1.f / (abs(v0) + abs(vd));
+                float inter = (Vc * abs(vd) + Vn * abs(v0)) * dinv;
+
+                Point3f p(shift.x ? inter : V.x,
+                    shift.y ? inter : V.y,
+                    shift.z ? inter : V.z);
+                {
+                    points.push_back(toPtype(pose * p));
+                    if (needNormals)
+                        normals.push_back(toPtype(pose.rotation() *
+                            getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
+                    if (needColors)
+                        colors.push_back(toPtype(pose.rotation() *
+                            getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p * voxelSizeInv)));
+                }
+            }
+        }
+    }
+}
+
+void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    OutputArray _points, OutputArray _normals)
+{
+    fetchPointsNormalsColorsFromColorTsdfVolumeUnit(settings, _volume, _points, _normals, Mat());
+}
+
+void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    OutputArray _points, OutputArray _normals, OutputArray _colors)
+{
+    std::cout << "fetchPointsNormalsFromColorTsdfVolumeUnit()" << std::endl;
+
+    if (!_points.needed())
+        return;
+    const Mat volume = _volume.getMat();
+
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    Affine3f invPose(pose.inv());
+    Matx33f r = pose.rotation();
+    float voxelSize = settings.getVoxelSize();
+    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+
+    const Vec4i volDims;
+    settings.getVolumeDimentions(volDims);
+    const Vec8i neighbourCoords = Vec8i(
+        volDims.dot(Vec4i(0, 0, 0)),
+        volDims.dot(Vec4i(0, 0, 1)),
+        volDims.dot(Vec4i(0, 1, 0)),
+        volDims.dot(Vec4i(0, 1, 1)),
+        volDims.dot(Vec4i(1, 0, 0)),
+        volDims.dot(Vec4i(1, 0, 1)),
+        volDims.dot(Vec4i(1, 1, 0)),
+        volDims.dot(Vec4i(1, 1, 1))
+    );
+
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+
+    bool needNormals = _normals.needed();
+    bool needColors  = _colors.needed();
+
+    std::vector<std::vector<ptype>> pVecs, nVecs, cVecs;
+    Range range(0, volResolution.x);
+    const int nstripes = -1;
+    const RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
+    Mutex mutex;
+    auto FetchPointsNormalsInvoker = [&](const Range& range) {
+
+        std::vector<ptype> points, normals, colors;
+        for (int x = range.start; x < range.end; x++)
+        {
+            const RGBTsdfVoxel* volDataX = volDataStart + x * volDims[0];
+            for (int y = 0; y < volResolution.y; y++)
+            {
+                const RGBTsdfVoxel* volDataY = volDataX + y * volDims[1];
+                for (int z = 0; z < volResolution.z; z++)
+                {
+                    const RGBTsdfVoxel& voxel0 = volDataY[z * volDims[2]];
+                    float v0 = tsdfToFloat(voxel0.tsdf);
+                    if (voxel0.weight != 0 && v0 != 1.f)
+                    {
+                        Point3f V(Point3f((float)x + 0.5f, (float)y + 0.5f, (float)z + 0.5f) * voxelSize);
+
+                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 0);
+                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 1);
+                        coord(volume, volDataStart, points, normals, colors, volResolution, volDims, neighbourCoords, pose, voxelSize, voxelSizeInv, needNormals, needColors, x, y, z, V, v0, 2);
+
+                    } // if voxel is not empty
+                }
+            }
+        }
+        AutoLock al(mutex);
+        pVecs.push_back(points);
+        nVecs.push_back(normals);
+    };
+
+    parallel_for_(range, FetchPointsNormalsInvoker, nstripes);
+
+    std::vector<ptype> points, normals;
+    for (size_t i = 0; i < pVecs.size(); i++)
+    {
+        points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
+        normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
+    }
+
+    _points.create((int)points.size(), 1, POINT_TYPE);
+    if (!points.empty())
+        Mat((int)points.size(), 1, POINT_TYPE, &points[0]).copyTo(_points.getMat());
+
+    if (_normals.needed())
+    {
+        _normals.create((int)normals.size(), 1, POINT_TYPE);
+        if (!normals.empty())
+            Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
+    }
+
+}
+
 
 } // namespace cv

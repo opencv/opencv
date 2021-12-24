@@ -482,17 +482,21 @@ void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Out
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
+    std::cout << "ColorTsdfVolume::fetchNormals()" << std::endl;
 
+    fetchNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
 
 void ColorTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
+    std::cout << "ColorTsdfVolume::fetchPointsNormals()" << std::endl;
 
+    fetchPointsNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
 
 void ColorTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const
 {
-
+    fetchPointsNormalsColorsFromColorTsdfVolumeUnit(settings, volume, points, normals, colors);
 }
 
 void ColorTsdfVolume::reset()

@@ -29,6 +29,14 @@ void integrateColorTsdfVolumeUnit(
 void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors);
 
+void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    InputArray _points, OutputArray _normals);
+
+void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    OutputArray _points, OutputArray _normals);
+
+void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
+    OutputArray _points, OutputArray _normals, OutputArray _colors);
 
 } // namespace cv
 

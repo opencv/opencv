@@ -610,10 +610,19 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
-            // takes only point from raycast for checking fetched normals on the display
-            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
-            volume.fetchPointsNormals(points, tmpnormals);
+
+            if (volumeType == VolumeType::ColorTSDF)
+            {
+                volume.integrate(depth, rgb, poses[0].matrix);
+                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals, colors);
+            }
+            else
+            {
+                volume.integrate(depth, poses[0].matrix);
+                // takes only point from raycast for checking fetched normals on the display
+                //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
+                volume.fetchPointsNormals(points, tmpnormals);
+            }
             volume.fetchNormals(points, normals);
 
             //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
@@ -628,8 +637,16 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
             std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
+            if (volumeType == VolumeType::ColorTSDF)
+            {
+                volume.integrate(depth, rgb, poses[0].matrix);
+            }
+            else
+            {
+                volume.integrate(depth, poses[0].matrix);
+            }
             volume.fetchPointsNormals(points, normals);
+
         }
     }
 
@@ -816,6 +833,21 @@ TEST(ColorTSDF_CPU, raycast_normals)
     //normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
+
+TEST(ColorTSDF_CPU, fetch_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, fetch_points_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
 
 #endif
 }
