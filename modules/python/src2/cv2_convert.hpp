@@ -372,6 +372,9 @@ struct IsRepresentableAsMatDataType<T, typename VoidType<typename cv::DataType<T
 {
 };
 
+// https://github.com/opencv/opencv/issues/20930
+template <> struct IsRepresentableAsMatDataType<cv::RotatedRect, void> : FalseType {};
+
 } // namespace traits
 
 template <typename Tp>
