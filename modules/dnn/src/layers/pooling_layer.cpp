@@ -1113,9 +1113,16 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
             }
             else if (padMode.empty())
             {
-                int addedDims = isPool1D? inpShape.size() : local_kernel.size();
-                for (int i = 0; i < addedDims; i++) {
+                size_t addedDims = isPool1D? inpShape.size() : local_kernel.size();
+                CV_CheckLE(addedDims, inpShape.size(), "");
+                CV_CheckLE(addedDims, pads_begin.size(), "");
+                CV_CheckLE(addedDims, pads_end.size(), "");
+                CV_CheckLE(addedDims, local_kernel.size(), "");
+                CV_CheckLE(addedDims, strides.size(), "");
+                for (int i = 0; i < addedDims; i++)
+                {
                     float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
+                    CV_CheckGE(dst, 0.0f, "");
                     outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
                 }
 
