@@ -2143,7 +2143,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         AVPixelFormat pix_fmt = video_st->codec->pix_fmt;
 #endif
         unsigned int fourcc_tag = avcodec_pix_fmt_to_codec_tag(pix_fmt);
-        return (fourcc_tag == 0) ? (double)-1 : (double)fourcc_tag;
+        return (fourcc_tag == 0) ? -1.0 : (double)fourcc_tag;
     }
     case CAP_PROP_FORMAT:
         if (rawMode)
@@ -2190,7 +2190,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         break;
     }
 
-    return 0;
+    return -1.0;
 }
 
 double CvCapture_FFMPEG::r2d(AVRational r) const

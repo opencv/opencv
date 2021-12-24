@@ -476,7 +476,7 @@ double CvCaptureCAM::getProperty(int property_id) const{
 
     CMFormatDescriptionRef format = mCaptureDevice.activeFormat.formatDescription;
     CMVideoDimensions s1 = CMVideoFormatDescriptionGetDimensions(format);
-    double retval = 0;
+    double retval = -1.0;
 
     switch (property_id) {
         case cv::CAP_PROP_FRAME_WIDTH:

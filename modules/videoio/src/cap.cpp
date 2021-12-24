@@ -623,7 +623,7 @@ double VideoCapture::get(int propId) const
         }
         return static_cast<double>(api);
     }
-    return !icap.empty() ? icap->getProperty(propId) : 0;
+    return !icap.empty() ? icap->getProperty(propId) : -1.0;
 }
 
 
