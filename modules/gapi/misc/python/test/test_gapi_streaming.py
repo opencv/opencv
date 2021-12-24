@@ -370,6 +370,9 @@ try:
                     raise unittest.SkipTest(str(e))
 
         def test_gst_source(self):
+            if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
+                raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
+
             gstpipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                              videorate ! videoscale ! video/x-raw,width=1920,height=1080,
                              framerate=30/1 ! appsink"""
@@ -391,10 +394,24 @@ try:
                 has_frame, output = ccomp.pull()
 
 
+        def open_VideoCapture_gstreamer(self, gstpipeline):
+            try:
+                cap = cv.VideoCapture(gstpipeline, cv.CAP_GSTREAMER)
+            except Exception as e:
+                raise unittest.SkipTest("Backend GSTREAMER can't open the video; " +
+                                        "cause: " + str(e))
+            if not cap.isOpened():
+                raise unittest.SkipTest("Backend GSTREAMER can't open the video")
+            return cap
+
         def test_gst_source_accuracy(self):
-            path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
-            gstpipeline = """filesrc location=""" + path + """ ! decodebin ! videoconvert ! videoscale !
-                             video/x-raw,format=NV12 ! appsink"""
+            if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
+                raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
+
+            path = self.find_file('highgui/video/big_buck_bunny.avi',
+                                  [os.environ['OPENCV_TEST_DATA_PATH']])
+            gstpipeline = """filesrc location=""" + path + """ ! decodebin ! videoconvert !
+                             videoscale ! video/x-raw,format=NV12 ! appsink"""
 
             # G-API pipeline
             g_in = cv.GMat()
@@ -409,8 +426,7 @@ try:
             ccomp.start()
 
             # OpenCV Gst-source
-            cap = cv.VideoCapture(gstpipeline, cv.CAP_GSTREAMER)
-            self.assertTrue(cap.isOpened())
+            cap = self.open_VideoCapture_gstreamer(gstpipeline)
 
             # Assert
             max_num_frames = 10
@@ -439,6 +455,9 @@ try:
                 raise unittest.SkipTest(str(e) + ", casued by " + str(e.__cause__))
 
         def test_gst_multiple_sources(self):
+            if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
+                raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
+
             gstpipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
                              videorate ! videoscale !
                              video/x-raw,width=1920,height=1080,framerate=30/1 !
@@ -469,7 +488,11 @@ try:
 
 
         def test_gst_multisource_accuracy(self):
-            path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
+            if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
+                raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
+
+            path = self.find_file('highgui/video/big_buck_bunny.avi',
+                                  [os.environ['OPENCV_TEST_DATA_PATH']])
             gstpipeline1 = """filesrc location=""" + path + """ ! decodebin ! videoconvert !
                               videoscale ! video/x-raw,format=NV12 ! appsink"""
             gstpipeline2 = """filesrc location=""" + path + """ ! decodebin !
@@ -495,10 +518,8 @@ try:
             ccomp.start()
 
             # OpenCV Gst-source
-            cap1 = cv.VideoCapture(gstpipeline1, cv.CAP_GSTREAMER)
-            self.assertTrue(cap1.isOpened())
-            cap2 = cv.VideoCapture(gstpipeline2, cv.CAP_GSTREAMER)
-            self.assertTrue(cap2.isOpened())
+            cap1 = self.open_VideoCapture_gstreamer(gstpipeline1)
+            cap2 = self.open_VideoCapture_gstreamer(gstpipeline2)
 
             # Assert
             max_num_frames = 10
