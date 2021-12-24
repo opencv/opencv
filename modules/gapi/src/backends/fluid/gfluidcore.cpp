@@ -3079,7 +3079,7 @@ GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false)
 } // namespace gapi
 } // namespace cv
 
-cv::gapi::GKernelPackage cv::gapi::core::fluid::kernels()
+cv::GKernelPackage cv::gapi::core::fluid::kernels()
 {
     using namespace cv::gapi::fluid;
 

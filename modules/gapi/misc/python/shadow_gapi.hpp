@@ -5,7 +5,7 @@ namespace cv
 {
 struct GAPI_EXPORTS_W_SIMPLE GCompileArg
 {
-    GAPI_WRAP GCompileArg(gapi::GKernelPackage arg);
+    GAPI_WRAP GCompileArg(GKernelPackage arg);
     GAPI_WRAP GCompileArg(gapi::GNetPackage arg);
     GAPI_WRAP GCompileArg(gapi::streaming::queue_capacity arg);
 };

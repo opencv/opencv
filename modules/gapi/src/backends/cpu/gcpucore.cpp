@@ -720,7 +720,7 @@ GAPI_OCV_KERNEL(GCPUSizeMF, cv::gapi::streaming::GSizeMF)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
+cv::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <  GCPUAdd

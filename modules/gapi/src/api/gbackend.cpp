@@ -62,7 +62,7 @@ void cv::gapi::GBackend::Priv::addMetaSensitiveBackendPasses(ade::ExecutionEngin
     // which are sensitive to metadata
 }
 
-cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
+cv::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
 {
     return {};
 }

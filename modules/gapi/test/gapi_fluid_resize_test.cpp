@@ -364,7 +364,7 @@ static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Si
     default: CV_Assert(false);  \
     }
 
-    GKernelPackage pkg;
+    cv::GKernelPackage pkg;
     switch (interpolation)
     {
     case INTER_NEAREST: RESIZE_SWITCH(NN); break;

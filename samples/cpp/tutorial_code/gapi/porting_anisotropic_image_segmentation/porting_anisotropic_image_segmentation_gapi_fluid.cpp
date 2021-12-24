@@ -63,7 +63,7 @@ int main()
     //! [kernel_pkg_proper]
     //! [kernel_pkg]
     // Prepare the kernel package and run the graph
-    cv::gapi::GKernelPackage fluid_kernels = cv::gapi::combine        // Define a custom kernel package:
+    cv::GKernelPackage fluid_kernels = cv::gapi::combine              // Define a custom kernel package:
         (cv::gapi::core::fluid::kernels(),                            // ...with Fluid Core kernels
          cv::gapi::imgproc::fluid::kernels());                        // ...and Fluid ImgProc kernels
     //! [kernel_pkg]

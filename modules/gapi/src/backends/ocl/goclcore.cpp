@@ -531,7 +531,7 @@ GAPI_OCL_KERNEL(GOCLTranspose, cv::gapi::core::GTranspose)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
+cv::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <  GOCLAdd
