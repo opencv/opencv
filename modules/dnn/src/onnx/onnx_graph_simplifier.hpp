@@ -31,7 +31,7 @@ void convertInt64ToInt32(const T1& src, T2& dst, int size)
     }
 }
 
-Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto);
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto);
 
 CV__DNN_EXPERIMENTAL_NS_END
 }}  // namespace dnn, namespace cv

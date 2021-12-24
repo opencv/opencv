@@ -636,7 +636,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
 
-Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty())
