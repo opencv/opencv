@@ -397,7 +397,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 }
 // ----------------------------
 
-static const bool display = true;
+static const bool display = false;
 static const bool parallelCheck = false;
 
 class _Settings
@@ -479,9 +479,9 @@ void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f l
 {
     Mat image;
     patchNaNs(points);
-    imshow("depth1", depth * (1.f / depthFactor / 4.f));
+    imshow("depth", depth * (1.f / depthFactor / 4.f));
     renderPointsNormals(points, normals, image, lightPose);
-    imshow("render1", image);
+    imshow("render", image);
     waitKey(2000);
     destroyAllWindows();
 }
@@ -490,11 +490,11 @@ void displayColorImage(Mat depth, Mat rgb, Mat points, Mat normals, Mat colors, 
 {
     Mat image;
     patchNaNs(points);
-    imshow("depth2", depth * (1.f / depthFactor / 4.f));
-    imshow("rgb2", rgb * (1.f / 255.f));
+    imshow("depth", depth * (1.f / depthFactor / 4.f));
+    imshow("rgb", rgb * (1.f / 255.f));
     renderPointsNormalsColors(points, normals, colors, image, lightPose);
-    imshow("render2", image);
-    waitKey(20000);
+    imshow("render", image);
+    waitKey(2000);
     destroyAllWindows();
 }
 
@@ -582,13 +582,13 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         {
             if (volumeType == VolumeType::ColorTSDF)
             {
-                std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+                //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
                 volume.integrate(depth, rgb, poses[0].matrix);
                 volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
             }
             else
             {
-                std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+                //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
                 volume.integrate(depth, poses[0].matrix);
                 volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
 
@@ -598,7 +598,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(odf, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
             odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
@@ -609,7 +609,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
 
             if (volumeType == VolumeType::ColorTSDF)
             {
@@ -636,7 +636,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             if (volumeType == VolumeType::ColorTSDF)
             {
                 volume.integrate(depth, rgb, poses[0].matrix);
@@ -675,52 +675,95 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
-    Mat points, normals, newPoints, newNormals;
+    Mat rgb = scene->rgb(poses[0]);
+    Mat points, normals, colors, newPoints, newNormals;
     AccessFlag af = ACCESS_READ;
     int anfas, profile;
 
     OdometryFrame odf;
     odf.setDepth(depth);
+    odf.setImage(rgb);
 
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
     {
-        volume.integrate(depth, poses[0].matrix);
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+        if (volumeType == VolumeType::ColorTSDF)
+        {
+            volume.integrate(depth, rgb, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        }
+        else
+        {
+            volume.integrate(depth, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+        }
     }
     else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
     {
-        volume.integrate(odf, poses[0].matrix);
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        if (volumeType == VolumeType::ColorTSDF)
+        {
+            volume.integrate(odf, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
+        }
+        else
+        {
+            volume.integrate(odf, poses[0].matrix);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        }
     }
 
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, depthFactor, lightPose);
-
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
+        
     points.release();
     normals.release();
 
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
     {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
+        if (volumeType == VolumeType::ColorTSDF)
+        {
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        }
+        else
+        {
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
+        }
     }
     else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
     {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        if (volumeType == VolumeType::ColorTSDF)
+        {
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
+        }
+        else
+        {
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        }
     }
 
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, depthFactor, lightPose);
-
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
@@ -770,7 +813,7 @@ TEST(TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
     normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    //normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -830,7 +873,7 @@ TEST(ColorTSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
     normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    //normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -848,6 +891,13 @@ TEST(ColorTSDF_CPU, fetch_points_normals)
     cv::ocl::setUseOpenCL(true);
 }
 
+TEST(ColorTSDF_CPU, valid_points)
+{
+    cv::ocl::setUseOpenCL(false);
+    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
 
 #endif
 }

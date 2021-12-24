@@ -38,6 +38,7 @@ void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, I
 void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
     OutputArray _points, OutputArray _normals, OutputArray _colors);
 
+
 } // namespace cv
 
 #endif

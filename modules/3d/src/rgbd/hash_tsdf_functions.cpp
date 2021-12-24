@@ -16,7 +16,7 @@ void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
 {
-    std::cout << "integrateHashTsdfVolumeUnit()" << std::endl;
+    //std::cout << "integrateHashTsdfVolumeUnit()" << std::endl;
 
     CV_TRACE_FUNCTION();
 
@@ -181,7 +181,7 @@ void integrateHashTsdfVolumeUnit(
         }
         });
 
-    std::cout << "integrateHashTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "integrateHashTsdfVolumeUnit() end" << std::endl;
 }
 
 
@@ -404,7 +404,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
 {
-    std::cout << "ocl_integrateHashTsdfVolumeUnit()" << std::endl;
+    //std::cout << "ocl_integrateHashTsdfVolumeUnit()" << std::endl;
 
     CV_TRACE_FUNCTION();
     UMat depth = _depth.getUMat();
@@ -528,7 +528,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     if (!k.run(3, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
 
-    std::cout << "ocl_integrateHashTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "ocl_integrateHashTsdfVolumeUnit() end" << std::endl;
 }
 
 
@@ -916,7 +916,7 @@ void raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
 {
-    std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
+    //std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
 
     CV_TRACE_FUNCTION();
     Size frameSize(width, height);
@@ -1052,7 +1052,7 @@ void raycastHashTsdfVolumeUnit(
 
     parallel_for_(Range(0, points.rows), _HashRaycastInvoker, nstripes);
 
-    std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
 }
 
 
@@ -1247,7 +1247,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
     OutputArray _points, OutputArray _normals)
 {
-    std::cout << "fetchNormalsFromHashTsdfVolumeUnit()" << std::endl;
+    //std::cout << "fetchNormalsFromHashTsdfVolumeUnit()" << std::endl;
     CV_TRACE_FUNCTION();
 
     if (!_points.needed())
@@ -1344,7 +1344,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
             Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
     }
     
-    std::cout << "fetchNormalsFromHashTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "fetchNormalsFromHashTsdfVolumeUnit() end" << std::endl;
 
 }
 

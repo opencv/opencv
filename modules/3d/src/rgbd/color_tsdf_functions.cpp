@@ -25,7 +25,7 @@ void integrateColorTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
     InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
-    std::cout << "integrateColorTsdfVolumeUnit()" << std::endl;
+    //std::cout << "integrateColorTsdfVolumeUnit()" << std::endl;
 
     Depth depth = _depth.getMat();
     Colors color = _rgb.getMat();
@@ -339,7 +339,7 @@ void integrateColorTsdfVolumeUnit(
     parallel_for_(integrateRange, IntegrateInvoker);
     //IntegrateInvoker(integrateRange);
 
-    std::cout << "integrateColorTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "integrateColorTsdfVolumeUnit() end" << std::endl;
 
 }
 
@@ -348,7 +348,7 @@ void integrateColorTsdfVolumeUnit(
 #if USE_INTRINSICS
 // all coordinate checks should be done in inclosing cycle
 
-inline float interpolateVoxel(const Mat& volume,
+inline float interpolateColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const v_float32x4& p)
 {
@@ -391,17 +391,17 @@ inline float interpolateVoxel(const Mat& volume,
     return v0 + tx * (v1 - v0);
 }
 
-inline float interpolateVoxel(const Mat& volume,
+inline float interpolateColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0);
-    return interpolateVoxel(volume, volDims, neighbourCoords, p);
+    return interpolateColorVoxel(volume, volDims, neighbourCoords, p);
 }
 
 
 #else
-inline float interpolateVoxel(const Mat& volume,
+inline float interpolateColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const Point3f& p)
 {
@@ -439,7 +439,7 @@ inline float interpolateVoxel(const Mat& volume,
 #if USE_INTRINSICS
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 
-inline v_float32x4 getNormalVoxel(const Mat& volume,
+inline v_float32x4 getNormalColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
     const v_float32x4& p)
 {
@@ -500,18 +500,18 @@ inline v_float32x4 getNormalVoxel(const Mat& volume,
     return Norm.get0() < 0.0001f ? nanv : n / Norm;
 }
 
-inline Point3f getNormalVoxel(const Mat& volume,
+inline Point3f getNormalColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
     const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
-    v_float32x4 result = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p);
+    v_float32x4 result = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p);
     float CV_DECL_ALIGNED(16) ares[4];
     v_store_aligned(ares, result);
     return Point3f(ares[0], ares[1], ares[2]);
 }
 #else
-inline Point3f getNormalVoxel(const Mat& volume,
+inline Point3f getNormalColorVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
     const Point3f& p)
 {
@@ -717,7 +717,7 @@ inline Point3f getColorVoxel(const Mat& volume,
 void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
+    //std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
 
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
@@ -852,7 +852,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                     int zdim = volDims[2];
                     v_float32x4 rayStep = dir * v_setall_f32(tstep);
                     v_float32x4 next = (orig + dir * v_setall_f32(tmin));
-                    float f = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -870,7 +870,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                         fnext = tsdfToFloat(volume.at<RGBTsdfVoxel>(coord).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
 
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
@@ -885,15 +885,15 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                     if (f > 0.f && fnext < 0.f)
                     {
                         v_float32x4 tp = next - rayStep;
-                        float ft = interpolateVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateColorVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
 
                         // avoid division by zero
                         if (!cvIsNaN(ts) && !cvIsInf(ts))
                         {
                             v_float32x4 pv = (orig + dir * v_setall_f32(ts));
-                            v_float32x4 nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
+                            v_float32x4 nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
                             v_float32x4 cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
 
                             if (!isNaN(nv))
@@ -1030,14 +1030,14 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     parallel_for_(raycastRange, RaycastInvoker);
     //RaycastInvoker(raycastRange);
 
-    std::cout << "raycastColorTsdfVolumeUnit() end" << std::endl;
+    //std::cout << "raycastColorTsdfVolumeUnit() end" << std::endl;
 }
 
 
 void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
     InputArray _points, OutputArray _normals)
 {
-    std::cout << "fetchNormalsFromColorTsdfVolumeUnit" << std::endl;
+    //std::cout << "fetchNormalsFromColorTsdfVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
@@ -1085,7 +1085,7 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
         {
             Point3f voxPt = (invPose * p);
             voxPt = voxPt * voxelSizeInv;
-            n = pose.rotation() * getNormalVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
+            n = pose.rotation() * getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, voxPt);
         }
         normals(position[0], position[1]) = toPtype(n);
     };
@@ -1144,7 +1144,7 @@ inline void coord(
                     points.push_back(toPtype(pose * p));
                     if (needNormals)
                         normals.push_back(toPtype(pose.rotation() *
-                            getNormalVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
+                            getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p * voxelSizeInv)));
                     if (needColors)
                         colors.push_back(toPtype(pose.rotation() *
                             getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, p * voxelSizeInv)));
@@ -1163,7 +1163,7 @@ void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, I
 void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
     OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    std::cout << "fetchPointsNormalsFromColorTsdfVolumeUnit()" << std::endl;
+    //std::cout << "fetchPointsNormalsFromColorTsdfVolumeUnit()" << std::endl;
 
     if (!_points.needed())
         return;

@@ -13,7 +13,7 @@ namespace cv {
 
 void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 {
-    std::cout << "preCalculationPixNorm" << std::endl;
+    //std::cout << "preCalculationPixNorm" << std::endl;
 
     Point2f fl(intrinsics.fx, intrinsics.fy);
     Point2f pp(intrinsics.cx, intrinsics.cy);
@@ -38,7 +38,7 @@ void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 #ifdef HAVE_OPENCL
 void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 {
-    std::cout << "ocl_preCalculationPixNorm" << std::endl;
+    //std::cout << "ocl_preCalculationPixNorm" << std::endl;
 
     // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
     Mat cpuPixNorm;
@@ -908,7 +908,7 @@ void integrateTsdfVolumeUnit(
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    std::cout << "ocl_integrateTsdfVolumeUnit" << std::endl;
+    //std::cout << "ocl_integrateTsdfVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
     //CV_UNUSED(frameId);
@@ -981,7 +981,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
 
 #if USE_INTRINSICS
 // all coordinate checks should be done in inclosing cycle
-inline float interpolateVoxel(const Mat& volume,
+inline float interpolateTsdfVoxel(const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const v_float32x4& p)
 {
@@ -1024,16 +1024,16 @@ inline float interpolateVoxel(const Mat& volume,
     return v0 + tx * (v1 - v0);
 }
 
-inline float interpolateVoxel( const Mat& volume,
+inline float interpolateTsdfVoxel( const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0);
-    return interpolateVoxel(volume, volDims, neighbourCoords, p);
+    return interpolateTsdfVoxel(volume, volDims, neighbourCoords, p);
 }
 
 #else
-inline float interpolateVoxel( const Mat& volume,
+inline float interpolateTsdfVoxel( const Mat& volume,
     const Vec4i& volDims, const Vec8i& neighbourCoords,
     const Point3f& p)
 {
@@ -1196,7 +1196,7 @@ inline Point3f getNormalVoxel( const Mat& volume,
 void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
                        InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    std::cout << "raycastVolumeUnit" << std::endl;
+    //std::cout << "raycastVolumeUnit" << std::endl;
 
     const Size frameSize(width, height);
     //CV_Assert(frameSize.area() > 0);
@@ -1245,7 +1245,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
     Range raycastRange = Range(0, points.rows);
     //TODO::  swap realization, they are missplaced :)
-#if USE_INTRINSICS_
+#if USE_INTRINSICS
     auto RaycastInvoker = [&](const Range& range)
     {
         const v_float32x4 vfxy(reproj.fxinv, reproj.fyinv, 0, 0);
@@ -1325,7 +1325,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                     int zdim = volDims[2];
                     v_float32x4 rayStep = dir * v_setall_f32(tstep);
                     v_float32x4 next = (orig + dir * v_setall_f32(tmin));
-                    float f = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -1343,7 +1343,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                         fnext = tsdfToFloat(volume.at<TsdfVoxel>(coord).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
 
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
@@ -1358,8 +1358,8 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                     if (f > 0.f && fnext < 0.f)
                     {
                         v_float32x4 tp = next - rayStep;
-                        float ft = interpolateVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateTsdfVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
 
                         // avoid division by zero
@@ -1433,7 +1433,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
                     Point3f rayStep = dir * tstep;
                     Point3f next = (orig + dir * tmin);
-                    float f = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -1451,7 +1451,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                         fnext = tsdfToFloat(volume.at<TsdfVoxel>(ix * xdim + iy * ydim + iz * zdim).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
                                 break;
@@ -1464,8 +1464,8 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                     if (f > 0.f && fnext < 0.f)
                     {
                         Point3f tp = next - rayStep;
-                        float ft = interpolateVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateTsdfVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateTsdfVoxel(volume, volDims, neighbourCoords, next);
                         // float t = tmin + steps*tstep;
                         // float ts = t - tstep*ft/(ftdt - ft);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
@@ -1501,7 +1501,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    std::cout << "ocl_raycastVolumeUnit" << std::endl;
+    //std::cout << "ocl_raycastVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
 
@@ -1600,7 +1600,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
 
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
-    std::cout << "fetchNormalsFromTsdfVolumeUnit" << std::endl;
+    //std::cout << "fetchNormalsFromTsdfVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
@@ -1656,7 +1656,7 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
 
 void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
-    std::cout << "ocl_fetchNormalsFromTsdfVolumeUnit" << std::endl;
+    //std::cout << "ocl_fetchNormalsFromTsdfVolumeUnit" << std::endl;
 
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
@@ -1791,7 +1791,7 @@ inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<
 
 void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    std::cout << "fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
+    //std::cout << "fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
 
     if (!_points.needed())
         return;
@@ -1886,7 +1886,7 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
 
 void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray points, OutputArray normals)
 {
-    std::cout << "ocl_fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
+    //std::cout << "ocl_fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
 
     CV_TRACE_FUNCTION();
 

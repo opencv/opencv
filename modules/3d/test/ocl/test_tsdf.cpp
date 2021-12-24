@@ -276,7 +276,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = true;
+static const bool display = false;
 static const bool parallelCheck = false;
 
 class Settings
@@ -444,7 +444,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(udepth, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
 
@@ -454,7 +454,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(odf, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
             odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
@@ -465,7 +465,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(depth, poses[0].matrix);
             // takes only point from raycast for checking fetched normals on the display
             volume.raycast(poses[0].matrix, frameSize.height,frameSize.width, upoints, utmpnormals);
@@ -481,7 +481,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
+            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
             volume.integrate(depth, poses[0].matrix);
             volume.fetchPointsNormals(upoints, unormals);
         }

@@ -22,7 +22,7 @@ Volume::Impl::Impl(const VolumeSettings& _settings) :
 TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
     Volume::Impl(settings)
 {
-    std::cout << "TsdfVolume::TsdfVolume()" << std::endl;
+    //std::cout << "TsdfVolume::TsdfVolume()" << std::endl;
 
     Vec3i volResolution;
     settings.getVolumeResolution(volResolution);
@@ -41,7 +41,7 @@ TsdfVolume::~TsdfVolume() {}
 
 void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
-    std::cout << "TsdfVolume::integrate(OdometryFrame)" << std::endl;
+    //std::cout << "TsdfVolume::integrate(OdometryFrame)" << std::endl;
 
     CV_TRACE_FUNCTION();
     Depth depth;
@@ -54,7 +54,7 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 
 void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
-    std::cout << "TsdfVolume::integrate(Mat)" << std::endl;
+    //std::cout << "TsdfVolume::integrate(Mat)" << std::endl;
 
     CV_TRACE_FUNCTION();
     Depth depth = _depth.getMat();
@@ -98,7 +98,7 @@ void TsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
 
 void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    std::cout << "TsdfVolume::raycast(OdometryFrame)" << std::endl;
+    //std::cout << "TsdfVolume::raycast(OdometryFrame)" << std::endl;
 #ifndef HAVE_OPENCL
     Mat points, normals;
     raycast(cameraPose, height, width, points, normals);
@@ -131,7 +131,7 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryF
 
 void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    std::cout << "TsdfVolume::raycast(Mat)" << std::endl;
+    //std::cout << "TsdfVolume::raycast(Mat)" << std::endl;
 
     CV_Assert(height > 0);
     CV_Assert(width > 0);
@@ -154,7 +154,7 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArr
 
 void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    std::cout << "TsdfVolume::fetchNormals(Mat)" << std::endl;
+    //std::cout << "TsdfVolume::fetchNormals(Mat)" << std::endl;
 #ifndef HAVE_OPENCL
     fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
 #else
@@ -167,7 +167,7 @@ void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 
 void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    std::cout << "TsdfVolume::fetchPointsNormals(Mat)" << std::endl;
+    //std::cout << "TsdfVolume::fetchPointsNormals(Mat)" << std::endl;
 #ifndef HAVE_OPENCL
     fetchPointsNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
 #else
@@ -240,7 +240,7 @@ HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
-    std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
+    //std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
     CV_TRACE_FUNCTION();
     Depth depth;
     frame.getDepth(depth);
@@ -252,7 +252,7 @@ void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPos
 
 void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
-    std::cout << "HashTsdfVolume::integrate(Mat)" << std::endl;
+    //std::cout << "HashTsdfVolume::integrate(Mat)" << std::endl;
     Depth depth = _depth.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
@@ -297,7 +297,7 @@ void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray po
 
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    std::cout << "HashTsdfVolume::raycast()" << std::endl;
+    //std::cout << "HashTsdfVolume::raycast()" << std::endl;
 #ifndef HAVE_OPENCL
     Mat points, normals;
     raycast(cameraPose, height, width, points, normals);
@@ -329,7 +329,7 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odome
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    std::cout << "HashTsdfVolume::raycast()" << std::endl;
+    //std::cout << "HashTsdfVolume::raycast()" << std::endl;
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
@@ -348,7 +348,7 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Outpu
 
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    std::cout << "HashTsdfVolume::fetchNormals()" << std::endl;
+    //std::cout << "HashTsdfVolume::fetchNormals()" << std::endl;
 #ifndef HAVE_OPENCL
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
@@ -361,7 +361,7 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 }
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    std::cout << "fetchPointsNormals()" << std::endl;
+    //std::cout << "fetchPointsNormals()" << std::endl;
 #ifndef HAVE_OPENCL
     fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
@@ -432,20 +432,29 @@ ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& settings) :
 
 ColorTsdfVolume::~ColorTsdfVolume() {}
 
-void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray pose)
+void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPose)
 {
-    std::cout << "ColorTsdfVolume::integrate(OdometryFrame)" << std::endl;
+    //std::cout << "ColorTsdfVolume::integrate(OdometryFrame)" << std::endl;
+    CV_TRACE_FUNCTION();
+    Depth depth;
+    frame.getDepth(depth);
+    // dependence from OdometryFrame
+    depth = depth * settings.getDepthFactor();
+    Mat rgb;
+    frame.getImage(rgb);
+
+    integrate(depth, rgb, cameraPose);
 }
 
 void ColorTsdfVolume::integrate(InputArray depth, InputArray pose)
 {
-    std::cout << "ColorTsdfVolume::integrate(Mat)" << std::endl;
+    //std::cout << "ColorTsdfVolume::integrate(Mat)" << std::endl;
     CV_Error(cv::Error::StsBadFunc, "There is no color data");
 }
 
 void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
 {
-    std::cout << "ColorTsdfVolume::integrate(Mat, Mat)" << std::endl;
+    //std::cout << "ColorTsdfVolume::integrate(Mat, Mat)" << std::endl;
     Depth depth = _depth.getMat();
     Colors image = _image.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
@@ -465,16 +474,26 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    std::cout << "ColorTsdfVolume::raycast()" << std::endl;
+    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
+
+    Mat points, normals, colors;
+    raycast(cameraPose, height, width, points, normals, colors);
+    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
+    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_IMAGE);
+    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+    outFrame.setPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
 }
 
 void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    std::cout << "ColorTsdfVolume::raycast()" << std::endl;
+    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
+    CV_Error(cv::Error::StsBadFunc, "There is no color shelter");
 }
 void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
-    std::cout << "ColorTsdfVolume::raycast()" << std::endl;
+    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
 
     const Matx44f cameraPose = _cameraPose.getMat();
     raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals, _colors);
@@ -482,14 +501,14 @@ void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Out
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    std::cout << "ColorTsdfVolume::fetchNormals()" << std::endl;
+    //std::cout << "ColorTsdfVolume::fetchNormals()" << std::endl;
 
     fetchNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
 
 void ColorTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    std::cout << "ColorTsdfVolume::fetchPointsNormals()" << std::endl;
+    //std::cout << "ColorTsdfVolume::fetchPointsNormals()" << std::endl;
 
     fetchPointsNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
