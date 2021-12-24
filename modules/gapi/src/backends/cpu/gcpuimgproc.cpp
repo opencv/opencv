@@ -613,7 +613,7 @@ GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
+cv::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GCPUFilter2D

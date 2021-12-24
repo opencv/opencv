@@ -193,7 +193,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     out.post(std::move(out_arg));
 }
 
-cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
+cv::GKernelPackage cv::gimpl::streaming::kernels()
 {
     return cv::gapi::kernels<Copy>();
 }
@@ -414,14 +414,14 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
     }
 }
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+cv::GKernelPackage cv::gapi::streaming::kernels()
 {
     return cv::gapi::kernels<GOCVBGR, GOCVY, GOCVUV>();
 }
 
 #else
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+cv::GKernelPackage cv::gapi::streaming::kernels()
 {
     // Still provide this symbol to avoid linking issues
     util::throw_error(std::runtime_error("cv::gapi::streaming::kernels() isn't supported in standalone"));

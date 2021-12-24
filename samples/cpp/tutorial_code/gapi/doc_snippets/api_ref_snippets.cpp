@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     //! [graph_decl_apply]
 
     //! [apply_with_param]
-    cv::gapi::GKernelPackage kernels = cv::gapi::combine
+    cv::GKernelPackage kernels = cv::gapi::combine
         (cv::gapi::core::fluid::kernels(),
          cv::gapi::imgproc::fluid::kernels());
     sobelEdge.apply(input, output, cv::compile_args(kernels));
@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
     cv::imwrite(argv[2], output);
 
     //! [kernels_snippet]
-    cv::gapi::GKernelPackage pkg = cv::gapi::kernels
+    cv::GKernelPackage pkg = cv::gapi::kernels
         < CustomAdd
         , CustomFilter2D
         , CustomRGB2YUV

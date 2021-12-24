@@ -602,7 +602,7 @@ GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3)
     return TMerge3_4lpi::on(src1, src2, src3);
 }
 
-cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
+cv::GKernelPackage fluidTestPackage = cv::gapi::kernels
         <FAddSimple
         ,FAddCSimple
         ,FAddScalar

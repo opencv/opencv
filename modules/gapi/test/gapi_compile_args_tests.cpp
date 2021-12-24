@@ -44,14 +44,14 @@ GAPI_OCV_KERNEL(GOCVTestOp, GTestOp)
 
 TEST(GetCompileArgTest, PredefinedArgs)
 {
-    cv::gapi::GKernelPackage pkg = cv::gapi::kernels<GOCVTestOp>();
+    cv::GKernelPackage pkg = cv::gapi::kernels<GOCVTestOp>();
     cv::GCompileArg arg0 { pkg },
                     arg1 { cv::gapi::use_only { pkg } },
                     arg2 { cv::graph_dump_path { "fake_path" } };
 
     GCompileArgs compArgs { arg0, arg1, arg2 };
 
-    auto kernelPkgOpt = cv::gapi::getCompileArg<cv::gapi::GKernelPackage>(compArgs);
+    auto kernelPkgOpt = cv::gapi::getCompileArg<cv::GKernelPackage>(compArgs);
     GAPI_Assert(kernelPkgOpt.has_value());
     EXPECT_NO_THROW(kernelPkgOpt.value().lookup("org.opencv.test.test_op"));
 
