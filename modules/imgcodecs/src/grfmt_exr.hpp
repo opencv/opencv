@@ -53,6 +53,7 @@
 #include <ImfInputFile.h>
 #include <ImfChannelList.h>
 #include <ImathBox.h>
+#include <ImfRgbaFile.h>
 #include "grfmt_base.hpp"
 
 namespace cv
