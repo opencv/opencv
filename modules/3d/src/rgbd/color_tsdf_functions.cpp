@@ -964,7 +964,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
 
                     Point3f rayStep = dir * tstep;
                     Point3f next = (orig + dir * tmin);
-                    float f = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                    float f = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
                     float fnext = f;
 
                     //raymarch
@@ -982,7 +982,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                         fnext = tsdfToFloat(volume.at<RGBTsdfVoxel>(ix * xdim + iy * ydim + iz * zdim).tsdf);
                         if (fnext != f)
                         {
-                            fnext = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                            fnext = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
                             // when ray crosses a surface
                             if (std::signbit(f) != std::signbit(fnext))
                                 break;
@@ -995,8 +995,8 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                     if (f > 0.f && fnext < 0.f)
                     {
                         Point3f tp = next - rayStep;
-                        float ft = interpolateVoxel(volume, volDims, neighbourCoords, tp);
-                        float ftdt = interpolateVoxel(volume, volDims, neighbourCoords, next);
+                        float ft = interpolateColorVoxel(volume, volDims, neighbourCoords, tp);
+                        float ftdt = interpolateColorVoxel(volume, volDims, neighbourCoords, next);
                         // float t = tmin + steps*tstep;
                         // float ts = t - tstep*ft/(ftdt - ft);
                         float ts = tmin + tstep * (steps - ft / (ftdt - ft));
@@ -1005,7 +1005,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
                         if (!cvIsNaN(ts) && !cvIsInf(ts))
                         {
                             Point3f pv = (orig + dir * ts);
-                            Point3f nv = getNormalVoxel(volume, volDims, neighbourCoords, volResolution, pv);
+                            Point3f nv = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, pv);
                             Point3f cv = getColorVoxel(volume, volDims, neighbourCoords, volResolution, voxelSizeInv, pv);
                             if (!isNaN(nv))
                             {

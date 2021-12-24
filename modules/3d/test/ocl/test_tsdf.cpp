@@ -419,8 +419,6 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Settings settings(true, false);
-
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
     vs.getCameraIntrinsics(intr);
@@ -440,22 +438,19 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     OdometryFrame odf(OdometryFrameStoreType::UMAT);
     odf.setDepth(udepth);
 
+    if (testSrcType == VolumeTestSrcType::MAT)
+        volume.integrate(depth, poses[0].matrix);
+    else
+        volume.integrate(odf, poses[0].matrix);
+
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        if (testSrcType == VolumeTestSrcType::MAT)
         {
-            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(udepth, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
-
-            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, utmpnormals);
-
         }
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
         {
-            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(odf, poses[0].matrix);
             volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
             odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
             odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
@@ -463,26 +458,18 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
-        if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+        if (testSrcType == VolumeTestSrcType::MAT)
         {
-            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
             // takes only point from raycast for checking fetched normals on the display
             volume.raycast(poses[0].matrix, frameSize.height,frameSize.width, upoints, utmpnormals);
             //volume.fetchPointsNormals(upoints, utmpnormals);
             volume.fetchNormals(upoints, unormals);
-
-            //settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-            //settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, utmpnormals);
-            //settings.volume->fetchNormals(upoints, unormals);
         }
     }
     else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
     {
         if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
         {
-            //std::cout << "Test: " << (int)testFunction << (int)testSrcType << std::endl;
-            volume.integrate(depth, poses[0].matrix);
             volume.fetchPointsNormals(upoints, unormals);
         }
     }
@@ -522,14 +509,18 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     OdometryFrame odf(OdometryFrameStoreType::UMAT);
     odf.setDepth(udepth);
 
+    if (testSrcType == VolumeTestSrcType::MAT)
+        volume.integrate(depth, poses[0].matrix);
+    else
+        volume.integrate(odf, poses[0].matrix);
+
+
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
     {
-        volume.integrate(udepth, poses[0].matrix);
         volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
     }
     else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
     {
-        volume.integrate(odf, poses[0].matrix);
         volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
         odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
         odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
@@ -570,9 +561,13 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-TEST(TSDF_GPU, raycast_normals)
+TEST(TSDF_GPU, raycast_normals_mat)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_GPU, raycast_normals_frame)
+{
     normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
@@ -580,31 +575,50 @@ TEST(TSDF_GPU, fetch_points_normals)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
+
 TEST(TSDF_GPU, fetch_normals)
 {
     normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(TSDF_GPU, valid_points)
+
+TEST(TSDF_GPU, valid_points_mat)
 {
     valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_GPU, valid_points_frame)
+{
     valid_points_test(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF_GPU, raycast_normals)
+TEST(HashTSDF_GPU, raycast_normals_mat)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
+
+TEST(HashTSDF_GPU, raycast_normals_frame)
+{
+    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
 TEST(HashTSDF_GPU, fetch_points_normals)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
+
 TEST(HashTSDF_GPU, fetch_normals)
 {
     normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
-TEST(HashTSDF_GPU, valid_points)
+
+TEST(HashTSDF_GPU, valid_points_mat)
 {
     valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_GPU, valid_points_frame)
+{
+    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 }
