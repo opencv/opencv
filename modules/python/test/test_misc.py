@@ -594,6 +594,18 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(ints.dtype, np.int32, "Vector of integers has wrong elements type")
         self.assertEqual(ints.shape, expected_shape, "Vector of integers has wrong shape.")
 
+    def test_result_rotated_rect_issue_20930(self):
+        rr = cv.utils.testRotatedRect(10, 20, 100, 200, 45)
+        self.assertTrue(isinstance(rr, tuple), msg=type(rr))
+        self.assertEqual(len(rr), 3)
+
+        rrv = cv.utils.testRotatedRectVector(10, 20, 100, 200, 45)
+        self.assertTrue(isinstance(rrv, tuple), msg=type(rrv))
+        self.assertEqual(len(rrv), 10)
+
+        rr = rrv[0]
+        self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
+        self.assertEqual(len(rr), 3)
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

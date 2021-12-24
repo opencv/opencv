@@ -288,8 +288,6 @@ std::vector<Target> getAvailableTargets(Backend be)
 
 namespace
 {
-    typedef std::vector<MatShape> ShapesVec;
-
     struct LayerShapes
     {
         ShapesVec in, out, internal;
@@ -1489,6 +1487,11 @@ struct Net::Impl : public detail::NetImplBase
             }
 
             clear();
+
+            if (hasDynamicShapes)
+            {
+                updateLayersShapes();
+            }
 
             this->blobsToKeep = blobsToKeep_;
 
@@ -3794,20 +3797,24 @@ struct Net::Impl : public detail::NetImplBase
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     {
-        std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
+        CV_CheckGE(id, 0, "");
+        CV_CheckLT(id, (int)layers.size(), "");
+        LayerData& layerData = layers[id];
+        std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
+        LayerShapes& layerShapes = inOutShapes[id];
 
-        if (id == 0 && inOutShapes[id].in[0].empty())
+        if (id == 0 && layerShapes.in[0].empty())
         {
-            if (!layers[0].outputBlobs.empty())
+            if (!layerData.outputBlobs.empty())
             {
                 ShapesVec shapes;
-                for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+                for (int i = 0; i < layerData.outputBlobs.size(); i++)
                 {
-                    Mat& inp = layers[0].outputBlobs[i];
-                    CV_Assert(inp.total());
+                    Mat& inp = layerData.outputBlobs[i];
+                    CV_Assert(!inp.empty());
                     shapes.push_back(shape(inp));
                 }
-                inOutShapes[0].in = shapes;
+                layerShapes.in = shapes;
             }
             else
             {
@@ -3823,17 +3830,17 @@ struct Net::Impl : public detail::NetImplBase
                 }
                 if (none)
                 {
-                    inOutShapes[0].out.clear();
+                    layerShapes.out.clear();
                     return;
                 }
                 else
                 {
-                    inOutShapes[0].in = inputShapes;
+                    layerShapes.in = inputShapes;
                 }
             }
         }
 
-        if (inOutShapes[id].in.empty())
+        if (layerShapes.in.empty())
         {
             for(int i = 0; i < inputLayerIds.size(); i++)
             {
@@ -3846,14 +3853,14 @@ struct Net::Impl : public detail::NetImplBase
                     getLayerShapesRecursively(layerId, inOutShapes);
                 }
                 const MatShape& shape = inOutShapes[layerId].out[inputLayerIds[i].oid];
-                inOutShapes[id].in.push_back(shape);
+                layerShapes.in.push_back(shape);
             }
         }
-        const ShapesVec& is = inOutShapes[id].in;
-        ShapesVec& os = inOutShapes[id].out;
-        ShapesVec& ints = inOutShapes[id].internal;
-        int requiredOutputs = layers[id].requiredOutputs.size();
-        Ptr<Layer> l = layers[id].getLayerInstance();
+        const ShapesVec& is = layerShapes.in;
+        ShapesVec& os = layerShapes.out;
+        ShapesVec& ints = layerShapes.internal;
+        int requiredOutputs = layerData.requiredOutputs.size();
+        Ptr<Layer> l = layerData.getLayerInstance();
         CV_Assert(l);
         bool layerSupportInPlace = false;
         try
@@ -3881,13 +3888,38 @@ struct Net::Impl : public detail::NetImplBase
             CV_LOG_ERROR(NULL, "Exception message: " << e.what());
             throw;
         }
-        inOutShapes[id].supportInPlace = layerSupportInPlace;
+        layerShapes.supportInPlace = layerSupportInPlace;
 
-        for (int i = 0; i < ints.size(); i++)
-            CV_Assert(total(ints[i]) > 0);
+        try
+        {
+            for (int i = 0; i < ints.size(); i++)
+                CV_CheckGT(total(ints[i]), 0, "");
 
-        for (int i = 0; i < os.size(); i++)
-            CV_Assert(total(os[i]) > 0);
+            for (int i = 0; i < os.size(); i++)
+                CV_CheckGT(total(os[i]), 0, "");
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() post validation failed." <<
+                    " inputs=" << is.size() <<
+                    " outputs=" << os.size() << "/" << requiredOutputs <<
+                    " blobs=" << l->blobs.size() <<
+                    " inplace=" << layerSupportInPlace);
+            for (size_t i = 0; i < is.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    input[" << i << "] = " << toString(is[i]));
+            }
+            for (size_t i = 0; i < os.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    output[" << i << "] = " << toString(os[i]));
+            }
+            for (size_t i = 0; i < l->blobs.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    blobs[" << i << "] = " << typeToString(l->blobs[i].type()) << " " << toString(shape(l->blobs[i])));
+            }
+            CV_LOG_ERROR(NULL, "Exception message: " << e.what());
+            throw;
+        }
     }
 
     void getLayersShapes(const ShapesVec& netInputShapes,
@@ -3915,43 +3947,58 @@ struct Net::Impl : public detail::NetImplBase
 
     void updateLayersShapes()
     {
-        CV_Assert(!layers[0].outputBlobs.empty());
+        CV_LOG_DEBUG(NULL, "updateLayersShapes() with layers.size=" << layers.size());
+        CV_Assert(netInputLayer);
+        DataLayer& inputLayer = *netInputLayer;
+        LayerData& inputLayerData = layers[0];
+        CV_Assert(inputLayerData.layerInstance.get() == &inputLayer);
+        CV_Assert(!inputLayerData.outputBlobs.empty());
         ShapesVec inputShapes;
-        for(int i = 0; i < layers[0].outputBlobs.size(); i++)
+        for(int i = 0; i < inputLayerData.outputBlobs.size(); i++)
         {
-            Mat& inp = layers[0].outputBlobs[i];
-            CV_Assert(inp.total());
-            if (preferableBackend == DNN_BACKEND_OPENCV &&
+            Mat& inp = inputLayerData.outputBlobs[i];
+            CV_Assert(!inp.empty());
+            if (preferableBackend == DNN_BACKEND_OPENCV &&  // FIXIT: wrong place for output allocation
                 preferableTarget == DNN_TARGET_OPENCL_FP16 &&
-                layers[0].dtype == CV_32F)
+                inputLayerData.dtype == CV_32F)
             {
-                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+                inp.create(inp.dims, inp.size, CV_16S);
             }
             inputShapes.push_back(shape(inp));
         }
+        CV_LOG_DEBUG(NULL, toString(inputShapes, "Network input shapes"));
         LayersShapesMap layersShapes;
         layersShapes[0].in = inputShapes;
         for (MapIdToLayerData::iterator it = layers.begin();
              it != layers.end(); it++)
         {
             int layerId = it->first;
-            std::vector<LayerPin>& inputLayerIds = it->second.inputBlobsId;
-            if (layersShapes[layerId].in.empty())
+            LayerData& layerData = it->second;
+            std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
+            LayerShapes& layerShapes = layersShapes[layerId];
+            CV_LOG_DEBUG(NULL, "layer " << layerId << ": [" << layerData.type << "]:(" << layerData.name << ") with inputs.size=" << inputLayerIds.size());
+            if (layerShapes.in.empty())
             {
                 for(int i = 0; i < inputLayerIds.size(); i++)
                 {
-                    int inputLayerId = inputLayerIds[i].lid;
+                    const LayerPin& inputPin = inputLayerIds[i];
+                    int inputLayerId = inputPin.lid;
+                    CV_LOG_DEBUG(NULL, "    input[" << i << "] " << inputLayerId << ":" << inputPin.oid << " as [" << layers[inputLayerId].type << "]:(" << layers[inputLayerId].name << ")");
                     LayersShapesMap::iterator inputIt = layersShapes.find(inputLayerId);
-                    if(inputIt == layersShapes.end() || inputIt->second.out.empty())
+                    if (inputIt == layersShapes.end() || inputIt->second.out.empty())
                     {
                         getLayerShapesRecursively(inputLayerId, layersShapes);
                     }
-                    const MatShape& shape = layersShapes[inputLayerId].out[inputLayerIds[i].oid];
-                    layersShapes[layerId].in.push_back(shape);
+                    const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
+                    layerShapes.in.push_back(shape);
                 }
-                it->second.getLayerInstance()->updateMemoryShapes(layersShapes[layerId].in);
+                layerData.getLayerInstance()->updateMemoryShapes(layerShapes.in);
             }
+            CV_LOG_DEBUG(NULL, "Layer " << layerId << ": " << toString(layerShapes.in, "input shapes"));
+            CV_LOG_IF_DEBUG(NULL, !layerShapes.out.empty(), "Layer " << layerId << ": " << toString(layerShapes.out, "output shapes"));
+            CV_LOG_IF_DEBUG(NULL, !layerShapes.internal.empty(), "Layer " << layerId << ": " << toString(layerShapes.internal, "internal shapes"));
         }
+        CV_LOG_DEBUG(NULL, "updateLayersShapes() - DONE");
     }
 
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins)
@@ -5000,13 +5047,8 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    if (!oldShape) {
+    if (!oldShape)
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
-        if (impl->hasDynamicShapes)
-        {
-            impl->updateLayersShapes();
-        }
-    }
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {
