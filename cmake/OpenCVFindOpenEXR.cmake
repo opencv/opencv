@@ -9,6 +9,27 @@
 # OPENEXR_LIBRARIES = libraries that are needed to use OpenEXR.
 #
 
+if(NOT HAVE_CXX11)
+  message(STATUS "OpenEXR: enable C++11 to use external OpenEXR")
+  return()
+endif()
+
+if(NOT OPENCV_SKIP_OPENEXR_FIND_PACKAGE)
+  find_package(OpenEXR 3 QUIET)
+  #ocv_cmake_dump_vars(EXR)
+  if(OpenEXR_FOUND)
+    if(TARGET OpenEXR::OpenEXR)  # OpenEXR 3+
+      set(OPENEXR_LIBRARIES OpenEXR::OpenEXR)
+      set(OPENEXR_INCLUDE_PATHS "")
+      set(OPENEXR_VERSION "${OpenEXR_VERSION}")
+      set(OPENEXR_FOUND 1)
+      return()
+    else()
+      message(STATUS "Unsupported find_package(OpenEXR) - missing OpenEXR::OpenEXR target (version ${OpenEXR_VERSION})")
+    endif()
+  endif()
+endif()
+
 SET(OPENEXR_LIBRARIES "")
 SET(OPENEXR_LIBSEARCH_SUFFIXES "")
 file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)

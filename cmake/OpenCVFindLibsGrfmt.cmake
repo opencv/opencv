@@ -242,6 +242,7 @@ if(WITH_OPENEXR)
     if(OPENEXR_VERSION)  # check via TARGET doesn't work
       set(BUILD_OPENEXR ON)
       set(HAVE_OPENEXR YES)
+      set(BUILD_OPENEXR ON)
     endif()
   endif()
 endif()
