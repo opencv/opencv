@@ -1489,16 +1489,6 @@ TEST_P(Test_ONNX_layers, DivConst)
 }
 
 
-// FIXIT disabled due to non-standard ONNX model domains, need to add ONNX domains support
-// Example:
-// DNN/ONNX: unsupported opset[1]: domain='com.microsoft.experimental' version=1
-// DNN/ONNX: unsupported opset[2]: domain='ai.onnx.preview.training' version=1
-// DNN/ONNX: unsupported opset[3]: domain='com.microsoft.nchwc' version=1
-// DNN/ONNX: unsupported opset[4]: domain='com.microsoft.mlfeaturizers' version=1
-// DNN/ONNX: unsupported opset[5]: domain='ai.onnx.ml' version=2
-// DNN/ONNX: unsupported opset[6]: domain='com.microsoft' version=1
-// DNN/ONNX: unsupported opset[7]: domain='ai.onnx.training' version=1
-#if 0
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
@@ -1604,7 +1594,6 @@ TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
     testONNXModels("quantized_constant", npy, 0.002, 0.008);
 }
-#endif
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
@@ -1749,8 +1738,7 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
 }
 
-// FIXIT missing ONNX domains support
-TEST_P(Test_ONNX_nets, DISABLED_ResNet50_Int8)
+TEST_P(Test_ONNX_nets, ResNet50_Int8)
 {
     testONNXModels("resnet50_int8", pb, default_l1, default_lInf, true);
 }
