@@ -18,7 +18,7 @@ namespace detail
 This class provides functions required for Levenberg-Marquadt algorithm implementation.
 See LevMarqBase::optimize() source code for details.
 */
-class CV_EXPORTS LevMarqBackend : public LevMarqBase::Backend
+class CV_EXPORTS LevMarqBackend
 {
 public:
     virtual ~LevMarqBackend() { }
@@ -61,6 +61,30 @@ public:
     virtual void acceptProbe() = 0;
 };
 
+/** @brief Base class for Levenberg-Marquadt solvers.
+
+This class can be used for general local optimization using sparse linear solvers, exponential param update or fixed variables
+implemented in child classes.
+This base class does not depend on a type, layout or a group structure of a param vector or an objective function jacobian.
+A child class should provide a storage for that data and implement all virtual member functions that process it.
+This class does not support fixed/masked variables, this should also be implemented in child classes.
+*/
+class CV_EXPORTS LevMarqBase
+{
+public:
+    virtual ~LevMarqBase() { }
+
+    // runs optimization using given termination conditions
+    virtual LevMarq::Report optimize();
+
+    LevMarqBase(const Ptr<LevMarqBackend>& backend_, const LevMarq::Settings& settings_):
+        backend(backend_), settings(settings_)
+    { }
+
+    Ptr<LevMarqBackend> backend;
+    LevMarq::Settings settings;
+};
+
 
 // ATTENTION! This class is used internally in Large KinFu.
 // It has been pushed to publicly available headers for tests only.
@@ -97,12 +121,14 @@ public:
     // checks if graph is connected and each edge connects exactly 2 nodes
     virtual bool isValid() const = 0;
 
-    // creates an optimizer and returns a pointer on it
-    // this function can be omited if a user wants to run optimizer with default settings
-    virtual Ptr<LevMarqBase> createOptimizer(const LevMarqBase::Settings& settings = LevMarqBase::Settings()) = 0;
+    // creates an optimizer with user-defined settings and returns a pointer on it
+    virtual Ptr<LevMarqBase> createOptimizer(const LevMarq::Settings& settings) = 0;
+    // creates an optimizer with default settings and returns a pointer on it
+    virtual Ptr<LevMarqBase> createOptimizer() = 0;
 
+    // Creates an optimizer (with default settings) if it wasn't created before and runs it
     // Returns number of iterations elapsed or -1 if failed to optimize
-    virtual LevMarqBase::Report optimize() = 0;
+    virtual LevMarq::Report optimize() = 0;
 
     // calculate cost function based on current nodes parameters
     virtual double calcEnergy() const = 0;

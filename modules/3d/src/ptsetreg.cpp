@@ -998,10 +998,10 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
 
                 return true;
             };
-            LevMarqDenseLinear solver(Hvec, affine2DRefineCallback,
-                LevMarqBase::Settings()
-                .maxIterationsS((unsigned int)refineIters)
-                .geodesicS(true));
+            LevMarq solver(Hvec, affine2DRefineCallback,
+                           LevMarq::Settings()
+                           .setMaxIterations((unsigned int)refineIters)
+                           .setGeodesic(true));
             solver.optimize();
         }
     }
@@ -1139,10 +1139,10 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
 
                 return true;
             };
-            LevMarqDenseLinear solver(Hvec, affinePartial2dRefineCallback,
-                LevMarqBase::Settings()
-                .maxIterationsS((unsigned int)refineIters)
-                .geodesicS(true));
+            LevMarq solver(Hvec, affinePartial2dRefineCallback,
+                           LevMarq::Settings()
+                           .setMaxIterations((unsigned int)refineIters)
+                           .setGeodesic(true));
             solver.optimize();
 
             // update H with refined parameters

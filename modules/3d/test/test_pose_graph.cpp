@@ -118,11 +118,11 @@ TEST(PoseGraph, sphereG2O)
 
     // geoScale=1 is experimental, not guaranteed to work on other problems
     // the rest are default params
-    pg->createOptimizer(LevMarqBase::Settings().geoScaleS(1.0)
-        .maxIterationsS(100)
-        .checkRelEnergyChangeS(true)
-        .relEnergyDeltaToleranceS(1e-6)
-        .geodesicS(true));
+    pg->createOptimizer(LevMarq::Settings().setGeoScale(1.0)
+                        .setMaxIterations(100)
+                        .setCheckRelEnergyChange(true)
+                        .setRelEnergyDeltaTolerance(1e-6)
+                        .setGeodesic(true));
 
     auto r = pg->optimize();
 
@@ -416,7 +416,7 @@ TEST(LevMarq, Rosenbrock)
                 };
     };
 
-    LevMarqDenseLinear solver(2, [f, j](InputOutputArray param, OutputArray err, OutputArray jv) -> bool
+    LevMarq solver(2, [f, j](InputOutputArray param, OutputArray err, OutputArray jv) -> bool
     {
             Vec2d v = param.getMat();
             double x = v[0], y = v[1];
@@ -429,7 +429,7 @@ TEST(LevMarq, Rosenbrock)
             }
             return true;
     },
-    LevMarqBase::Settings().geodesicS(true));
+    LevMarq::Settings().setGeodesic(true));
 
     Mat_<double> x (Vec2d(1, 3));
 

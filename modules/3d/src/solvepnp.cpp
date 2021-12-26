@@ -735,12 +735,12 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
 
             return true;
         };
-        LevMarqDenseLinear solver(params, solvePnPRefineLMCallback,
-            LevMarqBase::Settings()
-            .maxIterationsS((unsigned int)_criteria.maxCount)
-            .stepNormToleranceS((double)_criteria.epsilon)
-            .smallEnergyToleranceS((double)_criteria.epsilon * (double)_criteria.epsilon)
-            .geodesicS(true));
+        LevMarq solver(params, solvePnPRefineLMCallback,
+                       LevMarq::Settings()
+                       .setMaxIterations((unsigned int)_criteria.maxCount)
+                       .setStepNormTolerance((double)_criteria.epsilon)
+                       .setSmallEnergyTolerance((double)_criteria.epsilon * (double)_criteria.epsilon)
+                       .setGeodesic(true));
         solver.optimize();
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());

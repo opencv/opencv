@@ -403,10 +403,10 @@ Mat findHomography( InputArray _points1, InputArray _points2,
 
                 return true;
             };
-            LevMarqDenseLinear solver(H8, homographyRefineCallback,
-                LevMarqBase::Settings()
-                .maxIterationsS(10)
-                .geodesicS(true));
+            LevMarq solver(H8, homographyRefineCallback,
+                           LevMarq::Settings()
+                           .setMaxIterations(10)
+                           .setGeodesic(true));
             solver.optimize();
         }
     }

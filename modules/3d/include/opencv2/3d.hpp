@@ -469,13 +469,33 @@ can be found in:
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
 
-/** @brief Base class for Levenberg-Marquadt solvers.
+/** @brief Type of matrix used in LevMarq solver
 
-This class can be used for general local optimization using sparse linear solvers, exponential param update or fixed variables
-implemented in child classes.
-This base class does not depend on a type, layout or a group structure of a param vector or an objective function jacobian.
-A child class should provide a storage for that data and implement all virtual member functions that process it.
-This class does not support fixed/masked variables, this should also be implemented in child classes.
+Matrix type can be dense, sparse or chosen automatically based on a matrix size, performance considerations or backend availability.
+
+Note: only dense matrix is now supported
+*/
+enum class MatrixType
+{
+    AUTO = 0,
+    DENSE = 1,
+    SPARSE = 2
+};
+
+/** @brief Type of variables used in LevMarq solver
+
+Variables can be linear, rotation (SO(3) group) or rigid transformation (SE(3) group) with corresponding jacobians and exponential updates.
+
+Note: only linear variables are now supported
+*/
+enum class VariableType
+{
+    LINEAR = 0,
+    SO3 = 1,
+    SE3 = 2
+};
+
+/** @brief Levenberg-Marquadt solver
 
 A Levenberg-Marquadt algorithm locally minimizes an objective function value (aka energy, cost or error) starting from
 current param vector.
@@ -486,11 +506,16 @@ and lambda changes for each probe point. Then the resulting dx is "added" to cur
 a probe value. "Added" is quoted because in some groups (e.g. SO(3) group) such an increment can be a non-trivial operation.
 
 For more details, please refer to Wikipedia page (https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm).
+
+This solver supports fixed variables and two forms of callback function:
+1. Generating ordinary jacobian J and residual vector err ("long")
+2. Generating normal equation matrix J^T*J and gradient vector J^T*err
+
+Currently the solver supports dense jacobian matrix and linear parameter increment.
 */
-class CV_EXPORTS LevMarqBase
+class CV_EXPORTS LevMarq
 {
 public:
-
     /** @brief Optimization report
 
     The structure is returned when optimization is over.
@@ -509,89 +534,36 @@ public:
         double energy;
     };
 
-
     /** @brief Structure to keep LevMarq settings
 
     The structure allows a user to pass algorithm parameters along with their names like this:
     @code
     MySolver solver(nVars, callback, MySolver::Settings().geodesicS(true).geoScale(1.0));
     @endcode
-
     */
     struct CV_EXPORTS Settings
     {
-        Settings() :
-            jacobiScaling(false),
-            upDouble(true),
-            useStepQuality(true),
-            clampDiagonal(true),
-            stepNormInf(false),
-            checkRelEnergyChange(true),
-            checkMinGradient(true),
-            checkStepNorm(true),
-            geodesic(false),
-            hGeo(1e-4),
-            geoScale(0.5),
-            stepNormTolerance(1e-6),
-            relEnergyDeltaTolerance(1e-6),
-            minGradientTolerance(1e-6),
-            smallEnergyTolerance(0), // not used by default
-            maxIterations(500),
-            initialLambda(0.0001),
-            initialLmUpFactor(2.0),
-            initialLmDownFactor(3.0)
-        { }
+        Settings();
 
-        bool operator==(const Settings& other) const
-        {
-            const double eps = FLT_EPSILON;
-            bool ok = true;
-            ok = ok && (this->jacobiScaling == other.jacobiScaling);
-            ok = ok && (this->upDouble == other.upDouble);
-            ok = ok && (this->useStepQuality == other.useStepQuality);
-            ok = ok && (this->clampDiagonal == other.clampDiagonal);
-            ok = ok && (this->stepNormInf == other.stepNormInf);
-            ok = ok && (this->checkRelEnergyChange == other.checkRelEnergyChange);
-            ok = ok && (this->checkMinGradient == other.checkMinGradient);
-            ok = ok && (this->checkStepNorm == other.checkStepNorm);
-
-            ok = ok && (this->geodesic == other.geodesic);
-            ok = ok && abs(this->hGeo - other.hGeo) < eps;
-            ok = ok && abs(this->geoScale - other.geoScale) < eps;
-
-            ok = ok && abs(this->stepNormTolerance - other.stepNormTolerance) < eps;
-            ok = ok && abs(this->relEnergyDeltaTolerance - other.relEnergyDeltaTolerance) < eps;
-            ok = ok && abs(this->minGradientTolerance - other.minGradientTolerance) < eps;
-            ok = ok && abs(this->smallEnergyTolerance - other.smallEnergyTolerance) < eps;
-
-            ok = ok && (this->maxIterations == other.maxIterations);
-
-            ok = ok && abs(this->initialLambda - other.initialLambda) < eps;
-            ok = ok && abs(this->initialLmUpFactor - other.initialLmUpFactor) < eps;
-            ok = ok && abs(this->initialLmDownFactor - other.initialLmDownFactor) < eps;
-
-            return ok;
-        }
-
-        Settings& jacobiScalingS          (bool         v) { jacobiScaling           = v; return *this; }
-        Settings& upDoubleS               (bool         v) { upDouble                = v; return *this; }
-        Settings& useStepQualityS         (bool         v) { useStepQuality          = v; return *this; }
-        Settings& clampDiagonalS          (bool         v) { clampDiagonal           = v; return *this; }
-        Settings& stepNormInfS            (bool         v) { stepNormInf             = v; return *this; }
-        Settings& checkRelEnergyChangeS   (bool         v) { checkRelEnergyChange    = v; return *this; }
-        Settings& checkMinGradientS       (bool         v) { checkMinGradient        = v; return *this; }
-        Settings& checkStepNormS          (bool         v) { checkStepNorm           = v; return *this; }
-        Settings& geodesicS               (bool         v) { geodesic                = v; return *this; }
-        Settings& hGeoS                   (double       v) { hGeo                    = v; return *this; }
-        Settings& geoScaleS               (double       v) { geoScale                = v; return *this; }
-        Settings& stepNormToleranceS      (double       v) { stepNormTolerance       = v; return *this; }
-        Settings& relEnergyDeltaToleranceS(double       v) { relEnergyDeltaTolerance = v; return *this; }
-        Settings& minGradientToleranceS   (double       v) { minGradientTolerance    = v; return *this; }
-        Settings& smallEnergyToleranceS   (double       v) { smallEnergyTolerance    = v; return *this; }
-        Settings& maxIterationsS          (unsigned int v) { maxIterations           = v; return *this; }
-        Settings& initialLambdaS          (double       v) { initialLambda           = v; return *this; }
-        Settings& initialLmUpFactorS      (double       v) { initialLmUpFactor       = v; return *this; }
-        Settings& initialLmDownFactorS    (double       v) { initialLmDownFactor     = v; return *this; }
+        inline Settings& setJacobiScaling          (bool   v) { jacobiScaling = v; return *this; }
+        inline Settings& setUpDouble               (bool   v) { upDouble = v; return *this; }
+        inline Settings& setUseStepQuality         (bool   v) { useStepQuality = v; return *this; }
+        inline Settings& setClampDiagonal          (bool   v) { clampDiagonal = v; return *this; }
+        inline Settings& setStepNormInf            (bool   v) { stepNormInf = v; return *this; }
+        inline Settings& setCheckRelEnergyChange   (bool   v) { checkRelEnergyChange = v; return *this; }
+        inline Settings& setCheckMinGradient       (bool   v) { checkMinGradient = v; return *this; }
+        inline Settings& setCheckStepNorm          (bool   v) { checkStepNorm = v; return *this; }
+        inline Settings& setGeodesic               (bool   v) { geodesic = v; return *this; }
+        inline Settings& setHGeo                   (double v) { hGeo = v; return *this; }
+        inline Settings& setGeoScale               (double v) { geoScale = v; return *this; }
+        inline Settings& setStepNormTolerance      (double v) { stepNormTolerance = v; return *this; }
+        inline Settings& setRelEnergyDeltaTolerance(double v) { relEnergyDeltaTolerance = v; return *this; }
+        inline Settings& setMinGradientTolerance   (double v) { minGradientTolerance = v; return *this; }
+        inline Settings& setSmallEnergyTolerance   (double v) { smallEnergyTolerance = v; return *this; }
+        inline Settings& setMaxIterations          (int    v) { maxIterations = (unsigned int)v; return *this; }
+        inline Settings& setInitialLambda          (double v) { initialLambda = v; return *this; }
+        inline Settings& setInitialLmUpFactor      (double v) { initialLmUpFactor = v; return *this; }
+        inline Settings& setInitialLmDownFactor    (double v) { initialLmDownFactor = v; return *this; }
 
         // normalize jacobian columns for better conditioning
         // slows down sparse solver, but maybe this'd be useful for some other solver
@@ -633,51 +605,20 @@ public:
         double initialLmDownFactor;
     };
 
-    /*
-    Defined in details header
-    */
-    class CV_EXPORTS Backend
-    {
-    public:
-        virtual ~Backend() { }
-    };
-
-    LevMarqBase(const Ptr<Backend>& backend, const Settings& settings);
-
-    virtual ~LevMarqBase() { }
-
-    // runs optimization using given termination conditions
-    virtual Report optimize();
-
-protected:
-    class Impl;
-    Ptr<Impl> pImpl;
-};
-
-
-/**
-A Levenberg-Marquadt solver with dense jacobian matrix and linear parameter increment.
-Supports fixed variables and two forms of callback function:
-1. Generating ordinary jacobian J and residual vector err ("long")
-2. Generating normal equation matrix J^T*J and gradient vector J^T*err
-*/
-class CV_EXPORTS LevMarqDenseLinear : public LevMarqBase
-{
-public:
     /** "Long" callback: f(param, &err, &J) -> bool
-        Computes error and Jacobian for the specified vector of parameters,
-        returns true on success.
+    Computes error and Jacobian for the specified vector of parameters,
+    returns true on success.
 
-        param: the current vector of parameters
-        err: output vector of errors: err_i = actual_f_i - ideal_f_i
-        J: output Jacobian: J_ij = d(err_i)/d(param_j)
+    param: the current vector of parameters
+    err: output vector of errors: err_i = actual_f_i - ideal_f_i
+    J: output Jacobian: J_ij = d(err_i)/d(param_j)
 
-        Param vector values may be changed by the callback only if they are fixed.
-        Changing non-fixed variables may lead to incorrect results.
-        When J=noArray(), it means that it does not need to be computed.
-        Dimensionality of error vector and param vector can be different.
-        The callback should explicitly allocate (with "create" method) each output array
-        (unless it's noArray()).
+    Param vector values may be changed by the callback only if they are fixed.
+    Changing non-fixed variables may lead to incorrect results.
+    When J=noArray(), it means that it does not need to be computed.
+    Dimensionality of error vector and param vector can be different.
+    The callback should explicitly allocate (with "create" method) each output array
+    (unless it's noArray()).
     */
     typedef std::function<bool(InputOutputArray, OutputArray, OutputArray)> LongCallback;
 
@@ -710,11 +651,13 @@ public:
         @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
         @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(int nvars, LongCallback callback, const Settings& settings = Settings(),
-                       InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    LevMarq(int nvars, LongCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, int nerrs = 0, int solveMethod = DECOMP_SVD);
     /**
         Creates a solver
 
@@ -722,11 +665,13 @@ public:
         @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
         @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(int nvars, NormalCallback callback, const Settings& settings = Settings(),
-                       InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
+    LevMarq(int nvars, NormalCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
         Creates a solver
@@ -735,11 +680,13 @@ public:
         @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
         @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
         @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(InputOutputArray param, LongCallback callback, const Settings& settings = Settings(),
-                       InputArray mask = noArray(), int nerrs = 0, int solveMethod = DECOMP_SVD);
+    LevMarq(InputOutputArray param, LongCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, int nerrs = 0, int solveMethod = DECOMP_SVD);
     /**
         Creates a solver
 
@@ -747,26 +694,38 @@ public:
         @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
         @param settings LevMarq settings structure, see LevMarqBase class for details
         @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
         @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
         @param solveMethod What method to use for linear system solving
     */
-    LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, const Settings& settings = Settings(),
-                       InputArray mask = noArray(), bool LtoR = false, int solveMethod = DECOMP_SVD);
+    LevMarq(InputOutputArray param, NormalCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
-       Runs Levenberg-Marquardt algorithm using the passed vector of parameters as the start point.
-       The final vector of parameters (whether the algorithm converged or not) is stored at the same
-       vector.
-       This method can be used instead of the optimize() method if rerun with different start points is required.
-       The method returns the optimization report.
-
-       @param param initial/final vector of parameters.
-
-       Note that the dimensionality of parameter space is defined by the size of param vector,
-       and the dimensionality of optimized criteria is defined by the size of err vector
-       computed by the callback.
+        Runs Levenberg-Marquadt algorithm using current settings and given parameters vector.
+        The method returns the optimization report.
     */
-    LevMarqBase::Report run(InputOutputArray param);
+    Report optimize();
+
+    /** @brief Runs optimization using the passed vector of parameters as the start point.
+    
+        The final vector of parameters (whether the algorithm converged or not) is stored at the same
+        vector.
+        This method can be used instead of the optimize() method if rerun with different start points is required.
+        The method returns the optimization report.
+
+        @param param initial/final vector of parameters.
+
+        Note that the dimensionality of parameter space is defined by the size of param vector,
+        and the dimensionality of optimized criteria is defined by the size of err vector
+        computed by the callback.
+    */
+    Report run(InputOutputArray param);
+
+private:
+    class Impl;
+    Ptr<Impl> pImpl;
 };
 
 

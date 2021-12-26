@@ -108,7 +108,7 @@ class PoseGraphLevMarqBackend;
 class PoseGraphLevMarq : public LevMarqBase
 {
 public:
-    PoseGraphLevMarq(PoseGraphImpl* pg, const Settings& settings = Settings()) :
+    PoseGraphLevMarq(PoseGraphImpl* pg, const LevMarq::Settings& settings = LevMarq::Settings()) :
         LevMarqBase(makePtr<PoseGraphLevMarqBackend>(pg), settings)
     { }
 };
@@ -332,22 +332,27 @@ public:
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
     // creates an optimizer
-    virtual Ptr<LevMarqBase> createOptimizer(const LevMarqBase::Settings& settings = LevMarqBase::Settings()) CV_OVERRIDE
+    virtual Ptr<LevMarqBase> createOptimizer(const LevMarq::Settings& settings) CV_OVERRIDE
     {
-        LevMarqBase::Settings newSettings;
-        if (settings == LevMarqBase::Settings())
-        {
-            newSettings = LevMarqBase::Settings().maxIterationsS(100).checkRelEnergyChangeS(true).relEnergyDeltaToleranceS(1e-6).geodesicS(true);
-        }
-        else
-            newSettings = settings;
-        lm = makePtr<PoseGraphLevMarq>(this, newSettings);
+        lm = makePtr<PoseGraphLevMarq>(this, settings);
+
+        return lm;
+    }
+
+    // creates an optimizer
+    virtual Ptr<LevMarqBase> createOptimizer() CV_OVERRIDE
+    {
+        lm = makePtr<PoseGraphLevMarq>(this, LevMarq::Settings()
+                                             .setMaxIterations(100)
+                                             .setCheckRelEnergyChange(true)
+                                             .setRelEnergyDeltaTolerance(1e-6)
+                                             .setGeodesic(true));
 
         return lm;
     }
 
     // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
-    virtual LevMarqBase::Report optimize() CV_OVERRIDE;
+    virtual LevMarq::Report optimize() CV_OVERRIDE;
 
     std::map<size_t, Node> nodes;
     std::vector<Edge> edges;
@@ -911,7 +916,7 @@ public:
 };
 
 
-LevMarqBase::Report PoseGraphImpl::optimize()
+LevMarq::Report PoseGraphImpl::optimize()
 {
     if (!lm)
         createOptimizer();

@@ -1305,7 +1305,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
         return true;
     };
 
-    LevMarqDenseLinear solver(_param, callback, LevMarqBase::Settings().maxIterationsS((unsigned int)max_iter).geodesicS(true));
+    LevMarq solver(_param, callback, LevMarq::Settings().setMaxIterations((unsigned int)max_iter).setGeodesic(true));
     solver.optimize();
 
     _param.rowRange(0, 3).copyTo(rvec);

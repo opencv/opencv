@@ -577,12 +577,12 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         return true;
     };
 
-    LevMarqDenseLinear solver(param0, calibCameraLMCallback,
-        LevMarqBase::Settings()
-        .maxIterationsS((unsigned int)termCrit.maxCount)
-        .stepNormToleranceS(termCrit.epsilon)
-        .smallEnergyToleranceS(termCrit.epsilon * termCrit.epsilon),
-        mask0, /* LtoR */ false, solveMethod);
+    LevMarq solver(param0, calibCameraLMCallback,
+                   LevMarq::Settings()
+                   .setMaxIterations((unsigned int)termCrit.maxCount)
+                   .setStepNormTolerance(termCrit.epsilon)
+                   .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
+                   mask0, MatrixType::AUTO, VariableType::LINEAR, /* LtoR */ false, solveMethod);
     // geodesic is not supported for normal callbacks
     solver.optimize();
 
@@ -1064,14 +1064,15 @@ static double stereoCalibrateImpl(
     double reprojErr = 0;
     if (countNonZero(mask))
     {
-        LevMarqDenseLinear solver(param, lmcallback,
-            LevMarqBase::Settings()
-            .maxIterationsS((unsigned int)termCrit.maxCount)
-            .stepNormToleranceS(termCrit.epsilon)
-            .smallEnergyToleranceS(termCrit.epsilon * termCrit.epsilon),
-            mask);
+        LevMarq solver(param, lmcallback,
+                       LevMarq::Settings()
+                       .setMaxIterations((unsigned int)termCrit.maxCount)
+                       .setStepNormTolerance(termCrit.epsilon)
+                       .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
+                       mask);
         // geodesic not supported for normal callbacks
-        LevMarqBase::Report r = solver.optimize();
+        LevMarq::Report r = solver.optimize();
+
         reprojErr = r.energy;
     }
 

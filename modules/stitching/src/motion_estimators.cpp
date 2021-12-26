@@ -273,13 +273,13 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         return true;
     };
 
-    LevMarqDenseLinear solver(cam_params_, callb,
-        LevMarqBase::Settings()
-        .maxIterationsS((unsigned int)term_criteria_.maxCount)
-        .stepNormToleranceS(term_criteria_.epsilon)
-        .smallEnergyToleranceS(term_criteria_.epsilon * term_criteria_.epsilon)
-        .geodesicS(true),
-        noArray(), nerrs);
+    LevMarq solver(cam_params_, callb,
+                   LevMarq::Settings()
+                   .setMaxIterations((unsigned int)term_criteria_.maxCount)
+                   .setStepNormTolerance(term_criteria_.epsilon)
+                   .setSmallEnergyTolerance(term_criteria_.epsilon * term_criteria_.epsilon)
+                   .setGeodesic(true),
+                   noArray(), MatrixType::AUTO, VariableType::LINEAR, nerrs);
     solver.optimize();
 
     LOGLN_CHAT("");

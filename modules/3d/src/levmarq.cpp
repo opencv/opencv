@@ -45,6 +45,29 @@
 
 namespace cv {
 
+LevMarq::Settings::Settings():
+    jacobiScaling(false),
+    upDouble(true),
+    useStepQuality(true),
+    clampDiagonal(true),
+    stepNormInf(false),
+    checkRelEnergyChange(true),
+    checkMinGradient(true),
+    checkStepNorm(true),
+    geodesic(false),
+    hGeo(1e-4),
+    geoScale(0.5),
+    stepNormTolerance(1e-6),
+    relEnergyDeltaTolerance(1e-6),
+    minGradientTolerance(1e-6),
+    smallEnergyTolerance(0), // not used by default
+    maxIterations(500),
+    initialLambda(0.0001),
+    initialLmUpFactor(2.0),
+    initialLmDownFactor(3.0)
+{ }
+
+
 // from Ceres, equation energy change:
 // eq. energy = 1/2 * (residuals + J * step)^2 =
 // 1/2 * ( residuals^2 + 2 * residuals^T * J * step + (J*step)^T * J * step)
@@ -84,36 +107,12 @@ static void calcJtrvv(const Mat_<double>& jtbv, const Mat_<double>& jtb, const M
 }
 
 
-class LevMarqBase::Impl
-{
-public:
-    Impl(const Ptr<LevMarqBase::Backend>& backendV, const LevMarqBase::Settings& settingsV) :
-        backend(backendV.dynamicCast<detail::LevMarqBackend>()),
-        settings(settingsV)
-    { }
-
-    LevMarqBase::Report optimize();
-
-    Ptr<detail::LevMarqBackend> backend;
-    LevMarqBase::Settings settings;
-};
-
-LevMarqBase::LevMarqBase(const Ptr<Backend>& backend, const Settings& settings) :
-    pImpl(makePtr<LevMarqBase::Impl>(backend, settings))
-{ }
-
-LevMarqBase::Report LevMarqBase::optimize()
-{
-    return pImpl->optimize();
-}
-
-
-LevMarqBase::Report LevMarqBase::Impl::optimize()
+LevMarq::Report detail::LevMarqBase::optimize()
 {
     if (settings.geodesic && !backend->enableGeo())
     {
         CV_LOG_INFO(NULL, "The backend does not support geodesic acceleration, please turn off the corresponding option");
-        return LevMarqBase::Report(false, 0, 0); // not found
+        return LevMarq::Report(false, 0, 0); // not found
     }
 
     // this function sets probe vars to current X
@@ -123,7 +122,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
     if (!backend->calcFunc(energy, /*calcEnergy*/ true, /*calcJacobian*/ true) || energy < 0)
     {
         CV_LOG_INFO(NULL, "Error while calculating energy function");
-        return LevMarqBase::Report(false, 0, 0); // not found
+        return LevMarq::Report(false, 0, 0); // not found
     }
 
     double oldEnergy = energy;
@@ -263,7 +262,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
                 if (!success || energy < 0 || std::isnan(energy))
                 {
                     CV_LOG_INFO(NULL, "Error while calculating energy function");
-                    return LevMarqBase::Report(false, iter, oldEnergy); // not found
+                    return LevMarq::Report(false, iter, oldEnergy); // not found
                 }
 
                 costChange = oldEnergy - energy;
@@ -334,7 +333,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
             if (!backend->calcFunc(dummy, /*calcEnergy*/ false, /*calcJacobian*/ true))
             {
                 CV_LOG_INFO(NULL, "Error while calculating jacobian");
-                return LevMarqBase::Report(false, iter, oldEnergy); // not found
+                return LevMarq::Report(false, iter, oldEnergy); // not found
             }
         }
     }
@@ -356,7 +355,7 @@ LevMarqBase::Report LevMarqBase::Impl::optimize()
     if (bigLambda)
         CV_LOG_INFO(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
 
-    return LevMarqBase::Report(found, iter, oldEnergy);
+    return LevMarq::Report(found, iter, oldEnergy);
 }
 
 
@@ -372,10 +371,10 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
 
     // "Long" callback: f(x, &b, &J) -> bool
     // Produces jacobian and residuals for each energy term
-    LevMarqDenseLinear::LongCallback cb;
+    LevMarq::LongCallback cb;
     // "Normal" callback: f(x, &jtb, &jtj, &energy) -> bool
     // Produces J^T*J and J^T*b directly instead of J and b
-    LevMarqDenseLinear::NormalCallback cb_alt;
+    LevMarq::NormalCallback cb_alt;
 
     Mat_<uchar> mask;
     // full matrices containing all vars including fixed ones
@@ -398,22 +397,22 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
     // J^T*rvv vector
     Mat_<double> jtrvv;
 
-    LevMarqDenseLinearBackend(int nvars_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+    LevMarqDenseLinearBackend(int nvars_, LevMarq::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
         LevMarqDenseLinearBackend(noArray(), nvars_, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearBackend(int nvars_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+    LevMarqDenseLinearBackend(int nvars_, LevMarq::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
         LevMarqDenseLinearBackend(noArray(), nvars_, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarqDenseLinear::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
+    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarq::LongCallback callback_, InputArray mask_, int nerrs_, int solveMethod_) :
         LevMarqDenseLinearBackend(param_, 0, callback_, nullptr, nerrs_, false, mask_, solveMethod_)
     { }
-    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarqDenseLinear::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
+    LevMarqDenseLinearBackend(InputOutputArray param_, LevMarq::NormalCallback callback_, InputArray mask_, bool LtoR_, int solveMethod_) :
         LevMarqDenseLinearBackend(param_, 0, nullptr, callback_, 0, LtoR_, mask_, solveMethod_)
     { }
 
     LevMarqDenseLinearBackend(InputOutputArray currentX_, int nvars,
-        LevMarqDenseLinear::LongCallback cb_ = nullptr,
-        LevMarqDenseLinear::NormalCallback cb_alt_ = nullptr,
+        LevMarq::LongCallback cb_ = nullptr,
+        LevMarq::NormalCallback cb_alt_ = nullptr,
         size_t nerrs_ = 0,
         bool LtoR_ = false,
         InputArray mask_ = noArray(),
@@ -712,25 +711,78 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
     }
 };
 
-
-LevMarqDenseLinear::LevMarqDenseLinear(int nvars, LongCallback callback, const Settings& settings, InputArray mask, int nerrs, int solveMethod) :
-    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod), settings)
-{ }
-LevMarqDenseLinear::LevMarqDenseLinear(int nvars, NormalCallback callback, const Settings& settings, InputArray mask, bool LtoR, int solveMethod) :
-    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod), settings)
-{ }
-LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, LongCallback callback, const Settings& settings, InputArray mask, int nerrs, int solveMethod) :
-    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod), settings)
-{ }
-LevMarqDenseLinear::LevMarqDenseLinear(InputOutputArray param, NormalCallback callback, const Settings& settings, InputArray mask, bool LtoR, int solveMethod) :
-    LevMarqBase(makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod), settings)
-{ }
-
-LevMarqBase::Report LevMarqDenseLinear::run(InputOutputArray param)
+class LevMarq::Impl : public detail::LevMarqBase
 {
-    CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
-    pImpl->backend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
-    return optimize();
+public:
+    Impl(const Ptr<detail::LevMarqBackend>& backend_, const LevMarq::Settings& settings_) :
+        LevMarqBase(backend_, settings_)
+    { }
+
+    Report run(InputOutputArray param)
+    {
+        CV_Assert(!param.empty() && (param.type() == CV_64F) && (param.rows() == 1 || param.cols() == 1));
+        backend.dynamicCast<LevMarqDenseLinearBackend>()->currentX = param.getMat().reshape(1, param.size().area());
+        return optimize();
+    }
+};
+
+
+LevMarq::LevMarq(int nvars, LongCallback callback, const Settings& settings, InputArray mask,
+                 MatrixType matrixType, VariableType paramType, int nerrs, int solveMethod)
+{
+    if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
+        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+    if (paramType != VariableType::LINEAR)
+        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+
+    auto backend = makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, nerrs, solveMethod);
+    pImpl = makePtr<LevMarq::Impl>(backend, settings);
+}
+
+LevMarq::LevMarq(int nvars, NormalCallback callback, const Settings& settings, InputArray mask,
+                 MatrixType matrixType, VariableType paramType, bool LtoR, int solveMethod)
+{
+    if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
+        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+    if (paramType != VariableType::LINEAR)
+        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+
+    auto backend = makePtr<LevMarqDenseLinearBackend>(nvars, callback, mask, LtoR, solveMethod);
+    pImpl = makePtr<LevMarq::Impl>(backend, settings);
+}
+
+LevMarq::LevMarq(InputOutputArray param, LongCallback callback, const Settings& settings, InputArray mask,
+                 MatrixType matrixType, VariableType paramType, int nerrs, int solveMethod)
+{
+    if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
+        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+    if (paramType != VariableType::LINEAR)
+        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+
+    auto backend = makePtr<LevMarqDenseLinearBackend>(param, callback, mask, nerrs, solveMethod);
+    pImpl = makePtr<LevMarq::Impl>(backend, settings);
+}
+
+LevMarq::LevMarq(InputOutputArray param, NormalCallback callback, const Settings& settings, InputArray mask,
+                 MatrixType matrixType, VariableType paramType, bool LtoR, int solveMethod)
+{
+    if (matrixType != MatrixType::AUTO && matrixType != MatrixType::DENSE)
+        CV_Error(CV_StsNotImplemented, "General purpuse sparse solver for LevMarq is not implemented yet");
+    if (paramType != VariableType::LINEAR)
+        CV_Error(CV_StsNotImplemented, "SO(3) and SE(3) params for LevMarq are not implemented yet");
+
+    auto backend = makePtr<LevMarqDenseLinearBackend>(param, callback, mask, LtoR, solveMethod);
+    pImpl = makePtr<LevMarq::Impl>(backend, settings);
+}
+
+LevMarq::Report LevMarq::optimize()
+{
+    return pImpl->optimize();
+}
+
+LevMarq::Report LevMarq::run(InputOutputArray param)
+{
+    return pImpl->run(param);
 }
 
 }
