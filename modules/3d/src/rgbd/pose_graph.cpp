@@ -108,8 +108,8 @@ class PoseGraphLevMarqBackend;
 class PoseGraphLevMarq : public LevMarqBase
 {
 public:
-    PoseGraphLevMarq(PoseGraphImpl* pg, const LevMarq::Settings& settings = LevMarq::Settings()) :
-        LevMarqBase(makePtr<PoseGraphLevMarqBackend>(pg), settings)
+    PoseGraphLevMarq(PoseGraphImpl* pg, const LevMarq::Settings& settings_ = LevMarq::Settings()) :
+        LevMarqBase(makePtr<PoseGraphLevMarqBackend>(pg), settings_)
     { }
 };
 

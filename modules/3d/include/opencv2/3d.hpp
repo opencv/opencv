@@ -709,7 +709,7 @@ public:
     Report optimize();
 
     /** @brief Runs optimization using the passed vector of parameters as the start point.
-    
+
         The final vector of parameters (whether the algorithm converged or not) is stored at the same
         vector.
         This method can be used instead of the optimize() method if rerun with different start points is required.
