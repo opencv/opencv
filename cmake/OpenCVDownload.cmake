@@ -41,32 +41,27 @@ set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "" CACHE INTERNAL "Mirror for https://githu
 set(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "" CACHE INTERNAL "Mirror for https://raw.githubusercontent.com")
 set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
 
-macro(ocv_download_replace_githubusercontent)
-  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-  # get commit id & package name
-  list(GET dl_url_splits 5 _commit_id)
-  list(GET dl_url_splits 6 _package_name)
-  # append commit id & package name
-  # list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_commit_id})
-  # list(APPEND OPENCV_MIRROR_FOR_GITHUBUSERCONTENT ${_package_name})
-  list(INSERT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT 2 ${_commit_id})
-  list(INSERT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT 3 ${_commit_id})
-  # join to be the new link
-  list(JOIN OPENCV_MIRROR_FOR_GITHUBUSERCONTENT "/" new_dl_url)
-  set(DL_URL "${new_dl_url}")
+macro(ocv_download_set_url pkg_url suffix)
+  if(NOT pkg_url)
+    if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
+      set(pkg_url ${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT})
+      list(APPEND pkg_url "${suffix}")
+      list(JOIN pkg_url "/" pkg_url)
+    endif()
+  endif()
 endmacro()
 
-macro(ocv_download_replace_github_archive)
-  string(REPLACE "/" ";" dl_url_splits ${DL_URL})
-  # get repo owner & repo name
-  list(GET dl_url_splits 3 _repo_owner)
-  list(GET dl_url_splits 4 _repo_name)
-  # insert repo owner & repo name
-  list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 1 ${_repo_owner})
-  list(INSERT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE 2 ${_repo_name})
-  # join to be the new link
-  list(JOIN OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "/" new_dl_url)
-  set(DL_URL "${new_dl_url}")
+# e.g. https://github.com/opencv/ade/archive/
+#   -> https://gitcode.net/opencv/ade/-/archive/
+# set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "https://gitcode.net;-;archive;" PARENT_SCOPE)
+macro(ocv_download_set_url_and_md5sum pkg_url pkg_owner pkg_name pkg_md5sum new_md5sum)
+  if(NOT pkg_url)
+    if(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
+      set(pkg_url ${OPENCV_MIRROR_FOR_GITHUB_ARCHIVE})
+      list(INSERT pkg_url 1 ${pkg_owner})
+      list(INSERT pkg_url 2 ${pkg_name})
+      list(JOIN pkg_url "/" pkg_url)
+      set(pkg_md5sum ${new_md5sum})
 endmacro()
 
 function(ocv_init_download)
@@ -95,7 +90,7 @@ function(ocv_init_download)
     if(NOT ${_found_gitcode} EQUAL -1)
       if(NOT OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
         # e.g. https://github.com/opencv/ade/archive/
-        #   -> https://codechina.csdn.net/opencv/ade/-/archive/
+        #   -> https://gitcode.net/opencv/ade/-/archive/
         set(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE "https://${OPENCV_MIRROR_GITCODE};-;archive;" PARENT_SCOPE)
       endif()
       if(NOT OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
@@ -167,20 +162,6 @@ function(ocv_download)
       break()
     endif()
   endforeach()
-
-  # replace download links with the mirrored one if detected
-  if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
-    string(FIND "${DL_URL}" "https://raw.githubusercontent.com" _found_githubusercontent)
-    if(NOT ${_found_githubusercontent} EQUAL -1)
-      ocv_download_replace_githubusercontent()
-    endif()
-  endif()
-  if(OPENCV_MIRROR_FOR_GITHUB_ARCHIVE)
-    string(FIND "${DL_URL}" "https://github.com" _found_github)
-    if(NOT ${_found_github} EQUAL -1)
-        ocv_download_replace_github_archive()
-    endif()
-  endif()
 
   # Append filename to url if needed
   if(DL_RELATIVE_URL)

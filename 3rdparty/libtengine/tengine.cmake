@@ -35,6 +35,9 @@ ELSE()
 	SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url
 	SET(tengine_md5sum 23f61ebb1dd419f1207d8876496289c5) #md5sum
 
+	# https://gitcode.net/OAID/Tengine/-/archive/e89cf8870de2ff0a80cfe626c0b52b2a16fb302e.zip
+	ocv_download_set_url_and_md5sum(${OPENCV_TENGINE_URL} "OAID" "Tengine" ${tengine_md5sum} 1b5908632b557275cd6e85b0c03f9690)
+
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
 						HASH ${tengine_md5sum}
 						URL

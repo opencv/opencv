@@ -2,6 +2,10 @@ set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
 set(ade_filename "v0.1.1f.zip")
 set(ade_subdir "ade-0.1.1f")
 set(ade_md5 "b624b995ec9c439cbc2e9e6ee940d3a2")
+
+# https://gitcode.net/opencv/ade/-/archive/v0.1.1f.zip
+ocv_download_set_url_and_md5sum(${OPENCV_ADE_URL} "opencv" "ade" ${ade_md5} aa2ec43abe534f8b1db13274b5ed92dd)
+
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_md5}
              URL
