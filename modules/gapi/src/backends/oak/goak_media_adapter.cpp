@@ -13,7 +13,7 @@ namespace oak {
 class OAKMediaAdapter::Priv final {
 public:
     Priv() = default;
-    Priv(cv::Size sz, OAKFrameFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
+    Priv(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
 
     MediaFrame::View access(MediaFrame::Access access);
     cv::GFrameDesc meta() const;
@@ -22,13 +22,13 @@ public:
 
 private:
     cv::Size m_sz;
-    OAKFrameFormat m_fmt;
+    cv::MediaFormat m_fmt;
     uint8_t* m_y_ptr;
     uint8_t* m_uv_ptr;
 };
 
-OAKMediaAdapter::Priv::Priv(cv::Size sz, OAKFrameFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) {
-    GAPI_Assert(fmt == OAKFrameFormat::NV12 && "OAKMediaAdapter only supports NV12 format for now");
+OAKMediaAdapter::Priv::Priv(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) {
+    GAPI_Assert(fmt == cv::MediaFormat::NV12 && "OAKMediaAdapter only supports NV12 format for now");
     m_sz = sz;
     m_fmt = fmt;
     m_y_ptr = y_ptr;
@@ -41,9 +41,9 @@ MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
                             cv::MediaFrame::View::Strides{}};
 }
 
-cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::NV12, m_sz}; }
+cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {m_fmt, m_sz}; }
 
-OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) :
+OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) :
     m_priv(new OAKMediaAdapter::Priv(sz, fmt, y_ptr, uv_ptr)) {};
 
 MediaFrame::View OAKMediaAdapter::access(MediaFrame::Access access) {

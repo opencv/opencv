@@ -24,8 +24,11 @@ int main(int argc, char *argv[]) {
 
     const std::string output = cmd.get<std::string>("output");
 
+    cv::gapi::oak::EncoderConfig cfg;
+    cfg.profile = cv::gapi::oak::EncoderConfig::Profile::H265_MAIN;
+
     cv::GFrame in;
-    cv::GArray<uint8_t> encoded = cv::gapi::oak::encode(in, {});
+    cv::GArray<uint8_t> encoded = cv::gapi::oak::encode(in, cfg);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
 

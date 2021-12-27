@@ -91,7 +91,7 @@ G_API_OP(GSobelXY, <GFrame(GFrame, const SobelFilter&, const SobelFilter&)>, "or
     }
 };
 
-GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& = {});
+GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig&);
 
 GAPI_EXPORTS GFrame sobelXY(const GFrame& in,
                             const SobelFilter& hk = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}},

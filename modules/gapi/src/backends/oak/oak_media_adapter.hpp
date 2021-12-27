@@ -15,16 +15,11 @@ namespace cv {
 namespace gapi {
 namespace oak {
 
-enum class OAKFrameFormat {
-    BGR,
-    NV12,
-};
-
 // FIXME: introduce a proper adapter
 class GAPI_EXPORTS OAKMediaAdapter final : public cv::MediaFrame::IAdapter {
 public:
     OAKMediaAdapter();
-    OAKMediaAdapter(cv::Size sz, OAKFrameFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
+    OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
     cv::GFrameDesc meta() const override;
     cv::MediaFrame::View access(cv::MediaFrame::Access) override;
     ~OAKMediaAdapter();
