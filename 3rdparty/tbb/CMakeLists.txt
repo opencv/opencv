@@ -12,7 +12,7 @@ string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
 #ocv_update(OPENCV_TBB_SUBDIR ...)
 
 # https://gitcode.net/01org/tbb/-/archive/v2020.2.zip
-ocv_download_set_url_and_md5sum(OPENCV_TBB_URL "01org" "tbb" ${OPENCV_TBB_RELEASE_MD5} 3ff457ea49220a3523755af4f6b92bb4)
+ocv_download_set_url_and_md5sum(OPENCV_TBB_URL "01org" "tbb" OPENCV_TBB_RELEASE_MD5 3ff457ea49220a3523755af4f6b92bb4)
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
