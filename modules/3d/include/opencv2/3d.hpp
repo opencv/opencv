@@ -468,76 +468,266 @@ can be found in:
  */
 CV_EXPORTS_W void Rodrigues( InputArray src, OutputArray dst, OutputArray jacobian = noArray() );
 
-/** Levenberg-Marquardt solver. Starting with the specified vector of parameters it
-    optimizes the target vector criteria "err"
-    (finds local minima of each target vector component absolute value).
 
-    When needed, it calls user-provided callback.
+/** @brief Type of matrix used in LevMarq solver
+
+Matrix type can be dense, sparse or chosen automatically based on a matrix size, performance considerations or backend availability.
+
+Note: only dense matrix is now supported
 */
-class CV_EXPORTS LMSolver : public Algorithm
+enum class MatrixType
+{
+    AUTO = 0,
+    DENSE = 1,
+    SPARSE = 2
+};
+
+/** @brief Type of variables used in LevMarq solver
+
+Variables can be linear, rotation (SO(3) group) or rigid transformation (SE(3) group) with corresponding jacobians and exponential updates.
+
+Note: only linear variables are now supported
+*/
+enum class VariableType
+{
+    LINEAR = 0,
+    SO3 = 1,
+    SE3 = 2
+};
+
+/** @brief Levenberg-Marquadt solver
+
+A Levenberg-Marquadt algorithm locally minimizes an objective function value (aka energy, cost or error) starting from
+current param vector.
+To do that, at each iteration it repeatedly calculates the energy at probe points until it's reduced.
+To calculate a probe point, a linear equation is solved: (J^T*J + lambda*D)*dx = -J^T*b where J is a function jacobian,
+b is a vector of residuals (aka errors or energy terms), D is a diagonal matrix generated from J^T*J diagonal
+and lambda changes for each probe point. Then the resulting dx is "added" to current variable and it forms
+a probe value. "Added" is quoted because in some groups (e.g. SO(3) group) such an increment can be a non-trivial operation.
+
+For more details, please refer to Wikipedia page (https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm).
+
+This solver supports fixed variables and two forms of callback function:
+1. Generating ordinary jacobian J and residual vector err ("long")
+2. Generating normal equation matrix J^T*J and gradient vector J^T*err
+
+Currently the solver supports dense jacobian matrix and linear parameter increment.
+*/
+class CV_EXPORTS LevMarq
 {
 public:
-    class CV_EXPORTS Callback
+    /** @brief Optimization report
+
+    The structure is returned when optimization is over.
+    */
+    struct CV_EXPORTS Report
     {
-    public:
-        virtual ~Callback() {}
-        /**
-         computes error and Jacobian for the specified vector of parameters
-
-         @param param the current vector of parameters
-         @param err output vector of errors: err_i = actual_f_i - ideal_f_i
-         @param J output Jacobian: J_ij = d(err_i)/d(param_j)
-
-         when J=noArray(), it means that it does not need to be computed.
-         Dimensionality of error vector and param vector can be different.
-         The callback should explicitly allocate (with "create" method) each output array
-         (unless it's noArray()).
-        */
-        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
+        Report(bool isFound, int nIters, double finalEnergy) :
+            found(isFound), iters(nIters), energy(finalEnergy)
+        { }
+        // true if the cost function converged to a local minimum which is checked by check* fields, thresholds and other options
+        // false if the cost function failed to converge because of error, amount of iterations exhausted or lambda explosion
+        bool found;
+        // amount of iterations elapsed until the optimization stopped
+        int iters;
+        // energy value reached by the optimization
+        double energy;
     };
 
-    /**
-       Runs Levenberg-Marquardt algorithm using the passed vector of parameters as the start point.
-       The final vector of parameters (whether the algorithm converged or not) is stored at the same
-       vector. The method returns the number of iterations used. If it's equal to the previously specified
-       maxIters, there is a big chance the algorithm did not converge.
+    /** @brief Structure to keep LevMarq settings
 
-       @param param initial/final vector of parameters.
-
-       Note that the dimensionality of parameter space is defined by the size of param vector,
-       and the dimensionality of optimized criteria is defined by the size of err vector
-       computed by the callback.
+    The structure allows a user to pass algorithm parameters along with their names like this:
+    @code
+    MySolver solver(nVars, callback, MySolver::Settings().geodesicS(true).geoScale(1.0));
+    @endcode
     */
-    virtual int run(InputOutputArray param) const = 0;
+    struct CV_EXPORTS Settings
+    {
+        Settings();
+
+        inline Settings& setJacobiScaling          (bool   v) { jacobiScaling = v; return *this; }
+        inline Settings& setUpDouble               (bool   v) { upDouble = v; return *this; }
+        inline Settings& setUseStepQuality         (bool   v) { useStepQuality = v; return *this; }
+        inline Settings& setClampDiagonal          (bool   v) { clampDiagonal = v; return *this; }
+        inline Settings& setStepNormInf            (bool   v) { stepNormInf = v; return *this; }
+        inline Settings& setCheckRelEnergyChange   (bool   v) { checkRelEnergyChange = v; return *this; }
+        inline Settings& setCheckMinGradient       (bool   v) { checkMinGradient = v; return *this; }
+        inline Settings& setCheckStepNorm          (bool   v) { checkStepNorm = v; return *this; }
+        inline Settings& setGeodesic               (bool   v) { geodesic = v; return *this; }
+        inline Settings& setHGeo                   (double v) { hGeo = v; return *this; }
+        inline Settings& setGeoScale               (double v) { geoScale = v; return *this; }
+        inline Settings& setStepNormTolerance      (double v) { stepNormTolerance = v; return *this; }
+        inline Settings& setRelEnergyDeltaTolerance(double v) { relEnergyDeltaTolerance = v; return *this; }
+        inline Settings& setMinGradientTolerance   (double v) { minGradientTolerance = v; return *this; }
+        inline Settings& setSmallEnergyTolerance   (double v) { smallEnergyTolerance = v; return *this; }
+        inline Settings& setMaxIterations          (int    v) { maxIterations = (unsigned int)v; return *this; }
+        inline Settings& setInitialLambda          (double v) { initialLambda = v; return *this; }
+        inline Settings& setInitialLmUpFactor      (double v) { initialLmUpFactor = v; return *this; }
+        inline Settings& setInitialLmDownFactor    (double v) { initialLmDownFactor = v; return *this; }
+
+        // normalize jacobian columns for better conditioning
+        // slows down sparse solver, but maybe this'd be useful for some other solver
+        bool jacobiScaling;
+        // double upFactor until the probe is successful
+        bool upDouble;
+        // use stepQuality metrics for steps down
+        bool useStepQuality;
+        // clamp diagonal values added to J^T*J to pre-defined range of values
+        bool clampDiagonal;
+        // to use squared L2 norm or Inf norm for step size estimation
+        bool stepNormInf;
+        // to use relEnergyDeltaTolerance or not
+        bool checkRelEnergyChange;
+        // to use minGradientTolerance or not
+        bool checkMinGradient;
+        // to use stepNormTolerance or not
+        bool checkStepNorm;
+        // to use geodesic acceleration or not
+        bool geodesic;
+        // second directional derivative approximation step for geodesic acceleration
+        double hGeo;
+        // how much of geodesic acceleration is used
+        double geoScale;
+        // optimization stops when norm2(dx) drops below this value
+        double stepNormTolerance;
+        // optimization stops when relative energy change drops below this value
+        double relEnergyDeltaTolerance;
+        // optimization stops when max gradient value (J^T*b vector) drops below this value
+        double minGradientTolerance;
+        // optimization stops when energy drops below this value
+        double smallEnergyTolerance;
+        // optimization stops after a number of iterations performed
+        unsigned int maxIterations;
+
+        // LevMarq up and down params
+        double initialLambda;
+        double initialLmUpFactor;
+        double initialLmDownFactor;
+    };
+
+    /** "Long" callback: f(param, &err, &J) -> bool
+    Computes error and Jacobian for the specified vector of parameters,
+    returns true on success.
+
+    param: the current vector of parameters
+    err: output vector of errors: err_i = actual_f_i - ideal_f_i
+    J: output Jacobian: J_ij = d(err_i)/d(param_j)
+
+    Param vector values may be changed by the callback only if they are fixed.
+    Changing non-fixed variables may lead to incorrect results.
+    When J=noArray(), it means that it does not need to be computed.
+    Dimensionality of error vector and param vector can be different.
+    The callback should explicitly allocate (with "create" method) each output array
+    (unless it's noArray()).
+    */
+    typedef std::function<bool(InputOutputArray, OutputArray, OutputArray)> LongCallback;
+
+    /** Normal callback: f(param, &JtErr, &JtJ, &errnorm) -> bool
+
+        Computes squared L2 error norm, normal equation matrix J^T*J and J^T*err vector
+        where J is MxN Jacobian: J_ij = d(err_i)/d(param_j)
+        err is Mx1 vector of errors: err_i = actual_f_i - ideal_f_i
+        M is a number of error terms, N is a number of variables to optimize.
+        Make sense to use this class instead of usual Callback if the number
+        of error terms greatly exceeds the number of variables.
+
+        param: the current Nx1 vector of parameters
+        JtErr: output Nx1 vector J^T*err
+        JtJ: output NxN matrix J^T*J
+        errnorm: output total error: dot(err, err)
+
+        Param vector values may be changed by the callback only if they are fixed.
+        Changing non-fixed variables may lead to incorrect results.
+        If JtErr or JtJ are empty, they don't have to be computed.
+        The callback should explicitly allocate (with "create" method) each output array
+        (unless it's noArray()).
+    */
+    typedef std::function<bool(InputOutputArray, OutputArray, OutputArray, double&)> NormalCallback;
 
     /**
-       Sets the maximum number of iterations
-       @param maxIters the number of iterations
+        Creates a solver
+
+        @param nvars Number of variables in a param vector
+        @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
+        @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
+        @param solveMethod What method to use for linear system solving
     */
-    virtual void setMaxIters(int maxIters) = 0;
+    LevMarq(int nvars, LongCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, int nerrs = 0, int solveMethod = DECOMP_SVD);
     /**
-       Retrieves the current maximum number of iterations
+        Creates a solver
+
+        @param nvars Number of variables in a param vector
+        @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
+        @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
+        @param solveMethod What method to use for linear system solving
     */
-    virtual int getMaxIters() const = 0;
+    LevMarq(int nvars, NormalCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, bool LtoR = false, int solveMethod = DECOMP_SVD);
 
     /**
-       Creates Levenberg-Marquard solver
+        Creates a solver
 
-       @param cb callback
-       @param maxIters maximum number of iterations that can be further
-         modified using setMaxIters() method.
+        @param param Input/output vector containing starting param vector and resulting optimized params
+        @param callback "Long" callback, produces jacobian and residuals for each energy term, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
+        @param nerrs Energy terms amount. If zero, callback-generated jacobian size is used instead
+        @param solveMethod What method to use for linear system solving
     */
-    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters);
-    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
+    LevMarq(InputOutputArray param, LongCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, int nerrs = 0, int solveMethod = DECOMP_SVD);
+    /**
+        Creates a solver
 
-    static int run(InputOutputArray param, InputArray mask,
-                   int nerrs, const TermCriteria& termcrit, int solveMethod,
-                   std::function<bool (Mat& param, Mat* err, Mat* J)> callb);
-    static int runAlt(InputOutputArray param, InputArray mask,
-                      const TermCriteria& termcrit, int solveMethod, bool LtoR,
-                      std::function<bool (Mat& param, Mat* JtErr,
-                                          Mat* JtJ, double* errnorm)> callb);
+        @param param Input/output vector containing starting param vector and resulting optimized params
+        @param callback Normal callback, produces J^T*J and J^T*b directly instead of J and b, returns true on success
+        @param settings LevMarq settings structure, see LevMarqBase class for details
+        @param mask Indicates what variables are fixed during optimization (zeros) and what vars to optimize (non-zeros)
+        @param matrixType Type of matrix used in the solver; only DENSE and AUTO are supported now
+        @param paramType Type of optimized parameters; only LINEAR is supported now
+        @param LtoR Indicates what part of symmetric matrix to copy to another part: lower or upper. Used only with alt. callback
+        @param solveMethod What method to use for linear system solving
+    */
+    LevMarq(InputOutputArray param, NormalCallback callback, const Settings& settings = Settings(), InputArray mask = noArray(),
+            MatrixType matrixType = MatrixType::AUTO, VariableType paramType = VariableType::LINEAR, bool LtoR = false, int solveMethod = DECOMP_SVD);
+
+    /**
+        Runs Levenberg-Marquadt algorithm using current settings and given parameters vector.
+        The method returns the optimization report.
+    */
+    Report optimize();
+
+    /** @brief Runs optimization using the passed vector of parameters as the start point.
+
+        The final vector of parameters (whether the algorithm converged or not) is stored at the same
+        vector.
+        This method can be used instead of the optimize() method if rerun with different start points is required.
+        The method returns the optimization report.
+
+        @param param initial/final vector of parameters.
+
+        Note that the dimensionality of parameter space is defined by the size of param vector,
+        and the dimensionality of optimized criteria is defined by the size of err vector
+        computed by the callback.
+    */
+    Report run(InputOutputArray param);
+
+private:
+    class Impl;
+    Ptr<Impl> pImpl;
 };
+
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
 An example program about pose estimation from coplanar points

@@ -761,119 +761,6 @@ public:
     }
 };
 
-class Affine2DRefineCallback : public LMSolver::Callback
-{
-public:
-    Affine2DRefineCallback(InputArray _src, InputArray _dst)
-    {
-        src = _src.getMat();
-        dst = _dst.getMat();
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-        int i, count = src.checkVector(2);
-        Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
-        Mat err = _err.getMat(), J;
-        if( _Jac.needed())
-        {
-            _Jac.create(count*2, param.rows, CV_64F);
-            J = _Jac.getMat();
-            CV_Assert( J.isContinuous() && J.cols == 6 );
-        }
-
-        const Point2f* M = src.ptr<Point2f>();
-        const Point2f* m = dst.ptr<Point2f>();
-        const double* h = param.ptr<double>();
-        double* errptr = err.ptr<double>();
-        double* Jptr = J.data ? J.ptr<double>() : 0;
-
-        for( i = 0; i < count; i++ )
-        {
-            double Mx = M[i].x, My = M[i].y;
-            double xi = h[0]*Mx + h[1]*My + h[2];
-            double yi = h[3]*Mx + h[4]*My + h[5];
-            errptr[i*2] = xi - m[i].x;
-            errptr[i*2+1] = yi - m[i].y;
-
-            /*
-            Jacobian should be:
-                {x, y, 1, 0, 0, 0}
-                {0, 0, 0, x, y, 1}
-            */
-            if( Jptr )
-            {
-                Jptr[0] = Mx; Jptr[1] = My; Jptr[2] = 1.;
-                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
-                Jptr[6] = Jptr[7] = Jptr[8] = 0.;
-                Jptr[9] = Mx; Jptr[10] = My; Jptr[11] = 1.;
-
-                Jptr += 6*2;
-            }
-        }
-
-        return true;
-    }
-
-    Mat src, dst;
-};
-
-class AffinePartial2DRefineCallback : public LMSolver::Callback
-{
-public:
-    AffinePartial2DRefineCallback(InputArray _src, InputArray _dst)
-    {
-        src = _src.getMat();
-        dst = _dst.getMat();
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-        int i, count = src.checkVector(2);
-        Mat param = _param.getMat();
-        _err.create(count*2, 1, CV_64F);
-        Mat err = _err.getMat(), J;
-        if( _Jac.needed())
-        {
-            _Jac.create(count*2, param.rows, CV_64F);
-            J = _Jac.getMat();
-            CV_Assert( J.isContinuous() && J.cols == 4 );
-        }
-
-        const Point2f* M = src.ptr<Point2f>();
-        const Point2f* m = dst.ptr<Point2f>();
-        const double* h = param.ptr<double>();
-        double* errptr = err.ptr<double>();
-        double* Jptr = J.data ? J.ptr<double>() : 0;
-
-        for( i = 0; i < count; i++ )
-        {
-            double Mx = M[i].x, My = M[i].y;
-            double xi = h[0]*Mx - h[1]*My + h[2];
-            double yi = h[1]*Mx + h[0]*My + h[3];
-            errptr[i*2] = xi - m[i].x;
-            errptr[i*2+1] = yi - m[i].y;
-
-            /*
-            Jacobian should be:
-                {x, -y, 1, 0}
-                {y,  x, 0, 1}
-            */
-            if( Jptr )
-            {
-                Jptr[0] = Mx; Jptr[1] = -My; Jptr[2] = 1.; Jptr[3] = 0.;
-                Jptr[4] = My; Jptr[5] =  Mx; Jptr[6] = 0.; Jptr[7] = 1.;
-
-                Jptr += 4*2;
-            }
-        }
-
-        return true;
-    }
-
-    Mat src, dst;
-};
 
 int estimateAffine3D(InputArray _from, InputArray _to,
                      OutputArray _out, OutputArray _inliers,
@@ -1065,7 +952,57 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
             Mat src = from.rowRange(0, inliers_count);
             Mat dst = to.rowRange(0, inliers_count);
             Mat Hvec = H.reshape(1, 6);
-            LMSolver::create(makePtr<Affine2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+
+            auto affine2DRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+            {
+                int i, errCount = src.checkVector(2);
+                Mat param = _param.getMat();
+                _err.create(errCount * 2, 1, CV_64F);
+                Mat err = _err.getMat(), J;
+                if (_Jac.needed())
+                {
+                    _Jac.create(errCount * 2, param.rows, CV_64F);
+                    J = _Jac.getMat();
+                    CV_Assert(J.isContinuous() && J.cols == 6);
+                }
+
+                const Point2f* M = src.ptr<Point2f>();
+                const Point2f* m = dst.ptr<Point2f>();
+                const double* h = param.ptr<double>();
+                double* errptr = err.ptr<double>();
+                double* Jptr = J.data ? J.ptr<double>() : 0;
+
+                for (i = 0; i < errCount; i++)
+                {
+                    double Mx = M[i].x, My = M[i].y;
+                    double xi = h[0] * Mx + h[1] * My + h[2];
+                    double yi = h[3] * Mx + h[4] * My + h[5];
+                    errptr[i * 2] = xi - m[i].x;
+                    errptr[i * 2 + 1] = yi - m[i].y;
+
+                    /*
+                    Jacobian should be:
+                        {x, y, 1, 0, 0, 0}
+                        {0, 0, 0, x, y, 1}
+                    */
+                    if (Jptr)
+                    {
+                        Jptr[0] = Mx; Jptr[1] = My; Jptr[2] = 1.;
+                        Jptr[3] = Jptr[4] = Jptr[5] = 0.;
+                        Jptr[6] = Jptr[7] = Jptr[8] = 0.;
+                        Jptr[9] = Mx; Jptr[10] = My; Jptr[11] = 1.;
+
+                        Jptr += 6 * 2;
+                    }
+                }
+
+                return true;
+            };
+            LevMarq solver(Hvec, affine2DRefineCallback,
+                           LevMarq::Settings()
+                           .setMaxIterations((unsigned int)refineIters)
+                           .setGeodesic(true));
+            solver.optimize();
         }
     }
 
@@ -1158,7 +1095,56 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
             double *Hptr = H.ptr<double>();
             double Hvec_buf[4] = {Hptr[0], Hptr[3], Hptr[2], Hptr[5]};
             Mat Hvec (4, 1, CV_64F, Hvec_buf);
-            LMSolver::create(makePtr<AffinePartial2DRefineCallback>(src, dst), static_cast<int>(refineIters))->run(Hvec);
+
+            auto affinePartial2dRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+            {
+                int i, errCount = src.checkVector(2);
+                Mat param = _param.getMat();
+                _err.create(errCount * 2, 1, CV_64F);
+                Mat err = _err.getMat(), J;
+                if (_Jac.needed())
+                {
+                    _Jac.create(errCount * 2, param.rows, CV_64F);
+                    J = _Jac.getMat();
+                    CV_Assert(J.isContinuous() && J.cols == 4);
+                }
+
+                const Point2f* M = src.ptr<Point2f>();
+                const Point2f* m = dst.ptr<Point2f>();
+                const double* h = param.ptr<double>();
+                double* errptr = err.ptr<double>();
+                double* Jptr = J.data ? J.ptr<double>() : 0;
+
+                for (i = 0; i < errCount; i++)
+                {
+                    double Mx = M[i].x, My = M[i].y;
+                    double xi = h[0] * Mx - h[1] * My + h[2];
+                    double yi = h[1] * Mx + h[0] * My + h[3];
+                    errptr[i * 2] = xi - m[i].x;
+                    errptr[i * 2 + 1] = yi - m[i].y;
+
+                    /*
+                    Jacobian should be:
+                        {x, -y, 1, 0}
+                        {y,  x, 0, 1}
+                    */
+                    if (Jptr)
+                    {
+                        Jptr[0] = Mx; Jptr[1] = -My; Jptr[2] = 1.; Jptr[3] = 0.;
+                        Jptr[4] = My; Jptr[5] = Mx; Jptr[6] = 0.; Jptr[7] = 1.;
+
+                        Jptr += 4 * 2;
+                    }
+                }
+
+                return true;
+            };
+            LevMarq solver(Hvec, affinePartial2dRefineCallback,
+                           LevMarq::Settings()
+                           .setMaxIterations((unsigned int)refineIters)
+                           .setGeodesic(true));
+            solver.optimize();
+
             // update H with refined parameters
             Hptr[0] = Hptr[4] = Hvec_buf[0];
             Hptr[1] = -Hvec_buf[1];

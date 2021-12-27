@@ -1098,50 +1098,6 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
         eulerAngles.convertTo(_eulerAngles, depth);
 }
 
-class SolvePnPCallback CV_FINAL : public LMSolver::Callback
-{
-public:
-    SolvePnPCallback(const Mat& _objpt, const Mat& _imgpt,
-                     const Mat& _cameraMatrix, const Mat& _distCoeffs)
-    {
-        objpt = _objpt;
-        imgpt = _imgpt;
-        cameraMatrix = _cameraMatrix;
-        distCoeffs = _distCoeffs;
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-        Mat param = _param.getMat();
-        CV_Assert((param.cols == 1 || param.rows == 1) && param.total() == 6 && param.type() == CV_64F);
-        double* pdata = param.ptr<double>();
-        Mat rvec(3, 1, CV_64F, pdata);
-        Mat tvec(3, 1, CV_64F, pdata + 3);
-        int count = objpt.rows + objpt.cols - 1;
-        _err.create(count*2, 1, CV_64F);
-        Mat err = _err.getMat();
-        err = err.reshape(2, count);
-        if( _Jac.needed() )
-        {
-            _Jac.create(count*2, 6, CV_64F);
-            Mat Jac = _Jac.getMat();
-            Mat dpdr = Jac.colRange(0, 3);
-            Mat dpdt = Jac.colRange(3, 6);
-            projectPoints( objpt, rvec, tvec, cameraMatrix, distCoeffs,
-                           err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
-        }
-        else
-        {
-            projectPoints( objpt, rvec, tvec, cameraMatrix, distCoeffs, err);
-        }
-        err = err - imgpt;
-        err = err.reshape(1, 2*count);
-        return true;
-    }
-
-    Mat objpt, imgpt, cameraMatrix, distCoeffs;
-};
-
 
 void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
                   const Mat& imagePoints, const Mat& A,
@@ -1316,9 +1272,42 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     _mn = _mn.reshape(2, 1);
 
     // refine extrinsic parameters using iterative algorithm
-    Ptr<LMSolver::Callback> callb = makePtr<SolvePnPCallback>(matM, _m, matA, distCoeffs);
-    Ptr<LMSolver> solver = LMSolver::create(callb, max_iter, (double)FLT_EPSILON);
-    solver->run(_param);
+    auto callback = [matM, _m, matA, distCoeffs]
+        (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
+    {
+        const Mat& objpt = matM;
+        const Mat& imgpt = _m;
+        const Mat& cameraMatrix = matA;
+        Mat x = param_.getMat();
+        CV_Assert((x.cols == 1 || x.rows == 1) && x.total() == 6 && x.type() == CV_64F);
+        double* pdata = x.ptr<double>();
+        Mat rv(3, 1, CV_64F, pdata);
+        Mat tv(3, 1, CV_64F, pdata + 3);
+        int errCount = objpt.rows + objpt.cols - 1;
+        _err.create(errCount * 2, 1, CV_64F);
+        Mat err = _err.getMat();
+        err = err.reshape(2, errCount);
+        if (_Jac.needed())
+        {
+            _Jac.create(errCount * 2, 6, CV_64F);
+            Mat Jac = _Jac.getMat();
+            Mat dpdr = Jac.colRange(0, 3);
+            Mat dpdt = Jac.colRange(3, 6);
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs,
+                err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
+        }
+        else
+        {
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs, err);
+        }
+        err = err - imgpt;
+        err = err.reshape(1, 2 * errCount);
+        return true;
+    };
+
+    LevMarq solver(_param, callback, LevMarq::Settings().setMaxIterations((unsigned int)max_iter).setGeodesic(true));
+    solver.optimize();
+
     _param.rowRange(0, 3).copyTo(rvec);
     _param.rowRange(3, 6).copyTo(tvec);
 }
