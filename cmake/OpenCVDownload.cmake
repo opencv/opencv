@@ -62,6 +62,8 @@ macro(ocv_download_set_url_and_md5sum pkg_url pkg_owner pkg_name pkg_md5sum new_
       list(INSERT pkg_url 2 ${pkg_name})
       list(JOIN pkg_url "/" pkg_url)
       set(pkg_md5sum ${new_md5sum})
+    endif()
+  endif()
 endmacro()
 
 function(ocv_init_download)
