@@ -6,7 +6,7 @@
 
 #include "../test_precomp.hpp"
 
-#ifdef WITH_OAK_BACKEND
+#ifdef HAVE_OAK
 
 #include <opencv2/gapi/oak/oak.hpp>
 
@@ -23,4 +23,4 @@ TEST(OAK, Available)
 }
 } // opencv_test
 
-#endif // WITH_OAK_BACKEND
+#endif // HAVE_OAK

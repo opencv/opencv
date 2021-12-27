@@ -33,7 +33,7 @@ GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& cfg) {
     return GEncFrame::on(in, cfg);
 }
 
-GFrame sobelXY(const GFrame& in, const SobelFilter& hk, const SobelFilter& vk) {
+GFrame sobelXY(const GFrame& in, const cv::Mat& hk, const cv::Mat& vk) {
     return GSobelXY::on(in, hk, vk);
 }
 

@@ -13,7 +13,7 @@ const std::string keys =
     "{ h help  |              | Print this help message }"
     "{ output  | output.h265  | Path to the output .h265 video file }";
 
-#ifdef WITH_OAK_BACKEND
+#ifdef HAVE_OAK
 
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -47,19 +47,22 @@ int main(int argc, char *argv[]) {
     uint32_t frames = 300;
     uint32_t pulled = 0;
 
-    while (pulled++ < frames &&
-           pipeline.pull(cv::gout(out_h265_data))) {
+    while (pipeline.pull(cv::gout(out_h265_data))) {
         if (out_h265_file.is_open()) {
             out_h265_file.write(reinterpret_cast<const char*>(out_h265_data.data()),
                                                               out_h265_data.size());
         }
+        if (pulled++ == frames) {
+            pipeline.stop();
+            break;
+        }
     }
 }
-#else // WITH_OAK_BACKEND
+#else // HAVE_OAK
 
 int main() {
     GAPI_Assert(false && "Built without OAK support");
     return -1;
 }
 
-#endif // WITH_OAK_BACKEND
+#endif // HAVE_OAK

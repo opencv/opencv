@@ -35,10 +35,11 @@ OAKMediaAdapter::Priv::Priv(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, ui
     m_uv_ptr = uv_ptr;
 }
 
-// FIXME: handle strides
+// FIXME: properly handle strides
 MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
     return MediaFrame::View{cv::MediaFrame::View::Ptrs{m_y_ptr, m_uv_ptr},
-                            cv::MediaFrame::View::Strides{}};
+                            cv::MediaFrame::View::Strides{static_cast<long unsigned int>(m_sz.width),
+                                                          static_cast<long unsigned int>(m_sz.height)}};
 }
 
 cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {m_fmt, m_sz}; }

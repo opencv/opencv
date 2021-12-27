@@ -83,10 +83,8 @@ G_API_OP(GEncFrame, <GArray<uint8_t>(GFrame, EncoderConfig)>, "org.opencv.oak.en
     }
 };
 
-using SobelFilter = std::vector<std::vector<int>>;
-
-G_API_OP(GSobelXY, <GFrame(GFrame, const SobelFilter&, const SobelFilter&)>, "org.opencv.oak.sobelxy") {
-    static GFrameDesc outMeta(const GFrameDesc& in, const SobelFilter&, const SobelFilter&) {
+G_API_OP(GSobelXY, <GFrame(GFrame, const cv::Mat&, const cv::Mat&)>, "org.opencv.oak.sobelxy") {
+    static GFrameDesc outMeta(const GFrameDesc& in, const cv::Mat&, const cv::Mat&) {
         return in;
     }
 };
@@ -94,8 +92,8 @@ G_API_OP(GSobelXY, <GFrame(GFrame, const SobelFilter&, const SobelFilter&)>, "or
 GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig&);
 
 GAPI_EXPORTS GFrame sobelXY(const GFrame& in,
-                            const SobelFilter& hk = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}},
-                            const SobelFilter& vk = {{1, 2, 1}, {0, 0, 0}, {-1, -2, -1}});
+                            const cv::Mat& hk,
+                            const cv::Mat& vk);
 
 // OAK backend & kernels ////////////////////////////////////////////////////////
 GAPI_EXPORTS cv::gapi::GBackend backend();

@@ -13,7 +13,7 @@ const std::string keys =
     "{ h help  |              | Print this help message }"
     "{ output  | output.png   | Path to the output file }";
 
-#ifdef WITH_OAK_BACKEND
+#ifdef HAVE_OAK
 
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -24,17 +24,24 @@ int main(int argc, char *argv[]) {
 
     const std::string output_name = cmd.get<std::string>("output");
 
+    std::vector<int> h = {1, 0, -1,
+                          2, 0, -2,
+                          1, 0, -1};
+    std::vector<int> v = { 1,  2,  1,
+                           0,  0,  0,
+                          -1, -2, -1};
+    cv::Mat hk(3, 3, CV_32SC1, h.data());
+    cv::Mat vk(3, 3, CV_32SC1, v.data());
+
     // Heterogeneous pipeline:
     // OAK camera -> Sobel -> streaming accessor (CPU)
     cv::GFrame in;
-    cv::GFrame sobel = cv::gapi::oak::sobelXY(in);
+    cv::GFrame sobel = cv::gapi::oak::sobelXY(in, hk, vk);
     // Default camera and then sobel work only with nv12 format
     cv::GMat out = cv::gapi::streaming::Y(sobel);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
-                                 cv::gapi::combine(cv::gapi::oak::kernels(),
-                                                   cv::gapi::streaming::kernels(),
-                                                   cv::gapi::core::cpu::kernels()));
+                                 cv::gapi::oak::kernels());
 
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out)).compileStreaming(std::move(args));
 
@@ -50,11 +57,11 @@ int main(int argc, char *argv[]) {
     cv::imwrite(output_name, out_mat);
 }
 
-#else // WITH_OAK_BACKEND
+#else // HAVE_OAK
 
 int main() {
     GAPI_Assert(false && "Built without OAK support");
     return -1;
 }
 
-#endif // WITH_OAK_BACKEND
+#endif // HAVE_OAK
