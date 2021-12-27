@@ -783,7 +783,7 @@
       <cols>1</cols>
       <dt>f</dt>
       <data>
-        5.80576859e+01 -3.08669995e+03 -1.40865369e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---91--SOLVEPNP_ITERATIVE->
+        58.0672525 -3086.692925 -1408.65345</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---91--SOLVEPNP_ITERATIVE->
 <PointsNum_Algo_solvePnP--solvePnP---91--SOLVEPNP_EPNP->
   <rvec>
     <kind>65536</kind>
