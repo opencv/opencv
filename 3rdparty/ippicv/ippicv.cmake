@@ -33,14 +33,7 @@ function(download_ippicv root_var)
     return()
   endif()
 
-  # if(NOT OPENCV_IPPICV_URL)
-  #   if(OPENCV_MIRROR_FOR_GITHUBUSERCONTENT)
-  #     set(OPENCV_IPPICV_URL ${OPENCV_MIRROR_FOR_GITHUBUSERCONTENT})
-  #     list(APPEND OPENCV_IPPICV_URL "${IPPICV_COMMIT}/ippicv/")
-  #     list(JOIN OPENCV_IPPICV_URL "/" OPENCV_IPPICV_URL)
-  #   endif()
-  # endif()
-  ocv_download_set_url(${OPENCV_IPPICV_URL} "${IPPICV_COMMIT}/ippicv/")
+  ocv_download_set_url(OPENCV_IPPICV_URL "${IPPICV_COMMIT}/ippicv/")
 
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/ippicv")
   ocv_download(FILENAME ${OPENCV_ICV_NAME}
