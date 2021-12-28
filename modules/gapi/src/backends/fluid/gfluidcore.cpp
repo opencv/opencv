@@ -2787,7 +2787,7 @@ struct LinearScratchDesc {
                     outW * sizeof(index_t)     +
                     outH * sizeof(alpha_t)     +
                     outH * sizeof(index_t) * 2 +
-                     inW * sizeof(T) * lpi * chanNum;
+                    (inW + 1) * sizeof(T) * lpi * chanNum;
 
         return static_cast<int>(size);
     }
@@ -2952,7 +2952,6 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         dst[l] = out.OutLine<T>(l);
     }
 
-#if 0 // Disabling SSE4.1 path due to Valgrind issues: https://github.com/opencv/opencv/issues/21097
 #if CV_SSE4_1
     const auto* clone = scr.clone;
     auto* tmp = scr.tmp;
@@ -2971,7 +2970,6 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
 
         return;
     }
-#endif // CV_SSE4_1
 #endif
     int length = out.length();
     for (int l = 0; l < lpi; l++) {
