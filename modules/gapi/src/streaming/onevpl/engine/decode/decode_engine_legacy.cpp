@@ -296,8 +296,9 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
+    VPLAccelerationPolicy::FrameConstructorArgs args{ready_surface, sess.session};
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
-                                                                   ready_surface);
+                                                                   args);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object

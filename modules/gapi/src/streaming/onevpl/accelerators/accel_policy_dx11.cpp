@@ -157,12 +157,21 @@ size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
     GAPI_Assert(false && "get_free_surface_count() is not implemented");
 }
 
-size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy::get_surface_count() is not implemented");
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
+    auto pool_it = pool_table.find(key);
+    if (pool_it == pool_table.end()) {
+        std::stringstream ss;
+        ss << "key is not found: " << key << ", table size: " << pool_table.size();
+        const std::string& str = ss.str();
+        GAPI_LOG_WARNING(nullptr, str);
+        throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
+    }
+    return pool_it->second.total_size();
 }
 
-cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
-                                                                           mfxFrameSurface1* surface) {
+cv::MediaFrame::AdapterPtr
+VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
+                                                const FrameConstructorArgs &params) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -173,7 +182,8 @@ cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_
     }
 
     pool_t& requested_pool = pool_it->second;
-    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(surface))};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(params.assoc_surface),
+                                                                   params.assoc_handle)};
 }
 
 mfxStatus VPLDX11AccelerationPolicy::alloc_cb(mfxHDL pthis, mfxFrameAllocRequest *request,

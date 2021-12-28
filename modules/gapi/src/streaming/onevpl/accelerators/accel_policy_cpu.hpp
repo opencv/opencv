@@ -38,7 +38,7 @@ struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolic
     size_t get_surface_count(pool_key_t key) const override;
 
     cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
-                                                    mfxFrameSurface1* surface) override;
+                                                    const FrameConstructorArgs& args) override;
 
 private:
     std::map<pool_key_t, pool_t> pool_table;

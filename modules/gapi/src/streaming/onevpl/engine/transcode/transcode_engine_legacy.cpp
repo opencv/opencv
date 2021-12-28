@@ -187,6 +187,12 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                         my_sess.sync_queue.pop();
                         auto *dec_surface = pending_op.second;
                         auto *vpp_suface = my_sess.vpp_surface_ptr.lock()->get_handle();
+                        static int x_offset = 0;
+                        static int y_offset = 0;
+                        dec_surface->Info.CropX = x_offset;
+                        dec_surface->Info.CropY = y_offset;
+                        dec_surface->Info.CropW = 100 + x_offset++;
+                        dec_surface->Info.CropH = 100 + y_offset++;
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,
@@ -463,8 +469,10 @@ void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
 
     // manage memory ownership rely on acceleration policy
     ready_surface->Data.Locked--;  // TODO -S- workaround
+
+    VPLAccelerationPolicy::FrameConstructorArgs args{ready_surface, sess.session};
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.vpp_out_pool_id,
-                                                                   ready_surface);
+                                                                   args);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object

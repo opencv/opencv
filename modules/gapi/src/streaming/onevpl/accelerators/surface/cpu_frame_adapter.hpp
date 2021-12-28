@@ -6,10 +6,8 @@
 
 #ifndef GAPI_STREAMING_ONEVPL_ACCELERATORS_SURFACE_CPU_FRAME_ADAPTER_HPP
 #define GAPI_STREAMING_ONEVPL_ACCELERATORS_SURFACE_CPU_FRAME_ADAPTER_HPP
-#include <memory>
 
-#include <opencv2/gapi/media.hpp>
-#include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
+#include "streaming/onevpl/accelerators/surface/base_frame_adapter.hpp"
 
 #ifdef HAVE_ONEVPL
 
@@ -18,22 +16,20 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-class Surface;
-class VPLMediaFrameCPUAdapter : public cv::MediaFrame::IAdapter {
+class VPLMediaFrameCPUAdapter : public BaseFrameAdapter {
 public:
     // GAPI_EXPORTS for tests
-    GAPI_EXPORTS explicit VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> assoc_surface);
+    GAPI_EXPORTS explicit VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> assoc_surface,
+                                                  SessionHandle assoc_handle);
     GAPI_EXPORTS ~VPLMediaFrameCPUAdapter();
-    cv::GFrameDesc meta() const override;
+
     MediaFrame::View access(MediaFrame::Access) override;
 
     // The default implementation does nothing
     cv::util::any blobParams() const override;
     void serialize(cv::gapi::s11n::IOStream&) override;
     void deserialize(cv::gapi::s11n::IIStream&) override;
-private:
-    std::shared_ptr<Surface> parent_surface_ptr;
-    GFrameDesc frame_desc;
+
 };
 } // namespace onevpl
 } // namespace wip
