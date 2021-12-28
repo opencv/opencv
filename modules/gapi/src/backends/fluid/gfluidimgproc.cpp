@@ -1825,7 +1825,7 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
 } // namespace gapi
 } // namespace cv
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::fluid::kernels()
+cv::GKernelPackage cv::gapi::imgproc::fluid::kernels()
 {
     using namespace cv::gapi::fluid;
 

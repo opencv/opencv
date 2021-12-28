@@ -11,7 +11,7 @@
 #include <opencv2/gapi/python/python.hpp>
 
 // NB: Python wrapper replaces :: with _ for classes
-using gapi_GKernelPackage           = cv::gapi::GKernelPackage;
+using gapi_GKernelPackage           = cv::GKernelPackage;
 using gapi_GNetPackage              = cv::gapi::GNetPackage;
 using gapi_ie_PyParams              = cv::gapi::ie::PyParams;
 using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
@@ -829,7 +829,7 @@ static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
 static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObject*)
 {
     using namespace cv;
-    gapi::GKernelPackage pkg;
+    GKernelPackage pkg;
     Py_ssize_t size = PyTuple_Size(py_args);
 
     for (int i = 0; i < size; ++i)

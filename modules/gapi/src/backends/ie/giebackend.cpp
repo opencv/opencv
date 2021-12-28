@@ -1456,7 +1456,7 @@ namespace {
             return EPtr{new cv::gimpl::ie::GIEExecutable(graph, nodes)};
         }
 
-        virtual cv::gapi::GKernelPackage auxiliaryKernels() const override {
+        virtual cv::GKernelPackage auxiliaryKernels() const override {
             return cv::gapi::kernels< cv::gimpl::ie::Infer
                                     , cv::gimpl::ie::InferROI
                                     , cv::gimpl::ie::InferList

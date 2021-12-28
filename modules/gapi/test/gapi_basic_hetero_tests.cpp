@@ -153,9 +153,9 @@ namespace
 struct GAPIHeteroTest: public ::testing::Test
 {
     cv::GComputation m_comp;
-    cv::gapi::GKernelPackage m_ocv_kernels;
-    cv::gapi::GKernelPackage m_fluid_kernels;
-    cv::gapi::GKernelPackage m_hetero_kernels;
+    cv::GKernelPackage m_ocv_kernels;
+    cv::GKernelPackage m_fluid_kernels;
+    cv::GKernelPackage m_hetero_kernels;
 
     cv::Mat m_in_mat;
     cv::Mat m_out_mat;
@@ -210,7 +210,7 @@ TEST_F(GAPIHeteroTest, TestBoth)
 struct GAPIBigHeteroTest : public ::testing::TestWithParam<std::array<int, 9>>
 {
     cv::GComputation m_comp;
-    cv::gapi::GKernelPackage m_kernels;
+    cv::GKernelPackage m_kernels;
 
     cv::Mat m_in_mat;
     cv::Mat m_out_mat1;

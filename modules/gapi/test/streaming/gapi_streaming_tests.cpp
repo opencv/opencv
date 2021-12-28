@@ -67,7 +67,7 @@ struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
         return cap;
     }
 
-    cv::gapi::GKernelPackage getKernelPackage(KernelPackage pkg_kind)
+    cv::GKernelPackage getKernelPackage(KernelPackage pkg_kind)
     {
         using namespace cv::gapi;
         switch (pkg_kind)
@@ -111,7 +111,7 @@ struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
         return args;
     }
 
-    cv::gapi::GKernelPackage pkg;
+    cv::GKernelPackage       pkg;
     cv::optional<size_t>     cap;
 };
 
@@ -1062,7 +1062,7 @@ struct GAPI_Streaming_TemplateTypes: ::testing::Test {
     cv::GMat blur;
     cv::GArray<int> vec;
     cv::GOpaque<int> opq;
-    cv::gapi::GKernelPackage pkg;
+    cv::GKernelPackage pkg;
     cv::Mat in_mat;
 };
 

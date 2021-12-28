@@ -174,7 +174,7 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoCo
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
+cv::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GCPUBuildOptFlowPyramid
@@ -189,7 +189,7 @@ cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
 
 #else
 
-cv::gapi::GKernelPackage cv::gapi::video::cpu::kernels()
+cv::GKernelPackage cv::gapi::video::cpu::kernels()
 {
     return GKernelPackage();
 }
