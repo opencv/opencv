@@ -356,6 +356,7 @@ void allocateVolumeUnits(
     } while (needReallocation);
 }
 
+#ifdef HAVE_OPENCL
 
 void markActive(
     const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId,
@@ -399,7 +400,6 @@ void markActive(
 }
 
 
-#ifdef HAVE_OPENCL
 void ocl_integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
