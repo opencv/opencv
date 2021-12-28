@@ -333,6 +333,7 @@ void integrateTsdfVolumeUnit(
     //IntegrateInvoker(integrateRange);
 }
 
+#ifdef HAVE_OPENCL
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
@@ -402,7 +403,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
         throw std::runtime_error("Failed to run kernel");
 
 }
-
+#endif
 
 
 // Raycast
@@ -926,6 +927,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 }
 
 
+#ifdef HAVE_OPENCL
 void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals)
 {
@@ -1022,7 +1024,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     if (!k.run(2, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
 }
-
+#endif
 
 // Fetch
 
@@ -1082,6 +1084,7 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
     points.forEach(PushNormals);
 }
 
+#ifdef HAVE_OPENCL
 void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
     //std::cout << "ocl_fetchNormalsFromTsdfVolumeUnit" << std::endl;
@@ -1158,7 +1161,7 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
         throw std::runtime_error("Failed to run kernel");
 
 }
-
+#endif
 
 inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<ptype>& points, std::vector<ptype>& normals,
     const Point3i volResolution, const Vec4i volDims, const Vec8i neighbourCoords, const Affine3f pose,
@@ -1312,6 +1315,8 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
 
 }
 
+
+#ifdef HAVE_OPENCL
 void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray points, OutputArray normals)
 {
     //std::cout << "ocl_fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
@@ -1461,7 +1466,7 @@ void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, In
             throw std::runtime_error("Failed to run kernel");
     }
 }
-
+#endif
 
 
 
