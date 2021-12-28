@@ -40,14 +40,11 @@ public:
     };
     typedef std::map<int, PoseConstraint> Constraints;
 
-    Submap(int _id, const VolumeParams& volumeParams, const cv::Affine3f& _pose = cv::Affine3f::Identity(),
+    Submap(int _id, const VolumeSettings& settings, const cv::Affine3f& _pose = cv::Affine3f::Identity(),
            int _startFrameId = 0)
         : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId)
     {
-        VolumeParams vp = volumeParams;
-        vp.kind = VolumeParams::VolumeKind::HASHTSDF;
-        Ptr<VolumeParams> pvp = makePtr<VolumeParams>(vp);
-        volume = makeVolume(pvp);
+        volume = Volume(VolumeType::HashTSDF, settings);
     }
     virtual ~Submap() = default;
 
@@ -55,10 +52,12 @@ public:
     virtual void raycast(const Odometry& icp, const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                          OutputArray points = noArray(), OutputArray normals = noArray());
 
-    virtual int getTotalAllocatedBlocks() const { return int(volume->getTotalVolumeUnits()); };
+    virtual int getTotalAllocatedBlocks() const { return int(volume.getTotalVolumeUnits()); };
     virtual int getVisibleBlocks(int currFrameId) const
     {
-        return volume->getVisibleBlocks(currFrameId, FRAME_VISIBILITY_THRESHOLD);
+        //return volume.getVisibleBlocks(currFrameId, FRAME_VISIBILITY_THRESHOLD);
+        return volume.getVisibleBlocks();
+
     }
 
     float calcVisibilityRatio(int currFrameId) const
@@ -97,7 +96,7 @@ public:
     OdometryFrame frame;
     OdometryFrame renderFrame;
 
-    std::shared_ptr<Volume> volume;
+    Volume volume;
 };
 
 template<typename MatType>
@@ -106,7 +105,7 @@ void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::
                                 const int currFrameId)
 {
     CV_Assert(currFrameId >= startFrameId);
-    volume->integrate(_depth, depthFactor, cameraPose.matrix, intrinsics, currFrameId);
+    volume.integrate(_depth, cameraPose.matrix);
 }
 
 template<typename MatType>
@@ -119,7 +118,7 @@ void Submap<MatType>::raycast(const Odometry& icp, const cv::Affine3f& _cameraPo
 
         frame.getPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
         frame.getPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM, 0);
-        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
+        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.height, pts, nrm);
         frame.setPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
         frame.setPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM,  0);
 
@@ -132,7 +131,7 @@ void Submap<MatType>::raycast(const Odometry& icp, const cv::Affine3f& _cameraPo
     }
     else
     {
-        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
+        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.height, points, normals);
     }
 }
 
@@ -185,7 +184,7 @@ public:
     typedef std::map<int, Ptr<SubmapT>> IdToSubmapPtr;
     typedef std::unordered_map<int, ActiveSubmapData> IdToActiveSubmaps;
 
-    SubmapManager(const VolumeParams& _volumeParams) : volumeParams(_volumeParams) {}
+    SubmapManager(const VolumeSettings& _volumeSettings) : volumeSettings(_volumeSettings) {}
     virtual ~SubmapManager() = default;
 
     void reset() { submapList.clear(); };
@@ -211,7 +210,7 @@ public:
     Ptr<detail::PoseGraph> MapToPoseGraph();
     void PoseGraphToMap(const Ptr<detail::PoseGraph>& updatedPoseGraph);
 
-    VolumeParams volumeParams;
+    VolumeSettings volumeSettings;
 
     std::vector<Ptr<SubmapT>> submapList;
     IdToActiveSubmaps activeSubmaps;
@@ -224,7 +223,7 @@ int SubmapManager<MatType>::createNewSubmap(bool isCurrentMap, int currFrameId, 
 {
     int newId = int(submapList.size());
 
-    Ptr<SubmapT> newSubmap = cv::makePtr<SubmapT>(newId, volumeParams, pose, currFrameId);
+    Ptr<SubmapT> newSubmap = cv::makePtr<SubmapT>(newId, volumeSettings, pose, currFrameId);
     submapList.push_back(newSubmap);
 
     ActiveSubmapData newSubmapData;

@@ -399,7 +399,7 @@ void markActive(
 }
 
 
-
+#ifdef HAVE_OPENCL
 void ocl_integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
@@ -530,8 +530,7 @@ void ocl_integrateHashTsdfVolumeUnit(
 
     //std::cout << "ocl_integrateHashTsdfVolumeUnit() end" << std::endl;
 }
-
-
+#endif
 
 inline TsdfVoxel _at(Mat& volUnitsData, const cv::Vec3i& volumeIdx, int indx,
     const int volumeUnitResolution, const Vec4i volStrides)
@@ -768,6 +767,7 @@ Point3f getNormalVoxel(
     return nv < 0.0001f ? nan3 : normal / nv;
 }
 
+#ifdef HAVE_OPENCL
 
 Point3f ocl_getNormalVoxel(
     const Point3f& point, const float voxelSizeInv,
@@ -910,7 +910,7 @@ Point3f ocl_getNormalVoxel(
     return nv < 0.0001f ? nan3 : normal / nv;
 }
 
-
+#endif
 
 void raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
@@ -1055,6 +1055,7 @@ void raycastHashTsdfVolumeUnit(
     //std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
 }
 
+#ifdef HAVE_OPENCL
 
 void ocl_raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
@@ -1151,7 +1152,7 @@ void ocl_raycastHashTsdfVolumeUnit(
         throw std::runtime_error("Failed to run kernel");
 
 }
-
+#endif
 
 void fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
@@ -1197,6 +1198,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 
 }
 
+#ifdef HAVE_OPENCL
 void olc_fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals)
@@ -1240,7 +1242,7 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
     points.forEach(HashPushNormals);
 
 }
-
+#endif
 
 
 void fetchPointsNormalsFromHashTsdfVolumeUnit(
@@ -1348,6 +1350,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
 
 }
 
+#ifdef HAVE_OPENCL
 
 inline TsdfVoxel new_at(
     Mat& volUnitsDataCopy, const cv::Vec3i& volumeIdx, int indx,
@@ -1473,6 +1476,6 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     }
 
 }
-
+#endif
 
 } // namespace cv
