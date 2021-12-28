@@ -266,7 +266,7 @@ GAPI_OCL_KERNEL(GOCLRGB2GrayCustom, cv::gapi::imgproc::GRGB2GrayCustom)
 };
 
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::ocl::kernels()
+cv::GKernelPackage cv::gapi::imgproc::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GOCLFilter2D

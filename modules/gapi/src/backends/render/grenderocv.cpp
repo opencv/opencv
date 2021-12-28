@@ -193,7 +193,7 @@ GAPI_OCV_KERNEL_ST(RenderFrameOCVImpl, cv::gapi::wip::draw::GRenderFrame, Render
 };
 
 
-cv::gapi::GKernelPackage cv::gapi::render::ocv::kernels()
+cv::GKernelPackage cv::gapi::render::ocv::kernels()
 {
     const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl, RenderNV12OCVImpl, RenderFrameOCVImpl>();
     return pkg;

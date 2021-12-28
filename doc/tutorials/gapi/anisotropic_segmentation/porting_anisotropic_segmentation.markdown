@@ -295,7 +295,7 @@ and specify it to G-API:
 
 In G-API, kernels (or operation implementations) are objects. Kernels are
 organized into collections, or _kernel packages_, represented by class
-cv::gapi::GKernelPackage. The main purpose of a kernel package is to
+cv::GKernelPackage. The main purpose of a kernel package is to
 capture which kernels we would like to use in our graph, and pass it
 as a _graph compilation option_:
 
