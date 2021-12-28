@@ -2352,7 +2352,7 @@ class OpenCLSVMBufferPoolImpl;
 
 struct Context::Impl
 {
-    static Context::Impl* get(Context& context) { return context.p; }
+    static Context::Impl* get(Context& context) { return context.getImpl(); }
 
     typedef std::deque<Context::Impl*> container_t;
     static container_t& getGlobalContainer()
@@ -3084,7 +3084,7 @@ namespace svm {
 
 const SVMCapabilities getSVMCapabilitites(const ocl::Context& context)
 {
-    Context::Impl* i = context.p;
+    Context::Impl* i = context.getImpl();
     CV_Assert(i);
     if (!i->svmInitialized)
         i->svmInit();
@@ -3093,7 +3093,7 @@ const SVMCapabilities getSVMCapabilitites(const ocl::Context& context)
 
 CV_EXPORTS const SVMFunctions* getSVMFunctions(const ocl::Context& context)
 {
-    Context::Impl* i = context.p;
+    Context::Impl* i = context.getImpl();
     CV_Assert(i);
     CV_Assert(i->svmInitialized); // getSVMCapabilitites() must be called first
     CV_Assert(i->svmFunctions.fn_clSVMAlloc != NULL);

@@ -155,17 +155,4 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     }
 }
 
-
-CV_IMPL void
-cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* _corners,
-                   int count, CvSize win, CvSize zeroZone,
-                   CvTermCriteria criteria )
-{
-    if(!_corners || count <= 0)
-        return;
-
-    cv::Mat src = cv::cvarrToMat(srcarr), corners(count, 1, CV_32FC2, _corners);
-    cv::cornerSubPix(src, corners, win, zeroZone, criteria);
-}
-
 /* End of file. */
