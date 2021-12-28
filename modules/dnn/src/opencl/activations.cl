@@ -278,7 +278,7 @@ __kernel void CeluForward(const int n, __global T* in, __global T* out,
 {
     int index = get_global_id(0);
     if(index < n)
-        out[index] = max(0.f, in[index]) + min(0.f, alpha * expm1(in[index] / alpha));
+        out[index] = max((T)0.f, in[index]) + (T)min(0.f, alpha * expm1(in[index] / alpha));
 }
 
 __kernel void HardSigmoidForward(const int n, __global T* in, __global T* out,
@@ -287,7 +287,7 @@ __kernel void HardSigmoidForward(const int n, __global T* in, __global T* out,
 {
     int index = get_global_id(0);
     if(index < n)
-        out[index] = max(0.f, min(1.f, alpha * in[index] + beta));
+        out[index] = max((T)0.f, (T)min(1.f, alpha * in[index] + beta));
 }
 
 __kernel void SeluForward(const int n, __global T* in, __global T* out,
