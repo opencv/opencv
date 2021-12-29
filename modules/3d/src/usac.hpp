@@ -18,9 +18,7 @@ public:
     virtual int getMaxIterationsBeforeLO () const = 0;
     virtual int getMaxNumHypothesisToTestBeforeRejection() const = 0;
     virtual int getRandomGeneratorState () const = 0;
-    //! The number of threads to be used.
-    //! (0 sets the value automatically, a negative number turns parallelization off)
-    virtual int getNumberOfThreads() const = 0;
+    virtual bool isParallel() const = 0;
 
     virtual NeighborSearchMethod getNeighborsSearchMethod () const = 0;
     virtual SamplingMethod getSamplingMethod () const = 0;
@@ -37,7 +35,7 @@ public:
     virtual void setMaxIterationsBeforeLo(int max_iterations_before_lo_) = 0;
     virtual void setMaxNumHypothesisToTestBeforeRejection(int max_num_hypothesis_to_test_before_rejection_) = 0;
     virtual void setRandomGeneratorState(int random_generator_state_) = 0;
-    virtual void setNumberOfThreads(int number_of_threads_) = 0;
+    virtual void setParallel(bool is_parallel) = 0;
     virtual void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) = 0;
     virtual void setSamplingMethod(SamplingMethod sampling_method_) = 0;
     virtual void setScoreMethod(ScoreMethod score_method_) = 0;

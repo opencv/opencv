@@ -133,7 +133,7 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     usacConfig->setMaxNumHypothesisToTestBeforeRejection(
             _max_num_hypothesis_to_test_before_rejection);
     usacConfig->setRandomGeneratorState(state);
-    usacConfig->setNumberOfThreads(number_of_threads);
+    usacConfig->setParallel(is_parallel);
     usacConfig->setNeighborsSearchMethod(_neighbors_search_method);
     usacConfig->setSamplingMethod(_sampling_method);
     usacConfig->setScoreMethod(_score_method);

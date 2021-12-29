@@ -134,18 +134,12 @@ public:
     //! Get the expected number of models.
     virtual int getNumberOfModelsExpected() const = 0;
 
-    /**
-     * @brief Set the number of threads to be used.
-     *
-     * @param number_of_threads_ The number of threads to be used.
-     * (0 sets the value automatically, a negative number turns parallelization off)
-     *
-     * @note Not all SAC methods have a parallel implementation. Some will ignore this setting.
-     */
-    virtual void setNumberOfThreads(int number_of_threads_) = 0;
+    //! Set whether to use parallelism or not.
+    //! The number of threads is set by cv::setNumThreads(int nthreads).
+    virtual void setParallel(bool is_parallel) = 0;
 
-    // Get the number of threads to be used.
-    virtual int getNumberOfThreads() const = 0;
+    //! Get whether to use parallelism or not.
+    virtual bool isParallel() const = 0;
 
     //! Set state used to initialize the RNG(Random Number Generator).
     virtual void setRandomGeneratorState(uint64 rng_state_) = 0;

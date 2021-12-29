@@ -37,8 +37,7 @@ private:
     //! Expected number of models.
     int number_of_models_expected;
 
-    //! The number of threads the scheduler should use, or a negative number if no parallelization is wanted.
-    int number_of_threads;
+    bool is_parallel;
 
     //! 64-bit value used to initialize the RNG(Random Number Generator).
     uint64 rng_state;
@@ -63,7 +62,7 @@ public:
             : sac_model_type(sac_model_type_), sac_method(sac_method_), threshold(threshold_),
               radius_min(DBL_MIN), radius_max(DBL_MAX),
               max_iterations(max_iterations_), confidence(0.999), number_of_models_expected(1),
-              number_of_threads(-1), rng_state(0),
+              is_parallel(false), rng_state(0),
               custom_model_constraints()
     {
     }
@@ -118,11 +117,9 @@ public:
     int getNumberOfModelsExpected() const override
     { return number_of_models_expected; }
 
-    void setNumberOfThreads(int number_of_threads_) override
-    { number_of_threads = number_of_threads_; }
+    void setParallel(bool is_parallel_) override { is_parallel = is_parallel_; }
 
-    int getNumberOfThreads() const override
-    { return number_of_threads; }
+    bool isParallel() const override { return is_parallel; }
 
     void setRandomGeneratorState(uint64 rng_state_) override
     { rng_state = rng_state_; }

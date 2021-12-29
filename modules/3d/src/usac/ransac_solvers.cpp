@@ -88,7 +88,7 @@ class SimpleUsacConfigImpl : public SimpleUsacConfig {
 public:
     SimpleUsacConfigImpl() : max_iterations(2500), max_iterations_before_lo(100),
                              max_num_hypothesis_to_test_before_rejection(15),
-                             random_generator_state(0), number_of_threads(-1),
+                             random_generator_state(0), is_parallel(false),
                              neighbors_search_method(NeighborSearchMethod::NEIGH_GRID),
                              sampling_method(SamplingMethod::SAMPLING_UNIFORM),
                              score_method(ScoreMethod::SCORE_METHOD_RANSAC),
@@ -98,7 +98,7 @@ public:
     int getMaxIterationsBeforeLO() const override { return max_iterations_before_lo; }
     int getMaxNumHypothesisToTestBeforeRejection() const override { return max_num_hypothesis_to_test_before_rejection; }
     int getRandomGeneratorState() const override { return random_generator_state; }
-    int getNumberOfThreads() const override { return number_of_threads; }
+    bool isParallel () const override { return is_parallel; }
     NeighborSearchMethod getNeighborsSearchMethod() const override { return neighbors_search_method; }
     SamplingMethod getSamplingMethod() const override { return sampling_method; }
     ScoreMethod getScoreMethod() const override { return score_method; }
@@ -110,7 +110,7 @@ public:
     void setMaxNumHypothesisToTestBeforeRejection(int max_num_hypothesis_to_test_before_rejection_)
          override  { max_num_hypothesis_to_test_before_rejection = max_num_hypothesis_to_test_before_rejection_; }
     void setRandomGeneratorState(int random_generator_state_) override  { random_generator_state = random_generator_state_; }
-    void setNumberOfThreads(int number_of_threads_) override  { number_of_threads = number_of_threads_; }
+    void setParallel (bool is_parallel_) override { is_parallel = is_parallel_; }
     void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) override { neighbors_search_method = neighbors_search_method_; }
     void setSamplingMethod(SamplingMethod sampling_method_) override  { sampling_method = sampling_method_; }
     void setScoreMethod(ScoreMethod score_method_) override  { score_method = score_method_; }
@@ -122,9 +122,7 @@ protected:
     int max_iterations_before_lo;
     int max_num_hypothesis_to_test_before_rejection;
     int random_generator_state;
-    //! The number of threads to be used.
-    //! (0 sets the value automatically, a negative number turns parallelization off)
-    int number_of_threads;
+    bool is_parallel;
     NeighborSearchMethod neighbors_search_method;
     SamplingMethod sampling_method;
     ScoreMethod score_method;
@@ -163,13 +161,7 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
     Mat best_model;
     int final_iters;
 
-    const int MAX_THREADS = getNumThreads();
-    int number_of_threads = config->getNumberOfThreads();
-    if (number_of_threads == 0 || number_of_threads > MAX_THREADS) {
-        number_of_threads = MAX_THREADS;
-    }
-
-    if (number_of_threads < 0) {
+    if (! config->isParallel()) {
         auto update_best = [&] (const Mat &new_model, const Score &new_score) {
             best_score = new_score;
             // remember best model
@@ -214,7 +206,7 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
 
                 if (current_score.isBetter(best_score)) {
                     if (_degeneracy->recoverIfDegenerate(sample, models[i],
-                                                         non_degenerate_model, non_denegenerate_model_score)) {
+                            non_degenerate_model, non_denegenerate_model_score)) {
                         // check if best non degenerate model is better than so far the best model
                         if (non_denegenerate_model_score.isBetter(best_score))
                             max_iters = update_best(non_degenerate_model, non_denegenerate_model_score);
@@ -248,18 +240,19 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
 
         final_iters = iters;
     } else {
+        const int MAX_THREADS = getNumThreads();
         const bool is_prosac = config->getSamplingMethod() == SamplingMethod::SAMPLING_PROSAC;
 
         std::atomic_bool success(false);
         std::atomic_int num_hypothesis_tested(0);
         std::atomic_int thread_cnt(0);
-        std::vector<Score> best_scores(number_of_threads);
-        std::vector<Mat> best_models(number_of_threads);
+        std::vector<Score> best_scores(MAX_THREADS);
+        std::vector<Mat> best_models(MAX_THREADS);
 
         Mutex mutex; // only for prosac
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////
-        parallel_for_(Range(0, number_of_threads), [&](const Range & /*range*/) {
+        parallel_for_(Range(0, MAX_THREADS), [&](const Range & /*range*/) {
             if (!success) { // cover all if not success to avoid thread creating new variables
                 const int thread_rng_id = thread_cnt++;
                 int thread_state = config->getRandomGeneratorState() + 10*thread_rng_id;
@@ -303,7 +296,7 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
                         // Synchronize threads. just to speed verification of model.
                         int best_thread_idx = thread_rng_id;
                         bool updated = false;
-                        for (int t = 0; t < number_of_threads; t++) {
+                        for (int t = 0; t < MAX_THREADS; t++) {
                             if (best_scores[t].isBetter(best_score_all_threads)) {
                                 best_score_all_threads = best_scores[t];
                                 updated = true;
@@ -380,7 +373,7 @@ bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
         // find best model from all threads' models
         best_score = best_scores[0];
         int best_thread_idx = 0;
-        for (int i = 1; i < number_of_threads; i++) {
+        for (int i = 1; i < MAX_THREADS; i++) {
             if (best_scores[i].isBetter(best_score)) {
                 best_score = best_scores[i];
                 best_thread_idx = i;
@@ -806,7 +799,7 @@ void modelParamsToUsacConfig (Ptr<SimpleUsacConfig> &config, const Ptr<const Mod
     config->setMaxIterationsBeforeLo(params->getMaxItersBeforeLO());
     config->setMaxNumHypothesisToTestBeforeRejection(params->getMaxNumHypothesisToTestBeforeRejection());
     config->setRandomGeneratorState(params->getRandomGeneratorState());
-    config->setNumberOfThreads(params->isParallel() ? 0 : -1);
+    config->setParallel(params->isParallel());
     config->setNeighborsSearchMethod(params->getNeighborsSearch());
     config->setSamplingMethod(params->getSampler());
     config->setScoreMethod(params->getScore());

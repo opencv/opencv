@@ -16,10 +16,10 @@ int countNum(const vector<int> &m, int num)
 
 string getHeader(const Ptr<SACSegmentation> &s){
     string r;
-    if(s->getNumberOfThreads() == -1)
+    if(!s->isParallel())
         r += "One thread ";
     else
-        r += std::to_string(s->getNumberOfThreads()) + "-thread ";
+        r += std::to_string(getNumThreads()) + "-thread ";
 
     if(s->getNumberOfModelsExpected() == 1)
         r += "single model segmentation ";
@@ -282,7 +282,7 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
 
     pt_cloud.release();
     sacSegmentation->setCustomModelConstraints(nullptr);
-    sacSegmentation->setNumberOfThreads(3);
+    sacSegmentation->setParallel(true);
 
     // Multi-plane segmentation
     for (int i = 0; i < models_num; i++)
@@ -384,7 +384,7 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
 
     pt_cloud.release();
     sacSegmentation->setCustomModelConstraints(nullptr);
-    sacSegmentation->setNumberOfThreads(3);
+    sacSegmentation->setParallel(true);
 
     // Multi-sphere segmentation
     for (int i = 0; i < models_num; i++)
