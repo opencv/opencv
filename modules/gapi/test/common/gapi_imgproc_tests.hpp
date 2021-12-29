@@ -119,6 +119,12 @@ GAPI_TEST_FIXTURE(YUV2BGRTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmp
 GAPI_TEST_FIXTURE(RGB2HSVTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BayerGR2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2YUV422Test, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
+    cmpF, interp, sz_out)
+GAPI_TEST_FIXTURE(ResizePTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
+    cmpF, interp, sz_out)
+GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(CompareMats,int,double,double), 4,
+    cmpF, interp, fx, fy)
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_HPP

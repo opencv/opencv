@@ -791,8 +791,15 @@ TEST(Fluid, UnusedNodeOutputCompileTest)
 TEST(Fluid, UnusedNodeOutputReshapeTest)
 {
     const auto test_size = cv::Size(8, 8);
-    const auto get_compile_args =
-        [] () { return cv::compile_args(cv::gapi::core::fluid::kernels()); };
+
+    const auto get_compile_args = [] () {
+        return cv::compile_args(
+            cv::gapi::combine(
+                cv::gapi::core::fluid::kernels(),
+                cv::gapi::imgproc::fluid::kernels()
+            )
+        );
+    };
 
     cv::GMat in;
     cv::GMat a, b, c, d;

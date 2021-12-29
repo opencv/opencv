@@ -14,6 +14,16 @@
 
 namespace cv { namespace gapi {
 
+GMat resize(const GMat& src, const Size& dsize, double fx, double fy, int interpolation)
+{
+    return imgproc::GResize::on(src, dsize, fx, fy, interpolation);
+}
+
+GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation)
+{
+    return imgproc::GResizeP::on(src, dsize, interpolation);
+}
+
 GMat sepFilter(const GMat& src, int ddepth, const Mat& kernelX, const Mat& kernelY, const Point& anchor,
                const Scalar& delta, int borderType, const Scalar& borderVal)
 {
