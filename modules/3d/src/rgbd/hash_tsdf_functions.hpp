@@ -285,13 +285,6 @@ public:
 typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
 typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 
-
-static cv::Vec3i volumeToVolumeUnitIdx(const Point3f& point, const float volumeUnitSize);
-static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const float volumeUnitSize);
-static cv::Point3f voxelCoordToVolume(const cv::Vec3i& voxelIdx, const float voxelSize);
-static cv::Vec3i volumeToVoxelCoord(const cv::Point3f& point, const float voxelSizeInv);
-
-
 void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
