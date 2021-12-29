@@ -29,7 +29,7 @@
 #elif defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4100)
-# if _MSC_VER < 1900
+# if _MSC_VER < 1910
 #  pragma warning(disable:4268) // Disable warnings of ngraph. OpenVINO recommends use MSVS 2019.
 # endif
 #elif defined(__GNUC__)
