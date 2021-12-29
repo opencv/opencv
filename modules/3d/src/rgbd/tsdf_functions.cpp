@@ -1101,7 +1101,7 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1322,7 +1322,7 @@ void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, In
     const Affine3f pose = Affine3f(_pose);
 
     float voxelSize = settings.getVoxelSize();
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
