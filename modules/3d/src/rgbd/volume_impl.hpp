@@ -183,8 +183,7 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
         this->impl = makePtr<ColorTsdfVolume>(settings);
         break;
     default:
-        CV_Error(Error::StsInternal,
-        	"Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
+        CV_Error(Error::StsInternal, "Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
         break;
     }
 }

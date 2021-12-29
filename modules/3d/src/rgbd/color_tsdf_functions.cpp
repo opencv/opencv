@@ -303,7 +303,7 @@ void integrateColorTsdfVolumeUnit(
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
                     Vec3f colorRGB = color.at<Vec3f>(rgb_v, rgb_u);
-                    
+
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - camSpacePt.z);
                     // possible alternative is:

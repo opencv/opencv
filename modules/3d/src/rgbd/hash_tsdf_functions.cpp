@@ -1391,9 +1391,6 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
         if (!normals.empty())
             Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
     }
-    
-    //std::cout << "fetchNormalsFromHashTsdfVolumeUnit() end" << std::endl;
-
 }
 
 #ifdef HAVE_OPENCL
