@@ -1131,7 +1131,7 @@ struct InferROI: public cv::detail::KernelTag {
                     [ctx](InferenceEngine::InferRequest &req) {
                         GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-
+//-S- preproc ??-->
                         // NB: This blob will be used to make roi from its, so
                         // it should be treated as image
                         IE::Blob::Ptr this_blob =

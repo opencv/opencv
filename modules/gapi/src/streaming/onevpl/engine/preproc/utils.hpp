@@ -1,0 +1,24 @@
+#ifndef GAPI_STREAMING_ONEVPL_PREPROC_UTILS_HPP
+#define GAPI_STREAMING_ONEVPL_PREPROC_UTILS_HPP
+
+#ifdef HAVE_ONEVPL
+#include "streaming/onevpl/onevpl_export.hpp"
+
+#include <opencv2/gapi/gframe.hpp>
+
+namespace cv {
+namespace gapi {
+namespace wip {
+namespace onevpl {
+namespace utils {
+
+cv::MediaFormat fourcc_to_MediaFormat(int value);
+int MediaFormat_to_fourcc(cv::MediaFormat value);
+int MediaFormat_to_chroma(cv::MediaFormat value);
+} // namespace utils
+} // namespace cv
+} // namespace gapi
+} // namespace wip
+} // namespace onevpl
+#endif // #ifdef HAVE_ONEVPL
+#endif // GAPI_STREAMING_ONEVPL_PREPROC_UTILS_HPP
