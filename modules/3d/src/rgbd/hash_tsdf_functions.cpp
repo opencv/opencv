@@ -468,7 +468,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     CV_TRACE_FUNCTION();
     UMat depth = _depth.getUMat();
     CV_Assert(!depth.empty());
-    CV_Assert(lastVolIndex > 0);
+    CV_Assert(lastVolIndex >= 0);
     UMat pixNorms = _pixNorms.getUMat();
     UMat volUnitsData = _volUnitsData.getUMat();
     Mat volUnitsDataCopy = _volUnitsDataCopy.getMat();
