@@ -167,8 +167,8 @@ static void subMatrix(const Mat& src, Mat& dst,
 
 static void cameraCalcJErr(const Mat& objectPoints, const Mat& imagePoints,
                            const Mat& npoints, Mat& allErrors,
-                           Mat& _param, Mat* _JtErr, Mat* _JtJ, double* _errnorm,
-                           double aspectRatio, Mat* perViewErrors,
+                           Mat& _param, bool calcJ, Mat& JtErr, Mat& JtJ, double& errnorm,
+                           double aspectRatio, Mat& perViewErrors,
                            int flags, bool optimizeObjPoints)
 {
     const int NINTRINSIC = CALIB_NINTRINSIC;
@@ -177,7 +177,6 @@ static void cameraCalcJErr(const Mat& objectPoints, const Mat& imagePoints,
     Mat _k(14, 1, CV_64F, k);
     double* param = _param.ptr<double>();
     int nparams = (int)_param.total();
-    bool calcJ = _JtErr != 0;
     int ni0 = npoints.at<int>(0);
     Mat _Je(ni0*2, 6, CV_64F), _Ji(ni0*2, NINTRINSIC, CV_64F), _Jo, _err(ni*2, 1, CV_64F);
 
@@ -192,10 +191,8 @@ static void cameraCalcJErr(const Mat& objectPoints, const Mat& imagePoints,
               0, 0, 1);
     std::copy(param + 4, param + 4 + 14, k);
 
-    if (_JtJ)
-        _JtJ->setZero();
-    if (_JtErr)
-        _JtErr->setZero();
+    JtJ.setZero();
+    JtErr.setZero();
 
     if(optimizeObjPoints)
         _Jo.create(ni0*2, ni0*3, CV_64F);
@@ -263,8 +260,6 @@ static void cameraCalcJErr(const Mat& objectPoints, const Mat& imagePoints,
 
         if( calcJ )
         {
-            Mat JtJ = *_JtJ, JtErr = *_JtErr;
-
             // see HZ: (A6.14) for details on the structure of the Jacobian
             JtJ(Rect(0, 0, NINTRINSIC, NINTRINSIC)) += _Ji.t() * _Ji;
             JtJ(Rect(NINTRINSIC + i * 6, NINTRINSIC + i * 6, 6, 6)) = _Je.t() * _Je;
@@ -295,14 +290,13 @@ static void cameraCalcJErr(const Mat& objectPoints, const Mat& imagePoints,
             printf("\n");
         }*/
 
-        if( perViewErrors )
-            perViewErrors->at<double>(i) = std::sqrt(viewErr / ni);
+        if( !perViewErrors.empty() )
+            perViewErrors.at<double>(i) = std::sqrt(viewErr / ni);
 
         reprojErr += viewErr;
     }
 
-    if(_errnorm)
-        *_errnorm = reprojErr;
+    errnorm = reprojErr;
 }
 
 static double calibrateCameraInternal( const Mat& objectPoints,
@@ -571,22 +565,35 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     //std::cout << "single camera calib. mask: " << mask0.t() << "\n";
 
     // 3. run the optimization
-    LMSolver::runAlt(param0, mask0, termCrit, solveMethod, false,
-        [&](Mat& _param, Mat* _JtErr, Mat* _JtJ, double* _errnorm)
+
+    auto calibCameraLMCallback = [matM, _m, npoints, &allErrors, aspectRatio, &perViewErrors, flags, releaseObject]
+        (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
     {
-        cameraCalcJErr(matM, _m, npoints, allErrors, _param, _JtErr, _JtJ, _errnorm,
-                       aspectRatio, perViewErrors, flags, releaseObject);
+        Mat jterr = JtErr.getMat(), jtj = JtJ.getMat(), perViewErr = perViewErrors ? *perViewErrors : Mat();
+        Mat mparam = _param.getMat();
+        cameraCalcJErr(matM, _m, npoints, allErrors, mparam, /* calcJ */ JtErr.needed() && JtJ.needed(),
+                       jterr, jtj, errnorm,
+                       aspectRatio, perViewErr, flags, releaseObject);
         return true;
-    });
+    };
+
+    LevMarq solver(param0, calibCameraLMCallback,
+                   LevMarq::Settings()
+                   .setMaxIterations((unsigned int)termCrit.maxCount)
+                   .setStepNormTolerance(termCrit.epsilon)
+                   .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
+                   mask0, MatrixType::AUTO, VariableType::LINEAR, /* LtoR */ false, solveMethod);
+    // geodesic is not supported for normal callbacks
+    solver.optimize();
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
     Mat JtErr(nparams, 1, CV_64F), JtJ(nparams, nparams, CV_64F), JtJinv, JtJN;
     double reprojErr = 0;
-    JtErr.setZero(); JtJ.setZero();
-    cameraCalcJErr(matM, _m, npoints, allErrors, param0,
-                   stdDevs ? &JtErr : 0, stdDevs ? &JtJ : 0, &reprojErr,
-                   aspectRatio, 0, flags, releaseObject);
+    JtErr.setZero(); JtJ.setZero(); Mat dummy;
+    cameraCalcJErr(matM, _m, npoints, allErrors, param0, (stdDevs != nullptr),
+                   JtErr, JtJ, reprojErr,
+                   aspectRatio, dummy, flags, releaseObject);
     if (stdDevs)
     {
         int nparams_nz = countNonZero(mask0);
@@ -673,12 +680,11 @@ static double stereoCalibrateImpl(
         TermCriteria termCrit )
 {
     const int NINTRINSIC = 18;
-    double reprojErr = 0;
 
     double dk[2][14]={{0}};
     Mat Dist[2];
-    Matx33d A[2], R_LR;
-    int i, k, p, ni = 0, pos, pointsTotal = 0, maxPoints = 0, nparams;
+    Matx33d A[2];
+    int pointsTotal = 0, maxPoints = 0, nparams;
     bool recomputeIntrinsics = false;
     double aspectRatio[2] = {0};
 
@@ -689,10 +695,10 @@ static double stereoCalibrateImpl(
                _npoints.type() == CV_32S );
 
     int nimages = (int)_npoints.total();
-    for( i = 0; i < nimages; i++ )
+    for(int i = 0; i < nimages; i++ )
     {
-        ni = _npoints.at<int>(i);
-        maxPoints = MAX(maxPoints, ni);
+        int ni = _npoints.at<int>(i);
+        maxPoints = std::max(maxPoints, ni);
         pointsTotal += ni;
     }
 
@@ -700,7 +706,7 @@ static double stereoCalibrateImpl(
     _objectPoints.convertTo(objectPoints, CV_64F);
     objectPoints = objectPoints.reshape(3, 1);
 
-    for( k = 0; k < 2; k++ )
+    for(int k = 0; k < 2; k++ )
     {
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
         const Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
@@ -750,7 +756,7 @@ static double stereoCalibrateImpl(
 
     if( flags & CALIB_FIX_ASPECT_RATIO )
     {
-        for( k = 0; k < 2; k++ )
+        for(int k = 0; k < 2; k++ )
             aspectRatio[k] = A[k](0, 0)/A[k](1, 1);
     }
 
@@ -765,7 +771,8 @@ static double stereoCalibrateImpl(
     // for intrinisic parameters of each camera ((fx,fy,cx,cy,k1,k2,p1,p2) ~ 8 parameters).
     nparams = 6*(nimages+1) + (recomputeIntrinsics ? NINTRINSIC*2 : 0);
 
-    std::vector<uchar> mask(nparams, (uchar)0);
+    std::vector<uchar> mask(nparams, (uchar)1);
+
     std::vector<double> param(nparams, 0.);
 
     if( recomputeIntrinsics )
@@ -825,13 +832,14 @@ static double stereoCalibrateImpl(
        om = median(om_ref_list)
        T = median(T_ref_list)
     */
-    for( i = pos = 0; i < nimages; pos += ni, i++ )
+    int pos = 0;
+    for(int i = 0; i < nimages; i++ )
     {
-        ni = _npoints.at<int>(i);
+        int ni = _npoints.at<int>(i);
         Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + pos*3);
         Matx33d R[2];
         Vec3d rv, T[2];
-        for( k = 0; k < 2; k++ )
+        for(int k = 0; k < 2; k++ )
         {
             Mat imgpt_ik = Mat(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + pos*2);
             solvePnP(objpt_i, imgpt_ik, A[k], Dist[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
@@ -859,6 +867,8 @@ static double stereoCalibrateImpl(
         RT0data[i + nimages*3] = T[1][0];
         RT0data[i + nimages*4] = T[1][1];
         RT0data[i + nimages*5] = T[1][2];
+
+        pos += ni;
     }
 
     if(flags & CALIB_USE_EXTRINSIC_GUESS)
@@ -881,7 +891,7 @@ static double stereoCalibrateImpl(
     else
     {
         // find the medians and save the first 6 parameters
-        for( i = 0; i < 6; i++ )
+        for(int i = 0; i < 6; i++ )
         {
             double* rti = RT0data + i*nimages;
             qsort( rti, nimages, sizeof(*rti), dbCmp );
@@ -890,7 +900,7 @@ static double stereoCalibrateImpl(
     }
 
     if( recomputeIntrinsics )
-        for( k = 0; k < 2; k++ )
+        for(int k = 0; k < 2; k++ )
         {
             double* iparam = &param[(nimages+1)*6 + k*NINTRINSIC];
             if( flags & CALIB_ZERO_TANGENT_DIST )
@@ -911,17 +921,15 @@ static double stereoCalibrateImpl(
 
     //std::cout << "param before LM: " << Mat(param, false).t() << "\n";
 
-    LMSolver::runAlt(param, mask, termCrit, DECOMP_SVD, false,
-    [&](Mat& _param, Mat* _JtErr, Mat* _JtJ, double* _errnorm)
+    auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
-        double* param_p = _param.ptr<double>();
+        double* param_p = _param.getMat().ptr<double>();
         Vec3d om_LR(param_p[0], param_p[1], param_p[2]);
         Vec3d T_LR(param_p[3], param_p[4], param_p[5]);
         Vec3d om[2], T[2];
         Matx33d dr3dr1, dr3dr2, dt3dr2, dt3dt1, dt3dt2;
 
-        reprojErr = 0;
-        Rodrigues(om_LR, R_LR);
+        double reprojErr = 0;
 
         if( recomputeIntrinsics )
         {
@@ -942,7 +950,7 @@ static double stereoCalibrateImpl(
                 //ipparam[0] = ipparam[1]*aspectRatio[0];
                 //ipparam[NINTRINSIC] = ipparam[NINTRINSIC+1]*aspectRatio[1];
             }
-            for( k = 0; k < 2; k++ )
+            for(int k = 0; k < 2; k++ )
             {
                 A[k] = Matx33d(iparam[k*NINTRINSIC+0], 0, iparam[k*NINTRINSIC+2],
                                0, iparam[k*NINTRINSIC+1], iparam[k*NINTRINSIC+3],
@@ -952,21 +960,22 @@ static double stereoCalibrateImpl(
             }
         }
 
-        for( i = pos = 0; i < nimages; pos += ni, i++ )
+        int ptPos = 0;
+        for(int i = 0; i < nimages; i++ )
         {
-            ni = _npoints.at<int>(i);
+            int ni = _npoints.at<int>(i);
 
             double* pi = param_p + (i+1)*6;
             om[0] = Vec3d(pi[0], pi[1], pi[2]);
             T[0] = Vec3d(pi[3], pi[4], pi[5]);
 
-            if( _JtJ || _JtErr )
+            if( JtJ_.needed() || JtErr_.needed() )
                 composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1], dr3dr1, noArray(),
                            dr3dr2, noArray(), noArray(), dt3dt1, dt3dr2, dt3dt2 );
             else
                 composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1] );
 
-            Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + pos*3);
+            Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + ptPos*3);
             err.resize(ni*2); Je.resize(ni*2); J_LR.resize(ni*2); Ji.resize(ni*2);
 
             Mat tmpImagePoints = err.reshape(2, 1);
@@ -976,30 +985,30 @@ static double stereoCalibrateImpl(
             Mat dpdrot = Je.colRange(0, 3);
             Mat dpdt = Je.colRange(3, 6);
 
-            for( k = 0; k < 2; k++ )
+            for(int k = 0; k < 2; k++ )
             {
-                Mat imgpt_ik(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + pos*2);
+                Mat imgpt_ik(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + ptPos*2);
 
-                if( _JtJ || _JtErr )
+                if( JtJ_.needed() || JtErr_.needed() )
                     projectPoints(objpt_i, om[k], T[k], A[k], Dist[k],
-                            tmpImagePoints, dpdrot, dpdt, dpdf, dpdc, dpdk, noArray(),
-                            (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0.);
+                                  tmpImagePoints, dpdrot, dpdt, dpdf, dpdc, dpdk, noArray(),
+                                  (flags & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0.);
                 else
                     projectPoints(objpt_i, om[k], T[k], A[k], Dist[k], tmpImagePoints);
                 subtract( tmpImagePoints, imgpt_ik, tmpImagePoints );
 
-                if( _JtJ )
+                if( JtJ_.needed() )
                 {
-                    Mat& JtErr = *_JtErr;
-                    Mat& JtJ = *_JtJ;
+                    Mat JtErr = JtErr_.getMat();
+                    Mat JtJ = JtJ_.getMat();
                     int iofs = (nimages+1)*6 + k*NINTRINSIC, eofs = (i+1)*6;
-                    assert( _JtJ && _JtErr );
+                    assert( JtJ_.needed() && JtErr_.needed() );
 
                     if( k == 1 )
                     {
                         // d(err_{x|y}R) ~ de3
                         // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
-                        for( p = 0; p < ni*2; p++ )
+                        for(int p = 0; p < ni*2; p++ )
                         {
                             Mat de3dr3( 1, 3, CV_64F, Je.ptr(p));
                             Mat de3dt3( 1, 3, CV_64F, de3dr3.ptr<double>() + 3 );
@@ -1045,21 +1054,38 @@ static double stereoCalibrateImpl(
                     perViewErr->at<double>(i, k) = std::sqrt(viewErr/ni);
                 reprojErr += viewErr;
             }
+
+            ptPos += ni;
         }
-        if(_errnorm)
-            *_errnorm = reprojErr;
+        errnorm = reprojErr;
         return true;
-    });
+    };
+
+    double reprojErr = 0;
+    if (countNonZero(mask))
+    {
+        LevMarq solver(param, lmcallback,
+                       LevMarq::Settings()
+                       .setMaxIterations((unsigned int)termCrit.maxCount)
+                       .setStepNormTolerance(termCrit.epsilon)
+                       .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
+                       mask);
+        // geodesic not supported for normal callbacks
+        LevMarq::Report r = solver.optimize();
+
+        reprojErr = r.energy;
+    }
 
     Vec3d om_LR(param[0], param[1], param[2]);
     Vec3d T_LR(param[3], param[4], param[5]);
+    Matx33d R_LR;
     Rodrigues( om_LR, R_LR );
     if( matR->rows == 1 || matR->cols == 1 )
         om_LR.convertTo(*matR, matR->depth());
     else
         R_LR.convertTo(*matR, matR->depth());
     T_LR.convertTo(*matT, matT->depth());
-    for( k = 0; k < 2; k++ )
+    for(int k = 0; k < 2; k++ )
     {
         double* iparam = &param[(nimages+1)*6 + k*NINTRINSIC];
         A[k] = Matx33d(iparam[0], 0, iparam[2], 0, iparam[1], iparam[3], 0, 0, 1);
@@ -1067,7 +1093,7 @@ static double stereoCalibrateImpl(
 
     if( recomputeIntrinsics )
     {
-        for( k = 0; k < 2; k++ )
+        for(int k = 0; k < 2; k++ )
         {
             Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
             Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;

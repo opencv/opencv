@@ -551,57 +551,6 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     return solutions;
 }
 
-class SolvePnPRefineLMCallback CV_FINAL : public LMSolver::Callback
-{
-public:
-    SolvePnPRefineLMCallback(InputArray _opoints, InputArray _ipoints, InputArray _cameraMatrix, InputArray _distCoeffs)
-    {
-        objectPoints = _opoints.getMat();
-        imagePoints = _ipoints.getMat();
-        npoints = std::max(objectPoints.checkVector(3, CV_32F), objectPoints.checkVector(3, CV_64F));
-        imagePoints0 = imagePoints.reshape(1, npoints*2);
-        cameraMatrix = _cameraMatrix.getMat();
-        distCoeffs = _distCoeffs.getMat();
-    }
-
-    bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
-    {
-         Mat param = _param.getMat();
-         _err.create(npoints*2, 1, CV_64FC1);
-
-         if(_Jac.needed())
-         {
-             _Jac.create(npoints*2, param.rows, CV_64FC1);
-         }
-
-         Mat rvec = param(Rect(0, 0, 1, 3)), tvec = param(Rect(0, 3, 1, 3));
-
-         Mat J, projectedPts;
-         projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
-
-         if (_Jac.needed())
-         {
-             Mat Jac = _Jac.getMat();
-             for (int i = 0; i < Jac.rows; i++)
-             {
-                 for (int j = 0; j < Jac.cols; j++)
-                 {
-                     Jac.at<double>(i,j) = J.at<double>(i,j);
-                 }
-             }
-         }
-
-         Mat err = _err.getMat();
-         projectedPts = projectedPts.reshape(1, npoints*2);
-         err = projectedPts - imagePoints0;
-
-        return true;
-    }
-
-    Mat objectPoints, imagePoints, imagePoints0;
-    Mat cameraMatrix, distCoeffs;
-    int npoints;
-};
 
 /**
  * @brief Compute the Interaction matrix and the residuals for the current pose.
@@ -750,7 +699,49 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
             params.at<double>(i+3,0) = tvec.at<double>(i,0);
         }
 
-        LMSolver::create(makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs), _criteria.maxCount, _criteria.epsilon)->run(params);
+        int npts = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+        Mat imagePoints0 = ipoints.reshape(1, npts * 2);
+        auto solvePnPRefineLMCallback = [opoints, imagePoints0, npts, cameraMatrix, distCoeffs]
+            (InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
+        {
+            Mat param = _param.getMat();
+            _err.create(npts * 2, 1, CV_64FC1);
+
+            if (_Jac.needed())
+            {
+                _Jac.create(npts * 2, param.rows, CV_64FC1);
+            }
+
+            Mat prvec = param(Rect(0, 0, 1, 3)), ptvec = param(Rect(0, 3, 1, 3));
+
+            Mat J, projectedPts;
+            projectPoints(opoints, prvec, ptvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
+
+            if (_Jac.needed())
+            {
+                Mat Jac = _Jac.getMat();
+                for (int i = 0; i < Jac.rows; i++)
+                {
+                    for (int j = 0; j < Jac.cols; j++)
+                    {
+                        Jac.at<double>(i, j) = J.at<double>(i, j);
+                    }
+                }
+            }
+
+            Mat err = _err.getMat();
+            projectedPts = projectedPts.reshape(1, npts * 2);
+            err = projectedPts - imagePoints0;
+
+            return true;
+        };
+        LevMarq solver(params, solvePnPRefineLMCallback,
+                       LevMarq::Settings()
+                       .setMaxIterations((unsigned int)_criteria.maxCount)
+                       .setStepNormTolerance((double)_criteria.epsilon)
+                       .setSmallEnergyTolerance((double)_criteria.epsilon * (double)_criteria.epsilon)
+                       .setGeodesic(true));
+        solver.optimize();
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
         params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());

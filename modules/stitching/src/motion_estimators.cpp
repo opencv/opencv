@@ -253,16 +253,34 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
                                                                 edges_[i].second].num_inliers);
 
     int nerrs = total_num_matches_ * num_errs_per_measurement_;
-    LMSolver::run(cam_params_, Mat(), nerrs, term_criteria_, DECOMP_SVD,
-        [&](Mat& param, Mat* err, Mat* jac)
+
+    auto callb = [&](InputOutputArray param, OutputArray err, OutputArray jac) -> bool
+    {
+        // workaround against losing value
+        Mat backup = cam_params_.clone();
+        param.copyTo(cam_params_);
+        if (jac.needed())
         {
-            param.copyTo(cam_params_);
-            if (jac)
-                calcJacobian(*jac);
-            if (err)
-                calcError(*err);
-            return true;
-        });
+            Mat m = jac.getMat();
+            calcJacobian(m);
+        }
+        if (err.needed())
+        {
+            Mat m = err.getMat();
+            calcError(m);
+        }
+        backup.copyTo(cam_params_);
+        return true;
+    };
+
+    LevMarq solver(cam_params_, callb,
+                   LevMarq::Settings()
+                   .setMaxIterations((unsigned int)term_criteria_.maxCount)
+                   .setStepNormTolerance(term_criteria_.epsilon)
+                   .setSmallEnergyTolerance(term_criteria_.epsilon * term_criteria_.epsilon)
+                   .setGeodesic(true),
+                   noArray(), MatrixType::AUTO, VariableType::LINEAR, nerrs);
+    solver.optimize();
 
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));

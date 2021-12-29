@@ -83,7 +83,7 @@ struct BlockSparseMat
     Mat diagonal() const
     {
         // Diagonal max length is the number of columns in the sparse matrix
-        int diagLength = blockN * nBlocks;
+        int diagLength =int( blockN * nBlocks );
         cv::Mat diag   = cv::Mat::zeros(diagLength, 1, cv::DataType<_Tp>::type);
 
         for (int i = 0; i < diagLength; i++)
@@ -136,56 +136,82 @@ struct BlockSparseMat
     }
 
 #if defined(HAVE_EIGEN)
-    //! Function to solve a sparse linear system of equations HX = B
-    //! Requires Eigen
-    bool sparseSolve(InputArray B, OutputArray X, bool checkSymmetry = true, OutputArray predB = cv::noArray()) const
-    {
-        Eigen::SparseMatrix<_Tp> bigA = toEigen();
-        Mat mb = B.getMat().t();
-        Eigen::Matrix<_Tp, -1, 1> bigB;
-        cv2eigen(mb, bigB);
 
-        Eigen::SparseMatrix<_Tp> bigAtranspose = bigA.transpose();
-        if(checkSymmetry && !bigA.isApprox(bigAtranspose))
+    // Decomposes matrix for further solution
+    // Sometimes it's required to consequently solve A*x = b then A*x = c then A*x = d...
+    // Splitting the solution procedure into two parts let us reuse the matrix' decomposition
+    struct Decomposition
+    {
+        Eigen::SparseMatrix<_Tp> bigA;
+        Eigen::SimplicialLDLT<Eigen::SparseMatrix<_Tp>> solver;
+    };
+
+    bool decompose(Decomposition& d, bool checkSymmetry = true) const
+    {
+        d.bigA = this->toEigen();
+
+        Eigen::SparseMatrix<_Tp> bigAtranspose = d.bigA.transpose();
+        if (checkSymmetry && !d.bigA.isApprox(bigAtranspose))
         {
             CV_Error(Error::StsBadArg, "H matrix is not symmetrical");
             return false;
         }
 
-        Eigen::SimplicialLDLT<Eigen::SparseMatrix<_Tp>> solver;
-
-        solver.compute(bigA);
-        if (solver.info() != Eigen::Success)
+        d.solver.compute(d.bigA);
+        bool r = (d.solver.info() == Eigen::Success);
+        if (!r)
         {
             CV_LOG_INFO(NULL, "Failed to eigen-decompose");
+        }
+
+        return r;
+    }
+
+    static bool solveDecomposed(const Decomposition& d, InputArray B, OutputArray X, OutputArray predB = cv::noArray())
+    {
+        Mat mb = B.getMat();
+        mb = mb.cols == 1 ? mb : mb.t();
+        Eigen::Matrix<_Tp, -1, 1> bigB;
+        cv2eigen(mb, bigB);
+
+        Eigen::Matrix<_Tp, -1, 1> solutionX = d.solver.solve(bigB);
+        if (d.solver.info() != Eigen::Success)
+        {
+            CV_LOG_INFO(NULL, "Failed to eigen-solve");
             return false;
         }
         else
         {
-            Eigen::Matrix<_Tp, -1, 1> solutionX = solver.solve(bigB);
-            if (solver.info() != Eigen::Success)
+            eigen2cv(solutionX, X);
+            if (predB.needed())
             {
-                CV_LOG_INFO(NULL, "Failed to eigen-solve");
-                return false;
+                Eigen::Matrix<_Tp, -1, 1> predBEigen = d.bigA * solutionX;
+                eigen2cv(predBEigen, predB);
             }
-            else
-            {
-                eigen2cv(solutionX, X);
-                if (predB.needed())
-                {
-                    Eigen::Matrix<_Tp, -1, 1> predBEigen = bigA * solutionX;
-                    eigen2cv(predBEigen, predB);
-                }
-                return true;
-            }
+            return true;
         }
     }
+
 #else
-    bool sparseSolve(InputArray /*B*/, OutputArray /*X*/, bool /*checkSymmetry*/ = true, OutputArray /*predB*/ = cv::noArray()) const
+    struct Decomposition { };
+
+    bool decompose(Decomposition& /*_d*/, bool /*checkSymmetry*/ = true) const
+    {
+        CV_Error(Error::StsNotImplemented, "Eigen library required for matrix solve, dense solver is not implemented");
+    }
+
+    bool solveDecomposed(const Decomposition& /*d*/, InputArray /*B*/, OutputArray /*X*/, OutputArray /*predB*/ = cv::noArray()) const
     {
         CV_Error(Error::StsNotImplemented, "Eigen library required for matrix solve, dense solver is not implemented");
     }
 #endif
+
+    //! Function to solve a sparse linear system of equations HX = B
+    bool sparseSolve(InputArray B, OutputArray X, bool checkSymmetry = true, OutputArray predB = cv::noArray()) const
+    {
+        Decomposition d;
+        return decompose(d, checkSymmetry) && solveDecomposed(d, B, X, predB);
+    }
 
     static constexpr _Tp NON_ZERO_VAL_THRESHOLD = _Tp(0.0001);
     size_t nBlocks;

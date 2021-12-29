@@ -140,17 +140,18 @@ void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image) const
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
-
     TMat depth_tmp, depth_flt;
     depth_tmp = getTMat<TMat>(_depth);
-    // Odometry works with depth values in range [0, 10)
-    // if the max depth value more than 10, it needs to devide by 5000
+    // Odometry works well with depth values in range [0, 10)
+    // If it's bigger, let's scale it down by 5000, a typical depth factor
     double max;
-    cv::minMaxLoc(depth_tmp, NULL, &max);
+    cv::minMaxLoc(depth_tmp, nullptr, &max);
     if (max > 10)
     {
         depth_tmp.convertTo(depth_flt, CV_32FC1, 1.f / 5000.f);
-        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), getTMat<Mat>(depth_flt) < FLT_EPSILON);
+        TMat depthMask;
+        cv::compare(depth_flt, Scalar(FLT_EPSILON), depthMask, cv::CMP_LT);
+        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depthMask);
         depth_tmp = depth_flt;
     }
     this->depth = depth_tmp;
