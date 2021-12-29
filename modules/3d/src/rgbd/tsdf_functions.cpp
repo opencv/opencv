@@ -987,7 +987,6 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
 
     const UMat volume = _volume.getUMat();
     float voxelSize = settings.getVoxelSize();
-    float voxelSizeInv = 1.0f / voxelSize;
     float raycastStepFactor = settings.getRaycastStepFactor();
     float truncatedDistance = settings.getTruncatedDistance();
 
@@ -1049,7 +1048,7 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
     Matx33f r = pose.rotation();
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1086,8 +1085,6 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
 #ifdef HAVE_OPENCL
 void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
-    //std::cout << "ocl_fetchNormalsFromTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
     if (!_normals.needed())
@@ -1104,8 +1101,6 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
-    Affine3f invPose(pose.inv());
-    Matx33f r = pose.rotation();
     float voxelSizeInv = 1.0 / settings.getVoxelSize();
 
     const Vec4i volDims;
@@ -1221,8 +1216,6 @@ inline void coord(const Mat& volume, const TsdfVoxel* volDataStart, std::vector<
 
 void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
-
     if (!_points.needed())
         return;
     const Mat volume = _volume.getMat();
@@ -1230,9 +1223,8 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
-    Affine3f invPose(pose.inv());
     float voxelSize = settings.getVoxelSize();
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1317,8 +1309,6 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
 #ifdef HAVE_OPENCL
 void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, OutputArray points, OutputArray normals)
 {
-    //std::cout << "ocl_fetchPointsNormalsFromTsdfVolumeUnit()" << std::endl;
-
     CV_TRACE_FUNCTION();
 
     if (!points.needed())
@@ -1330,8 +1320,7 @@ void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, In
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
-    Affine3f invPose(pose.inv());
-    Matx33f r = pose.rotation();
+
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0 / settings.getVoxelSize();
 

@@ -1055,7 +1055,7 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1167,9 +1167,8 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
-    Affine3f invPose(pose.inv());
     float voxelSize = settings.getVoxelSize();
-    float voxelSizeInv = 1.0 / settings.getVoxelSize();
+    float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);

@@ -63,6 +63,18 @@ Point3f getNormalVoxel(
     const Mat& volUnitsDataCopy, const VolumeUnitIndexes& volumeUnits);
 
 
+#ifdef HAVE_OPENCL
+void markActive(
+    const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId,
+    const Affine3f volumePose, CustomHashSet& hashTable, UMat& isActiveFlags, UMat& lastVisibleIndices,
+    const float truncateThreshold, const float volumeUnitSize);
+
+Point3f ocl_getNormalVoxel(
+    const Point3f& point, const float voxelSizeInv,
+    const int volumeUnitDegree, const Vec4i volStrides,
+    const Mat& volUnitsData, const CustomHashSet& hashTable);
+#endif
+
 void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
@@ -231,8 +243,6 @@ void integrateHashTsdfVolumeUnit(
             }
         }
         });
-
-    //std::cout << "integrateHashTsdfVolumeUnit() end" << std::endl;
 }
 
 
@@ -455,11 +465,10 @@ void ocl_integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
 {
-    //std::cout << "ocl_integrateHashTsdfVolumeUnit()" << std::endl;
-
     CV_TRACE_FUNCTION();
     UMat depth = _depth.getUMat();
     CV_Assert(!depth.empty());
+    CV_Assert(lastVolIndex > 0);
     UMat pixNorms = _pixNorms.getUMat();
     UMat volUnitsData = _volUnitsData.getUMat();
     Mat volUnitsDataCopy = _volUnitsDataCopy.getMat();
@@ -1153,7 +1162,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
-    const float volumeUnitSize = voxelSize * resolution[0];
+    const float volumeUnitSize = voxelSize * volResolution.x;
 
     Vec4f boxMin, boxMax(volumeUnitSize - voxelSize,
         volumeUnitSize - voxelSize,
@@ -1233,8 +1242,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
     const Affine3f pose = Affine3f(_pose);
 
     auto HashPushNormals = [&](const ptype& point, const int* position) {
-
-        Affine3f invPose(pose.inv());
+        //Affine3f invPose(pose.inv());
         Point3f p = fromPtype(point);
         Point3f n = nan3;
         if (!isNaN(p))
@@ -1450,9 +1458,6 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
 
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    const Affine3f pose = Affine3f(_pose);
     Range _fetchRange(0, hashTable.last);
 
     const int nstripes = -1;
