@@ -11,7 +11,39 @@
 
 namespace cv {
 
-    void allocateVolumeUnits(
+static Vec3i volumeToVolumeUnitIdx(const Point3f& point, const float volumeUnitSize)
+{
+    return cv::Vec3i(
+        cvFloor(point.x / volumeUnitSize),
+        cvFloor(point.y / volumeUnitSize),
+        cvFloor(point.z / volumeUnitSize));
+}
+
+static cv::Point3f volumeUnitIdxToVolume(const cv::Vec3i& volumeUnitIdx, const float volumeUnitSize)
+{
+    return cv::Point3f(
+        volumeUnitIdx[0] * volumeUnitSize,
+        volumeUnitIdx[1] * volumeUnitSize,
+        volumeUnitIdx[2] * volumeUnitSize);
+}
+
+static cv::Point3f voxelCoordToVolume(const cv::Vec3i& voxelIdx, const float voxelSize)
+{
+    return cv::Point3f(
+        voxelIdx[0] * voxelSize,
+        voxelIdx[1] * voxelSize,
+        voxelIdx[2] * voxelSize);
+}
+
+static cv::Vec3i volumeToVoxelCoord(const cv::Point3f& point, const float voxelSizeInv)
+{
+    return cv::Vec3i(
+        cvFloor(point.x * voxelSizeInv),
+        cvFloor(point.y * voxelSizeInv),
+        cvFloor(point.z * voxelSizeInv));
+}
+
+void allocateVolumeUnits(
     const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
     CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize);
 
