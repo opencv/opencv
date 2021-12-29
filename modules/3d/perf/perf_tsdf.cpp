@@ -349,13 +349,12 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
             }
         }, nstripes);
 }
-void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose)
+void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _colors, OutputArray image, Affine3f)
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points = _points.getMat();
-    Normals normals = _normals.getMat();
     Colors  colors = _colors.getMat();
 
     Mat_<Vec4b> img = image.getMat();
@@ -368,13 +367,11 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
             {
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
-                const ptype* nrmRow = normals[y];
                 const ptype* clrRow = colors[y];
 
                 for (int x = 0; x < sz.width; x++)
                 {
                     Point3f p = fromPtype(ptsRow[x]);
-                    Point3f n = fromPtype(nrmRow[x]);
                     Point3f c = fromPtype(clrRow[x]);
 
                     Vec4b color;
@@ -435,7 +432,6 @@ PERF_TEST(Perf_TSDF, integrate_mat)
     vs.getCameraIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
@@ -748,7 +744,6 @@ PERF_TEST(Perf_HashTSDF, integrate_mat)
     vs.getCameraIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
@@ -781,7 +776,6 @@ PERF_TEST(Perf_HashTSDF, integrate_frame)
     vs.getCameraIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
@@ -1059,7 +1053,6 @@ PERF_TEST(Perf_ColorTSDF, integrate_mat)
     vs.getCameraIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
@@ -1093,7 +1086,6 @@ PERF_TEST(Perf_ColorTSDF, integrate_frame)
     vs.getCameraIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 

@@ -11,6 +11,25 @@
 
 namespace cv {
 
+    void allocateVolumeUnits(
+    const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
+    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize);
+
+TsdfVoxel atVolumeUnit(
+    const Mat& volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    const Vec3i& point, const Vec3i& volumeUnitIdx, VolumeUnitIndexes::const_iterator it,
+    const int volumeUnitDegree, const Vec4i volStrides);
+
+TsdfVoxel new_atVolumeUnit(
+    const Mat& volUnitsDataCopy,
+    const Vec3i& point, const Vec3i& volumeUnitIdx, const int indx,
+    const int volumeUnitDegree, const Vec4i volStrides);
+
+Point3f getNormalVoxel(
+    const Point3f& point, const float voxelSizeInv,
+    const int volumeUnitDegree, const Vec4i volStrides,
+    const Mat& volUnitsDataCopy, const VolumeUnitIndexes& volumeUnits);
+
 
 void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
@@ -1270,11 +1289,6 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
-
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    const Affine3f pose = Affine3f(_pose);
-
 
     std::vector<Vec3i> totalVolUnits;
     for (const auto& keyvalue : volumeUnits)

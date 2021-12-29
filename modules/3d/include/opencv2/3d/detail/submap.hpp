@@ -51,13 +51,14 @@ public:
     }
     virtual ~Submap() = default;
 
-    virtual void integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
+    virtual void integrate(InputArray _depth, const int currframeId);
     virtual void raycast(const Odometry& icp, const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                          OutputArray points = noArray(), OutputArray normals = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume.getTotalVolumeUnits()); };
     virtual int getVisibleBlocks(int currFrameId) const
     {
+        CV_Assert(currFrameId >= startFrameId);
         //return volume.getVisibleBlocks(currFrameId, FRAME_VISIBILITY_THRESHOLD);
         return volume.getVisibleBlocks();
 
@@ -104,8 +105,7 @@ public:
 
 template<typename MatType>
 
-void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics,
-                                const int currFrameId)
+void Submap<MatType>::integrate(InputArray _depth, const int currFrameId)
 {
     CV_Assert(currFrameId >= startFrameId);
     volume.integrate(_depth, cameraPose.matrix);

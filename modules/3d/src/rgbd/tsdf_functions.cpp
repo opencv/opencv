@@ -92,7 +92,7 @@ void integrateTsdfVolumeUnit(
 
     Range integrateRange(0, volResolution.x);
 
-#if USE_INTRINSICS_
+#if USE_INTRINSICS
     auto IntegrateInvoker = [&](const Range& range)
     {
         // zStep == vol2cam*(Point3f(x, y, 1)*voxelSize) - basePt;
@@ -668,7 +668,6 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
-    float raycastStepFactor = settings.getRaycastStepFactor();
     const Intr::Reprojector reproj = Intr(intr).makeReprojector();
     float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
 
@@ -1232,7 +1231,6 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
-    Matx33f r = pose.rotation();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0 / settings.getVoxelSize();
 
@@ -1256,7 +1254,7 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
     bool needNormals = _normals.needed();
 
     std::vector<std::vector<ptype>> pVecs, nVecs;
-    Range range(0, volResolution.x);
+    Range fetchRange(0, volResolution.x);
     const int nstripes = -1;
     const TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
     Mutex mutex;
@@ -1291,7 +1289,7 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
         nVecs.push_back(normals);
     };
 
-    parallel_for_(range, FetchPointsNormalsInvoker, nstripes);
+    parallel_for_(fetchRange, FetchPointsNormalsInvoker, nstripes);
 
 
 

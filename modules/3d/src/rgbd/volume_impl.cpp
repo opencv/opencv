@@ -19,11 +19,9 @@ Volume::Impl::Impl(const VolumeSettings& _settings) :
 
 // TSDF
 
-TsdfVolume::TsdfVolume(const VolumeSettings& settings) :
-    Volume::Impl(settings)
+TsdfVolume::TsdfVolume(const VolumeSettings& _settings) :
+    Volume::Impl(_settings)
 {
-    //std::cout << "TsdfVolume::TsdfVolume()" << std::endl;
-
     Vec3i volResolution;
     settings.getVolumeResolution(volResolution);
 #ifndef HAVE_OPENCL
@@ -41,8 +39,6 @@ TsdfVolume::~TsdfVolume() {}
 
 void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
-    //std::cout << "TsdfVolume::integrate(OdometryFrame)" << std::endl;
-
     CV_TRACE_FUNCTION();
     Depth depth;
     frame.getDepth(depth);
@@ -54,8 +50,6 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 
 void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
-    //std::cout << "TsdfVolume::integrate(Mat)" << std::endl;
-
     CV_TRACE_FUNCTION();
     Depth depth = _depth.getMat();
     CV_Assert(depth.type() == DEPTH_TYPE);
@@ -90,7 +84,7 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
         integrateTsdfVolumeUnit(settings, cameraPose, depth, cpu_pixNorms, cpu_volume);
 #endif
 }
-void TsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
+void TsdfVolume::integrate(InputArray, InputArray, InputArray)
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
@@ -98,7 +92,6 @@ void TsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
 
 void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    //std::cout << "TsdfVolume::raycast(OdometryFrame)" << std::endl;
 #ifndef HAVE_OPENCL
     Mat points, normals;
     raycast(cameraPose, height, width, points, normals);
@@ -131,8 +124,6 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryF
 
 void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    //std::cout << "TsdfVolume::raycast(Mat)" << std::endl;
-
     CV_Assert(height > 0);
     CV_Assert(width > 0);
 
@@ -147,14 +138,13 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
 #endif
 }
 
-void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void TsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
 void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    //std::cout << "TsdfVolume::fetchNormals(Mat)" << std::endl;
 #ifndef HAVE_OPENCL
     fetchNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
 #else
@@ -167,7 +157,6 @@ void TsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 
 void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    //std::cout << "TsdfVolume::fetchPointsNormals(Mat)" << std::endl;
 #ifndef HAVE_OPENCL
     fetchPointsNormalsFromTsdfVolumeUnit(settings, volume, points, normals);
 #else
@@ -179,7 +168,7 @@ void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) con
 #endif
 }
 
-void TsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const
+void TsdfVolume::fetchPointsNormalsColors(OutputArray, OutputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
@@ -213,8 +202,8 @@ size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 // HASH_TSDF
 
-HashTsdfVolume::HashTsdfVolume(const VolumeSettings& settings) :
-    Volume::Impl(settings)
+HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
+    Volume::Impl(_settings)
 {
 #ifndef HAVE_OPENCL
     Vec3i resolution;
@@ -240,7 +229,6 @@ HashTsdfVolume::~HashTsdfVolume() {}
 
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
-    //std::cout << "HashTsdfVolume::integrate(OdometryFrame)" << std::endl;
     CV_TRACE_FUNCTION();
     Depth depth;
     frame.getDepth(depth);
@@ -252,7 +240,6 @@ void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPos
 
 void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
-    //std::cout << "HashTsdfVolume::integrate(Mat)" << std::endl;
     Depth depth = _depth.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
@@ -289,7 +276,7 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #endif
 }
 
-void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray pose)
+void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
@@ -297,7 +284,6 @@ void HashTsdfVolume::integrate(InputArray depth, InputArray image, InputArray po
 
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    //std::cout << "HashTsdfVolume::raycast()" << std::endl;
 #ifndef HAVE_OPENCL
     Mat points, normals;
     raycast(cameraPose, height, width, points, normals);
@@ -329,7 +315,6 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odome
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
 {
-    //std::cout << "HashTsdfVolume::raycast()" << std::endl;
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
@@ -341,14 +326,13 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
         raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
 }
-void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void HashTsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    //std::cout << "HashTsdfVolume::fetchNormals()" << std::endl;
 #ifndef HAVE_OPENCL
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
@@ -361,7 +345,6 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 }
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    //std::cout << "fetchPointsNormals()" << std::endl;
 #ifndef HAVE_OPENCL
     fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
@@ -372,7 +355,10 @@ void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals)
 #endif
 }
 
-void HashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const {};
+void HashTsdfVolume::fetchPointsNormalsColors(OutputArray, OutputArray, OutputArray) const
+{
+    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+};
 
 void HashTsdfVolume::reset()
 {
@@ -421,8 +407,8 @@ size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 // COLOR_TSDF
 
-ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& settings) :
-    Volume::Impl(settings)
+ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& _settings) :
+    Volume::Impl(_settings)
 {
     Vec3i volResolution;
     settings.getVolumeResolution(volResolution);
@@ -434,7 +420,6 @@ ColorTsdfVolume::~ColorTsdfVolume() {}
 
 void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPose)
 {
-    //std::cout << "ColorTsdfVolume::integrate(OdometryFrame)" << std::endl;
     CV_TRACE_FUNCTION();
     Depth depth;
     frame.getDepth(depth);
@@ -446,15 +431,13 @@ void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPos
     integrate(depth, rgb, cameraPose);
 }
 
-void ColorTsdfVolume::integrate(InputArray depth, InputArray pose)
+void ColorTsdfVolume::integrate(InputArray, InputArray)
 {
-    //std::cout << "ColorTsdfVolume::integrate(Mat)" << std::endl;
     CV_Error(cv::Error::StsBadFunc, "There is no color data");
 }
 
 void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
 {
-    //std::cout << "ColorTsdfVolume::integrate(Mat, Mat)" << std::endl;
     Depth depth = _depth.getMat();
     Colors image = _image.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
@@ -474,8 +457,6 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
-    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
-
     Mat points, normals, colors;
     raycast(cameraPose, height, width, points, normals, colors);
     outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
@@ -486,30 +467,23 @@ void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odom
     outFrame.setPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
 }
 
-void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals) const
+void ColorTsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray) const
 {
-    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
     CV_Error(cv::Error::StsBadFunc, "There is no color shelter");
 }
 void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
-    //std::cout << "ColorTsdfVolume::raycast()" << std::endl;
-
     const Matx44f cameraPose = _cameraPose.getMat();
     raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals, _colors);
 }
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    //std::cout << "ColorTsdfVolume::fetchNormals()" << std::endl;
-
     fetchNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
 
 void ColorTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
-    //std::cout << "ColorTsdfVolume::fetchPointsNormals()" << std::endl;
-
     fetchPointsNormalsFromColorTsdfVolumeUnit(settings, volume, points, normals);
 }
 

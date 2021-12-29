@@ -764,7 +764,6 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
-    float raycastStepFactor = settings.getRaycastStepFactor();
     float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
@@ -1056,7 +1055,6 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
-    Matx33f r = pose.rotation();
     float voxelSizeInv = 1.0 / settings.getVoxelSize();
 
     const Vec4i volDims;
@@ -1078,7 +1076,6 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
 
     auto PushNormals = [&](const ptype& pp, const int* position)
     {
-        Affine3f invPose(pose.inv());
         Point3f p = fromPtype(pp);
         Point3f n = nan3;
         if (!isNaN(p))
@@ -1163,8 +1160,6 @@ void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, I
 void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
     OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    //std::cout << "fetchPointsNormalsFromColorTsdfVolumeUnit()" << std::endl;
-
     if (!_points.needed())
         return;
     const Mat volume = _volume.getMat();
@@ -1173,7 +1168,6 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Affine3f invPose(pose.inv());
-    Matx33f r = pose.rotation();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0 / settings.getVoxelSize();
 
@@ -1198,7 +1192,7 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     bool needColors  = _colors.needed();
 
     std::vector<std::vector<ptype>> pVecs, nVecs, cVecs;
-    Range range(0, volResolution.x);
+    Range fetchRange(0, volResolution.x);
     const int nstripes = -1;
     const RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
     Mutex mutex;
@@ -1232,7 +1226,7 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
         nVecs.push_back(normals);
     };
 
-    parallel_for_(range, FetchPointsNormalsInvoker, nstripes);
+    parallel_for_(fetchRange, FetchPointsNormalsInvoker, nstripes);
 
     std::vector<ptype> points, normals;
     for (size_t i = 0; i < pVecs.size(); i++)

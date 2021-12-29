@@ -350,13 +350,12 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
             }
         }, nstripes);
 }
-void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose)
+void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _colors, OutputArray image, Affine3f)
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points  = _points.getMat();
-    Normals normals = _normals.getMat();
     Colors  colors  = _colors.getMat();
 
     Mat_<Vec4b> img = image.getMat();
@@ -369,13 +368,11 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
             {
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
-                const ptype* nrmRow = normals[y];
                 const ptype* clrRow = colors[y];
 
                 for (int x = 0; x < sz.width; x++)
                 {
                     Point3f p = fromPtype(ptsRow[x]);
-                    Point3f n = fromPtype(nrmRow[x]);
                     Point3f c = fromPtype(clrRow[x]);
 
                     Vec4b color;
@@ -545,10 +542,12 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     }
 
     if (testFunction == VolumeTestFunction::RAYCAST && display)
+    {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
+    }
 
     normalsCheck(normals);
 }
@@ -608,11 +607,13 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     anfas = counterOfValid(points);
 
     if (display)
+    {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
-        
+    }
+
     points.release();
     normals.release();
 
@@ -636,10 +637,12 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     profile = counterOfValid(points);
 
     if (display)
+    {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
+    }
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
