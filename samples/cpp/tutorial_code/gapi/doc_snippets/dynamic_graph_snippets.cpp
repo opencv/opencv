@@ -1,6 +1,6 @@
 #include <opencv2/gapi.hpp>
-#include <opencv2/gapi/core.hpp>
-#include <opencv2/gapi/cpu/core.hpp>
+#include <opencv2/gapi/cpu/imgproc.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 int main(int argc, char *argv[])
 {
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
         out_vector += cv::gout(out_mat2);
 // ! [GRunArgsP usage]
 
-    auto stream = cc.compileStreaming(cv::compile_args(cv::gapi::core::cpu::kernels()));
+    auto stream = cc.compileStreaming(cv::compile_args(cv::gapi::imgproc::cpu::kernels()));
     stream.setSource(std::move(in_vector));
 
     stream.start();
