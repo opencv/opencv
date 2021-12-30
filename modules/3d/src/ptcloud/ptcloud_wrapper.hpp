@@ -36,7 +36,7 @@ public:
                 "Data with only one channel are supported");
         CV_CheckEQ(points_.rows, 3,
                 "Data with only Mat with 3xN are supported");
-        CV_Check(points_.isContinuous(), points_.isContinuous(),
+        CV_Check(points_.isContinuous(), points_.isContinuous() == true,
                 "The matrix should be continuous");
     }
 

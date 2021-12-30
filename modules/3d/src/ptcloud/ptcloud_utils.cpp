@@ -59,8 +59,7 @@ void
 copyPointDataByIdxs(const Mat &src, Mat &dst, const std::vector<int> &idxs, int dst_size,
         int arrangement_of_points, bool is_parallel)
 {
-    CV_CheckDepthEQ(src.depth(), CV_32F,
-            "Data with only depth CV_32F are supported");
+    CV_CheckDepthEQ(src.depth(), CV_32F, "Data with only depth CV_32F are supported");
     CV_CheckChannelsEQ(src.channels(), 1, "Data with only one channel are supported");
 
     const int idxs_size = (int) idxs.size();
