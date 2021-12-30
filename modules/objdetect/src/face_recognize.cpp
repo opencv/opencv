@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef WINRT
+#ifdef HAVE_OPENCV_DNN
 
 #include "precomp.hpp"
 
@@ -182,5 +182,7 @@ Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String
 }
 
 } // namespace cv
+
+#else
 
 #endif
