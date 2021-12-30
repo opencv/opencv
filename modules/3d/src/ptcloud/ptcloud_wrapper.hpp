@@ -30,7 +30,7 @@ public:
               pts_ptr_x((float *) points_.data), pts_ptr_y(pts_ptr_x + pts_cnt),
               pts_ptr_z(pts_ptr_y + pts_cnt)
     {
-        CV_CheckDepth(points_.depth(), points_.depth() == CV_32F,
+        CV_CheckDepthEQ(points_.depth(), CV_32F,
                 "Data with only depth CV_32F are supported");
         CV_CheckChannelsEQ(points_.channels(), 1,
                 "Data with only one channel are supported");

@@ -67,9 +67,9 @@ public:
 
     //-------------------------- CREATE -----------------------
 
-    static Ptr<SACSegmentation> create(SacModelType sac_model_type_ = SAC_MODEL_PLANE,
-            SacMethod sac_method_ = SAC_METHOD_RANSAC,
-            double threshold_ = 0.5, int max_iterations_ = 1000);
+    static Ptr<SACSegmentation> create(SacModelType sac_model_type = SAC_MODEL_PLANE,
+            SacMethod sac_method = SAC_METHOD_RANSAC,
+            double threshold = 0.5, int max_iterations = 1000);
 
     // -------------------------- CONSTRUCTOR, DESTRUCTOR --------------------------
 
@@ -97,45 +97,45 @@ public:
     //-------------------------- Getter and Setter -----------------------
 
     //! Set the type of sample consensus model to use.
-    virtual void setSacModelType(SacModelType sac_model_type_) = 0;
+    virtual void setSacModelType(SacModelType sac_model_type) = 0;
 
     //! Get the type of sample consensus model used.
     virtual SacModelType getSacModelType() const = 0;
 
     //! Set the type of sample consensus method to use.
-    virtual void setSacMethodType(SacMethod sac_method_) = 0;
+    virtual void setSacMethodType(SacMethod sac_method) = 0;
 
     //! Get the type of sample consensus method used.
     virtual SacMethod getSacMethodType() const = 0;
 
     //! Set the distance to the model threshold.
     //! Considered as inlier point if distance to the model less than threshold.
-    virtual void setDistanceThreshold(double threshold_) = 0;
+    virtual void setDistanceThreshold(double threshold) = 0;
 
     //! Get the distance to the model threshold.
     virtual double getDistanceThreshold() const = 0;
 
     //! Set the minimum and maximum radius limits for the model.
     //! Only used for models whose model parameters include a radius.
-    virtual void setRadiusLimits(double radius_min_, double radius_max_) = 0;
+    virtual void setRadiusLimits(double radius_min, double radius_max) = 0;
 
     //! Get the minimum and maximum radius limits for the model.
-    virtual void getRadiusLimits(double &radius_min_, double &radius_max_) const = 0;
+    virtual void getRadiusLimits(double &radius_min, double &radius_max) const = 0;
 
     //! Set the maximum number of iterations to attempt.
-    virtual void setMaxIterations(int max_iterations_) = 0;
+    virtual void setMaxIterations(int max_iterations) = 0;
 
     //! Get the maximum number of iterations to attempt.
     virtual int getMaxIterations() const = 0;
 
     //! Set the confidence that ensure at least one of selections is an error-free set of data points.
-    virtual void setConfidence(double confidence_) = 0;
+    virtual void setConfidence(double confidence) = 0;
 
     //! Get the confidence that ensure at least one of selections is an error-free set of data points.
     virtual double getConfidence() const = 0;
 
     //! Set the number of models expected.
-    virtual void setNumberOfModelsExpected(int number_of_models_expected_) = 0;
+    virtual void setNumberOfModelsExpected(int number_of_models_expected) = 0;
 
     //! Get the expected number of models.
     virtual int getNumberOfModelsExpected() const = 0;
@@ -148,7 +148,7 @@ public:
     virtual bool isParallel() const = 0;
 
     //! Set state used to initialize the RNG(Random Number Generator).
-    virtual void setRandomGeneratorState(uint64 rng_state_) = 0;
+    virtual void setRandomGeneratorState(uint64 rng_state) = 0;
 
     //! Get state used to initialize the RNG(Random Number Generator).
     virtual uint64 getRandomGeneratorState() const = 0;
@@ -156,7 +156,7 @@ public:
     //! Set custom model coefficient constraint function.
     //! A custom function that takes model coefficients and returns whether the model is acceptable or not.
     virtual void
-    setCustomModelConstraints(const ModelConstraintFunction &custom_model_constraints_) = 0;
+    setCustomModelConstraints(const ModelConstraintFunction &custom_model_constraints) = 0;
 
     //! Get custom model coefficient constraint function.
     virtual const ModelConstraintFunction &getCustomModelConstraints() const = 0;

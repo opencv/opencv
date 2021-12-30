@@ -30,7 +30,7 @@ int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
 
     // Get input point cloud data
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts, 0);
+    getPointsMatFromInputArray(input_pts, ori_pts, 0);
 
     const int ori_pts_size = ori_pts.rows;
 
@@ -150,7 +150,7 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sampled_
 
     // Get input point cloud data
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts, 0);
+    getPointsMatFromInputArray(input_pts, ori_pts, 0);
 
     const int ori_pts_size = ori_pts.rows;
     CV_CheckLT(sampled_pts_size, ori_pts_size,
@@ -193,7 +193,7 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const float sample
     CV_CheckGT(sampled_scale, 0.0f, "The point cloud sampled scale must greater than 0.");
     CV_CheckLT(sampled_scale, 1.0f, "The point cloud sampled scale must less than 1.");
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts, 0);
+    getPointsMatFromInputArray(input_pts, ori_pts, 0);
     randomSampling(sampled_pts, input_pts, cvCeil(sampled_scale * ori_pts.rows), rng);
 } // randomSampling()
 
@@ -220,7 +220,7 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
     Mat ori_pts;
     // In order to keep the points continuous in memory (which allows better support for SIMD),
     // the position of the points may be changed, data copying is mandatory
-    _getMatFromInputArray(input_pts, ori_pts, 1, true);
+    getPointsMatFromInputArray(input_pts, ori_pts, 1, true);
 
     const int ori_pts_size = ori_pts.rows * ori_pts.cols / 3;
     CV_CheckLT(sampled_pts_size, ori_pts_size,
@@ -270,14 +270,11 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         int next_pt = sampled_cnt;
         int i = sampled_cnt;
 #ifdef CV_SIMD
-        int k = (ori_pts_size - sampled_cnt) / v_float32::nlanes;
-        int end = sampled_cnt + v_float32::nlanes * k;
-
         v_float32 v_last_p_x = vx_setall_f32(last_pt_x);
         v_float32 v_last_p_y = vx_setall_f32(last_pt_y);
         v_float32 v_last_p_z = vx_setall_f32(last_pt_z);
 
-        for (; i < end; i += v_float32::nlanes)
+        for (; i <= ori_pts_size - v_float32::nlanes; i += v_float32::nlanes)
         {
             v_float32 vx_diff = v_last_p_x - vx_load(ori_pts_ptr_x + i);
             v_float32 vy_diff = v_last_p_y - vx_load(ori_pts_ptr_y + i);
@@ -359,7 +356,7 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
     CV_CheckGE(dist_lower_limit, 0.0f,
                "The distance lower bound must be greater than or equal to 0.");
     Mat ori_pts;
-    _getMatFromInputArray(input_pts, ori_pts, 1);
+    getPointsMatFromInputArray(input_pts, ori_pts, 1);
     return farthestPointSampling(sampled_point_flags, input_pts,
                                  cvCeil(sampled_scale * ori_pts.cols), dist_lower_limit, rng);
 } // farthestPointSampling()

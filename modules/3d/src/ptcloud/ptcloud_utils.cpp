@@ -9,7 +9,7 @@
 namespace cv {
 
 void
-_getMatFromInputArray(InputArray input_pts, Mat &mat, int arrangement_of_points, bool clone_data)
+getPointsMatFromInputArray(InputArray input_pts, Mat &mat, int arrangement_of_points, bool clone_data)
 {
     CV_Check(input_pts.dims(), input_pts.dims() < 3,
             "Only support data with dimension less than 3.");
@@ -59,7 +59,7 @@ void
 copyPointDataByIdxs(const Mat &src, Mat &dst, const std::vector<int> &idxs, int dst_size,
         int arrangement_of_points, bool is_parallel)
 {
-    CV_CheckDepth(src.depth(), src.depth() == CV_32F,
+    CV_CheckDepthEQ(src.depth(), CV_32F,
             "Data with only depth CV_32F are supported");
     CV_CheckChannelsEQ(src.channels(), 1, "Data with only one channel are supported");
 

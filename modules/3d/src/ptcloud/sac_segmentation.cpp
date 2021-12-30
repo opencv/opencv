@@ -38,7 +38,7 @@ inline int sacModelMinimumSampleSize(SacModelType model_type)
 int
 SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &model_coefficients)
 {
-    CV_CheckDepth(points.depth(), points.depth() == CV_32F,
+    CV_CheckDepthEQ(points.depth(), CV_32F,
             "Data with only depth CV_32F are supported");
     CV_CheckChannelsEQ(points.channels(), 1, "Data with only one channel are supported");
     CV_CheckEQ(points.rows, 3, "Data with only Mat with 3xN are supported");
@@ -163,7 +163,7 @@ SACSegmentationImpl::segment(InputArray input_pts, OutputArray labels,
 {
     Mat points;
     // Get Mat with 3xN CV_32F
-    _getMatFromInputArray(input_pts, points, 1);
+    getPointsMatFromInputArray(input_pts, points, 1);
     int pts_size = points.rows * points.cols / 3;
 
     std::vector<int> _labels(pts_size, 0);

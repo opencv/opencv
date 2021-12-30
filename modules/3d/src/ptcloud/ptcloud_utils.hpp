@@ -26,7 +26,7 @@ namespace cv {
  *          Nx3(x1, y1, z1, ..., xn, yn, zn) to 3xN(x1, ..., xn, y1, ..., yn, z1, ..., zn)
  *
  */
-void _getMatFromInputArray(InputArray input_pts, Mat &mat,
+void getPointsMatFromInputArray(InputArray input_pts, Mat &mat,
         int arrangement_of_points = 1, bool clone_data = false);
 
 /** @brief Copy the data xyz of the point by specifying the indexs.

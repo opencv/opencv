@@ -9,9 +9,6 @@
 
 namespace cv {
 
-//! @addtogroup _3d
-//! @{
-
 class SACSegmentationImpl : public SACSegmentation
 {
 private:
@@ -141,7 +138,6 @@ Ptr <SACSegmentation> SACSegmentation::create(SacModelType sac_model_type_, SacM
     return makePtr<SACSegmentationImpl>(sac_model_type_, sac_method_, threshold_, max_iterations_);
 }
 
-//! @} _3d
 } //end namespace cv
 
 #endif //OPENCV_3D_SAC_SEGMENTATION_HPP
