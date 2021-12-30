@@ -831,6 +831,8 @@ protected:
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
+#ifndef WINRT
 #include "opencv2/objdetect/face.hpp"
+#endif
 
 #endif

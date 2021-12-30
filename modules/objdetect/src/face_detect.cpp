@@ -2,6 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#ifndef WINRT
+
 #include "precomp.hpp"
 
 #include "opencv2/imgproc.hpp"
@@ -287,3 +289,5 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
 }
 
 } // namespace cv
+
+#endif
