@@ -71,6 +71,12 @@ public:
             SacMethod sac_method_ = SAC_METHOD_RANSAC,
             double threshold_ = 0.5, int max_iterations_ = 1000);
 
+    // -------------------------- CONSTRUCTOR, DESTRUCTOR --------------------------
+
+    SACSegmentation() = default;
+
+    virtual ~SACSegmentation() = default;
+
     //-------------------------- SEGMENT -----------------------
 
     /**
