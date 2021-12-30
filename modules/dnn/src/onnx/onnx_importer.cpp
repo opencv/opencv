@@ -1417,10 +1417,8 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             }
         }
     }
-    else // if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
+    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
     {
-        addBroadcasting(node_proto, {0, 1}, layerParams);
-
         layerParams.type = "Eltwise";
         if (isSub)
         {
@@ -1428,15 +1426,15 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             layerParams.set("coeff", DictValue::arrayReal<float*>(subCoeffs, 2));
         }
     }
-//    else
-//    {
-//        if (isSub)
-//        {
-//            addNegation(layerParams, node_proto, 1);
-//        }
-//        layerParams.type = "Scale";
-//        layerParams.set("bias_term", true);
-//    }
+    else
+    {
+        if (isSub)
+        {
+            addNegation(layerParams, node_proto, 1);
+        }
+        layerParams.type = "Scale";
+        layerParams.set("bias_term", true);
+    }
     addLayer(layerParams, node_proto);
 }
 

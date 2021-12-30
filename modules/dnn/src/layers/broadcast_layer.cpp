@@ -4,7 +4,15 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../broadcast_common.hpp"
+#include <opencv2/core/ocl.hpp>
 
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/broadcast.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
+#include <numeric>
 
 namespace cv { namespace dnn {
 
@@ -19,9 +27,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV && (preferableTarget == DNN_TARGET_CPU
+        return (backendId == DNN_BACKEND_OPENCV && (preferableTarget == DNN_TARGET_CPU
                                                    || preferableTarget == DNN_TARGET_OPENCL
-                                                   || preferableTarget == DNN_TARGET_OPENCL_FP16);
+                                                   || preferableTarget == DNN_TARGET_OPENCL_FP16))
+               || (backendId == DNN_BACKEND_CUDA);
     }
 
     static MatShape findCommonShape(std::vector<MatShape> shapes)
@@ -64,22 +73,30 @@ public:
 
     void cacheIndices(const std::vector<Mat>& shapes, const MatShape& outShape)
     {
+        m_outShape = outShape;
         m_cache.clear();
-        m_cache.resize(shapes.size(), InputCache(outShape.size()));
+        m_cache.resize(shapes.size());
         for (size_t j = 0; j < shapes.size(); ++j)
         {
             InputCache& cache = m_cache[j];
-            cache.alignedShape = shape(shapes[j]);
-            cache.alignedShape.insert(cache.alignedShape.begin(), outShape.size() - cache.alignedShape.size(), 1);
-            for (size_t i = 0; i < cache.alignedShape.size(); ++i)
+            const auto inputShape = shape(shapes[j]);
+            cache.shape_prods = std::vector<size_t>(inputShape.begin(), inputShape.end());
+            cache.shape_prods.insert(cache.shape_prods.begin(), outShape.size() - cache.shape_prods.size(), 1);
+            for (size_t i = 0; i < cache.shape_prods.size(); ++i)
             {
-                if (outShape[i] != cache.alignedShape[i])
+                if (outShape[i] != cache.shape_prods[i])
                 {
-                    cache.ids.push_back(i);
-                    cache.idx_to[i] = cv::Range(0, 1);
+                    cache.broadcast_dims.push_back(i);
                 }
             }
+            std::reverse(cache.broadcast_dims.begin(), cache.broadcast_dims.end());
+            cache.shape_prods.insert(cache.shape_prods.begin(), 1);
+            std::partial_sum(cache.shape_prods.begin(), cache.shape_prods.end(),
+                             cache.shape_prods.begin(), std::multiplies<size_t>());
         }
+        m_prods = std::vector<size_t>(outShape.begin(), outShape.end());
+        m_prods.push_back(1);
+        std::partial_sum(m_prods.rbegin(), m_prods.rend(), m_prods.rbegin(), std::multiplies<size_t>());
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -92,56 +109,6 @@ public:
         cacheIndices(inputs, outShape);
     }
 
-    static bool advance(std::vector<size_t>& ids,
-                        int& k,
-                        std::vector<cv::Range>& idx_to,
-                        std::vector<cv::Range>& idx_from,
-                        const MatShape& out_shape)
-    {
-        for (int i = 0; i < k;)
-        {
-            size_t& d = ids[i];
-            const int old_end = idx_to[d].end;
-            int new_end = std::min(out_shape[d], old_end * 2);
-            if (new_end > old_end)
-            {
-                idx_to[d] = cv::Range(idx_to[d].end, new_end);
-                idx_from[d].end = idx_to[d].size();
-                return true;
-            }
-            idx_to[d] = cv::Range::all();
-            idx_from[d] = cv::Range::all();
-            std::swap(d, ids[k - 1]);
-            --k;
-        }
-        return false;
-    }
-
-    template <typename T>
-    void forward_generic(const std::vector<T>& inputs, std::vector<T>& outputs)
-    {
-        MatShape outShape = shape(outputs[0]);
-
-        std::vector<cv::Range> idx_to;
-        std::vector<cv::Range> idx_from;
-        for (size_t i = 0; i < inputs.size(); ++i)
-        {
-            const T& input = inputs[i];
-            T& output = outputs[i];
-            InputCache& cache = m_cache[i];
-
-            idx_to = cache.idx_to;
-            idx_from = idx_to;
-
-            int k = static_cast<int>(cache.ids.size());
-            input.reshape(1, cache.alignedShape.size(), cache.alignedShape.data()).copyTo(output(idx_to));
-            while (advance(cache.ids, k, idx_to, idx_from, outShape))
-            {
-                output(idx_from).copyTo(output(idx_to));
-            }
-        }
-    }
-
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inputs_, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
@@ -151,8 +118,46 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        forward_generic(inputs, outputs);
-        return false;
+        auto q = static_cast<cl_command_queue>(ocl::Queue::getDefault().ptr());
+        cl_int retval = CL_SUCCESS;
+        size_t elSize = inputs[0].elemSize();
+
+        auto copier = [&retval, &q, elSize](cl_mem src, size_t src_offset, cl_mem dst, size_t dst_offset,
+                                            const size_t size, const size_t times) {
+            for (size_t i = 0; i < times; ++i)
+            {
+                retval = clEnqueueCopyBuffer(q, src, dst, src_offset * elSize, dst_offset * elSize, size * elSize, 0, 0, 0);
+                CV_Assert(retval == CL_SUCCESS);
+                dst_offset += size;
+            }
+        };
+
+        for (size_t i = 0; i < inputs.size(); ++i)
+        {
+            const UMat &input = inputs[i];
+            UMat &output = outputs[i];
+
+            CV_Assert(input.isContinuous() && output.isContinuous());
+            auto input_ptr = static_cast<cl_mem>(input.handle(ACCESS_READ));
+            auto output_ptr = static_cast<cl_mem>(output.handle(ACCESS_WRITE));
+
+            broadcast(input_ptr, output_ptr, m_cache[i], m_prods, m_outShape, copier);
+        }
+        clFinish(q); // not sure
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+            void *context_,
+            const std::vector<Ptr<BackendWrapper>>& inputs,
+            const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::BroadcastOp>(preferableTarget, context->stream, m_cache, m_prods, m_outShape);
     }
 #endif
 
@@ -169,20 +174,35 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        forward_generic(inputs, outputs);
+        static auto copier = [](const float* src, size_t src_offset, float* dst, size_t dst_offset,
+                                const size_t size, const size_t times)
+        {
+            src += src_offset;
+            dst += dst_offset;
+            for (size_t i = 0; i < times; ++i)
+            {
+                memcpy(dst, src, size * sizeof(float));
+                dst += size;
+            }
+        };
+
+        for (size_t i = 0; i < inputs.size(); ++i)
+        {
+            const Mat &input = inputs[i];
+            Mat &output = outputs[i];
+
+            CV_Assert(input.isContinuous() && output.isContinuous());
+            const float *input_ptr = input.ptr<float>();
+            float *output_ptr = output.ptr<float>();
+
+            broadcast(input_ptr, output_ptr, m_cache[i], m_prods, m_outShape, copier);
+        }
     }
 
 private:
-    struct InputCache
-    {
-        InputCache(size_t size) : idx_to(size, cv::Range::all()) {}
-
-        std::vector<size_t> ids;
-        std::vector<cv::Range> idx_to;
-        MatShape alignedShape;
-    };
-
     std::vector<InputCache> m_cache;
+    std::vector<size_t> m_prods;
+    MatShape m_outShape;
 };
 
 Ptr<BroadcastLayer> BroadcastLayer::create(const LayerParams& params)
