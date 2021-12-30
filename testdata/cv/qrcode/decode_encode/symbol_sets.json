@@ -1,0 +1,7 @@
+{
+    "symbols_sets": [
+        { "mode": 1, "symbols_set":"0123456789" },
+        { "mode": 2, "symbols_set":"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:" },
+        { "mode": 4, "symbols_set":"!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz{|}"}
+    ]
+}

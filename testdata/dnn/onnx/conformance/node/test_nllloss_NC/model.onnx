@@ -1,0 +1,17 @@
+backend-test:œ
+F
+input
+targetloss"NegativeLogLikelihoodLoss*
+	reduction"none test_nllloss_NCZ
+input
+
+
+Z
+target
+
+
+b
+loss
+
+
+B

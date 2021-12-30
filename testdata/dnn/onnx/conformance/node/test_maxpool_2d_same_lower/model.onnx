@@ -1,0 +1,18 @@
+backend-test:™
+A
+xy"MaxPool*
+auto_pad"
+SAME_LOWER *
+kernel_shape@@ test_maxpool_2d_same_lowerZ
+x
+
+
+
+ 
+ b
+y
+
+
+
+ 
+ B	

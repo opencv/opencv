@@ -1,0 +1,19 @@
+backend-test:·
+S
+xy"MaxPool*
+auto_pad"
+SAME_UPPER *
+kernel_shape@@ *
+strides@@ &test_maxpool_2d_precomputed_same_upperZ
+x
+
+
+
+
+b
+y
+
+
+
+
+B	

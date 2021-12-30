@@ -1,0 +1,26 @@
+backend-test:É
+S
+x
+Wy"Conv*
+auto_pad"
+SAME_LOWER *
+kernel_shape@@ *
+strides@@ test_conv_with_autopad_sameZ
+x
+
+
+
+
+Z
+W
+
+
+
+
+b
+y
+
+
+
+
+B
