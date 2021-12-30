@@ -51,7 +51,7 @@ Example of segmenting plane from a 3D point cloud using the RANSAC algorithm:
 1. Supported algorithms: enum SacMethod in ptcloud.hpp.
 2. Supported models: enum SacModelType in ptcloud.hpp.
  */
-class CV_EXPORTS SACSegmentation : public Algorithm
+class CV_EXPORTS SACSegmentation
 {
 public:
     /** @brief Custom function that take the model coefficients and return whether the model is acceptable or not.

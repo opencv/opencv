@@ -67,7 +67,6 @@ public:
     {
     }
 
-    ~SACSegmentationImpl() override = default;
 
     int segment(InputArray input_pts, OutputArray labels, OutputArray models_coefficients) override;
 
