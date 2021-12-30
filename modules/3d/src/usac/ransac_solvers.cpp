@@ -10,6 +10,8 @@ namespace cv { namespace usac {
 int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
+//! Adapter between SimpleUsacConfig and Model.
+void modelParamsToUsacConfig (Ptr<SimpleUsacConfig> &config, const Ptr<const Model> &params);
 
 class RansacOutputImpl : public RansacOutput {
 private:
@@ -82,144 +84,178 @@ Ptr<RansacOutput> RansacOutput::create(const Mat &model_, const std::vector<bool
             number_iterations_, number_estimated_models_, number_good_models_);
 }
 
-class Ransac {
-protected:
-    const Ptr<const Model> params;
-    const Ptr<const Estimator> _estimator;
-    const Ptr<Quality> _quality;
-    const Ptr<Sampler> _sampler;
-    const Ptr<TerminationCriteria> _termination_criteria;
-    const Ptr<ModelVerifier> _model_verifier;
-    const Ptr<Degeneracy> _degeneracy;
-    const Ptr<LocalOptimization> _local_optimization;
-    const Ptr<FinalModelPolisher> model_polisher;
-
-    const int points_size, state;
-    const bool parallel;
+class SimpleUsacConfigImpl : public SimpleUsacConfig {
 public:
+    SimpleUsacConfigImpl() : max_iterations(2500), max_iterations_before_lo(100),
+                             max_num_hypothesis_to_test_before_rejection(15),
+                             random_generator_state(0), is_parallel(false),
+                             neighbors_search_method(NeighborSearchMethod::NEIGH_GRID),
+                             sampling_method(SamplingMethod::SAMPLING_UNIFORM),
+                             score_method(ScoreMethod::SCORE_METHOD_RANSAC),
+                             lo_method(LocalOptimMethod::LOCAL_OPTIM_INNER_LO), need_mask(true) {}
 
-    Ransac (const Ptr<const Model> &params_, int points_size_, const Ptr<const Estimator> &estimator_, const Ptr<Quality> &quality_,
-            const Ptr<Sampler> &sampler_, const Ptr<TerminationCriteria> &termination_criteria_,
-            const Ptr<ModelVerifier> &model_verifier_, const Ptr<Degeneracy> &degeneracy_,
-            const Ptr<LocalOptimization> &local_optimization_, const Ptr<FinalModelPolisher> &model_polisher_,
-            bool parallel_=false, int state_ = 0) :
+    int getMaxIterations() const override { return max_iterations; }
+    int getMaxIterationsBeforeLO() const override { return max_iterations_before_lo; }
+    int getMaxNumHypothesisToTestBeforeRejection() const override { return max_num_hypothesis_to_test_before_rejection; }
+    int getRandomGeneratorState() const override { return random_generator_state; }
+    bool isParallel () const override { return is_parallel; }
+    NeighborSearchMethod getNeighborsSearchMethod() const override { return neighbors_search_method; }
+    SamplingMethod getSamplingMethod() const override { return sampling_method; }
+    ScoreMethod getScoreMethod() const override { return score_method; }
+    LocalOptimMethod getLOMethod() const override { return lo_method; }
+    bool isMaskRequired() const override { return need_mask; }
 
-            params (params_), _estimator (estimator_), _quality (quality_), _sampler (sampler_),
-            _termination_criteria (termination_criteria_), _model_verifier (model_verifier_),
-            _degeneracy (degeneracy_), _local_optimization (local_optimization_),
-            model_polisher (model_polisher_), points_size (points_size_), state(state_),
-            parallel(parallel_) {}
+    void setMaxIterations(int max_iterations_) override { max_iterations = max_iterations_; }
+    void setMaxIterationsBeforeLo(int max_iterations_before_lo_) override { max_iterations_before_lo = max_iterations_before_lo_; }
+    void setMaxNumHypothesisToTestBeforeRejection(int max_num_hypothesis_to_test_before_rejection_)
+         override  { max_num_hypothesis_to_test_before_rejection = max_num_hypothesis_to_test_before_rejection_; }
+    void setRandomGeneratorState(int random_generator_state_) override  { random_generator_state = random_generator_state_; }
+    void setParallel (bool is_parallel_) override { is_parallel = is_parallel_; }
+    void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) override { neighbors_search_method = neighbors_search_method_; }
+    void setSamplingMethod(SamplingMethod sampling_method_) override  { sampling_method = sampling_method_; }
+    void setScoreMethod(ScoreMethod score_method_) override  { score_method = score_method_; }
+    void setLoMethod(LocalOptimMethod lo_method_) override { lo_method = lo_method_; }
+    void maskRequired (bool need_mask_) override { need_mask = need_mask_; }
 
-    bool run(Ptr<RansacOutput> &ransac_output) {
-        if (points_size < params->getSampleSize())
-            return false;
+protected:
+    int max_iterations;
+    int max_iterations_before_lo;
+    int max_num_hypothesis_to_test_before_rejection;
+    int random_generator_state;
+    bool is_parallel;
+    NeighborSearchMethod neighbors_search_method;
+    SamplingMethod sampling_method;
+    ScoreMethod score_method;
+    LocalOptimMethod lo_method;
+    bool need_mask;
+};
 
-        const auto begin_time = std::chrono::steady_clock::now();
+Ptr<SimpleUsacConfig> SimpleUsacConfig::create() {
+    return makePtr<SimpleUsacConfigImpl>();
+}
 
-        // check if LO
-        const bool LO = params->getLO() != LocalOptimMethod::LOCAL_OPTIM_NULL;
-        const bool is_magsac = params->getLO() == LocalOptimMethod::LOCAL_OPTIM_SIGMA;
-        const int max_hyp_test_before_ver = params->getMaxNumHypothesisToTestBeforeRejection();
-        const int repeat_magsac = 10, max_iters_before_LO = params->getMaxItersBeforeLO();
-        Score best_score;
-        Mat best_model;
-        int final_iters;
+UniversalRANSAC::UniversalRANSAC (const Ptr<const UsacConfig> &config_, int points_size_,
+        const Ptr<const Estimator> &estimator_, const Ptr<Quality> &quality_,
+        const Ptr<Sampler> &sampler_, const Ptr<TerminationCriteria> &termination_criteria_,
+        const Ptr<ModelVerifier> &model_verifier_, const Ptr<Degeneracy> &degeneracy_,
+        const Ptr<LocalOptimization> &local_optimization_,
+        const Ptr<FinalModelPolisher> &model_polisher_) :
 
-        if (! parallel) {
-            auto update_best = [&] (const Mat &new_model, const Score &new_score) {
-                best_score = new_score;
-                // remember best model
-                new_model.copyTo(best_model);
-                // update quality and verifier to save evaluation time of a model
-                _quality->setBestScore(best_score.score);
-                // update verifier
-                _model_verifier->update(best_score.inlier_number);
-                // update upper bound of iterations
-                return _termination_criteria->update(best_model, best_score.inlier_number);
-            };
-            bool was_LO_run = false;
-            Mat non_degenerate_model, lo_model;
-            Score current_score, lo_score, non_denegenerate_model_score;
+        config (config_), _estimator (estimator_), _quality (quality_), _sampler (sampler_),
+        _termination_criteria (termination_criteria_), _model_verifier (model_verifier_),
+        _degeneracy (degeneracy_), _local_optimization (local_optimization_),
+        _model_polisher (model_polisher_), points_size (points_size_) {}
 
-            // reallocate memory for models
-            std::vector<Mat> models(_estimator->getMaxNumSolutions());
+bool UniversalRANSAC::run(Ptr<RansacOutput> &ransac_output) {
+    if (points_size < _estimator->getMinimalSampleSize())
+        return false;
 
-            // allocate memory for sample
-            std::vector<int> sample(_estimator->getMinimalSampleSize());
-            int iters = 0, max_iters = params->getMaxIters();
-            for (; iters < max_iters; iters++) {
-                _sampler->generateSample(sample);
-                const int number_of_models = _estimator->estimateModels(sample, models);
+    const auto begin_time = std::chrono::steady_clock::now();
 
-                for (int i = 0; i < number_of_models; i++) {
-                    if (iters < max_hyp_test_before_ver) {
-                        current_score = _quality->getScore(models[i]);
-                    } else {
-                        if (is_magsac && iters % repeat_magsac == 0) {
-                            if (!_local_optimization->refineModel
-                                    (models[i], best_score, models[i], current_score))
-                                continue;
-                        } else if (_model_verifier->isModelGood(models[i])) {
-                            if (!_model_verifier->getScore(current_score)) {
-                                if (_model_verifier->hasErrors())
-                                    current_score = _quality->getScore(_model_verifier->getErrors());
-                                else current_score = _quality->getScore(models[i]);
-                            }
-                        } else continue;
-                    }
+    // check if LO
+    const bool LO = config->getLOMethod() != LocalOptimMethod::LOCAL_OPTIM_NULL;
+    const bool is_magsac = config->getLOMethod() == LocalOptimMethod::LOCAL_OPTIM_SIGMA;
+    const int max_hyp_test_before_ver = config->getMaxNumHypothesisToTestBeforeRejection();
+    const int repeat_magsac = 10, max_iters_before_LO = config->getMaxIterationsBeforeLO();
+    Score best_score;
+    Mat best_model;
+    int final_iters;
 
-                    if (current_score.isBetter(best_score)) {
-                        if (_degeneracy->recoverIfDegenerate(sample, models[i],
-                                non_degenerate_model, non_denegenerate_model_score)) {
-                            // check if best non degenerate model is better than so far the best model
-                            if (non_denegenerate_model_score.isBetter(best_score))
-                                max_iters = update_best(non_degenerate_model, non_denegenerate_model_score);
-                            else continue;
-                        } else max_iters = update_best(models[i], current_score);
+    if (! config->isParallel()) {
+        auto update_best = [&] (const Mat &new_model, const Score &new_score) {
+            best_score = new_score;
+            // remember best model
+            new_model.copyTo(best_model);
+            // update quality and verifier to save evaluation time of a model
+            _quality->setBestScore(best_score.score);
+            // update verifier
+            _model_verifier->update(best_score.inlier_number);
+            // update upper bound of iterations
+            return _termination_criteria->update(best_model, best_score.inlier_number);
+        };
+        bool was_LO_run = false;
+        Mat non_degenerate_model, lo_model;
+        Score current_score, lo_score, non_denegenerate_model_score;
 
-                        if (LO && iters >= max_iters_before_LO) {
-                            // do magsac if it wasn't already run
-                            if (is_magsac && iters % repeat_magsac == 0 && iters >= max_hyp_test_before_ver) continue; // magsac has already run
-                            was_LO_run = true;
-                            // update model by Local optimization
-                            if (_local_optimization->refineModel
-                                    (best_model, best_score, lo_model, lo_score)) {
-                                if (lo_score.isBetter(best_score)){
-                                    max_iters = update_best(lo_model, lo_score);
-                                }
-                            }
+        // reallocate memory for models
+        std::vector<Mat> models(_estimator->getMaxNumSolutions());
+
+        // allocate memory for sample
+        std::vector<int> sample(_estimator->getMinimalSampleSize());
+        int iters = 0, max_iters = config->getMaxIterations();
+        for (; iters < max_iters; iters++) {
+            _sampler->generateSample(sample);
+            const int number_of_models = _estimator->estimateModels(sample, models);
+
+            for (int i = 0; i < number_of_models; i++) {
+                if (iters < max_hyp_test_before_ver) {
+                    current_score = _quality->getScore(models[i]);
+                } else {
+                    if (is_magsac && iters % repeat_magsac == 0) {
+                        if (!_local_optimization->refineModel
+                                (models[i], best_score, models[i], current_score))
+                            continue;
+                    } else if (_model_verifier->isModelGood(models[i])) {
+                        if (!_model_verifier->getScore(current_score)) {
+                            if (_model_verifier->hasErrors())
+                                current_score = _quality->getScore(_model_verifier->getErrors());
+                            else current_score = _quality->getScore(models[i]);
                         }
-                        if (iters > max_iters)
-                            break;
-                    } // end of if so far the best score
-                } // end loop of number of models
-                if (LO && !was_LO_run && iters >= max_iters_before_LO) {
-                    was_LO_run = true;
-                    if (_local_optimization->refineModel(best_model, best_score, lo_model, lo_score))
-                        if (lo_score.isBetter(best_score)){
-                            max_iters = update_best(lo_model, lo_score);
-                        }
+                    } else continue;
                 }
-            } // end main while loop
 
-            final_iters = iters;
-        } else {
-            const int MAX_THREADS = getNumThreads();
-            const bool is_prosac = params->getSampler() == SamplingMethod::SAMPLING_PROSAC;
+                if (current_score.isBetter(best_score)) {
+                    if (_degeneracy->recoverIfDegenerate(sample, models[i],
+                            non_degenerate_model, non_denegenerate_model_score)) {
+                        // check if best non degenerate model is better than so far the best model
+                        if (non_denegenerate_model_score.isBetter(best_score))
+                            max_iters = update_best(non_degenerate_model, non_denegenerate_model_score);
+                        else continue;
+                    } else max_iters = update_best(models[i], current_score);
 
-            std::atomic_bool success(false);
-            std::atomic_int num_hypothesis_tested(0);
-            std::atomic_int thread_cnt(0);
-            std::vector<Score> best_scores(MAX_THREADS);
-            std::vector<Mat> best_models(MAX_THREADS);
+                    if (LO && iters >= max_iters_before_LO) {
+                        // do magsac if it wasn't already run
+                        if (is_magsac && iters % repeat_magsac == 0 && iters >= max_hyp_test_before_ver) continue; // magsac has already run
+                        was_LO_run = true;
+                        // update model by Local optimization
+                        if (_local_optimization->refineModel
+                                (best_model, best_score, lo_model, lo_score)) {
+                            if (lo_score.isBetter(best_score)){
+                                max_iters = update_best(lo_model, lo_score);
+                            }
+                        }
+                    }
+                    if (iters > max_iters)
+                        break;
+                } // end of if so far the best score
+            } // end loop of number of models
+            if (LO && !was_LO_run && iters >= max_iters_before_LO) {
+                was_LO_run = true;
+                if (_local_optimization->refineModel(best_model, best_score, lo_model, lo_score))
+                    if (lo_score.isBetter(best_score)){
+                        max_iters = update_best(lo_model, lo_score);
+                    }
+            }
+        } // end main while loop
 
-            Mutex mutex; // only for prosac
+        final_iters = iters;
+    } else {
+        const int MAX_THREADS = getNumThreads();
+        const bool is_prosac = config->getSamplingMethod() == SamplingMethod::SAMPLING_PROSAC;
 
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////
-            parallel_for_(Range(0, MAX_THREADS), [&](const Range & /*range*/) {
+        std::atomic_bool success(false);
+        std::atomic_int num_hypothesis_tested(0);
+        std::atomic_int thread_cnt(0);
+        std::vector<Score> best_scores(MAX_THREADS);
+        std::vector<Mat> best_models(MAX_THREADS);
+
+        Mutex mutex; // only for prosac
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        parallel_for_(Range(0, MAX_THREADS), [&](const Range & /*range*/) {
             if (!success) { // cover all if not success to avoid thread creating new variables
                 const int thread_rng_id = thread_cnt++;
-                int thread_state = state + 10*thread_rng_id;
+                int thread_state = config->getRandomGeneratorState() + 10*thread_rng_id;
 
                 Ptr<Estimator> estimator = _estimator->clone();
                 Ptr<Degeneracy> degeneracy = _degeneracy->clone(thread_state++);
@@ -238,7 +274,7 @@ public:
                       best_score_all_threads;
                 std::vector<int> sample(estimator->getMinimalSampleSize());
                 std::vector<Mat> models(estimator->getMaxNumSolutions());
-                int iters, max_iters = params->getMaxIters();
+                int iters, max_iters = config->getMaxIterations();
                 auto update_best = [&] (const Score &new_score, const Mat &new_model) {
                     // copy new score to best score
                     best_score_thread = new_score;
@@ -333,49 +369,48 @@ public:
                     }
                 } // end of loop over iters
             }}); // end parallel
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////
-            // find best model from all threads' models
-            best_score = best_scores[0];
-            int best_thread_idx = 0;
-            for (int i = 1; i < MAX_THREADS; i++) {
-                if (best_scores[i].isBetter(best_score)) {
-                    best_score = best_scores[i];
-                    best_thread_idx = i;
-                }
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        // find best model from all threads' models
+        best_score = best_scores[0];
+        int best_thread_idx = 0;
+        for (int i = 1; i < MAX_THREADS; i++) {
+            if (best_scores[i].isBetter(best_score)) {
+                best_score = best_scores[i];
+                best_thread_idx = i;
             }
-            best_model = best_models[best_thread_idx];
-            final_iters = num_hypothesis_tested;
         }
-
-        if (best_model.empty())
-            return false;
-
-        // polish final model
-        if (params->getFinalPolisher() != PolishingMethod::NonePolisher) {
-            Mat polished_model;
-            Score polisher_score;
-            if (model_polisher->polishSoFarTheBestModel(best_model, best_score,
-                     polished_model, polisher_score))
-                if (polisher_score.isBetter(best_score)) {
-                    best_score = polisher_score;
-                    polished_model.copyTo(best_model);
-                }
-        }
-        // ================= here is ending ransac main implementation ===========================
-        std::vector<bool> inliers_mask;
-        if (params->isMaskRequired()) {
-            inliers_mask = std::vector<bool>(points_size);
-            // get final inliers from the best model
-            _quality->getInliers(best_model, inliers_mask);
-        }
-        // Store results
-        ransac_output = RansacOutput::create(best_model, inliers_mask,
-                static_cast<int>(std::chrono::duration_cast<std::chrono::microseconds>
-                (std::chrono::steady_clock::now() - begin_time).count()), best_score.score,
-                best_score.inlier_number, final_iters, -1, -1);
-        return true;
+        best_model = best_models[best_thread_idx];
+        final_iters = num_hypothesis_tested;
     }
-};
+
+    if (best_model.empty())
+        return false;
+
+    // polish final model
+    if (!_model_polisher.empty()) {
+        Mat polished_model;
+        Score polisher_score;
+        if (_model_polisher->polishSoFarTheBestModel(best_model, best_score,
+                                                    polished_model, polisher_score))
+            if (polisher_score.isBetter(best_score)) {
+                best_score = polisher_score;
+                polished_model.copyTo(best_model);
+            }
+    }
+    // ================= here is ending ransac main implementation ===========================
+    std::vector<bool> inliers_mask;
+    if (config->isMaskRequired()) {
+        inliers_mask = std::vector<bool>(points_size);
+        // get final inliers from the best model
+        _quality->getInliers(best_model, inliers_mask);
+    }
+    // Store results
+    ransac_output = RansacOutput::create(best_model, inliers_mask,
+                                         static_cast<int>(std::chrono::duration_cast<std::chrono::microseconds>
+                                                 (std::chrono::steady_clock::now() - begin_time).count()), best_score.score,
+                                         best_score.inlier_number, final_iters, -1, -1);
+    return true;
+}
 
 /*
  * pts1, pts2 are matrices either N x a, N x b or a x N or b x N, where N > a and N > b
@@ -757,6 +792,21 @@ Ptr<Model> Model::create(double threshold_, EstimationMethod estimator_, Samplin
                               max_iterations_, score_);
 }
 
+void modelParamsToUsacConfig (Ptr<SimpleUsacConfig> &config, const Ptr<const Model> &params) {
+    config = SimpleUsacConfig::create();
+
+    config->setMaxIterations(params->getMaxIters());
+    config->setMaxIterationsBeforeLo(params->getMaxItersBeforeLO());
+    config->setMaxNumHypothesisToTestBeforeRejection(params->getMaxNumHypothesisToTestBeforeRejection());
+    config->setRandomGeneratorState(params->getRandomGeneratorState());
+    config->setParallel(params->isParallel());
+    config->setNeighborsSearchMethod(params->getNeighborsSearch());
+    config->setSamplingMethod(params->getSampler());
+    config->setScoreMethod(params->getScore());
+    config->setLoMethod(params->getLO());
+    config->maskRequired(params->isMaskRequired());
+}
+
 bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2, int state,
        Ptr<RansacOutput> &ransac_output, InputArray K1_, InputArray K2_,
        InputArray dist_coeff1, InputArray dist_coeff2) {
@@ -1004,8 +1054,12 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
     if (params->getFinalPolisher() == PolishingMethod::LSQPolisher)
         polisher = LeastSquaresPolishing::create(estimator, quality, params->getFinalLSQIterations());
 
-    Ransac ransac (params, points_size, estimator, quality, sampler,
-          termination, verifier, degeneracy, lo, polisher, params->isParallel(), state);
+    Ptr<SimpleUsacConfig> usacConfig;
+    modelParamsToUsacConfig(usacConfig, params);
+    usacConfig->setRandomGeneratorState(state);
+
+    UniversalRANSAC ransac (usacConfig, points_size, estimator, quality, sampler,
+          termination, verifier, degeneracy, lo, polisher);
     if (ransac.run(ransac_output)) {
         if (params->isPnP()) {
             // convert R to rodrigues and back and recalculate inliers which due to numerical

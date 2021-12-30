@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "../usac.hpp"
+#include "../ptcloud/ptcloud_wrapper.hpp"
 
 namespace cv { namespace usac {
 class HomographyEstimatorImpl : public HomographyEstimator {
@@ -215,6 +216,73 @@ public:
 Ptr<PnPEstimator> PnPEstimator::create (const Ptr<MinimalSolver> &min_solver_,
         const Ptr<NonMinimalSolver> &non_min_solver_) {
     return makePtr<PnPEstimatorImpl>(min_solver_, non_min_solver_);
+}
+
+/////////////////////////////////////////////////////////////////////////
+class PointCloudModelEstimatorImpl : public PointCloudModelEstimator {
+private:
+    const Ptr<MinimalSolver> min_solver;
+    const Ptr<NonMinimalSolver> non_min_solver;
+    const ModelConstraintFunction custom_model_constraints;
+
+    inline int filteringModel(std::vector<Mat> M, int models_count,
+            std::vector<Mat> &valid_models) const {
+        int valid_models_count = 0;
+        if (!custom_model_constraints) {
+            valid_models_count = models_count;
+            for (int i = 0; i < models_count; ++i)
+                valid_models[i] = M[i];
+        } else {
+            for (int i = 0; i < models_count; ++i)
+                // filtering Models with custom_model_constraints
+                if (custom_model_constraints(M[i]))
+                    valid_models[valid_models_count++] = M[i];
+        }
+
+        return valid_models_count;
+    }
+
+public:
+    explicit PointCloudModelEstimatorImpl (const Ptr<MinimalSolver> &min_solver_,
+            const Ptr<NonMinimalSolver> &non_min_solver_,
+            ModelConstraintFunction custom_model_constraints_) :
+            min_solver(min_solver_), non_min_solver(non_min_solver_),
+            custom_model_constraints(std::move(custom_model_constraints_)) {}
+
+    int estimateModels (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        std::vector<Mat> M;
+        const int models_count = min_solver->estimate(sample, M);
+        return filteringModel(M, models_count, models);
+    }
+
+    int estimateModelNonMinimalSample (const std::vector<int> &sample, int sample_size,
+            std::vector<Mat> &models, const std::vector<double> &weights) const override {
+        std::vector<Mat> M;
+        const int models_count = non_min_solver->estimate(sample, sample_size, M, weights);
+        return filteringModel(M, models_count, models);
+    }
+
+    int getMinimalSampleSize() const override {
+        return min_solver->getSampleSize();
+    }
+    int getNonMinimalSampleSize() const override {
+        return non_min_solver->getMinimumRequiredSampleSize();
+    }
+    int getMaxNumSolutions () const override {
+        return min_solver->getMaxNumberOfSolutions();
+    }
+    int getMaxNumSolutionsNonMinimal () const override {
+        return non_min_solver->getMaxNumberOfSolutions();
+    }
+    Ptr<Estimator> clone() const override {
+        return makePtr<PointCloudModelEstimatorImpl>(min_solver->clone(), non_min_solver->clone(),
+                                                     custom_model_constraints);
+    }
+};
+Ptr<PointCloudModelEstimator> PointCloudModelEstimator::create (const Ptr<MinimalSolver> &min_solver_,
+        const Ptr<NonMinimalSolver> &non_min_solver_,
+        const ModelConstraintFunction &custom_model_constraints_) {
+    return makePtr<PointCloudModelEstimatorImpl>(min_solver_, non_min_solver_, custom_model_constraints_);
 }
 
 ///////////////////////////////////////////// ERROR /////////////////////////////////////////
@@ -532,6 +600,187 @@ public:
 };
 Ptr<ReprojectionErrorPmatrix> ReprojectionErrorPmatrix::create(const Mat &points) {
     return makePtr<ReprojectionErrorPmatrixImpl>(points);
+}
+
+class PlaneModelErrorImpl : public PlaneModelError, public PointCloudWrapper {
+private:
+    //! ax + by + cz + d = 0
+    float a, b, c ,d;
+    std::vector<float> errors_cache;
+    bool cache_valid;
+
+public:
+    explicit PlaneModelErrorImpl(const Mat &points_)
+    : PointCloudWrapper(points_),
+    a(0), b(0), c(0), d(0), errors_cache(pts_cnt), cache_valid(false)
+    {
+    }
+
+    inline void setModelParameters(const Mat &model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "Model parameter type should use double");
+
+        const double * const p = (double *) model.data;
+        double coeff_a = p[0], coeff_b = p[1], coeff_c = p[2], coeff_d = p[3];
+        // Format for easy distance calculation
+        double magnitude_abc = sqrt(coeff_a * coeff_a + coeff_b * coeff_b + coeff_c * coeff_c);
+        if (0 != magnitude_abc) {
+            double inv_magnitude_abc = 1.0 / magnitude_abc;
+            coeff_a = coeff_a * inv_magnitude_abc;
+            coeff_b = coeff_b * inv_magnitude_abc;
+            coeff_c = coeff_c * inv_magnitude_abc;
+            coeff_d = coeff_d * inv_magnitude_abc;
+        }
+        cache_valid = cache_valid && a == (float) coeff_a && b == (float) coeff_b
+                &&  c == (float) coeff_c && d == (float) coeff_d;
+
+        a = (float) coeff_a;
+        b = (float) coeff_b;
+        c = (float) coeff_c;
+        d = (float) coeff_d;
+    }
+
+    inline float getError(int point_idx) const override
+    {
+        float error = a * pts_ptr_x[point_idx] + b * pts_ptr_y[point_idx]
+                      + c * pts_ptr_z[point_idx] + d;
+        return error * error;
+    }
+
+    const std::vector<float> &getErrors(const Mat &model) override
+    {
+        setModelParameters(model);
+
+        if (cache_valid)
+            return errors_cache;
+
+        int i = 0;
+#ifdef CV_SIMD
+        v_float32 v_a = vx_setall_f32(a);
+        v_float32 v_b = vx_setall_f32(b);
+        v_float32 v_c = vx_setall_f32(c);
+        v_float32 v_d = vx_setall_f32(d);
+
+        float* errors_cache_ptr = errors_cache.data();
+        for (; i <= pts_cnt - v_float32::nlanes; i += v_float32::nlanes)
+        {
+            v_float32 v_error = v_a * vx_load(pts_ptr_x + i) + v_b * vx_load(pts_ptr_y + i)
+                    + v_c * vx_load(pts_ptr_z + i) + v_d;
+            v_store(errors_cache_ptr + i, v_error * v_error);
+        }
+#endif
+        for (; i < pts_cnt; ++i) {
+            float error = a * pts_ptr_x[i] + b * pts_ptr_y[i] + c * pts_ptr_z[i] + d;
+            errors_cache[i] = error * error;
+        }
+        cache_valid = true;
+        return errors_cache;
+    }
+
+    Ptr<Error> clone () const override {
+        return makePtr<PlaneModelErrorImpl>(*points_mat);
+    }
+
+};
+Ptr<PlaneModelError> PlaneModelError::create(const Mat &points) {
+    return makePtr<PlaneModelErrorImpl>(points);
+}
+
+class SphereModelErrorImpl : public SphereModelError, public PointCloudWrapper {
+private:
+    //! Center and radius
+    float center_x, center_y, center_z, radius;
+    std::vector<float> errors_cache;
+    bool cache_valid;
+
+public:
+    explicit SphereModelErrorImpl(const Mat &points_)
+            : PointCloudWrapper(points_),
+              center_x(0), center_y(0), center_z(0), radius(0),
+              errors_cache(pts_cnt), cache_valid(false)
+    {
+    }
+
+    inline void setModelParameters(const Mat &model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "Model parameter type should use double");
+
+        const double *const p = (double *) model.data;
+        float coeff_x = (float) p[0], coeff_y = (float) p[1],
+              coeff_z = (float) p[2], coeff_r = (float) p[3];
+
+        cache_valid = cache_valid && center_x == coeff_x && coeff_y == coeff_y
+                      && coeff_z == coeff_z && radius == coeff_r;
+
+        center_x = coeff_x;
+        center_y = coeff_y;
+        center_z = coeff_z;
+        radius = coeff_r;
+    }
+
+    inline float getError(int point_idx) const override
+    {
+        float diff_x = center_x - pts_ptr_x[point_idx];
+        float diff_y = center_y - pts_ptr_y[point_idx];
+        float diff_z = center_z - pts_ptr_z[point_idx];
+        // A better way to avoid sqrt() ?
+        float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
+        float diff_dist = distance_from_center - radius;
+        double distance_square_from_surface = diff_dist * diff_dist;
+
+        return (float) distance_square_from_surface;
+    }
+
+    const std::vector<float> &getErrors(const Mat &model) override
+    {
+        setModelParameters(model);
+
+        if (cache_valid)
+            return errors_cache;
+
+        int i = 0;
+#ifdef CV_SIMD
+        v_float32 v_center_x = vx_setall_f32(center_x);
+        v_float32 v_center_y = vx_setall_f32(center_y);
+        v_float32 v_center_z = vx_setall_f32(center_z);
+        v_float32 v_radius = vx_setall_f32(radius);
+
+        float* errors_cache_ptr = errors_cache.data();
+        for (; i <= pts_cnt - v_float32::nlanes; i += v_float32::nlanes)
+        {
+            v_float32 v_diff_x = v_center_x - vx_load(pts_ptr_x + i);
+            v_float32 v_diff_y = v_center_y - vx_load(pts_ptr_y + i);
+            v_float32 v_diff_z = v_center_z - vx_load(pts_ptr_z + i);
+
+            v_float32 v_distance_from_center = v_sqrt(v_diff_x * v_diff_x +
+                    v_diff_y * v_diff_y + v_diff_z * v_diff_z);
+            v_float32 v_diff_dist = v_distance_from_center - v_radius;
+            v_store(errors_cache_ptr + i, v_diff_dist * v_diff_dist);
+        }
+#endif
+        for (; i < pts_cnt; ++i)
+        {
+            float diff_x = center_x - pts_ptr_x[i];
+            float diff_y = center_y - pts_ptr_y[i];
+            float diff_z = center_z - pts_ptr_z[i];
+            // A better way to avoid sqrt() ?
+            float distance_from_center = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
+            float diff_dist = distance_from_center - radius;
+            errors_cache[i] = diff_dist * diff_dist;
+        }
+
+        return errors_cache;
+    }
+
+    Ptr<Error> clone () const override {
+        return makePtr<SphereModelErrorImpl>(*points_mat);
+    }
+
+};
+Ptr<SphereModelError> SphereModelError::create(const Mat &points) {
+    return makePtr<SphereModelErrorImpl>(points);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

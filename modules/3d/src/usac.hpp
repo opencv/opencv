@@ -11,6 +11,42 @@ enum VerificationMethod { NullVerifier, SprtVerifier };
 enum PolishingMethod { NonePolisher, LSQPolisher };
 enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
 
+
+class UsacConfig : public Algorithm {
+public:
+    virtual int getMaxIterations () const = 0;
+    virtual int getMaxIterationsBeforeLO () const = 0;
+    virtual int getMaxNumHypothesisToTestBeforeRejection() const = 0;
+    virtual int getRandomGeneratorState () const = 0;
+    virtual bool isParallel() const = 0;
+
+    virtual NeighborSearchMethod getNeighborsSearchMethod () const = 0;
+    virtual SamplingMethod getSamplingMethod () const = 0;
+    virtual ScoreMethod getScoreMethod () const = 0;
+    virtual LocalOptimMethod getLOMethod () const = 0;
+
+    virtual bool isMaskRequired () const = 0;
+
+};
+
+class SimpleUsacConfig : public UsacConfig {
+public:
+    virtual void setMaxIterations(int max_iterations_) = 0;
+    virtual void setMaxIterationsBeforeLo(int max_iterations_before_lo_) = 0;
+    virtual void setMaxNumHypothesisToTestBeforeRejection(int max_num_hypothesis_to_test_before_rejection_) = 0;
+    virtual void setRandomGeneratorState(int random_generator_state_) = 0;
+    virtual void setParallel(bool is_parallel) = 0;
+    virtual void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) = 0;
+    virtual void setSamplingMethod(SamplingMethod sampling_method_) = 0;
+    virtual void setScoreMethod(ScoreMethod score_method_) = 0;
+    virtual void setLoMethod(LocalOptimMethod lo_method_) = 0;
+    virtual void maskRequired(bool need_mask_) = 0;
+
+    static Ptr<SimpleUsacConfig> create();
+
+};
+
+
 // Abstract Error class
 class Error : public Algorithm {
 public:
@@ -56,6 +92,18 @@ public:
 class ReprojectionErrorAffine : public Error {
 public:
     static Ptr<ReprojectionErrorAffine> create(const Mat &points);
+};
+
+// Error for plane model
+class PlaneModelError : public Error {
+public:
+    static Ptr<PlaneModelError> create(const Mat &points);
+};
+
+// Error for sphere model
+class SphereModelError : public Error {
+public:
+    static Ptr<SphereModelError> create(const Mat &points);
 };
 
 // Normalizing transformation of data points
@@ -125,6 +173,18 @@ public:
     static Ptr<AffineMinimalSolver> create(const Mat &points_);
 };
 
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<PlaneModelMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SphereModelMinimalSolver> create(const Mat &points_);
+};
+
 //////////////////////////////////////// NON MINIMAL SOLVER ///////////////////////////////////////
 class NonMinimalSolver : public Algorithm {
 public:
@@ -171,6 +231,18 @@ public:
 class AffineNonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<AffineNonMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<PlaneModelNonMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SphereModelNonMinimalSolver> create(const Mat &points_);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -383,6 +455,23 @@ class PnPEstimator : public Estimator {
 public:
     static Ptr<PnPEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_);
+};
+
+class PointCloudModelEstimator : public Estimator {
+public:
+    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
+    //! Same as cv::SACSegmentation::ModelConstraintFunction in ptcloud.hpp.
+    using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
+    /** @brief Methods for creating PointCloudModelEstimator.
+     *
+     * @param min_solver_ Minimum solver for estimating the model with minimum samples.
+     * @param non_min_solver_ Non-minimum solver for estimating the model with non-minimum samples.
+     * @param custom_model_constraints_ Custom model constraints for filtering the estimated obtained model.
+     * @return Ptr\<PointCloudModelEstimator\>
+     */
+    static Ptr<PointCloudModelEstimator> create (const Ptr<MinimalSolver> &min_solver_,
+            const Ptr<NonMinimalSolver> &non_min_solver_,
+            const ModelConstraintFunction &custom_model_constraints_ = nullptr);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -781,6 +870,78 @@ public:
     virtual bool isMaskRequired () const = 0;
     static Ptr<Model> create(double threshold_, EstimationMethod estimator_, SamplingMethod sampler_,
          double confidence_=0.95, int max_iterations_=5000, ScoreMethod score_ =ScoreMethod::SCORE_METHOD_MSAC);
+};
+
+/////////////////////////////////////////  UniversalRANSAC  ////////////////////////////////////////
+
+/** Implementation of the Universal RANSAC algorithm.
+
+UniversalRANSAC represents an implementation of the Universal RANSAC
+(Universal RANdom SAmple Consensus) algorithm, as described in:
+"USAC: A Universal Framework for Random Sample Consensus", Raguram, R., et al.
+IEEE Transactions on Pattern Analysis and Machine Intelligence,
+vol. 35, no. 8, 2013, pp. 2022–2038.
+
+USAC extends the simple hypothesize-and-verify structure of standard RANSAC
+to incorporate a number of important practical and computational considerations.
+The optimization of RANSAC algorithms such as NAPSAC, GroupSAC, and MAGSAC
+can be considered as a special case of the USAC framework.
+
+The algorithm works as following stages:
++ [Stage 0] Pre-filtering
+ - [**0. Pre-filtering**] Filtering of the input data, e.g. removing some noise points.
++ [Stage 1] Sample minimal subset
+ - [**1a. Sampling**] Sample minimal subset. It may be possible to incorporate prior information
+ and bias the sampling with a view toward preferentially generating models that are more
+ likely to be correct, or like the standard RANSAC, sampling uniformly at random.
+ - [**1b. Sample check**] Check whether the sample is suitable for computing model parameters.
+ Note that this simple test requires very little overhead, particularly when compared to
+ the expensive model generation and verification stages.
++ [Stage 2] Generate minimal-sample model(s)
+ - [**2a. Model generation**] Using the data points sampled in the previous step to fit the model
+ (calculate model parameters).
+ - [**2b. Model check**] A preliminary test that checks the model based on application-specific
+ constraints and then performs the verification only if required. For example, fitting
+ a sphere to a limited radius range.
++ [Stage 3] Is the model interesting?
+ - [**3a. Verification**] Verify that the current model is likely to obtain the maximum
+ objective function (in other words, better than the current best model), a score can be
+ used (e.g., the data point's voting support for this model), or conduct a statistical
+ test on a small number of data points, and discard or accept the model based on the results
+ of the test. For example, T(d, d) Test, Bail-Out Test, SPRT Test, Preemptive Verification.
+ - [**3b. Degeneracy**] Determine if sufficient constraints are provided to produce
+ a unique solution.
++ [Stage 4] Generate non-minimal sample model
+ - [**4. Model refinement**] Handle the issue of noisy models (by Local Optimization,
+ Error Propagation, etc).
++ [Stage 5] Confidence in solution achieved?
+ - [**5. Judgment termination**] Determine whether the specified maximum number of iterations
+ is reached or whether the desired model is obtained with a certain confidence level.
+
+Stage 1b, 2b, 3a, 3b, 5 may jump back to Stage 1a.
+
+ */
+class UniversalRANSAC {
+protected:
+    const Ptr<const UsacConfig> config;
+    const Ptr<const Estimator> _estimator;
+    const Ptr<Quality> _quality;
+    const Ptr<Sampler> _sampler;
+    const Ptr<TerminationCriteria> _termination_criteria;
+    const Ptr<ModelVerifier> _model_verifier;
+    const Ptr<Degeneracy> _degeneracy;
+    const Ptr<LocalOptimization> _local_optimization;
+    const Ptr<FinalModelPolisher> _model_polisher;
+
+    const int points_size;
+public:
+
+    UniversalRANSAC (const Ptr<const UsacConfig> &config_, int points_size_, const Ptr<const Estimator> &estimator_, const Ptr<Quality> &quality_,
+            const Ptr<Sampler> &sampler_, const Ptr<TerminationCriteria> &termination_criteria_,
+            const Ptr<ModelVerifier> &model_verifier_, const Ptr<Degeneracy> &degeneracy_,
+            const Ptr<LocalOptimization> &local_optimization_, const Ptr<FinalModelPolisher> &model_polisher_);
+
+    bool run(Ptr<RansacOutput> &ransac_output);
 };
 
 Mat findHomography(InputArray srcPoints, InputArray dstPoints, int method,

@@ -39,10 +39,10 @@ public:
     }
 
     Score getScore (const Mat &model) const override {
-        error->setModelParameters(model);
+        const std::vector<float>& errors = error->getErrors(model);
         int inlier_number = 0;
         for (int point = 0; point < points_size; point++) {
-            if (error->getError(point) < threshold)
+            if (errors[point] < threshold)
                 inlier_number++;
             if (inlier_number + (points_size - point) < -best_score)
                 break;
