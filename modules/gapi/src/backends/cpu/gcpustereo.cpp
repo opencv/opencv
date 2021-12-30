@@ -70,14 +70,14 @@ GAPI_OCV_KERNEL_ST(GCPUStereo, cv::gapi::calib3d::GStereo, StereoSetup)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::calib3d::cpu::kernels() {
+cv::GKernelPackage cv::gapi::calib3d::cpu::kernels() {
     static auto pkg = cv::gapi::kernels<GCPUStereo>();
     return pkg;
 }
 
 #else
 
-cv::gapi::GKernelPackage cv::gapi::calib3d::cpu::kernels()
+cv::GKernelPackage cv::gapi::calib3d::cpu::kernels()
 {
     return GKernelPackage();
 }

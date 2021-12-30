@@ -295,6 +295,43 @@ TEST(Imgcodecs_Bmp, read_rle8)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), rle, ord);
 }
 
+TEST(Imgcodecs_Bmp, read_32bit_rgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_rgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
+TEST(Imgcodecs_Bmp, rgba_bit_mask)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_mask.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
+TEST(Imgcodecs_Bmp, read_32bit_xrgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_xrgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
+
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
 {
@@ -392,6 +429,6 @@ TEST(Imgcodecs, write_parameter_type)
 
 }} // namespace
 
-#ifdef HAVE_OPENEXR
+#if defined(HAVE_OPENEXR) && defined(OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS)
 #include "test_exr.impl.hpp"
 #endif

@@ -340,8 +340,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                     rv = r0 * std::cos( phi );
                     i = (int)rv * tn;
                     i += cvFloor( phi1 );
-                    assert( i >= 0 );
-                    assert( i < rn * tn );
+                    CV_Assert( i >= 0 );
+                    CV_Assert( i < rn * tn );
                     caccum[i] = (uchar) (caccum[i] + ((i ^ iprev) != 0));
                     iprev = i;
                     if( cmax < caccum[i] )
@@ -405,8 +405,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                         i = CV_IMAX( i, -1 );
                         i = CV_IMIN( i, sfn );
                         mcaccum[i]++;
-                        assert( i >= -1 );
-                        assert( i <= sfn );
+                        CV_Assert( i >= -1 );
+                        CV_Assert( i <= sfn );
                     }
                 }
 
@@ -975,7 +975,9 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
         for(int n = 0; n < numangle; n++ )
         {
             int r = cvRound( point.at(i).x  * tabCos[n] + point.at(i).y * tabSin[n] - irho_min);
-            accum[(n+1) * (numrho+2) + r+1]++;
+            if ( r >= 0 && r <= numrho) {
+                accum[(n+1) * (numrho+2) + r+1]++;
+            }
         }
 
     // stage 2. find local maximums
@@ -2253,7 +2255,6 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     }
 
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
-    CV_Assert(_circles.isMat() || _circles.isVector());
 
     if( dp <= 0 || minDist <= 0 || param1 <= 0)
         CV_Error( Error::StsOutOfRange, "dp, min_dist and canny_threshold must be all positive numbers" );

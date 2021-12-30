@@ -47,7 +47,7 @@ an external parameter.
 G-API provides a macro to define a new kernel interface --
 G_TYPED_KERNEL():
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_api
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_api
 
 This macro is a shortcut to a new type definition. It takes three
 arguments to register a new type, and requires type body to be present
@@ -81,18 +81,18 @@ Once a kernel is defined, it can be used in pipelines with special,
 G-API-supplied method "::on()". This method has the same signature as
 defined in kernel, so this code:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_on
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_on
 
 is a perfectly legal construction. This example has some verbosity,
 though, so usually a kernel declaration comes with a C++ function
 wrapper ("factory method") which enables optional parameters, more
 compact syntax, Doxygen comments, etc:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_wrap
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_wrap
 
 so now it can be used like:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_wrap_call
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_wrap_call
 
 # Extra information {#gapi_kernel_supp_info}
 
@@ -143,7 +143,7 @@ For example, the aforementioned `Filter2D` is implemented in
 "reference" CPU (OpenCV) plugin this way (*NOTE* -- this is a
 simplified form with improper border handling):
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_ocv
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_ocv
 
 Note how CPU (OpenCV) plugin has transformed the original kernel
 signature:
@@ -174,7 +174,7 @@ point extraction to an STL vector:
 A compound kernel _implementation_ can be defined using a generic
 macro GAPI_COMPOUND_KERNEL():
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp compound
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp compound
 
 <!-- TODO: ADD on how Compound kernels may simplify dispatching -->
 <!-- TODO: Add details on when expand() is called! -->

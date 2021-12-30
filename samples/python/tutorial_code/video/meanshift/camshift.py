@@ -24,7 +24,7 @@ mask = cv.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
 roi_hist = cv.calcHist([hsv_roi],[0],mask,[180],[0,180])
 cv.normalize(roi_hist,roi_hist,0,255,cv.NORM_MINMAX)
 
-# Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+# Setup the termination criteria, either 10 iteration or move by at least 1 pt
 term_crit = ( cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1 )
 
 while(1):

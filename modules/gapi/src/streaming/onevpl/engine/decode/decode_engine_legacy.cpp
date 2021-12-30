@@ -10,11 +10,13 @@
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/engine/decode/decode_engine_legacy.hpp"
 #include "streaming/onevpl/engine/decode/decode_session.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
+#include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
@@ -23,95 +25,6 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-/* UTILS */
-mfxU32 GetSurfaceSize(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
-    mfxU32 nbytes = 0;
-
-    mfxU32 half_width = width / 2;
-    mfxU32 half_height = height / 2;
-    switch (FourCC) {
-        case MFX_FOURCC_I420:
-        case MFX_FOURCC_NV12:
-            nbytes = width * height +  2 * half_width * half_height;
-            break;
-        case MFX_FOURCC_I010:
-        case MFX_FOURCC_P010:
-            nbytes = width * height + 2 * half_width * half_height;
-            nbytes *= 2;
-            break;
-        case MFX_FOURCC_RGB4:
-            nbytes = width * height * 4;
-            break;
-        default:
-            GAPI_LOG_WARNING(nullptr, "Unsupported FourCC requested: " << FourCC);
-            GAPI_Assert(false && "Unsupported FourCC requested");
-            break;
-    }
-    return nbytes;
-}
-
-surface_ptr_t create_surface_RGB4(mfxFrameInfo frameInfo,
-                                  std::shared_ptr<void> out_buf_ptr,
-                                  size_t out_buf_ptr_offset,
-                                  size_t out_buf_size)
-{
-    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
-    mfxU16 surfW = frameInfo.Width * 4;
-    mfxU16 surfH = frameInfo.Height;
-    (void)surfH;
-
-    // TODO more intelligent check
-    if (out_buf_size <= out_buf_ptr_offset) {
-        throw std::runtime_error(std::string("Insufficient buffer size: ") +
-                                 std::to_string(out_buf_size) + ", buffer offset: " +
-                                 std::to_string(out_buf_ptr_offset) +
-                                 ", expected surface width: " + std::to_string(surfW) +
-                                 ", height: " + std::to_string(surfH));
-    }
-
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-
-    handle->Info = frameInfo;
-    handle->Data.B = buf + out_buf_ptr_offset;
-    handle->Data.G = handle->Data.B + 1;
-    handle->Data.R = handle->Data.B + 2;
-    handle->Data.A = handle->Data.B + 3;
-    handle->Data.Pitch = surfW;
-
-    return Surface::create_surface(std::move(handle), out_buf_ptr);
-}
-
-surface_ptr_t create_surface_other(mfxFrameInfo frameInfo,
-                                   std::shared_ptr<void> out_buf_ptr,
-                                   size_t out_buf_ptr_offset,
-                                   size_t out_buf_size)
-{
-    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
-    mfxU16 surfH = frameInfo.Height;
-    mfxU16 surfW = (frameInfo.FourCC == MFX_FOURCC_P010) ? frameInfo.Width * 2 : frameInfo.Width;
-
-    // TODO more intelligent check
-    if (out_buf_size <=
-        out_buf_ptr_offset + (surfW * surfH) + ((surfW / 2) * (surfH / 2))) {
-        throw std::runtime_error(std::string("Insufficient buffer size: ") +
-                                 std::to_string(out_buf_size) + ", buffer offset: " +
-                                 std::to_string(out_buf_ptr_offset) +
-                                 ", expected surface width: " + std::to_string(surfW) +
-                                 ", height: " + std::to_string(surfH));
-    }
-
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-
-    handle->Info = frameInfo;
-    handle->Data.Y     = buf + out_buf_ptr_offset;
-    handle->Data.U     = buf + out_buf_ptr_offset + (surfW * surfH);
-    handle->Data.V     = handle->Data.U + ((surfW / 2) * (surfH / 2));
-    handle->Data.Pitch = surfW;
-
-    return Surface::create_surface(std::move(handle), out_buf_ptr);
-}
 
 VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
  : ProcessingEngineBase(std::move(accel)) {
@@ -122,42 +35,99 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
-            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.data_provider);
-            if (my_sess.last_status != MFX_ERR_NONE) {
+            if (!my_sess.data_provider) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
+                return ExecutionStatus::Continue;
+            }
+
+            my_sess.last_status = MFX_ERR_NONE;
+            if (!my_sess.data_provider->fetch_bitstream_data(my_sess.stream)) {
+                my_sess.last_status = MFX_ERR_MORE_DATA;
                 my_sess.data_provider.reset(); //close source
             }
             return ExecutionStatus::Continue;
         },
-        // 2) enqueue ASYNC decode
+        // 2) enqueue ASYNC decode operation
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
 
+            // prepare sync object for new surface
+            LegacyDecodeSession::op_handle_t sync_pair{};
+
+            // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.last_status == MFX_ERR_NONE
-                                                        ? &my_sess.stream
+                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
+                                                        ? my_sess.stream.get()
+
                                                         : nullptr, /* No more data to read, start decode draining mode*/
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
-                                                    &my_sess.output_surface_ptr,
-                                                    &my_sess.sync);
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+            // process wait-like statuses in-place:
+            // It had better to use up all VPL decoding resources in pipeline
+            // as soon as possible. So waiting more free-surface or device free
+            while (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
+                   my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
+                try {
+                    if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
+                        my_sess.swap_surface(*this);
+                    }
+                    my_sess.last_status =
+                    MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
+                                                    my_sess.stream.get(),
+                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    &sync_pair.second,
+                                                    &sync_pair.first);
+
+                } catch (const std::runtime_error& ex) {
+                    // NB: not an error, yield CPU ticks to check
+                    // surface availability at a next phase.
+                    // But print WARNING to notify user about pipeline stuck
+                    GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
+                                               "] has no surface, reason: " <<
+                                               ex.what());
+                    break;
+                }
+            }
+
+            if (my_sess.last_status == MFX_ERR_NONE) {
+                my_sess.sync_queue.emplace(sync_pair);
+            } else if (my_sess.last_status != MFX_ERR_MORE_DATA) /* suppress MFX_ERR_MORE_DATA warning */ {
+                GAPI_LOG_WARNING(nullptr, "decode pending ops count: " <<
+                                          my_sess.sync_queue.size() <<
+                                          ", sync id: " << sync_pair.first <<
+                                          ", status: " <<
+                                          mfxstatus_to_string(my_sess.last_status));
+            }
             return ExecutionStatus::Continue;
         },
         // 3) Wait for ASYNC decode result
         [this] (EngineSession& sess) -> ExecutionStatus
         {
-            if (sess.last_status == MFX_ERR_NONE) // Got 1 decoded frame
-            {
-                do {
-                    //TODO try to extract TIMESTAMP
-                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, sess.sync, 100);
-                    if (MFX_ERR_NONE == sess.last_status) {
+            LegacyDecodeSession& my_sess = static_cast<LegacyDecodeSession&>(sess);
+            do {
+                if (!my_sess.sync_queue.empty()) { // FIFO: check the oldest async operation complete
+                    LegacyDecodeSession::op_handle_t& pending_op = my_sess.sync_queue.front();
+                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
-                        LegacyDecodeSession& my_sess = static_cast<LegacyDecodeSession&>(sess);
-                        on_frame_ready(my_sess);
+                    GAPI_LOG_DEBUG(nullptr, "pending ops count: " <<
+                                            my_sess.sync_queue.size() <<
+                                            ", sync id:  " <<
+                                            pending_op.first <<
+                                            ", surface:  " <<
+                                            pending_op.second <<
+                                            ", status: " <<
+                                            mfxstatus_to_string(my_sess.last_status));
+
+                    // put frames in ready queue on success
+                    if (MFX_ERR_NONE == sess.last_status) {
+                        on_frame_ready(my_sess, pending_op.second);
                     }
-                } while (sess.last_status == MFX_WRN_IN_EXECUTION);
-            }
+                }
+            } while (MFX_ERR_NONE == sess.last_status && !my_sess.sync_queue.empty());
             return ExecutionStatus::Continue;
         },
         // 4) Falls back on generic status procesing
@@ -168,45 +138,138 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
     );
 }
 
-void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
-                                               DecoderParams&& decoder_param,
-                                               std::shared_ptr<onevpl::IDataProvider> provider)
-{
-    mfxFrameAllocRequest decRequest = {};
+ProcessingEngineBase::session_ptr
+VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
+                                          const std::vector<CfgParam>& cfg_params,
+                                          std::shared_ptr<IDataProvider> provider) {
+    GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
+
+    // init session
+    acceleration_policy->init(mfx_session);
+
+    // Get codec ID from data provider
+    IDataProvider::mfx_codec_id_type decoder_id_name = provider->get_mfx_codec_id();
+
+    // Prepare video param
+    mfxVideoParam mfxDecParams {};
+    mfxDecParams.mfx.CodecId = decoder_id_name;
+
+    // set memory stream direction accroding to accelearion policy device type
+    IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
+    GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
+    AccelType accel_type = devices.begin()->second.get_type();
+    if (accel_type == AccelType::DX11) {
+        mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
+    } else if (accel_type == AccelType::HOST) {
+        mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    } else {
+        GAPI_Assert(false && "unsupported AccelType from device selector");
+    }
+
+    // try fetch & decode input data
+    mfxStatus sts = MFX_ERR_NONE;
+    std::shared_ptr<IDataProvider::mfx_bitstream> bitstream{};
+    bool can_fetch_data = false;
+    do {
+        can_fetch_data = provider->fetch_bitstream_data(bitstream);
+        if (!can_fetch_data) {
+            // must fetch data always because EOF critical at this point
+            GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get() <<
+                                      ". Unexpected EOF");
+            throw std::runtime_error("Error reading bitstream: EOF");
+        }
+
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
+        if(MFX_ERR_NONE != sts && MFX_ERR_MORE_DATA != sts) {
+            throw std::runtime_error("Error decoding header, error: " +
+                                     mfxstatus_to_string(sts));
+        }
+    } while (sts == MFX_ERR_MORE_DATA && !provider->empty());
+
+    if (MFX_ERR_NONE != sts) {
+        GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
+                                  << ". Make sure data source is valid and/or "
+                                  "\"" << CfgParam::decoder_id_name() << "\""
+                                  " has correct value in case of demultiplexed raw input");
+         throw std::runtime_error("Error decode header, error: " +
+                                  mfxstatus_to_string(sts));
+    }
+    mfxFrameAllocRequest decRequest {};
+
     // Query number required surfaces for decoder
-    MFXVideoDECODE_QueryIOSurf(mfx_session, &decoder_param.param, &decRequest);
+    MFXVideoDECODE_QueryIOSurf(mfx_session, &mfxDecParams, &decRequest);
 
     // External (application) allocation of decode surfaces
     GAPI_LOG_DEBUG(nullptr, "Query IOSurf for session: " << mfx_session <<
+                            ", mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin <<
                             ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
                             ", mfxFrameAllocRequest.Type: " << decRequest.Type);
 
-    mfxU32 singleSurfaceSize = GetSurfaceSize(decoder_param.param.mfx.FrameInfo.FourCC,
-                                              decoder_param.param.mfx.FrameInfo.Width,
-                                              decoder_param.param.mfx.FrameInfo.Height);
-    if (!singleSurfaceSize) {
-        throw std::runtime_error("Cannot determine surface size for: fourCC" +
-                                 std::to_string(decoder_param.param.mfx.FrameInfo.FourCC) +
-                                 ", width: " + std::to_string(decoder_param.param.mfx.FrameInfo.Width) +
-                                 ", height: " + std::to_string(decoder_param.param.mfx.FrameInfo.Height));
+    // NB: override NumFrameSuggested preallocation size (how many frames we can hold)
+    size_t preallocated_frames_count = decRequest.NumFrameSuggested;
+    // NB: if you see bunch of WARNING about "cannot get free surface from pool"
+    // and have abundant RAM size then increase `preallocated_frames_count`
+    // to keep more free surfaces in a round. Otherwise VPL decode pipeline will be waiting
+    // till application is freeing unusable surface on its side.
+    //
+    auto queue_capacity_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
+        return value.get_name() == CfgParam::frames_pool_size_name();
+    });
+    if (queue_capacity_it != cfg_params.end()) {
+        cv::util::visit(cv::util::overload_lambdas(
+            [&preallocated_frames_count](uint8_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int8_t value)    { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint16_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int16_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint32_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int32_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](uint64_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](int64_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](float_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](double_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
+            [&preallocated_frames_count](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
+            [&preallocated_frames_count](const std::string& value) {
+                preallocated_frames_count = strtoull_or_throw(value.c_str());
+            }),
+            queue_capacity_it->get_value());
+
+        GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
+                      preallocated_frames_count << ", for session: " << mfx_session);
+
+    }
+    if (preallocated_frames_count < decRequest.NumFrameMin) {
+        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
+                                  preallocated_frames_count << ". It must be equal or greater than "
+                                  "mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin);
+        throw std::runtime_error(std::string("Invalid value of param: ") +
+                                 CfgParam::frames_pool_size_name() + ", underflow");
+    } else {
+        if (static_cast<size_t>(std::numeric_limits<mfxU16>::max()) < preallocated_frames_count) {
+            GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
+                                  preallocated_frames_count << ". It must not be equal than " <<
+                                  std::numeric_limits<mfxU16>::max());
+            throw std::runtime_error(std::string("Invalid value of param: ") +
+                                 CfgParam::frames_pool_size_name() + ", overflow");
+        }
+        decRequest.NumFrameSuggested = static_cast<mfxU16>(preallocated_frames_count);
+        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input for session: " << mfx_session <<
+                            ", mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin <<
+                            ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
+                            ", mfxFrameAllocRequest.Type: " << decRequest.Type);
     }
 
-    const auto &frameInfo = decoder_param.param.mfx.FrameInfo;
-    auto surface_creator =
-            [&frameInfo] (std::shared_ptr<void> out_buf_ptr, size_t out_buf_ptr_offset,
-                          size_t out_buf_size) -> surface_ptr_t {
-                return (frameInfo.FourCC == MFX_FOURCC_RGB4) ?
-                        create_surface_RGB4(frameInfo, out_buf_ptr, out_buf_ptr_offset,
-                                            out_buf_size) :
-                        create_surface_other(frameInfo, out_buf_ptr, out_buf_ptr_offset,
-                                             out_buf_size);};
-
-    //TODO Configure preallocation size (how many frames we can hold)
-    const size_t preallocated_frames_count = 30;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
-                acceleration_policy->create_surface_pool(decRequest.NumFrameSuggested * preallocated_frames_count,
-                                                         singleSurfaceSize,
-                                                         surface_creator);
+                acceleration_policy->create_surface_pool(decRequest, mfxDecParams);
+
+    // Input parameters finished, now initialize decode
+    // create decoder for session accoring to header recovered from source file
+    sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
+    if (MFX_ERR_NONE != sts) {
+        throw std::runtime_error("Error initializing Decode, error: " +
+                                 mfxstatus_to_string(sts));
+    }
+
+    DecoderParams decoder_param {bitstream, mfxDecParams};
 
     // create session
     std::shared_ptr<LegacyDecodeSession> sess_ptr =
@@ -217,20 +280,25 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     sess_ptr->init_surface_pool(decode_pool_key);
     // prepare working decode surface
     sess_ptr->swap_surface(*this);
+    return sess_ptr;
 }
 
 ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
     return op(sess);
 }
 
-void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
+void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
+                                           mfxFrameSurface1* ready_surface)
 {
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
-                                                                   sess.output_surface_ptr);
+                                                                   ready_surface);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
+
+    // pop away synced out object
+    sess.sync_queue.pop();
 }
 
 ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
@@ -239,10 +307,19 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
 
     switch (status) {
         case MFX_ERR_NONE:
-            return ExecutionStatus::Continue;
+        {
+            // prepare sync object for new surface
+            try {
+                sess.swap_surface(*this);
+                return ExecutionStatus::Continue;
+            } catch (const std::runtime_error& ex) {
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
+                return ExecutionStatus::Continue; // read more data
+            }
+        }
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (!sess.data_provider || sess.data_provider->empty()) {
-                // No more data to drain from decoder, start encode draining mode
+            if (!(sess.data_provider || (sess.stream && sess.stream->DataLength))) {
+                // No more data to drain from decoder
                 return ExecutionStatus::Processed;
             }
             else
@@ -256,8 +333,9 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             try {
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
-            } catch (const std::exception& ex) {
+            } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
+                 return ExecutionStatus::Continue; // read more data
             }
             break;
         }
@@ -277,8 +355,10 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
                                     "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
+            */
+            return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
             // The function detected that video parameters provided by the application
@@ -295,8 +375,17 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
+        case MFX_WRN_IN_EXECUTION:
+            try {
+                sess.swap_surface(*this);
+                return ExecutionStatus::Continue;
+            } catch (const std::runtime_error& ex) {
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
+                return ExecutionStatus::Continue;
+            }
         default:
-            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status));
+            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status) <<
+                                      ", decoded frames: " << sess.decoded_frames_count);
             break;
     }
 

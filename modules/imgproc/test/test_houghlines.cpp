@@ -299,6 +299,36 @@ TEST_P(HoughLinesPointSetTest, regression)
     run_test();
 }
 
+TEST(HoughLinesPointSet, regression_21029)
+{
+    std::vector<Point2f> points;
+    points.push_back(Point2f(100, 100));
+    points.push_back(Point2f(1000, 1000));
+    points.push_back(Point2f(10000, 10000));
+    points.push_back(Point2f(100000, 100000));
+
+    double rhoMin = 0;
+    double rhoMax = 10;
+    double rhoStep = 0.1;
+
+    double thetaMin = 85 * CV_PI / 180.0;
+    double thetaMax = 95 * CV_PI / 180.0;
+    double thetaStep = 1 * CV_PI / 180.0;
+
+    int lines_max = 5;
+    int threshold = 100;
+
+    Mat lines;
+
+    HoughLinesPointSet(points, lines,
+        lines_max, threshold,
+        rhoMin, rhoMax, rhoStep,
+        thetaMin, thetaMax, thetaStep
+    );
+
+    EXPECT_TRUE(lines.empty());
+}
+
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
                                                                            testing::Values( 1, 10 ),
                                                                            testing::Values( 0.05, 0.1 ),

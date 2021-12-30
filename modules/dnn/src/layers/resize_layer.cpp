@@ -64,6 +64,7 @@ public:
             outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
             outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
         } else {
+            CV_CheckGE(inputs[1].size(), (size_t)4, "");
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
         }

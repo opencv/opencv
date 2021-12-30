@@ -50,6 +50,6 @@ float SafeDoubleToFloat(double value);
 
 }  // namespace io
 }  // namespace protobuf
-
 }  // namespace google
+
 #endif  // GOOGLE_PROTOBUF_IO_STRTOD_H__
