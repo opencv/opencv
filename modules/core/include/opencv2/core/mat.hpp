@@ -458,7 +458,16 @@ CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
-//! Usage flags for allocator
+/** @brief  Usage flags for allocator
+
+ @warning  All flags except `USAGE_DEFAULT` are experimental.
+
+ @warning  For the OpenCL allocator, `USAGE_ALLOCATE_SHARED_MEMORY` depends on
+ OpenCV's optional, experimental integration with OpenCL SVM. To enable this
+ integration, build OpenCV using the `WITH_OPENCL_SVM=ON` CMake option and, at
+ runtime, call `cv::ocl::Context::getDefault().setUseSVM(true);` or similar
+ code. Note that SVM is incompatible with OpenCL 1.x.
+*/
 enum UMatUsageFlags
 {
     USAGE_DEFAULT = 0,
