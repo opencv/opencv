@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "cascadedetect.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_objdetect.hpp"
 

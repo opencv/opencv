@@ -243,7 +243,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     if (params.size() > 1)
     {
-        if (params[0] == CV_IMWRITE_WEBP_QUALITY)
+        if (params[0] == IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
             quality = static_cast<float>(params[1]);
