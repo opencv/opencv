@@ -2321,6 +2321,124 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
+struct MinMaxFunctor : public BaseFunctor
+{
+    typedef MinMaxLayer Layer;
+    Mat blob;
+    bool op_flag;
+
+    explicit MinMaxFunctor(const Mat& blob_=Mat(), bool op_flag_=false) : blob(blob_), op_flag(op_flag_)
+    {
+    }
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        const float* blobptr = blob.ptr<float>();
+        CV_Assert(blob.total() == cn1 || blob.total() == 1); //vector and scalar;
+        for( int cn = cn0; cn < cn1; cn+=1 , srcptr += planeSize, dstptr += planeSize )
+        {
+            int i = 0;
+            float s = blob.total() == 1 ? blobptr[0]:blobptr[cn];
+#if CV_SIMD128
+            v_float32x4 s4 = v_setall_f32(s);
+            for( ; i <= len - 16; i += 16 )
+            {
+                v_float32x4 x0 = v_load(srcptr + i);
+                v_float32x4 x1 = v_load(srcptr + i + 4);
+                v_float32x4 x2 = v_load(srcptr + i + 8);
+                v_float32x4 x3 = v_load(srcptr + i + 12);
+                if(op_flag)
+                {
+                    x0 = v_max(x0, s4);
+                    x1 = v_max(x1, s4);
+                    x2 = v_max(x2, s4);
+                    x3 = v_max(x3, s4);
+                }
+                else
+                {
+                    x0 = v_min(x0, s4);
+                    x1 = v_min(x1, s4);
+                    x2 = v_min(x2, s4);
+                    x3 = v_min(x3, s4);
+                }
+                v_store(dstptr + i, x0);
+                v_store(dstptr + i + 4, x1);
+                v_store(dstptr + i + 8, x2);
+                v_store(dstptr + i + 12, x3);
+            }
+#endif
+        if (op_flag)
+            for( ; i < len; i++ )
+            {
+                dstptr[i] = std::max(srcptr[i],s);
+            }
+        else
+            for( ; i < len; i++ )
+            {
+                dstptr[i] = std::min(srcptr[i],s);
+            }
+        }
+    }
+
+#ifdef HAVE_OPENCL
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        CV_Error(Error::StsNotImplemented, "");  
+        return false;
+    }
+#endif
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::MinMaxOp>(target, stream, blob, op_flag);
+    }
+#endif
+
+#ifdef HAVE_HALIDE
+    void attachHalide(const Halide::Expr& input, Halide::Func& top)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_HALIDE
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif
+
+#ifdef HAVE_VULKAN
+    std::shared_ptr<vkcom::OpBase> initVkCom()
+    {
+        // TODO: add vkcom implementation
+        return std::shared_ptr<vkcom::OpBase>();
+    }
+#endif  // HAVE_VULKAN
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
 #define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
 Ptr<_Layer> _Layer::create() { \
     return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
@@ -2659,6 +2777,21 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
     Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
     l->setParamsFrom(params);
 
+    return l;
+}
+
+Ptr<Layer> MinMaxLayer::create(const LayerParams& params)
+{
+    CV_Assert(params.blobs.size() == 1);
+    Ptr<MinMaxLayer> l;
+    if (params.get<String>("operation", "max") == "max"){
+        l = new ElementWiseLayer<MinMaxFunctor>(MinMaxFunctor(params.blobs[0], true));
+        l->setParamsFrom(params);
+        return l;
+    }
+
+    l = new ElementWiseLayer<MinMaxFunctor>(MinMaxFunctor(params.blobs[0], false));
+    l->setParamsFrom(params);
     return l;
 }
 

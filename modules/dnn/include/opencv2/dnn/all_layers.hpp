@@ -552,6 +552,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS MinMaxLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ELULayer : public ActivationLayer
     {
     public:

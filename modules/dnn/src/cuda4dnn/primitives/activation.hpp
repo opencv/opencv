@@ -59,6 +59,30 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     };
 
     template <class T>
+    class MinMaxOp final : public BaseOp<MinMaxOp, T> {
+    public:
+        MinMaxOp(csl::Stream stream_, const Mat& blob_, const bool op_)
+                : stream(std::move(stream_)), op(op_)
+        {
+            CV_Assert(!blob_.empty());
+            blob = csl::makeTensorHeader<T>(blob_);
+            csl::copyMatToTensor<T>(blob_, blob, stream);
+        }
+
+        void calculate(csl::TensorSpan<T> output, csl::TensorView<T> input) const
+        {
+            CV_Assert(input.get_axis_size(1) == blob.size() || blob.size() == 1); // vector or scalar
+            std::size_t inner_size = input.size_range(2, input.rank());
+            kernels::elementwise_MinMax<T>(stream, output, input, op, inner_size, blob);
+        }
+
+    private:
+        csl::Stream stream;
+        csl::Tensor<T> blob;
+        bool op;
+    };
+
+    template <class T>
     class ClippedReLUOp final : public BaseOp<ClippedReLUOp, T> {
     public:
         ClippedReLUOp(csl::Stream stream_, T min_, T max_)

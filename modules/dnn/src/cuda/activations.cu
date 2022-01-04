@@ -62,6 +62,42 @@ namespace raw {
         }
     }
 
+    template <class T, std::size_t N>
+    __global__ void elementwise_max_vec(Span<T> output, View<T> input, size_type inner_size, View<T> blob) {
+        using vector_type = get_vector_type_t<T, N>;
+
+        auto output_vPtr = vector_type::get_pointer(output.data());
+        auto input_vPtr = vector_type::get_pointer(input.data());
+
+        for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+            const index_type c = blob.size() == 1 ? 0 : (i / inner_size) % blob.size();
+
+            vector_type vec;
+            v_load(vec, input_vPtr[i]);
+            for (int j = 0; j < vector_type::size(); j++)
+                vec.data[j] = vec.data[j] > blob[c] ? vec.data[j] : blob[c] ;
+            v_store(output_vPtr[i], vec);
+        }
+    }
+
+    template <class T, std::size_t N>
+    __global__ void elementwise_min_vec(Span<T> output, View<T> input, size_type inner_size, View<T> blob) {
+        using vector_type = get_vector_type_t<T, N>;
+
+        auto output_vPtr = vector_type::get_pointer(output.data());
+        auto input_vPtr = vector_type::get_pointer(input.data());
+
+        for (auto i : grid_stride_range(output.size() / vector_type::size())) {
+            const index_type c = blob.size() == 1 ? 0 : (i / inner_size) % blob.size();
+
+            vector_type vec;
+            v_load(vec, input_vPtr[i]);
+            for (int j = 0; j < vector_type::size(); j++)
+                vec.data[j] = vec.data[j] < blob[c] ? vec.data[j] : blob[c] ;
+            v_store(output_vPtr[i], vec);
+        }
+    }
+
 } /* namespace raw */
 
 template <class T, class ActivationOp, std::size_t N> static
@@ -376,9 +412,43 @@ void axiswise_relu(const Stream& stream, Span<T> output, View<T> input, std::siz
     }
 }
 
+template <class T, std::size_t N> static
+void launch_vectorized_elementwise_MinMax(const Stream& stream, Span<T> output, View<T> input, bool op, std::size_t inner_size, View<T> blob) {
+    CV_Assert(is_fully_aligned<T>(output, N));
+    CV_Assert(is_fully_aligned<T>(input, N));
+    CV_Assert(inner_size % N == 0);
+    if (op)
+    {
+        auto kernel = raw::elementwise_max_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size / N, blob);
+    }
+    else
+    {
+        auto kernel = raw::elementwise_min_vec<T, N>;
+        auto policy = make_policy(kernel, output.size() / N, 0, stream);
+        launch_kernel(kernel, policy, output, input, inner_size / N, blob);
+    }
+}
+
+template <class T>
+void elementwise_MinMax(const Stream& stream, Span<T> output, View<T> input, bool op, std::size_t inner_size, View<T> blob) {
+    CV_Assert(input.size() == output.size());
+
+    if (is_fully_aligned<T>(output, 4) && is_fully_aligned<T>(input, 4) && inner_size % 4 == 0) {
+        launch_vectorized_elementwise_MinMax<T, 4>(stream, output, input, op, inner_size, blob);
+    } else if (is_fully_aligned<T>(output, 2) && is_fully_aligned<T>(input, 2) && inner_size % 2 == 0) {
+        launch_vectorized_elementwise_MinMax<T, 2>(stream, output, input, op, inner_size, blob);
+    } else {
+        launch_vectorized_elementwise_MinMax<T, 1>(stream, output, input, op, inner_size, blob);
+    }
+}
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void axiswise_relu<__half>(const Stream&, Span<__half>, View<__half>, std::size_t, View<__half>);
+    template void elementwise_MinMax<__half>(const Stream& stream, Span<__half>, View<__half>, bool, std::size_t, View<__half>);
 #endif
     template void axiswise_relu<float>(const Stream&, Span<float>, View<float>, std::size_t, View<float>);
+    template void elementwise_MinMax<float>(const Stream& stream, Span<float>, View<float>, bool, std::size_t, View<float>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

@@ -22,6 +22,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void axiswise_relu(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, std::size_t inner_size, csl::View<T> slope);
 
     template <class T>
+    void elementwise_MinMax(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, bool op, std::size_t inner_size, csl::View<T> slope);
+
+    template <class T>
     void tanh(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>

@@ -193,6 +193,27 @@ TEST_P(Test_TensorFlow_layers, ArgLayer)
     runTensorFlowNet("argmin");
 }
 
+TEST_P(Test_TensorFlow_layers, MinMaxLayer)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+    if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
+    {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
+    }
+
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#endif
+    runTensorFlowNet("maximum_two_inputs");
+    runTensorFlowNet("maximum_scale_const");
+    runTensorFlowNet("maximum_vector_const");
+    runTensorFlowNet("minimum_scale_const");
+    runTensorFlowNet("minimum_two_inputs");
+    runTensorFlowNet("minimum_vector_const");
+}
+
 TEST_P(Test_TensorFlow_layers, conv_single_conv)
 {
     runTensorFlowNet("single_conv");

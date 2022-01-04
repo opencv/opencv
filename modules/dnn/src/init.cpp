@@ -160,6 +160,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Proposal,       ProposalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Scale,          ScaleLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Compare,        CompareLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(MinMax,         MinMaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DataAugmentation, DataAugmentationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Correlation,    CorrelationLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Accum,          AccumLayer);

@@ -600,6 +600,7 @@ private:
     void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseSquare             (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseArg                (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    void parseMinMax                (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
@@ -680,6 +681,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
     dispatch["Square"] = &TFImporter::parseSquare;
     dispatch["ArgMax"] = dispatch["ArgMin"] = &TFImporter::parseArg;
+    dispatch["Minimum"] = dispatch["Maximum"] = &TFImporter::parseMinMax;
 
     return dispatch;
 }
@@ -2455,6 +2457,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                 layer_id[squeezeName] = squeezeId;
                 connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
+                data_layouts[name] = DATA_LAYOUT_PLANAR;
             }
         }
         else if (axis == 1)
@@ -2483,6 +2486,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                 layer_id[squeezeName] = squeezeId;
                 connect(layer_id, dstNet, Pin(poolingName), squeezeId, 0);
+                data_layouts[name] = DATA_LAYOUT_PLANAR;
             }
             else
             {
@@ -2641,6 +2645,47 @@ void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     int id = dstNet.addLayer(name, "Arg", layerParams);
     layer_id[name] = id;
     connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+}
+
+void TFImporter::parseMinMax(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+    const std::string& type = layer.op();
+    const int num_inputs = layer.input_size();
+
+    bool hasConstBlob = false;
+    Mat blob;
+    for(int i = 0; i < layer.input_size(); i++) {
+        if (value_id.find(layer.input(i)) != value_id.end())
+        {
+            hasConstBlob = true;
+            blob = getTensorContent(getConstBlob(layer, value_id, i));
+        }
+    }
+    CV_Assert(hasConstBlob || num_inputs==2);
+    if(!hasConstBlob)
+    {
+        layerParams.set("operation", type == "Maximum" ? "max":"min");
+        int id = dstNet.addLayer(name, "Eltwise", layerParams);
+        layer_id[name] = id;
+        for (int ii = 0; ii < num_inputs; ii++)
+        {
+            Pin inp = parsePin(layer.input(ii));
+            connect(layer_id, dstNet, inp, id, ii);
+        }
+    }
+    //one input
+    else
+    {
+        layerParams.blobs.push_back(blob);
+        layerParams.set("operation", type == "Maximum" ? "max":"min");
+        int id = dstNet.addLayer(name, "MinMax", layerParams);
+        Pin inp0 = parsePin(layer.input(0));
+        if (layer_id.find(inp0.name) != layer_id.end())
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        else
+            connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
+    }
 }
 
 void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
