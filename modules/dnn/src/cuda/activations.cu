@@ -63,7 +63,7 @@ namespace raw {
     }
 
     template <class T, std::size_t N>
-    __global__ void elementwise_max_vec(Span<T> output, View<T> input, size_type inner_size, View<T> blob) {
+    __global__ void elementwise_minmax_vec(Span<T> output, View<T> input, bool op, size_type inner_size, View<T> blob) {
         using vector_type = get_vector_type_t<T, N>;
 
         auto output_vPtr = vector_type::get_pointer(output.data());
@@ -75,25 +75,7 @@ namespace raw {
             vector_type vec;
             v_load(vec, input_vPtr[i]);
             for (int j = 0; j < vector_type::size(); j++)
-                vec.data[j] = vec.data[j] > blob[c] ? vec.data[j] : blob[c] ;
-            v_store(output_vPtr[i], vec);
-        }
-    }
-
-    template <class T, std::size_t N>
-    __global__ void elementwise_min_vec(Span<T> output, View<T> input, size_type inner_size, View<T> blob) {
-        using vector_type = get_vector_type_t<T, N>;
-
-        auto output_vPtr = vector_type::get_pointer(output.data());
-        auto input_vPtr = vector_type::get_pointer(input.data());
-
-        for (auto i : grid_stride_range(output.size() / vector_type::size())) {
-            const index_type c = blob.size() == 1 ? 0 : (i / inner_size) % blob.size();
-
-            vector_type vec;
-            v_load(vec, input_vPtr[i]);
-            for (int j = 0; j < vector_type::size(); j++)
-                vec.data[j] = vec.data[j] < blob[c] ? vec.data[j] : blob[c] ;
+                vec.data[j] = !(vec.data[j] > blob[c] ^ op) ? vec.data[j] : blob[c] ; // op: true means "max", false means "min"
             v_store(output_vPtr[i], vec);
         }
     }
@@ -417,18 +399,9 @@ void launch_vectorized_elementwise_MinMax(const Stream& stream, Span<T> output, 
     CV_Assert(is_fully_aligned<T>(output, N));
     CV_Assert(is_fully_aligned<T>(input, N));
     CV_Assert(inner_size % N == 0);
-    if (op)
-    {
-        auto kernel = raw::elementwise_max_vec<T, N>;
-        auto policy = make_policy(kernel, output.size() / N, 0, stream);
-        launch_kernel(kernel, policy, output, input, inner_size / N, blob);
-    }
-    else
-    {
-        auto kernel = raw::elementwise_min_vec<T, N>;
-        auto policy = make_policy(kernel, output.size() / N, 0, stream);
-        launch_kernel(kernel, policy, output, input, inner_size / N, blob);
-    }
+    auto kernel = raw::elementwise_minmax_vec<T, N>;
+    auto policy = make_policy(kernel, output.size() / N, 0, stream);
+    launch_kernel(kernel, policy, output, input, op, inner_size / N, blob);
 }
 
 template <class T>
