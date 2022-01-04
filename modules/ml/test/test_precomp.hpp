@@ -4,7 +4,6 @@
 #include "opencv2/ts.hpp"
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "opencv2/ml.hpp"
-#include "opencv2/core/core_c.h"
 
 #include <fstream>
 using std::ifstream;
