@@ -3018,7 +3018,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
     cv::Mat goldMean;
 
-    cv::reduce(src,goldMean,0 ,CV_REDUCE_AVG, CV_32F);
+    cv::reduce(src,goldMean,0 ,REDUCE_AVG, CV_32F);
 
     cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
 

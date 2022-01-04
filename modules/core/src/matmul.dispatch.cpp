@@ -804,7 +804,7 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
     else
     {
         ctype = std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), CV_32F);
-        reduce( _src, _mean, takeRows ? 0 : 1, CV_REDUCE_AVG, ctype );
+        reduce( _src, _mean, takeRows ? 0 : 1, REDUCE_AVG, ctype );
         mean = _mean.getMat();
     }
 
