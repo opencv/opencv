@@ -2388,7 +2388,7 @@ struct MinMaxFunctor : public BaseFunctor
 #ifdef HAVE_OPENCL
     bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {
-        CV_Error(Error::StsNotImplemented, "");  
+        CV_Error(Error::StsNotImplemented, "");
         return false;
     }
 #endif
