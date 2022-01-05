@@ -2100,7 +2100,7 @@ public:
 
         Mat_<Pixel> image = Mat::zeros(3, sizes, CV_8UC3);
 
-        image.forEach<Pixel>([&](Pixel& pixel, const int position[]) -> void {
+        image.forEach<Pixel>([](Pixel& pixel, const int position[]) -> void {
             pixel.x = position[0];
             pixel.y = position[1];
             pixel.z = position[2];
