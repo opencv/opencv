@@ -295,24 +295,30 @@ bool TiffDecoder::readHeader()
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
+            char depth;
+            uint16 fmt = SAMPLEFORMAT_UINT;
+            TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &fmt);
             int wanted_channels = normalizeChannelsNumber(ncn);
             switch(bpp)
             {
                 case 1:
-                    m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
+                    depth = fmt == SAMPLEFORMAT_INT ? CV_8S : CV_8U;
+                    m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
                     result = true;
                     break;
                 case 8:
                     //Palette color, the value of the component is used as an index into the red,
                     //green and blue curves in the ColorMap field to retrieve an RGB triplet that defines the color.
+                    depth = fmt == SAMPLEFORMAT_INT ? CV_8S : CV_8U;
                     if(photometric == PHOTOMETRIC_PALETTE)
-                        m_type = CV_MAKETYPE(CV_8U, 3);
+                        m_type = CV_MAKETYPE(depth, 3);
                     else
-                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
+                        m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
                     result = true;
                     break;
                 case 16:
-                    m_type = CV_MAKETYPE(CV_16U, !isGrayScale ? wanted_channels : 1);
+                    depth = fmt == SAMPLEFORMAT_INT ? CV_16S : CV_16U;
+                    m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
                     result = true;
                     break;
                 case 32:
@@ -432,7 +438,7 @@ bool  TiffDecoder::readData( Mat& img )
 
     bool color = img.channels() > 1;
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32F || depth == CV_64F, "");
 
     if (m_width && m_height)
     {
