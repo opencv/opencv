@@ -5,9 +5,6 @@
 
 #include <iostream>
 
-using namespace std;
-using namespace cv;
-
 class dls
 {
 public:
@@ -93,10 +90,10 @@ private:
     double **V, **H;
 
     // Holds the computed eigenvalues.
-    Mat _eigenvalues;
+    cv::Mat _eigenvalues;
 
     // Holds the computed eigenvectors.
-    Mat _eigenvectors;
+    cv::Mat _eigenvectors;
 
     // Allocates memory.
     template<typename _Tp>
@@ -726,7 +723,7 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(InputArray src) {
+    EigenvalueDecomposition(cv::InputArray src) {
         compute(src);
     }
 
@@ -734,13 +731,13 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(InputArray src)
+    void compute(cv::InputArray src)
     {
         /*if(isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
             cv::eigen(src, _eigenvalues, _eigenvectors);
         } else {*/
-            Mat tmp;
+            cv::Mat tmp;
             // Convert the given input matrix to double. Is there any way to
             // prevent allocating the temporary memory? Only used for copying
             // into working memory and deallocated after.
@@ -765,9 +762,9 @@ public:
     ~EigenvalueDecomposition() {}
 
     // Returns the eigenvalues of the Eigenvalue Decomposition.
-    Mat eigenvalues() {  return _eigenvalues; }
+    cv::Mat eigenvalues() {  return _eigenvalues; }
     // Returns the eigenvectors of the Eigenvalue Decomposition.
-    Mat eigenvectors() { return _eigenvectors; }
+    cv::Mat eigenvectors() { return _eigenvectors; }
 };
 
 #endif // DLS_H
