@@ -61,7 +61,7 @@ struct GAPI_EXPORTS CfgParam {
      *
      */
     static constexpr const char *frames_pool_size_name() { return "frames_pool_size"; }
-    static CfgParam create_frames_pool_size(uint64_t value);
+    static CfgParam create_frames_pool_size(size_t value);
 
     /**
      * @brief acceleration_mode_name

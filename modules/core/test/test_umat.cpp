@@ -1398,8 +1398,8 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     randu(srcUMat, -1.f, 1.f);
     srcUMat.copyTo(srcMat);
 
-    reduce(srcUMat, srcUMat, 0, CV_REDUCE_SUM);
-    reduce(srcMat, srcMat, 0, CV_REDUCE_SUM);
+    reduce(srcUMat, srcUMat, 0, REDUCE_SUM);
+    reduce(srcMat, srcMat, 0, REDUCE_SUM);
 
     srcUMat.convertTo(srcUMat, CV_64FC1);
     srcMat.convertTo(srcMat, CV_64FC1);

@@ -86,8 +86,12 @@ CfgParam::CfgParam (const std::string& param_name, value_t&& param_value, bool i
 
 CfgParam::~CfgParam() = default;
 
-CfgParam CfgParam::create_frames_pool_size(uint64_t value) {
-    return CfgParam::create(CfgParam::frames_pool_size_name(), value, false);
+CfgParam CfgParam::create_frames_pool_size(size_t value) {
+    // NB: cast to uint64_t because CfgParam inner variant works over
+    // uint64_t instead of size_t and mirrored VPL types variety
+    // but size_t looks more friendly for C++ high-level development
+    return CfgParam::create(CfgParam::frames_pool_size_name(),
+                            static_cast<uint64_t>(value), false);
 }
 
 CfgParam CfgParam::create_acceleration_mode(uint32_t value) {

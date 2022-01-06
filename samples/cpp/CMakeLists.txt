@@ -56,6 +56,7 @@ foreach(sample_filename ${cpp_samples})
   endif()
   if(HAVE_OPENGL AND sample_filename MATCHES "detect_mser")
     target_compile_definitions(${tgt} PRIVATE HAVE_OPENGL)
+    ocv_target_link_libraries(${tgt} PRIVATE "${OPENGL_LIBRARIES}")
   endif()
   if(sample_filename MATCHES "simd_")
     # disabled intentionally - demonstration purposes only

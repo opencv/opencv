@@ -107,12 +107,6 @@ GAPI_TEST_FIXTURE(ThresholdOTTest, initMatrixRandU, FIXTURE_API(int), 1, tt)
 GAPI_TEST_FIXTURE(InRangeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split3Test, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(Split4Test, initMatrixRandU, <>, 0)
-GAPI_TEST_FIXTURE(ResizeTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
-    cmpF, interp, sz_out)
-GAPI_TEST_FIXTURE(ResizePTest, initNothing, FIXTURE_API(CompareMats,int,cv::Size), 3,
-    cmpF, interp, sz_out)
-GAPI_TEST_FIXTURE(ResizeTestFxFy, initNothing, FIXTURE_API(CompareMats,int,double,double), 4,
-    cmpF, interp, fx, fy)
 GAPI_TEST_FIXTURE(Merge3Test, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(Merge4Test, initMatsRandU, <>, 0)
 GAPI_TEST_FIXTURE(RemapTest, initMatrixRandU, <>, 0)

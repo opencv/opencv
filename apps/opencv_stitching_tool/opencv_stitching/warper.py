@@ -55,7 +55,7 @@ class Warper:
 
     def update_scale(self, scale):
         if scale is not None and scale != self.scale:
-            self.warper = cv.PyRotationWarper(self.warper_type, scale)  # setScale not working: https://docs.opencv.org/master/d5/d76/classcv_1_1PyRotationWarper.html#a90b000bb75f95294f9b0b6ec9859eb55
+            self.warper = cv.PyRotationWarper(self.warper_type, scale)  # setScale not working: https://docs.opencv.org/4.x/d5/d76/classcv_1_1PyRotationWarper.html#a90b000bb75f95294f9b0b6ec9859eb55
             self.scale = scale
 
     @staticmethod

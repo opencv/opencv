@@ -130,7 +130,7 @@ G_TYPED_KERNEL(TCalcHist, <GArray<int>(GMat)>, "test.ocv.calc_hist")
 GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3);
 std::tuple<GMat, GMat, GMat> split3_4lpi(const GMat& src);
 
-extern cv::gapi::GKernelPackage fluidTestPackage;
+extern cv::GKernelPackage fluidTestPackage;
 
 } // namespace gapi_test_kernels
 } // namespace cv

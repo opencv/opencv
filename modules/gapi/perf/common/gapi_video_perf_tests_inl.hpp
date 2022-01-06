@@ -130,7 +130,7 @@ PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
 
     auto customKernel  = gapi::kernels<GCPUMinScalar>();
     auto kernels       = gapi::combine(customKernel,
-                                       params.compileArgs[0].get<gapi::GKernelPackage>());
+                                       params.compileArgs[0].get<GKernelPackage>());
     params.compileArgs = compile_args(kernels);
 
     OptFlowLKTestOutput outOCV  { outPtsOCV,  outStatusOCV,  outErrOCV };
