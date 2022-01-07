@@ -7,13 +7,15 @@
 
 #include <opencv2/core.hpp>
 
-/** @defgroup dnn_face DNN-based face detection and recognition
- */
-
 namespace cv
 {
 
-/** @brief DNN-based face detector, model download link: https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx.
+//! @addtogroup objdetect_dnn_face
+//! @{
+
+/** @brief DNN-based face detector
+
+model download link: https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet
  */
 class CV_EXPORTS_W FaceDetectorYN
 {
@@ -80,7 +82,9 @@ public:
                                               int target_id = 0);
 };
 
-/** @brief DNN-based face recognizer, model download link: https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view.
+/** @brief DNN-based face recognizer
+
+model download link: https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface
  */
 class CV_EXPORTS_W FaceRecognizerSF
 {
@@ -105,11 +109,11 @@ public:
     CV_WRAP virtual void feature(InputArray aligned_img, OutputArray face_feature) = 0;
 
     /** @brief Calculating the distance between two face features
-     *  @param _face_feature1 the first input feature
-     *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
+     *  @param face_feature1 the first input feature
+     *  @param face_feature2 the second input feature of the same size and the same type as face_feature1
      *  @param dis_type defining the similarity with optional values "FR_OSINE" or "FR_NORM_L2"
      */
-    CV_WRAP virtual double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE) const = 0;
+    CV_WRAP virtual double match(InputArray face_feature1, InputArray face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
      *  @param model the path of the onnx model used for face recognition
@@ -120,6 +124,7 @@ public:
     CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
 };
 
+//! @}
 } // namespace cv
 
 #endif

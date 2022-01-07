@@ -51,7 +51,7 @@
 namespace cv
 {
 
-//! @addtogroup objdetect
+//! @addtogroup objdetect_cascade_classifier
 //! @{
 
 class CV_EXPORTS DetectionBasedTracker
@@ -215,7 +215,7 @@ class CV_EXPORTS DetectionBasedTracker
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
 
-//! @} objdetect
+//! @}
 
 } //end of cv namespace
 
