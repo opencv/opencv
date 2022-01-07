@@ -5,19 +5,21 @@
 
 #include <iostream>
 
+namespace cv {
+
 class dls
 {
 public:
-    dls(const cv::Mat& opoints, const cv::Mat& ipoints);
+    dls(const Mat& opoints, const Mat& ipoints);
     ~dls();
 
-    bool compute_pose(cv::Mat& R, cv::Mat& t);
+    bool compute_pose(Mat& R, Mat& t);
 
 private:
 
     // initialisation
     template <typename OpointType, typename IpointType>
-    void init_points(const cv::Mat& opoints, const cv::Mat& ipoints)
+    void init_points(const Mat& opoints, const Mat& ipoints)
     {
         for(int i = 0; i < N; i++)
         {
@@ -46,33 +48,33 @@ private:
     }
 
     // main algorithm
-    cv::Mat LeftMultVec(const cv::Mat& v);
-    void run_kernel(const cv::Mat& pp);
-    void build_coeff_matrix(const cv::Mat& pp, cv::Mat& Mtilde, cv::Mat& D);
-    void compute_eigenvec(const cv::Mat& Mtilde, cv::Mat& eigenval_real, cv::Mat& eigenval_imag,
-                                                 cv::Mat& eigenvec_real, cv::Mat& eigenvec_imag);
-    void fill_coeff(const cv::Mat * D);
+    Mat LeftMultVec(const Mat& v);
+    void run_kernel(const Mat& pp);
+    void build_coeff_matrix(const Mat& pp, Mat& Mtilde, Mat& D);
+    void compute_eigenvec(const Mat& Mtilde, Mat& eigenval_real, Mat& eigenval_imag,
+                                             Mat& eigenvec_real, Mat& eigenvec_imag);
+    void fill_coeff(const Mat * D);
 
     // useful functions
-    cv::Mat cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b,
-                        const std::vector<double>& c, const std::vector<double>& u);
-    cv::Mat Hessian(const double s[]);
-    cv::Mat cayley2rotbar(const cv::Mat& s);
-    cv::Mat skewsymm(const cv::Mat * X1);
+    Mat cayley_LS_M(const std::vector<double>& a, const std::vector<double>& b,
+                    const std::vector<double>& c, const std::vector<double>& u);
+    Mat Hessian(const double s[]);
+    Mat cayley2rotbar(const Mat& s);
+    Mat skewsymm(const Mat * X1);
 
     // extra functions
-    cv::Mat rotx(const double t);
-    cv::Mat roty(const double t);
-    cv::Mat rotz(const double t);
-    cv::Mat mean(const cv::Mat& M);
-    bool is_empty(const cv::Mat * v);
-    bool positive_eigenvalues(const cv::Mat * eigenvalues);
+    Mat rotx(const double t);
+    Mat roty(const double t);
+    Mat rotz(const double t);
+    Mat mean(const Mat& M);
+    bool is_empty(const Mat * v);
+    bool positive_eigenvalues(const Mat * eigenvalues);
 
-    cv::Mat p, z, mn;        // object-image points
+    Mat p, z, mn;        // object-image points
     int N;                // number of input points
     std::vector<double> f1coeff, f2coeff, f3coeff, cost_; // coefficient for coefficients matrix
-    std::vector<cv::Mat> C_est_, t_est_;    // optimal candidates
-    cv::Mat C_est__, t_est__;                // optimal found solution
+    std::vector<Mat> C_est_, t_est_;    // optimal candidates
+    Mat C_est__, t_est__;                // optimal found solution
     double cost__;                            // optimal found solution
 };
 
@@ -90,10 +92,10 @@ private:
     double **V, **H;
 
     // Holds the computed eigenvalues.
-    cv::Mat _eigenvalues;
+    Mat _eigenvalues;
 
     // Holds the computed eigenvectors.
-    cv::Mat _eigenvectors;
+    Mat _eigenvectors;
 
     // Allocates memory.
     template<typename _Tp>
@@ -723,7 +725,7 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    EigenvalueDecomposition(cv::InputArray src) {
+    EigenvalueDecomposition(InputArray src) {
         compute(src);
     }
 
@@ -731,13 +733,13 @@ public:
     // given in src. This function is a port of the EigenvalueSolver in JAMA,
     // which has been released to public domain by The MathWorks and the
     // National Institute of Standards and Technology (NIST).
-    void compute(cv::InputArray src)
+    void compute(InputArray src)
     {
         /*if(isSymmetric(src)) {
             // Fall back to OpenCV for a symmetric matrix!
-            cv::eigen(src, _eigenvalues, _eigenvectors);
+            eigen(src, _eigenvalues, _eigenvectors);
         } else {*/
-            cv::Mat tmp;
+            Mat tmp;
             // Convert the given input matrix to double. Is there any way to
             // prevent allocating the temporary memory? Only used for copying
             // into working memory and deallocated after.
@@ -762,9 +764,10 @@ public:
     ~EigenvalueDecomposition() {}
 
     // Returns the eigenvalues of the Eigenvalue Decomposition.
-    cv::Mat eigenvalues() {  return _eigenvalues; }
+    Mat eigenvalues() {  return _eigenvalues; }
     // Returns the eigenvectors of the Eigenvalue Decomposition.
-    cv::Mat eigenvectors() { return _eigenvectors; }
+    Mat eigenvectors() { return _eigenvectors; }
 };
 
+} // namespace cv
 #endif // DLS_H
