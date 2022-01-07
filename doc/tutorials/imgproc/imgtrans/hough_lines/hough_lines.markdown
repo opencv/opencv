@@ -97,6 +97,11 @@ b.  **The Probabilistic Hough Line Transform**
     of the detected lines \f$(x_{0}, y_{0}, x_{1}, y_{1})\f$
 -   In OpenCV it is implemented with the function **HoughLinesP()**
 
+c.  **The Weighted Hough Transform**
+
+-   It can use edge intensity insted of Standard hough can only use binarized edge(0,1) as its input.
+-   In OpenCV it is implemented with the function **HoughLinesStandard()** with use_edgeval = true.
+
 ###  What does this program do?
     -   Loads an image
     -   Applies a *Standard Hough Line Transform* and a *Probabilistic Line Transform*.
