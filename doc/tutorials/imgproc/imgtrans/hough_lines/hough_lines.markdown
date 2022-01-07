@@ -100,7 +100,8 @@ b.  **The Probabilistic Hough Line Transform**
 c.  **The Weighted Hough Transform**
 
 -   It can use edge intensity insted of Standard hough can only use binarized edge(0,1) as its input.
--   In OpenCV it is implemented with the function **HoughLinesStandard()** with use_edgeval = true.
+-   In OpenCV it is implemented with the function **HoughLines()** with use_edgeval=true.
+-   See the example in samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp.
 
 ###  What does this program do?
     -   Loads an image
