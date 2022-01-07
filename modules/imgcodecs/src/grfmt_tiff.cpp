@@ -331,8 +331,9 @@ bool TiffDecoder::readHeader()
             }
             case 32:
             {
-                CV_CheckEQ((int)sample_format, SAMPLEFORMAT_IEEEFP, "");
-                m_type = CV_MAKETYPE(CV_32F, wanted_channels);
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_IEEEFP || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_IEEEFP ? CV_32F : CV_32S;
+                m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
             }
@@ -450,7 +451,7 @@ bool  TiffDecoder::readData( Mat& img )
 
     bool color = img.channels() > 1;
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
 
     if (m_width && m_height)
     {
@@ -667,7 +668,7 @@ bool  TiffDecoder::readData( Mat& img )
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, buffer, buffer_size) >= 0);
                             }
 
-                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? CV_32F : CV_64F, ncn), buffer);
+                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), buffer);
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3)
