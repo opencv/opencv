@@ -924,9 +924,7 @@ public:
         INTERPROCESS   = 0x04   /**< Event is suitable for interprocess use. DisableTiming must be set */
     };
 
-    CV_WRAP explicit Event(Event::CreateFlags flags = Event::CreateFlags::DEFAULT);
-
-    CV_WRAP explicit Event(const unsigned flags);
+    CV_WRAP explicit Event(const int flags = Event::CreateFlags::DEFAULT);
 
     //! records an event
     CV_WRAP void record(Stream& stream = Stream::Null());

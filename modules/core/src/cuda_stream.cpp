@@ -811,12 +811,7 @@ Event cv::cuda::EventAccessor::wrapEvent(cudaEvent_t event)
 
 #endif
 
-cv::cuda::Event::Event(Event::CreateFlags flags) :
-    cv::cuda::Event(static_cast<unsigned>(flags))
-{
-}
-
-cv::cuda::Event::Event(const unsigned flags)
+cv::cuda::Event::Event(const int flags)
 {
 #ifndef HAVE_CUDA
     CV_UNUSED(flags);
