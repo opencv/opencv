@@ -184,7 +184,7 @@ Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String
     #ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
     #else
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF depende on dnn module.");
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF is depende on dnn module.");
     #endif
 }
 
