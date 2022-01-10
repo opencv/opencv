@@ -83,7 +83,7 @@ void integrateTsdfVolumeUnit(
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector proj = Intr(intr).makeProjector();
     const float dfac(1.f / settings.getDepthFactor());
     const float truncDist = settings.getTruncatedDistance();
@@ -370,7 +370,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
     const Point3i volResolution = Point3i(resolution);
     Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
     const Vec4i volDims;
@@ -654,7 +654,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraRaycastIntrinsics(intr);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -981,7 +981,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraRaycastIntrinsics(intr);
     Intr intrinsics(intr);
     Intr::Reprojector r = intrinsics.makeReprojector();
 

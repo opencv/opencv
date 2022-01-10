@@ -346,7 +346,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -415,7 +415,7 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);

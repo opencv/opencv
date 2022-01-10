@@ -113,7 +113,7 @@ void integrateHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * resolution[0];
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     const Intr intrinsics(intr);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
@@ -489,7 +489,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     UMat lastVisibleIndices = _lastVisibleIndices.getUMat();
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     const Intr intrinsics(intr);
 
     Vec4i volStrides;
@@ -1026,7 +1026,7 @@ void raycastHashTsdfVolumeUnit(
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraRaycastIntrinsics(intr);
     const Intr intrinsics(intr);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
@@ -1154,7 +1154,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     UMat normals = _normals.getUMat();
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraRaycastIntrinsics(intr);
     Intr intrinsics(intr);
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);

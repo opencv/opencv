@@ -429,7 +429,7 @@ PERF_TEST(Perf_TSDF, integrate_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -461,7 +461,7 @@ PERF_TEST(Perf_TSDF, integrate_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -495,7 +495,7 @@ PERF_TEST(Perf_TSDF, raycast_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -534,7 +534,7 @@ PERF_TEST(Perf_TSDF, raycast_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -583,7 +583,7 @@ PERF_TEST(Perf_TSDF_CPU, integrate_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -616,7 +616,7 @@ PERF_TEST(Perf_TSDF_CPU, integrate_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -650,7 +650,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -689,7 +689,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -738,7 +738,7 @@ PERF_TEST(Perf_HashTSDF, integrate_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -770,7 +770,7 @@ PERF_TEST(Perf_HashTSDF, integrate_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -804,7 +804,7 @@ PERF_TEST(Perf_HashTSDF, raycast_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -843,7 +843,7 @@ PERF_TEST(Perf_HashTSDF, raycast_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -892,7 +892,7 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -925,7 +925,7 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -959,7 +959,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -997,7 +997,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -1045,7 +1045,7 @@ PERF_TEST(Perf_ColorTSDF, integrate_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -1078,7 +1078,7 @@ PERF_TEST(Perf_ColorTSDF, integrate_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
@@ -1114,7 +1114,7 @@ PERF_TEST(Perf_ColorTSDF, raycast_mat)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
@@ -1154,7 +1154,7 @@ PERF_TEST(Perf_ColorTSDF, raycast_frame)
 
     Size frameSize(vs.getWidth(), vs.getHeight());
     Matx33f intr;
-    vs.getCameraIntrinsics(intr);
+    vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);

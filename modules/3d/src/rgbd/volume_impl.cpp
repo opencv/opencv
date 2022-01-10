@@ -56,7 +56,7 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     CV_Assert(!depth.empty());
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,
@@ -248,7 +248,7 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     Depth depth = _depth.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,
@@ -447,7 +447,7 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
     Colors image = _image.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,

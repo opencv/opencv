@@ -46,11 +46,11 @@ void integrateColorTsdfVolumeUnit(
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector projDepth = Intr(intr).makeProjector();
 
     Matx33f rgb_intr;
-    settings.getRGBCameraIntrinsics(rgb_intr);
+    settings.getRGBCameraIntegrateIntrinsics(rgb_intr);
     const Intr::Projector projColor = Intr(rgb_intr);
 
     const float dfac(1.f / settings.getDepthFactor());
@@ -749,7 +749,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
     Matx33f intr;
-    settings.getCameraIntrinsics(intr);
+    settings.getCameraRaycastIntrinsics(intr);
     const Intr::Reprojector reprojDepth = Intr(intr).makeReprojector();
 
     Matx44f _pose;
