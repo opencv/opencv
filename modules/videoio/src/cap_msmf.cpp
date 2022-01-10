@@ -449,7 +449,7 @@ private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
     {
-        CV_LOG_WARNING(NULL, "terminating async callback");
+        CV_LOG_INFO(NULL, "terminating async callback");
     }
 
 public:
