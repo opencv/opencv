@@ -369,6 +369,7 @@ try:
                 else:
                     raise unittest.SkipTest(str(e))
 
+
         def test_gst_source(self):
             if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
                 raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
@@ -403,6 +404,7 @@ try:
             if not cap.isOpened():
                 raise unittest.SkipTest("Backend GSTREAMER can't open the video")
             return cap
+
 
         def test_gst_source_accuracy(self):
             if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
@@ -454,6 +456,7 @@ try:
             except SystemError as e:
                 raise unittest.SkipTest(str(e) + ", casued by " + str(e.__cause__))
 
+
         def test_gst_multiple_sources(self):
             if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
                 raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
@@ -487,7 +490,7 @@ try:
                 has_frame, out = ccomp.pull()
 
 
-        def test_gst_multisource_accuracy(self):
+        def test_gst_multiple_sources_accuracy(self):
             if not cv.videoio_registry.hasBackend(cv.CAP_GSTREAMER):
                 raise unittest.SkipTest("Backend is not available/disabled: GSTREAMER")
 

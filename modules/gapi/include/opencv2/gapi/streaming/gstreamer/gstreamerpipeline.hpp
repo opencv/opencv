@@ -28,7 +28,6 @@ public:
     IStreamSource::Ptr getStreamingSource(const std::string& appsinkName,
                                           const GStreamerSource::OutputType outputType =
                                               GStreamerSource::OutputType::MAT);
-    // NB: Function for using from python
     GAPI_WRAP cv::Ptr<cv::gapi::wip::IStreamSource> get_streaming_source(
         const std::string& appsinkName,
         const GStreamerSource::OutputType outputType = GStreamerSource::OutputType::MAT);

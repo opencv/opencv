@@ -298,4 +298,4 @@ cv.gapi.wip.draw.Poly = cv.gapi_wip_draw_Poly
 
 cv.gapi.streaming.queue_capacity = cv.gapi_streaming_queue_capacity
 
-cv.gapi.wip.gst.GStreamerPipeline = cv.gapi.wip.GStreamerPipeline = cv.gapi_wip_gst_GStreamerPipeline
+cv.gapi.wip.GStreamerPipeline = cv.gapi_wip_gst_GStreamerPipeline
