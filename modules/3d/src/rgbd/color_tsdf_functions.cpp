@@ -1154,7 +1154,7 @@ inline void coord(
 void fetchPointsNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
     OutputArray _points, OutputArray _normals)
 {
-    fetchPointsNormalsColorsFromColorTsdfVolumeUnit(settings, _volume, _points, _normals, Mat());
+    fetchPointsNormalsColorsFromColorTsdfVolumeUnit(settings, _volume, _points, _normals, noArray());
 }
 
 void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
