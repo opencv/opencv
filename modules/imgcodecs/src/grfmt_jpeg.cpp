@@ -643,23 +643,23 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
-            if( params[i] == CV_IMWRITE_JPEG_QUALITY )
+            if( params[i] == IMWRITE_JPEG_QUALITY )
             {
                 quality = params[i+1];
                 quality = MIN(MAX(quality, 0), 100);
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_PROGRESSIVE )
+            if( params[i] == IMWRITE_JPEG_PROGRESSIVE )
             {
                 progressive = params[i+1];
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
+            if( params[i] == IMWRITE_JPEG_OPTIMIZE )
             {
                 optimize = params[i+1];
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_LUMA_QUALITY )
+            if( params[i] == IMWRITE_JPEG_LUMA_QUALITY )
             {
                 if (params[i+1] >= 0)
                 {
@@ -674,7 +674,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_CHROMA_QUALITY )
+            if( params[i] == IMWRITE_JPEG_CHROMA_QUALITY )
             {
                 if (params[i+1] >= 0)
                 {
@@ -682,7 +682,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
             }
 
-            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
+            if( params[i] == IMWRITE_JPEG_RST_INTERVAL )
             {
                 rst_interval = params[i+1];
                 rst_interval = MIN(MAX(rst_interval, 0), 65535L);

@@ -1,4 +1,4 @@
-https://github.com/opencv/opencv_extra/tree/master/testdata/stitching
+https://github.com/opencv/opencv_extra/tree/4.x/testdata/stitching
 
 s1.jpg s2.jpg
 boat1.jpg boat2.jpg boat3.jpg boat4.jpg boat5.jpg boat6.jpg

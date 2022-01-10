@@ -1067,6 +1067,79 @@ TEST_P(RGB2YUV422Test, AccuracyTest)
         EXPECT_EQ(sz, out_mat_gapi.size());
     }
 }
+
+static void ResizeAccuracyTest(const CompareMats& cmpF, int type, int interp, cv::Size sz_in,
+    cv::Size sz_out, double fx, double fy, cv::GCompileArgs&& compile_args)
+{
+    cv::Mat in_mat1 (sz_in, type );
+    cv::Scalar mean = cv::Scalar::all(127);
+    cv::Scalar stddev = cv::Scalar::all(40.f);
+
+    cv::randn(in_mat1, mean, stddev);
+
+    auto out_mat_sz = sz_out.area() == 0 ? cv::Size(saturate_cast<int>(sz_in.width *fx),
+                                                    saturate_cast<int>(sz_in.height*fy))
+                                         : sz_out;
+    cv::Mat out_mat(out_mat_sz, type);
+    cv::Mat out_mat_ocv(out_mat_sz, type);
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::resize(in, sz_out, fx, fy, interp);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat, std::move(compile_args));
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::resize(in_mat1, out_mat_ocv, sz_out, fx, fy, interp);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat, out_mat_ocv));
+    }
+}
+
+TEST_P(ResizeTest, AccuracyTest)
+{
+    ResizeAccuracyTest(cmpF, type, interp, sz, sz_out, 0.0, 0.0, getCompileArgs());
+}
+
+TEST_P(ResizeTestFxFy, AccuracyTest)
+{
+    ResizeAccuracyTest(cmpF, type, interp, sz, cv::Size{0, 0}, fx, fy, getCompileArgs());
+}
+
+TEST_P(ResizePTest, AccuracyTest)
+{
+    constexpr int planeNum = 3;
+    cv::Size sz_in_p {sz.width,  sz.height*planeNum};
+    cv::Size sz_out_p{sz_out.width, sz_out.height*planeNum};
+
+    cv::Mat in_mat(sz_in_p, CV_8UC1);
+    cv::randn(in_mat, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
+
+    cv::Mat out_mat    (sz_out_p, CV_8UC1);
+    cv::Mat out_mat_ocv_p(sz_out_p, CV_8UC1);
+
+    cv::GMatP in;
+    auto out = cv::gapi::resizeP(in, sz_out, interp);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    c.compile(cv::descr_of(in_mat).asPlanar(planeNum), getCompileArgs())
+             (cv::gin(in_mat), cv::gout(out_mat));
+
+    for (int i = 0; i < planeNum; i++) {
+        const cv::Mat in_mat_roi = in_mat(cv::Rect(0, i*sz.height,  sz.width,  sz.height));
+        cv::Mat out_mat_roi = out_mat_ocv_p(cv::Rect(0, i*sz_out.height, sz_out.width, sz_out.height));
+        cv::resize(in_mat_roi, out_mat_roi, sz_out, 0, 0, interp);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat, out_mat_ocv_p));
+    }
+}
+
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_TESTS_INL_HPP

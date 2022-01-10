@@ -110,17 +110,10 @@ private:
     opencv_onnx::GraphProto& net;
 };
 
-class SoftMaxSubgraph : public Subgraph
+class SoftMaxSubgraphBase : public Subgraph
 {
 public:
-    SoftMaxSubgraph() : axis(1)
-    {
-        int input = addNodeToMatch("");
-        int inpExp = addNodeToMatch("Exp", input);
-        int sum = addNodeToMatch("ReduceSum", inpExp);
-        addNodeToMatch("Div", inpExp, sum);
-        setFusedNode("Softmax", input);
-    }
+    SoftMaxSubgraphBase() : axis(1), id(-1) {}
 
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds,
@@ -128,7 +121,8 @@ public:
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            Ptr<ImportNodeWrapper> sum = net->getNode(matchedNodesIds[1]);
+            CV_Assert(id >= 0 && id < matchedNodesIds.size());
+            Ptr<ImportNodeWrapper> sum = net->getNode(matchedNodesIds[id]);
             opencv_onnx::NodeProto* node = sum.dynamicCast<ONNXNodeWrapper>()->node;
 
             for (int i = 0; i < node->attribute_size(); i++)
@@ -156,8 +150,160 @@ public:
         attr->set_i(axis);
     }
 
-private:
+protected:
     int axis;
+    int id;
+};
+
+class SoftMaxSubgraph : public SoftMaxSubgraphBase
+{
+public:
+    SoftMaxSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int inpExp = addNodeToMatch("Exp", input);
+
+        int sum = addNodeToMatch("ReduceSum", inpExp);
+        id = 1;
+
+        addNodeToMatch("Div", inpExp, sum);
+        setFusedNode("Softmax", input);
+    }
+};
+
+class SoftMaxSubgraph2 : public SoftMaxSubgraphBase {
+public:
+    SoftMaxSubgraph2() {
+        int input = addNodeToMatch("");
+
+        int reducemax = addNodeToMatch("ReduceMax", input);
+        id = 0;
+
+        int sub = addNodeToMatch("Sub", input, reducemax);
+        int exp = addNodeToMatch("Exp", sub);
+        int reducesum = addNodeToMatch("ReduceSum", exp, addNodeToMatch(""));
+        addNodeToMatch("Div", exp, reducesum);
+        setFusedNode("Softmax", input);
+    }
+};
+
+class LogSoftMaxSubgraph : public SoftMaxSubgraphBase
+{
+public:
+    LogSoftMaxSubgraph()
+    {
+        int input = addNodeToMatch("");
+
+        int reducemax = addNodeToMatch("ReduceMax", input);
+        id = 0;
+
+        int sub_1 = addNodeToMatch("Sub", input, reducemax);
+        int exp = addNodeToMatch("Exp", sub_1);
+        int reducesum = addNodeToMatch("ReduceSum", exp, addNodeToMatch(""));
+        int log = addNodeToMatch("Log", reducesum);
+        addNodeToMatch("Sub", sub_1, log);
+        setFusedNode("LogSoftmax", input);
+    }
+};
+
+class HardSwishSubgraph : public Subgraph
+{
+public:
+    HardSwishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int hardSigmoid = addNodeToMatch("HardSigmoid", input);
+        addNodeToMatch("Mul", input, hardSigmoid);
+        setFusedNode("HardSwish", input);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            Ptr<ImportNodeWrapper> hardSigmoid = net->getNode(matchedNodesIds[0]);
+            opencv_onnx::NodeProto* node = hardSigmoid.dynamicCast<ONNXNodeWrapper>()->node;
+
+            uint8_t matched = 0;
+            for (int i = 0; i < node->attribute_size(); i++)
+            {
+                opencv_onnx::AttributeProto attr = node->attribute(i);
+                if ((attr.name() == "alpha" && attr.f() == 1.f / 6.f) ||
+                    (attr.name() == "beta" && attr.f() == 0.5f))
+                {
+                    ++matched;
+                }
+            }
+            return matched == 2;
+        }
+        return false;
+    }
+};
+
+class CeluSubgraph : public Subgraph
+{
+public:
+    CeluSubgraph() : alpha(1.f)
+    {
+        int input = addNodeToMatch("");
+        int div = addNodeToMatch("Div", input, addNodeToMatch(""));
+        int elu = addNodeToMatch("Elu", div);
+        addNodeToMatch("Mul", addNodeToMatch(""), elu);
+        setFusedNode("Celu", input);
+    }
+
+    static float extractAlpha(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+        int const_id = getInputNodeId(net, node, input_id);
+        Ptr<ImportNodeWrapper> alpha_ptr = net->getNode(const_id);
+        opencv_onnx::NodeProto* alpha_node = alpha_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::TensorProto alpha_proto = alpha_node->attribute(0).t();
+        Mat alpha_mat = getMatFromTensor(alpha_proto);
+        return *alpha_mat.ptr<float>();
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            float alpha_div = extractAlpha(net, matchedNodesIds[0], 1);
+            float alpha_mul = extractAlpha(net, matchedNodesIds[2], 0);
+            float alpha_elu = 1.f;
+
+            Ptr<ImportNodeWrapper> elu_ptr = net->getNode(matchedNodesIds[1]);
+            opencv_onnx::NodeProto* elu_node = elu_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+
+            for (int i = 0; i < elu_node->attribute_size(); i++)
+            {
+                opencv_onnx::AttributeProto attr = elu_node->attribute(i);
+                if (attr.name() != "alpha")
+                    continue;
+                alpha_elu = attr.f();
+            }
+
+            alpha = alpha_div;
+            return alpha_elu == 1.f && alpha_div == alpha_mul;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::AttributeProto* alpha_attr = node->add_attribute();
+        alpha_attr->set_name("alpha");
+        alpha_attr->set_f(alpha);
+    }
+
+protected:
+    float alpha;
 };
 
 class NormalizeSubgraphBase : public Subgraph
@@ -577,6 +723,10 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<ResizeSubgraph1>());
     subgraphs.push_back(makePtr<ResizeSubgraph2>());
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
+    subgraphs.push_back(makePtr<SoftMaxSubgraph2>());
+    subgraphs.push_back(makePtr<LogSoftMaxSubgraph>());
+    subgraphs.push_back(makePtr<HardSwishSubgraph>());
+    subgraphs.push_back(makePtr<CeluSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph1>());
     subgraphs.push_back(makePtr<NormalizeSubgraph2>());
     subgraphs.push_back(makePtr<NormalizeSubgraph2_2>());
@@ -591,7 +741,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
 
-Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&

@@ -26,14 +26,25 @@ static void test_readFrames(/*const*/ VideoCapture& capture, const int N = 100, 
     const bool validTickAndFps = cvTickFreq != 0 && fps != 0.;
     testTimestamps &= validTickAndFps;
 
+    double frame0ts = 0;
+
     for (int i = 0; i < N; i++)
     {
         SCOPED_TRACE(cv::format("frame=%d", i));
 
         capture >> frame;
-        const int64 sysTimeCurr = cv::getTickCount();
-        const double camTimeCurr = capture.get(cv::CAP_PROP_POS_MSEC);
         ASSERT_FALSE(frame.empty());
+
+        const int64 sysTimeCurr = cv::getTickCount();
+        double camTimeCurr = capture.get(cv::CAP_PROP_POS_MSEC);
+        if (i == 0)
+            frame0ts = camTimeCurr;
+        camTimeCurr -= frame0ts;  // normalized timestamp based on the first frame
+
+        if (cvtest::debugLevel > 0)
+        {
+            std::cout << i << ": " << camTimeCurr << std::endl;
+        }
 
         // Do we have a previous frame?
         if (i > 0 && testTimestamps)

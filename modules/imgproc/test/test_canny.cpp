@@ -249,7 +249,7 @@ test_Canny( const Mat& src, Mat& dst,
             }
             else
             {
-                assert( fabs(tg) > tan_3pi_8 );
+                CV_Assert( fabs(tg) > tan_3pi_8 );
                 x1 = x2 = x; y1 = y + 1; y2 = y - 1;
             }
 

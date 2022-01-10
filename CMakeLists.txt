@@ -106,7 +106,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
-# Bootstap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+# Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
@@ -223,7 +223,7 @@ OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
@@ -296,6 +296,9 @@ OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
 OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
   VISIBLE_IF TRUE
   VERIFY TARGET ngraph::ngraph)
+OCV_OPTION(WITH_WEBNN "Include WebNN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_WEBNN)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support (Jasper)" ON
   VISIBLE_IF NOT IOS
   VERIFY HAVE_JASPER)
@@ -308,7 +311,7 @@ OCV_OPTION(WITH_JPEG "Include JPEG support" ON
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
-OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" BUILD_OPENEXR OR NOT CMAKE_CROSSCOMPILING
+OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR APPLE) OR BUILD_OPENEXR) OR NOT CMAKE_CROSSCOMPILING
   VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
@@ -791,6 +794,11 @@ endif()
 # --- VkCom ---
 if(WITH_VULKAN)
   include(cmake/OpenCVDetectVulkan.cmake)
+endif()
+
+# --- WebNN ---
+if(WITH_WEBNN)
+  include(cmake/OpenCVDetectWebNN.cmake)
 endif()
 
 # --- Inference Engine ---
@@ -1621,6 +1629,15 @@ if(WITH_VULKAN OR HAVE_VULKAN)
   if(HAVE_VULKAN)
     status("    Include path:"  VULKAN_INCLUDE_DIRS THEN "${VULKAN_INCLUDE_DIRS}" ELSE "NO")
     status("    Link libraries:" VULKAN_LIBRARIES THEN "${VULKAN_LIBRARIES}" ELSE "Dynamic load")
+  endif()
+endif()
+
+if(WITH_WEBNN OR HAVE_WEBNN)
+  status("")
+  status("  WebNN:"     HAVE_WEBNN THEN "YES" ELSE "NO")
+  if(HAVE_WEBNN AND NOT EMSCRIPTEN)
+    status("    Include path:"  WEBNN_HEADER_DIRS THEN "${WEBNN_HEADER_DIRS}" ELSE "NO")
+    status("    Link libraries:" WEBNN_LIBRARIES THEN "${WEBNN_LIBRARIES}" ELSE "NO")
   endif()
 endif()
 

@@ -287,15 +287,15 @@ Output Examples:
 ![Picture example](detect_test2.jpg)
 
 ## Source Code
-The [source code](https://github.com/opencv/opencv/blob/master/modules/dnn/src/model.cpp)
+The [source code](https://github.com/opencv/opencv/blob/4.x/modules/dnn/src/model.cpp)
 of these APIs can be found in the DNN module.
 
 ## Detailed Sample
 For more information, please refer to:
-- [samples/dnn/scene_text_recognition.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_recognition.cpp)
-- [samples/dnn/scene_text_detection.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_detection.cpp)
-- [samples/dnn/text_detection.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.cpp)
-- [samples/dnn/scene_text_spotting.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_spotting.cpp)
+- [samples/dnn/scene_text_recognition.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_recognition.cpp)
+- [samples/dnn/scene_text_detection.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_detection.cpp)
+- [samples/dnn/text_detection.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/text_detection.cpp)
+- [samples/dnn/scene_text_spotting.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_spotting.cpp)
 
 #### Test with an image
 Examples:

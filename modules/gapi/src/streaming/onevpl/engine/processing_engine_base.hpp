@@ -8,6 +8,7 @@
 #define GAPI_STREAMING_ONEVPL_ENGINE_PROCESSING_ENGINE_BASE_HPP
 
 #include <queue>
+#include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
@@ -49,9 +50,9 @@ public:
     ProcessingEngineBase(std::unique_ptr<VPLAccelerationPolicy>&& accel);
     virtual ~ProcessingEngineBase();
 
-    virtual void initialize_session(mfxSession mfx_session,
-                                    DecoderParams&& decoder_param,
-                                    std::shared_ptr<IDataProvider> provider) = 0;
+    virtual session_ptr initialize_session(mfxSession mfx_session,
+                                           const std::vector<CfgParam>& cfg_params,
+                                           std::shared_ptr<IDataProvider> provider) = 0;
 
     ExecutionStatus process(mfxSession session);
     size_t get_ready_frames_count() const;
@@ -87,9 +88,6 @@ protected:
         return sess_impl;
     }
 };
-
-
-mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& data_provider);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

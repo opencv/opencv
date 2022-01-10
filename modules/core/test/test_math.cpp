@@ -1039,7 +1039,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
     }
     else
     {
-        assert( mat_depth == CV_64F );
+        CV_Assert( mat_depth == CV_64F );
         for( i = 0; i < transmat->rows; i++ )
             for( j = 0; j < cols; j++ )
                 mat[i*cols + j] = ((double*)(transmat->data.ptr + transmat->step*i))[j];
@@ -1065,7 +1065,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
                     buf[j] = ((double*)src)[j];
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
         }
 
         switch( cn )
@@ -1095,7 +1095,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
         }
 
         switch( depth )
@@ -1109,7 +1109,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
                     ((double*)dst)[j] = buf[j];
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
         }
     }
 }
@@ -1458,8 +1458,8 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
     double *a0 = a->data.db, *b0 = b ? b->data.db : 0;
     double *x0 = x ? x->data.db : 0;
     double t, det = 1.;
-    assert( CV_MAT_TYPE(a->type) == CV_64FC1 &&
-           (!b || CV_ARE_TYPES_EQ(a,b)) && (!x || CV_ARE_TYPES_EQ(a,x)));
+    CV_Assert( CV_MAT_TYPE(a->type) == CV_64FC1 &&
+               (!b || CV_ARE_TYPES_EQ(a,b)) && (!x || CV_ARE_TYPES_EQ(a,x)));
 
     for( i = 0; i < Nm; i++ )
     {
@@ -1514,7 +1514,7 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
 
     if( x )
     {
-        assert( b );
+        CV_Assert( b );
 
         for( i = N-1; i >= 0; i-- )
         {
@@ -3018,7 +3018,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
     cv::Mat goldMean;
 
-    cv::reduce(src,goldMean,0 ,CV_REDUCE_AVG, CV_32F);
+    cv::reduce(src,goldMean,0 ,REDUCE_AVG, CV_32F);
 
     cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
 

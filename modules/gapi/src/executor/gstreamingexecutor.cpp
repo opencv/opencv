@@ -24,6 +24,8 @@
 #include "backends/streaming/gstreamingbackend.hpp" // GCopy
 #include "compiler/gcompiler.hpp" // for compileIslands
 
+#include <logger.hpp>
+
 #include "executor/gstreamingexecutor.hpp"
 
 #include <opencv2/gapi/streaming/meta.hpp>
@@ -662,7 +664,7 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
         // Wrap all input cv::Mats with RMats
         for (auto& arg : isl_input_args) {
             if (arg.index() == cv::GRunArg::index_of<cv::Mat>()) {
-                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(arg))
+                arg = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatOnMat>(cv::util::get<cv::Mat>(arg))
                                  , arg.meta
                                  };
             }
@@ -745,7 +747,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                 {
                     MatType newMat;
                     cv::gimpl::createMat(desc, newMat);
-                    auto rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(newMat);
+                    auto rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(newMat);
                     out_arg = cv::GRunArg(std::move(rmat));
                 }
                 ret_val = cv::GRunArgP(&cv::util::get<cv::RMat>(out_arg));
@@ -1382,8 +1384,16 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
 cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
 {
-    if (state == State::READY || state == State::RUNNING)
-        stop();
+    // FIXME: this is a temporary try-catch exception hadling.
+    // Need to eliminate throwings from stop()
+    try {
+        if (state == State::READY || state == State::RUNNING)
+            stop();
+    } catch (const std::exception& e) {
+        std::stringstream message;
+        message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
+        GAPI_LOG_WARNING(NULL, message.str());
+    }
 }
 
 void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)

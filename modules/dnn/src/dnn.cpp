@@ -45,6 +45,7 @@
 #include "ie_ngraph.hpp"
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
+#include "op_webnn.hpp"
 
 #ifdef HAVE_CUDA
 #include "cuda4dnn/init.hpp"
@@ -224,6 +225,13 @@ private:
 #endif
 #endif // HAVE_INF_ENGINE
 
+#ifdef HAVE_WEBNN
+        if (haveWebnn())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_WEBNN, DNN_TARGET_CPU));
+        }
+#endif // HAVE_WEBNN
+
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL())
         {
@@ -280,8 +288,6 @@ std::vector<Target> getAvailableTargets(Backend be)
 
 namespace
 {
-    typedef std::vector<MatShape> ShapesVec;
-
     struct LayerShapes
     {
         ShapesVec in, out, internal;
@@ -638,29 +644,26 @@ struct DataLayer : public Layer
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        // FIXIT: add wrapper without exception suppression
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (outputs_arr.depth() == CV_16S)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
+        bool isFP16 = outputs_arr.depth() == CV_16S;
 
         std::vector<Mat> outputs, internals;
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-        // Supported modes:
-        // | Input type | Output type |
-        // |       fp32 |        fp32 |
-        // |      uint8 |        fp32 |
         for (int i = 0; i < inputsData.size(); ++i)
         {
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
+
             CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
-            CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
+            if (isFP16)
+                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+            else
+                CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
 
             bool singleMean = true;
             for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
@@ -670,34 +673,49 @@ struct DataLayer : public Layer
 
             if (singleMean)
             {
-                inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                if (isFP16)
+                {
+                    Mat input_f32;
+                    inputsData[i].convertTo(input_f32, CV_32F, scale, -mean[0] * scale);
+                    convertFp16(input_f32, outputs[i]);
+                }
+                else
+                {
+                    inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
+                }
             }
             else
             {
                 for (int n = 0; n < inputsData[i].size[0]; ++n)
+                {
                     for (int c = 0; c < inputsData[i].size[1]; ++c)
                     {
                         Mat inp = getPlane(inputsData[i], n, c);
                         Mat out = getPlane(outputs[i], n, c);
-                        inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                        if (isFP16)
+                        {
+                            Mat input_f32;
+                            inp.convertTo(input_f32, CV_32F, scale, -mean[c] * scale);
+                            convertFp16(input_f32, out);
+                        }
+                        else
+                        {
+                            inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
+                        }
                     }
+                }
             }
         }
     }
 
 #ifdef HAVE_OPENCL
-    std::vector<Mat> tmp_expressions;
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
-        // Supported modes:
-        // | Input type | Output type |
-        // |       fp32 |        fp32 |
-        // |       fp32 |        fp16 |
-        // |      uint8 |        fp32 |
+        bool isFP16 = outputs_.depth() == CV_16S;
+
         std::vector<UMat> outputs;
         outputs_.getUMatVector(outputs);
 
-        tmp_expressions.clear();
         for (int i = 0; i < inputsData.size(); ++i)
         {
             Mat inputData = inputsData[i];
@@ -705,58 +723,55 @@ struct DataLayer : public Layer
             double scale = scaleFactors[i];
             Scalar& mean = means[i];
 
-            CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
+            CV_Assert(mean == Scalar() || inputData.size[1] <= 4);
+            if (isFP16)
+                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+            else
+                CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
+
             bool singleMean = true;
-            for (int j = 1; j < std::min(4, inputsData[i].size[1]) && singleMean; ++j)
+            for (int j = 1; j < std::min(4, inputData.size[1]) && singleMean; ++j)
             {
                 singleMean = mean[j] == mean[j - 1];
             }
 
-            if (outputs_.depth() == CV_16S)
+            if (singleMean)
             {
-                if (singleMean)
+                if (isFP16)
                 {
-                    tmp_expressions.push_back(Mat(scale * (inputsData[i] - mean[0])));
-                    convertFp16(tmp_expressions.back(), outputs[i]);
+                    UMat input_i;
+                    inputData.convertTo(input_i, CV_32F, scale, -mean[0] * scale);
+                    convertFp16(input_i, outputs[i]);
                 }
                 else
                 {
-                    for (int n = 0; n < inputsData[i].size[0]; ++n)
-                        for (int c = 0; c < inputsData[i].size[1]; ++c)
-                        {
-                            Mat inp = getPlane(inputsData[i], n, c);
-
-                            std::vector<cv::Range> plane(4, Range::all());
-                            plane[0] = Range(n, n + 1);
-                            plane[1] = Range(c, c + 1);
-                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
-
-                            tmp_expressions.push_back(scale * (inp - mean[c]));
-                            convertFp16(tmp_expressions.back(), out);
-                        }
+                    inputData.convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
                 }
             }
             else
             {
-                CV_Assert(outputs_.depth() == CV_32F);
-                if (singleMean)
+                for (int n = 0; n < inputData.size[0]; ++n)
                 {
-                    inputsData[i].convertTo(outputs[i], CV_32F, scale, -mean[0] * scale);
-                }
-                else
-                {
-                    for (int n = 0; n < inputsData[i].size[0]; ++n)
-                        for (int c = 0; c < inputsData[i].size[1]; ++c)
+                    for (int c = 0; c < inputData.size[1]; ++c)
+                    {
+                        Mat inp = getPlane(inputData, n, c);
+
+                        std::vector<cv::Range> plane(4, Range::all());
+                        plane[0] = Range(n, n + 1);
+                        plane[1] = Range(c, c + 1);
+                        UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
+
+                        if (isFP16)
                         {
-                            Mat inp = getPlane(inputsData[i], n, c);
-
-                            std::vector<cv::Range> plane(4, Range::all());
-                            plane[0] = Range(n, n + 1);
-                            plane[1] = Range(c, c + 1);
-                            UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size);
-
+                            UMat input_i;
+                            inp.convertTo(input_i, CV_32F, scale, -mean[c] * scale);
+                            convertFp16(input_i, out);
+                        }
+                        else
+                        {
                             inp.convertTo(out, CV_32F, scale, -mean[c] * scale);
                         }
+                    }
                 }
             }
         }
@@ -1116,6 +1131,14 @@ static Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
 #endif
     }
+    else if (backendId == DNN_BACKEND_WEBNN)
+    {
+#ifdef HAVE_WEBNN
+        return Ptr<BackendWrapper>(new WebnnBackendWrapper(targetId, m));
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of WebNN");
+#endif
+    }
     else if (backendId == DNN_BACKEND_VKCOM)
     {
         CV_Assert(haveVulkan());
@@ -1259,6 +1282,12 @@ struct Net::Impl : public detail::NetImplBase
             {
                 return wrapMat(preferableBackend, preferableTarget, host);
             }
+            else if (preferableBackend == DNN_BACKEND_WEBNN)
+            {
+#ifdef HAVE_WEBNN
+                return wrapMat(preferableBackend, preferableTarget, host);
+#endif
+            }
             else if (preferableBackend == DNN_BACKEND_VKCOM)
             {
   #ifdef HAVE_VULKAN
@@ -1400,6 +1429,13 @@ struct Net::Impl : public detail::NetImplBase
             );
         }
 #endif
+#ifdef HAVE_WEBNN
+        if (preferableBackend == DNN_BACKEND_WEBNN)
+        {
+            CV_Assert(preferableTarget == DNN_TARGET_CPU ||
+                      preferableTarget == DNN_TARGET_OPENCL);
+        }
+#endif
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
         CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
@@ -1451,6 +1487,11 @@ struct Net::Impl : public detail::NetImplBase
             }
 
             clear();
+
+            if (hasDynamicShapes)
+            {
+                updateLayersShapes();
+            }
 
             this->blobsToKeep = blobsToKeep_;
 
@@ -1622,6 +1663,14 @@ struct Net::Impl : public detail::NetImplBase
             initNgraphBackend(blobsToKeep_);
 #else
             CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of Inference Engine + nGraph");
+#endif
+        }
+        else if (preferableBackend == DNN_BACKEND_WEBNN)
+        {
+#ifdef HAVE_WEBNN
+            initWebnnBackend(blobsToKeep_);
+#else
+            CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of WebNN");
 #endif
         }
         else if (preferableBackend == DNN_BACKEND_VKCOM)
@@ -2340,6 +2389,270 @@ struct Net::Impl : public detail::NetImplBase
         }
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    void addWebnnOutputs(LayerData &ld)
+    {
+        CV_TRACE_FUNCTION();
+
+        Ptr<WebnnNet> layerNet;
+        auto it = ld.backendNodes.find(preferableBackend);
+        if (it != ld.backendNodes.end())
+        {
+            Ptr<BackendNode> node = it->second;
+            if (!node.empty())
+            {
+                Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+                CV_Assert(!webnnNode.empty()); CV_Assert(!webnnNode->net.empty());
+                layerNet = webnnNode->net;
+            }
+        }
+
+        for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+        {
+            LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+            Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+            if (!inpNode.empty())
+            {
+                Ptr<WebnnBackendNode> webnnInpNode = inpNode.dynamicCast<WebnnBackendNode>();
+                CV_Assert(!webnnInpNode.empty()); CV_Assert(!webnnInpNode->net.empty());
+                if (layerNet != webnnInpNode->net)
+                {
+                    webnnInpNode->net->addOutput(webnnInpNode->name);
+                    webnnInpNode->net->setUnconnectedNodes(webnnInpNode);
+                }
+            }
+        }
+    }
+
+    void initWebnnBackend(const std::vector<LayerPin>& blobsToKeep_)
+    {
+        CV_TRACE_FUNCTION();
+        CV_Assert_N(preferableBackend == DNN_BACKEND_WEBNN, haveWebnn());
+
+        MapIdToLayerData::iterator it;
+        Ptr<WebnnNet> net;
+
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+            if (ld.id == 0)
+            {
+                CV_Assert((netInputLayer->outNames.empty() && ld.outputBlobsWrappers.size() == 1) ||
+                          (netInputLayer->outNames.size() == ld.outputBlobsWrappers.size()));
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                    std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+                    outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+                    wrapper->name = outputName;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                    std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+                    wrapper->name = outputName;
+                }
+            }
+        }
+
+        // Build WebNN networks from sets of layers that support this
+        // backend. Split a whole model on several WebNN networks if
+        // some of layers are not implemented.
+        for (it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData &ld = it->second;
+
+            if (ld.id == 0 && ld.skip)
+                continue;
+
+            bool fused = ld.skip;
+            Ptr<Layer> layer = ld.layerInstance;
+            if (!fused && !layer->supportBackend(preferableBackend))
+            {
+                // For test use. when not using WebNN, the test case will fail
+                // with the following code.
+                CV_LOG_WARNING(NULL, "Layer " + ld.type + " name " + ld.name + " is unsupported by WebNN backend.");
+
+                addWebnnOutputs(ld);
+                net = Ptr<WebnnNet>();
+                layer->preferableTarget = DNN_TARGET_CPU;
+
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                    Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                    if (!inpNode.empty()) {
+                        Ptr<WebnnBackendNode> webnnNode = inpNode.dynamicCast<WebnnBackendNode>();
+                        CV_Assert(!webnnNode.empty());
+                        webnnNode->net->setUnconnectedNodes(webnnNode);
+                    }
+                }
+                continue;
+            }
+            ld.skip = true; // Initially skip all WebNN supported layers.
+
+            // Create a new network if one of inputs from different WebNN graph.
+            std::vector<Ptr<BackendNode>> inputNodes;
+            for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+            {
+                // Layer_Test_ROIPooling.Accuracy has 2 inputs inpLD = 0, 0 -> has 4 inputNodes (input, rois, input, rois)
+                if (inputNodes.size() == ld.inputBlobsId.size()) {
+                    break;
+                }
+                LayerData &inpLd = layers[ld.inputBlobsId[i].lid];
+                Ptr<BackendNode> inpNode = inpLd.backendNodes[preferableBackend];
+                if (!inpNode.empty())
+                {
+                     Ptr<WebnnBackendNode> webnnInpNode = inpNode.dynamicCast<WebnnBackendNode>();
+                     CV_Assert(!webnnInpNode.empty()); CV_Assert(!webnnInpNode->net.empty());
+                     if (webnnInpNode->net == net && !fused) {
+                        inputNodes.push_back(inpNode);
+                        continue;
+                     }
+                }
+
+                if (net.empty()) {
+                    net = Ptr<WebnnNet>(new WebnnNet());
+                }
+
+                if (!fused) {
+                    std::vector<std::string> inputNames;
+                    std::vector<cv::Mat> inputs;
+
+                    auto curr_pos = inpLd.consumers.begin();
+                    auto compare = [&ld] (const LayerPin& lp) { return lp.lid == ld.id; };
+                    auto cons = curr_pos;
+                    while ((cons = std::find_if(curr_pos, inpLd.consumers.end(), compare)) !=
+                            inpLd.consumers.end()) {
+                        int cons_inp = cons->oid;
+                        Ptr<WebnnBackendWrapper> inpWrapper = inpLd.outputBlobsWrappers[cons_inp].
+                                                                     dynamicCast<WebnnBackendWrapper>();
+                        CV_Assert(!inpWrapper.empty());
+                        auto iter = std::find(inputNames.begin(), inputNames.end(),
+                                              inpWrapper->name);
+                        if (iter == inputNames.end()) {
+                            inputNames.push_back(inpWrapper->name);
+                            inputs.push_back(inpLd.outputBlobs[cons_inp]);
+                        }
+                        curr_pos = cons + 1;
+                    }
+
+                    auto inps = net->setInputs(inputs, inputNames);
+                    for (auto& inp : inps) {
+                        WebnnBackendNode* node = new WebnnBackendNode(inp);
+                        node->net = net;
+                        inputNodes.emplace_back(Ptr<BackendNode>(node));
+                    }
+                }
+            }
+
+            Ptr<BackendNode> node;
+            if (!net.empty())
+            {
+                if (fused)
+                {
+                    bool inPlace = ld.inputBlobsId.size() == 1 && ld.outputBlobs.size() == 1 &&
+                                   ld.inputBlobs[0]->data == ld.outputBlobs[0].data;
+                    CV_Assert(inPlace);
+                    node = layers[ld.inputBlobsId[0].lid].backendNodes[preferableBackend];
+                    ld.inputBlobsWrappers = layers[ld.inputBlobsId[0].lid].inputBlobsWrappers;
+                }
+            }
+            else {
+                net = Ptr<WebnnNet>(new WebnnNet());
+            }
+
+            if (!fused)
+            {
+                CV_Assert(ld.inputBlobsId.size() == inputNodes.size());
+                for (int i = 0; i < ld.inputBlobsId.size(); ++i)
+                {
+                    int lid = ld.inputBlobsId[i].lid;
+                    int oid = ld.inputBlobsId[i].oid;
+                    if (oid == 0 || lid == 0)
+                        continue;
+
+                    auto webnnInpNode = inputNodes[i].dynamicCast<WebnnBackendNode>();
+                    inputNodes[i] = Ptr<BackendNode>(new WebnnBackendNode(webnnInpNode->operand));
+                }
+
+                if (layer->supportBackend(preferableBackend))
+                {
+                    if (ld.type == "Const") {
+                        ml::Operand fake_operand;
+                        Ptr<WebnnBackendNode> fake_input_node = Ptr<WebnnBackendNode>(new WebnnBackendNode(fake_operand));
+                        fake_input_node->net = net;
+                        inputNodes.push_back(fake_input_node);
+                    }
+                    node = layer->initWebnn(ld.inputBlobsWrappers, inputNodes);
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        Ptr<WebnnBackendWrapper> wrapper = ld.outputBlobsWrappers[i].dynamicCast<WebnnBackendWrapper>();
+                        node.dynamicCast<WebnnBackendNode>()->name = wrapper->name;
+                    }
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            else if (node.empty())
+                continue;
+
+            ld.backendNodes[preferableBackend] = node;
+
+            Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+            CV_Assert(!webnnNode.empty());
+            webnnNode->net = net;
+
+            if (ld.consumers.empty()) {
+                // TF EAST_text_detection
+                webnnNode->net->setUnconnectedNodes(webnnNode);
+            }
+            for (const auto& pin : blobsToKeep_)
+            {
+                if (pin.lid == ld.id)
+                {
+                    webnnNode->net->addOutput(webnnNode->name);
+                    break;
+                }
+            }
+            net->addBlobs(ld.inputBlobsWrappers);
+            net->addBlobs(ld.outputBlobsWrappers);
+            addWebnnOutputs(ld);
+        }
+
+        // Initialize all networks.
+        for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
+        {
+            LayerData &ld = it->second;
+            auto iter = ld.backendNodes.find(preferableBackend);
+            if (iter == ld.backendNodes.end())
+                continue;
+
+            Ptr<BackendNode>& node = iter->second;
+            if (node.empty())
+                continue;
+
+            Ptr<WebnnBackendNode> webnnNode = node.dynamicCast<WebnnBackendNode>();
+            if (webnnNode.empty())
+                continue;
+
+            CV_Assert(!webnnNode->net.empty());
+
+            if (!webnnNode->net->isInitialized())
+            {
+                webnnNode->net->setUnconnectedNodes(webnnNode);
+                webnnNode->net->createNet((Target)preferableTarget);
+                ld.skip = false;
+            }
+        }
+    }
+#endif
 
     void initVkComBackend()
     {
@@ -3394,6 +3707,10 @@ struct Net::Impl : public detail::NetImplBase
                 {
                     forwardNgraph(ld.outputBlobsWrappers, node, isAsync);
                 }
+                 else if (preferableBackend == DNN_BACKEND_WEBNN)
+                {
+                    forwardWebnn(ld.outputBlobsWrappers, node, isAsync);
+                }
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
                     try
@@ -3480,20 +3797,24 @@ struct Net::Impl : public detail::NetImplBase
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     {
-        std::vector<LayerPin>& inputLayerIds = layers[id].inputBlobsId;
+        CV_CheckGE(id, 0, "");
+        CV_CheckLT(id, (int)layers.size(), "");
+        LayerData& layerData = layers[id];
+        std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
+        LayerShapes& layerShapes = inOutShapes[id];
 
-        if (id == 0 && inOutShapes[id].in[0].empty())
+        if (id == 0 && layerShapes.in[0].empty())
         {
-            if (!layers[0].outputBlobs.empty())
+            if (!layerData.outputBlobs.empty())
             {
                 ShapesVec shapes;
-                for (int i = 0; i < layers[0].outputBlobs.size(); i++)
+                for (int i = 0; i < layerData.outputBlobs.size(); i++)
                 {
-                    Mat& inp = layers[0].outputBlobs[i];
-                    CV_Assert(inp.total());
+                    Mat& inp = layerData.outputBlobs[i];
+                    CV_Assert(!inp.empty());
                     shapes.push_back(shape(inp));
                 }
-                inOutShapes[0].in = shapes;
+                layerShapes.in = shapes;
             }
             else
             {
@@ -3509,17 +3830,17 @@ struct Net::Impl : public detail::NetImplBase
                 }
                 if (none)
                 {
-                    inOutShapes[0].out.clear();
+                    layerShapes.out.clear();
                     return;
                 }
                 else
                 {
-                    inOutShapes[0].in = inputShapes;
+                    layerShapes.in = inputShapes;
                 }
             }
         }
 
-        if (inOutShapes[id].in.empty())
+        if (layerShapes.in.empty())
         {
             for(int i = 0; i < inputLayerIds.size(); i++)
             {
@@ -3532,14 +3853,14 @@ struct Net::Impl : public detail::NetImplBase
                     getLayerShapesRecursively(layerId, inOutShapes);
                 }
                 const MatShape& shape = inOutShapes[layerId].out[inputLayerIds[i].oid];
-                inOutShapes[id].in.push_back(shape);
+                layerShapes.in.push_back(shape);
             }
         }
-        const ShapesVec& is = inOutShapes[id].in;
-        ShapesVec& os = inOutShapes[id].out;
-        ShapesVec& ints = inOutShapes[id].internal;
-        int requiredOutputs = layers[id].requiredOutputs.size();
-        Ptr<Layer> l = layers[id].getLayerInstance();
+        const ShapesVec& is = layerShapes.in;
+        ShapesVec& os = layerShapes.out;
+        ShapesVec& ints = layerShapes.internal;
+        int requiredOutputs = layerData.requiredOutputs.size();
+        Ptr<Layer> l = layerData.getLayerInstance();
         CV_Assert(l);
         bool layerSupportInPlace = false;
         try
@@ -3567,13 +3888,38 @@ struct Net::Impl : public detail::NetImplBase
             CV_LOG_ERROR(NULL, "Exception message: " << e.what());
             throw;
         }
-        inOutShapes[id].supportInPlace = layerSupportInPlace;
+        layerShapes.supportInPlace = layerSupportInPlace;
 
-        for (int i = 0; i < ints.size(); i++)
-            CV_Assert(total(ints[i]) > 0);
+        try
+        {
+            for (int i = 0; i < ints.size(); i++)
+                CV_CheckGT(total(ints[i]), 0, "");
 
-        for (int i = 0; i < os.size(); i++)
-            CV_Assert(total(os[i]) > 0);
+            for (int i = 0; i < os.size(); i++)
+                CV_CheckGT(total(os[i]), 0, "");
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() post validation failed." <<
+                    " inputs=" << is.size() <<
+                    " outputs=" << os.size() << "/" << requiredOutputs <<
+                    " blobs=" << l->blobs.size() <<
+                    " inplace=" << layerSupportInPlace);
+            for (size_t i = 0; i < is.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    input[" << i << "] = " << toString(is[i]));
+            }
+            for (size_t i = 0; i < os.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    output[" << i << "] = " << toString(os[i]));
+            }
+            for (size_t i = 0; i < l->blobs.size(); ++i)
+            {
+                CV_LOG_ERROR(NULL, "    blobs[" << i << "] = " << typeToString(l->blobs[i].type()) << " " << toString(shape(l->blobs[i])));
+            }
+            CV_LOG_ERROR(NULL, "Exception message: " << e.what());
+            throw;
+        }
     }
 
     void getLayersShapes(const ShapesVec& netInputShapes,
@@ -3601,43 +3947,58 @@ struct Net::Impl : public detail::NetImplBase
 
     void updateLayersShapes()
     {
-        CV_Assert(!layers[0].outputBlobs.empty());
+        CV_LOG_DEBUG(NULL, "updateLayersShapes() with layers.size=" << layers.size());
+        CV_Assert(netInputLayer);
+        DataLayer& inputLayer = *netInputLayer;
+        LayerData& inputLayerData = layers[0];
+        CV_Assert(inputLayerData.layerInstance.get() == &inputLayer);
+        CV_Assert(!inputLayerData.outputBlobs.empty());
         ShapesVec inputShapes;
-        for(int i = 0; i < layers[0].outputBlobs.size(); i++)
+        for(int i = 0; i < inputLayerData.outputBlobs.size(); i++)
         {
-            Mat& inp = layers[0].outputBlobs[i];
-            CV_Assert(inp.total());
-            if (preferableBackend == DNN_BACKEND_OPENCV &&
+            Mat& inp = inputLayerData.outputBlobs[i];
+            CV_Assert(!inp.empty());
+            if (preferableBackend == DNN_BACKEND_OPENCV &&  // FIXIT: wrong place for output allocation
                 preferableTarget == DNN_TARGET_OPENCL_FP16 &&
-                layers[0].dtype == CV_32F)
+                inputLayerData.dtype == CV_32F)
             {
-                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+                inp.create(inp.dims, inp.size, CV_16S);
             }
             inputShapes.push_back(shape(inp));
         }
+        CV_LOG_DEBUG(NULL, toString(inputShapes, "Network input shapes"));
         LayersShapesMap layersShapes;
         layersShapes[0].in = inputShapes;
         for (MapIdToLayerData::iterator it = layers.begin();
              it != layers.end(); it++)
         {
             int layerId = it->first;
-            std::vector<LayerPin>& inputLayerIds = it->second.inputBlobsId;
-            if (layersShapes[layerId].in.empty())
+            LayerData& layerData = it->second;
+            std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
+            LayerShapes& layerShapes = layersShapes[layerId];
+            CV_LOG_DEBUG(NULL, "layer " << layerId << ": [" << layerData.type << "]:(" << layerData.name << ") with inputs.size=" << inputLayerIds.size());
+            if (layerShapes.in.empty())
             {
                 for(int i = 0; i < inputLayerIds.size(); i++)
                 {
-                    int inputLayerId = inputLayerIds[i].lid;
+                    const LayerPin& inputPin = inputLayerIds[i];
+                    int inputLayerId = inputPin.lid;
+                    CV_LOG_DEBUG(NULL, "    input[" << i << "] " << inputLayerId << ":" << inputPin.oid << " as [" << layers[inputLayerId].type << "]:(" << layers[inputLayerId].name << ")");
                     LayersShapesMap::iterator inputIt = layersShapes.find(inputLayerId);
-                    if(inputIt == layersShapes.end() || inputIt->second.out.empty())
+                    if (inputIt == layersShapes.end() || inputIt->second.out.empty())
                     {
                         getLayerShapesRecursively(inputLayerId, layersShapes);
                     }
-                    const MatShape& shape = layersShapes[inputLayerId].out[inputLayerIds[i].oid];
-                    layersShapes[layerId].in.push_back(shape);
+                    const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
+                    layerShapes.in.push_back(shape);
                 }
-                it->second.getLayerInstance()->updateMemoryShapes(layersShapes[layerId].in);
+                layerData.getLayerInstance()->updateMemoryShapes(layerShapes.in);
             }
+            CV_LOG_DEBUG(NULL, "Layer " << layerId << ": " << toString(layerShapes.in, "input shapes"));
+            CV_LOG_IF_DEBUG(NULL, !layerShapes.out.empty(), "Layer " << layerId << ": " << toString(layerShapes.out, "output shapes"));
+            CV_LOG_IF_DEBUG(NULL, !layerShapes.internal.empty(), "Layer " << layerId << ": " << toString(layerShapes.internal, "internal shapes"));
         }
+        CV_LOG_DEBUG(NULL, "updateLayersShapes() - DONE");
     }
 
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins)
@@ -4686,13 +5047,8 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    if (!oldShape) {
+    if (!oldShape)
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
-        if (impl->hasDynamicShapes)
-        {
-            impl->updateLayersShapes();
-        }
-    }
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {
@@ -4830,6 +5186,7 @@ string Net::Impl::dump()
         case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
         case DNN_BACKEND_VKCOM: backend = "VULKAN/"; break;
         case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
+        case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -5417,6 +5774,13 @@ Ptr<BackendNode> Layer::initInfEngine(const std::vector<Ptr<BackendWrapper> > &)
 Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendWrapper> > & inputs, const std::vector<Ptr<BackendNode> >& nodes)
 {
     CV_Error(Error::StsNotImplemented, "Inference Engine pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
+Ptr<BackendNode> Layer::initWebnn(const std::vector<Ptr<BackendWrapper> > & inputs, const std::vector<Ptr<BackendNode> >& nodes)
+{
+    CV_Error(Error::StsNotImplemented, "WebNN pipeline of " + type +
                                        " layers is not defined.");
     return Ptr<BackendNode>();
 }

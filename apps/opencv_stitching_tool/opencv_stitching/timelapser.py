@@ -26,7 +26,7 @@ class Timelapser:
                 )
 
     def initialize(self, *args):
-        """https://docs.opencv.org/master/dd/dac/classcv_1_1detail_1_1Timelapser.html#aaf0f7c4128009f02473332a0c41f6345"""  # noqa
+        """https://docs.opencv.org/4.x/dd/dac/classcv_1_1detail_1_1Timelapser.html#aaf0f7c4128009f02473332a0c41f6345"""  # noqa
         self.timelapser.initialize(*args)
 
     def process_and_save_frame(self, img_name, img, corner):

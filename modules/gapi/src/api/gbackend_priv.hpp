@@ -66,7 +66,7 @@ public:
     // they are called when meta information becomes available.
     virtual void addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &);
 
-    virtual cv::gapi::GKernelPackage auxiliaryKernels() const;
+    virtual cv::GKernelPackage auxiliaryKernels() const;
 
     // Ask backend if it has a custom control over island fusion process
     // This method is quite redundant but there's nothing better fits

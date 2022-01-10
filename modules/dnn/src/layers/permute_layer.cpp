@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -119,6 +120,7 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_WEBNN ||
                ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
@@ -439,6 +441,20 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<int32_t> permutation(_order.begin(), _order.end());
+        ml::TransposeOptions options;
+        options.permutation = permutation.data();
+        options.permutationCount = permutation.size();
+        auto operand = webnnGraphBuilder.Transpose(webnnInpOperand, &options);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(

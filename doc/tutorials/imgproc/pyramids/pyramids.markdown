@@ -54,7 +54,7 @@ Theory
 -   To produce layer \f$(i+1)\f$ in the Gaussian pyramid, we do the following:
     -   Convolve \f$G_{i}\f$ with a Gaussian kernel:
 
-        \f[\frac{1}{16} \begin{bmatrix} 1 & 4 & 6 & 4 & 1  \\ 4 & 16 & 24 & 16 & 4  \\ 6 & 24 & 36 & 24 & 6  \\ 4 & 16 & 24 & 16 & 4  \\ 1 & 4 & 6 & 4 & 1 \end{bmatrix}\f]
+        \f[\frac{1}{256} \begin{bmatrix} 1 & 4 & 6 & 4 & 1  \\ 4 & 16 & 24 & 16 & 4  \\ 6 & 24 & 36 & 24 & 6  \\ 4 & 16 & 24 & 16 & 4  \\ 1 & 4 & 6 & 4 & 1 \end{bmatrix}\f]
 
     -   Remove every even-numbered row and column.
 
@@ -79,19 +79,19 @@ This tutorial code's is shown lines below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java)
 @include samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/Pyramids/pyramids.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/Pyramids/pyramids.py)
 @include samples/python/tutorial_code/imgProc/Pyramids/pyramids.py
 @end_toggle
 
@@ -191,7 +191,7 @@ Otherwise, an error will be shown.
 Results
 -------
 
--   The program calls by default an image [chicky_512.png](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/chicky_512.png)
+-   The program calls by default an image [chicky_512.png](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/chicky_512.png)
     that comes in the `samples/data` folder. Notice that this image is \f$512 \times 512\f$,
     hence a downsample won't generate any error (\f$512 = 2^{9}\f$). The original image is shown below:
 

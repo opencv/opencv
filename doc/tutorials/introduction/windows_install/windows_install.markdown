@@ -367,7 +367,7 @@ libraries). If you do not need the support for some of these, you can just freel
 Set the OpenCV environment variable and add it to the systems path {#tutorial_windows_install_path}
 =================================================================
 
-First we set an environment variable to make easier our work. This will hold the build directory of
+First, we set an environment variable to make our work easier. This will hold the build directory of
 our OpenCV library that we use in our projects. Start up a command window and enter:
 @code
     setx -m OPENCV_DIR D:\OpenCV\Build\x86\vc11     (suggested for Visual Studio 2012 - 32 bit Windows)
