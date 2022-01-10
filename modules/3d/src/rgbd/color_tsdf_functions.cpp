@@ -1223,15 +1223,17 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
         AutoLock al(mutex);
         pVecs.push_back(points);
         nVecs.push_back(normals);
+        cVecs.push_back(colors);
     };
 
     parallel_for_(fetchRange, FetchPointsNormalsInvoker, nstripes);
 
-    std::vector<ptype> points, normals;
+    std::vector<ptype> points, normals, colors;
     for (size_t i = 0; i < pVecs.size(); i++)
     {
         points.insert(points.end(), pVecs[i].begin(), pVecs[i].end());
         normals.insert(normals.end(), nVecs[i].begin(), nVecs[i].end());
+        colors.insert(colors.end(), cVecs[i].begin(), cVecs[i].end());
     }
 
     _points.create((int)points.size(), 1, POINT_TYPE);
@@ -1245,6 +1247,12 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
             Mat((int)normals.size(), 1, POINT_TYPE, &normals[0]).copyTo(_normals.getMat());
     }
 
+    if (_colors.needed())
+    {
+        _colors.create((int)colors.size(), 1, COLOR_TYPE);
+        if (!colors.empty())
+            Mat((int)colors.size(), 1, COLOR_TYPE, &colors[0]).copyTo(_colors.getMat());
+    }
 }
 
 
