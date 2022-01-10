@@ -499,13 +499,10 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                             cv::Size(static_cast<int>(oak_frame->getWidth()),
                                      static_cast<int>(oak_frame->getHeight())),
                             cv::MediaFormat::NV12,
-                            oak_frame->getData().data(),
-                            oak_frame->getData().data() + static_cast<long>(oak_frame->getData().size() / 3 * 2));
-            // FIXME: should we copy data instead?
+                            std::move(oak_frame->getData()));
             break;
         case cv::GRunArgP::index_of<cv::detail::VectorRef>():
-            cv::util::get<cv::detail::VectorRef>(out_arg).wref<uint8_t>() = oak_frame->getData();
-            // FIXME: should we copy data instead?
+            cv::util::get<cv::detail::VectorRef>(out_arg).wref<uint8_t>() = std::move(oak_frame->getData());
             break;
         // FIXME: Add support for remaining types
         default:

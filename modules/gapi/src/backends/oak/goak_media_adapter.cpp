@@ -13,7 +13,7 @@ namespace oak {
 class OAKMediaAdapter::Priv final {
 public:
     Priv() = default;
-    Priv(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
+    Priv(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer);
 
     MediaFrame::View access(MediaFrame::Access access);
     cv::GFrameDesc meta() const;
@@ -23,29 +23,28 @@ public:
 private:
     cv::Size m_sz;
     cv::MediaFormat m_fmt;
-    uint8_t* m_y_ptr;
-    uint8_t* m_uv_ptr;
+    std::vector<uint8_t> m_buffer;
 };
 
-OAKMediaAdapter::Priv::Priv(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) {
+OAKMediaAdapter::Priv::Priv(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer) {
     GAPI_Assert(fmt == cv::MediaFormat::NV12 && "OAKMediaAdapter only supports NV12 format for now");
     m_sz = sz;
     m_fmt = fmt;
-    m_y_ptr = y_ptr;
-    m_uv_ptr = uv_ptr;
+    m_buffer = buffer;
 }
 
-// FIXME: properly handle strides
 MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
-    return MediaFrame::View{cv::MediaFrame::View::Ptrs{m_y_ptr, m_uv_ptr},
+    uint8_t* y_ptr = m_buffer.data();
+    uint8_t* uv_ptr = m_buffer.data() + static_cast<long>(m_buffer.size() / 3 * 2);
+    return MediaFrame::View{cv::MediaFrame::View::Ptrs{y_ptr, uv_ptr},
                             cv::MediaFrame::View::Strides{static_cast<long unsigned int>(m_sz.width),
                                                           static_cast<long unsigned int>(m_sz.height)}};
 }
 
 cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {m_fmt, m_sz}; }
 
-OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr) :
-    m_priv(new OAKMediaAdapter::Priv(sz, fmt, y_ptr, uv_ptr)) {};
+OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer) :
+    m_priv(new OAKMediaAdapter::Priv(sz, fmt, std::move(buffer))) {};
 
 MediaFrame::View OAKMediaAdapter::access(MediaFrame::Access access) {
     return m_priv->access(access);

@@ -19,7 +19,7 @@ namespace oak {
 class GAPI_EXPORTS OAKMediaAdapter final : public cv::MediaFrame::IAdapter {
 public:
     OAKMediaAdapter();
-    OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, uint8_t* y_ptr, uint8_t* uv_ptr);
+    OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer);
     cv::GFrameDesc meta() const override;
     cv::MediaFrame::View access(cv::MediaFrame::Access) override;
     ~OAKMediaAdapter();
