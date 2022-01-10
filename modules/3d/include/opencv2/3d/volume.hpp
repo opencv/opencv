@@ -85,8 +85,16 @@ public:
     */
     void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
 
+    /** @brief clear all data in volume
+    */
     void reset();
+
+    /** @brief return visible blocks in volume
+    */
     int getVisibleBlocks() const;
+
+    /** @brief return number of vulmeunits in volume
+    */
     size_t getTotalVolumeUnits() const;
 
     class Impl;
