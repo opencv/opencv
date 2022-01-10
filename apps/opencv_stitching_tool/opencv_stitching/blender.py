@@ -26,8 +26,8 @@ class Blender:
 
         elif self.blender_type == "multiband":
             self.blender = cv.detail_MultiBandBlender()
-            self.blender.setNumBands((np.log(blend_width) /
-                                      np.log(2.) - 1.).astype(np.int))
+            self.blender.setNumBands(int((np.log(blend_width) /
+                                          np.log(2.) - 1.)))
 
         elif self.blender_type == "feather":
             self.blender = cv.detail_FeatherBlender()
@@ -45,4 +45,12 @@ class Blender:
         result_mask = None
         result, result_mask = self.blender.blend(result, result_mask)
         result = cv.convertScaleAbs(result)
-        return result
+        return result, result_mask
+
+    @classmethod
+    def create_panorama(cls, imgs, masks, corners, sizes):
+        blender = cls("no")
+        blender.prepare(corners, sizes)
+        for img, mask, corner in zip(imgs, masks, corners):
+            blender.feed(img, mask, corner)
+        return blender.blend()

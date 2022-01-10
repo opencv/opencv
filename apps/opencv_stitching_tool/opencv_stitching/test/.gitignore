@@ -10,4 +10,6 @@
 !test_composition.py
 !test_performance.py
 !stitching_detailed.py
+!test_largest_interior_rectangle.py
+!test_largest_interior_rectangle_in_raster.py
 !SAMPLE_IMAGES_TO_DOWNLOAD.txt

@@ -1,6 +1,6 @@
 import cv2 as cv
 
-from .megapix_downscaler import MegapixDownscaler
+from .megapix_scaler import MegapixDownscaler
 from .stitching_error import StitchingError
 
 class ImageHandler:
@@ -35,7 +35,7 @@ class ImageHandler:
 
     def resize_to_low_resolution(self, medium_imgs=None):
         if medium_imgs and self.scales_set:
-            return self.resize_medium_to_low(medium_imgs)
+            return self.resize_imgs_by_scaler(medium_imgs, self.low_scaler)
         return self.read_and_resize_imgs(self.low_scaler)
 
     def resize_to_final_resolution(self):
@@ -45,9 +45,9 @@ class ImageHandler:
         for img, size in self.input_images():
             yield self.resize_img_by_scaler(scaler, size, img)
 
-    def resize_medium_to_low(self, medium_imgs):
+    def resize_imgs_by_scaler(self, medium_imgs, scaler):
         for img, size in zip(medium_imgs, self.img_sizes):
-            yield self.resize_img_by_scaler(self.low_scaler, size, img)
+            yield self.resize_img_by_scaler(scaler, size, img)
 
     @staticmethod
     def resize_img_by_scaler(scaler, size, img):
@@ -92,3 +92,14 @@ class ImageHandler:
 
     def get_final_to_low_ratio(self):
         return self.low_scaler.scale / self.final_scaler.scale
+
+    def get_low_to_final_ratio(self):
+        return self.final_scaler.scale / self.low_scaler.scale
+
+    def get_final_img_sizes(self):
+        return [self.final_scaler.get_scaled_img_size(sz)
+                for sz in self.img_sizes]
+
+    def get_low_img_sizes(self):
+        return [self.low_scaler.get_scaled_img_size(sz)
+                for sz in self.img_sizes]

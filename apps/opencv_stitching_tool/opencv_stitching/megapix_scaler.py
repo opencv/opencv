@@ -25,3 +25,14 @@ class MegapixScaler:
         width = int(round(img_size[0] * self.scale))
         height = int(round(img_size[1] * self.scale))
         return (width, height)
+
+
+class MegapixDownscaler(MegapixScaler):
+
+    @staticmethod
+    def force_downscale(scale):
+        return min(1.0, scale)
+
+    def set_scale(self, scale):
+        scale = self.force_downscale(scale)
+        super().set_scale(scale)

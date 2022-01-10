@@ -23,6 +23,7 @@ from opencv_stitching.camera_estimator import CameraEstimator
 from opencv_stitching.camera_adjuster import CameraAdjuster
 from opencv_stitching.camera_wave_corrector import WaveCorrector
 from opencv_stitching.warper import Warper
+from opencv_stitching.cropper import Cropper
 from opencv_stitching.exposure_error_compensator import ExposureErrorCompensator  # noqa
 from opencv_stitching.seam_finder import SeamFinder
 from opencv_stitching.blender import Blender
@@ -72,9 +73,7 @@ parser.add_argument(
     type=int, dest='range_width'
 )
 parser.add_argument(
-    '--try_use_gpu',
-    action='store',
-    default=False,
+    '--try_use_gpu', action='store', default=False,
     help="Try to use CUDA. The default value is no. "
          "All default values are for CPU mode.",
     type=bool, dest='try_use_gpu'
@@ -145,6 +144,13 @@ parser.add_argument(
     help="Resolution for seam estimation and exposure estimation step. "
     "The default is %s Mpx." % ImageHandler.DEFAULT_LOW_MEGAPIX,
     type=float, dest='low_megapix'
+)
+parser.add_argument(
+    '--crop', action='store', default=Cropper.DEFAULT_CROP,
+    help="Crop black borders around images caused by warping using the "
+    "largest interior rectangle. "
+    "Default is '%s'." % Cropper.DEFAULT_CROP,
+    type=bool, dest='crop'
 )
 parser.add_argument(
     '--compensator', action='store',
