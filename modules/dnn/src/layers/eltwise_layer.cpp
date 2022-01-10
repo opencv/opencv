@@ -89,6 +89,7 @@ public:
         ELTWISE_CHANNNELS_USE_MAX,               //!< number of channels from inputs may be different,
                                                  //!< output's number of channels is equal to maximal number of input channels
                                                  //!< @note supported operation: `SUM`
+        ELTWISE_BROADCAST,                       //!< shape of inputs is different, we do broadcast first,
     } channelsModeInput;
 
 
@@ -151,6 +152,10 @@ public:
                 if (op != SUM)
                     CV_Error(cv::Error::StsBadArg, "[" + type + "]:(" + name + ") 'max' channels mode is limited to SUM operation only");
             }
+            else if(v == "broadcast")
+            {
+                channelsModeInput = ELTWISE_BROADCAST;
+            }
             else
                 CV_Error(cv::Error::StsBadArg, "[" + type + "]:(" + name + ") unknown channels mode: \"" + v + "\"");
         }
@@ -161,7 +166,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (hasVecInput && ELTWISE_CHANNNELS_SAME)
+        if ((hasVecInput && ELTWISE_CHANNNELS_SAME) || channelsModeInput == ELTWISE_BROADCAST)
             return backendId == DNN_BACKEND_OPENCV;
 
         if (backendId == DNN_BACKEND_CUDA)
@@ -186,6 +191,50 @@ public:
         CV_Assert(inputs[0].size() >= 2);
         CV_Assert(coeffs.size() == 0 || coeffs.size() == inputs.size());
         CV_Assert(op == SUM || coeffs.size() == 0);
+
+        // The Broadcast rules refer to:
+        // https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules
+        if(channelsMode == ELTWISE_BROADCAST)
+        {
+            // calculate the output shape
+            int inputSize = inputs.size();
+            std::vector<int> indexVec(inputSize, 0);
+            int maxLen = 0;
+
+            // Find the maxLen and init the indexVec.
+            for(int i = 0; i<inputSize; i++)
+            {
+                indexVec[i] = inputs[i].size() - 1;
+                if(inputs[i].size() > maxLen)
+                    maxLen = inputs[i].size();
+            }
+
+            MatShape outputShape(maxLen, 0);
+
+            for(int i = maxLen - 1; i >= 0; i--)
+            {
+                int temp = 1;
+                for(int j = 0; j < inputSize; j++)
+                {
+                    if(indexVec[j] < 0)
+                        continue;
+
+                    if(inputs[j][indexVec[j]] != 1)
+                    {
+                        if (temp == 1)
+                            temp = inputs[j][indexVec[j]];
+                        else
+                            CV_Assert(temp == inputs[j][indexVec[j]] && "Mat shapes could not be broadcast.");
+                    }
+                    indexVec[j]--;
+                }
+                outputShape[i] = temp;
+            }
+            outputs.assign(1, outputShape);
+
+            outputChannels = outputShape[1];
+            return true;
+        }
 
         int dims = inputs[0].size();
         // Number of channels in output shape is determined by the first input tensor.
@@ -306,7 +355,14 @@ public:
             CV_Assert(self.coeffs.empty() || self.coeffs.size() == (size_t)nsrcs);
             CV_CheckGE(nsrcs, 2, "");
 
-            CV_Assert(self.outputChannels == dst.size[1]);
+            // TODEL
+            auto a = dst.size[1];
+
+            if(self.outputChannels != dst.size[1])
+            {
+                std::cout <<"channels"<< a <<", "<< self.outputChannels << std::endl;
+                CV_Assert(self.outputChannels == dst.size[1]);
+            }
 
             EltwiseInvoker p(self);
             p.srcs.resize(nsrcs);
@@ -324,7 +380,11 @@ public:
 
                 if (self.channelsMode == ELTWISE_CHANNNELS_SAME)
                 {
-                    CV_Assert(srcs[i].size == dst.size);
+                    // TODEL
+                    auto aSize = shape(srcs[i].size);
+                    auto bSize = shape(dst.size);
+                    if(srcs[i].size != dst.size)
+                        CV_Assert(srcs[i].size == dst.size);
                 }
                 else if (self.channelsMode == ELTWISE_CHANNNELS_INPUT_0)
                 {
@@ -730,6 +790,24 @@ public:
                 }
             }
         }
+        else if(channelsModeInput == ELTWISE_BROADCAST)
+        {
+            // Convert the ELTWISE_BROADCAST to ELTWISE_CHANNNELS_SAME by
+            // re-allocate memory for input Mat which is needed for broadcast.
+            MatShape outShape = shape(outputs[0]);
+            for(int i = 0; i<inputs.size(); i++)
+            {
+                auto inputShape = shape(inputs[i]);
+                if(inputShape != outShape)
+                {   Mat broadMat;
+                    broadcastMat(inputs[i], outShape, broadMat);
+                    inputs[i] = broadMat;
+                }
+            }
+
+            channelsModeInput = ELTWISE_CHANNNELS_SAME;
+            channelsMode= ELTWISE_CHANNNELS_SAME;
+        }
 
         EltwiseInvoker::run(*this,
                             &inputs[0], (int)inputs.size(), outputs[0],
@@ -948,6 +1026,69 @@ public:
         }
         else
             return false;
+    }
+
+    void broadcastMat(InputArray _src, const MatShape& dstShape, OutputArray _dst)
+    {
+        Mat src = _src.getMat();
+
+        MatShape srcShape = shape(src);
+        int dstSizeLen = dstShape.size();
+        int appendLen = dstSizeLen - srcShape.size();
+
+        // Add "1" to the missing dimension
+        if(appendLen > 0)
+        {
+            for(int i = 0; i < appendLen; i++)
+            {
+                srcShape.insert(srcShape.begin(), 1);
+            }
+        }
+
+        // reallocate the memory
+        int srcType = src.type(), sdepth = CV_MAT_DEPTH(srcType);
+        int newType = CV_MAKETYPE(sdepth, 1);
+
+        _dst.create(dstShape.size(), dstShape.data(), newType);
+        Mat dst = _dst.getMat();
+
+        // copy value to dst.
+        std::vector<int> srcIdx(srcShape.size(), 0);
+        std::vector<int> dstIdx(dstShape.size(), 0);
+
+        while(dstIdx[0] != dstShape[0])
+        {
+            dst.at<float>(dstIdx.data()) = src.at<float>(srcIdx.data() + appendLen);
+
+            // update index
+            dstIdx[dstSizeLen-1]++;
+            bool upData = false;
+            for(int i = dstSizeLen-1; i >= 0; i--)
+            {
+                if(upData)
+                {
+                    dstIdx[i]++;
+                    upData = false;
+                }
+
+                if(dstIdx[i] == dstShape[i])
+                {
+                    if(i == 0)
+                    {
+                        break;
+                    }
+                    dstIdx[i] = 0;
+                    upData = true;
+                }else
+                    break;
+            }
+
+            for(int i = dstSizeLen-1; i >= 0; i--)
+            {
+                if(srcShape[i] != 1)
+                    srcIdx[i] = dstIdx[i];
+            }
+        }
     }
 
     Ptr<ActivationLayer> activ;

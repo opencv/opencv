@@ -1406,12 +1406,20 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     }
     else
     {
+        layerParams.type = "Eltwise";
+        layerParams.set("output_channels_mode", "broadcast");
         if (isSub)
         {
-            addNegation(layerParams, node_proto, 1);
+            static float subCoeffs[] = {1.f, -1.f};
+            layerParams.set("coeff", DictValue::arrayReal<float*>(subCoeffs, 2));
         }
-        layerParams.type = "Scale";
-        layerParams.set("bias_term", true);
+
+//        if (isSub)
+//        {
+//            addNegation(layerParams, node_proto, 1);
+//        }
+//        layerParams.type = "Scale";
+//        layerParams.set("bias_term", true);
     }
     addLayer(layerParams, node_proto);
 }
@@ -1946,65 +1954,69 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
     }
     else
     {
+        layerParams.type = "Eltwise";
+        layerParams.set("operation", isDiv ? "div" : "prod");
+        layerParams.set("output_channels_mode", "broadcast");
+
         // Scale layer allocate output with the first input shape
-        if (total(outShapes[node_proto.input(0)]) < total(outShapes[node_proto.input(1)]))
-        {
-            opencv_onnx::NodeProto proto;
-            proto.add_input(node_proto.input(1));
-            proto.add_input(node_proto.input(0));
-            proto.add_output(layerParams.name);
-            node_proto = proto;
-        }
-
-        if (isDiv)
-        {
-            LayerParams powerParams;
-            powerParams.name = layerParams.name + "/inv";
-            powerParams.type = "Power";
-            powerParams.set("power", -1);
-
-            //Create Power layer
-            int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
-            //Connect to input
-            IterLayerId_t layerId = layer_id.find(node_proto.input(1));
-            CV_Assert(layerId != layer_id.end());
-            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-            //Add shape
-            layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
-            outShapes[powerParams.name] = outShapes[node_proto.input(1)];
-
-            //Replace input to Power
-            node_proto.set_input(1, powerParams.name);
-        }
-
-        const MatShape& broadShape = outShapes[node_proto.input(1)];
-        const MatShape& outShape = outShapes[node_proto.input(0)];
-
-        size_t axis = 0;
-        int broadAxis = -1;
-        findBroadAxis(broadShape, outShape, axis, broadAxis);
-
-        // if there is a one dimension in the middle that should be broadcasted, broadcast it
-        if (broadAxis != -1)
-        {
-            opencv_onnx::NodeProto concat_node_proto = node_proto;
-            const std::string& input1 = concat_node_proto.input(1);
-
-            expandMid(layerParams.name, concat_node_proto, input1, outShape[broadAxis]);
-
-            LayerParams concatLP;
-            concatLP.name = layerParams.name + "/concat";
-            concatLP.set("axis", broadAxis);
-            concatLP.type = "Concat";
-            concat_node_proto.set_output(0, concatLP.name);
-
-            addLayer(concatLP, concat_node_proto);
-            node_proto.set_input(1, concatLP.name);
-        }
-
-        CV_Assert(axis != outShape.size());
-        layerParams.set("axis", static_cast<int>(axis));
-        layerParams.type = "Scale";
+//        if (total(outShapes[node_proto.input(0)]) < total(outShapes[node_proto.input(1)]))
+//        {
+//            opencv_onnx::NodeProto proto;
+//            proto.add_input(node_proto.input(1));
+//            proto.add_input(node_proto.input(0));
+//            proto.add_output(layerParams.name);
+//            node_proto = proto;
+//        }
+//
+//        if (isDiv)
+//        {
+//            LayerParams powerParams;
+//            powerParams.name = layerParams.name + "/inv";
+//            powerParams.type = "Power";
+//            powerParams.set("power", -1);
+//
+//            //Create Power layer
+//            int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
+//            //Connect to input
+//            IterLayerId_t layerId = layer_id.find(node_proto.input(1));
+//            CV_Assert(layerId != layer_id.end());
+//            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+//            //Add shape
+//            layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
+//            outShapes[powerParams.name] = outShapes[node_proto.input(1)];
+//
+//            //Replace input to Power
+//            node_proto.set_input(1, powerParams.name);
+//        }
+//
+//        const MatShape& broadShape = outShapes[node_proto.input(1)];
+//        const MatShape& outShape = outShapes[node_proto.input(0)];
+//
+//        size_t axis = 0;
+//        int broadAxis = -1;
+//        findBroadAxis(broadShape, outShape, axis, broadAxis);
+//
+//        // if there is a one dimension in the middle that should be broadcasted, broadcast it
+//        if (broadAxis != -1)
+//        {
+//            opencv_onnx::NodeProto concat_node_proto = node_proto;
+//            const std::string& input1 = concat_node_proto.input(1);
+//
+//            expandMid(layerParams.name, concat_node_proto, input1, outShape[broadAxis]);
+//
+//            LayerParams concatLP;
+//            concatLP.name = layerParams.name + "/concat";
+//            concatLP.set("axis", broadAxis);
+//            concatLP.type = "Concat";
+//            concat_node_proto.set_output(0, concatLP.name);
+//
+//            addLayer(concatLP, concat_node_proto);
+//            node_proto.set_input(1, concatLP.name);
+//        }
+//
+//        CV_Assert(axis != outShape.size());
+//        layerParams.set("axis", static_cast<int>(axis));
+//        layerParams.type = "Scale";
     }
     addLayer(layerParams, node_proto);
 }
