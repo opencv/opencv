@@ -122,6 +122,7 @@ public:
     UMat gpu_pixNorms;
 
     int bufferSizeDegree;
+    int volumeUnitDegree;
     // per-volume-unit data
     UMat lastVisibleIndices;
     UMat isActiveFlags;

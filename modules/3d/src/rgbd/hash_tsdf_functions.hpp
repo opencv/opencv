@@ -282,40 +282,42 @@ public:
     }
 };
 
+int calcVolumeUnitDegree(Point3i volumeResolution);
+
 typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
 typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 
 void integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
 
 void raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals);
 
 void fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
-    InputArray _points, OutputArray _normals);
+    const int volumeUnitDegree, InputArray _points, OutputArray _normals);
 
 void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
-    OutputArray _points, OutputArray _normals);
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals);
 
 #ifdef HAVE_OPENCL
 void ocl_integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy, InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags);
 
 void ocl_raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals);
 
 void olc_fetchNormalsFromHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals);
 
 void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals);
 #endif
 

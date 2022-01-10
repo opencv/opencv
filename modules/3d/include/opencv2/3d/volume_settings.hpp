@@ -45,14 +45,11 @@ public:
     float getRaycastStepFactor() const;
     void  setZFirstMemOrder(bool val);
     bool  getZFirstMemOrder() const;
-    void  setVolumeUnitDegree(int val);
-    int   getVolumeUnitDegree() const;
 
     void setVolumePose(InputArray val);
     void getVolumePose(OutputArray val) const;
     void setVolumeResolution(InputArray val);
     void getVolumeResolution(OutputArray val) const;
-    void setVolumeDimentions(InputArray val);
     void getVolumeDimentions(OutputArray val) const;
     void setCameraIntrinsics(InputArray val);
     void getCameraIntrinsics(OutputArray val) const;

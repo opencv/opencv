@@ -9,7 +9,6 @@ namespace cv
 {
 
 Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder);
-int calcVolumeUnitDegree(Point3i volumeResolution);
 
 class VolumeSettings::Impl
 {
@@ -35,14 +34,11 @@ public:
     virtual float getRaycastStepFactor() const = 0;
     virtual void  setZFirstMemOrder(bool val) = 0;
     virtual bool  getZFirstMemOrder() const = 0;
-    virtual void  setVolumeUnitDegree(int val) = 0;
-    virtual int   getVolumeUnitDegree() const = 0;
 
     virtual void setVolumePose(InputArray val) = 0;
     virtual void getVolumePose(OutputArray val) const = 0;
     virtual void setVolumeResolution(InputArray val) = 0;
     virtual void getVolumeResolution(OutputArray val) const = 0;
-    virtual void setVolumeDimentions(InputArray val) = 0;
     virtual void getVolumeDimentions(OutputArray val) const = 0;
     virtual void setCameraIntrinsics(InputArray val) = 0;
     virtual void getCameraIntrinsics(OutputArray val) const = 0;
@@ -75,14 +71,11 @@ public:
     virtual float getRaycastStepFactor() const override;
     virtual void  setZFirstMemOrder(bool val) override;
     virtual bool  getZFirstMemOrder() const override;
-    virtual void  setVolumeUnitDegree(int val) override;
-    virtual int   getVolumeUnitDegree() const override;
 
     virtual void setVolumePose(InputArray val) override;
     virtual void getVolumePose(OutputArray val) const override;
     virtual void setVolumeResolution(InputArray val) override;
     virtual void getVolumeResolution(OutputArray val) const override;
-    virtual void setVolumeDimentions(InputArray val) override;
     virtual void getVolumeDimentions(OutputArray val) const override;
     virtual void setCameraIntrinsics(InputArray val) override;
     virtual void getCameraIntrinsics(OutputArray val) const override;
@@ -101,7 +94,6 @@ private:
     int   maxWeight;
     float raycastStepFactor;
     bool  zFirstMemOrder;
-    int volumeUnitDegree;
 
     Matx44f volumePose;
     Point3i volumeResolution;
@@ -128,7 +120,6 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static const int volumeUnitDegree = 0;
 
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Matx33f  rgb_cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
@@ -185,7 +176,6 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
-        static const int volumeUnitDegree = 0;
 
         const Matx33f  cameraIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Matx33f  rgb_cameraIntrinsics = Matx33f(rgb_fx, 0, rgb_cx, 0, rgb_fy, rgb_cy, 0, 0, 1); // camera settings
@@ -229,14 +219,11 @@ void  VolumeSettings::setMaxWeight(int val) { this->impl->setMaxWeight(val); };
 int   VolumeSettings::getMaxWeight() const { return this->impl->getMaxWeight(); };
 void  VolumeSettings::setZFirstMemOrder(bool val) { this->impl->setZFirstMemOrder(val); };
 bool  VolumeSettings::getZFirstMemOrder() const { return this->impl->getZFirstMemOrder(); };
-void  VolumeSettings::setVolumeUnitDegree(int val) { this->impl->setVolumeUnitDegree(val); };
-int   VolumeSettings::getVolumeUnitDegree() const { return this->impl->getVolumeUnitDegree(); };
 
 void VolumeSettings::setVolumePose(InputArray val) { this->impl->setVolumePose(val); };
 void VolumeSettings::getVolumePose(OutputArray val) const { this->impl->getVolumePose(val); };
 void VolumeSettings::setVolumeResolution(InputArray val) { this->impl->setVolumeResolution(val); };
 void VolumeSettings::getVolumeResolution(OutputArray val) const { this->impl->getVolumeResolution(val); };
-void VolumeSettings::setVolumeDimentions(InputArray val) { this->impl->setVolumeDimentions(val); };
 void VolumeSettings::getVolumeDimentions(OutputArray val) const { this->impl->getVolumeDimentions(val); };
 void VolumeSettings::setCameraIntrinsics(InputArray val) { this->impl->setCameraIntrinsics(val); };
 void VolumeSettings::getCameraIntrinsics(OutputArray val) const { this->impl->getCameraIntrinsics(val); };
@@ -265,7 +252,6 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
-        this->volumeUnitDegree = ds.volumeUnitDegree;
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
@@ -286,7 +272,6 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
-        this->volumeUnitDegree = calcVolumeUnitDegree(ds.volumeResolution);
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
@@ -307,7 +292,6 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
-        this->volumeUnitDegree = ds.volumeUnitDegree;
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
@@ -411,17 +395,6 @@ bool VolumeSettingsImpl::getZFirstMemOrder() const
     return this->zFirstMemOrder;
 }
 
-void VolumeSettingsImpl::setVolumeUnitDegree(int val)
-{
-    this->volumeUnitDegree = val;
-}
-
-int VolumeSettingsImpl::getVolumeUnitDegree() const
-{
-    return this->volumeUnitDegree;
-}
-
-
 void VolumeSettingsImpl::setVolumePose(InputArray val)
 {
     if (!val.empty())
@@ -446,14 +419,6 @@ void VolumeSettingsImpl::setVolumeResolution(InputArray val)
 void VolumeSettingsImpl::getVolumeResolution(OutputArray val) const
 {
     Mat(this->volumeResolution).copyTo(val);
-}
-
-void VolumeSettingsImpl::setVolumeDimentions(InputArray val)
-{
-    if (!val.empty())
-    {
-        this->volumeDimentions = Vec4i(val.getMat());
-    }
 }
 
 void VolumeSettingsImpl::getVolumeDimentions(OutputArray val) const
@@ -509,20 +474,5 @@ Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder)
     }
     return Vec4i(xdim, ydim, zdim);
 }
-
-
-int calcVolumeUnitDegree(Point3i volumeResolution)
-{
-    if (!(volumeResolution.x & (volumeResolution.x - 1)))
-    {
-        // vuRes is a power of 2, let's get this power
-        return trailingZeros32(volumeResolution.x);
-    }
-    else
-    {
-        CV_Error(Error::StsBadArg, "Volume unit resolution should be a power of 2");
-    }
-}
-
 
 }

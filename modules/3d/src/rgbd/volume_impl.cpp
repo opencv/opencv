@@ -205,6 +205,11 @@ size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
     Volume::Impl(_settings)
 {
+    Vec3i resolution;
+    settings.getVolumeResolution(resolution);
+    const Point3i volResolution = Point3i(resolution);
+    volumeUnitDegree = calcVolumeUnitDegree(volResolution);
+
 #ifndef HAVE_OPENCL
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -266,11 +271,11 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #else
     if (ocl::useOpenCL())
     {
-        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
     }
     else
     {
-        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
         lastFrameId++;
     }
 #endif
@@ -321,9 +326,9 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
     raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
 #else
     if (ocl::useOpenCL())
-        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, hashTable, gpu_volUnitsData, _points, _normals);
+        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
     else
-        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
+        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
 }
 void HashTsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray, OutputArray) const
@@ -337,9 +342,9 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
     if (ocl::useOpenCL())
-        olc_fetchNormalsFromHashTsdfVolumeUnit(settings, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+        olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
     else
-        fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, points, normals);
+        fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 
 #endif
 }
@@ -349,9 +354,9 @@ void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals)
     fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
 #else
     if (ocl::useOpenCL())
-        ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+        ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
     else
-        fetchPointsNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, points, normals);
+        fetchPointsNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 #endif
 }
 

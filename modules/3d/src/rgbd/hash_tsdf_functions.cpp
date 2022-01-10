@@ -43,6 +43,19 @@ static cv::Vec3i volumeToVoxelCoord(const cv::Point3f& point, const float voxelS
         cvFloor(point.z * voxelSizeInv));
 }
 
+int calcVolumeUnitDegree(Point3i volumeResolution)
+{
+    if (!(volumeResolution.x & (volumeResolution.x - 1)))
+    {
+        // vuRes is a power of 2, let's get this power
+        return trailingZeros32(volumeResolution.x);
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Volume unit resolution should be a power of 2");
+    }
+}
+
 void allocateVolumeUnits(
     const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
     CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize);
@@ -76,7 +89,7 @@ Point3f ocl_getNormalVoxel(
 #endif
 
 void integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
 {
     //std::cout << "integrateHashTsdfVolumeUnit()" << std::endl;
@@ -89,7 +102,7 @@ void integrateHashTsdfVolumeUnit(
     Mat pixNorms = _pixNorms.getMat();
 
     //! Compute volumes to be allocated
-    const int depthStride = settings.getVolumeUnitDegree();
+    const int depthStride = volumeUnitDegree;
     const float invDepthFactor = 1.f / settings.getDepthFactor();
     const float truncDist = settings.getTruncatedDistance();
     const float truncateThreshold = settings.getTruncateThreshold();
@@ -462,7 +475,7 @@ void markActive(
 
 
 void ocl_integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
 {
     CV_TRACE_FUNCTION();
@@ -486,7 +499,6 @@ void ocl_integrateHashTsdfVolumeUnit(
     settings.getVolumeResolution(resolution);
     const int volumeUnitResolution = resolution[0];
     const int maxWeight = settings.getMaxWeight();
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
     const float truncDist = settings.getTruncatedDistance();
     const float truncateThreshold = settings.getTruncateThreshold();
     const float voxelSize = settings.getVoxelSize();
@@ -973,7 +985,7 @@ Point3f ocl_getNormalVoxel(
 #endif
 
 void raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
 {
     //std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
@@ -999,8 +1011,6 @@ void raycastHashTsdfVolumeUnit(
     const float truncateThreshold = settings.getTruncateThreshold();
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
-
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1118,7 +1128,7 @@ void raycastHashTsdfVolumeUnit(
 #ifdef HAVE_OPENCL
 
 void ocl_raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
@@ -1155,7 +1165,6 @@ void ocl_raycastHashTsdfVolumeUnit(
     const float truncateThreshold = settings.getTruncateThreshold();
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
 
     const Vec4i volStrides;
     settings.getVolumeDimentions(volStrides);
@@ -1216,7 +1225,7 @@ void ocl_raycastHashTsdfVolumeUnit(
 
 void fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
-    InputArray _points, OutputArray _normals)
+    const int volumeUnitDegree, InputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
 
@@ -1232,7 +1241,6 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1259,7 +1267,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 
 #ifdef HAVE_OPENCL
 void olc_fetchNormalsFromHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
@@ -1278,7 +1286,6 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
 
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
 
     const Vec4i volDims;
     settings.getVolumeDimentions(volDims);
@@ -1306,7 +1313,7 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
 
 void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
-    OutputArray _points, OutputArray _normals)
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals)
 {
     //std::cout << "fetchNormalsFromHashTsdfVolumeUnit()" << std::endl;
     CV_TRACE_FUNCTION();
@@ -1319,7 +1326,6 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
 
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -1425,7 +1431,7 @@ inline TsdfVoxel new_at(
 
 
 void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals)
 {
 
@@ -1447,7 +1453,6 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
 
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
-    const int volumeUnitDegree = settings.getVolumeUnitDegree();
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
