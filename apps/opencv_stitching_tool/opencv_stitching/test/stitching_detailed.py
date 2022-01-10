@@ -317,7 +317,7 @@ def main():
     sizes = []
     blender = None
     timelapser = None
-    # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
+    # https://github.com/opencv/opencv/blob/4.x/samples/cpp/stitching_detailed.cpp#L725 ?
     for idx, name in enumerate(img_names):
         full_img = cv.imread(name)
         if not is_compose_scale_set:

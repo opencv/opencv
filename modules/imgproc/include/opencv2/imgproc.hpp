@@ -405,10 +405,10 @@ enum ConnectedComponentsTypes {
 
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
-    CCL_DEFAULT   = -1, //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
+    CCL_DEFAULT   = -1, //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity.
     CCL_WU        = 0,  //!< SAUF @cite Wu2009 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for SAUF.
     CCL_GRANA     = 1,  //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
-    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity.
+    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both Spaghetti and Spaghetti4C.
     CCL_SAUF      = 3,  //!< Same as CCL_WU. It is preferable to use the flag with the name of the algorithm (CCL_SAUF) rather than the one with the name of the first author (CCL_WU).
     CCL_BBDT      = 4,  //!< Same as CCL_GRANA. It is preferable to use the flag with the name of the algorithm (CCL_BBDT) rather than the one with the name of the first author (CCL_GRANA).
     CCL_SPAGHETTI = 5,  //!< Same as CCL_BOLELLI. It is preferable to use the flag with the name of the algorithm (CCL_SPAGHETTI) rather than the one with the name of the first author (CCL_BOLELLI).
@@ -2157,12 +2157,12 @@ The function finds lines in a set of points using a modification of the Hough tr
 @param point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
-@param lines_max Max count of hough lines.
+@param lines_max Max count of Hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
-votes ( \f$>\texttt{threshold}\f$ )
-@param min_rho Minimum Distance value of the accumulator in pixels.
-@param max_rho Maximum Distance value of the accumulator in pixels.
-@param rho_step Distance resolution of the accumulator in pixels.
+votes ( \f$>\texttt{threshold}\f$ ).
+@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
+@param max_rho Maximum value for \f$\rho\f$ for the accumulator.
+@param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.
@@ -3858,9 +3858,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
@@ -3890,9 +3891,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana's (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms (statistics included) if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled

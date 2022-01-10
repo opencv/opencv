@@ -8,15 +8,11 @@
 #define GAPI_STREAMING_ONEVPL_ONEVPL_UTILS_HPP
 
 #ifdef HAVE_ONEVPL
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif // MFX_VERSION
-
-#include <vpl/mfx.h>
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
@@ -42,8 +38,16 @@ template <typename COMNonManageableType>
 using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
 
 template <typename COMNonManageableType>
+using ComSharedPtrGuard = std::shared_ptr<COMNonManageableType>;
+
+template <typename COMNonManageableType>
 ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
     return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
+template <typename COMNonManageableType>
+ComSharedPtrGuard<COMNonManageableType> createCOMSharedPtrGuard(ComPtrGuard<COMNonManageableType>&& unique_guard) {
+    return ComSharedPtrGuard<COMNonManageableType>(std::move(unique_guard));
 }
 
 
@@ -61,14 +65,20 @@ mfxResourceType cstr_to_mfx_resource_type(const char* cstr);
 
 mfxU32 cstr_to_mfx_codec_id(const char* cstr);
 
+const char* mfx_codec_id_to_cstr(mfxU32 mfx_id);
+
+const std::set<mfxU32> &get_supported_mfx_codec_ids();
+
 const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type);
 
 mfxU32 cstr_to_mfx_version(const char* cstr);
 
+std::string mfxstatus_to_string(int64_t err);
 std::string mfxstatus_to_string(mfxStatus err);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
 
+std::string ext_mem_frame_type_to_cstr(int type);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

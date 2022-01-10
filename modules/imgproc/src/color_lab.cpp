@@ -978,8 +978,9 @@ static struct LUVLUT_T {
     const long long int *LvToVpl_b;
 } LUVLUT = {0, 0, 0};
 
+/* NB: no NaN propagation guarantee */
 #define clip(value) \
-    value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
+    value < 0.0f ? 0.0f : value <= 1.0f ? value : 1.0f;
 
 //all constants should be presented through integers to keep bit-exactness
 static const softdouble gammaThreshold    = softdouble(809)/softdouble(20000);    //  0.04045
@@ -1329,6 +1330,10 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     int tx = cx >> (lab_base_shift - lab_lut_shift);
     int ty = cy >> (lab_base_shift - lab_lut_shift);
     int tz = cz >> (lab_base_shift - lab_lut_shift);
+
+    CV_DbgCheck(tx, tx >= 0 && tx < LAB_LUT_DIM, "");
+    CV_DbgCheck(ty, ty >= 0 && ty < LAB_LUT_DIM, "");
+    CV_DbgCheck(tz, tz >= 0 && tz < LAB_LUT_DIM, "");
 
     const int16_t* baseLUT = &LUT[3*8*tx + (3*8*LAB_LUT_DIM)*ty + (3*8*LAB_LUT_DIM*LAB_LUT_DIM)*tz];
     int aa[8], bb[8], cc[8];
@@ -2974,9 +2979,9 @@ struct RGB2Luvfloat
         for( ; i < n; i++, src += scn, dst += 3 )
         {
             float R = src[0], G = src[1], B = src[2];
-            R = std::min(std::max(R, 0.f), 1.f);
-            G = std::min(std::max(G, 0.f), 1.f);
-            B = std::min(std::max(B, 0.f), 1.f);
+            R = clip(R);
+            G = clip(G);
+            B = clip(B);
             if( gammaTab )
             {
                 R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -3200,9 +3205,9 @@ struct Luv2RGBfloat
             float G = X*C3 + Y*C4 + Z*C5;
             float B = X*C6 + Y*C7 + Z*C8;
 
-            R = std::min(std::max(R, 0.f), 1.f);
-            G = std::min(std::max(G, 0.f), 1.f);
-            B = std::min(std::max(B, 0.f), 1.f);
+            R = clip(R);
+            G = clip(G);
+            B = clip(B);
 
             if( gammaTab )
             {
@@ -3567,7 +3572,7 @@ struct Luv2RGBinteger
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
-        x = y*x/BASE;
+        x = ((long long int)y)*x/BASE;
 
         long long int vpl = LUVLUT.LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
@@ -3689,17 +3694,13 @@ struct Luv2RGBinteger
             vzm[i] = zm;
 
             vx[i] = (int32_t)(xv >> base_shift);
+            vx[i] = (((int64_t)y_)*vx[i]) >> base_shift;
         }
         v_int32 zm[4];
         for(int k = 0; k < 4; k++)
         {
             x[k] = vx_load_aligned(vx + k*vsize/4);
             zm[k] = vx_load_aligned(vzm + k*vsize/4);
-        }
-
-        for(int k = 0; k < 4; k++)
-        {
-            x[k] = (y[k]*x[k]) >> base_shift;
         }
 
         // z = zm/256 + zm/65536;

@@ -32,9 +32,9 @@ class ExposureErrorCompensator:
                 )
 
     def feed(self, *args):
-        """https://docs.opencv.org/master/d2/d37/classcv_1_1detail_1_1ExposureCompensator.html#ae6b0cc69a7bc53818ddea53eddb6bdba"""  # noqa
+        """https://docs.opencv.org/4.x/d2/d37/classcv_1_1detail_1_1ExposureCompensator.html#ae6b0cc69a7bc53818ddea53eddb6bdba"""  # noqa
         self.compensator.feed(*args)
 
     def apply(self, *args):
-        """https://docs.opencv.org/master/d2/d37/classcv_1_1detail_1_1ExposureCompensator.html#a473eaf1e585804c08d77c91e004f93aa"""  # noqa
+        """https://docs.opencv.org/4.x/d2/d37/classcv_1_1detail_1_1ExposureCompensator.html#a473eaf1e585804c08d77c91e004f93aa"""  # noqa
         return self.compensator.apply(*args)

@@ -4,13 +4,32 @@
 //
 // Copyright (C) 2018 Intel Corporation
 
-
-#include "test_precomp.hpp"
-
 #include <type_traits>
-
+#include "test_precomp.hpp"
+#include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/util/util.hpp>
 
+namespace cv
+{
+struct Own {};
+namespace gapi
+{
+namespace own
+{
+struct ConvertibleToOwn{};
+struct NotConvertibleToOwn{};
+} // own
+} // gapi
+} // cv
+
+struct NoGhape {};
+struct HasGShape {
+    static constexpr cv::GShape shape = cv::GShape::GFRAME;
+};
+struct MimicGShape {
+     static constexpr int shape = 0;
+};
+#define DISALLOWED_LIST  cv::gapi::own::NotConvertibleToOwn
 namespace opencv_test
 {
 
@@ -40,4 +59,17 @@ TEST(GAPIUtil, AllButLast)
                   "[int, float] are NOT all integral types");
 }
 
+TEST(GAPIUtil, GShaped)
+{
+    static_assert(!cv::detail::has_gshape<NoGhape>::value, "NoGhape hasn't got any shape");
+    static_assert(cv::detail::has_gshape<HasGShape>::value, "HasGShape has got GShape shape");
+    static_assert(!cv::detail::has_gshape<MimicGShape>::value, "MimicGShape hasn't got right shape");
+}
+
+TEST(GAPIUtil, GTypeList)
+{
+    static_assert(cv::detail::contains<cv::gapi::own::NotConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "NotConvertibleToOwn is in denial list");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn is not in empty denial list");
+    static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn is not in denial list");
+}
 } // namespace opencv_test

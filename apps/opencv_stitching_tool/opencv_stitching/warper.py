@@ -64,7 +64,7 @@ class Warper:
     def warp_roi(self, size, camera, aspect=1):
         warper = cv.PyRotationWarper(self.warper_type, self.scale*aspect)
         K = Warper.get_K(camera, aspect)
-        return warper.warpRoi(size, K, camera.R)
+        return warper.warpRoi(size, K, camera.R)  
 
     @staticmethod
     def get_K(camera, aspect=1):

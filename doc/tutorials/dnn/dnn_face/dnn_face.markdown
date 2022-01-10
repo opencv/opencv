@@ -36,14 +36,34 @@ There are two models (ONNX format) pre-trained and required for this module:
 
 ### DNNFaceDetector
 
-```cpp
-// Initialize FaceDetectorYN
-Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(onnx_path, "", image.size(), score_thresh, nms_thresh, top_k);
+@add_toggle_cpp
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/dnn/face_detect.cpp)
 
-// Forward
-Mat faces;
-faceDetector->detect(image, faces);
-```
+-   **Code at glance:**
+    @include samples/dnn/face_detect.cpp
+@end_toggle
+
+@add_toggle_python
+-   **Downloadable code**: Click
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/dnn/face_detect.py)
+
+-   **Code at glance:**
+    @include samples/dnn/face_detect.py
+@end_toggle
+
+Explanation
+-----------
+
+@add_toggle_cpp
+@snippet dnn/face_detect.cpp initialize_FaceDetectorYN
+@snippet dnn/face_detect.cpp inference
+@end_toggle
+
+@add_toggle_python
+@snippet dnn/face_detect.py initialize_FaceDetectorYN
+@snippet dnn/face_detect.py inference
+@end_toggle
 
 The detection output `faces` is a two-dimension array of type CV_32F, whose rows are the detected face instances, columns are the location of a face and 5 facial landmarks. The format of each row is as follows:
 
@@ -57,28 +77,25 @@ x1, y1, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rcm, y_rcm, x_lcm, y_lcm
 
 Following Face Detection, run codes below to extract face feature from facial image.
 
-```cpp
-// Initialize FaceRecognizerSF with model path (cv::String)
-Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(model_path, "");
+@add_toggle_cpp
+@snippet dnn/face_detect.cpp initialize_FaceRecognizerSF
+@snippet dnn/face_detect.cpp facerecognizer
+@end_toggle
 
-// Aligning and cropping facial image through the first face of faces detected by dnn_face::DNNFaceDetector
-Mat aligned_face;
-faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
-
-// Run feature extraction with given aligned_face (cv::Mat)
-Mat feature;
-faceRecognizer->feature(aligned_face, feature);
-feature = feature.clone();
-```
+@add_toggle_python
+@snippet dnn/face_detect.py initialize_FaceRecognizerSF
+@snippet dnn/face_detect.py facerecognizer
+@end_toggle
 
 After obtaining face features *feature1* and *feature2* of two facial images, run codes below to calculate the identity discrepancy between the two faces.
 
-```cpp
-// Calculating the discrepancy between two face features by using cosine distance.
-double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
-// Calculating the discrepancy between two face features by using normL2 distance.
-double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
-```
+@add_toggle_cpp
+@snippet dnn/face_detect.cpp match
+@end_toggle
+
+@add_toggle_python
+@snippet dnn/face_detect.py match
+@end_toggle
 
 For example, two faces have same identity if the cosine distance is greater than or equal to 0.363, or the normL2 distance is less than or equal to 1.128.
 

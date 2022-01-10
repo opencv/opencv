@@ -716,7 +716,7 @@ CV_IMPL CvSeq* cvConvexityDefects( const CvArr* array,
 
         dx0 = (double)hull_next->x - (double)hull_cur->x;
         dy0 = (double)hull_next->y - (double)hull_cur->y;
-        assert( dx0 != 0 || dy0 != 0 );
+        CV_Assert( dx0 != 0 || dy0 != 0 );
         scale = 1./std::sqrt(dx0*dx0 + dy0*dy0);
 
         defect.start = hull_cur;

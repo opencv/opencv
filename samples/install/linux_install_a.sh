@@ -26,9 +26,9 @@ sudo apt install -y wget unzip
 # [wget]
 
 # [download]
-wget -O opencv.zip https://github.com/opencv/opencv/archive/master.zip
+wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
 unzip opencv.zip
-mv opencv-master opencv
+mv opencv-4.x opencv
 # [download]
 
 # [prepare]

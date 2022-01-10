@@ -208,7 +208,7 @@ cvTsMarkContours( IplImage* img, int val )
     int i, j;
     int step = img->widthStep;
 
-    assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 && (val&1) != 0);
+    CV_Assert( img->depth == IPL_DEPTH_8U && img->nChannels == 1 && (val&1) != 0);
 
     for( i = 1; i < img->height - 1; i++ )
         for( j = 1; j < img->width - 1; j++ )

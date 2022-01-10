@@ -616,7 +616,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
-    if (op == CV_REDUCE_AVG)
+    if (op == REDUCE_AVG)
     {
         if (sdepth < CV_32S && ddepth < CV_32S)
             ddepth = CV_32S;
@@ -654,7 +654,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         _dst.create(dsize, dtype);
         UMat dst = _dst.getUMat();
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(ocl::KernelArg::ReadOnly(src),
                       ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
         else
@@ -690,7 +690,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
                 temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
         else
             k.args(srcarg, temparg);
@@ -717,8 +717,8 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     int ddepth = CV_MAT_DEPTH(dtype);
 
     CV_Assert( cn == CV_MAT_CN(dtype) );
-    CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
-               op == CV_REDUCE_MIN || op == CV_REDUCE_AVG );
+    CV_Assert( op == REDUCE_SUM || op == REDUCE_MAX ||
+               op == REDUCE_MIN || op == REDUCE_AVG );
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
@@ -732,9 +732,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
 
-    if( op == CV_REDUCE_AVG )
+    if( op == REDUCE_AVG )
     {
-        op = CV_REDUCE_SUM;
+        op = REDUCE_SUM;
         if( sdepth < CV_32S && ddepth < CV_32S )
         {
             temp.create(dst.rows, dst.cols, CV_32SC(cn));
@@ -745,7 +745,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     ReduceFunc func = 0;
     if( dim == 0 )
     {
-        if( op == CV_REDUCE_SUM )
+        if( op == REDUCE_SUM )
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
                 func = GET_OPTIMIZED(reduceSumR8u32s);
@@ -768,7 +768,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumR64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = GET_OPTIMIZED(reduceMaxR8u);
@@ -781,7 +781,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxR64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = GET_OPTIMIZED(reduceMinR8u);
@@ -797,7 +797,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     }
     else
     {
-        if(op == CV_REDUCE_SUM)
+        if(op == REDUCE_SUM)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
                 func = GET_OPTIMIZED(reduceSumC8u32s);
@@ -820,7 +820,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumC64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = GET_OPTIMIZED(reduceMaxC8u);
@@ -833,7 +833,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxC64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
                 func = GET_OPTIMIZED(reduceMinC8u);
@@ -854,7 +854,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 
     func( src, temp );
 
-    if( op0 == CV_REDUCE_AVG )
+    if( op0 == REDUCE_AVG )
         temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
 }
 
@@ -868,9 +868,9 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     int n, len;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     if( sortRows )
         n = src.rows, len = src.cols;
@@ -940,8 +940,8 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
+    bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
+    bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
     bool        inplace         = (src.data == dst.data);
     int         depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
@@ -1013,8 +1013,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     AutoBuffer<int> ibuf;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     CV_Assert( src.data != dst.data );
 

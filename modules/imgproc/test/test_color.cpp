@@ -217,7 +217,7 @@ void CV_ColorCvtBaseTest::convert_forward( const Mat& src, Mat& dst )
     float* dst_buf = &_dst_buf[0];
     int i, j;
 
-    assert( (cn == 3 || cn == 4) && (dst_cn == 3 || dst_cn == 1) );
+    CV_Assert( (cn == 3 || cn == 4) && (dst_cn == 3 || dst_cn == 1) );
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -281,7 +281,7 @@ void CV_ColorCvtBaseTest::convert_forward( const Mat& src, Mat& dst )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }
@@ -312,7 +312,7 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
         float* dst_buf = &_dst_buf[0];
         int i, j;
 
-        assert( cn == 3 || cn == 4 );
+        CV_Assert( cn == 3 || cn == 4 );
 
         for( i = 0; i < src.rows; i++ )
         {
@@ -385,7 +385,7 @@ void CV_ColorCvtBaseTest::convert_backward( const Mat& src, const Mat& dst, Mat&
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
             }
         }
     }
@@ -1501,7 +1501,7 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
     int g_rshift = dst_bits == 16 ? 2 : 3;
     int r_lshift = dst_bits == 16 ? 11 : 10;
 
-    //assert( (cn == 3 || cn == 4) && (dst_cn == 3 || (dst_cn == 2 && depth == CV_8U)) );
+    //CV_Assert( (cn == 3 || cn == 4) && (dst_cn == 3 || (dst_cn == 2 && depth == CV_8U)) );
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -1571,7 +1571,7 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }
@@ -1587,7 +1587,7 @@ void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat&
     int g_lshift = dst_bits == 16 ? 2 : 3;
     int r_rshift = dst_bits == 16 ? 11 : 10;
 
-    //assert( (cn == 3 || cn == 4) && (src_cn == 3 || (src_cn == 2 && depth == CV_8U)) );
+    //CV_Assert( (cn == 3 || cn == 4) && (src_cn == 3 || (src_cn == 2 && depth == CV_8U)) );
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -1677,7 +1677,7 @@ void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat&
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
     }
 }
@@ -1839,6 +1839,21 @@ TEST(Imgproc_ColorLab, accuracy) { CV_ColorLabTest test; test.safe_run(); }
 TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
+
+TEST(Imgproc_ColorLuv, Overflow_21112)
+{
+    const Size sz(107, 16);  // unaligned size to run both SIMD and generic code
+    Mat luv_init(sz, CV_8UC3, Scalar(49, 205, 23));
+    Mat rgb;
+    cvtColor(luv_init, rgb, COLOR_Luv2RGB);
+    // Convert to normal Luv coordinates for floats.
+    Mat luv_initf(sz, CV_32FC3, Scalar(49.0f/255.f*100, 205.0f*354/255.f - 134, 23.0f*262/255.f - 140));
+    Mat rgbf;
+    cvtColor(luv_initf, rgbf, COLOR_Luv2RGB);
+    Mat rgb_converted;
+    rgb.convertTo(rgb_converted, CV_32F);
+    EXPECT_LE(cvtest::norm(255.f*rgbf, rgb_converted, NORM_INF), 1e-5);
+}
 
 TEST(Imgproc_ColorBayer, regression)
 {
@@ -2569,7 +2584,7 @@ int row8uLuv2RGB(const uchar* src_row, uchar *dst_row, int n, int cn, int blue_i
 
         long long int xv = ((int)up)*(long long)vp;
         int x = (int)(xv/BASE);
-        x = y*x/BASE;
+        x = ((long long int)y)*x/BASE;
 
         long long int vpl = LvToVpl_b[LL*256+vv];
         long long int zp = vpl - xv*(255/3);
@@ -2725,11 +2740,11 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
         0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0,
 
-        0xec311a14, 0x995efefc, 0xf71b590b, 0xc1edfce7, 0x67b2b2e2, 0xe6d7f90d, 0xbcbaff5c, 0xd86ae19c,
-        0x3e8e4647, 0x53f1a5e3, 0x60dfb6ca, 0xcda851fe, 0xd91084b3, 0xe361bf6f, 0x90fe66ed, 0xb19c5b89,
+        0x4bff0e00, 0x76bbff01, 0x80735725, 0xb5e0f137, 0x96abb417, 0xfb2cf5cf, 0x314cf55e, 0x77bde10e,
+        0x2ab24209, 0x81caa6F0, 0x3019b8eb, 0x427c505f, 0x5bba7d77, 0xf29cb4d6, 0x760f65ca, 0xf6b4536c,
 
-        0x190508ec, 0xc7764e22, 0x19b042a8, 0x2db4c5d8, 0x6e1cfd1d, 0x39bddd51, 0x942714ed, 0x19444d39,
-        0xed16e206, 0xc4102784, 0x590075fe, 0xaaef2ec6, 0xbeb84149, 0x8da31e4f, 0x7cbe7d77, 0x1c90b30a,
+        0xb5cd0704, 0x82144fd4, 0x4e6f4843, 0x106bc505, 0xf587fc97, 0x3665d9a3, 0x3ea014a8, 0xec664953,
+        0x6ec9e59e, 0xf9201e08, 0xf3676fb8, 0xe4e42c10, 0x92d33f64, 0x13b923f7, 0x308f7f50, 0xca98b420,
     };
 
     RNG rng(0);
@@ -2796,6 +2811,83 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
         }
     }
 }
+
+
+static
+void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t hash, Size sz = Size(263, 255), int rngSeed = 0)
+{
+    RNG rng(rngSeed);
+
+    Mat src(sz, inputType, Scalar::all(0));
+    Mat dst;
+    rng.fill(src, RNG::UNIFORM, 0, 255, true);
+
+    cv::cvtColor(src, dst, code);
+
+    uint32_t dst_hash = adler32(dst);
+
+    EXPECT_EQ(hash, dst_hash) << cv::format("0x%08llx", (long long int)dst_hash);
+
+    if (cvtest::debugLevel > 0)
+    {
+        const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+        CV_Assert(test_info);
+        std::string name = (std::string(test_info->test_case_name()) + "--" + test_info->name() + ".xml");
+        cv::FileStorage fs(name, cv::FileStorage::WRITE);
+        fs << "dst" << dst;
+    }
+}
+
+TEST(Imgproc_cvtColor_BE, COLOR_BGR2YUV) { runCvtColorBitExactCheck(COLOR_BGR2YUV, CV_8UC3, 0xc2cbcfda); }
+TEST(Imgproc_cvtColor_BE, COLOR_RGB2YUV) { runCvtColorBitExactCheck(COLOR_RGB2YUV, CV_8UC3, 0x4e98e757); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR) { runCvtColorBitExactCheck(COLOR_YUV2BGR, CV_8UC3, 0xb2c62a3f); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB) { runCvtColorBitExactCheck(COLOR_YUV2RGB, CV_8UC3, 0x6d242a3f); }
+
+// packed input
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_NV12) { runCvtColorBitExactCheck(COLOR_YUV2RGB_NV12, CV_8UC1, 0x46a1bb76, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_NV12) { runCvtColorBitExactCheck(COLOR_YUV2BGR_NV12, CV_8UC1, 0x3843bb76, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_NV21) { runCvtColorBitExactCheck(COLOR_YUV2RGB_NV21, CV_8UC1, 0xf3fdf2ea, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_NV21) { runCvtColorBitExactCheck(COLOR_YUV2BGR_NV21, CV_8UC1, 0x6e84f2ea, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_NV12) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_NV12, CV_8UC1, 0xb6a16bd3, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_NV12) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_NV12, CV_8UC1, 0xa8436bd3, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_NV21) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_NV21, CV_8UC1, 0x1c7fa347, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_NV21) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_NV21, CV_8UC1, 0x96f7a347, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_YV12) { runCvtColorBitExactCheck(COLOR_YUV2RGB_YV12, CV_8UC1, 0xc5da1651, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_YV12) { runCvtColorBitExactCheck(COLOR_YUV2BGR_YV12, CV_8UC1, 0x12161651, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_IYUV) { runCvtColorBitExactCheck(COLOR_YUV2RGB_IYUV, CV_8UC1, 0xb4e62ea5, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_IYUV) { runCvtColorBitExactCheck(COLOR_YUV2BGR_IYUV, CV_8UC1, 0xfa632ea5, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_YV12) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_YV12, CV_8UC1, 0x0db4c69f, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_YV12) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_YV12, CV_8UC1, 0x59e1c69f, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_IYUV) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_IYUV, CV_8UC1, 0xfe09def3, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_IYUV) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_IYUV, CV_8UC1, 0x4395def3, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2GRAY_420) { runCvtColorBitExactCheck(COLOR_YUV2GRAY_420, CV_8UC1, 0xf672b440, Size(262, 510)); }
+
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_UYVY) { runCvtColorBitExactCheck(COLOR_YUV2RGB_UYVY, CV_8UC2, 0x69bea2c1, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_UYVY) { runCvtColorBitExactCheck(COLOR_YUV2BGR_UYVY, CV_8UC2, 0xdc51a2c1, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_UYVY) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_UYVY, CV_8UC2, 0x851eab45, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_UYVY) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_UYVY, CV_8UC2, 0xf7b1ab45, Size(262, 510)); }
+
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_YUY2) { runCvtColorBitExactCheck(COLOR_YUV2RGB_YUY2, CV_8UC2, 0x607e8889, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_YUY2) { runCvtColorBitExactCheck(COLOR_YUV2BGR_YUY2, CV_8UC2, 0xfb148889, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGB_YVYU) { runCvtColorBitExactCheck(COLOR_YUV2RGB_YVYU, CV_8UC2, 0x239b13d4, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGR_YVYU) { runCvtColorBitExactCheck(COLOR_YUV2BGR_YVYU, CV_8UC2, 0x402b13d4, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_YUY2) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_YUY2, CV_8UC2, 0xf6af910d, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_YUY2) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_YUY2, CV_8UC2, 0x9154910d, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2RGBA_YVYU) { runCvtColorBitExactCheck(COLOR_YUV2RGBA_YVYU, CV_8UC2, 0x14481c58, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2BGRA_YVYU) { runCvtColorBitExactCheck(COLOR_YUV2BGRA_YVYU, CV_8UC2, 0x30d81c58, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2GRAY_UYVY) { runCvtColorBitExactCheck(COLOR_YUV2GRAY_UYVY, CV_8UC2, 0x228e669c, Size(262, 510)); }
+TEST(Imgproc_cvtColor_BE, COLOR_YUV2GRAY_YUY2) { runCvtColorBitExactCheck(COLOR_YUV2GRAY_YUY2, CV_8UC2, 0x125c62fd, Size(262, 510)); }
+
+TEST(Imgproc_cvtColor_BE, COLOR_RGB2YUV_I420) { runCvtColorBitExactCheck(COLOR_RGB2YUV_I420, CV_8UC3, 0x44bb076a, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGR2YUV_I420) { runCvtColorBitExactCheck(COLOR_BGR2YUV_I420, CV_8UC3, 0xf908ff52, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_RGBA2YUV_I420) { runCvtColorBitExactCheck(COLOR_RGBA2YUV_I420, CV_8UC3, 0x44bb076a, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGRA2YUV_I420) { runCvtColorBitExactCheck(COLOR_BGRA2YUV_I420, CV_8UC3, 0xf908ff52, Size(262, 254)); }
+
+TEST(Imgproc_cvtColor_BE, COLOR_RGB2YUV_YV12) { runCvtColorBitExactCheck(COLOR_RGB2YUV_YV12, CV_8UC3, 0x1b0d076a, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGR2YUV_YV12) { runCvtColorBitExactCheck(COLOR_BGR2YUV_YV12, CV_8UC3, 0xda8aff52, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_RGBA2YUV_YV12) { runCvtColorBitExactCheck(COLOR_RGBA2YUV_YV12, CV_8UC3, 0x1b0d076a, Size(262, 254)); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGRA2YUV_YV12) { runCvtColorBitExactCheck(COLOR_BGRA2YUV_YV12, CV_8UC3, 0xda8aff52, Size(262, 254)); }
+
 
 static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
 {
@@ -3102,5 +3194,27 @@ TEST(ImgProc_cvtColorTwoPlane, y_plane_padding_differs_from_uv_plane_padding_170
     EXPECT_DOUBLE_EQ(cvtest::norm(rgb_reference_mat, rgb_uv_padded_mat, NORM_INF), .0);
 }
 
+TEST(ImgProc_RGB2Lab, NaN_21111)
+{
+    const float kNaN = std::numeric_limits<float>::quiet_NaN();
+    cv::Mat3f src(1, 111, Vec3f::all(kNaN)), dst;
+    // Make some entries with only one NaN.
+    src(0, 0) = src(0, 27) = src(0, 81) = src(0, 108) = cv::Vec3f(0, 0, kNaN);
+    src(0, 1) = src(0, 28) = src(0, 82) = src(0, 109) = cv::Vec3f(0, kNaN, 0);
+    src(0, 2) = src(0, 29) = src(0, 83) = src(0, 110) = cv::Vec3f(kNaN, 0, 0);
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_RGB2Lab));
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_RGB2Luv));
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_Luv2RGB));
+
+#if 0  // no NaN propagation guarantee
+    for (int i = 0; i < 20; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            EXPECT_TRUE(cvIsNaN(dst(0, i)[j]));
+        }
+    }
+#endif
+}
 
 }} // namespace

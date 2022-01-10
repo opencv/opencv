@@ -157,6 +157,9 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # ifndef PPC_FEATURE2_ARCH_3_00
 #   define PPC_FEATURE2_ARCH_3_00 0x00800000
 # endif
+# ifndef PPC_FEATURE_HAS_VSX
+#   define PPC_FEATURE_HAS_VSX 0x00000080
+# endif
 #endif
 
 #if defined _WIN32 || defined WINCE
@@ -616,7 +619,7 @@ struct HWFeatures
         have[CV_CPU_MSA] = true;
     #endif
 
-    #if (defined __ppc64__ || defined __PPC64__) && defined __unix__
+    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
         unsigned int hwcap = getauxval(AT_HWCAP);
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             hwcap = getauxval(AT_HWCAP2);
@@ -626,8 +629,19 @@ struct HWFeatures
                 have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
+    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+        unsigned int hwcap = 0;
+        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        // TODO: AIX, FreeBSD
+        // TODO: AIX, OpenBSD
         #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
             have[CV_CPU_VSX] = true;
         #endif
@@ -929,6 +943,51 @@ int64 getCPUTickCount(void)
 //#endif
 
 #endif
+
+
+namespace internal {
+
+class Timestamp
+{
+public:
+    const int64 zeroTickCount;
+    const double ns_in_ticks;
+
+    Timestamp()
+        : zeroTickCount(getTickCount())
+        , ns_in_ticks(1e9 / getTickFrequency())
+    {
+        // nothing
+    }
+
+    int64 getTimestamp()
+    {
+        int64 t = getTickCount();
+        return (int64)((t - zeroTickCount) * ns_in_ticks);
+    }
+
+    static Timestamp& getInstance()
+    {
+        static Timestamp g_timestamp;
+        return g_timestamp;
+    }
+};
+
+class InitTimestamp {
+public:
+    InitTimestamp() {
+        Timestamp::getInstance();
+    }
+};
+static InitTimestamp g_initialize_timestamp;  // force zero timestamp initialization
+
+}  // namespace
+
+int64 getTimestampNS()
+{
+    return internal::Timestamp::getInstance().getTimestamp();
+}
+
 
 const String& getBuildInformation()
 {
