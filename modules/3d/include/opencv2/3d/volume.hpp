@@ -44,6 +44,25 @@ public:
 
     /** @brief Extract the points of volume from set position.
     * @param cameraPose the pose of camera (camera in volume environment, not real).
+    * @param outFrame the object, which store the result data.
+    */
+    void raycast(InputArray cameraPose, OdometryFrame& outFrame) const;
+    /** @brief Extract the points of volume from set position.
+    * @param cameraPose the pose of camera (camera in volume environment, not real).
+    * @param points the storage of points in the image.
+    * @param normals the storage of normals (corresponding to points) in the image.
+    */
+    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals) const;
+    /** @brief Extract the points of volume from set position.
+    * @param cameraPose the pose of camera (camera in volume environment, not real).
+    * @param points the storage of points in the image.
+    * @param normals the storage of normals (corresponding to points) in the image.
+    * @param colors the storage of colors (corresponding to points) in the image (only for ColorTSDF).
+    */
+    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const;
+
+    /** @brief Extract the points of volume from set position.
+    * @param cameraPose the pose of camera (camera in volume environment, not real).
     * @param height the height of result image.
     * @param width the width of result image.
     * @param outFrame the object, which store the result data.

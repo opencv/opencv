@@ -89,6 +89,18 @@ void TsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
+void TsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+}
+void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+}
+void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
+}
 
 void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
@@ -286,6 +298,18 @@ void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
+void HashTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+}
+void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+}
+void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
+}
 
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
 {
@@ -458,6 +482,19 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
         preCalculationPixNorm(depth.size(), intrinsics, pixNorms);
     }
     integrateColorTsdfVolumeUnit(settings, cameraPose, depth, image, pixNorms, volume);
+}
+
+void ColorTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+}
+void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+}
+void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
+{
+    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
 }
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const

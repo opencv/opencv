@@ -473,7 +473,7 @@ enum class VolumeTestSrcType
     ODOMETRY_FRAME = 1
 };
 
-void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
+void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
@@ -552,7 +552,86 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction, VolumeT
     normalsCheck(normals);
 }
 
-void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
+void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
+{
+    VolumeSettings vs(volumeType);
+    Volume volume(volumeType, vs);
+
+    Size frameSize(vs.getWidth(), vs.getHeight());
+    Matx33f intr;
+    vs.getCameraIntegrateIntrinsics(intr);
+    bool onlySemisphere = false;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    Mat rgb = scene->rgb(poses[0]);
+    Mat points, normals, tmpnormals, colors;
+
+    OdometryFrame odf;
+    odf.setDepth(depth);
+    odf.setImage(rgb);
+
+    if (testSrcType == VolumeTestSrcType::MAT)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.integrate(depth, rgb, poses[0].matrix);
+        else
+            volume.integrate(depth, poses[0].matrix);
+    }
+    else
+    {
+        volume.integrate(odf, poses[0].matrix);
+    }
+
+    if (testFunction == VolumeTestFunction::RAYCAST)
+    {
+        if (testSrcType == VolumeTestSrcType::MAT)
+        {
+            if (volumeType == VolumeType::ColorTSDF)
+                volume.raycast(poses[0].matrix, points, normals, colors);
+            else
+                volume.raycast(poses[0].matrix, points, normals);
+        }
+        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+        {
+            volume.raycast(poses[0].matrix, odf);
+            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+            if (volumeType == VolumeType::ColorTSDF)
+                odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
+        }
+    }
+    else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, points, tmpnormals, colors);
+        else
+            // hash_tsdf cpu don't works with raycast normals
+            //volume.raycast(poses[0].matrix, points, tmpnormals);
+            volume.fetchPointsNormals(points, tmpnormals);
+
+        volume.fetchNormals(points, normals);
+    }
+    else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
+    {
+        volume.fetchPointsNormals(points, normals);
+    }
+
+    if (testFunction == VolumeTestFunction::RAYCAST && display)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
+    }
+
+    normalsCheck(normals);
+}
+
+void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
@@ -652,221 +731,466 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType)
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-
-#ifndef HAVE_OPENCL
-TEST(TSDF, raycast_normals_mat)
+void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
-    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    VolumeSettings vs(volumeType);
+    Volume volume(volumeType, vs);
+
+    Size frameSize(vs.getWidth(), vs.getHeight());
+    Matx33f intr;
+    vs.getCameraIntegrateIntrinsics(intr);
+    bool onlySemisphere = true;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    Mat rgb = scene->rgb(poses[0]);
+    Mat points, normals, colors, newPoints, newNormals;
+    int anfas, profile;
+
+    OdometryFrame odf;
+    odf.setDepth(depth);
+    odf.setImage(rgb);
+
+    if (testSrcType == VolumeTestSrcType::MAT)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.integrate(depth, rgb, poses[0].matrix);
+        else
+            volume.integrate(depth, poses[0].matrix);
+    }
+    else
+    {
+        volume.integrate(odf, poses[0].matrix);
+    }
+
+    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, points, normals, colors);
+        else
+            volume.raycast(poses[0].matrix, points, normals);
+    }
+    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+    {
+        volume.raycast(poses[0].matrix, odf);
+        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        if (volumeType == VolumeType::ColorTSDF)
+            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
+    }
+
+    patchNaNs(points);
+    anfas = counterOfValid(points);
+
+    if (display)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
+    }
+
+    points.release();
+    normals.release();
+
+    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[17].matrix, points, normals, colors);
+        else
+            volume.raycast(poses[17].matrix, points, normals);
+    }
+    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+    {
+        volume.raycast(poses[17].matrix, odf);
+        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
+        if (volumeType == VolumeType::ColorTSDF)
+            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
+    }
+
+    patchNaNs(points);
+    profile = counterOfValid(points);
+
+    if (display)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
+    }
+
+    // TODO: why profile == 2*anfas ?
+    float percentValidity = float(anfas) / float(profile);
+
+    ASSERT_NE(profile, 0) << "There is no points in profile";
+    ASSERT_NE(anfas, 0) << "There is no points in anfas";
+    ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-TEST(TSDF, raycast_normals_frame)
+
+#ifndef HAVE_OPENCL
+TEST(TSDF, raycast_custom_framesize_normals_mat)
 {
-    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF, raycast_custom_framesize_normals_frame)
+{
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(TSDF, raycast_common_framesize_normals_mat)
+{
+    normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF, raycast_common_framesize_normals_frame)
+{
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(TSDF, fetch_points_normals)
 {
-    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF, fetch_normals)
 {
-    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
-TEST(TSDF, valid_points_mat)
+TEST(TSDF, valid_points_custom_framesize_mat)
 {
-    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(TSDF, valid_points_frame)
+TEST(TSDF, valid_points_custom_framesize_frame)
 {
-    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF, raycast_normals_mat)
+TEST(TSDF, valid_points_common_framesize_mat)
 {
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(HashTSDF, raycast_normals_frame)
+TEST(TSDF, valid_points_common_framesize_frame)
 {
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF, raycast_custom_framesize_normals_mat)
+{
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF, raycast_custom_framesize_normals_frame)
+{
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF, raycast_common_framesize_normals_mat)
+{
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF, raycast_common_framesize_normals_frame)
+{
+    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF, fetch_points_normals)
 {
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF, fetch_normals)
 {
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
-TEST(HashTSDF, valid_points_mat)
+TEST(HashTSDF, valid_points_custom_framesize_mat)
 {
-    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(HashTSDF, valid_points_frame)
+TEST(HashTSDF, valid_points_custom_framesize_frame)
 {
-    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(ColorTSDF, raycast_normals_mat)
+TEST(HashTSDF, valid_points_common_framesize_mat)
 {
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(ColorTSDF, raycast_normals_frame)
+TEST(HashTSDF, valid_points_common_framesize_frame)
 {
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF, raycast_custom_framesize_normals_mat)
+{
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF, raycast_custom_framesize_normals_frame)
+{
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF, raycast_common_framesize_normals_mat)
+{
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF, raycast_common_framesize_normals_frame)
+{
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(ColorTSDF, fetch_normals)
 {
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF, fetch_points_normals)
 {
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
-TEST(ColorTSDF, valid_points_mat)
+TEST(ColorTSDF, valid_points_custom_framesize_mat)
 {
-    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
 }
 
-TEST(ColorTSDF, valid_points_fetch)
+TEST(ColorTSDF, valid_points_custom_framesize_fetch)
 {
-    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
+
+TEST(ColorTSDF, valid_points_common_framesize_mat)
+{
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF, valid_points_common_framesize_fetch)
+{
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
 #else
-TEST(TSDF_CPU, raycast_normals_mat)
+TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, raycast_normals_frame)
+TEST(TSDF_CPU, raycast_custom_framesize_normals_frame)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(TSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(TSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(TSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(TSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, valid_points_mat)
+TEST(TSDF_CPU, valid_points_custom_framesize_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(TSDF_CPU, valid_points_frame)
+TEST(TSDF_CPU, valid_points_custom_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, raycast_normals_mat)
+TEST(TSDF_CPU, valid_points_common_framesize_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, raycast_normals_frame)
+TEST(TSDF_CPU, valid_points_common_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, raycast_custom_framesize_normals_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, raycast_custom_framesize_normals_frame)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, valid_points_mat)
+TEST(HashTSDF_CPU, valid_points_custom_framesize_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, valid_points_frame)
+TEST(HashTSDF_CPU, valid_points_custom_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(ColorTSDF_CPU, raycast_normals_mat)
+TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(ColorTSDF_CPU, raycast_normals_frame)
+TEST(HashTSDF_CPU, valid_points_common_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_frame)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(ColorTSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(ColorTSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(ColorTSDF_CPU, valid_points_mat)
+TEST(ColorTSDF_CPU, valid_points_custom_framesize_mat)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(ColorTSDF_CPU, valid_points_fetch)
+TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, valid_points_common_framesize_mat)
+{
+    cv::ocl::setUseOpenCL(false);
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
+{
+    cv::ocl::setUseOpenCL(false);
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
 
