@@ -119,6 +119,8 @@ public:
     int lastVolIndex;
     int lastFrameId;
     Vec6f frameParams;
+    int volumeUnitDegree;
+
 #ifndef HAVE_OPENCL
     Mat volUnitsData;
     Mat pixNorms;
@@ -132,7 +134,6 @@ public:
     UMat gpu_pixNorms;
 
     int bufferSizeDegree;
-    int volumeUnitDegree;
     // per-volume-unit data
     UMat lastVisibleIndices;
     UMat isActiveFlags;
