@@ -359,7 +359,7 @@ void HashTsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray, Out
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
 #ifndef HAVE_OPENCL
-    fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, volUnitsData, volumeUnits, points, normals);
+    fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals);
 #else
     if (ocl::useOpenCL())
         olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
@@ -371,7 +371,7 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
 #ifndef HAVE_OPENCL
-    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, volUnitsData, volumeUnits, points, normals);
+    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals);
 #else
     if (ocl::useOpenCL())
         ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
