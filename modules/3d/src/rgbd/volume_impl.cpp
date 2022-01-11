@@ -274,7 +274,7 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #endif
     }
 #ifndef HAVE_OPENCL
-    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, depth, pixNorms, volUnitsData, volumeUnits);
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
 #else
     if (ocl::useOpenCL())
@@ -343,7 +343,7 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
-    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volUnitsData, volumeUnits, _points, _normals);
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
 #else
     if (ocl::useOpenCL())
         ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
@@ -359,7 +359,7 @@ void HashTsdfVolume::raycast(InputArray, int, int, OutputArray, OutputArray, Out
 void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
 #ifndef HAVE_OPENCL
-    fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+    fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, volUnitsData, volumeUnits, points, normals);
 #else
     if (ocl::useOpenCL())
         olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
@@ -371,7 +371,7 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 void HashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const
 {
 #ifndef HAVE_OPENCL
-    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, points, normals);
+    fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, volUnitsData, volumeUnits, points, normals);
 #else
     if (ocl::useOpenCL())
         ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
