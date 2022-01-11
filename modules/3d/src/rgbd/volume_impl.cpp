@@ -223,8 +223,6 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
     volumeUnitDegree = calcVolumeUnitDegree(volResolution);
 
 #ifndef HAVE_OPENCL
-    Vec3i resolution;
-    settings.getVolumeResolution(resolution);
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
     reset();
 #else
@@ -234,8 +232,6 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
     }
     else
     {
-        Vec3i resolution;
-        settings.getVolumeResolution(resolution);
         cpu_volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
         reset();
     }
