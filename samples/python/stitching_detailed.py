@@ -246,9 +246,9 @@ def get_matcher(args):
     if matcher_type == "affine":
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
     elif range_width == -1:
-        matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestMatcher(try_cuda, match_conf)
     else:
-        matcher = cv.detail.BestOf2NearestRangeMatcher_create(range_width, try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestRangeMatcher(range_width, try_cuda, match_conf)
     return matcher
 
 
