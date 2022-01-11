@@ -269,7 +269,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
         else if( autoSteps )
         {
             m.step.p[i] = total;
-            int64 total1 = (int64)total*s;
+            uint64 total1 = (uint64)total*s;
             if( (uint64)total1 != (size_t)total1 )
                 CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
             total = (size_t)total1;
