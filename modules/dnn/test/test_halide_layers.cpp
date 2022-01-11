@@ -43,8 +43,8 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
     if (cvtest::debugLevel > 0 || testing::Test::HasFailure())
     {
         std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
-        std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
-        std::cout << outputHalide.reshape(1, outputDefault.total()).t() << std::endl;
+        std::cout << cv::Mat(outputDefault.reshape(1, outputDefault.total()).t()) << std::endl;
+        std::cout << cv::Mat(outputHalide.reshape(1, outputDefault.total()).t()) << std::endl;
     }
 }
 

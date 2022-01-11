@@ -57,7 +57,7 @@ static inline std::string toString(const Mat& blob, const std::string& name = st
     {
         Mat blob_ = blob;
         blob_.dims = 2;  // hack
-        ss << blob_.t();
+        ss << cv::Mat(blob_.t());
     }
     else
     {
