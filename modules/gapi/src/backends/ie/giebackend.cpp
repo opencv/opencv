@@ -19,6 +19,8 @@
 #include <functional>
 #include <unordered_set>
 #include <atomic>
+#include <tuple>
+
 
 #include <ade/util/algorithm.hpp>
 
@@ -507,18 +509,29 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
     cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
     auto ie_core = cv::gimpl::ie::wrap::getCore();
 
-    using ParamType = std::pair<InferenceEngine::TensorDesc,
-                                InferenceEngine::ParamMap>;
+    using ParamType = std::pair<std::pair<InferenceEngine::TensorDesc,
+                                 InferenceEngine::ParamMap>,
+                                 std::pair<InferenceEngine::TensorDesc,
+                                 InferenceEngine::ParamMap>>;
 
     ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
     if (blob_params == nullptr) {
         GAPI_Assert(false && "Incorrect type of blobParams: "
-                              "expected std::pair<InferenceEngine::TensorDesc,"
-                                                 "InferenceEngine::ParamMap>");
+                              "expected std::tuple<InferenceEngine::TensorDesc,"
+                                                  "InferenceEngine::ParamMap,"
+                                                  "InferenceEngine::TensorDesc,"
+                                                  "InferenceEngine::ParamMap>");
     }
 
-    return ctx.uu.rctx->CreateBlob(blob_params->first,
-                                   blob_params->second);
+    auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
+    auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
+
+#if INF_ENGINE_RELEASE >= 2021010000
+    return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
+#else
+    return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+#endif
+
 }
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
