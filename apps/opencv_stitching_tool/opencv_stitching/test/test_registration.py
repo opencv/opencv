@@ -70,8 +70,8 @@ class TestImageRegistration(unittest.TestCase):
         indices_to_delete = subsetter.get_indices_to_delete(len(img_names),
                                                             indices)
 
-        self.assertEqual(indices, [2, 3, 4])
-        self.assertEqual(indices_to_delete, [0, 1])
+        np.testing.assert_array_equal(indices, np.array([2, 3, 4]))
+        np.testing.assert_array_equal(indices_to_delete, np.array([0, 1]))
 
         subsetted_image_names = subsetter.subset_list(img_names, indices)
         self.assertEqual(subsetted_image_names,
