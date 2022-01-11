@@ -172,21 +172,31 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                      irho, tabSin, tabCos);
 
     // stage 1. fill accumulator
-    for( i = 0; i < height; i++ )
-        for( j = 0; j < width; j++ )
-        {
-            if( image[i * step + j] != 0 )
-                for(int n = 0; n < numangle; n++ )
-                {
-                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
-                    r += (numrho - 1) / 2;
-                    if (use_edgeval) {
+    if (use_edgeval) {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
                         accum[(n + 1) * (numrho + 2) + r + 1] += image[i * step + j];
-                    } else {
+                     }
+             }
+    } else {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
                         accum[(n + 1) * (numrho + 2) + r + 1]++;
                     }
-                }
-        }
+            }
+     }
 
     // stage 2. find local maximums
     findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );

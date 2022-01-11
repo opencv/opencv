@@ -2112,9 +2112,7 @@ parameters should be positive.
 Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
 Must fall between min_theta and CV_PI.
-@param use_weight True if you want to use weighted Hough transform.
-@param thre_edgeval For weighted Hough transform, only account for over this
-threthold edge for fast computation
+@param use_edgeval True if you want to use weighted Hough transform.
  */
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
