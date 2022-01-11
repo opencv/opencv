@@ -94,7 +94,6 @@ public:
     /** @brief Extract the all data from volume.
     * @param points the storage of all points.
     * @param normals the storage of all normals, corresponding to points.
-    * @param colors the storage of all colors, corresponding to points (only for ColorTSDF).
     */
     void fetchPointsNormals(OutputArray points, OutputArray normals) const;
     /** @brief Extract the all data from volume.
