@@ -320,8 +320,8 @@ INSTANTIATE_TEST_CASE_P(TransposePerfTestGPU, TransposePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1,
-                    CV_8UC2, CV_16UC2, CV_16SC2, CV_32FC2,
-                    CV_8UC3, CV_16UC3, CV_16SC3, CV_32FC3),
+                   CV_8UC2, CV_16UC2, CV_16SC2, CV_32FC2,
+                   CV_8UC3, CV_16UC3, CV_16SC3, CV_32FC3),
             Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestGPU, ResizePerfTest,
@@ -330,14 +330,14 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestGPU, ResizePerfTest,
             Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
             Values( szSmall128, szVGA, sz720p, sz1080p ),
             Values(cv::Size(64,64),
-                    cv::Size(30,30)),
+                   cv::Size(30,30)),
             Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestGPU, ResizeFxFyPerfTest,
-    Combine(Values(AbsSimilarPoints(2, 0.05).to_compare_f()),
+    Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC1, CV_16UC1, CV_16SC1),
             Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
-            Values( szSmall128, szVGA, sz720p, sz1080p ),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(0.5, 0.1),
             Values(0.5, 0.1),
             Values(cv::compile_args(CORE_GPU))));
