@@ -2333,8 +2333,8 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     MatType type = -1;
     int interp = 1;
     cv::Size sz;
-    double fx = 0.0;
-    double fy = 0.0;
+    double fx = 1.0;
+    double fy = 1.0;
     cv::GCompileArgs compile_args;
     std::tie(cmpF, type, interp, sz, fx, fy, compile_args) = GetParam();
 
@@ -2342,7 +2342,7 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat1, mean, stddev);
-    cv::Size sz_out = cv::Size(saturate_cast<int>(sz.width *fx), saturate_cast<int>(sz.height*fy));
+    cv::Size sz_out = cv::Size();
     out_mat_gapi = cv::Mat(sz_out, type);
     out_mat_ocv = cv::Mat(sz_out, type);
 
