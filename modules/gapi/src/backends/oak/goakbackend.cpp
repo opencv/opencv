@@ -41,7 +41,7 @@ class GOAKExecutable final: public GIslandExecutable {
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
-    void LinkToParent(ade::NodeHandle handle);
+    void LinkToParents(ade::NodeHandle handle);
 
     class ExtractTypeHelper : protected dai::Node {
     public:
@@ -179,7 +179,7 @@ template<typename U> struct get_out<cv::GArray<U>> {
 
 struct OAKKernelParams {
     const std::unique_ptr<dai::Pipeline>& pipeline;
-    const cv::Size& camera_wh;
+    const cv::Size& camera_size;
     std::vector<std::pair<std::string, dai::Buffer>>& m_in_queues;
 };
 
@@ -241,30 +241,23 @@ using ConstOAKGraph = ade::ConstTypedGraph
 // This function links dai operation nodes - parent's output to child's input.
 // It utilizes G-API graph to search for operation's node it's previous operation in graph
 // when links them in dai graph.
-void cv::gimpl::GOAKExecutable::LinkToParent(ade::NodeHandle handle)
+void cv::gimpl::GOAKExecutable::LinkToParents(ade::NodeHandle handle)
 {
     ade::NodeHandle parent;
     for (const auto& data_nh : handle.get()->inNodes()) {
-        // data_nh - node's input data
-        // need to find which other node produces that data
-        for (const auto& node : m_oak_nodes) {
-            auto nh = node.first;
-            for (const auto& outdatah : nh.get()->outNodes()) {
-                if (data_nh == outdatah) {
-                    parent = nh;
-                }
-            }
-        }
-    }
+        // Data node has only 1 input
+        GAPI_Assert(data_nh.get()->inNodes().size() == 1);
+        parent = data_nh.get()->inNodes().front();
 
-    GAPI_Assert(m_oak_nodes[handle].inputs.size() ==
-                m_oak_nodes[parent].outputs.size());
-    for (auto && it : ade::util::zip(ade::util::toRange(m_oak_nodes[parent].outputs),
-                                     ade::util::toRange(m_oak_nodes[handle].inputs)))
-    {
-        auto &out = std::get<0>(it);
-        auto &in = std::get<1>(it);
-        out->link(*in);
+        GAPI_Assert(m_oak_nodes.at(handle).inputs.size() ==
+                    m_oak_nodes.at(parent).outputs.size());
+        for (auto && it : ade::util::zip(ade::util::toRange(m_oak_nodes.at(parent).outputs),
+                                         ade::util::toRange(m_oak_nodes.at(handle).inputs)))
+        {
+            auto &out = std::get<0>(it);
+            auto &in = std::get<1>(it);
+            out->link(*in);
+        }
     }
 }
 
@@ -335,11 +328,12 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 {
                     ++oak_islands;
                 }
+                if (oak_islands > 1) {
+                    util::throw_error
+                        (std::logic_error
+                            ("There can only be one OAK island in graph"));
+                }
             }
-        }
-
-        if (oak_islands != 1) {
-            GAPI_Assert(false && "There can only be a single OAK island in graph");
         }
 
         // FIXME: change the hard-coded behavior (XLinkIn path)
@@ -371,20 +365,20 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 // pass kernel input args and compile args to prepare OAK node and
                 // store it to link later
                 m_oak_nodes[nh] = {};
-                m_oak_nodes[nh].inputs.reserve(op.args.size());
-                m_oak_nodes[nh].outputs.reserve(op.outs.size());
+                m_oak_nodes.at(nh).inputs.reserve(op.args.size());
+                m_oak_nodes.at(nh).outputs.reserve(op.outs.size());
 
                 std::vector<cv::GArg> in_ctx_args;
                 in_ctx_args.reserve(op.args.size());
                 for (auto &op_arg : op.args) in_ctx_args.push_back(packInArg(op_arg,
-                                                                           m_oak_nodes[nh].inputs));
-                for (auto &&op_out : op.outs) packOutArg(op_out, m_oak_nodes[nh].outputs);
-                GAPI_Assert(!m_oak_nodes[nh].inputs.empty());
-                GAPI_Assert(!m_oak_nodes[nh].outputs.empty());
+                                                                           m_oak_nodes.at(nh).inputs));
+                for (auto &&op_out : op.outs) packOutArg(op_out, m_oak_nodes.at(nh).outputs);
+                GAPI_Assert(!m_oak_nodes.at(nh).inputs.empty());
+                GAPI_Assert(!m_oak_nodes.at(nh).outputs.empty());
 
-                GOAKContext ctx(m_pipeline, m_camera_size, in_ctx_args, m_oak_nodes[nh].outputs);
-                m_oak_nodes[nh].node = u.k.m_put_f(ctx, m_in_queues);
-                GAPI_Assert(m_oak_nodes[nh].node != nullptr);
+                GOAKContext ctx(m_pipeline, m_camera_size, in_ctx_args, m_oak_nodes.at(nh).outputs);
+                m_oak_nodes.at(nh).node = u.k.m_put_f(ctx, m_in_queues);
+                GAPI_Assert(m_oak_nodes.at(nh).node != nullptr);
             }
         }
 
@@ -441,20 +435,20 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         // Properly link all nodes
         // 1. Link input nodes to camera
         for (const auto& nh : in_nodes) {
-            GAPI_Assert(m_oak_nodes[nh].inputs.size() == 1);
+            GAPI_Assert(m_oak_nodes.at(nh).inputs.size() == 1);
             // FIXME: covert other camera outputs
-            m_camera_input->video.link(*(m_oak_nodes[nh].inputs[0]));
+            m_camera_input->video.link(*(m_oak_nodes.at(nh).inputs[0]));
         }
 
         // 2. Link output nodes to XLinkOut nodes
         size_t out_counter = 0;
         for (const auto& nh : out_nodes) {
-            GAPI_Assert(m_oak_nodes[nh].outputs.size() == 1);
+            GAPI_Assert(m_oak_nodes.at(nh).outputs.size() == 1);
             GAPI_Assert(out_counter < m_xlink_outputs.size());
-            m_oak_nodes[nh].outputs[0]->link(m_xlink_outputs[out_counter++]->input);
+            m_oak_nodes.at(nh).outputs[0]->link(m_xlink_outputs[out_counter++]->input);
             // Input nodes in OAK doesn't have parent operation - just camera (for now)
             if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
-                LinkToParent(nh);
+                LinkToParents(nh);
             }
         }
 
@@ -462,7 +456,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         for (const auto& nh : inter_nodes) {
             // Input nodes in OAK doesn't have parent operation - just camera (for now)
             if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
-                LinkToParent(nh);
+                LinkToParents(nh);
             }
         }
 
@@ -638,7 +632,7 @@ GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
                                           GOAKContext::OutputPtr& out) {
         auto edgeDetector = params.pipeline->create<dai::node::EdgeDetector>();
 
-        edgeDetector->setMaxOutputFrameSize(params.camera_wh.width * params.camera_wh.height);
+        edgeDetector->setMaxOutputFrameSize(params.camera_size.width * params.camera_size.height);
 
         auto xinEdgeCfg = params.pipeline->create<dai::node::XLinkIn>();
         xinEdgeCfg->setStreamName("sobel_cfg");
