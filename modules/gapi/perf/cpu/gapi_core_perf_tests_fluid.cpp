@@ -353,7 +353,7 @@ INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPer
             Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+    Combine(Values(AbsExact().to_compare_f()),
             Values(CV_8UC3),
             Values(cv::INTER_LINEAR),
             Values(szSmall128, szVGA, sz720p, sz1080p),

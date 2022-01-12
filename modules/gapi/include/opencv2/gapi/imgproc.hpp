@@ -504,8 +504,8 @@ namespace imgproc {
             }
             else
             {
-                int outSz_w = static_cast<int>(round(in.size.width  * fx));
-                int outSz_h = static_cast<int>(round(in.size.height * fy));
+                int outSz_w = saturate_cast<int>(in.size.width  * fx);
+                int outSz_h = saturate_cast<int>(in.size.height * fy);
                 GAPI_Assert(outSz_w > 0 && outSz_h > 0);
                 return in.withSize(Size(outSz_w, outSz_h));
             }
