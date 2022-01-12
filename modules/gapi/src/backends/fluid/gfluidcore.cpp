@@ -951,10 +951,17 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
         break;
     }
     case ARITHM_DIVIDE:
-        for (int w=0; w < width; w++)
-            for (int c=0; c < chan; c++)
-                out[chan*w + c] = div<DST>(in[chan*w + c], scalar[c], scale);
+    {
+        int w = 0;
+#if CV_SIMD
+        int set_mask_flag = static_cast<int>(scalar[18]);
+        w = divc_simd(in, scalar, out, length, chan, scale, set_mask_flag);
+#endif
+        for (; w < width; ++w)
+            for (int c = 0; c < chan; ++c)
+                out[chan * w + c] = div<DST>(in[chan * w + c], scalar[c], scale);
         break;
+    }
     default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -1295,31 +1302,87 @@ GAPI_FLUID_KERNEL(GFluidMulCOld, cv::gapi::core::GMulCOld, true)
     }
 };
 
-GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, false)
+GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
 {
     static const int Window = 1;
 
-    static void run(const View &src, const cv::Scalar &_scalar, double _scale, int /*dtype*/,
-                    Buffer &dst)
+    static void run(const View& src, const cv::Scalar& _scalar, double _scale, int /*dtype*/,
+                    Buffer& dst, Buffer& scratch)
     {
-        const float scalar[4] = {
-            static_cast<float>(_scalar[0]),
-            static_cast<float>(_scalar[1]),
-            static_cast<float>(_scalar[2]),
-            static_cast<float>(_scalar[3])
-        };
-        const float scale = static_cast<float>(_scale);
+        GAPI_Assert(src.meta().chan <= 4);
+
+        if (dst.y() == 0)
+        {
+            const int chan = src.meta().chan;
+            float* sc = scratch.OutLine<float>();
+            int scratch_length = scratch.length();
+
+            for (int i = 0; i < scratch_length - 1; ++i)
+                sc[i] = static_cast<float>(_scalar[i % chan]);
+
+            sc[scratch_length - 1] = 0.0;
+            for (int j = 0; j < chan; ++j)
+            {
+                if (std::fabs(static_cast<float>(_scalar[j])) <= FLT_EPSILON)
+                {
+                    sc[scratch_length - 1] = 1.0;
+                    break;
+                }
+            }
+        }
+        const float* scalar = scratch.OutLine<float>();
+        float scale = static_cast<float>(_scale);
 
         //     DST     SRC     OP            __VA_ARGS__
-        UNARY_(uchar , uchar , run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  short, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  float, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( short,  short, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float, uchar , run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  short, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  float, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  ushort, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  short,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  float,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, ushort, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, uchar,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, short,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, float,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  short,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  ushort, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  float,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  uchar,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  short,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  ushort, run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  float,  run_arithm_s, dst, src, scalar, ARITHM_DIVIDE, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GMatDesc&, const GScalarDesc&, double, int, Buffer& scratch)
+    {
+#if CV_SIMD
+            // 512 bits / 32 bits = 16 elements of float32 a AVX512 SIMD vector can contain.
+            constexpr int maxNlanes = 16;
+
+            // +2 is offset for 3-channel case.
+            // Offset is need to right load coefficients from scalar array to SIMD vectors for 3-channel case.
+            // Scalar array looks like: scalar[] = {C1, C2, C3, C1, C2, C3, ...}
+            // The first scalar SIMD vector should looks like:
+            // C1 C2 C3 C1
+            // The second:
+            // C2 C3 C1 C2
+            // The third:
+            // C3 C1 C2 C3
+            constexpr int offset = 2;
+            constexpr int zero_scalar_elem_indicator = 1;
+            constexpr int buflen = maxNlanes + offset + zero_scalar_elem_indicator;
+#else
+            constexpr int buflen = 4;
+#endif
+            cv::Size bufsize(buflen, 1);
+            GMatDesc bufdesc = { CV_32F, 1, bufsize };
+            Buffer buffer(bufdesc);
+            scratch = std::move(buffer);
+    }
+
+    static void resetScratch(Buffer& /*scratch*/)
+    {
     }
 };
 
