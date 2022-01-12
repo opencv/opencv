@@ -290,7 +290,7 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
     #ifdef HAVE_OPENCV_DNN
     return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
     #else
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN is depend on dnn module.");
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
     #endif
 }
 
