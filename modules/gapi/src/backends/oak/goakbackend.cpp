@@ -57,8 +57,7 @@ class GOAKExecutable final: public GIslandExecutable {
         std::vector<ExtractTypeHelper::OutputPtr> outputs = {};
     };
 
-    std::reference_wrapper<cv::GArg> packArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins,
-                                             std::vector<cv::GArg>& oak_wrapped_args);
+    cv::GArg packArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins);
     void outArg(const RcDesc &rc, std::vector<ExtractTypeHelper::OutputPtr>& oak_outs);
 
     const ade::Graph& m_g;
@@ -88,8 +87,6 @@ class GOAKExecutable final: public GIslandExecutable {
     std::unique_ptr<dai::Device> m_device;
     std::unique_ptr<dai::Pipeline> m_pipeline;
 
-    std::vector<cv::GArg> m_oak_wrapped_args;
-
 public:
     GOAKExecutable(const ade::Graph& g,
                    const cv::GCompileArgs& args,
@@ -118,12 +115,12 @@ public:
 
     GOAKContext(const std::unique_ptr<dai::Pipeline>& pipeline,
                 const cv::Size& camera_size,
-                std::vector<std::reference_wrapper<cv::GArg>>& args,
+                std::vector<cv::GArg>& args,
                 std::vector<OutputPtr>& results);
 
     // Generic accessor API
     template<typename T>
-    T& inArg(int input) { return m_args.at(input).get().get<T>(); }
+    T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // FIXME: consider not using raw pointers
     InputPtr& in(int input);
@@ -135,13 +132,13 @@ public:
 private:
     const std::unique_ptr<dai::Pipeline>& m_pipeline;
     const cv::Size& m_camera_size;
-    std::vector<std::reference_wrapper<cv::GArg>>& m_args;
+    std::vector<cv::GArg>& m_args;
     std::vector<OutputPtr>& m_outputs;
 };
 
 GOAKContext::GOAKContext(const std::unique_ptr<dai::Pipeline>& pipeline,
                          const cv::Size& camera_size,
-                         std::vector<std::reference_wrapper<cv::GArg>>& args,
+                         std::vector<cv::GArg>& args,
                          std::vector<OutputPtr>& results)
     : m_pipeline(pipeline), m_camera_size(camera_size), m_args(args), m_outputs(results) {}
 
@@ -154,7 +151,7 @@ const cv::Size& GOAKContext::camera_size() const {
 }
 
 GOAKContext::InputPtr& GOAKContext::in(int input) {
-    return inArg<GOAKContext::InputPtr>(input);
+    return inArg<std::reference_wrapper<GOAKContext::InputPtr>>(input).get();
 }
 
 GOAKContext::OutputPtr& GOAKContext::out(int output) {
@@ -269,10 +266,9 @@ void cv::gimpl::GOAKExecutable::LinkToParentHelper(ade::NodeHandle handle,
     }
 }
 
-std::reference_wrapper<cv::GArg>
+cv::GArg
 cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
-                                   std::vector<ExtractTypeHelper::InputPtr>& oak_ins,
-                                   std::vector<cv::GArg>& oak_wrapped_args) {
+                                   std::vector<ExtractTypeHelper::InputPtr>& oak_ins) {
     if (arg.kind != cv::detail::ArgKind::GOBJREF) {
         GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
                     && arg.kind != cv::detail::ArgKind::GSCALAR
@@ -287,8 +283,7 @@ cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
     switch (ref.shape) {
     case GShape::GFRAME:
         oak_ins.push_back(nullptr);
-        oak_wrapped_args.push_back(GArg(oak_ins.back()));
-        return oak_wrapped_args.back();
+        return GArg(std::reference_wrapper<ExtractTypeHelper::InputPtr>(oak_ins.back()));
         break;
     default:
         util::throw_error(std::logic_error("Unsupported GShape type in OAK backend"));
@@ -340,17 +335,6 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
             m_xlink_outputs.push_back(xout);
         }
 
-        // Reserve for all wrapped GArgs
-        size_t garg_size = 0;
-        for (const auto& nh : nodes) {
-            if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
-                garg_size += m_gm.metadata(nh).get<Op>().args.size();
-            }
-        }
-        m_oak_wrapped_args.reserve(garg_size);
-
-        size_t curr_arg_idx = 0;
-
         // Create OAK node for each node in this backend
         for (const auto& nh : nodes) {
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
@@ -362,11 +346,10 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 m_oak_nodes[nh].inputs.reserve(op.args.size());
                 m_oak_nodes[nh].outputs.reserve(op.outs.size());
 
-                std::vector<std::reference_wrapper<cv::GArg>> in_ctx_args;
+                std::vector<cv::GArg> in_ctx_args;
                 in_ctx_args.reserve(op.args.size());
                 for (auto &op_arg : op.args) in_ctx_args.push_back(packArg(op_arg,
-                                                                           m_oak_nodes[nh].inputs,
-                                                                           m_oak_wrapped_args));
+                                                                           m_oak_nodes[nh].inputs));
                 for (auto &&op_out : op.outs) outArg(op_out, m_oak_nodes[nh].outputs);
                 GAPI_Assert(!m_oak_nodes[nh].inputs.empty());
                 GAPI_Assert(!m_oak_nodes[nh].outputs.empty());
@@ -374,13 +357,6 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 GOAKContext ctx(m_pipeline, m_camera_wh, in_ctx_args, m_oak_nodes[nh].outputs);
                 m_oak_nodes[nh].node = u.k.m_f(ctx, m_in_queues);
                 GAPI_Assert(m_oak_nodes[nh].node != nullptr);
-
-                // Restore wrapped input references
-                // FIXME: where is a problem somewhere - should work w/o this hack
-                for (size_t i = 0; i < m_oak_nodes[nh].inputs.size(); ++i) {
-                    m_oak_nodes[nh].inputs[i] = m_oak_wrapped_args.at(curr_arg_idx + i).get<ExtractTypeHelper::InputPtr>();
-                }
-                curr_arg_idx += op.args.size();
             }
         }
 
@@ -441,11 +417,6 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                             GAPI_Assert(m_oak_nodes[nh].outputs.size() == 1);
                             GAPI_Assert(out_counter < m_xlink_outputs.size());
                             m_oak_nodes[nh].outputs[0]->link(m_xlink_outputs[out_counter++]->input);
-
-                            if (!m_oak_nodes[nh].processed) {
-                                LinkToParentHelper(nh, nodes);
-                                m_oak_nodes[nh].processed = true;
-                            }
                         }
                     }
                 }
@@ -458,7 +429,6 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
                 if (!m_oak_nodes[nh].processed) {
                     LinkToParentHelper(nh, nodes);
-                    m_oak_nodes[nh].processed = true;
                 }
             }
         }
