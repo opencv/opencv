@@ -717,7 +717,7 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
-    return depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F;
+    return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F;
 }
 
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
@@ -861,7 +861,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         int width = img.cols, height = img.rows;
         int type = img.type();
         int depth = CV_MAT_DEPTH(type);
-        CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+        CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
         CV_CheckType(type, channels >= 1 && channels <= 4, "");
 
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width));
@@ -884,19 +884,28 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         int page_compression = compression;
 
         int bitsPerChannel = -1;
+        uint16 sample_format = SAMPLEFORMAT_INT;
         switch (depth)
         {
             case CV_8U:
+                sample_format = SAMPLEFORMAT_UINT;
+            case CV_8S:
             {
                 bitsPerChannel = 8;
                 break;
             }
+
             case CV_16U:
+                sample_format = SAMPLEFORMAT_UINT;
+            case CV_16S:
             {
                 bitsPerChannel = 16;
                 break;
             }
+
             case CV_32F:
+                sample_format = SAMPLEFORMAT_IEEEFP;
+            case CV_32S:
             {
                 bitsPerChannel = 32;
                 page_compression = COMPRESSION_NONE;
@@ -906,6 +915,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             {
                 bitsPerChannel = 64;
                 page_compression = COMPRESSION_NONE;
+                sample_format = SAMPLEFORMAT_IEEEFP;
                 break;
             }
             default:
@@ -931,7 +941,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsPerStrip));
 
-        CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, depth >= CV_32F ? SAMPLEFORMAT_IEEEFP : SAMPLEFORMAT_UINT));
+        CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, sample_format));
 
         if (page_compression != COMPRESSION_NONE)
         {
@@ -1030,7 +1040,7 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
     int type = img.type();
     int depth = CV_MAT_DEPTH(type);
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
 
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
