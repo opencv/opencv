@@ -1188,6 +1188,7 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
         CV_Assert(starts.size() == ends.size());
 
         if (axis > 0) {
+            CV_CheckLE(axis, 1024, "Slice layer can't have more than 1024 axes"); // arbitrary limit
             begin.resize(axis, 0);
             end.resize(axis, -1);
         }
@@ -1470,6 +1471,13 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const int numDirs = Wx.size[0];  // Is 1 for forward only and 2 for bidirectional LSTM.
     const int numFeatures = Wx.size[2];
 
+    // Following checks are deduced from the IFGO->IGFO loop below
+    // Wx is numDirs X numHidden*3 X numFeatures
+    // Wh is numDirs X numHidden*3 X numHidden
+    CV_CheckLE(numHidden * 3, Wx.size[1], "Wx should have beat  least 3x hidden_size in dimension 1");
+    CV_CheckLE(numHidden * 3, Wh.size[1], "Wh should have be at least 3x hidden_size in dimension 1");
+    CV_CheckLE(numHidden, Wh.size[2], "Wh should have be at least hidden_size in dimension 2");
+
     Mat h0, c0;
     if (!node_proto.input(5).empty()) {
         h0 = getBlob(node_proto, 5);
@@ -1490,6 +1498,9 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     Mat bx = b.colRange(0, b.cols / 2);
     Mat bh = b.colRange(b.cols / 2, b.cols);
     b = bx + bh;
+
+    // b is numDirs X numHidden*3
+    CV_CheckLE(numHidden * 3, b.cols, "Bias data should have at least 3x hidden_size columns");
 
     // IFGO->IGFO
     for (int k = 0; k < numDirs; ++k)
