@@ -319,6 +319,29 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         // FIXME: currently OAK backend only works with camera as input,
         //        so it must be a single object
         GAPI_Assert(ins_data.size() == 1);
+
+        // Check that there is only one OAK island in graph since there
+        // can only be one instance of dai::Pipeline in the application
+        auto isl_graph = m_gm.metadata().get<IslandModel>().model;
+        GIslandModel::Graph gim(*isl_graph);
+        size_t oak_islands = 0;
+
+        for (const auto& nh : gim.nodes())
+        {
+            if (gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND)
+            {
+                const auto isl = gim.metadata(nh).get<FusedIsland>().object;
+                if (isl->backend() == cv::gapi::oak::backend())
+                {
+                    ++oak_islands;
+                }
+            }
+        }
+
+        if (oak_islands != 1) {
+            GAPI_Assert(false && "There can only be a single OAK island in graph");
+        }
+
         // FIXME: change the hard-coded behavior (XLinkIn path)
         auto camRgb = m_pipeline->create<dai::node::ColorCamera>();
         // FIXME: extract camera compile arguments here and properly convert them for dai
