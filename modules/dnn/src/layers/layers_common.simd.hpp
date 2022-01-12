@@ -81,6 +81,8 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                int blockSize, int vecsize, int vecsize_aligned,
                const float* relu, bool initOutput )
 {
+    CV_Assert(isAligned<32>(weights));
+
     int outCn = outShape[1];
     size_t outPlaneSize = outShape[2]*outShape[3];
     float r0 = 1.f, r1 = 1.f, r2 = 1.f;

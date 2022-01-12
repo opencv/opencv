@@ -421,7 +421,9 @@ public:
         if (!blobs.empty())
         {
             Mat wm = blobs[0].reshape(1, numOutput);
-            if( wm.step1() % VEC_ALIGN != 0 )
+            if ((wm.step1() % VEC_ALIGN != 0) ||
+                !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
+            )
             {
                 int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
                 Mat wm_buffer = Mat(numOutput, newcols, wm.type());
@@ -1660,7 +1662,6 @@ public:
                                 }
                             }
                         }
-
                         // now compute dot product of the weights
                         // and im2row-transformed part of the tensor
                     #if CV_TRY_AVX512_SKX
