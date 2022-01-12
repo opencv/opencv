@@ -16,7 +16,7 @@ if img_object is None or img_scene is None:
 
 #-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
 minHessian = 400
-detector = cv.xfeatures2d_SURF.create(hessianThreshold=minHessian)
+detector = cv.xfeatures2d_SURF_create(hessianThreshold=minHessian)
 keypoints_obj, descriptors_obj = detector.detectAndCompute(img_object, None)
 keypoints_scene, descriptors_scene = detector.detectAndCompute(img_scene, None)
 

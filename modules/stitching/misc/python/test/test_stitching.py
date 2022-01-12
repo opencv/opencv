@@ -24,7 +24,7 @@ class stitching_detail_test(NewOpenCVTests):
 
     def test_simple(self):
         img = self.get_sample('stitching/a1.png')
-        finder= cv.ORB.create()
+        finder= cv.ORB_create()
         imgFea = cv.detail.computeImageFeatures2(finder,img)
         self.assertIsNotNone(imgFea)
 

@@ -5,13 +5,13 @@ import cv2 as cv
 class FeatureDetector:
     DETECTOR_CHOICES = OrderedDict()
     try:
-        cv.xfeatures2d_SURF.create()  # check if the function can be called
-        DETECTOR_CHOICES['surf'] = cv.xfeatures2d_SURF.create
+        cv.xfeatures2d_SURF_create()  # check if the function can be called
+        DETECTOR_CHOICES['surf'] = cv.xfeatures2d_SURF_create
     except (AttributeError, cv.error):
         print("SURF not available")
 
     # if SURF not available, ORB is default
-    DETECTOR_CHOICES['orb'] = cv.ORB.create
+    DETECTOR_CHOICES['orb'] = cv.ORB_create
 
     try:
         DETECTOR_CHOICES['sift'] = cv.SIFT_create

@@ -29,12 +29,12 @@ BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
 FEATURES_FIND_CHOICES = OrderedDict()
 try:
-    cv.xfeatures2d_SURF.create() # check if the function can be called
-    FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
+    cv.xfeatures2d_SURF_create() # check if the function can be called
+    FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF_create
 except (AttributeError, cv.error) as e:
     print("SURF not available")
 # if SURF not available, ORB is default
-FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
+FEATURES_FIND_CHOICES['orb'] = cv.ORB_create
 try:
     FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
 except AttributeError:

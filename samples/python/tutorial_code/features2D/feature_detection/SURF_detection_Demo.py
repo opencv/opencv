@@ -14,7 +14,7 @@ if src is None:
 
 #-- Step 1: Detect the keypoints using SURF Detector
 minHessian = 400
-detector = cv.xfeatures2d_SURF.create(hessianThreshold=minHessian)
+detector = cv.xfeatures2d_SURF_create(hessianThreshold=minHessian)
 keypoints = detector.detect(src)
 
 #-- Draw keypoints
