@@ -15,7 +15,6 @@ namespace cv {
 namespace gapi {
 namespace oak {
 
-// FIXME: introduce a proper adapter
 class GAPI_EXPORTS OAKMediaAdapter final : public cv::MediaFrame::IAdapter {
 public:
     OAKMediaAdapter();

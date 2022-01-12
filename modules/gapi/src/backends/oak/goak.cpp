@@ -13,21 +13,8 @@
 #include <chrono>
 
 namespace cv {
-namespace gimpl {
-namespace oak {
-
-// Internal kernel package defined by the backend itself.
-// The function is defined in goakbackend.cpp
-cv::gapi::GKernelPackage kernels();
-
-} // namespace oak
-} // namespace gimpl
-
 namespace gapi {
 namespace oak {
-
-// Forward declaration in case was built w/o OAK
-class OAKMediaAdapter;
 
 GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& cfg) {
     return GEncFrame::on(in, cfg);
@@ -35,10 +22,6 @@ GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& cfg) {
 
 GFrame sobelXY(const GFrame& in, const cv::Mat& hk, const cv::Mat& vk) {
     return GSobelXY::on(in, hk, vk);
-}
-
-cv::gapi::GKernelPackage kernels() {
-    return cv::gimpl::oak::kernels();
 }
 
 // This is a dummy oak::ColorCamera class that just makes our pipelining

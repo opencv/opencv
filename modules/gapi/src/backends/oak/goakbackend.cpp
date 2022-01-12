@@ -13,6 +13,8 @@
 #include <algorithm> // any_of
 #include <functional> // reference_wrapper
 
+#include <ade/util/zip_range.hpp>
+
 #include <api/gbackend_priv.hpp>
 #include <backends/common/gbackend.hpp>
 
@@ -39,8 +41,7 @@ class GOAKExecutable final: public GIslandExecutable {
     virtual void run(GIslandExecutable::IInput &in,
                      GIslandExecutable::IOutput &out) override;
 
-    void LinkToParentHelper(ade::NodeHandle handle,
-                            const std::vector<ade::NodeHandle>& nodes);
+    void LinkToParent(ade::NodeHandle handle);
 
     class ExtractTypeHelper : protected dai::Node {
     public:
@@ -52,13 +53,12 @@ class GOAKExecutable final: public GIslandExecutable {
 
     struct OAKNodeInfo {
         std::shared_ptr<dai::Node> node = nullptr;
-        bool processed = false;
         std::vector<ExtractTypeHelper::InputPtr> inputs = {};
         std::vector<ExtractTypeHelper::OutputPtr> outputs = {};
     };
 
-    cv::GArg packArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins);
-    void outArg(const RcDesc &rc, std::vector<ExtractTypeHelper::OutputPtr>& oak_outs);
+    cv::GArg packInArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins);
+    void packOutArg(const RcDesc &rc, std::vector<ExtractTypeHelper::OutputPtr>& oak_outs);
 
     const ade::Graph& m_g;
     GModel::ConstGraph m_gm;
@@ -70,7 +70,7 @@ class GOAKExecutable final: public GIslandExecutable {
 
     // Will be reworked later when XLinkIn will be introduced as input
     std::shared_ptr<dai::node::ColorCamera> m_camera_input;
-    cv::Size m_camera_wh;
+    cv::Size m_camera_size;
 
     // Backend outputs
     std::vector<std::shared_ptr<dai::node::XLinkOut>> m_xlink_outputs;
@@ -216,8 +216,8 @@ struct OAKCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> > {
 struct GOAKKernel {
     using F = std::function<std::shared_ptr<dai::Node>(GOAKContext&,
                                                        std::vector<std::pair<std::string, dai::Buffer>>&)>;
-    explicit GOAKKernel(const F& f) : m_f(f) {}
-    const F m_f;
+    explicit GOAKKernel(const F& f) : m_put_f(f) {}
+    const F m_put_f;
 };
 
 struct OAKComponent
@@ -241,34 +241,36 @@ using ConstOAKGraph = ade::ConstTypedGraph
 // This function links dai operation nodes - parent's output to child's input.
 // It utilizes G-API graph to search for operation's node it's previous operation in graph
 // when links them in dai graph.
-void cv::gimpl::GOAKExecutable::LinkToParentHelper(ade::NodeHandle handle,
-                                                   const std::vector<ade::NodeHandle>& nodes)
+void cv::gimpl::GOAKExecutable::LinkToParent(ade::NodeHandle handle)
 {
     ade::NodeHandle parent;
     for (const auto& data_nh : handle.get()->inNodes()) {
         // data_nh - node's input data
         // need to find which other node produces that data
-        for (const auto& nh : nodes) {
-            if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
-                for (const auto& outdatah : nh.get()->outNodes()) {
-                    if (data_nh == outdatah) {
-                        parent = nh;
-                    }
+        for (const auto& node : m_oak_nodes) {
+            auto nh = node.first;
+            for (const auto& outdatah : nh.get()->outNodes()) {
+                if (data_nh == outdatah) {
+                    parent = nh;
                 }
             }
         }
     }
-    GAPI_Assert(m_oak_nodes.find(parent) != m_oak_nodes.end());
+
     GAPI_Assert(m_oak_nodes[handle].inputs.size() ==
                 m_oak_nodes[parent].outputs.size());
-    for (size_t i = 0; i < m_oak_nodes[handle].inputs.size(); ++i) {
-        m_oak_nodes[parent].outputs[i]->link(*(m_oak_nodes[handle].inputs[i]));
+    for (auto && it : ade::util::zip(ade::util::toRange(m_oak_nodes[parent].outputs),
+                                     ade::util::toRange(m_oak_nodes[handle].inputs)))
+    {
+        auto &out = std::get<0>(it);
+        auto &in = std::get<1>(it);
+        out->link(*in);
     }
 }
 
 cv::GArg
-cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
-                                   std::vector<ExtractTypeHelper::InputPtr>& oak_ins) {
+cv::gimpl::GOAKExecutable::packInArg(const GArg &arg,
+                                     std::vector<ExtractTypeHelper::InputPtr>& oak_ins) {
     if (arg.kind != cv::detail::ArgKind::GOBJREF) {
         GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
                     && arg.kind != cv::detail::ArgKind::GSCALAR
@@ -291,8 +293,8 @@ cv::gimpl::GOAKExecutable::packArg(const GArg &arg,
     }
 }
 
-void cv::gimpl::GOAKExecutable::outArg(const RcDesc &rc,
-                                       std::vector<ExtractTypeHelper::OutputPtr>& oak_outs) {
+void cv::gimpl::GOAKExecutable::packOutArg(const RcDesc &rc,
+                                           std::vector<ExtractTypeHelper::OutputPtr>& oak_outs) {
     switch (rc.shape) {
     case GShape::GFRAME:
         oak_outs.push_back(nullptr);
@@ -314,6 +316,9 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
     : m_g(g), m_gm(m_g), m_args(args),
       m_device(nullptr), m_pipeline(new dai::Pipeline)
     {
+        // FIXME: currently OAK backend only works with camera as input,
+        //        so it must be a single object
+        GAPI_Assert(ins_data.size() == 1);
         // FIXME: change the hard-coded behavior (XLinkIn path)
         auto camRgb = m_pipeline->create<dai::node::ColorCamera>();
         // FIXME: extract camera compile arguments here and properly convert them for dai
@@ -324,7 +329,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         m_camera_input = camRgb;
         // FIXME: change when other camera censors are introduced
         std::tuple<int, int> video_size = camRgb->getVideoSize();
-        m_camera_wh = cv::Size{std::get<0>(video_size), std::get<1>(video_size)};
+        m_camera_size = cv::Size{std::get<0>(video_size), std::get<1>(video_size)};
 
         // Prepare XLinkOut nodes for each output object in graph
         for (size_t i = 0; i < outs_data.size(); ++i) {
@@ -348,14 +353,14 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
 
                 std::vector<cv::GArg> in_ctx_args;
                 in_ctx_args.reserve(op.args.size());
-                for (auto &op_arg : op.args) in_ctx_args.push_back(packArg(op_arg,
+                for (auto &op_arg : op.args) in_ctx_args.push_back(packInArg(op_arg,
                                                                            m_oak_nodes[nh].inputs));
-                for (auto &&op_out : op.outs) outArg(op_out, m_oak_nodes[nh].outputs);
+                for (auto &&op_out : op.outs) packOutArg(op_out, m_oak_nodes[nh].outputs);
                 GAPI_Assert(!m_oak_nodes[nh].inputs.empty());
                 GAPI_Assert(!m_oak_nodes[nh].outputs.empty());
 
-                GOAKContext ctx(m_pipeline, m_camera_wh, in_ctx_args, m_oak_nodes[nh].outputs);
-                m_oak_nodes[nh].node = u.k.m_f(ctx, m_in_queues);
+                GOAKContext ctx(m_pipeline, m_camera_size, in_ctx_args, m_oak_nodes[nh].outputs);
+                m_oak_nodes[nh].node = u.k.m_put_f(ctx, m_in_queues);
                 GAPI_Assert(m_oak_nodes[nh].node != nullptr);
             }
         }
@@ -378,67 +383,75 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
             }
         }
 
-        // Properly link all nodes
-        // 1. Link input nodes to camera
-        for (const auto& d : ins_data)
-        {
-            for (const auto& nh : nodes)
-            {
-                if (m_gm.metadata(nh).contains<cv::gimpl::Op>())
-                {
-                    for (const auto& indata : nh.get()->inNodes()) {
-                        auto rc = m_gm.metadata(indata).get<cv::gimpl::Data>().rc;
-                        if (rc == d.rc)
-                        {
-                            GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
-                            GAPI_Assert(m_oak_nodes[nh].inputs.size() == 1);
-                            // FIXME: covert other camera outputs
-                            m_camera_input->video.link(*(m_oak_nodes[nh].inputs[0]));
-                            m_oak_nodes[nh].processed = true;
-                        }
+        // Prepare nodes for linking
+        std::vector<ade::NodeHandle> in_nodes;
+        std::vector<ade::NodeHandle> out_nodes;
+        std::vector<ade::NodeHandle> inter_nodes;
+
+        for (const auto& node : m_oak_nodes) {
+            auto nh = node.first;
+            // Fill input op nodes
+            for (const auto& d : ins_data) {
+                for (const auto& indata : nh.get()->inNodes()) {
+                    auto rc = m_gm.metadata(indata).get<cv::gimpl::Data>().rc;
+                    if (rc == d.rc) {
+                        in_nodes.push_back(nh);
                     }
                 }
             }
+            // Fill output op nodes
+            for (const auto& d : outs_data) {
+                for (const auto& outdata : nh.get()->outNodes()) {
+                    auto rc = m_gm.metadata(outdata).get<cv::gimpl::Data>().rc;
+                    if (rc == d.rc) {
+                        out_nodes.push_back(nh);
+                    }
+                }
+            }
+            // Fill internal op nodes
+            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end() &&
+                std::find(out_nodes.begin(), out_nodes.end(), nh) == out_nodes.end()) {
+                inter_nodes.push_back(nh);
+            }
+        }
+
+        // Properly link all nodes
+        // 1. Link input nodes to camera
+        for (const auto& nh : in_nodes) {
+            GAPI_Assert(m_oak_nodes[nh].inputs.size() == 1);
+            // FIXME: covert other camera outputs
+            m_camera_input->video.link(*(m_oak_nodes[nh].inputs[0]));
         }
 
         // 2. Link output nodes to XLinkOut nodes
         size_t out_counter = 0;
-        for (const auto& d : outs_data)
-        {
-            for (const auto& nh : nodes)
-            {
-                if (m_gm.metadata(nh).contains<cv::gimpl::Op>())
-                {
-                    for (const auto& outdata : nh.get()->outNodes()) {
-                        auto rc = m_gm.metadata(outdata).get<cv::gimpl::Data>().rc;
-                        if (rc == d.rc)
-                        {
-                            GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
-                            GAPI_Assert(m_oak_nodes[nh].outputs.size() == 1);
-                            GAPI_Assert(out_counter < m_xlink_outputs.size());
-                            m_oak_nodes[nh].outputs[0]->link(m_xlink_outputs[out_counter++]->input);
-                        }
-                    }
-                }
+        for (const auto& nh : out_nodes) {
+            GAPI_Assert(m_oak_nodes[nh].outputs.size() == 1);
+            GAPI_Assert(out_counter < m_xlink_outputs.size());
+            m_oak_nodes[nh].outputs[0]->link(m_xlink_outputs[out_counter++]->input);
+            // Input nodes in OAK doesn't have parent operation - just camera (for now)
+            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
+                LinkToParent(nh);
             }
         }
 
         // 3. Link internal nodes to their parents
-        for (const auto& nh : nodes) {
-            if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
-                GAPI_Assert(m_oak_nodes.find(nh) != m_oak_nodes.end());
-                if (!m_oak_nodes[nh].processed) {
-                    LinkToParentHelper(nh, nodes);
-                }
+        for (const auto& nh : inter_nodes) {
+            // Input nodes in OAK doesn't have parent operation - just camera (for now)
+            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
+                LinkToParent(nh);
             }
         }
 
         m_device = std::unique_ptr<dai::Device>(new dai::Device(*m_pipeline));
 
         // Prepare all output queues
-        for (size_t i = 0; i < outs_data.size(); ++i) {
+        for (const auto out_it : ade::util::indexed(outs_data))
+        {
             // FIXME: add queue parameters
-            m_out_queues.push_back(m_device->getOutputQueue(m_out_queue_names[i], 30, true));
+            // Currently: 30 - max DAI queue capacity, true - blocking queue
+            m_out_queues.push_back(m_device->getOutputQueue(
+                                        m_out_queue_names[ade::util::index(out_it)], 30, true));
         }
     }
 
@@ -459,14 +472,16 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         return;
     }
 
-    for (size_t i = 0; i < m_in_queues.size(); ++i) {
-        auto q = m_device->getInputQueue(m_in_queues[i].first);
-        q->send(m_in_queues[i].second);
+    for (const auto& in_q : m_in_queues) {
+        auto q = m_device->getInputQueue(in_q.first);
+        q->send(in_q.second);
     }
 
     for (size_t i = 0; i < m_out_queues.size(); ++i) {
         auto q = m_out_queues[i];
         // TODO: support other DAI types if needed
+        // Note: we utilize getData() method that returns std::vector of data
+        //       on which we gain ownership
         auto oak_frame = q->get<dai::ImgFrame>();
 
         auto out_arg = out.get(i);
@@ -628,23 +643,28 @@ GAPI_OAK_KERNEL(GOAKSobelXY, cv::gapi::oak::GSobelXY) {
     }
 };
 } // anonymous namespace
+} // namespace oak
+} // namespace gimpl
+} // namespace cv
 
-cv::gapi::GKernelPackage kernels();
+namespace cv {
+namespace gapi {
+namespace oak {
 
 cv::gapi::GKernelPackage kernels() {
-    return cv::gapi::kernels< GOAKEncFrame
-                            , GOAKSobelXY
+    return cv::gapi::kernels< cv::gimpl::oak::GOAKEncFrame
+                            , cv::gimpl::oak::GOAKSobelXY
                             >();
 }
 
 } // namespace oak
-} // namespace gimpl
+} // namespace gapi
 } // namespace cv
 
 #else
 
 namespace cv {
-namespace gimpl {
+namespace gapi {
 namespace oak {
 
 cv::gapi::GKernelPackage kernels();
@@ -655,7 +675,7 @@ cv::gapi::GKernelPackage kernels() {
 }
 
 } // namespace oak
-} // namespace gimpl
+} // namespace gapi
 } // namespace cv
 
 #endif // HAVE_OAK
