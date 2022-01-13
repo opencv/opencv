@@ -18,7 +18,7 @@ namespace cv
 * @param RGB       only rgb image
 * @param RGB_DEPTH only depth and rgb data simultaneously
 */
-enum class OdometryType
+enum OdometryType
 {
     DEPTH     = 0,
     RGB       = 1,
@@ -32,13 +32,13 @@ enum class OdometryType
 enum class OdometryAlgoType
 {
     COMMON = 0,
-    FAST   = 1
+    FAST = 1
 };
 
 class CV_EXPORTS_W Odometry
 {
 public:
-    Odometry();
+    CV_WRAP Odometry();
     Odometry(OdometryType otype, const OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
@@ -71,6 +71,8 @@ public:
      *   0    0    0    1  }
      */
     bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt);
+    
+    CV_WRAP bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt);
 
     class Impl;
 private:

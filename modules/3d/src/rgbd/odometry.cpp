@@ -21,6 +21,7 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) = 0;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) = 0;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
+    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const = 0;
 };
 
 
@@ -38,6 +39,7 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
 };
 
 OdometryICP::OdometryICP(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -86,6 +88,28 @@ bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     return isCorrect;
 }
 
+bool OdometryICP::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArray Rt) const
+{
+    OdometryFrame srcFrame, dstFrame;
+    srcFrame.setDepth(_srcFrame);
+    dstFrame.setDepth(_dstFrame);
+
+    prepareICPFrame(srcFrame, dstFrame, this->settings, this->algtype);
+
+    Matx33f cameraMatrix;
+    settings.getCameraMatrix(cameraMatrix);
+    std::vector<int> iterCounts;
+    Mat miterCounts;
+    settings.getIterCounts(miterCounts);
+    for (int i = 0; i < miterCounts.size().height; i++)
+        iterCounts.push_back(miterCounts.at<int>(i));
+    bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
+        this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
+        iterCounts, this->settings.getMaxTranslation(),
+        this->settings.getMaxRotation(), settings.getSobelScale(),
+        OdometryType::DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);    
+    return isCorrect;
+}
 
 class OdometryRGB : public Odometry::Impl
 {
@@ -101,6 +125,7 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
 };
 
 OdometryRGB::OdometryRGB(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -145,6 +170,7 @@ bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
         OdometryType::RGB, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
+bool OdometryRGB::compute(InputArray, InputArray, OutputArray) const {return false;}
 
 
 class OdometryRGBD : public Odometry::Impl
@@ -161,6 +187,7 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
 };
 
 OdometryRGBD::OdometryRGBD(OdometrySettings _settings, OdometryAlgoType _algtype)
@@ -204,6 +231,7 @@ bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& d
         OdometryType::RGB_DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
+bool OdometryRGBD::compute(InputArray, InputArray, OutputArray) const {return false;}
 
 
 Odometry::Odometry()
@@ -260,6 +288,11 @@ void Odometry::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt)
 {
     //this->prepareFrames(srcFrame, dstFrame);
+    return this->impl->compute(srcFrame, dstFrame, Rt);
+}
+
+bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt)
+{
     return this->impl->compute(srcFrame, dstFrame, Rt);
 }
 

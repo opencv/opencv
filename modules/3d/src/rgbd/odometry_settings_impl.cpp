@@ -108,10 +108,13 @@ private:
 public:
     class DefaultSets {
     public:
-        const cv::Matx33f defaultCameraMatrix =
-        { /* fx, 0, cx*/ 0, 0, 0,
-            /* 0, fy, cy*/ 0, 0, 0,
-            /* 0,  0,  0*/ 0, 0, 0 };
+        static const int width  = 640;
+        static const int height = 480;
+        static constexpr float fx = 525.f;
+        static constexpr float fy = 525.f;
+        static constexpr float cx = float(width) / 2.f - 0.5f;
+        static constexpr float cy = float(height) / 2.f - 0.5f;
+        const cv::Matx33f defaultCameraMatrix = { fx, 0, cx, 0, fy, cy, 0, 0, 1 };
         const std::vector<int> defaultIterCounts = { 7, 7, 7, 10 };
 
         static constexpr float defaultMinDepth = 0.f;
