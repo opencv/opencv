@@ -9,27 +9,54 @@ import sys
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-src',
-        '--source_frame',
+        '--algo',
+        help="""DEPTH - works with depth,
+                RGB - works with images,
+                RGB_DEPTH - works with all,
+                defalt - runs all algos""",
         default="")
     parser.add_argument(
-        '-dst',
-        '--destination_frame',
+        '-src_d',
+        '--source_depth_frame',
         default="")
-
+    parser.add_argument(
+        '-dst_d',
+        '--destination_depth_frame',
+        default="")
+    parser.add_argument(
+        '-src_rgb',
+        '--source_rgb_frame',
+        default="")
+    parser.add_argument(
+        '-dst_rgb',
+        '--destination_rgb_frame',
+        default="")
 
     args = parser.parse_args()
 
-    depth1 = cv.imread(args.source_frame, cv.IMREAD_ANYDEPTH)
-    depth2 = cv.imread(args.destination_frame, cv.IMREAD_ANYDEPTH)
+    depth1 = cv.imread(args.source_depth_frame, cv.IMREAD_ANYDEPTH)
+    depth2 = cv.imread(args.destination_depth_frame, cv.IMREAD_ANYDEPTH)
 
-    odometry = cv.Odometry()
+    rgb1 = cv.imread(args.source_rgb_frame, cv.IMREAD_COLOR)
+    rgb2 = cv.imread(args.destination_rgb_frame, cv.IMREAD_COLOR)
 
-    Rt = np.zeros((4, 4))
+    if args.algo == "DEPTH" or args.algo == "":
+        odometry = cv.Odometry(cv.DEPTH)
+        Rt = np.zeros((4, 4))
+        odometry.compute(depth1, depth2, Rt)
+        print(Rt)
+    if args.algo == "RGB" or args.algo == "":
+        odometry = cv.Odometry(cv.RGB)
+        Rt = np.zeros((4, 4))
+        odometry.compute(rgb1, rgb2, Rt)
+        print(Rt)
+    if args.algo == "RGB_DEPTH" or args.algo == "":
+        odometry = cv.Odometry(cv.RGB_DEPTH)
+        Rt = np.zeros((4, 4))
+        odometry.compute(depth1, rgb1, depth2, rgb2, Rt)
+        print(Rt)
 
-    odometry.compute(depth1, depth2, Rt)
 
-    print(Rt)
 
 if __name__ == '__main__':
     main()
