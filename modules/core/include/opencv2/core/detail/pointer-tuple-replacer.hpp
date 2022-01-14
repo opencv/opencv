@@ -168,7 +168,8 @@ constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7
                          replace_single_element(t10));
 }
 
-///Thanks to https://stackoverflow.com/questions/34745581/forbids-functions-with-static-assert#comment57237292_34745581
+
+//Thanks to https://stackoverflow.com/questions/34745581/forbids-functions-with-static-assert#comment57237292_34745581
 template <typename...>
 struct always_false { static constexpr bool value = false; };
 
@@ -176,7 +177,6 @@ template<typename ... Args> void make_tpl_replaced(Args... ){
 static_assert(always_false<Args...>::value,
               "Zeor or more than ten arguments are currently not supported for forwarding to stl.");
 }
-
 
 
 } // namespace detail

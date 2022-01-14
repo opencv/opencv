@@ -13,12 +13,13 @@ class CORE_stl_forward : public ::testing::Test {
 
     void SetUp() override
     {
-        mat = cv::Mat(13,13,CV_32S);
-        mat_f = cv::Mat_<float>(13,13);
+        size_t size = 13;
+        mat = cv::Mat(size,size,CV_32S);
+        mat_f = cv::Mat_<float>(size,size);
 
 
-        intVec = std::vector<int>(13*13);
-        intList = std::list<int>(13*13);
+        intVec = std::vector<int>(size*size);
+        intList = std::list<int>(size*size);
 
         subMat = mat(cv::Rect(2,2,7,7));
         matSub_f = mat_f(cv::Rect(2,2,7,7));
@@ -125,6 +126,15 @@ TEST_F(CORE_stl_forward, tuple_replacer)
     static_assert(std::is_same<std::tuple_element<2,decltype(itReplaced_lambda)>::type,int*>::value,"CV iterators not replaced with their pointers.");
 }
 
+TEST_F(CORE_stl_forward, __get_first_cv_it_index)
+{
+    static_assert(cv::detail::__get_first_cv_it_index<decltype(mat.begin<int>())>() == 0, "Wrong index chosen");
+    static_assert(cv::detail::__get_first_cv_it_index<decltype(mat.begin<int>()),decltype(mat.end<int>())>() == 0, "Wrong index chosen");
+
+    static_assert(cv::detail::__get_first_cv_it_index<decltype(intVec.begin()), decltype(intVec.begin())>() == 0, "Wrong index chosen");
+    static_assert(cv::detail::__get_first_cv_it_index<decltype(intVec.begin()), decltype(intVec.begin()), decltype(mat.begin<int>())>() == 2, "Wrong index chosen");
+    static_assert(cv::detail::__get_first_cv_it_index<decltype(intVec.begin()), decltype(mat.begin<int>()), decltype(intVec.begin())>() == 1, "Wrong index chosen");
+}
 
 TEST_F(CORE_stl_forward, DISABLED_tuple_replacer_reverse_iterator)
 {
@@ -171,5 +181,19 @@ TEST_F(CORE_stl_forward, count_if_test)
     EXPECT_EQ(experimental::count_if(mat.begin<int>(), mat.end<int>(),lambda), std::count_if((int*)mat.begin<int>().ptr, (int*)mat.end<int>().ptr,lambda));
 }
 
+TEST_F(CORE_stl_forward, find_test)
+{
+    //Test replaced iterators vs. normal stl algo
+    EXPECT_EQ(*experimental::find(mat.begin<int>(), mat.end<int>(),5),5);
+    EXPECT_EQ(*experimental::find(mat_f.begin(), mat_f.end(),5),*std::find(mat_f.begin(), mat_f.end(),5));
+
+    std::ptrdiff_t replaced_dist = experimental::find(mat.begin<int>(), mat.end<int>(),10) - mat.begin<int>();
+    std::ptrdiff_t orig_dist = std::find(mat.begin<int>(), mat.end<int>(),10) - mat.begin<int>();
+
+    EXPECT_EQ(replaced_dist,orig_dist);
+}
+
+
 
 }} // namespace
+

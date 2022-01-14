@@ -108,6 +108,38 @@ template <typename... Args> bool __iterators__replaceable(Args &&... args) {
   return continuousPair.first && continuousPair.second;
 }
 
+//Find the first index of an openCV iterator in a tuple or return zero.
+//Thanks to https://stackoverflow.com/questions/26855322/how-do-i-get-the-index-of-a-type-matching-some-predicate
+template <template <class T> class, typename, long = 0>
+struct find_if;
+
+template <template <class T> class Pred, typename T, long pos, typename... tail>
+struct find_if<Pred, std::tuple<T, tail...>, pos> :
+    std::conditional<Pred<T>::value,
+                     std::integral_constant<int64_t, pos>,
+                     find_if<Pred, std::tuple<tail...>, pos+1>>::type {};
+
+template <template <class T> class Pred>
+struct find_if<Pred, std::tuple<>> : std::integral_constant<int64_t, -1> {};
+
+template <template <class, class> class T, class U>
+struct bind
+{
+    template <class X>
+    using first  = T<U, X>;
+    template <class X>
+    using second = T<X, U>;
+};
+
+
+/// Helper function: Return the index of the first cv::MatConstIterator derived type.
+/// Extends the tuple with an iterator such that it will always be found, otherwise compilation fails
+template<typename ...Args> constexpr size_t __get_first_cv_it_index()
+{
+    return find_if<bind<std::is_base_of, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value == sizeof ...(Args) ? 0 : find_if<bind<std::is_base_of, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value;
+}
+
+
 } // namespace detail
 } // namespace cv
 #endif // OPENCV_CORE_DETAIL_DISPATCH_HELPER_IMPL_HPP

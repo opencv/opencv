@@ -37,5 +37,22 @@ template <> struct make_index_sequence<1> : index_sequence<0> {};
 template <bool B, class T = void>
 using enable_if_t = typename std::enable_if<B, T>::type;
 
+
+//Compile time for loop. Credit to https://stackoverflow.com/questions/37602057/why-isnt-a-for-loop-a-compile-time-expression
+template<size_t N>
+struct num { static const constexpr auto value = N; };
+
+template <class F, std::size_t... Is>
+void for_(F func, index_sequence<Is...>) {
+  using expander = int[];
+  (void)expander{0, ((void)func(num<Is>{}), 0)...};
+}
+
+template <std::size_t N, typename F> void for_(F func) {
+  for_(func, make_index_sequence<N>());
+}
+
+
+
 }}
 #endif //OPENCV_CORE_STL_ALGORITHM_HPP
