@@ -2952,14 +2952,13 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         dst[l] = out.OutLine<T>(l);
     }
 
-#if 0 // Disabling SSE4.1 path due to Valgrind issues: https://github.com/opencv/opencv/issues/21097
 #if CV_SSE4_1
     const auto* clone = scr.clone;
     auto* tmp = scr.tmp;
 
     if (inSz.width >= 16 && outSz.width >= 16)
     {
-        sse42::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
+        sse41::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
                                                 reinterpret_cast<const uint8_t**>(src0),
                                                 reinterpret_cast<const uint8_t**>(src1),
                                                 reinterpret_cast<const short*>(alpha),
@@ -2972,7 +2971,6 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         return;
     }
 #endif // CV_SSE4_1
-#endif
     int length = out.length();
     for (int l = 0; l < lpi; l++) {
         constexpr static const auto unity = Mapper::unity;
