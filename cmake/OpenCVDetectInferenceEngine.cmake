@@ -1,22 +1,20 @@
-# The script detects Intel(R) Inference Engine installation
-#
-# Cache variables:
-# INF_ENGINE_RELEASE - a number reflecting IE source interface (linked with OpenVINO release)
-#
-# Detect parameters:
-# 1. Native cmake IE package:
-#    - environment variable InferenceEngine_DIR is set to location of cmake module
-# 2. Custom location:
-#    - INF_ENGINE_INCLUDE_DIRS - headers search location
-#    - INF_ENGINE_LIB_DIRS     - library search location
-# 3. OpenVINO location:
-#    - environment variable INTEL_OPENVINO_DIR is set to location of OpenVINO installation dir
-#    - INF_ENGINE_PLATFORM - part of name of library directory representing its platform
+# The script detects Intel(R) OpenVINO(TM) runtime installation
 #
 # Result:
-# INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
-#
+# - target ocv.3rdparty.openvino
 
+if(WITH_OPENVINO)
+  find_package(OpenVINO QUIET)
+  if(OpenVINO_FOUND)
+    message(STATUS "OpenVINO FOUND: ${OpenVINO_VERSION}")
+    math(EXPR ver "${OpenVINO_VERSION_MAJOR} * 1000000 + ${OpenVINO_VERSION_MINOR} * 10000 + ${OpenVINO_VERSION_PATCH} * 100")
+    ocv_add_external_target(openvino "" "openvino::runtime" "INF_ENGINE_RELEASE=${ver};HAVE_NGRAPH;HAVE_DNN_NGRAPH;HAVE_INF_ENGINE")
+    set(HAVE_OPENVINO 1)
+    return()
+  endif()
+endif()
+
+# ======================
 
 macro(ocv_ie_find_extra_libraries find_prefix find_suffix)
   file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${find_prefix}inference_engine*${find_suffix}")
@@ -145,15 +143,19 @@ if(NOT INF_ENGINE_TARGET AND _loc)
   add_custom_ie_build("${ie_custom_env_inc}" "${ie_custom_env_lib}" "${ie_custom_env_lib_rel}" "${ie_custom_env_lib_dbg}" "OpenVINO (${_loc})")
 endif()
 
-# Add more features to the target
+set(tgts)
+set(defs)
 
+# Add more features to the target
 if(INF_ENGINE_TARGET)
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
       INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )
+  list(APPEND tgts ${INF_ENGINE_TARGET})
+  list(APPEND defs "INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}" "HAVE_INF_ENGINE")
 endif()
 
-if(WITH_NGRAPH)
+if(WITH_NGRAPH OR NOT DEFINED WITH_NGRAPH)
   find_package(ngraph QUIET)
   if(ngraph_FOUND)
     ocv_assert(TARGET ngraph::ngraph)
@@ -162,5 +164,9 @@ if(WITH_NGRAPH)
     endif()
     message(STATUS "Detected ngraph: cmake package (${ngraph_VERSION})")
     set(HAVE_NGRAPH ON)
+    list(APPEND tgts ngraph::ngraph)
+    list(APPEND defs "HAVE_NGRAPH" "HAVE_DNN_NGRAPH")
   endif()
 endif()
+
+ocv_add_external_target(openvino "" "${tgts}" "${defs}")

@@ -290,12 +290,10 @@ OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
-OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
+# replacement for deprecated options: WITH_INF_ENGINE, WITH_NGRAPH
+OCV_OPTION(WITH_OPENVINO "Include Intel OpenVINO toolkit support" (WITH_INF_ENGINE)
   VISIBLE_IF TRUE
-  VERIFY INF_ENGINE_TARGET)
-OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
-  VISIBLE_IF TRUE
-  VERIFY TARGET ngraph::ngraph)
+  VERIFY TARGET ocv.3rdparty.openvino)
 OCV_OPTION(WITH_WEBNN "Include WebNN support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_WEBNN)
@@ -802,7 +800,7 @@ if(WITH_WEBNN)
 endif()
 
 # --- Inference Engine ---
-if(WITH_INF_ENGINE)
+if(WITH_INF_ENGINE OR WITH_OPENVINO)
   include(cmake/OpenCVDetectInferenceEngine.cmake)
 endif()
 
@@ -1537,55 +1535,61 @@ if(WITH_HALIDE OR HAVE_HALIDE)
   status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
 endif()
 
-if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
-  if(INF_ENGINE_TARGET)
-    list(GET INF_ENGINE_TARGET 0 ie_target)
-    set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
-    ocv_get_imported_target(ie_target "${ie_target}")
-    get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
-    ocv_build_features_string(_lib
-      IF _lib THEN "${_lib}"
-      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
-      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
-      IF _lib_rel  THEN "${_lib_rel}"
-      IF _lib_dbg  THEN "${_lib_dbg}"
-      ELSE "unknown"
-    )
-    get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
-    status("    Inference Engine:" "${__msg}")
-    status("        * libs:" "${_lib}")
-    status("        * includes:" "${_inc}")
-  else()
-    status("    Inference Engine:"     "NO")
+if(HAVE_OPENVINO
+    OR (WITH_OPENVINO AND NOT WITH_INF_ENGINE AND NOT INF_ENGINE_TARGET)
+)
+  status("    OpenVINO:" TARGET openvino::runtime THEN "YES (${OpenVINO_VERSION})" ELSE "NO")
+else()
+  if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
+    if(INF_ENGINE_TARGET)
+      list(GET INF_ENGINE_TARGET 0 ie_target)
+      set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
+      ocv_get_imported_target(ie_target "${ie_target}")
+      get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
+      get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
+      get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
+      get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
+      get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
+      ocv_build_features_string(_lib
+        IF _lib THEN "${_lib}"
+        IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+        IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+        IF _lib_rel  THEN "${_lib_rel}"
+        IF _lib_dbg  THEN "${_lib_dbg}"
+        ELSE "unknown"
+      )
+      get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
+      status("    Inference Engine:" "${__msg}")
+      status("        * libs:" "${_lib}")
+      status("        * includes:" "${_inc}")
+    else()
+      status("    Inference Engine:"     "NO")
+    endif()
   endif()
-endif()
-if(WITH_NGRAPH OR HAVE_NGRAPH)
-  if(HAVE_NGRAPH)
-    ocv_get_imported_target(__target ngraph::ngraph)
-    set(__msg "YES (${ngraph_VERSION})")
-    get_target_property(_lib ${__target} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
-    ocv_build_features_string(_lib
-      IF _lib THEN "${_lib}"
-      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
-      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
-      IF _lib_rel  THEN "${_lib_rel}"
-      IF _lib_dbg  THEN "${_lib_dbg}"
-      ELSE "unknown"
-    )
-    get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
-    status("    nGraph:" "${__msg}")
-    status("        * libs:" "${_lib}")
-    status("        * includes:" "${_inc}")
-  else()
-    status("    nGraph:"     "NO")
+  if(WITH_NGRAPH OR HAVE_NGRAPH)
+    if(HAVE_NGRAPH)
+      ocv_get_imported_target(__target ngraph::ngraph)
+      set(__msg "YES (${ngraph_VERSION})")
+      get_target_property(_lib ${__target} IMPORTED_LOCATION)
+      get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
+      get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
+      get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
+      get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
+      ocv_build_features_string(_lib
+        IF _lib THEN "${_lib}"
+        IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+        IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+        IF _lib_rel  THEN "${_lib_rel}"
+        IF _lib_dbg  THEN "${_lib_dbg}"
+        ELSE "unknown"
+      )
+      get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
+      status("    nGraph:" "${__msg}")
+      status("        * libs:" "${_lib}")
+      status("        * includes:" "${_inc}")
+    else()
+      status("    nGraph:"     "NO")
+    endif()
   endif()
 endif()
 
