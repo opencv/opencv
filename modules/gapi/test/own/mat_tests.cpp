@@ -109,6 +109,55 @@ TEST(OwnMat, Create3chan)
     ASSERT_FALSE(m.empty());
 }
 
+TEST(OwnMat, OwnMatSize)
+{
+    auto size = cv::Size{32,16};
+    Mat m;
+    m.create(size, CV_8UC3);
+
+    std::cout << m.size << std::endl;
+
+    ASSERT_EQ(m.size().width, 32);
+    ASSERT_EQ(m.size().height, 16);
+    ASSERT_EQ(m.size(), size);
+    ASSERT_EQ(m.size[0], 16);
+    ASSERT_EQ(m.size[1], 32);
+}
+
+TEST(OwnMat, OwnMatNDSize)
+{
+    Dims dims = {1,3,32,16};
+    Mat m;
+    m.create(dims, CV_32F);
+
+    std::cout << m.size << std::endl;
+
+    ASSERT_EQ(m.size.dims(), 4);
+    ASSERT_EQ(m.size[0], 1);
+    ASSERT_EQ(m.size[1], 3);
+    ASSERT_EQ(m.size[2], 32);
+    ASSERT_EQ(m.size[3], 16);
+}
+
+TEST(OwnMat, OwnMatOperators)
+{
+    Dims dims1 = {1,3,32,16};
+    Dims dims2 = {1,3,16,32};
+    auto size = cv::Size{32,16};
+
+    Mat m1, m2, m3, m4;
+
+    m1.create(dims1, CV_32F);
+    m2.create(dims2, CV_32F);
+    m3.create(size, CV_8UC3);
+    m4.create(size, CV_8UC3);
+
+    ASSERT_FALSE(m1.size == m2.size);
+    ASSERT_TRUE(m1.size != m2.size);
+    ASSERT_TRUE(m3.size == m4.size);
+    ASSERT_FALSE(m3.size != m4.size);
+}
+
 struct NonEmptyMat {
     cv::gapi::own::Size size{32,16};
     Mat m;

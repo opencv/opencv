@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_TYPES_HPP
 
 #include <algorithm>              // std::max, std::min
+#include <opencv2/gapi/own/assert.hpp>
 #include <ostream>
 
 namespace cv
@@ -113,6 +114,13 @@ public:
         height = rhs.height;
         return *this;
     }
+    //! the area (width*height)
+    int area() {
+        const int result = width * height;
+        GAPI_DbgAssert(!std::numeric_limits<int>::is_integer
+            || width == 0 || result / width == height); // make sure the result fits in the return value
+        return result;
+    }
 #endif // !defined(GAPI_STANDALONE)
 
     int width  = 0;
@@ -136,7 +144,6 @@ inline bool operator!=(const Size& lhs, const Size& rhs)
     return !(lhs == rhs);
 }
 
-
 inline std::ostream& operator<<(std::ostream& o, const Size& s)
 {
     o << "[" << s.width << " x " << s.height << "]";
@@ -144,6 +151,81 @@ inline std::ostream& operator<<(std::ostream& o, const Size& s)
 }
 
 struct VoidType {};
+
+struct MatSize
+{
+    MatSize() = default;
+    explicit MatSize(int* _p, std::vector<int>* _dims_p) : p(_p), dims_p(_dims_p) {}
+    #if !defined(GAPI_STANDALONE)
+    int dims() const
+    {
+        GAPI_DbgAssert(p[0] == -1 && p[1] == -1);
+        return dims_p->size();
+    }
+    Size operator()() const
+    {
+        GAPI_DbgAssert(dims() <= 2);
+        return Size(p[1], p[0]);
+    }
+    const int& operator[](int i) const
+    {
+        GAPI_DbgAssert(i >= 0);
+        if (!dims_p->empty())
+        {
+            return dims_p->at(i);
+        }
+        else
+        {
+            GAPI_DbgAssert(i <= 1 && i >= 0);
+            return p[i];
+        }
+    }
+    int& operator[](int i)
+    {
+        GAPI_DbgAssert(i >= 0);
+        if (!dims_p->empty())
+        {
+            return dims_p->at(i);
+        }
+        else
+        {
+            GAPI_DbgAssert(i <= 1 && i >= 0);
+            return p[i];
+        }
+    }
+    bool operator == (const MatSize& sz) const
+    {
+        return (this->p[0] == sz[0] && this->p[1] == sz[1] && *this->dims_p == *sz.dims_p);
+    }
+    bool operator != (const MatSize& sz) const
+    {
+        return !(*this == sz);
+    }
+    #endif // !defined(GAPI_STANDALONE)
+
+    int* p;
+    std::vector<int>* dims_p;
+};
+
+inline std::ostream& operator<<(std::ostream& o, const MatSize& s)
+{
+    const auto dims = s.dims();
+    if (dims <= 2)
+    {
+        o << "[" << s().width << " x " << s().height << "]";
+    }
+    else
+    {
+        o << "[";
+        for (int i = 0; i < dims; ++i)
+        {
+            o << s.dims_p->at(i);
+            if (i != dims - 1) o << " x ";
+        }
+        o << "]";
+    }
+    return o;
+}
 } // namespace own
 } // namespace gapi
 } // namespace cv

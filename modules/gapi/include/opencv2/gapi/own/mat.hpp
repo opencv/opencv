@@ -43,16 +43,17 @@ namespace cv { namespace gapi { namespace own {
         //Devoted class is needed to implement custom behavior on move (erasing state of moved from object)
         struct MatHeader{
             enum { AUTO_STEP = 0};
-            enum { TYPE_MASK = 0x00000FFF  };
+            enum { TYPE_MASK = 0x00000FFF };
 
             MatHeader() = default;
 
             MatHeader(int _rows, int _cols, int type, void* _data, size_t _step)
-            : flags((type & TYPE_MASK)), rows(_rows), cols(_cols), data((uchar*)_data), step(_step == AUTO_STEP ? detail::default_step(type, _cols) : _step)
+            : flags((type & TYPE_MASK)), rows(_rows), cols(_cols), data((uchar*)_data), step(_step == AUTO_STEP ? detail::default_step(type, _cols) : _step),
+              size(&rows, &dims)
             {}
 
             MatHeader(const std::vector<int> &_dims, int type, void* _data)
-            : flags((type & TYPE_MASK)), data((uchar*)_data), step(0), dims(_dims)
+            : flags((type & TYPE_MASK)), data((uchar*)_data), step(0), dims(_dims), size(&rows, &dims)
             {}
 
             MatHeader(const MatHeader& ) = default;
@@ -82,6 +83,8 @@ namespace cv { namespace gapi { namespace own {
             size_t step = 0;
             //! dimensions (ND-case)
             std::vector<int> dims;
+            //! dimensional size of the matrix; accessible in various formats
+            MatSize size;
         };
     } // namespace detail
     //concise version of cv::Mat suitable for GAPI needs (used when no dependence on OpenCV is required)
@@ -239,6 +242,7 @@ namespace cv { namespace gapi { namespace own {
                 tmp.data = tmp.memory.get();
 
                 *this = std::move(tmp);
+                this->size = MatSize(&this->rows, &this->dims);
             }
         }
 
@@ -252,6 +256,7 @@ namespace cv { namespace gapi { namespace own {
             tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
             tmp.data = tmp.memory.get();
             *this = std::move(tmp);
+            this->size = MatSize(&this->rows, &this->dims);
         }
 
         /** @brief Creates a full copy of the matrix and the underlying data.
@@ -341,12 +346,10 @@ namespace cv { namespace gapi { namespace own {
             return data + step * row + CV_ELEM_SIZE(type()) * col;
         }
 
-
     private:
         //actual memory allocated for storage, or nullptr if object is non owning view to over memory
         std::shared_ptr<uchar> memory;
     };
-
 } //namespace own
 } //namespace gapi
 } //namespace cv
