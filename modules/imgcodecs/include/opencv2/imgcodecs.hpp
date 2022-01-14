@@ -96,16 +96,16 @@ enum ImwriteFlags {
        IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
-       IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values.
-       IMWRITE_TIFF_XDPI = 257,//!< For TIFF, use to specify the X direction DPI.
-       IMWRITE_TIFF_YDPI = 258, //!< For TIFF, use to specify the Y direction DPI.
-       IMWRITE_TIFF_COMPRESSION = 259 //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values.
+       IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI.
+       IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI.
+       IMWRITE_TIFF_COMPRESSION    = 259 //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
      };
 
 enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
-       IMWRITE_EXR_TYPE_HALF = 1,   //!< store as HALF (FP16)
-       IMWRITE_EXR_TYPE_FLOAT = 2   //!< store as FP32 (default)
+       IMWRITE_EXR_TYPE_HALF   = 1, //!< store as HALF (FP16)
+       IMWRITE_EXR_TYPE_FLOAT  = 2  //!< store as FP32 (default)
      };
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
@@ -124,14 +124,14 @@ enum ImwritePNGFlags {
        IMWRITE_PNG_STRATEGY_FIXED        = 4  //!< Using this value prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
      };
 
-//! Imwrite PAM specific tupletype flags used to define the 'TUPETYPE' field of a PAM file.
+//! Imwrite PAM specific tupletype flags used to define the 'TUPLETYPE' field of a PAM file.
 enum ImwritePAMFlags {
-       IMWRITE_PAM_FORMAT_NULL = 0,
-       IMWRITE_PAM_FORMAT_BLACKANDWHITE = 1,
-       IMWRITE_PAM_FORMAT_GRAYSCALE = 2,
+       IMWRITE_PAM_FORMAT_NULL            = 0,
+       IMWRITE_PAM_FORMAT_BLACKANDWHITE   = 1,
+       IMWRITE_PAM_FORMAT_GRAYSCALE       = 2,
        IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA = 3,
-       IMWRITE_PAM_FORMAT_RGB = 4,
-       IMWRITE_PAM_FORMAT_RGB_ALPHA = 5,
+       IMWRITE_PAM_FORMAT_RGB             = 4,
+       IMWRITE_PAM_FORMAT_RGB_ALPHA       = 5
      };
 
 //! @} imgcodecs_flags
@@ -191,8 +191,8 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
 @param filename Name of file to be loaded.
+@param mats A vector of Mat objects holding each page.
 @param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
-@param mats A vector of Mat objects holding each page, if more than one.
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
