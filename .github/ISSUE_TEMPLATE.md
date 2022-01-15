@@ -34,11 +34,11 @@ This is a template helping you to create an issue which can be processed as quic
  - [ ] I report the issue, it's not a question
    <!--
    OpenCV team works with forum.opencv.org, Stack Overflow and other communities
-   to discuss problems. Tickets with question without real issue statement will be
+   to discuss problems. Tickets with questions without a real issue statement will be
    closed.
    -->
  - [ ] I checked the problem with documentation, FAQ, open issues,
-       forum.opencv.org, Stack Overflow, etc and have not found solution
+       forum.opencv.org, Stack Overflow, etc and have not found any solution
    <!--
    Places to check:
    * OpenCV documentation: https://docs.opencv.org
@@ -47,11 +47,11 @@ This is a template helping you to create an issue which can be processed as quic
    * OpenCV issue tracker: https://github.com/opencv/opencv/issues?q=is%3Aissue
    * Stack Overflow branch: https://stackoverflow.com/questions/tagged/opencv
    -->
- - [ ] I updated to latest OpenCV version and the issue is still there
+ - [ ] I updated to the latest OpenCV version and the issue is still there
    <!--
    master branch for OpenCV 4.x and 3.4 branch for OpenCV 3.x releases.
-   OpenCV team supports only latest release for each branch.
-   The ticket is closed, if the problem is not reproduced with modern version.
+   OpenCV team supports only the latest release for each branch.
+   The ticket is closed if the problem is not reproduced with the modern version.
    -->
  - [ ] There is reproducer code and related data files: videos, images, onnx, etc
    <!--
@@ -61,9 +61,9 @@ This is a template helping you to create an issue which can be processed as quic
      to reduce attachment size
    * Use PNG for images, if you report some CV related bug, but not image reader
      issue
-   * Attach the image as archive to the ticket, if you report some reader issue.
+   * Attach the image as an archive to the ticket, if you report some reader issue.
      Image hosting services compress images and it breaks the repro code.
-   * Provide ONNX file for some public model or ONNX file with with random weights,
+   * Provide ONNX file for some public model or ONNX file with random weights,
      if you report ONNX parsing or handling issue. Architecture details diagram
      from netron tool can be very useful too. See https://lutzroeder.github.io/netron/
    -->
