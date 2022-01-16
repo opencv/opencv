@@ -29,9 +29,9 @@ private:
     int hop_length = static_cast<int>(sample_rate * window_stride); // Number of steps to advance between frames
     int n_fft = 512; // Size of window for STFT
 
-    // Parameters for filterbanks calculation 
+    // Parameters for filterbanks calculation
     int n_filt = 64;
-    double lowfreq = 0.;    
+    double lowfreq = 0.;
     double highfreq = sample_rate / 2;
 
 public:
@@ -73,7 +73,7 @@ public:
         double min_log_mel = (min_log_hz - f_min) / f_sp;  // same (Mels)
         double logstep = std::log(6.4) / 27.0;  // step size for log region
 
-        for(int i = 0; i < mels.size(); i++)
+        for(size_t i = 0; i < mels.size(); i++)
         {
             if (mels[i] >= min_log_mel)
             {
@@ -107,7 +107,7 @@ public:
 
         double num = 1 + n_fft / 2;
         vector<vector<double>> weights(n_mels, vector<double>(static_cast<int>(num), 0.));
-        
+
         // Center freqs of each FFT bin
         vector<double> fftfreqs;
         double step = (sample_rate / 2) / (num - 1);
@@ -134,12 +134,12 @@ public:
         }
 
         double lower, upper, enorm;
-        for (size_t i = 0; i < n_mels; ++i)
+        for (int i = 0; i < n_mels; ++i)
         {
             // using Slaney-style mel which is scaled to be approx constant energy per channel
             enorm = 2./(mel_f[i + 2] - mel_f[i]);
 
-            for (size_t j = 0; j < num; ++j)
+            for (int j = 0; j < static_cast<int>(num); ++j)
             {
                 // lower and upper slopes for all bins
                 lower = (-1) * ramps[i][j] / fdiff[i];
@@ -148,7 +148,6 @@ public:
                 weights[i][j] = max(0., min(lower, upper)) * enorm;
             }
         }
-        
         return weights;
     }
 
@@ -165,7 +164,7 @@ public:
             pad_array.push_back(0.);
         }
 
-        for(int i = 0; i < data.size(); ++i)
+        for(size_t i = 0; i < data.size(); ++i)
         {
             pad_array.push_back(data[i]);
         }
@@ -193,15 +192,15 @@ public:
         return new_x;
     }
 
-    std::vector<double> hanning(int win_length)
+    std::vector<double> hanning()
     {
         // https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
         std::vector<double> window_tensor;
         for (int j = 1 - win_length; j < win_length; j+=2)
-        {   
+        {
             window_tensor.push_back(1 - (0.5 * (1 - cos(CV_PI * j / (win_length - 1)))));
         }
-        return window_tensor; 
+        return window_tensor;
     }
 
     std::vector<std::vector<double>> stft_power(std::vector<double>& y)
@@ -228,7 +227,7 @@ public:
         }
 
         // Compute a window function
-        std::vector<double> window_tensor = hanning(win_length);
+        std::vector<double> window_tensor = hanning();
 
         // Pad the window out to n_fft size
         std::vector<double> fft_window = pad_window_center(window_tensor, n_fft);
@@ -255,7 +254,7 @@ public:
             }
         }
 
-        // Short Time Fourier Transform 
+        // Short Time Fourier Transform
         // and get power of spectrum
         std::vector<std::vector<double>> spectrum_power(y_frames_transpose[0].size() / 2 + 1 );
         for (size_t i = 0; i < y_frames_transpose.size(); ++i)
@@ -264,7 +263,7 @@ public:
             dft(y_frames_transpose[i], dstMat, DFT_COMPLEX_OUTPUT);
 
             // we need only the first part of the spectrum, the second part is symmetrical
-            for (int j = 0; j < y_frames_transpose[0].size() / 2 + 1; ++j)
+            for (int j = 0; j < static_cast<int>(y_frames_transpose[0].size()) / 2 + 1; ++j)
             {
                 double power_re = dstMat.at<double>(2 * j) * dstMat.at<double>(2 * j);
                 double power_im = dstMat.at<double>(2 * j + 1) * dstMat.at<double>(2 * j + 1);
@@ -292,23 +291,23 @@ public:
         }
         // Calculate Short Time Fourier Transform and get power of spectrum
         auto spectrum_power = stft_power(x);
-        
+
         std::vector<std::vector<double>> filterbanks = mel(n_filt, lowfreq, highfreq);
-        
+
         // Calculate log of multiplication of filterbanks matrix on spectrum_power matrix
         std::vector<std::vector<double>> x_stft(filterbanks.size(),std::vector<double>(spectrum_power[0].size(), 0));
 
         for (size_t i = 0; i < filterbanks.size(); ++i)
-        {   
+        {
             for (size_t j = 0; j < filterbanks[0].size(); ++j)
             {
                 for (size_t k = 0; k < spectrum_power[0].size(); ++k)
-                {                    
+                {
                     x_stft[i][k] += filterbanks[i][j] * spectrum_power[j][k];
                 }
             }
             for (size_t k = 0; k < spectrum_power[0].size(); ++k)
-            {                    
+            {
                 x_stft[i][k] = std::log(x_stft[i][k] + 1e-20);
             }
         }
@@ -347,12 +346,12 @@ public:
     {
         vector<char> labels={' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p'
                                 ,'q','r','s','t','u','v','w','x','y','z','\''};
-        unordered_map<int, char>labels_map;
+        unordered_map<int, char> map;
         for(int i = 0; i < static_cast<int>(labels.size()); ++i)
         {
-            labels_map[i] = labels[i];
+            map[i] = labels[i];
         }
-        return labels_map;
+        return map;
     }
 
     string decode(Mat& x)
@@ -400,7 +399,7 @@ public:
 
 };
 
-string predict(std::vector<std::vector<double>>& features, dnn::Net net, Decoder decoder)
+static string predict(std::vector<std::vector<double>>& features, dnn::Net net, Decoder decoder)
 {
     // Passes the features through the Jasper model and decodes the output to english transcripts.
 
@@ -425,7 +424,7 @@ string predict(std::vector<std::vector<double>>& features, dnn::Net net, Decoder
     return prediction;
 }
 
-int readAudioFile(vector<double>& inputAudio, string file, int audioStream)
+static int readAudioFile(vector<double>& inputAudio, string file, int audioStream)
 {
     VideoCapture cap;
     int samplingRate = 16000;
@@ -435,7 +434,6 @@ int readAudioFile(vector<double>& inputAudio, string file, int audioStream)
                             CAP_PROP_AUDIO_SAMPLES_PER_SECOND, samplingRate
                             };
     cap.open(file, CAP_ANY, params);
-    
     if (!cap.isOpened())
     {
         cerr << "Error : Can't read audio file: '" << file << "' with audioStream = " << audioStream << endl;
@@ -460,7 +458,7 @@ int readAudioFile(vector<double>& inputAudio, string file, int audioStream)
     return samplingRate;
 }
 
-int readAudioMicrophone(vector<double>& inputAudio, int microTime)
+static int readAudioMicrophone(vector<double>& inputAudio, int microTime)
 {
     VideoCapture cap;
     int samplingRate = 16000;
@@ -470,7 +468,6 @@ int readAudioMicrophone(vector<double>& inputAudio, int microTime)
                             CAP_PROP_AUDIO_SAMPLES_PER_SECOND, samplingRate
                             };
     cap.open(0, CAP_ANY, params);
-    
     if (!cap.isOpened())
     {
         cerr << "Error : Can't open microphone" << endl;
@@ -556,7 +553,7 @@ int main(int argc, char** argv)
         Mat spectogram;
         Mat featuresMat(static_cast<int>(calculated_features.size()), static_cast<int>(calculated_features[0].size()), CV_64F);
         for(int i = 0; i < featuresMat.size[0]; ++i)
-        {        
+        {
             for(int j = 0; j < featuresMat.size[1]; ++j)
             {
                 featuresMat.at<double>(i, j) = calculated_features[i][j];
