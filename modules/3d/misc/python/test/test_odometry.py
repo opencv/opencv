@@ -59,7 +59,7 @@ class odometry_test(NewOpenCVTests):
         )
         Rt_res = np.zeros((4, 4))
 
-        odometry = cv.Odometry(cv.DEPTH_RGB)
+        odometry = cv.Odometry(cv.RGB_DEPTH)
         isCorrect = odometry.compute(depth_image, rgb_image, depth_image, rgb_image, Rt_res)
 
         res = (Rt - Rt_res).sum()
