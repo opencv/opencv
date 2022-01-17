@@ -52,18 +52,17 @@ class odometry_test(NewOpenCVTests):
         depth_image = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
         rgb_image = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYDEPTH)
         Rt = np.array(
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
+            [[1, 0, 0, 0],
+             [0, 1, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 0, 1]]
         )
         Rt_res = np.zeros((4, 4))
 
         odometry = cv.Odometry(cv.DEPTH_RGB)
         isCorrect = odometry.compute(depth_image, rgb_image, depth_image, rgb_image, Rt_res)
 
-        res = cv.norm(Rt, Rt_res)
-        print(res)
+        res = (Rt - Rt_res).sum()
 
         eps = 0.05
         self.assertLessEqual(res, eps)
