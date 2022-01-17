@@ -66,7 +66,7 @@ class odometry_test(NewOpenCVTests):
 
         eps = 0.05
         self.assertLessEqual(res, eps)
-        self.assettTrue(isCorrect)
+        self.assertTrue(isCorrect)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
