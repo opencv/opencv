@@ -181,11 +181,12 @@ private:
 
 Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config, int backend_id, int target_id)
 {
-    #ifdef HAVE_OPENCV_DNN
+#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
-    #else
+#else
+    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(backend_id); CV_UNUSED(target_id);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
-    #endif
+#endif
 }
 
 } // namespace cv
