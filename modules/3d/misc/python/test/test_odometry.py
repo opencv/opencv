@@ -25,7 +25,7 @@ class odometry_test(NewOpenCVTests):
 
         eps = 0.05
         self.assertLessEqual(res, eps)
-        self.assettTrue(isCorrect)
+        self.assertTrue(isCorrect)
 
     def test_OdometryRGB(self):
         rgb_image = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYDEPTH)
@@ -44,7 +44,7 @@ class odometry_test(NewOpenCVTests):
 
         eps = 0.05
         self.assertLessEqual(res, eps)
-        self.assettTrue(isCorrect)
+        self.assertTrue(isCorrect)
 
     def test_OdometryRGB(self):
         depth_image = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
