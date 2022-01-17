@@ -1,7 +1,8 @@
 OCV_OPTION(WITH_ADE "Enable ADE framework (required for Graph API module)" ON)
 
-OCV_OPTION(WITH_FREETYPE "Enable FreeType framework" OFF)
-OCV_OPTION(WITH_PLAIDML  "Include PlaidML2 support"  OFF)
+OCV_OPTION(WITH_FREETYPE "Enable FreeType framework"     OFF)
+OCV_OPTION(WITH_PLAIDML  "Include PlaidML2 support"      OFF)
+OCV_OPTION(WITH_OAK      "Include OpenCV AI Kit support" OFF)
 
 if(NOT WITH_ADE)
   return()
@@ -38,4 +39,11 @@ if(WITH_GAPI_ONEVPL)
     if(VPL_FOUND)
         set(HAVE_GAPI_ONEVPL TRUE)
     endif()
+endif()
+
+if(WITH_OAK)
+  find_package(depthai QUIET)
+  if(depthai_FOUND)
+      set(HAVE_OAK TRUE)
+  endif()
 endif()
