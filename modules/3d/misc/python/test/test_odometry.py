@@ -22,7 +22,6 @@ class odometry_test(NewOpenCVTests):
         isCorrect = odometry.compute(depth_image, depth_image, Rt_res)
 
         res = cv.norm(Rt, Rt_res)
-        print(res)
 
         eps = 0.05
         self.assertLessEqual(res, eps)
@@ -42,7 +41,6 @@ class odometry_test(NewOpenCVTests):
         isCorrect = odometry.compute(rgb_image, rgb_image, Rt_res)
 
         res = cv.norm(Rt, Rt_res)
-        print(res)
 
         eps = 0.05
         self.assertLessEqual(res, eps)
