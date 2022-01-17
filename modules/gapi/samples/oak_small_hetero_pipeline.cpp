@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
     pipeline.pull(cv::gout(out_mat));
 
     cv::imwrite(output_name, out_mat);
+
+    std::cout << "Pipeline finished: " << output_name << " file has been written." << std::endl;
 }
 
 #else // HAVE_OAK

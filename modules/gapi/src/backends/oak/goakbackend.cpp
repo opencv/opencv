@@ -57,6 +57,12 @@ class GOAKExecutable final: public GIslandExecutable {
         std::vector<ExtractTypeHelper::OutputPtr> outputs = {};
     };
 
+    struct OAKOutQueueInfo {
+        std::shared_ptr<dai::node::XLinkOut> xlink_output;
+        std::shared_ptr<dai::DataOutputQueue> out_queue;
+        std::string out_queue_name;
+    };
+
     cv::GArg packInArg(const GArg &arg, std::vector<ExtractTypeHelper::InputPtr>& oak_ins);
     void packOutArg(const RcDesc &rc, std::vector<ExtractTypeHelper::OutputPtr>& oak_outs);
 
@@ -73,9 +79,7 @@ class GOAKExecutable final: public GIslandExecutable {
     cv::Size m_camera_size;
 
     // Backend outputs
-    std::vector<std::shared_ptr<dai::node::XLinkOut>> m_xlink_outputs;
-    std::vector<std::shared_ptr<dai::DataOutputQueue>> m_out_queues;
-    std::vector<std::string> m_out_queue_names;
+    std::vector<OAKOutQueueInfo> m_out_queues;
 
     // Backend inputs
     std::vector<std::pair<std::string, dai::Buffer>> m_in_queues;
@@ -249,8 +253,12 @@ void cv::gimpl::GOAKExecutable::LinkToParents(ade::NodeHandle handle)
         GAPI_Assert(data_nh.get()->inNodes().size() == 1);
         parent = data_nh.get()->inNodes().front();
 
+        // Assuming that OAK nodes are aligned for linking.
+        // FIXME: potential rework might be needed then
+        //        counterexample is found.
         GAPI_Assert(m_oak_nodes.at(handle).inputs.size() ==
-                    m_oak_nodes.at(parent).outputs.size());
+                    m_oak_nodes.at(parent).outputs.size() &&
+                    "Internal OAK nodes are not aligned for linking");
         for (auto && it : ade::util::zip(ade::util::toRange(m_oak_nodes.at(parent).outputs),
                                          ade::util::toRange(m_oak_nodes.at(handle).inputs)))
         {
@@ -352,9 +360,8 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         for (size_t i = 0; i < outs_data.size(); ++i) {
             auto xout = m_pipeline->create<dai::node::XLinkOut>();
             std::string xout_name = "xout" + std::to_string(i);
-            m_out_queue_names.push_back(xout_name);
             xout->setStreamName(xout_name);
-            m_xlink_outputs.push_back(xout);
+            m_out_queues.push_back({xout, nullptr, xout_name});
         }
 
         // Create OAK node for each node in this backend
@@ -379,32 +386,35 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 GOAKContext ctx(m_pipeline, m_camera_size, in_ctx_args, m_oak_nodes.at(nh).outputs);
                 m_oak_nodes.at(nh).node = u.k.m_put_f(ctx, m_in_queues);
                 GAPI_Assert(m_oak_nodes.at(nh).node != nullptr);
-            }
-        }
 
-        // Check that all inputs and outputs are properly filled after constructing kernels
-        // to then link it together
-        for (const auto& node : m_oak_nodes) {
-            auto el = node.second;
-            if (std::any_of(el.inputs.cbegin(), el.inputs.cend(),
-                            [](ExtractTypeHelper::InputPtr ptr) {
-                    return ptr == nullptr;
-                })) {
-                GAPI_Assert(false && "DAI input are not set");
-            }
-            if (std::any_of(el.outputs.cbegin(), el.outputs.cend(),
-                            [](ExtractTypeHelper::OutputPtr ptr) {
-                    return ptr == nullptr;
-                })) {
-                GAPI_Assert(false && "DAI outputs are not set");
+                // Check that all inputs and outputs are properly filled after constructing kernels
+                // to then link it together
+                // FIXME: add more logging
+                const auto& node = m_oak_nodes.at(nh);
+                if (std::any_of(node.inputs.cbegin(), node.inputs.cend(),
+                                [](ExtractTypeHelper::InputPtr ptr) {
+                        return ptr == nullptr;
+                    })) {
+                    GAPI_Assert(false && "DAI input are not set");
+                }
+                if (std::any_of(node.outputs.cbegin(), node.outputs.cend(),
+                                [](ExtractTypeHelper::OutputPtr ptr) {
+                        return ptr == nullptr;
+                    })) {
+                    GAPI_Assert(false && "DAI outputs are not set");
+                }
             }
         }
 
         // Prepare nodes for linking
-        std::vector<ade::NodeHandle> in_nodes;
-        std::vector<ade::NodeHandle> out_nodes;
-        std::vector<ade::NodeHandle> inter_nodes;
+        std::unordered_set<ade::NodeHandle,
+                           ade::HandleHasher<ade::Node>> in_nodes;
+        std::unordered_set<ade::NodeHandle,
+                           ade::HandleHasher<ade::Node>> out_nodes;
+        std::unordered_set<ade::NodeHandle,
+                           ade::HandleHasher<ade::Node>> inter_nodes;
 
+        // TODO: optimize this loop
         for (const auto& node : m_oak_nodes) {
             auto nh = node.first;
             // Fill input op nodes
@@ -412,7 +422,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 for (const auto& indata : nh.get()->inNodes()) {
                     auto rc = m_gm.metadata(indata).get<cv::gimpl::Data>().rc;
                     if (rc == d.rc) {
-                        in_nodes.push_back(nh);
+                        in_nodes.insert(nh);
                     }
                 }
             }
@@ -421,14 +431,14 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 for (const auto& outdata : nh.get()->outNodes()) {
                     auto rc = m_gm.metadata(outdata).get<cv::gimpl::Data>().rc;
                     if (rc == d.rc) {
-                        out_nodes.push_back(nh);
+                        out_nodes.insert(nh);
                     }
                 }
             }
             // Fill internal op nodes
-            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end() &&
-                std::find(out_nodes.begin(), out_nodes.end(), nh) == out_nodes.end()) {
-                inter_nodes.push_back(nh);
+            if (in_nodes.find(nh) == in_nodes.end() &&
+                out_nodes.find(nh) == in_nodes.end()) {
+                inter_nodes.insert(nh);
             }
         }
 
@@ -443,11 +453,12 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         // 2. Link output nodes to XLinkOut nodes
         size_t out_counter = 0;
         for (const auto& nh : out_nodes) {
-            GAPI_Assert(m_oak_nodes.at(nh).outputs.size() == 1);
-            GAPI_Assert(out_counter < m_xlink_outputs.size());
-            m_oak_nodes.at(nh).outputs[0]->link(m_xlink_outputs[out_counter++]->input);
+            GAPI_Assert(out_counter + m_oak_nodes.at(nh).outputs.size() <= m_out_queues.size());
+            for (const auto& out : m_oak_nodes.at(nh).outputs) {
+                out->link(m_out_queues[out_counter++].xlink_output->input);
+            }
             // Input nodes in OAK doesn't have parent operation - just camera (for now)
-            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
+            if (in_nodes.find(nh) == in_nodes.end()) {
                 LinkToParents(nh);
             }
         }
@@ -455,20 +466,22 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         // 3. Link internal nodes to their parents
         for (const auto& nh : inter_nodes) {
             // Input nodes in OAK doesn't have parent operation - just camera (for now)
-            if (std::find(in_nodes.begin(), in_nodes.end(), nh) == in_nodes.end()) {
+            if (in_nodes.find(nh) == in_nodes.end()) {
                 LinkToParents(nh);
             }
         }
 
         m_device = std::unique_ptr<dai::Device>(new dai::Device(*m_pipeline));
 
-        // Prepare all output queues
+        // Prepare OAK output queues
+        GAPI_Assert(m_out_queues.size() == outs_data.size());
         for (const auto out_it : ade::util::indexed(outs_data))
         {
+            auto& q = m_out_queues[ade::util::index(out_it)];
+            GAPI_Assert(q.out_queue == nullptr); // shouldn't be not filled till this point
             // FIXME: add queue parameters
             // Currently: 30 - max DAI queue capacity, true - blocking queue
-            m_out_queues.push_back(m_device->getOutputQueue(
-                                        m_out_queue_names[ade::util::index(out_it)], 30, true));
+            q.out_queue = m_device->getOutputQueue(q.out_queue_name, 30, true);
         }
     }
 
@@ -495,7 +508,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
     }
 
     for (size_t i = 0; i < m_out_queues.size(); ++i) {
-        auto q = m_out_queues[i];
+        auto q = m_out_queues[i].out_queue;
         // TODO: support other DAI types if needed
         // Note: we utilize getData() method that returns std::vector of data
         //       on which we gain ownership

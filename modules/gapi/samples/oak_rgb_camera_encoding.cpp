@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    const std::string output = cmd.get<std::string>("output");
+    const std::string output_name = cmd.get<std::string>("output");
 
     cv::gapi::oak::EncoderConfig cfg;
     cfg.profile = cv::gapi::oak::EncoderConfig::Profile::H265_MAIN;
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint8_t> out_h265_data;
 
     std::ofstream out_h265_file;
-    out_h265_file.open(output, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+    out_h265_file.open(output_name, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 
     // Pull 300 frames from the camera
     uint32_t frames = 300;
@@ -57,6 +57,8 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
+
+    std::cout << "Pipeline finished: " << output_name << " file has been written." << std::endl;
 }
 #else // HAVE_OAK
 

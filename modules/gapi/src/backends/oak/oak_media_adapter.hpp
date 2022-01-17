@@ -17,14 +17,15 @@ namespace oak {
 
 class GAPI_EXPORTS OAKMediaAdapter final : public cv::MediaFrame::IAdapter {
 public:
-    OAKMediaAdapter();
+    OAKMediaAdapter() = default;
     OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer);
     cv::GFrameDesc meta() const override;
     cv::MediaFrame::View access(cv::MediaFrame::Access) override;
-    ~OAKMediaAdapter();
+    ~OAKMediaAdapter() = default;
 private:
-    class Priv;
-    std::unique_ptr<Priv> m_priv;
+    cv::Size m_sz;
+    cv::MediaFormat m_fmt;
+    std::vector<uint8_t> m_buffer;
 };
 
 } // namespace oak
