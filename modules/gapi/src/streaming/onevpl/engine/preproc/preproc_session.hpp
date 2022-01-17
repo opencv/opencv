@@ -13,6 +13,8 @@
 #include <opencv2/gapi/streaming/meta.hpp>
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
+#include "streaming/onevpl/engine/preproc/vpp_preproc_defines.hpp"
+
 #ifdef HAVE_ONEVPL
 
 #ifdef HAVE_INF_ENGINE
@@ -22,7 +24,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-struct PreprocParams {
+struct vpp_pp_params {
     mfxSession handle;
     mfxFrameInfo info;
 };

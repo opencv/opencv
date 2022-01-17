@@ -206,6 +206,7 @@ preproc_args_t files[] = {
 TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
 {
     using namespace cv::gapi::wip::onevpl;
+    using namespace cv::gapi::wip;
 
     std::vector<CfgParam> cfg_params_w_dx11;
     cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
@@ -253,7 +254,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     cv::GFrameDesc first_frame_decoded_desc = decoded_frame.desc();
 
     // 1.5) create preproc session based on frame description & network info
-    cv::util::optional<PreprocParams> first_pp_params = VPPPreprocEngine::is_applicable(decoded_frame);
+    cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
     ASSERT_TRUE(first_pp_params.has_value());
     std::shared_ptr<PreprocSession> first_pp_sess = preproc_engine.initialize_preproc(first_pp_params.value(),
                                cptr);
@@ -272,11 +273,11 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             in_progress = true;
             ASSERT_EQ(decoded_frame.desc(), first_frame_decoded_desc);
 
-            cv::util::optional<PreprocParams> pp_params = VPPPreprocEngine::is_applicable(decoded_frame);
-            ASSERT_TRUE(pp_params.has_value());
-            ASSERT_TRUE(0 == memcmp(&pp_params.value(), &first_pp_params.value(), sizeof(PreprocParams)));
+            cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
+            ASSERT_TRUE(params.has_value());
+            ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params::value_type)));
 
-            std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(pp_params.value(), cptr);
+            std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
             ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
 
             pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
@@ -296,6 +297,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
 
 TEST_P(VPPPreprocParams, functional_different_threads)
 {
+    using namespace cv::gapi::wip;
     using namespace cv::gapi::wip::onevpl;
     source_t file_path;
     decoder_t decoder_id;
@@ -368,7 +370,7 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, cptr] () {
         // create preproc session based on frame description & network info
         cv::MediaFrame decoded_frame = queue.pop();
-        cv::util::optional<PreprocParams> first_pp_params = VPPPreprocEngine::is_applicable(decoded_frame);
+        cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
         ASSERT_TRUE(first_pp_params.has_value());
         std::shared_ptr<PreprocSession> first_pp_sess =
                     preproc_engine.initialize_preproc(first_pp_params.value(), cptr);
@@ -388,11 +390,11 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                 }
                 in_progress = true;
 
-                cv::util::optional<PreprocParams> pp_params = VPPPreprocEngine::is_applicable(decoded_frame);
-                ASSERT_TRUE(pp_params.has_value());
-                ASSERT_TRUE(0 == memcmp(&pp_params.value(), &first_pp_params.value(), sizeof(PreprocParams)));
+                cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
+                ASSERT_TRUE(params.has_value());
+                ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
 
-                std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(pp_params.value(), cptr);
+                std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
                 ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
 
                 pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);

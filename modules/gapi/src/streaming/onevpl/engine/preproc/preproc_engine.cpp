@@ -155,14 +155,16 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
     );
 }
 
-cv::util::optional<PreprocParams> VPPPreprocEngine::is_applicable(const cv::MediaFrame& in_frame) {
+cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFrame& in_frame) {
     // TODO consider something smarter than RTI
-    cv::util::optional<PreprocParams> ret;
+    cv::util::optional<pp_params> ret;
     BaseFrameAdapter *vpl_adapter = in_frame.get<BaseFrameAdapter>();
     GAPI_LOG_DEBUG(nullptr, "validate VPP preprocessing is applicable for frame");
     if (vpl_adapter) {
-        ret = cv::util::make_optional<PreprocParams>({vpl_adapter->get_session_handle(),
-                                                      vpl_adapter->get_surface()->get_info()});
+        pp_params preproc_param;
+        preproc_param.value = vpp_pp_params{vpl_adapter->get_session_handle(),
+                                            vpl_adapter->get_surface()->get_info()};
+        ret = cv::util::make_optional<pp_params>(std::move(preproc_param));
         GAPI_LOG_DEBUG(nullptr, "VPP preprocessing applicable, session [" <<
                                 vpl_adapter->get_session_handle() << "]");
     }
@@ -170,9 +172,11 @@ cv::util::optional<PreprocParams> VPPPreprocEngine::is_applicable(const cv::Medi
 }
 
 std::shared_ptr<PreprocSession>
-VPPPreprocEngine::initialize_preproc(const PreprocParams& params,
+VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
                                      const InferenceEngine::InputInfo::CPtr& net_input) {
     GAPI_Assert(net_input && "InferenceEngine::InputInfo::CPtr is nullptr");
+    const vpp_pp_params &params = cv::util::get<vpp_pp_params>(preproc_params.value);
+
     // adjust preprocessing settings
     mfxVideoParam mfxVPPParams{0};
     // NB: IN params for VPP session must be equal to decoded surface params
@@ -314,7 +318,7 @@ VPPPreprocEngine::initialize_session(mfxSession,
 
 cv::MediaFrame VPPPreprocEngine::run_sync(std::shared_ptr<PreprocSession> s, const cv::MediaFrame& in_frame) {
     GAPI_DbgAssert(s && "Session is nullptr");
-    GAPI_DbgAssert(VPPPreprocEngine::is_applicable(in_frame) &&
+    GAPI_DbgAssert(is_applicable(in_frame) &&
                    "VPP preproc is not applicable for the given frame");
     BaseFrameAdapter *vpl_adapter = in_frame.get<BaseFrameAdapter>();
     if (!vpl_adapter) {
