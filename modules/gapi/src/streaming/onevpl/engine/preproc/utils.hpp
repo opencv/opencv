@@ -15,6 +15,8 @@ namespace utils {
 cv::MediaFormat fourcc_to_MediaFormat(int value);
 int MediaFormat_to_fourcc(cv::MediaFormat value);
 int MediaFormat_to_chroma(cv::MediaFormat value);
+
+mfxFrameInfo to_mfxFrameInfo(const cv::GFrameDesc& frame_info);
 } // namespace utils
 } // namespace cv
 } // namespace gapi

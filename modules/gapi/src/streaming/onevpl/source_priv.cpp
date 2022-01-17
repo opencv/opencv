@@ -36,6 +36,10 @@ GMetaArg GSource::Priv::descr_of() const {
 
 #else // HAVE_ONEVPL
 
+// TODO global variable move it into Source after CloneSession issue resolving
+mfxLoader mfx_handle = MFXLoad();
+int impl_number = 0;
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -47,7 +51,7 @@ enum {
 };
 
 GSource::Priv::Priv() :
-    mfx_handle(MFXLoad()),
+//    mfx_handle(MFXLoad()),
     mfx_impl_description(),
     mfx_handle_configs(),
     cfg_params(),
@@ -187,7 +191,8 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     GAPI_Assert(max_match_it != matches_count.rend() &&
                 "Cannot find matched MFX implementation for requested configuration");
 
-    int impl_number = max_match_it->second;
+    // TODO impl_number is global for now
+    impl_number = max_match_it->second;
     GAPI_LOG_INFO(nullptr, "Chosen implementation index: " << impl_number);
 
     // release unusable impl available_impl_descriptions

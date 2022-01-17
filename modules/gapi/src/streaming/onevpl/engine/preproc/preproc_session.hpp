@@ -10,6 +10,7 @@
 #include <memory>
 #include <queue>
 
+#include <opencv2/gapi/streaming/meta.hpp>
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #ifdef HAVE_ONEVPL
@@ -29,10 +30,12 @@ struct PreprocParams {
 class VPPPreprocEngine;
 class PreprocSession : public EngineSession {
 public:
+    friend class VPPPreprocEngine;
     PreprocSession(mfxSession sess, const mfxVideoParam &vpp_out_param);
     ~PreprocSession();
     using EngineSession::EngineSession;
 
+    Data::Meta generate_frame_meta();
     void swap_surface(VPPPreprocEngine& engine);
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
 
@@ -45,7 +48,9 @@ private:
 protected:
     std::weak_ptr<Surface> procesing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
-    std::queue<op_handle_t> sync_queue;
+    std::queue<op_handle_t> sync_in_queue;
+    std::queue<op_handle_t> vpp_out_queue;
+    int64_t preprocessed_frames_count;
 };
 } // namespace onevpl
 } // namespace wip

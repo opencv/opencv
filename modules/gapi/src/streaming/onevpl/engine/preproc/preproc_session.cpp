@@ -13,8 +13,8 @@
 #include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/utils.hpp"
-
 #include "logger.hpp"
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -23,13 +23,26 @@ PreprocSession::PreprocSession(mfxSession sess, const mfxVideoParam& vpp_out_par
     EngineSession(sess, {}),
     mfx_vpp_out_param(vpp_out_param),
     procesing_surface_ptr(),
-    sync_queue()
+    sync_in_queue(),
+    vpp_out_queue(),
+    preprocessed_frames_count()
 {
 }
 
 PreprocSession::~PreprocSession() {
     GAPI_LOG_INFO(nullptr, "Close VPP for session: " << session);
     MFXVideoVPP_Close(session);
+}
+
+Data::Meta PreprocSession::generate_frame_meta() {
+    const auto now = std::chrono::system_clock::now();
+    const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+                (now.time_since_epoch());
+    Data::Meta meta {
+                        {cv::gapi::streaming::meta_tag::timestamp, int64_t{dur.count()} },
+                        {cv::gapi::streaming::meta_tag::seq_id, int64_t{preprocessed_frames_count++}}
+                    };
+    return meta;
 }
 
 void PreprocSession::swap_surface(VPPPreprocEngine& engine) {

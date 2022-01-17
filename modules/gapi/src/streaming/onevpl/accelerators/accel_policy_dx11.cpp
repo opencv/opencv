@@ -417,6 +417,8 @@ mfxStatus VPLDX11AccelerationPolicy::on_free(mfxFrameAllocResponse *response) {
     }
 
     allocation_table.erase(table_it);
+    GAPI_LOG_DEBUG(nullptr, "Allocation by requested id: " << response->AllocId <<
+                            " has been erased");
     return MFX_ERR_NONE;
 }
 } // namespace onevpl

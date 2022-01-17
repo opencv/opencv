@@ -55,6 +55,22 @@ int MediaFormat_to_chroma(cv::MediaFormat value) {
             GAPI_Assert(false && "Unsupported cv::MediaFormat");
     }
 }
+
+mfxFrameInfo to_mfxFrameInfo(const cv::GFrameDesc& frame_info) {
+    mfxFrameInfo ret {0};
+    ret.FourCC        = MediaFormat_to_fourcc(frame_info.fmt);
+    ret.ChromaFormat  = MediaFormat_to_chroma(frame_info.fmt);
+    ret.Width         = frame_info.size.width;
+    ret.Height        = frame_info.size.height;
+    ret.CropX         = 0;
+    ret.CropY         = 0;
+    ret.CropW         = 0;
+    ret.CropH         = 0;
+    ret.PicStruct     = MFX_PICSTRUCT_UNKNOWN;
+    ret.FrameRateExtN = 0;
+    ret.FrameRateExtD = 0;
+    return ret;
+}
 } // namespace utils
 } // namespace cv
 } // namespace gapi

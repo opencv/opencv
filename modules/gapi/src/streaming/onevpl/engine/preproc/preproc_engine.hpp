@@ -8,6 +8,7 @@
 #define GAPI_STREAMING_ONVPL_PREPROC_ENGINE_HPP
 #include <stdio.h>
 #include <memory>
+#include <unordered_map>
 
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_session.hpp"
@@ -34,7 +35,7 @@ class GAPI_EXPORTS VPPPreprocEngine : public ProcessingEngineBase {
 public:
     VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
 
-    cv::util::optional<PreprocParams> is_applicable(const cv::MediaFrame& in_frame);
+    static cv::util::optional<PreprocParams> is_applicable(const cv::MediaFrame& in_frame);
 
     std::shared_ptr<PreprocSession>
             initialize_preproc(const PreprocParams& params,
@@ -44,12 +45,20 @@ public:
                                    const std::vector<CfgParam>& cfg_params,
                                    std::shared_ptr<IDataProvider> provider) override;
 
+    cv::MediaFrame run_sync(std::shared_ptr<PreprocSession> s, const cv::MediaFrame& in_frame);
 private:
     std::map<mfxFrameInfo, std::shared_ptr<PreprocSession>> preproc_session_map;
     void on_frame_ready(PreprocSession& sess,
                         mfxFrameSurface1* ready_surface);
+    ExecutionStatus process_error(mfxStatus status, PreprocSession& sess);
+    size_t preprocessed_frames_count;
 
-    //static mfxFrameInfo to_mfxFrameInfo(const cv::GFrameDesc& frame_info);
+    // NB: no nee to protect by mutex at now
+    using decoded_frame_key_t = void*;
+    std::unordered_map<decoded_frame_key_t, cv::MediaFrame> pending_decoded_frames_sync;
+
+    void abandon_decode_frame(decoded_frame_key_t key);
+    void remember_decode_frame(decoded_frame_key_t key, const cv::MediaFrame& in_frame);
 };
 } // namespace onevpl
 } // namespace wip

@@ -187,12 +187,6 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                         my_sess.sync_queue.pop();
                         auto *dec_surface = pending_op.second;
                         auto *vpp_suface = my_sess.vpp_surface_ptr.lock()->get_handle();
-                        static int x_offset = 0;
-                        static int y_offset = 0;
-                        dec_surface->Info.CropX = x_offset;
-                        dec_surface->Info.CropY = y_offset;
-                        dec_surface->Info.CropW = 100 + x_offset++;
-                        dec_surface->Info.CropH = 100 + y_offset++;
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,
