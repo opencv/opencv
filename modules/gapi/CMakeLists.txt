@@ -45,6 +45,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/oak/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
@@ -126,6 +127,11 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
 	  src/backends/fluid/gfluidcore_func.dispatch.cpp
+
+    # OAK Backend (optional)
+    src/backends/oak/goak.cpp
+    src/backends/oak/goakbackend.cpp
+    src/backends/oak/goak_media_adapter.cpp
 
     # OCL Backend (currently built-in)
     src/backends/ocl/goclbackend.cpp
@@ -272,6 +278,14 @@ if(HAVE_FREETYPE)
   ocv_target_include_directories(${the_module} PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()
 
+if(HAVE_OAK)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_OAK)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_OAK)
+  endif()
+  ocv_target_link_libraries(${the_module} PRIVATE depthai::core)
+endif()
+
 if(HAVE_PLAIDML)
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_PLAIDML)
   if(TARGET opencv_test_gapi)
@@ -348,5 +362,15 @@ if(HAVE_GAPI_ONEVPL)
     if(HAVE_D3D11 AND HAVE_OPENCL)
         ocv_target_include_directories(opencv_perf_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
     endif()
+  endif()
+endif()
+
+if(HAVE_OAK)
+  # FIXME: consider better solution
+  if(TARGET example_gapi_oak_rgb_camera_encoding)
+    ocv_target_compile_definitions(example_gapi_oak_rgb_camera_encoding PRIVATE -DHAVE_OAK)
+  endif()
+  if(TARGET example_gapi_oak_small_hetero_pipeline)
+    ocv_target_compile_definitions(example_gapi_oak_small_hetero_pipeline PRIVATE -DHAVE_OAK)
   endif()
 endif()
