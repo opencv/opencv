@@ -4978,6 +4978,13 @@ void Net::setPreferableTarget(int targetId)
                 impl->preferableTarget = DNN_TARGET_OPENCL;
 #endif
         }
+        else if (IS_DNN_CUDA_TARGET(targetId))
+        {
+#ifdef HAVE_CUDA
+            if (!cuda4dnn::doesDeviceSupportFP16())
+                impl->preferableTarget = DNN_TARGET_CUDA;
+#endif
+        }
         impl->clear();
     }
 }
