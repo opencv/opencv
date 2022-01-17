@@ -9,6 +9,7 @@
 #define OPENCV_GAPI_TYPES_HPP
 
 #include <algorithm>              // std::max, std::min
+#include <vector>
 #include <opencv2/gapi/own/assert.hpp>
 #include <ostream>
 
@@ -156,7 +157,6 @@ struct MatSize
 {
     MatSize() = default;
     explicit MatSize(int* _p, std::vector<int>* _dims_p) : p(_p), dims_p(_dims_p) {}
-    #if !defined(GAPI_STANDALONE)
     int dims() const
     {
         GAPI_DbgAssert(p[0] == -1 && p[1] == -1);
@@ -195,13 +195,14 @@ struct MatSize
     }
     bool operator == (const MatSize& sz) const
     {
-        return (this->p[0] == sz[0] && this->p[1] == sz[1] && *this->dims_p == *sz.dims_p);
+        return ((this->p[0] == sz[0]) &&
+                (this->p[1] == sz[1]) &&
+                (*(this->dims_p) == *sz.dims_p));
     }
     bool operator != (const MatSize& sz) const
     {
         return !(*this == sz);
     }
-    #endif // !defined(GAPI_STANDALONE)
 
     int* p;
     std::vector<int>* dims_p;

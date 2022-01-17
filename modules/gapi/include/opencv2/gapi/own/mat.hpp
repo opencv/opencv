@@ -346,10 +346,12 @@ namespace cv { namespace gapi { namespace own {
             return data + step * row + CV_ELEM_SIZE(type()) * col;
         }
 
+
     private:
         //actual memory allocated for storage, or nullptr if object is non owning view to over memory
         std::shared_ptr<uchar> memory;
     };
+
 } //namespace own
 } //namespace gapi
 } //namespace cv
