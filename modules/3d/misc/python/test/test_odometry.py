@@ -41,7 +41,7 @@ class odometry_test(NewOpenCVTests):
         isCorrect = odometry.compute(rgb_image, rgb_image, Rt_res)
 
         res = (Rt - Rt_res).sum()
-        
+
         eps = 0.05
         self.assertLessEqual(res, eps)
         self.assertTrue(isCorrect)
@@ -68,5 +68,3 @@ class odometry_test(NewOpenCVTests):
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
-
-

@@ -22,7 +22,7 @@ public:
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) = 0;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const = 0;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, 
+    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
                          InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const = 0;
 };
 
@@ -42,7 +42,7 @@ public:
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, 
+    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
                          InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
 };
 
@@ -126,7 +126,7 @@ public:
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, 
+    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
                          InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
 };
 
@@ -206,7 +206,7 @@ public:
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, 
+    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
                          InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
 };
 
@@ -258,7 +258,7 @@ bool OdometryRGBD::compute(InputArray, InputArray, OutputArray) const
     return false;
 }
 
-bool OdometryRGBD::compute(InputArray _srcDepthFrame, InputArray _srcRGBFrame, 
+bool OdometryRGBD::compute(InputArray _srcDepthFrame, InputArray _srcRGBFrame,
                           InputArray _dstDepthFrame, InputArray _dstRGBFrame, OutputArray Rt) const
 {
     OdometryFrame srcFrame = this->createOdometryFrame();
