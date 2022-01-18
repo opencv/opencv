@@ -256,8 +256,8 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     // 1.5) create preproc session based on frame description & network info
     cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
     ASSERT_TRUE(first_pp_params.has_value());
-    std::shared_ptr<PreprocSession> first_pp_sess = preproc_engine.initialize_preproc(first_pp_params.value(),
-                               cptr);
+    pp_session first_pp_sess = preproc_engine.initialize_preproc(first_pp_params.value(),
+                                                                 cptr);
 
     // 2) make preproc using incoming decoded frame & preproc session
     cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
@@ -277,8 +277,9 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_TRUE(params.has_value());
             ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params::value_type)));
 
-            std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
-            ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
+            pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
+            ASSERT_EQ(cv::util::get<std::shared_ptr<EngineSession>>(pp_sess.value).get(),
+                      cv::util::get<std::shared_ptr<EngineSession>>(first_pp_sess.value).get());
 
             pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
             cv::GFrameDesc pp_desc = pp_frame.desc();
@@ -372,7 +373,7 @@ TEST_P(VPPPreprocParams, functional_different_threads)
         cv::MediaFrame decoded_frame = queue.pop();
         cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
         ASSERT_TRUE(first_pp_params.has_value());
-        std::shared_ptr<PreprocSession> first_pp_sess =
+        pp_session first_pp_sess =
                     preproc_engine.initialize_preproc(first_pp_params.value(), cptr);
 
         // make preproc using incoming decoded frame & preproc session
@@ -394,8 +395,10 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                 ASSERT_TRUE(params.has_value());
                 ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
 
-                std::shared_ptr<PreprocSession> pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
-                ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
+                pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
+                //ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
+                ASSERT_EQ(cv::util::get<std::shared_ptr<EngineSession>>(pp_sess.value).get(),
+                          cv::util::get<std::shared_ptr<EngineSession>>(first_pp_sess.value).get());
 
                 pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
                 cv::GFrameDesc pp_desc = pp_frame.desc();

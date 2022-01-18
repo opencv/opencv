@@ -6,7 +6,6 @@
 
 #ifndef GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP
 #define GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP
-#include <stdio.h>
 #include <memory>
 #include <queue>
 
@@ -17,24 +16,17 @@
 
 #ifdef HAVE_ONEVPL
 
-#ifdef HAVE_INF_ENGINE
-#include <inference_engine.hpp>
-
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-struct vpp_pp_params {
-    mfxSession handle;
-    mfxFrameInfo info;
-};
 
 class VPPPreprocEngine;
-class PreprocSession : public EngineSession {
+class vpp_pp_session : public EngineSession {
 public:
     friend class VPPPreprocEngine;
-    PreprocSession(mfxSession sess, const mfxVideoParam &vpp_out_param);
-    ~PreprocSession();
+    vpp_pp_session(mfxSession sess, const mfxVideoParam &vpp_out_param);
+    ~vpp_pp_session();
     using EngineSession::EngineSession;
 
     Data::Meta generate_frame_meta();
@@ -58,6 +50,5 @@ protected:
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_INF_ENGINE
 #endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP

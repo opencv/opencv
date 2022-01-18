@@ -17,14 +17,23 @@ namespace gapi {
 namespace wip {
 
 #ifdef VPP_PREPROC_ENGINE
-#define GAPI_BACKEND_PP_PARAMS      cv::gapi::wip::onevpl::vpp_pp_params
-#else
+#define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::onevpl::vpp_pp_params
+#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::onevpl::vpp_pp_session_ptr
+#else // VPP_PREPROC_ENGINE
 struct empty_pp_params {};
-#define GAPI_BACKEND_PP_PARAMS      cv::gapi::wip::empty_pp_params;
-#endif
+struct empty_pp_session {};
+using empty_pp_session_ptr = std::shared_ptr<empty_pp_session>;
+#define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::empty_pp_params;
+#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::empty_pp_session_ptr;
+#endif // VPP_PREPROC_ENGINE
 
 struct pp_params {
     using value_type = cv::util::variant<GAPI_BACKEND_PP_PARAMS>;
+    value_type value;
+};
+
+struct pp_session {
+    using value_type = cv::util::variant<GAPI_BACKEND_PP_SESSIONS>;
     value_type value;
 };
 } // namespace wip

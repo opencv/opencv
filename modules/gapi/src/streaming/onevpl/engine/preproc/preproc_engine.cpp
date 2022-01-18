@@ -43,11 +43,11 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
         // 0) preproc decoded surface with VPP params
         [this] (EngineSession& sess) -> ExecutionStatus
         {
-            PreprocSession &my_sess = static_cast<PreprocSession&>(sess);
+            session_type &my_sess = static_cast<session_type&>(sess);
             while (!my_sess.sync_in_queue.empty()) {
                 do {
                     if (!my_sess.procesing_surface_ptr.expired()) {
-                        PreprocSession::op_handle_t pending_op = my_sess.sync_in_queue.front();
+                        session_type::op_handle_t pending_op = my_sess.sync_in_queue.front();
                         GAPI_LOG_DEBUG(nullptr, "pending IN operations count: " <<
                                                 my_sess.sync_in_queue.size() <<
                                                 ", sync id:  " <<
@@ -124,10 +124,10 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
         // 1) Wait for ASYNC decode result
         [this] (EngineSession& sess) -> ExecutionStatus
         {
-            PreprocSession& my_sess = static_cast<PreprocSession&>(sess);
+            session_type& my_sess = static_cast<session_type&>(sess);
             do {
                 if (!my_sess.vpp_out_queue.empty()) { // FIFO: check the oldest async operation complete
-                    PreprocSession::op_handle_t& pending_op = my_sess.vpp_out_queue.front();
+                    session_type::op_handle_t& pending_op = my_sess.vpp_out_queue.front();
                     sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
                     GAPI_LOG_DEBUG(nullptr, "pending VPP operations count: " <<
@@ -150,7 +150,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
         // 2) Falls back on generic status procesing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
-            return this->process_error(sess.last_status, static_cast<PreprocSession&>(sess));
+            return this->process_error(sess.last_status, static_cast<session_type&>(sess));
         }
     );
 }
@@ -171,9 +171,8 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
     return ret;
 }
 
-std::shared_ptr<PreprocSession>
-VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
-                                     const InferenceEngine::InputInfo::CPtr& net_input) {
+pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
+                                                const InferenceEngine::InputInfo::CPtr& net_input) {
     GAPI_Assert(net_input && "InferenceEngine::InputInfo::CPtr is nullptr");
     const vpp_pp_params &params = cv::util::get<vpp_pp_params>(preproc_params.value);
 
@@ -195,12 +194,12 @@ VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     mfxVPPParams.vpp.Out.CropH         = mfxVPPParams.vpp.Out.Height;
 
     // find existing session
-    GAPI_LOG_DEBUG(nullptr, "Find existing PreprocSession for requested frame params"
+    GAPI_LOG_DEBUG(nullptr, "Find existing vpp_pp_session for requested frame params"
                             ", total sessions: " << preproc_session_map.size());
     auto it = preproc_session_map.find(mfxVPPParams.vpp.In);
     if (it != preproc_session_map.end()) {
         GAPI_LOG_DEBUG(nullptr, "[" << it->second->session << "] found");
-        return it->second;
+        return pp_session{pp_session::value_type(std::static_pointer_cast<EngineSession>(it->second))};
     }
 
     // NB: make some sanity checks
@@ -282,18 +281,18 @@ VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     }
 
     // create engine session after all
-    std::shared_ptr<PreprocSession> sess_ptr =
-                        register_session<PreprocSession>(mfx_vpp_session, mfxVPPParams);
+    session_ptr_type sess_ptr = register_session<session_type>(mfx_vpp_session,
+                                                               mfxVPPParams);
     sess_ptr->init_surface_pool(vpp_out_pool_key);
     sess_ptr->swap_surface(*this);
 
     bool inserted = preproc_session_map.emplace(mfxVPPParams.vpp.In, sess_ptr).second;
     GAPI_Assert(inserted && "preproc session is exist");
-    GAPI_LOG_INFO(nullptr, "PreprocSession created, total sessions: " << preproc_session_map.size());
-    return sess_ptr;
+    GAPI_LOG_INFO(nullptr, "vpp_pp_session created, total sessions: " << preproc_session_map.size());
+    return pp_session{pp_session::value_type(std::static_pointer_cast<EngineSession>(sess_ptr))};
 }
 
-void VPPPreprocEngine::on_frame_ready(PreprocSession& sess,
+void VPPPreprocEngine::on_frame_ready(session_type& sess,
                                       mfxFrameSurface1* ready_surface)
 {
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
@@ -316,7 +315,10 @@ VPPPreprocEngine::initialize_session(mfxSession,
     return {};
 }
 
-cv::MediaFrame VPPPreprocEngine::run_sync(std::shared_ptr<PreprocSession> s, const cv::MediaFrame& in_frame) {
+cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame) {
+
+    std::shared_ptr<EngineSession> pp_sess_impl = cv::util::get<std::shared_ptr<EngineSession>>(sess.value);
+    session_ptr_type s = std::static_pointer_cast<session_type>(pp_sess_impl);
     GAPI_DbgAssert(s && "Session is nullptr");
     GAPI_DbgAssert(is_applicable(in_frame) &&
                    "VPP preproc is not applicable for the given frame");
@@ -328,7 +330,7 @@ cv::MediaFrame VPPPreprocEngine::run_sync(std::shared_ptr<PreprocSession> s, con
     }
 
     // schedule decoded surface into preproc queue
-    PreprocSession::op_handle_t in_preproc_request {nullptr,
+    session_type::op_handle_t in_preproc_request {nullptr,
                                                     vpl_adapter->get_surface()->get_handle()};
     s->sync_in_queue.emplace(in_preproc_request);
     remember_decode_frame(vpl_adapter->get_surface()->get_handle(), in_frame);
@@ -358,8 +360,7 @@ cv::MediaFrame VPPPreprocEngine::run_sync(std::shared_ptr<PreprocSession> s, con
     return cv::util::get<cv::MediaFrame>(data);
 }
 
-ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus status, PreprocSession& sess)
-{
+ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus status, session_type& sess) {
     GAPI_LOG_DEBUG(nullptr, "status: " << mfxstatus_to_string(status));
 
     switch (status) {

@@ -20,17 +20,17 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-namespace onevpl {
-    class PreprocSession;
-}
 struct IProcessingEngine {
     virtual ~IProcessingEngine() = default;
 
-    virtual cv::util::optional<pp_params> is_applicable(const cv::MediaFrame& in_frame) = 0;
-    virtual std::shared_ptr<onevpl::PreprocSession>
-            initialize_preproc(const pp_params& params,
-                               const InferenceEngine::InputInfo::CPtr& net_input) = 0;
-    virtual cv::MediaFrame run_sync(std::shared_ptr<onevpl::PreprocSession> s, const cv::MediaFrame& in_frame) = 0;
+    virtual cv::util::optional<pp_params>
+        is_applicable(const cv::MediaFrame& in_frame) = 0;
+
+    virtual pp_session
+        initialize_preproc(const pp_params& params,
+                           const InferenceEngine::InputInfo::CPtr& net_input) = 0;
+    virtual cv::MediaFrame
+        run_sync(const pp_session &sess, const cv::MediaFrame& in_frame) = 0;
 };
 
 #endif // HAVE_INF_ENGINE

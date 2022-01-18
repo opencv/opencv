@@ -11,7 +11,6 @@
 #include <unordered_map>
 
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
-#include "streaming/onevpl/engine/preproc/preproc_session.hpp"
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 
 #include "streaming/onevpl/engine/processing_engine_interface.hpp"
@@ -29,29 +28,31 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-class PreprocSession;
+class vpp_pp_session;
 struct IDataProvider;
 struct VPLAccelerationPolicy;
 
 class GAPI_EXPORTS VPPPreprocEngine final : public ProcessingEngineBase,
                                             public cv::gapi::wip::IProcessingEngine {
 public:
+    using session_type     = vpp_pp_session;
+    using session_ptr_type = std::shared_ptr<session_type>;
+
     VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
 
     cv::util::optional<pp_params> is_applicable(const cv::MediaFrame& in_frame) override;
 
-    std::shared_ptr<PreprocSession>
-            initialize_preproc(const pp_params& params,
-                               const InferenceEngine::InputInfo::CPtr& net_input) override;
+    pp_session initialize_preproc(const pp_params& params,
+                                  const InferenceEngine::InputInfo::CPtr& net_input) override;
 
-    cv::MediaFrame run_sync(std::shared_ptr<PreprocSession> s,
+    cv::MediaFrame run_sync(const pp_session &session_handle,
                             const cv::MediaFrame& in_frame) override;
 
 private:
-    std::map<mfxFrameInfo, std::shared_ptr<PreprocSession>> preproc_session_map;
-    void on_frame_ready(PreprocSession& sess,
+    std::map<mfxFrameInfo, session_ptr_type> preproc_session_map;
+    void on_frame_ready(session_type& sess,
                         mfxFrameSurface1* ready_surface);
-    ExecutionStatus process_error(mfxStatus status, PreprocSession& sess);
+    ExecutionStatus process_error(mfxStatus status, session_type& sess);
     session_ptr initialize_session(mfxSession mfx_session,
                                    const std::vector<CfgParam>& cfg_params,
                                    std::shared_ptr<IDataProvider> provider) override;
