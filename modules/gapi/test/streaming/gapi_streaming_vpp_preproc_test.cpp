@@ -278,8 +278,8 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params::value_type)));
 
             pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
-            ASSERT_EQ(cv::util::get<std::shared_ptr<EngineSession>>(pp_sess.value).get(),
-                      cv::util::get<std::shared_ptr<EngineSession>>(first_pp_sess.value).get());
+            ASSERT_EQ(pp_sess.get<EngineSession>().get(),
+                      first_pp_sess.get<EngineSession>().get());
 
             pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
             cv::GFrameDesc pp_desc = pp_frame.desc();
@@ -314,7 +314,6 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                     new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
 
     // create file data provider
-    //file_path = findDataFile("highgui/video/big_buck_bunny.h265");
     std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
                                                     {CfgParam::create_decoder_id(decoder_id)}));
 
@@ -396,9 +395,8 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                 ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
 
                 pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
-                //ASSERT_EQ(pp_sess.get(), first_pp_sess.get());
-                ASSERT_EQ(cv::util::get<std::shared_ptr<EngineSession>>(pp_sess.value).get(),
-                          cv::util::get<std::shared_ptr<EngineSession>>(first_pp_sess.value).get());
+                ASSERT_EQ(pp_sess.get<EngineSession>().get(),
+                          first_pp_sess.get<EngineSession>().get());
 
                 pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
                 cv::GFrameDesc pp_desc = pp_frame.desc();

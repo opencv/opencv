@@ -18,7 +18,6 @@
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
-#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 #ifdef HAVE_INF_ENGINE
@@ -161,10 +160,9 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
     BaseFrameAdapter *vpl_adapter = in_frame.get<BaseFrameAdapter>();
     GAPI_LOG_DEBUG(nullptr, "validate VPP preprocessing is applicable for frame");
     if (vpl_adapter) {
-        pp_params preproc_param;
-        preproc_param.value = vpp_pp_params{vpl_adapter->get_session_handle(),
-                                            vpl_adapter->get_surface()->get_info()};
-        ret = cv::util::make_optional<pp_params>(std::move(preproc_param));
+        ret = cv::util::make_optional<pp_params>(
+                        pp_params::create<vpp_pp_params>(vpl_adapter->get_session_handle(),
+                                                         vpl_adapter->get_surface()->get_info()));
         GAPI_LOG_DEBUG(nullptr, "VPP preprocessing applicable, session [" <<
                                 vpl_adapter->get_session_handle() << "]");
     }
@@ -174,7 +172,7 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
 pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
                                                 const InferenceEngine::InputInfo::CPtr& net_input) {
     GAPI_Assert(net_input && "InferenceEngine::InputInfo::CPtr is nullptr");
-    const vpp_pp_params &params = cv::util::get<vpp_pp_params>(preproc_params.value);
+    const vpp_pp_params &params = preproc_params.get<vpp_pp_params>();
 
     // adjust preprocessing settings
     mfxVideoParam mfxVPPParams{0};
@@ -199,7 +197,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     auto it = preproc_session_map.find(mfxVPPParams.vpp.In);
     if (it != preproc_session_map.end()) {
         GAPI_LOG_DEBUG(nullptr, "[" << it->second->session << "] found");
-        return pp_session{pp_session::value_type(std::static_pointer_cast<EngineSession>(it->second))};
+        return pp_session::create(std::static_pointer_cast<EngineSession>(it->second));
     }
 
     // NB: make some sanity checks
@@ -289,7 +287,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     bool inserted = preproc_session_map.emplace(mfxVPPParams.vpp.In, sess_ptr).second;
     GAPI_Assert(inserted && "preproc session is exist");
     GAPI_LOG_INFO(nullptr, "vpp_pp_session created, total sessions: " << preproc_session_map.size());
-    return pp_session{pp_session::value_type(std::static_pointer_cast<EngineSession>(sess_ptr))};
+    return pp_session::create(std::static_pointer_cast<EngineSession>(sess_ptr));
 }
 
 void VPPPreprocEngine::on_frame_ready(session_type& sess,
@@ -317,7 +315,7 @@ VPPPreprocEngine::initialize_session(mfxSession,
 
 cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame) {
 
-    std::shared_ptr<EngineSession> pp_sess_impl = cv::util::get<std::shared_ptr<EngineSession>>(sess.value);
+    std::shared_ptr<EngineSession> pp_sess_impl = sess.get<EngineSession>();
     session_ptr_type s = std::static_pointer_cast<session_type>(pp_sess_impl);
     GAPI_DbgAssert(s && "Session is nullptr");
     GAPI_DbgAssert(is_applicable(in_frame) &&
