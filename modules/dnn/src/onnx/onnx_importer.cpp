@@ -48,6 +48,8 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
+class ONNXLayerHandler;
+
 class ONNXImporter
 {
     opencv_onnx::ModelProto model_proto;
@@ -80,7 +82,7 @@ public:
     void populateNet();
 
 protected:
-    std::unique_ptr<detail::LayerHandler> missingLayerHandler;
+    std::unique_ptr<ONNXLayerHandler> layerHandler;
     Net& dstNet;
 
     opencv_onnx::GraphProto graph_proto;
@@ -98,11 +100,14 @@ protected:
     void handleNode(const opencv_onnx::NodeProto& node_proto);
 
 private:
+    friend class ONNXLayerHandler;
     typedef void (ONNXImporter::*ONNXImporterNodeParser)(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     typedef std::map<std::string, ONNXImporterNodeParser> DispatchMap;
     typedef std::map<std::string, DispatchMap> DomainDispatchMap;
 
     DomainDispatchMap domain_dispatch_map;
+    std::string getLayerTypeDomain(const opencv_onnx::NodeProto& node_proto);
+    const DispatchMap& getDispatchMap(const opencv_onnx::NodeProto& node_proto);
     void buildDispatchMap_ONNX_AI(int opset_version);
     void buildDispatchMap_COM_MICROSOFT(int opset_version);
 
@@ -156,6 +161,7 @@ private:
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -178,9 +184,38 @@ private:
     const std::string str_domain_ai_onnx = "ai.onnx";
 };
 
+class ONNXLayerHandler : public detail::LayerHandler
+{
+public:
+    explicit ONNXLayerHandler(ONNXImporter* importer_);
+
+    void fillRegistry(const opencv_onnx::GraphProto& net);
+
+protected:
+    ONNXImporter* importer;
+};
+
+ONNXLayerHandler::ONNXLayerHandler(ONNXImporter* importer_) : importer(importer_){}
+
+void ONNXLayerHandler::fillRegistry(const opencv_onnx::GraphProto &net)
+{
+    int layersSize = net.node_size();
+    for (int li = 0; li < layersSize; li++) {
+        const opencv_onnx::NodeProto &node_proto = net.node(li);
+        const std::string& name = node_proto.output(0);
+        const std::string& type = node_proto.op_type();
+        const std::string& layer_type_domain = importer->getLayerTypeDomain(node_proto);
+        const auto& dispatch = importer->getDispatchMap(node_proto);
+        if (dispatch.find(type) == dispatch.end())
+        {
+            addMissing(name, cv::format("%s.%s", layer_type_domain.c_str(), type.c_str()));
+        }
+    }
+    printMissing();
+}
 
 ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
-    : missingLayerHandler(DNN_DIAGNOSTICS_RUN ? new detail::LayerHandler() : nullptr)
+    : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
 {
@@ -203,7 +238,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
 }
 
 ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
-    : missingLayerHandler(DNN_DIAGNOSTICS_RUN ? new detail::LayerHandler() : nullptr)
+    : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
 {
@@ -795,6 +830,7 @@ void ONNXImporter::populateNet()
 
     if (DNN_DIAGNOSTICS_RUN) {
         CV_LOG_INFO(NULL, "DNN/ONNX: start diagnostic run!");
+        layerHandler->fillRegistry(graph_proto);
     }
 
     for(int li = 0; li < layersSize; li++)
@@ -806,54 +842,48 @@ void ONNXImporter::populateNet()
     CV_LOG_DEBUG(NULL, (DNN_DIAGNOSTICS_RUN ? "DNN/ONNX: diagnostic run completed!" : "DNN/ONNX: import completed!"));
 }
 
+std::string ONNXImporter::getLayerTypeDomain(const opencv_onnx::NodeProto& node_proto)
+{
+    if (!node_proto.has_domain())
+        return str_domain_ai_onnx;
+    const std::string& domain = node_proto.domain();
+    if (domain.empty())
+        return str_domain_ai_onnx;
+    return domain;
+}
+
+const ONNXImporter::DispatchMap& ONNXImporter::getDispatchMap(const opencv_onnx::NodeProto& node_proto)
+{
+    static DispatchMap empty_map;
+    const std::string& layer_type_domain = getLayerTypeDomain(node_proto);
+    auto it = domain_dispatch_map.find(layer_type_domain);
+    if (it == domain_dispatch_map.end())
+    {
+        return empty_map;
+    }
+
+    return it->second;
+}
+
 void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.output_size() >= 1);
     const std::string& name = node_proto.output(0);
     const std::string& layer_type = node_proto.op_type();
-    const std::string& layer_type_domain = [&]()
+    const std::string& layer_type_domain = getLayerTypeDomain(node_proto);
+    const auto& dispatch = getDispatchMap(node_proto);
+
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: processing node with " << node_proto.input_size() << " inputs and "
+                                                         << node_proto.output_size() << " outputs: "
+                                                         << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
+                                                         << cv::format(" from %sdomain='", onnx_opset_map.count(layer_type_domain) == 1 ? "" : "undeclared ")
+                                                         << layer_type_domain << "'"
+    );
+
+    if (dispatch.empty())
     {
-        if (!node_proto.has_domain())
-            return str_domain_ai_onnx;
-        const std::string& domain = node_proto.domain();
-        if (domain.empty())
-            return str_domain_ai_onnx;
-        return domain;
-    }();
-    const auto& dispatch = [&]()
-    {
-        if (layer_type_domain != str_domain_ai_onnx)
-        {
-            if (onnx_opset_map.find(layer_type_domain) == onnx_opset_map.end())
-            {
-                CV_LOG_WARNING(NULL, "DNN/ONNX: processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
-                        << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
-                        << " from undeclared domain='" << layer_type_domain << "'"
-                );
-            }
-            else
-            {
-                CV_LOG_DEBUG(NULL, "DNN/ONNX: processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
-                        << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
-                        << " from domain='" << layer_type_domain << "'"
-                );
-            }
-            auto it = domain_dispatch_map.find(layer_type_domain);
-            if (it == domain_dispatch_map.end())
-            {
-                CV_LOG_WARNING(NULL, "DNN/ONNX: missing dispatch map for domain='" << layer_type_domain << "'");
-                return DispatchMap();
-            }
-            return it->second;
-        }
-        else
-        {
-            CV_LOG_DEBUG(NULL, "DNN/ONNX: processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
-                    << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
-            );
-            return domain_dispatch_map[str_domain_ai_onnx];
-        }
-    }();
+        CV_LOG_WARNING(NULL, "DNN/ONNX: missing dispatch map for domain='" << layer_type_domain << "'");
+    }
 
     LayerParams layerParams;
     try
@@ -2882,6 +2912,15 @@ void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    for (int j = 0; j < node_proto.input_size(); j++) {
+        if (layer_id.find(node_proto.input(j)) == layer_id.end())
+            layerParams.blobs.push_back(getBlob(node_proto, j));
+    }
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& name = layerParams.name;
@@ -2897,20 +2936,11 @@ void ONNXImporter::parseCustomLayer(LayerParams& layerParams, const opencv_onnx:
         }
     }
 
-    CV_LOG_INFO(NULL, "DNN/ONNX: unknown node type, try using custom handler for node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
+    CV_LOG_IF_INFO(NULL, !LayerFactory::isLayerRegistered(layer_type), "DNN/ONNX: unknown node type, try using custom handler for node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
             << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str())
     );
 
-    if (missingLayerHandler)
-    {
-        missingLayerHandler->addMissing(layerParams.name, layerParams.type);
-    }
-
-    for (int j = 0; j < node_proto.input_size(); j++) {
-        if (layer_id.find(node_proto.input(j)) == layer_id.end())
-            layerParams.blobs.push_back(getBlob(node_proto, j));
-    }
-    addLayer(layerParams, node_proto);
+    parseSimpleLayers(layerParams, node_proto);
 }
 
 void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -3359,6 +3389,15 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
+
+    std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
+                                          "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
+                                          "Identity", "Log", "Round", "Selu", "Sigmoid", "Sin", "Sinh", "Softmax",
+                                          "Softplus", "Softsign", "Sqrt", "Tan", "ThresholdedRelu"};
+    for (const auto& name : simpleLayers)
+    {
+        dispatch[name] = &ONNXImporter::parseSimpleLayers;
+    }
 
     // ai.onnx: opset 10+
     dispatch["QuantizeLinear"] = dispatch["DequantizeLinear"] = &ONNXImporter::parseQuantDequant;
