@@ -6092,6 +6092,13 @@ void LayerFactory::unregisterLayer(const String &type)
     }
 }
 
+bool LayerFactory::isLayerRegistered(const std::string& type)
+{
+    cv::AutoLock lock(getLayerFactoryMutex());
+    auto& registeredLayers = getLayerFactoryImpl();
+    return registeredLayers.find(type) != registeredLayers.end();
+}
+
 Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& params)
 {
     CV_TRACE_FUNCTION();

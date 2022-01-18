@@ -3090,10 +3090,8 @@ void TFImporter::populateNet()
     {
         const tensorflow::NodeDef& layer = net.node(li);
 
-        const std::string name = layer.name();
-        const std::string type = layer.op();
-        const int ninputs = layer.input_size();
-        CV_LOG_DEBUG(NULL, "DNN/TF: (" << li << "/" << layersSize << ") Parse layer " << name << " @ " << type << " with " << ninputs << " inputs");
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing node (" << li << "/" << layersSize << ") with " << layer.input_size() << " inputs: "
+                                                           << cv::format("[%s]:(%s)", layer.op().c_str(), layer.name().c_str()));
 
         parseNode(layer);
     }
