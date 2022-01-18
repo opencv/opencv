@@ -157,7 +157,7 @@ struct MatSize
 {
     MatSize() = default;
     explicit MatSize(int* _p, std::vector<int>* _dims_p) : p(_p), dims_p(_dims_p) {}
-    int dims() const
+    size_t dims() const
     {
         GAPI_DbgAssert(p[0] == -1 && p[1] == -1);
         return dims_p->size();
@@ -211,14 +211,14 @@ struct MatSize
 inline std::ostream& operator<<(std::ostream& o, const MatSize& s)
 {
     const auto dims = s.dims();
-    if (dims <= 2)
+    if (dims <= 2u)
     {
         o << "[" << s().width << " x " << s().height << "]";
     }
     else
     {
         o << "[";
-        for (int i = 0; i < dims; ++i)
+        for (size_t i = 0; i < dims; ++i)
         {
             o << s.dims_p->at(i);
             if (i != dims - 1) o << " x ";
