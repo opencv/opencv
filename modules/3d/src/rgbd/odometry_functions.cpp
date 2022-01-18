@@ -115,7 +115,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     setPyramids(frame, OdometryFramePyramidType::PYR_IMAGE, ipyramids);
 
     std::vector<TMat> dpyramids;
-    preparePyramidImage(Mat(image.size(), CV_32F, 1), dpyramids, iterCounts.size());
+    preparePyramidImage(TMat(image.size(), CV_32F, 1), dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
     std::vector<TMat> mpyramids;
