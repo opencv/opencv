@@ -1,0 +1,12 @@
+diff --git a/inference-engine/src/plugin_api/caseless.hpp b/inference-engine/src/plugin_api/caseless.hpp
+index d8ce739..0dd8886 100644
+--- a/inference-engine/src/plugin_api/caseless.hpp
++++ b/inference-engine/src/plugin_api/caseless.hpp
+@@ -12,6 +12,7 @@
+ #include <algorithm>
+ #include <cctype>
+ #include <functional>
++#include <iterator>
+ #include <map>
+ #include <set>
+ #include <unordered_map>
