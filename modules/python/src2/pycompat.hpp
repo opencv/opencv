@@ -229,7 +229,12 @@ PyObject* pyopencv_from(const TYPE& src)                                        
             ERROR_HANDLER; \
         } \
         CVPY_TYPE_INCREF(pyopencv_##NAME##_TypePtr); \
-        PyModule_AddObject(m, #WNAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
+        if (PyModule_AddObject(m, #WNAME, (PyObject *)pyopencv_##NAME##_TypePtr) < 0) \
+        { \
+            printf("Failed to register a new type: " #WNAME  ", base (" #BASE ")\n"); \
+            Py_DECREF(pyopencv_##NAME##_TypePtr); \
+            ERROR_HANDLER; \
+        } \
     }
 
 //==================================================================================================
@@ -302,10 +307,15 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         pyopencv_##NAME##_TypePtr = PyType_FromSpecWithBases(&pyopencv_##NAME##_Spec, bases); \
         if (!pyopencv_##NAME##_TypePtr) \
         { \
-            printf("Failed to init: " #WNAME ", base (" #BASE ")" "\n"); \
+            printf("Failed to create type from spec: " #WNAME ", base (" #BASE ")\n"); \
             ERROR_HANDLER; \
         } \
-        PyModule_AddObject(m, #NAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
+        if (PyModule_AddObject(m, #WNAME, (PyObject *)pyopencv_##NAME##_TypePtr) < 0) \
+        { \
+            printf("Failed to register a new type: " #WNAME  ", base (" #BASE ")\n"); \
+            Py_DECREF(pyopencv_##NAME##_TypePtr); \
+            ERROR_HANDLER; \
+        } \
     }
 
 // Debug module load:
