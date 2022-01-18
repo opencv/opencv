@@ -213,6 +213,12 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+namespace nested {
+CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
+    return flag;
+}
+} // namespace nested
+
 //! @}  // core_utils
 }  // namespace cv::utils
 
