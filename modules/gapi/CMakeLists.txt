@@ -353,6 +353,14 @@ if (TARGET example_gapi_onevpl_infer_single_roi)
   endif()
 endif()
 
+if (TARGET example_gapi_pipeline_builder_tool)
+  if (WIN32)
+    ocv_target_link_libraries(example_gapi_pipeline_builder_tool winmm.lib)
+  endif()
+  file(GLOB_RECURSE pipeline_builder_configs "${CMAKE_CURRENT_LIST_DIR}/samples/pipeline_builder/configs/*.yml")
+  install(FILES ${pipeline_builder_configs} DESTINATION "${OPENCV_OTHER_INSTALL_PATH}/pipeline_builder_configs")
+endif()
+
 # perf test dependencies postprocessing
 if(HAVE_GAPI_ONEVPL)
   # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
