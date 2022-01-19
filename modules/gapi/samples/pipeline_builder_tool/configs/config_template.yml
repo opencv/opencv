@@ -13,14 +13,14 @@ Pipelines:
           precision: 'U8'
 
       nodes:
-        - name: 'PP' 
+        - name: 'PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'Infer' 
+        - name: 'Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -48,14 +48,14 @@ Pipelines:
           precision: 'U8'
 
       nodes:
-        - name: 'M1_PP' 
+        - name: 'M1_PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'M1_Infer' 
+        - name: 'M1_Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -65,14 +65,14 @@ Pipelines:
           output_layers:
             - 'detection_out'
 
-        - name: 'M2_PP' 
+        - name: 'M2_PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'M2_Infer' 
+        - name: 'M2_Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -82,14 +82,14 @@ Pipelines:
           output_layers:
             - 'detection_out'
 
-        - name: 'M3_PP' 
+        - name: 'M3_PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'M3_Infer' 
+        - name: 'M3_Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -99,14 +99,14 @@ Pipelines:
           output_layers:
             - 'detection_out'
 
-        - name: 'M4_PP' 
+        - name: 'M4_PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'M4_Infer' 
+        - name: 'M4_Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -116,14 +116,14 @@ Pipelines:
           output_layers:
             - 'detection_out'
 
-        - name: 'M5_PP' 
+        - name: 'M5_PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'M5_Infer' 
+        - name: 'M5_Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
@@ -166,14 +166,14 @@ Pipelines:
           precision: 'U8'
 
       nodes:
-        - name: 'PP' 
+        - name: 'PP'
           type: 'Dummy'
           time: 0.2
           output:
             dims: [1, 3, 300, 300]
             precision: 'U8'
 
-        - name: 'Infer' 
+        - name: 'Infer'
           type: 'Infer'
           xml: 'face-detection-retail-0004.xml'
           bin: 'face-detection-retail-0004.bin'
