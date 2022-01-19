@@ -142,20 +142,29 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
     std::cout << "OdometryFrameImplTMat<TMat>::setDepth" << std::endl;
     TMat depth_tmp, depth_flt;
+    std::cout << 1 << std::endl;
     depth_tmp = getTMat<TMat>(_depth);
     // Odometry works well with depth values in range [0, 10)
     // If it's bigger, let's scale it down by 5000, a typical depth factor
     double max;
+    std::cout << 2 << std::endl;
     cv::minMaxLoc(depth_tmp, nullptr, &max);
+    std::cout << 3 << std::endl;
     if (max > 10)
     {
+        std::cout << 4 << std::endl;
         depth_tmp.convertTo(depth_flt, CV_32FC1, 1.f / 5000.f);
+        std::cout << 5 << std::endl;
         TMat depthMask;
         cv::compare(depth_flt, Scalar(FLT_EPSILON), depthMask, cv::CMP_LT);
+        std::cout << 6 << std::endl;
         depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depthMask);
+        std::cout << 7 << std::endl;
         depth_tmp = depth_flt;
     }
+    std::cout << 8 << std::endl;
     this->depth = depth_tmp;
+    std::cout << 9 << std::endl;
     this->findMask(_depth);
 }
 

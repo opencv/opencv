@@ -39,17 +39,12 @@ void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
 
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
-    std::cout << "prepareICPFrame" << std::endl;
     prepareICPFrameBase(srcFrame, settings);
-    std::cout << 1 << std::endl;
     prepareICPFrameBase(dstFrame, settings);
 
-    std::cout << 1 << std::endl;
     prepareICPFrameSrc(srcFrame, settings);
-    std::cout << 1 << std::endl;
     if (algtype == OdometryAlgoType::FAST)
         prepareICPFrameDst(srcFrame, settings);
-    std::cout << 1 << std::endl;
     prepareICPFrameDst(dstFrame, settings);
 }
 
@@ -654,7 +649,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          double maxTranslation, double maxRotation, double sobelScale,
                          OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype)
 {
-    std::cout << "RGBDICPOdometryImpl" << std::endl;
     int transformDim = -1;
     CalcRgbdEquationCoeffsPtr rgbdEquationFuncPtr = 0;
     CalcICPEquationCoeffsPtr icpEquationFuncPtr = 0;
