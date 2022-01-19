@@ -39,7 +39,7 @@ class CV_EXPORTS_W Odometry
 {
 public:
     CV_WRAP Odometry();
-    CV_EXPORTS_W Odometry(OdometryType otype);
+    CV_WRAP Odometry(OdometryType otype);
     Odometry(OdometryType otype, const OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
