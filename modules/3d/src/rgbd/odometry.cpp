@@ -108,7 +108,6 @@ bool OdometryICP::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArra
 bool OdometryICP::compute(InputArray, InputArray, InputArray, InputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume does not work with depth and rgb data simultaneously");
-    return false;
 }
 
 class OdometryRGB : public Odometry::Impl
@@ -188,7 +187,6 @@ bool OdometryRGB::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArra
 bool OdometryRGB::compute(InputArray, InputArray, InputArray, InputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume does not work with depth and rgb data simultaneously");
-    return false;
 }
 
 class OdometryRGBD : public Odometry::Impl
@@ -255,7 +253,6 @@ bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& d
 bool OdometryRGBD::compute(InputArray, InputArray, OutputArray) const
 {
     CV_Error(cv::Error::StsBadFunc, "This volume needs depth and rgb data simultaneously");
-    return false;
 }
 
 bool OdometryRGBD::compute(InputArray _srcDepthFrame, InputArray _srcRGBFrame,
