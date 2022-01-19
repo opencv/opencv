@@ -47,7 +47,8 @@ const std::string keys =
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
-    "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
+    "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}"
+    "{ streaming_preproc_enable     | 0                                         | Turn on GAPI streaming auto-preprocessing using network input description instead of IE plugin preprocessing. Available values: 1 for VPP preproc backend}";
 
 namespace {
 bool is_gpu(const std::string &device_name) {
@@ -218,6 +219,7 @@ int main(int argc, char *argv[]) {
     const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
     const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
     const auto vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
+    const auto streaming_preproc_enable = cmd.get<uint32_t>("streaming_preproc_enable");
     const auto device_id = cmd.get<std::string>("faced");
 
     // check ouput file extension
@@ -324,10 +326,17 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
     if (is_gpu(device_id)) {
-        InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                            {"VA_DEVICE", accel_device_ptr} });
+        if (streaming_preproc_enable == 1) {
+            InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
+                                                 {"VA_DEVICE", accel_device_ptr},
+            /*TODO turn on auto vpp preproc*/    {"GAPI_DEVICE_CTX", accel_ctx_ptr} });
+            face_net.cfgContextParams(ctx_config);
+        } else {
+            InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
+                                                 {"VA_DEVICE", accel_device_ptr} });
 
-        face_net.cfgContextParams(ctx_config);
+            face_net.cfgContextParams(ctx_config);
+        }
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
 
         std::cout <<"/*******************************************************/\n"

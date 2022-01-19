@@ -181,13 +181,21 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
 
     // NB: OUT params must refer to IN params of a network
     const InferenceEngine::SizeVector& inDims = net_input->getTensorDesc().getDims();
+    auto layout = net_input->getTensorDesc().getLayout();
     GAPI_LOG_DEBUG(nullptr, "NETWORK dims: " << inDims[0] << ", " << inDims[1] <<
                              ", " << inDims[2] << ", " << inDims[3]);
     mfxVPPParams.vpp.Out = mfxVPPParams.vpp.In;
     mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
     mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
-    mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(ALIGN16(inDims[2]));
-    mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(ALIGN16(inDims[1]));
+    if (layout == InferenceEngine::NHWC) {
+        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(ALIGN16(inDims[2]));
+        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(ALIGN16(inDims[1]));
+    } else if (layout == InferenceEngine::NCHW) {
+        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(ALIGN16(inDims[3]));
+        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(ALIGN16(inDims[2]));
+    } else {
+        GAPI_Assert(false && "Unsupported layout for VPP preproc");
+    }
     mfxVPPParams.vpp.Out.CropW         = mfxVPPParams.vpp.Out.Width;
     mfxVPPParams.vpp.Out.CropH         = mfxVPPParams.vpp.Out.Height;
 

@@ -64,6 +64,15 @@ template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<
 
 #include "utils/itt.hpp"
 
+#include "streaming/onevpl/engine/processing_engine_interface.hpp"
+
+#ifdef HAVE_ONEVPL
+#include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
+#include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
+#include "streaming/onevpl/engine/preproc/preproc_session.hpp"
+#include "streaming/onevpl/cfg_param_device_selector.hpp"
+#endif // HAVE_ONEVPL
+
 namespace IE = InferenceEngine;
 
 namespace {
@@ -224,6 +233,8 @@ struct IEUnit {
 
     InferenceEngine::RemoteContext::Ptr rctx = nullptr;
 
+    std::shared_ptr<cv::gapi::wip::IProcessingEngine> prepoc_engine_impl;
+
     // FIXME: Unlike loadNetwork case, importNetwork requires that preprocessing
     // should be passed as ExecutableNetwork::SetBlob method, so need to collect
     // and store this information at the graph compilation stage (outMeta) and use in runtime.
@@ -237,6 +248,28 @@ struct IEUnit {
         if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
             rctx = ie_core.CreateContext(params.device_id, *ctx_params);
+
+            auto dev_param_it = ctx_params->find("VA_DEVICE");
+            auto ctx_param_it = ctx_params->find("GAPI_DEVICE_CTX");
+            if (dev_param_it != ctx_params->end() && ctx_param_it != ctx_params->end()) {
+#ifdef HAVE_ONEVPL
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+                using namespace cv::gapi::wip::onevpl;
+                GAPI_LOG_INFO(nullptr, "Device & Context detected: build VPP preprocessing engine");
+                std::unique_ptr<VPLAccelerationPolicy> decode_accel_policy (
+                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(
+                                                                       dev_param_it->second,
+                                                                       params.device_id,
+                                                                       ctx_param_it->second,
+                                                                       CfgParams{CfgParam::create_acceleration_mode("MFX_ACCEL_MODE_VIA_D3D11")})));
+                // create preproc engine
+                prepoc_engine_impl.reset(new VPPPreprocEngine(std::move(decode_accel_policy)));
+                GAPI_LOG_INFO(nullptr, "VPP preprocessing engine created");
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+#endif // HAVE_ONEVPL
+            }
         }
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
@@ -346,6 +379,9 @@ public:
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
 
+    using req_key_t = void*;
+    cv::MediaFrame* prepare_keep_alive_frame_slot(req_key_t key);
+    size_t release_keep_alive_frame(req_key_t key);
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
@@ -367,6 +403,10 @@ private:
     // Input parameters passed to an inference operation.
     cv::GArgs m_args;
     cv::GShapes m_in_shapes;
+
+    // keep alive preprocessed frames
+    std::mutex keep_alive_frames_mutex;
+    std::unordered_map<req_key_t, cv::MediaFrame> keep_alive_pp_frames;
 };
 
 IECallContext::IECallContext(const IEUnit                                      &  unit,
@@ -466,6 +506,29 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
     }
 }
 
+cv::MediaFrame* IECallContext::prepare_keep_alive_frame_slot(req_key_t key) {
+    std::unique_lock<std::mutex> lock(keep_alive_frames_mutex);
+    auto placeholder_it = keep_alive_pp_frames.emplace(key, cv::MediaFrame()).first;
+    return &placeholder_it->second;
+}
+
+size_t IECallContext::release_keep_alive_frame(req_key_t key) {
+    size_t elapsed_count = 0;
+    void *prev_slot = nullptr;
+    {
+        std::unique_lock<std::mutex> lock(keep_alive_frames_mutex);
+        auto ka_frame_it = keep_alive_pp_frames.find(key);
+        if (ka_frame_it != keep_alive_pp_frames.end()) {
+            prev_slot = &ka_frame_it->second;
+            ka_frame_it->second = cv::MediaFrame();
+        }
+        elapsed_count = keep_alive_pp_frames.size();
+    }
+    GAPI_LOG_DEBUG(nullptr, "Release keep alive frame, slot: " << prev_slot <<
+                            ", reserved frames count: " << elapsed_count);
+    return elapsed_count;
+}
+
 struct IECallable {
     static const char *name() { return "IERequestCallable"; }
     using Run = std::function<void(std::shared_ptr<IECallContext>, cv::gimpl::ie::RequestPool&)>;
@@ -502,11 +565,43 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
-inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
+inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
+                                       cv::MediaFrame* out_keep_alive_frame) {
     GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
                 "Remote blob is supported for MediaFrame only");
+    cv::MediaFrame frame = ctx.inFrame(i);
+#ifdef HAVE_ONEVPL
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+    if (ctx.uu.prepoc_engine_impl) {
+        GAPI_LOG_DEBUG(nullptr, "Try to use VPP preprocessing for decoded frame");
+        cv::util::optional<cv::gapi::wip::pp_params> param =
+                        ctx.uu.prepoc_engine_impl->is_applicable(frame);
+        if (param.has_value()) {
+            GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded frame will be used");
 
-    cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
+            auto inputs = ctx.uu.net.getInputsInfo();
+            const auto &input_name = ctx.uu.params.input_names.at(0);
+            auto ii = inputs.at(input_name);
+
+            cv::gapi::wip::pp_session pp_sess =
+                    ctx.uu.prepoc_engine_impl->initialize_preproc(param.value(), ii);
+
+            frame = ctx.uu.prepoc_engine_impl->run_sync(pp_sess, frame);
+
+            if (out_keep_alive_frame != nullptr) {
+                GAPI_LOG_DEBUG(nullptr, "remember preprocessed frame to keep it busy from reuse, slot: " <<
+                                        out_keep_alive_frame);
+                *out_keep_alive_frame = frame;
+            }
+        }
+    }
+
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+#endif // HAVE_ONEVPL
+
+    cv::util::any any_blob_params = frame.blobParams();
 
     using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
     using NV12ParamType = std::pair<ParamType, ParamType>;
@@ -532,9 +627,10 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
-                                 cv::gapi::ie::TraitAs hint) {
+                                 cv::gapi::ie::TraitAs hint,
+                                 cv::MediaFrame* out_keep_alive_frame = nullptr) {
     if (ctx.uu.rctx != nullptr) {
-        return extractRemoteBlob(ctx, i);
+        return extractRemoteBlob(ctx, i, out_keep_alive_frame);
     }
 
     switch (ctx.inShape(i)) {
@@ -881,6 +977,8 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.post(std::move(output));
     }
+
+    ctx->release_keep_alive_frame(&request);
 }
 
 class PostOutputsList {
@@ -1131,11 +1229,16 @@ struct InferROI: public cv::detail::KernelTag {
                     [ctx](InferenceEngine::InferRequest &req) {
                         GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-//-S- preproc ??-->
+
+                        // reserve unique slot for keep alive preprocessed frame
+                        cv::MediaFrame* slot_ptr = ctx->prepare_keep_alive_frame_slot(&req);
+
                         // NB: This blob will be used to make roi from its, so
                         // it should be treated as image
+
                         IE::Blob::Ptr this_blob =
-                            extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
+                            extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                        slot_ptr);
                         setROIBlob(req,
                                    *(ctx->uu.params.input_names.begin()),
                                    this_blob, this_roi, *ctx);
