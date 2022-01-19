@@ -140,6 +140,7 @@ void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image) const
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
+    std::cout << "OdometryFrameImplTMat<TMat>::setDepth" << std::endl;
     TMat depth_tmp, depth_flt;
     depth_tmp = getTMat<TMat>(_depth);
     // Odometry works well with depth values in range [0, 10)

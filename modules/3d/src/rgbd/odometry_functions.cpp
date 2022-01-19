@@ -24,14 +24,14 @@ enum
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
-    prepareRGBFrame(srcFrame, dstFrame, settings);
+    prepareRGBFrame(srcFrame, dstFrame, settings, true);
     prepareICPFrame(srcFrame, dstFrame, settings, algtype);
 }
 
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, bool useDepth)
 {
-    prepareRGBFrameBase(srcFrame, settings);
-    prepareRGBFrameBase(dstFrame, settings);
+    prepareRGBFrameBase(srcFrame, settings, useDepth);
+    prepareRGBFrameBase(dstFrame, settings, useDepth);
 
     prepareRGBFrameSrc(srcFrame, settings);
     prepareRGBFrameDst(dstFrame, settings);
@@ -39,16 +39,21 @@ void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
 
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
+    std::cout << "prepareICPFrame" << std::endl;
     prepareICPFrameBase(srcFrame, settings);
+    std::cout << 1 << std::endl;
     prepareICPFrameBase(dstFrame, settings);
 
+    std::cout << 1 << std::endl;
     prepareICPFrameSrc(srcFrame, settings);
+    std::cout << 1 << std::endl;
     if (algtype == OdometryAlgoType::FAST)
         prepareICPFrameDst(srcFrame, settings);
+    std::cout << 1 << std::endl;
     prepareICPFrameDst(dstFrame, settings);
 }
 
-void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
+void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool useDepth)
 {
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -70,30 +75,34 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     checkImage(image);
 
-/*
     TMat depth;
-    frame.getDepth(depth);
-    if (depth.empty())
+    if (useDepth)
     {
-        if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
+        frame.getDepth(depth);
+        if (depth.empty())
         {
-            TMat pyr0;
-            frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
-            frame.setDepth(pyr0);
+            if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
+            {
+                TMat pyr0;
+                frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
+                frame.setDepth(pyr0);
+            }
+            else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
+            {
+                TMat cloud;
+                frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
+                std::vector<TMat> xyz;
+                split(cloud, xyz);
+                frame.setDepth(xyz[2]);
+            }
+            else
+                CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
         }
-        else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
-        {
-            TMat cloud;
-            frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
-            std::vector<TMat> xyz;
-            split(cloud, xyz);
-            frame.setDepth(xyz[2]);
-        }
-        else
-            CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
+        checkDepth(depth, image.size());
     }
-    checkDepth(depth, image.size());
-*/
+    else
+        depth = TMat(image.size(), CV_32F, 1);
+    
     TMat mask;
     frame.getMask(mask);
     if (mask.empty() && frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK) > 0)
@@ -115,7 +124,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     setPyramids(frame, OdometryFramePyramidType::PYR_IMAGE, ipyramids);
 
     std::vector<TMat> dpyramids;
-    preparePyramidImage(TMat(image.size(), CV_32F, 1), dpyramids, iterCounts.size());
+    preparePyramidImage(depth, dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
     std::vector<TMat> mpyramids;

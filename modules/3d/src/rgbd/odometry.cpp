@@ -149,12 +149,12 @@ OdometryFrame OdometryRGB::createOdometryFrame() const
 
 void OdometryRGB::prepareFrame(OdometryFrame& frame)
 {
-    prepareRGBFrame(frame, frame, this->settings);
+    prepareRGBFrame(frame, frame, this->settings, false);
 }
 
 void OdometryRGB::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
-    prepareRGBFrame(srcFrame, dstFrame, this->settings);
+    prepareRGBFrame(srcFrame, dstFrame, this->settings, false);
 }
 
 bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
@@ -181,7 +181,7 @@ bool OdometryRGB::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArra
     srcFrame.setImage(_srcFrame);
     dstFrame.setImage(_dstFrame);
 
-    prepareRGBFrame(srcFrame, dstFrame, this->settings);
+    prepareRGBFrame(srcFrame, dstFrame, this->settings, false);
 
     bool isCorrect = compute(srcFrame, dstFrame, Rt);
     return isCorrect;
