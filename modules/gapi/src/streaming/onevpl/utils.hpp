@@ -76,6 +76,8 @@ mfxU32 cstr_to_mfx_version(const char* cstr);
 std::string GAPI_EXPORTS mfxstatus_to_string(int64_t err);
 std::string GAPI_EXPORTS mfxstatus_to_string(mfxStatus err);
 
+std::string mfx_frame_info_to_string(const mfxFrameInfo &info);
+
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
 
 std::string ext_mem_frame_type_to_cstr(int type);

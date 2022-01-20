@@ -182,7 +182,8 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     // NB: OUT params must refer to IN params of a network
     const InferenceEngine::SizeVector& inDims = net_input->getTensorDesc().getDims();
     auto layout = net_input->getTensorDesc().getLayout();
-    GAPI_LOG_DEBUG(nullptr, "NETWORK dims: " << inDims[0] << ", " << inDims[1] <<
+    GAPI_LOG_DEBUG(nullptr, "network input: " << net_input->name() <<
+                            ", tensor dims: " << inDims[0] << ", " << inDims[1] <<
                              ", " << inDims[2] << ", " << inDims[3]);
     mfxVPPParams.vpp.Out = mfxVPPParams.vpp.In;
     mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
@@ -198,6 +199,14 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     }
     mfxVPPParams.vpp.Out.CropW         = mfxVPPParams.vpp.Out.Width;
     mfxVPPParams.vpp.Out.CropH         = mfxVPPParams.vpp.Out.Height;
+
+    // check In & Out equally to bypass preproc
+    if (!memcmp(&mfxVPPParams.vpp.Out, &mfxVPPParams.vpp.In, sizeof(mfxVPPParams.vpp.Out)) ) {
+        GAPI_LOG_DEBUG(nullptr, "no preproc required");
+        return pp_session::create<EngineSession>(nullptr);
+    }
+    GAPI_LOG_DEBUG(nullptr, "\nFrom:\n{\n" << mfx_frame_info_to_string(mfxVPPParams.vpp.In) <<
+                            "}\nTo:\n{\n" << mfx_frame_info_to_string(mfxVPPParams.vpp.Out) << "}");
 
     // find existing session
     GAPI_LOG_DEBUG(nullptr, "Find existing vpp_pp_session for requested frame params"
@@ -324,6 +333,10 @@ VPPPreprocEngine::initialize_session(mfxSession,
 cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame) {
 
     std::shared_ptr<EngineSession> pp_sess_impl = sess.get<EngineSession>();
+    if (!pp_sess_impl) {
+        // bypass case
+        return in_frame;
+    }
     session_ptr_type s = std::static_pointer_cast<session_type>(pp_sess_impl);
     GAPI_DbgAssert(s && "Session is nullptr");
     GAPI_DbgAssert(is_applicable(in_frame) &&

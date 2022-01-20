@@ -249,6 +249,7 @@ struct IEUnit {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
             rctx = ie_core.CreateContext(params.device_id, *ctx_params);
 
+            // Guess additional parameters is enough for creating preproc engine
             auto dev_param_it = ctx_params->find("VA_DEVICE");
             auto ctx_param_it = ctx_params->find("GAPI_DEVICE_CTX");
             if (dev_param_it != ctx_params->end() && ctx_param_it != ctx_params->end()) {
@@ -257,14 +258,16 @@ struct IEUnit {
 #ifdef HAVE_D3D11
                 using namespace cv::gapi::wip::onevpl;
                 GAPI_LOG_INFO(nullptr, "Device & Context detected: build VPP preprocessing engine");
-                std::unique_ptr<VPLAccelerationPolicy> decode_accel_policy (
-                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(
-                                                                       dev_param_it->second,
-                                                                       params.device_id,
-                                                                       ctx_param_it->second,
-                                                                       CfgParams{CfgParam::create_acceleration_mode("MFX_ACCEL_MODE_VIA_D3D11")})));
-                // create preproc engine
-                prepoc_engine_impl.reset(new VPPPreprocEngine(std::move(decode_accel_policy)));
+                auto device_selector =
+                        std::make_shared<CfgParamDeviceSelector>(
+                                                dev_param_it->second,
+                                                params.device_id,
+                                                ctx_param_it->second,
+                                                CfgParams{CfgParam::create_acceleration_mode("MFX_ACCEL_MODE_VIA_D3D11")});
+                std::unique_ptr<VPLAccelerationPolicy> accel_policy (
+                    new VPLDX11AccelerationPolicy(device_selector));
+                // create VPP preproc engine
+                prepoc_engine_impl.reset(new VPPPreprocEngine(std::move(accel_policy)));
                 GAPI_LOG_INFO(nullptr, "VPP preprocessing engine created");
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
@@ -594,13 +597,13 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
                                         out_keep_alive_frame);
                 *out_keep_alive_frame = frame;
             }
-        }
+        } // oherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
     }
-
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL
 
+    // Request params for result frame whatever it got preprocessed or not
     cv::util::any any_blob_params = frame.blobParams();
 
     using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
