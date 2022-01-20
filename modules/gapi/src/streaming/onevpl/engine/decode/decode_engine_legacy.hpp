@@ -38,8 +38,8 @@ protected:
     };
 
     SessionParam prepare_session_param(mfxSession mfx_session,
-                                        const std::vector<CfgParam>& cfg_params,
-                                        std::shared_ptr<IDataProvider> provider);
+                                       const std::vector<CfgParam>& cfg_params,
+                                       std::shared_ptr<IDataProvider> provider);
 
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
     ExecutionStatus process_error(mfxStatus status, LegacyDecodeSession& sess);

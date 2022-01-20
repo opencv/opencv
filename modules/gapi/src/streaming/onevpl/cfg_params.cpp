@@ -126,7 +126,6 @@ CfgParam CfgParam::create_vpp_frames_pool_size(size_t value) {
                             static_cast<uint64_t>(value), false);
 }
 
-
 CfgParam CfgParam::create_vpp_in_width(uint16_t value) {
     return CfgParam::create(CfgParam::vpp_in_width_name(), value, false);
 }

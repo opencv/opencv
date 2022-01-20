@@ -165,7 +165,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
             }
             return ExecutionStatus::Continue;
         },
-        // 4) transcode
+        // 3) transcode
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyTranscodeSession &my_sess = static_cast<LegacyTranscodeSession&>(sess);
@@ -267,8 +267,8 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
 
 ProcessingEngineBase::session_ptr
 VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
-                                          const std::vector<CfgParam>& cfg_params,
-                                          std::shared_ptr<IDataProvider> provider) {
+                                             const std::vector<CfgParam>& cfg_params,
+                                             std::shared_ptr<IDataProvider> provider) {
     // NB: obtain decoder params
     VPLLegacyDecodeEngine::SessionParam decode_params =
                         prepare_session_param(mfx_session, cfg_params, provider);
@@ -457,7 +457,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyTranscodeEngine::execute_op(opera
 }
 
 void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
-                                           mfxFrameSurface1* ready_surface)
+                                              mfxFrameSurface1* ready_surface)
 {
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 

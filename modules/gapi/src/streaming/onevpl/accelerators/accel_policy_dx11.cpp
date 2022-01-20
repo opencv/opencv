@@ -259,7 +259,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     desc.Format = colorFormat;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.MiscFlags = 0;// D3D11_RESOURCE_MISC_SHARED;
+    desc.MiscFlags = 0;
     desc.BindFlags = D3D11_BIND_DECODER;
 
     if ((MFX_MEMTYPE_FROM_VPPIN & request->Type) && (DXGI_FORMAT_YUY2 == desc.Format) ||
@@ -295,7 +295,6 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     std::vector<ComPtrGuard<ID3D11Texture2D>> main_textures;
     main_textures.reserve(main_textures_count);
     for (size_t i = 0; i < main_textures_count; i++) {
-
         ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
         {
             ID3D11Texture2D *pTexture2D = nullptr;

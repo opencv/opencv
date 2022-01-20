@@ -159,6 +159,8 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 }
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
+    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is fully integrated"
+                         "in OpenVINO InferenceEngine and would be temporary disable.");
 #ifdef HAVE_INF_ENGINE
     Surface::data_t& data = parent_surface_ptr->get_data();
     NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);

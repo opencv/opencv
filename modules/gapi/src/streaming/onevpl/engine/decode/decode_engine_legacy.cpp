@@ -38,16 +38,16 @@ void VPLLegacyDecodeEngine::try_modify_pool_size_request_param(const char* param
     } else {
         if (static_cast<size_t>(std::numeric_limits<mfxU16>::max()) < new_frames_count) {
             GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << param_name << "\": " <<
-                                  new_frames_count << ". It must not be equal than " <<
-                                  std::numeric_limits<mfxU16>::max());
+                                      new_frames_count << ". It must not be greater than " <<
+                                      std::numeric_limits<mfxU16>::max());
             throw std::runtime_error(std::string("Invalid value of param: ") +
-                                 param_name + ", overflow");
+                                     param_name + ", overflow");
         }
         request.NumFrameSuggested = static_cast<mfxU16>(new_frames_count);
         GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input: " <<
-                            ", mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin <<
-                            ", mfxFrameAllocRequest.NumFrameSuggested: " << request.NumFrameSuggested <<
-                            ", mfxFrameAllocRequest.Type: " << request.Type);
+                                ", mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin <<
+                                ", mfxFrameAllocRequest.NumFrameSuggested: " << request.NumFrameSuggested <<
+                                ", mfxFrameAllocRequest.Type: " << request.Type);
     }
 }
 

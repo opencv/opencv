@@ -49,10 +49,11 @@ const std::string keys =
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
     "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
 
-static uint32_t vpl_source_preproc_enable = 0;
-static std::string device_id("AUTO");
-
 namespace {
+bool is_gpu(const std::string &device_name) {
+    return device_name.find("GPU") != std::string::npos;
+}
+
 std::string get_weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
@@ -127,8 +128,9 @@ using GRect       = cv::GOpaque<cv::Rect>;
 using GSize       = cv::GOpaque<cv::Size>;
 using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
-    static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &) {
+G_API_OP(LocateROI, <GRect(GSize, std::reference_wrapper<const std::string>)>, "sample.custom.locate-roi") {
+    static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &,
+                                   std::reference_wrapper<const std::string>) {
         return cv::empty_gopaque_desc();
     }
 };
@@ -149,11 +151,13 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     // but only crops the input image to square (this is
     // the most convenient aspect ratio for detectors to use)
 
-    static void run(const cv::Size& in_size, cv::Rect &out_rect) {
+    static void run(const cv::Size& in_size,
+                    std::reference_wrapper<const std::string> device_id_ref,
+                    cv::Rect &out_rect) {
 
         // Identify the central point & square size (- some padding)
         // NB: GPU plugin in InferenceEngine doesn't support ROI at now
-        if (device_id.find("GPU") == std::string::npos) {
+        if (!is_gpu(device_id_ref.get())) {
             const auto center = cv::Point{in_size.width/2, in_size.height/2};
             auto sqside = std::min(in_size.width, in_size.height);
 
@@ -207,13 +211,14 @@ int main(int argc, char *argv[]) {
     }
 
     // get file name
-    std::string file_path = cmd.get<std::string>("input");
-    const std::string output = cmd.get<std::string>("output");
+    const auto file_path = cmd.get<std::string>("input");
+    const auto output = cmd.get<std::string>("output");
     const auto face_model_path = cmd.get<std::string>("facem");
     const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
     const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
     const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
-    vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
+    const auto vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
+    const auto device_id = cmd.get<std::string>("faced");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -250,7 +255,6 @@ int main(int argc, char *argv[]) {
         source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_vpp_frames_pool_size(source_vpp_queue_capacity));
     }
 
-    device_id = cmd.get<std::string>("faced");
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
         get_weights_path(face_model_path),   // path to weights
@@ -272,7 +276,7 @@ int main(int argc, char *argv[]) {
     auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
     auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
-    if (device_id.find("GPU") != std::string::npos) {
+    if (is_gpu(device_id)) {
         auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
             IDXGIFactory* out_factory = nullptr;
@@ -319,7 +323,7 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
-    if (device_id.find("GPU") != std::string::npos) {
+    if (is_gpu(device_id)) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
                                             {"VA_DEVICE", accel_device_ptr} });
 
@@ -353,7 +357,7 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
-        if (device_id.find("GPU") != std::string::npos) {
+        if (is_gpu(device_id)) {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
                                                  device_id,
                                                  accel_device_ptr,
@@ -373,7 +377,7 @@ int main(int argc, char *argv[]) {
     // Now build the graph
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
-    auto roi = custom::LocateROI::on(size);
+    auto roi = custom::LocateROI::on(size, std::cref(device_id));
     auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
     cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
     auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));

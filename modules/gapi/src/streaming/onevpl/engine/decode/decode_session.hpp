@@ -29,7 +29,7 @@ struct VPLAccelerationPolicy;
 class GAPI_EXPORTS LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;
-    friend class VPLLegacyTranscodeEngine; //TODO
+    friend class VPLLegacyTranscodeEngine; //TODO: remove friend add method
 
     LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, std::shared_ptr<IDataProvider> provider);
     ~LegacyDecodeSession();
