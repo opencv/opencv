@@ -11,6 +11,17 @@
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 
+#ifdef HAVE_INF_ENGINE
+#include <inference_engine.hpp>
+#endif // HAVE_INF_ENGINE
+
+#include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
+#include "streaming/onevpl/engine/preproc/preproc_session.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
+#include "streaming/onevpl/cfg_param_device_selector.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+
 namespace opencv_test
 {
 using namespace perf;
@@ -32,10 +43,10 @@ using codec_t = std::string;
 using accel_mode_t = std::string;
 using source_description_t = std::tuple<source_t, codec_t, accel_mode_t>;
 
-class OneVPLSourcePerfTest : public TestPerfParams<source_description_t> {};
-class VideoCapSourcePerfTest : public TestPerfParams<source_t> {};
+class OneVPLSourcePerf_Test : public TestPerfParams<source_description_t> {};
+class VideoCapSourcePerf_Test : public TestPerfParams<source_t> {};
 
-PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
+PERF_TEST_P_(OneVPLSourcePerf_Test, TestPerformance)
 {
     using namespace cv::gapi::wip::onevpl;
 
@@ -67,7 +78,7 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
+PERF_TEST_P_(VideoCapSourcePerf_Test, TestPerformance)
 {
     using namespace cv::gapi::wip;
 
@@ -82,7 +93,7 @@ PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
-INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerfTest,
+INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerf_Test,
                         Values(source_description_t(files[0], codec[0], ""),
                                source_description_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11"),
                                source_description_t(files[1], codec[1], ""),
@@ -90,10 +101,208 @@ INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerfTest,
                                source_description_t(files[2], codec[2], ""),
                                source_description_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11")));
 
-INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerfTest,
+INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerf_Test,
                         Values(files[0],
                                files[1],
                                files[2]));
+
+using resize_t = std::pair<uint16_t, uint16_t>;
+using source_description_preproc_t = decltype(std::tuple_cat(std::declval<source_description_t>(),
+                                                             std::declval<std::tuple<resize_t>>()));
+class OneVPLSourcePerf_PP_Test : public TestPerfParams<source_description_preproc_t> {};
+
+PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
+{
+    using namespace cv::gapi::wip::onevpl;
+
+    const auto params = GetParam();
+    source_t src = findDataFile(get<0>(params));
+    codec_t type = get<1>(params);
+    accel_mode_t mode = get<2>(params);
+    resize_t res = get<3>(params);
+
+    std::vector<CfgParam> cfg_params {
+        CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
+    };
+
+    if (!type.empty()) {
+        cfg_params.push_back(CfgParam::create_decoder_id(type.c_str()));
+    }
+
+    if (!mode.empty()) {
+        cfg_params.push_back(CfgParam::create_acceleration_mode(mode.c_str()));
+    }
+
+    cfg_params.push_back(CfgParam::create_vpp_out_width(res.first));
+    cfg_params.push_back(CfgParam::create_vpp_out_height(res.second));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_x(0));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_y(0));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_w(res.first));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_h(res.second));
+
+    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
+
+    cv::gapi::wip::Data out;
+    TEST_CYCLE()
+    {
+        source_ptr->pull(out);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "", {1920, 1080}),
+                               source_description_preproc_t(files[0], codec[0], "", {352, 288}),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288}),
+                               source_description_preproc_t(files[1], codec[1], "", {1920, 1080}),
+                               source_description_preproc_t(files[1], codec[1], "", {352, 288}),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{1920, 1080}),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{352, 288}),
+                               source_description_preproc_t(files[2], codec[2], "", {1920, 1080}),
+                               source_description_preproc_t(files[2], codec[2], "", {352, 288}),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288})));
+
+#ifdef HAVE_INF_ENGINE
+class OneVPLSourcePerf_PP_Engine_Test : public TestPerfParams<source_description_preproc_t> {};
+InferenceEngine::InputInfo::CPtr mock_network_info(size_t width, size_t height) {
+    auto net_input = std::make_shared<InferenceEngine::InputInfo>();
+    InferenceEngine::SizeVector dims_src = {1         /* batch, N*/,
+                                            height,
+                                            width,
+                                            3 /*Channels,*/,
+                                            };
+    InferenceEngine::DataPtr dataPtr(
+        new InferenceEngine::Data("data", InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, dims_src, InferenceEngine::NHWC)));
+    net_input->setInputData(dataPtr);
+    InferenceEngine::InputInfo::CPtr cptr = std::make_shared<InferenceEngine::InputInfo>(*net_input);
+    return cptr;
+}
+
+PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
+{
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+
+    const auto params = GetParam();
+    source_t src = findDataFile(get<0>(params));
+    codec_t type = get<1>(params);
+    accel_mode_t mode = get<2>(params);
+    resize_t res = get<3>(params);
+
+    std::vector<CfgParam> cfg_params {
+        CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
+    };
+
+    if (!type.empty()) {
+        cfg_params.push_back(CfgParam::create_decoder_id(type.c_str()));
+    }
+
+    if (!mode.empty()) {
+        cfg_params.push_back(CfgParam::create_acceleration_mode(mode.c_str()));
+    }
+
+    auto device_selector = std::make_shared<CfgParamDeviceSelector>(cfg_params);
+    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params, device_selector);
+
+    // create VPP preproc engine
+    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(res.first, res.second);
+    std::unique_ptr<VPLAccelerationPolicy> policy;
+    if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
+        policy.reset(new VPLDX11AccelerationPolicy(device_selector));
+    } else {
+        policy.reset(new VPLCPUAccelerationPolicy(device_selector));
+    }
+    VPPPreprocEngine preproc_engine(std::move(policy));
+    cv::gapi::wip::Data out;
+    TEST_CYCLE()
+    {
+        source_ptr->pull(out);
+        cv::MediaFrame frame = cv::util::get<cv::MediaFrame>(out);
+        cv::util::optional<pp_params> param = preproc_engine.is_applicable(frame);
+        pp_session sess = preproc_engine.initialize_preproc(param.value(),
+                                                            cptr);
+        (void)preproc_engine.run_sync(sess, frame);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP, OneVPLSourcePerf_PP_Engine_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "", {1920, 1080}),
+                               source_description_preproc_t(files[0], codec[0], "", {352, 288}),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288}),
+                               source_description_preproc_t(files[1], codec[1], "", {1920, 1080}),
+                               source_description_preproc_t(files[1], codec[1], "", {352, 288}),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{1920, 1080}),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{352, 288}),
+                               source_description_preproc_t(files[2], codec[2], "", {1920, 1080}),
+                               source_description_preproc_t(files[2], codec[2], "", {352, 288}),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288})));
+
+class OneVPLSourcePerf_PP_Engine_Bypass_Test : public TestPerfParams<source_description_preproc_t> {};
+
+PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
+{
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+
+    const auto params = GetParam();
+    source_t src = findDataFile(get<0>(params));
+    codec_t type = get<1>(params);
+    accel_mode_t mode = get<2>(params);
+    resize_t res = get<3>(params);
+
+    std::vector<CfgParam> cfg_params {
+        CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
+    };
+
+    if (!type.empty()) {
+        cfg_params.push_back(CfgParam::create_decoder_id(type.c_str()));
+    }
+
+    if (!mode.empty()) {
+        cfg_params.push_back(CfgParam::create_acceleration_mode(mode.c_str()));
+    }
+
+    auto device_selector = std::make_shared<CfgParamDeviceSelector>(cfg_params);
+    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params, device_selector);
+
+    // create VPP preproc engine
+    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(res.first, res.second);
+    std::unique_ptr<VPLAccelerationPolicy> policy;
+    if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
+        policy.reset(new VPLDX11AccelerationPolicy(device_selector));
+    } else {
+        policy.reset(new VPLCPUAccelerationPolicy(device_selector));
+    }
+    VPPPreprocEngine preproc_engine(std::move(policy));
+    cv::gapi::wip::Data out;
+    TEST_CYCLE()
+    {
+        source_ptr->pull(out);
+        cv::MediaFrame frame = cv::util::get<cv::MediaFrame>(out);
+        cv::util::optional<pp_params> param = preproc_engine.is_applicable(frame);
+        pp_session sess = preproc_engine.initialize_preproc(param.value(),
+                                                            cptr);
+        (void)preproc_engine.run_sync(sess, frame);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_Bypass_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "", {672, 384}),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {672, 384}),
+                               source_description_preproc_t(files[1], codec[1], "", {672, 384}),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{672, 384}),
+                               source_description_preproc_t(files[2], codec[2], "", {336, 256}),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {336, 256})));
+#endif // HAVE_INF_ENGINE
 } // namespace opencv_test
 
 #endif // HAVE_ONEVPL

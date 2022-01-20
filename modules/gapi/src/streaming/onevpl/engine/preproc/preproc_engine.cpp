@@ -189,11 +189,11 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
     mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
     if (layout == InferenceEngine::NHWC) {
-        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(ALIGN16(inDims[2]));
-        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(ALIGN16(inDims[1]));
+        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(inDims[2]);
+        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(inDims[1]);
     } else if (layout == InferenceEngine::NCHW) {
-        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(ALIGN16(inDims[3]));
-        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(ALIGN16(inDims[2]));
+        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(inDims[3]);
+        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(inDims[2]);
     } else {
         GAPI_Assert(false && "Unsupported layout for VPP preproc");
     }
@@ -205,6 +205,13 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
         GAPI_LOG_DEBUG(nullptr, "no preproc required");
         return pp_session::create<EngineSession>(nullptr);
     }
+
+    // recalculate size param according to VPP alignment
+    mfxVPPParams.vpp.Out.Width = ALIGN16(mfxVPPParams.vpp.Out.Width);
+    mfxVPPParams.vpp.Out.Height = ALIGN16(mfxVPPParams.vpp.Out.Height);
+    mfxVPPParams.vpp.Out.CropW = mfxVPPParams.vpp.Out.Width;
+    mfxVPPParams.vpp.Out.CropH = mfxVPPParams.vpp.Out.Height;
+
     GAPI_LOG_DEBUG(nullptr, "\nFrom:\n{\n" << mfx_frame_info_to_string(mfxVPPParams.vpp.In) <<
                             "}\nTo:\n{\n" << mfx_frame_info_to_string(mfxVPPParams.vpp.Out) << "}");
 

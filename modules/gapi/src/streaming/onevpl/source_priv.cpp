@@ -266,7 +266,7 @@ GSource::Priv::~Priv() {
     GAPI_LOG_INFO(nullptr, "Unload MFX implementation description: " << mfx_impl_description);
     MFXDispReleaseImplDescription(mfx_handle, mfx_impl_description);
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
-    MFXUnload(mfx_handle);
+    //MFXUnload(mfx_handle);
 }
 
 std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::shared_ptr<IDeviceSelector> selector)

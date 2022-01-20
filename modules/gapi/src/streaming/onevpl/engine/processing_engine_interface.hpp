@@ -32,9 +32,8 @@ struct IProcessingEngine {
     virtual cv::MediaFrame
         run_sync(const pp_session &sess, const cv::MediaFrame& in_frame) = 0;
 };
-
-#endif // HAVE_INF_ENGINE
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_INF_ENGINE
 #endif // GAPI_STREAMING_ONEVPL_ENGINE_PROCESSING_ENGINE_INTERFACE_HPP
