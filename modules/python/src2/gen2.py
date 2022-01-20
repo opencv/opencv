@@ -246,9 +246,13 @@ class ClassProp(object):
 
 class ClassInfo(object):
     def __init__(self, name, decl=None):
+        # Scope name can be a module or other class e.g. cv::SimpleBlobDetector::Params
+        self.scope_name, self.sname = name.rsplit(".", 1)
+
+        self.scope_name = re.sub(r"^cv\.?", "", self.scope_name)
+
         self.cname = name.replace(".", "::")
         self.name = self.wname = normalize_class_name(name)
-        self.sname = name[name.rfind('.') + 1:]
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
@@ -361,13 +365,15 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return "CVPY_TYPE({}, {}, {}, {}, {}, {});\n".format(
+        return "CVPY_TYPE({}, {}, {}, {}, {}, {}, {});\n".format(
             self.wname,
-            self.name,
+            self.sname,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
             self.sname if self.issimple else "Ptr",
             baseptr,
-            constructor_name
+            constructor_name,
+            # Leading dot is required to provide correct class naming
+            "." + self.scope_name if len(self.scope_name) > 0 else self.scope_name
         )
 
 
@@ -883,6 +889,9 @@ class PythonWrapperGenerator(object):
         # Add Class to json file.
         namespace, classes, name = self.split_decl_name(name)
         namespace = '.'.join(namespace)
+        # Registering a namespace if it is not already handled or
+        # doesn't have anything except classes
+        self.namespaces.setdefault(namespace, Namespace())
         name = '_'.join(classes+[name])
 
         py_name = 'cv.' + classinfo.wname  # use wrapper name

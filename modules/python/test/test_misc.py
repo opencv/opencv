@@ -633,6 +633,26 @@ class Arguments(NewOpenCVTests):
             self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
                              msg="Function in nested module returns wrong result")
 
+    def test_class_from_submodule_has_global_alias(self):
+        self.assertTrue(hasattr(cv.ml, "Boost"),
+                        msg="Class is not registered in the submodule")
+        self.assertTrue(hasattr(cv, "ml_Boost"),
+                        msg="Class from submodule doesn't have alias in the "
+                        "global module")
+        self.assertEqual(cv.ml.Boost, cv.ml_Boost,
+                         msg="Classes from submodules and global module don't refer "
+                         "to the same type")
+
+    def test_inner_class_has_global_alias(self):
+        self.assertTrue(hasattr(cv.SimpleBlobDetector, "Params"),
+                        msg="Class is not registered as inner class")
+        self.assertEqual(cv.SimpleBlobDetector.Params, cv.SimpleBlobDetector_Params,
+                        msg="Inner class and class in global module don't refer "
+                        "to the same type")
+        self.assertTrue(hasattr(cv, "SimpleBlobDetector_Params"),
+                        msg="Inner class doesn't have alias in the global module")
+
+
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):
