@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
 import ctypes
 from functools import partial
 from collections import namedtuple
@@ -595,6 +596,20 @@ class Arguments(NewOpenCVTests):
         rr = rrv[0]
         self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
         self.assertEqual(len(rr), 3)
+
+    def test_nested_function_availability(self):
+        self.assertTrue(hasattr(cv.utils, "nested"),
+                        msg="Module is not generated for nested namespace")
+        self.assertTrue(hasattr(cv.utils.nested, "testEchoBooleanFunction"),
+                        msg="Function in nested module is not available")
+        self.assertEqual(sys.getrefcount(cv.utils.nested), 2,
+                         msg="Nested submodule lifetime should be managed by "
+                         "the parent module so the reference count should be "
+                         "2, because `getrefcount` temporary increases it.")
+        for flag in (True, False):
+            self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
+                             msg="Function in nested module returns wrong result")
+
 
 class SamplesFindFile(NewOpenCVTests):
 

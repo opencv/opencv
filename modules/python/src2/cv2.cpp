@@ -2100,45 +2100,151 @@ struct ConstDef
     long long val;
 };
 
-static void init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
-{
-  // traverse and create nested submodules
-  std::string s = name;
-  size_t i = s.find('.');
-  while (i < s.length() && i != std::string::npos)
-  {
-    size_t j = s.find('.', i);
-    if (j == std::string::npos)
-        j = s.length();
-    std::string short_name = s.substr(i, j-i);
-    std::string full_name = s.substr(0, j);
-    i = j+1;
+static inline bool strStartsWith(const std::string& str, const std::string& prefix) {
+    return prefix.empty() || \
+        (str.size() >= prefix.size() && std::memcmp(str.data(), prefix.data(), prefix.size()) == 0);
+}
 
-    PyObject * d = PyModule_GetDict(root);
-    PyObject * submod = PyDict_GetItemString(d, short_name.c_str());
-    if (submod == NULL)
+static inline bool strEndsWith(const std::string& str, char symbol) {
+    return !str.empty() && str[str.size() - 1] == symbol;
+}
+
+/**
+ * \brief Creates a submodule of the `root`. Missing parents submodules
+ * are created as needed. If name equals to parent module name than
+ * borrowed reference to parent module is returned (no reference counting
+ * are done).
+ * Submodule lifetime is managed by the parent module.
+ * If nested submodules are created than the lifetime is managed by the
+ * predecessor submodule in a list.
+ *
+ * \param parent_module Parent module object.
+ * \param name Submodule name.
+ * \return borrowed reference to the created submodule.
+ *         If any of submodules can't be created than NULL is returned.
+ */
+static PyObject* createSubmodule(PyObject* parent_module, const std::string& name)
+{
+    if (!parent_module)
     {
-        submod = PyImport_AddModule(full_name.c_str());
-        PyDict_SetItemString(d, short_name.c_str(), submod);
+        return PyErr_Format(PyExc_ImportError,
+            "Bindings generation error. "
+            "Parent module is NULL during the submodule '%s' creation",
+            name.c_str()
+        );
+    }
+    if (strEndsWith(name, '.'))
+    {
+        return PyErr_Format(PyExc_ImportError,
+            "Bindings generation error. "
+            "Submodule can't end with a dot. Got: %s", name.c_str()
+        );
     }
 
-    if (short_name != "")
-        root = submod;
-  }
+    const std::string parent_name = PyModule_GetName(parent_module);
 
-  // populate module's dict
-  PyObject * d = PyModule_GetDict(root);
-  for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
-  {
-    PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
-    PyDict_SetItemString(d, m->ml_name, method_obj);
-    Py_DECREF(method_obj);
-  }
-  for (ConstDef * c = consts; c->name != NULL; ++c)
-  {
-    PyDict_SetItemString(d, c->name, PyLong_FromLongLong(c->val));
-  }
+    /// Special case handling when caller tries to register a submodule of the parent module with
+    /// the same name
+    if (name == parent_name) {
+        return parent_module;
+    }
 
+    if (!strStartsWith(name, parent_name))
+    {
+        return PyErr_Format(PyExc_ImportError,
+            "Bindings generation error. "
+            "Submodule name should always start with a parent module name. "
+            "Parent name: %s. Submodule name: %s", parent_name.c_str(),
+            name.c_str()
+        );
+    }
+
+    size_t submodule_name_end = name.find('.', parent_name.size() + 1);
+    /// There is no intermediate submodules in the provided name
+    if (submodule_name_end == std::string::npos)
+    {
+        submodule_name_end = name.size();
+    }
+
+    PyObject* submodule = parent_module;
+
+    for (size_t submodule_name_start = parent_name.size() + 1;
+         submodule_name_start < name.size(); )
+    {
+        const std::string submodule_name = name.substr(submodule_name_start,
+                                                       submodule_name_end - submodule_name_start);
+
+        const std::string full_submodule_name = name.substr(0, submodule_name_end);
+
+
+        PyObject* parent_module_dict = PyModule_GetDict(submodule);
+        /// If submodule already exists it can be found in the parent module dictionary,
+        /// otherwise it should be added to it.
+        submodule = PyDict_GetItemString(parent_module_dict,
+                                         submodule_name.c_str());
+        if (!submodule)
+        {
+            submodule = PyImport_AddModule(full_submodule_name.c_str());
+            if (PyDict_SetItemString(parent_module_dict, submodule_name.c_str(), submodule) < 0) {
+                Py_CLEAR(submodule);
+                return PyErr_Format(PyExc_ImportError,
+                    "Can't register a submodule '%s' (full name: '%s')",
+                    submodule_name.c_str(), full_submodule_name.c_str()
+                );
+            }
+            /// PyDict_SetItemString doesn't steal a reference so the reference counter
+            /// of the submodule should be decremented to bind submodule lifetime to the
+            /// parent module
+            Py_DECREF(submodule);
+        }
+
+        submodule_name_start = submodule_name_end + 1;
+
+        submodule_name_end = name.find('.', submodule_name_start);
+        if (submodule_name_end == std::string::npos) {
+            submodule_name_end = name.size();
+        }
+    }
+    return submodule;
+}
+
+static bool init_submodule(PyObject * root, const char * name, PyMethodDef * methods, ConstDef * consts)
+{
+    // traverse and create nested submodules
+    PyObject* submodule = createSubmodule(root, name);
+    if (!submodule)
+    {
+        return false;
+    }
+    // populate module's dict
+    PyObject * d = PyModule_GetDict(submodule);
+    for (PyMethodDef * m = methods; m->ml_name != NULL; ++m)
+    {
+        PyObject * method_obj = PyCFunction_NewEx(m, NULL, NULL);
+        if (PyDict_SetItemString(d, m->ml_name, method_obj) < 0)
+        {
+            PyErr_Format(PyExc_ImportError,
+                "Can't register function %s in module: %s", m->ml_name, name
+            );
+            Py_CLEAR(method_obj);
+            return false;
+        }
+        Py_DECREF(method_obj);
+    }
+    for (ConstDef * c = consts; c->name != NULL; ++c)
+    {
+        PyObject* const_obj = PyLong_FromLongLong(c->val);
+        if (PyDict_SetItemString(d, c->name, const_obj) < 0)
+        {
+            PyErr_Format(PyExc_ImportError,
+                "Can't register constant %s in module %s", c->name, name
+            );
+            Py_CLEAR(const_obj);
+            return false;
+        }
+        Py_DECREF(const_obj);
+    }
+    return true;
 }
 
 #include "pyopencv_generated_modules_content.h"
@@ -2146,7 +2252,10 @@ static void init_submodule(PyObject * root, const char * name, PyMethodDef * met
 static bool init_body(PyObject * m)
 {
 #define CVPY_MODULE(NAMESTR, NAME) \
-    init_submodule(m, MODULESTR NAMESTR, methods_##NAME, consts_##NAME)
+    if (!init_submodule(m, MODULESTR NAMESTR, methods_##NAME, consts_##NAME)) \
+    { \
+        return false; \
+    }
     #include "pyopencv_generated_modules.h"
 #undef CVPY_MODULE
 
@@ -2163,7 +2272,13 @@ static bool init_body(PyObject * m)
     PyObject* d = PyModule_GetDict(m);
 
 
-    PyDict_SetItemString(d, "__version__", PyString_FromString(CV_VERSION));
+    PyObject* version_obj = PyString_FromString(CV_VERSION);
+    if (PyDict_SetItemString(d, "__version__", version_obj) < 0) {
+        PyErr_SetString(PyExc_ImportError, "Can't update module version");
+        Py_CLEAR(version_obj);
+        return false;
+    }
+    Py_DECREF(version_obj);
 
     PyObject *opencv_error_dict = PyDict_New();
     PyDict_SetItemString(opencv_error_dict, "file", Py_None);
@@ -2177,7 +2292,18 @@ static bool init_body(PyObject * m)
     PyDict_SetItemString(d, "error", opencv_error);
 
 
-#define PUBLISH(I) PyDict_SetItemString(d, #I, PyInt_FromLong(I))
+#define PUBLISH_(I, var_name, type_obj) \
+    PyObject* type_obj = PyInt_FromLong(I); \
+    if (PyDict_SetItemString(d, var_name, type_obj) < 0) \
+    { \
+        PyErr_SetString(PyExc_ImportError, "Can't register "  var_name " constant"); \
+        Py_CLEAR(type_obj); \
+        return false; \
+    } \
+    Py_DECREF(type_obj);
+
+#define PUBLISH(I) PUBLISH_(I, #I, I ## _obj)
+
     PUBLISH(CV_8U);
     PUBLISH(CV_8UC1);
     PUBLISH(CV_8UC2);
@@ -2213,6 +2339,7 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_64FC2);
     PUBLISH(CV_64FC3);
     PUBLISH(CV_64FC4);
+#undef PUBLISH_
 #undef PUBLISH
 
     return true;
