@@ -9,7 +9,7 @@ from tests_common import NewOpenCVTests
 
 class odometry_test(NewOpenCVTests):
     def test_OdometryDefault(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
+        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
         #check rotation from 0 to 4 degree
         for degree in range(0, 40, 5):
             radian = np.radians(degree/10)
@@ -36,7 +36,7 @@ class odometry_test(NewOpenCVTests):
             self.assertTrue(isCorrect)
 
     def test_OdometryDepth(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
+        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
         #check rotation from 0 to 4 degree
         for degree in range(0, 40, 5):
             radian = np.radians(degree/10)
@@ -90,7 +90,7 @@ class odometry_test(NewOpenCVTests):
             self.assertTrue(isCorrect)
 
     def test_OdometryRGB_Depth(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
+        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
         rgb = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYCOLOR)
         #check rotation from 0 to 4 degree
         for degree in range(0, 40, 5):
