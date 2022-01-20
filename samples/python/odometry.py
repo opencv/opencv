@@ -34,8 +34,8 @@ def main():
 
     args = parser.parse_args()
 
-    depth1 = cv.imread(args.source_depth_frame, cv.IMREAD_ANYDEPTH)
-    depth2 = cv.imread(args.destination_depth_frame, cv.IMREAD_ANYDEPTH)
+    depth1 = cv.imread(args.source_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
+    depth2 = cv.imread(args.destination_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
 
     rgb1 = cv.imread(args.source_rgb_frame, cv.IMREAD_COLOR)
     rgb2 = cv.imread(args.destination_rgb_frame, cv.IMREAD_COLOR)
