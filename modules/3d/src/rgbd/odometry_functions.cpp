@@ -97,7 +97,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
     }
     else
         depth = TMat(image.size(), CV_32F, 1);
-    
+
     TMat mask;
     frame.getMask(mask);
     if (mask.empty() && frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK) > 0)

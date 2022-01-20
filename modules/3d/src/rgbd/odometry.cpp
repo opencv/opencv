@@ -58,7 +58,6 @@ OdometryICP::~OdometryICP()
 
 OdometryFrame OdometryICP::createOdometryFrame() const
 {
-    std::cout << "OdometryICP::createOdometryFrame()" << std::endl;
 #ifdef HAVE_OPENCL
     return OdometryFrame(OdometryFrameStoreType::UMAT);
 #else
@@ -78,7 +77,6 @@ void OdometryICP::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame
 
 bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
 {
-    std::cout << "OdometryICP::compute_2" << std::endl;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
     std::vector<int> iterCounts;
@@ -96,7 +94,6 @@ bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
 
 bool OdometryICP::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArray Rt) const
 {
-    std::cout << "OdometryICP::compute_1" << std::endl;
     OdometryFrame srcFrame = this->createOdometryFrame();
     OdometryFrame dstFrame = this->createOdometryFrame();
     srcFrame.setDepth(_srcFrame);
@@ -354,7 +351,7 @@ bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFr
 
 bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const
 {
-    std::cout << "Odometry::compute" << std::endl;
+
     return this->impl->compute(srcFrame, dstFrame, Rt);
 }
 bool Odometry::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
