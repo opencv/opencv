@@ -16,11 +16,11 @@ Oriented Gradients](http://en.wikipedia.org/wiki/Histogram_of_oriented_gradients
 vectors.
 
 Here, before finding the HOG, we deskew the image using its second order moments. So we first define
-a function **deskew()** which takes a digit image and deskew it. Below is the deskew() function:
+a function **deskew()** which takes a digit image and deskews it. Below is the deskew() function:
 
 @snippet samples/python/tutorial_code/ml/py_svm_opencv/hogsvm.py deskew
 
-Below image shows above deskew function applied to an image of zero. Left image is the original
+Below image shows the deskew function applied to an image of zero. Left image is the original
 image and right image is the deskewed image.
 
 ![image](images/deskew.jpg)
@@ -30,13 +30,13 @@ cell in X and Y direction. Then find their magnitude and direction of gradient a
 gradient is quantized to 16 integer values. Divide this image to four sub-squares. For each
 sub-square, calculate the histogram of direction (16 bins) weighted with their magnitude. So each
 sub-square gives you a vector containing 16 values. Four such vectors (of four sub-squares) together
-gives us a feature vector containing 64 values. This is the feature vector we use to train our data.
+give us a feature vector containing 64 values. This is the feature vector we use to train our data.
 
 @snippet samples/python/tutorial_code/ml/py_svm_opencv/hogsvm.py hog
 
 Finally, as in the previous case, we start by splitting our big dataset into individual cells. For
-every digit, 250 cells are reserved for training data and remaining 250 data is reserved for
-testing. Full code is given below, you also can download it from [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ml/py_svm_opencv/hogsvm.py):
+every digit, 250 cells are reserved for training data and remaining 250 for
+testing. Full code is given below, you can also download it from [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ml/py_svm_opencv/hogsvm.py):
 
 @include samples/python/tutorial_code/ml/py_svm_opencv/hogsvm.py
 
