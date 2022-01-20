@@ -99,6 +99,10 @@ class YUV2BGRPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv:
 class RGB2HSVPerfTest     : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class BayerGR2RGBPerfTest : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
 class RGB2YUV422PerfTest  : public TestPerfParams<tuple<compare_f, cv::Size, cv::GCompileArgs>> {};
+class ResizePerfTest      : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
+class ResizeFxFyPerfTest  : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+class ResizeInSimpleGraphPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, double, double,  cv::GCompileArgs>> {};
+class BottleneckKernelsConstInputPerfTest : public TestPerfParams<tuple<compare_f, std::string, cv::GCompileArgs>> {};
 } // opencv_test
 
 #endif //OPENCV_GAPI_IMGPROC_PERF_TESTS_HPP

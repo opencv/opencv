@@ -403,4 +403,36 @@ INSTANTIATE_TEST_CASE_P(RGB2YUV422PerfTestCPU, RGB2YUV422PerfTest,
         Combine(Values(ToleranceColor(1e-3).to_compare_f()),
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values( cv::Size(64, 64),
+                    cv::Size(32, 32)),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestCPU, BottleneckKernelsConstInputPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values( "cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
+                    "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestCPU, ResizeInSimpleGraphPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC3),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5),
+            Values(0.5),
+            Values(cv::compile_args(IMGPROC_CPU))));
+
+INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestCPU, ResizeFxFyPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5, 0.1),
+            Values(0.5, 0.1),
+            Values(cv::compile_args(IMGPROC_CPU))));
 } // opencv_test
