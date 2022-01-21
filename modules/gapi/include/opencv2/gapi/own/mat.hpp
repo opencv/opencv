@@ -255,6 +255,10 @@ namespace cv { namespace gapi { namespace own {
             const auto sz = std::accumulate(_dims.begin(), _dims.end(), 1, std::multiplies<int>());
             tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
             tmp.data = tmp.memory.get();
+            // if (_dims.size() > 2) {
+            //     tmp.rows = -1;
+            //     tmp.cols = -1;
+            // }
             *this = std::move(tmp);
             this->size = MatSize(&this->rows, &this->dims);
         }

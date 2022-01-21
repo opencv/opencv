@@ -12,6 +12,7 @@
 #include <vector>
 #include <opencv2/gapi/own/assert.hpp>
 #include <ostream>
+#include <iostream>
 
 namespace cv
 {
@@ -115,13 +116,6 @@ public:
         height = rhs.height;
         return *this;
     }
-    //! the area (width*height)
-    int area() {
-        const int result = width * height;
-        GAPI_DbgAssert(!std::numeric_limits<int>::is_integer
-            || width == 0 || result / width == height); // make sure the result fits in the return value
-        return result;
-    }
 #endif // !defined(GAPI_STANDALONE)
 
     int width  = 0;
@@ -160,6 +154,7 @@ struct MatSize
     size_t dims() const
     {
         GAPI_DbgAssert(p[0] == -1 && p[1] == -1);
+        std::cout << p[0] << std::endl;
         return dims_p->size();
     }
     Size operator()() const
@@ -193,13 +188,13 @@ struct MatSize
             return p[i];
         }
     }
-    bool operator == (const MatSize& sz) const
+    bool operator==(const MatSize& sz) const
     {
         return ((this->p[0] == sz[0]) &&
                 (this->p[1] == sz[1]) &&
                 (*(this->dims_p) == *sz.dims_p));
     }
-    bool operator != (const MatSize& sz) const
+    bool operator!=(const MatSize& sz) const
     {
         return !(*this == sz);
     }

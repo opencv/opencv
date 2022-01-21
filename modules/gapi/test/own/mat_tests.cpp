@@ -115,8 +115,6 @@ TEST(OwnMat, OwnMatSize)
     Mat m;
     m.create(size, CV_8UC3);
 
-    std::cout << m.size << std::endl;
-
     ASSERT_EQ(m.size().width, 32);
     ASSERT_EQ(m.size().height, 16);
     ASSERT_EQ(m.size(), size);
@@ -130,9 +128,7 @@ TEST(OwnMat, OwnMatNDSize)
     Mat m;
     m.create(dims, CV_32F);
 
-    std::cout << m.size << std::endl;
-
-    ASSERT_EQ(m.size.dims(), 4);
+    ASSERT_EQ(m.size.dims(), 4u);
     ASSERT_EQ(m.size[0], 1);
     ASSERT_EQ(m.size[1], 3);
     ASSERT_EQ(m.size[2], 32);
