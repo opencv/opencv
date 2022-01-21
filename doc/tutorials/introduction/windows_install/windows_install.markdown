@@ -31,7 +31,7 @@ Installation by Using the Pre-built Libraries {#tutorial_windows_install_prebuil
 -#  Make sure you have admin rights. Unpack the self-extracting archive.
 -#  You can check the installation at the chosen path as you can see below.
 
-    ![](images/OpenCV_Install_Directory.png)
+![OpenCV_Install_Directory](https://github.com/opencv/opencv/blob/4.x/doc/tutorials/introduction/windows_install/images/OpenCV_Install_Directory.png)
 
 -#  To finalize the installation go to the @ref tutorial_windows_install_path section.
 
@@ -119,6 +119,7 @@ You may find the content of this tutorial also inside the following videos:
 
 **warning**
 
+
 These videos above are long-obsolete and contain inaccurate information. Be careful, since
 solutions described in those videos are no longer supported and may even break your install.
 
@@ -127,7 +128,7 @@ repository](https://github.com/opencv/opencv.git).
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
--   An IDE of choice (preferably), or just a CC++ compiler that will actually make the binary files.
+-   An IDE of choice (preferably), or just a C++ compiler that will actually make the binary files.
     Here we will use the [Microsoft Visual Studio](https://www.microsoft.com/visualstudio/en-us).
     However, you can use any other IDE that has a valid CC++ compiler.
 -   [CMake](http://www.cmake.org/cmake/resources/software.html), which is a neat tool to make the project files (for your chosen IDE) from the OpenCV
@@ -208,8 +209,8 @@ libraries). If you do not need the support for some of these, you can just freel
         the [Intel Integrated Performance Primitives (*IPP*)](http://software.intel.com/en-us/articles/intel-ipp/)
         the story is the same. For
         extracting the archives, I recommend using the [7-Zip](http://www.7-zip.org/) application.
-
-        ![](images/IntelTBB.png)
+  
+   ![IntelTBB](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/IntelTBB.png)
 
     -#  In case of the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) library it is again a case of download and extract to the
         `D:/OpenCV/dep` directory.
@@ -225,15 +226,16 @@ libraries). If you do not need the support for some of these, you can just freel
         Microsoft Visual Studio 2008 with 32 bit compiler). To do this go to the [Qt
         Downloads](http://qt.nokia.com/downloads) page. Download the source files (not the
         installers!!!):
-
-        ![](images/qtDownloadThisPackage.png)
+        
+   ![qtDownloadThisPackage](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/qtDownloadThisPackage.png)
 
         Extract it into a nice and short named directory like `D:/OpenCV/dep/qt/` . Then you need to
         build it. Start up a *Visual* *Studio* *Command* *Prompt* (*2010*) by using the start menu
         search (or navigate through the start menu
         All Programs --\> Microsoft Visual Studio 2010 --\> Visual Studio Tools --\> Visual Studio Command Prompt (2010)).
 
-        ![](images/visualstudiocommandprompt.jpg)
+   ![visualstudiocommandprompt](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/visualstudiocommandprompt.jpg)
+
 
         Now navigate to the extracted folder and enter inside it by using this console window. You
         should have a folder containing files like *Install*, *Make* and so on. Use the *dir* command
@@ -265,20 +267,23 @@ libraries). If you do not need the support for some of these, you can just freel
     source files of the OpenCV library (1). Then, specify a directory where you will build the
     binary files for OpenCV (2).
 
-    ![](images/CMakeSelectBin.jpg)
+   ![CMakeSelectBin](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/CMakeSelectBin.jpg)
+
 
     Press the Configure button to specify the compiler (and *IDE*) you want to use. Note that in
     case you can choose between different compilers for making either 64 bit or 32 bit libraries.
     Select the one you use in your application development.
 
-    ![](images/CMake_Configure_Windows.jpg)
+   ![CMake_Configure_Windows](https://github.com/opencv/opencv/blob/4.x/doc/tutorials/introduction/windows_install/images/CMake_Configure_Windows.jpg)
+
 
     CMake will start out and based on your system variables will try to automatically locate as many
     packages as possible. You can modify the packages to use for the build in the WITH --\> WITH_X
     menu points (where *X* is the package abbreviation). Here are a list of current packages you can
     turn on or off:
 
-    ![](images/CMakeBuildWithWindowsGUI.jpg)
+   ![CMakeBuildWithWindowsGUI](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/CMakeBuildWithWindowsGUI.jpg)
+
 
     Select all the packages you want to use and press again the *Configure* button. For an easier
     overview of the build options make sure the *Grouped* option under the binary directory
@@ -286,9 +291,10 @@ libraries). If you do not need the support for some of these, you can just freel
     directories. In case of these, CMake will throw an error in its output window (located at the
     bottom of the GUI) and set its field values to not found constants. For example:
 
-    ![](images/CMakePackageNotFoundWindows.jpg)
+   ![CMakePackageNotFoundWindows](https://github.com/opencv/opencv/blob/4.x/doc/tutorials/introduction/windows_install/images/CMakePackageNotFoundWindows.jpg)
 
-    ![](images/CMakeOutputPackageNotFound.jpg)
+
+   ![CMakeOutputPackageNotFound.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/CMakeOutputPackageNotFound.jpg)
 
     For these you need to manually set the queried directories or files path. After this press again
     the *Configure* button to see if the value entered by you was accepted or not. Do this until all
@@ -298,7 +304,7 @@ libraries). If you do not need the support for some of these, you can just freel
     option will make sure that they are categorized inside directories in the *Solution Explorer*.
     It is a must have feature, if you ask me.
 
-    ![](images/CMakeBuildOptionsOpenCV.jpg)
+   ![CMakeBuildOptionsOpenCV.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/CMakeBuildOptionsOpenCV.jpg)
 
     Furthermore, you need to select what part of OpenCV you want to build.
 
@@ -331,11 +337,11 @@ libraries). If you do not need the support for some of these, you can just freel
     IDE at the startup. Now you need to build both the *Release* and the *Debug* binaries. Use the
     drop-down menu on your IDE to change to another of these after building for one of them.
 
-    ![](images/ChangeBuildVisualStudio.jpg)
+   ![ChangeBuildVisualStudio.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/ChangeBuildVisualStudio.jpg)
 
     In the end, you can observe the built binary files inside the bin directory:
 
-    ![](images/OpenCVBuildResultWindows.jpg)
+   ![OpenCVBuildResultWindows.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/OpenCVBuildResultWindows.jpg)
 
     For the documentation, you need to explicitly issue the build commands on the *doxygen* project for
     the HTML documentation. It will call *Doxygen* to do
@@ -345,7 +351,7 @@ libraries). If you do not need the support for some of these, you can just freel
     separate directory (similarly to how the pre-built binaries ship) you need to explicitly build
     the *Install* project.
 
-    ![](images/WindowsBuildInstall.png)
+   ![WindowsBuildInstall.png](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/WindowsBuildInstall.png)
 
     This will create an *Install* directory inside the *Build* one collecting all the built binaries
     into a single place. Use this only after you built both the *Release* and *Debug* versions.
@@ -356,7 +362,7 @@ libraries). If you do not need the support for some of these, you can just freel
     If everything is okay, the *contours.exe* output should resemble the following image (if
     built with Qt support):
 
-    ![](images/WindowsQtContoursOutput.png)
+   ![WindowsQtContoursOutput.png](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/WindowsQtContoursOutput.png)
 
 @note
    If you use the GPU module (CUDA libraries), make sure you also upgrade to the latest drivers of
@@ -397,9 +403,9 @@ following new entry (right click in the application to bring up the menu):
     %OPENCV_DIR%\bin
 @endcode
 
-![](images/PathEditorOpenCVInsertNew.png)
+![PathEditorOpenCVInsertNew.png](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/PathEditorOpenCVInsertNew.png)
 
-![](images/PathEditorOpenCVSetPath.png)
+![PathEditorOpenCVSetPath.png](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/introduction/windows_install/images/PathEditorOpenCVSetPath.png)
 
 Save it to the registry and you are done. If you ever change the location of your build directories
 or want to try out your application with a different build, all you will need to do is to update the
