@@ -159,29 +159,44 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 }
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is fully integrated"
-                         "in OpenVINO InferenceEngine and would be temporary disable.");
+    /*GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully integrated"
+                         "in OpenVINO InferenceEngine and would be temporary disable.");*/
 #ifdef HAVE_INF_ENGINE
     Surface::data_t& data = parent_surface_ptr->get_data();
+    const Surface::info_t& info = parent_surface_ptr->get_info();
     NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);
 
     mfxHDLPair handle{};
     native_handle_getter->get_handle(data.MemId, reinterpret_cast<mfxHDL&>(handle));
 
-    InferenceEngine::ParamMap params{{"SHARED_MEM_TYPE", "VA_SURFACE"},
-                                     {"DEV_OBJECT_HANDLE", handle.first},
-                                     {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
-                                     {"VA_PLANE",
+    GAPI_Assert(frame_desc.fmt == MediaFormat::NV12 &&
+                "blobParams() for VPLMediaFrameDX11Adapter supports NV12 only");
+
+    InferenceEngine::ParamMap y_params{{"SHARED_MEM_TYPE", "VA_SURFACE"},
+                                       {"DEV_OBJECT_HANDLE", handle.first},
+                                       {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
+                                       {"VA_PLANE",
                                          static_cast<DX11AllocationItem::subresource_id_t>(
                                             reinterpret_cast<uint64_t>(
                                                 reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
                                                     handle.second)))}};//,
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    InferenceEngine::TensorDesc tdesc({InferenceEngine::Precision::U8,
-                                       {1, 3, static_cast<size_t>(info.Height),
-                                        static_cast<size_t>(info.Width)},
-                                       InferenceEngine::Layout::NCHW});
-    return std::make_pair(tdesc, params);
+    InferenceEngine::TensorDesc y_tdesc({InferenceEngine::Precision::U8,
+                                        {1, 1, static_cast<size_t>(info.Height),
+                                         static_cast<size_t>(info.Width)},
+                                        InferenceEngine::Layout::NHWC});
+
+    InferenceEngine::ParamMap uv_params = y_params;
+    uv_params["MEM_HANDLE"] = handle.first;
+    uv_params["VA_PLANE"] = static_cast<DX11AllocationItem::subresource_id_t>(
+                                            reinterpret_cast<uint64_t>(
+                                                reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
+                                                    handle.second))) + 1;
+    InferenceEngine::TensorDesc uv_tdesc({InferenceEngine::Precision::U8,
+                                         {1, 2, static_cast<size_t>(info.Height) / 2,
+                                          static_cast<size_t>(info.Width) / 2},
+                                         InferenceEngine::Layout::NHWC});
+    return std::make_pair(std::make_pair(y_tdesc, y_params),
+                          std::make_pair(uv_tdesc, uv_params));
 #else
     GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
 #endif // HAVE_INF_ENGINE

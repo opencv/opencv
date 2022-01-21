@@ -331,15 +331,15 @@ int main(int argc, char *argv[]) {
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
 
         std::cout <<"/*******************************************************/\n"
-                    "ATTENTION: GPU Inference Engine preprocessing is not vital as expected!\n"
+                    "ATTENTION: GPU Inference Engine preprocessing is not vital as expected!"
                      " Please consider param \"source_preproc_enable=1\" and specify "
                      " appropriated media frame transformation using oneVPL::VPP primitives"
-                     " which force onevpl::GSource to produce tranformed media frames.\n"
+                     " which force onevpl::GSource to produce tranformed media frames."
                      " For exploring list of supported transformations please find out "
                      " vpp_* related stuff in"
-                     " gapi/include/opencv2/gapi/streaming/onevpl/cfg_params.hpp\n"
+                     " gapi/include/opencv2/gapi/streaming/onevpl/cfg_params.hpp"
                      " Pay attention that to obtain expected result In this case VPP "
-                     " transformation must match network input params.\n"
+                     " transformation must match network input params."
                      " Please vote/create issue about exporting network params using GAPI\n"
                      "/******************************************************/" << std::endl;
     }
