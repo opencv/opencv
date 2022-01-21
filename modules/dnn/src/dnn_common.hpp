@@ -19,12 +19,12 @@ namespace detail {
 struct NetImplBase
 {
     const int networkId;  // network global identifier
-    int networkDumpCounter;  // dump counter
+    mutable int networkDumpCounter;  // dump counter
     int dumpLevel;  // level of information dumps (initialized through OPENCV_DNN_NETWORK_DUMP parameter)
 
     NetImplBase();
 
-    std::string getDumpFileNameBase();
+    std::string getDumpFileNameBase() const;
 };
 
 }  // namespace detail
