@@ -12,7 +12,6 @@
 #include <vector>
 #include <opencv2/gapi/own/assert.hpp>
 #include <ostream>
-#include <iostream>
 
 namespace cv
 {
@@ -153,8 +152,6 @@ struct MatSize
     explicit MatSize(int* _p, std::vector<int>* _dims_p) : p(_p), dims_p(_dims_p) {}
     size_t dims() const
     {
-        GAPI_DbgAssert(p[0] == -1 && p[1] == -1);
-        std::cout << p[0] << std::endl;
         return dims_p->size();
     }
     Size operator()() const

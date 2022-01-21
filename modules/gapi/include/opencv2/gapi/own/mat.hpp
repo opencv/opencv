@@ -76,7 +76,7 @@ namespace cv { namespace gapi { namespace own {
              */
             int flags = 0;
 
-            //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
+            //! the number of rows and columns
             int rows = 0, cols = 0;
             //! pointer to the data
             uchar* data = nullptr;
@@ -255,10 +255,6 @@ namespace cv { namespace gapi { namespace own {
             const auto sz = std::accumulate(_dims.begin(), _dims.end(), 1, std::multiplies<int>());
             tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
             tmp.data = tmp.memory.get();
-            // if (_dims.size() > 2) {
-            //     tmp.rows = -1;
-            //     tmp.cols = -1;
-            // }
             *this = std::move(tmp);
             this->size = MatSize(&this->rows, &this->dims);
         }
