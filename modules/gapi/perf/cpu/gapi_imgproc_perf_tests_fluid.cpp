@@ -9,6 +9,7 @@
 #include "../common/gapi_imgproc_perf_tests.hpp"
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
+#define CORE_FLUID cv::gapi::core::fluid::kernels()
 
 namespace opencv_test
 {
@@ -220,7 +221,7 @@ INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPer
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(0.5),
             Values(0.5),
-            Values(cv::compile_args(IMGPROC_FLUID))));
+            Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
