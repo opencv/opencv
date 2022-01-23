@@ -45,7 +45,7 @@ if(NOT HAVE_GSTREAMER AND WIN32)
     PATHS ${env_paths}
     PATH_SUFFIXES "lib")
   find_library(GSTREAMER_audio_LIBRARY
-    NAMES  gstaudio gstaudio-1.0
+    NAMES gstaudio gstaudio-1.0
     PATHS ${env_paths}
     PATH_SUFFIXES "lib")
 
