@@ -44,6 +44,10 @@ if(NOT HAVE_GSTREAMER AND WIN32)
     NAMES gstvideo gstvideo-1.0
     PATHS ${env_paths}
     PATH_SUFFIXES "lib")
+  find_library(GSTREAMER_audio_LIBRARY
+    NAMES gstaudio gstaudio-1.0
+    PATHS ${env_paths}
+    PATH_SUFFIXES "lib")
 
   find_library(GSTREAMER_glib_LIBRARY
     NAMES glib-2.0
@@ -63,6 +67,7 @@ if(NOT HAVE_GSTREAMER AND WIN32)
       AND GSTREAMER_pbutils_LIBRARY
       AND GSTREAMER_riff_LIBRARY
       AND GSTREAMER_video_LIBRARY
+      AND GSTREAMER_audio_LIBRARY
       AND GSTREAMER_glib_LIBRARY
       AND GSTREAMER_gobject_LIBRARY)
     file(STRINGS "${GSTREAMER_gst_INCLUDE_DIR}/gst/gstversion.h" ver_strings REGEX "#define +GST_VERSION_(MAJOR|MINOR|MICRO|NANO).*")
@@ -77,6 +82,7 @@ if(NOT HAVE_GSTREAMER AND WIN32)
       ${GSTREAMER_app_LIBRARY}
       ${GSTREAMER_riff_LIBRARY}
       ${GSTREAMER_video_LIBRARY}
+      ${GSTREAMER_audio_LIBRARY}
       ${GSTREAMER_pbutils_LIBRARY}
       ${GSTREAMER_glib_LIBRARY}
       ${GSTREAMER_gobject_LIBRARY})
