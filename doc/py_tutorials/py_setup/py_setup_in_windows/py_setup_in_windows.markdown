@@ -7,8 +7,8 @@ Goals
 In this tutorial
     - We will learn to setup OpenCV-Python in your Windows system.
 
-Below steps are tested in a Windows 7-64 bit machine with Visual Studio 2010 and Visual Studio 2012.
-The screenshots shows VS2012.
+Below steps are tested in a Windows 7 64-bit machine with Visual Studio 2010 and Visual Studio 2012.
+The screenshots show VS2012.
 
 Installing OpenCV from prebuilt binaries
 ----------------------------------------
