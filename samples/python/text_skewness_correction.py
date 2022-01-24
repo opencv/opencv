@@ -15,7 +15,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--image", required=True, help="path to input image file")
+    parser.add_argument("-i", "--image", default="imageTextR.png", help="path to input image file")
     args = vars(parser.parse_args())
 
     # load the image from disk
@@ -37,9 +37,9 @@ def main():
     coords = cv.findNonZero(thresh)
     angle = cv.minAreaRect(coords)[-1]
     # the `cv.minAreaRect` function returns values in the
-    # range [-90, 0) if the angle is less than -45 we need to add 90 to it
-    if angle < -45:
-        angle = (90 + angle)
+    # range [0, 90) if the angle is more than 45 we need to subtract 90 from it
+    if angle > 45:
+        angle = (angle - 90)
 
     (h, w) = image.shape[:2]
     center = (w // 2, h // 2)
@@ -55,4 +55,6 @@ def main():
 
 
 if __name__ == "__main__":
+    print(__doc__)
     main()
+    cv.destroyAllWindows()
