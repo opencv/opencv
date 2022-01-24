@@ -1589,7 +1589,7 @@ template<typename scale_tag_t, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<DST, ushort>::value ||
                          std::is_same<DST, short>::value), int>::type
-divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx, DST* outx,
+divc_simd_common_impl(scale_tag_t s_tag, const SRC in[], DST out[],
                       const v_float32& v_scalar, const v_float32& v_scale,
                       const int length)
 {
@@ -1603,11 +1603,11 @@ divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx, DST* outx,
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            v_float32 a1 = vg_load_f32(inx);
-            v_float32 a2 = vg_load_f32(&inx[nlanes/2]);
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes/2]);
 
-            v_store_i16(outx, v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
-                              v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale))));
+            v_store_i16(&out[x], v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
+                                 v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale))));
         }
 
         if (x < length)
@@ -1623,8 +1623,8 @@ divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx, DST* outx,
 //-------------------------------------------------------------------------------------------------
 
 template<typename scale_tag_t, typename SRC>
-CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx,
-                                           uchar* outx, const v_float32& v_scalar,
+CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC in[],
+                                           uchar out[], const v_float32& v_scalar,
                                            const v_float32& v_scale, const int length)
 {
     constexpr int nlanes = v_uint8::nlanes;
@@ -1637,15 +1637,15 @@ CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx,
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            v_float32 a1 = vg_load_f32(inx);
-            v_float32 a2 = vg_load_f32(&inx[nlanes/4]);
-            v_float32 a3 = vg_load_f32(&inx[nlanes/2]);
-            v_float32 a4 = vg_load_f32(&inx[3 * nlanes/4]);
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes/4]);
+            v_float32 a3 = vg_load_f32(&in[x + nlanes/2]);
+            v_float32 a4 = vg_load_f32(&in[x + 3 * nlanes/4]);
 
-            vx_store(outx, v_pack_u(v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
-                                           v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale)))),
-                                    v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a3, v_scalar, v_scale))),
-                                           v_round(v_select(v_mask, v_zero, div_op(s_tag, a4, v_scalar, v_scale))))));
+            vx_store(&out[x], v_pack_u(v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
+                                              v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale)))),
+                                       v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a3, v_scalar, v_scale))),
+                                              v_round(v_select(v_mask, v_zero, div_op(s_tag, a4, v_scalar, v_scale))))));
         }
 
         if (x < length)
@@ -1661,8 +1661,8 @@ CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC* inx,
 //-------------------------------------------------------------------------------------------------
 
 template<typename scale_tag_t, typename SRC>
-CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC* in,
-                                           float* out, const v_float32& v_scalar,
+CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC in[],
+                                           float out[], const v_float32& v_scalar,
                                            const v_float32& v_scale, const int length)
 {
     constexpr int nlanes = v_float32::nlanes;
@@ -1708,7 +1708,7 @@ template<typename scale_tag_t, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
                         std::is_same<DST, ushort>::value, int>::type
-divc_simd_c3_impl(scale_tag_t s_tag, SRC* in, DST* out, const v_float32& s1,
+divc_simd_c3_impl(scale_tag_t s_tag, SRC in[], DST out[], const v_float32& s1,
                   const v_float32& s2, const v_float32& s3,
                   const v_float32& v_scale, const int length,
                   const int nlanes, const int lanes)
@@ -1752,9 +1752,9 @@ divc_simd_c3_impl(scale_tag_t s_tag, SRC* in, DST* out, const v_float32& s1,
 
 template<typename scale_tag_t, typename SRC>
 CV_ALWAYS_INLINE int divc_simd_c3_impl(scale_tag_t s_tag, const SRC* in, uchar* out,
-                                        const v_float32& s1, const v_float32& s2,
-                                        const v_float32& s3, const v_float32& v_scale,
-                                        const int length, const int nlanes, const int lanes)
+                                       const v_float32& s1, const v_float32& s2,
+                                       const v_float32& s3, const v_float32& v_scale,
+                                       const int length, const int nlanes, const int lanes)
 {
     v_float32 v_zero = vx_setzero_f32();
     v_float32 v_mask1 = (s1 == v_zero);
@@ -1940,7 +1940,7 @@ DIVC_SIMD(float, float)
 
 #define ABSDIFFC_SIMD(SRC)                                                          \
 int absdiffc_simd(const SRC in[], const float scalar[], SRC out[],                  \
-              const int length, const int chan)                                     \
+                  const int length, const int chan)                                 \
 {                                                                                   \
     switch (chan)                                                                   \
     {                                                                               \
