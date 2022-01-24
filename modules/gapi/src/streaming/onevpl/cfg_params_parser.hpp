@@ -31,6 +31,11 @@ struct ParamCreator {
 
 mfxVariant cfg_param_to_mfx_variant(const CfgParam& value);
 
+void extract_optional_param_by_name(const std::string &name,
+                                    const std::vector<CfgParam>& in_params,
+                                    cv::util::optional<size_t> &out_param);
+
+unsigned long strtoul_or_throw(const char* str);
 size_t strtoull_or_throw(const char* str);
 int64_t strtoll_or_throw(const char* str);
 
