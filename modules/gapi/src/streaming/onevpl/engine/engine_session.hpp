@@ -29,6 +29,11 @@ namespace onevpl {
 struct GAPI_EXPORTS DecoderParams {
     std::shared_ptr<IDataProvider::mfx_bitstream> stream;
     mfxVideoParam param;
+    cv::optional<size_t> preallocated_frames_count;
+};
+
+struct GAPI_EXPORTS TranscoderParams {
+    mfxVideoParam param;
 };
 
 struct GAPI_EXPORTS EngineSession {
@@ -41,7 +46,7 @@ struct GAPI_EXPORTS EngineSession {
     std::string error_code_to_str() const;
     virtual ~EngineSession();
 
-    virtual const mfxVideoParam& get_video_param() const = 0;
+    virtual const mfxFrameInfo& get_video_param() const = 0;
 };
 } // namespace onevpl
 } // namespace wip
