@@ -511,11 +511,17 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
     using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
     using NV12ParamType = std::pair<ParamType, ParamType>;
 
-    NV12ParamType blob_params = cv::util::any_cast<NV12ParamType>(any_blob_params);
+    NV12ParamType* blob_params = cv::util::any_cast<NV12ParamType>(&any_blob_params);
+    if (blob_params == nullptr) {
+        GAPI_Assert(false && "Incorrect type of blobParams:"
+                             "expected std::pair<ParamType, ParamType>,"
+                             "with ParamType std::pair<InferenceEngine::TensorDesc,"
+                                                      "InferenceEngine::ParamMap >>");
+    }
 
     //The parameters are TensorDesc and ParamMap for both y and uv blobs
-    auto y_blob = ctx.uu.rctx->CreateBlob(blob_params.first.first, blob_params.first.second);
-    auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params.second.first, blob_params.second.second);
+    auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
+    auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
 
 #if INF_ENGINE_RELEASE >= 2021010000
     return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
