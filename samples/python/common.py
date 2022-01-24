@@ -222,7 +222,7 @@ def mosaic(w, imgs):
     pad = np.zeros_like(img0)
     imgs = it.chain([img0], imgs)
     rows = grouper(w, imgs, pad)
-    return np.vstack(map(np.hstack, rows))
+    return np.vstack(list(map(np.hstack, rows)))
 
 def getsize(img):
     h, w = img.shape[:2]
