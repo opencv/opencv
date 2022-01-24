@@ -48,16 +48,19 @@
 #include "opencv2/core/types_c.h"
 
 #ifdef __cplusplus
-#  ifdef _MSC_VER
-/* disable warning C4190: 'function' has C-linkage specified, but returns UDT 'typename'
-                          which is incompatible with C
+/* disable MSVC warning C4190 / clang-cl -Wreturn-type-c-linkage:
+       'function' has C-linkage specified, but returns UDT 'typename'
+       which is incompatible with C
 
    It is OK to disable it because we only extend few plain structures with
    C++ constructors for simpler interoperability with C++ API of the library
 */
-#    pragma warning(disable:4190)
-#  elif defined __clang__ && __clang_major__ >= 3
+#  if defined(__clang__)
+     // handle clang on Linux and clang-cl (i. e. clang on Windows) first
 #    pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
+#  elif defined(_MSC_VER)
+     // then handle MSVC
+#    pragma warning(disable:4190)
 #  endif
 #endif
 
