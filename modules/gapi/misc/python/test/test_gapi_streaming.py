@@ -478,8 +478,8 @@ try:
             ccomp = c.compileStreaming()
 
             pp = self.get_gst_pipeline(gstpipeline)
-            src1 = pp.get_streaming_source("sink1")
-            src2 = pp.get_streaming_source("sink2")
+            src1 = cv.gapi.wip.get_streaming_source(pp, "sink1")
+            src2 = cv.gapi.wip.get_streaming_source(pp, "sink2")
 
             ccomp.setSource(cv.gin(src1, src2))
             ccomp.start()
@@ -515,8 +515,8 @@ try:
             # G-API Gst-source
             pp = self.get_gst_pipeline(gstpipeline_gapi)
 
-            src1 = pp.get_streaming_source("sink1")
-            src2 = pp.get_streaming_source("sink2")
+            src1 = cv.gapi.wip.get_streaming_source(pp, "sink1")
+            src2 = cv.gapi.wip.get_streaming_source(pp, "sink2")
             ccomp.setSource(cv.gin(src1, src2))
             ccomp.start()
 
