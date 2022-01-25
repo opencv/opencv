@@ -94,15 +94,15 @@ void TsdfVolume::integrate(InputArray, InputArray, InputArray)
 
 void TsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
 }
 void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals);
 }
 void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
 }
 
 void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
@@ -299,15 +299,15 @@ void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
 
 void HashTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
 }
 void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals);
 }
 void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
 }
 
 void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
@@ -485,15 +485,15 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), outFrame);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
 }
 void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals);
 }
 void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getHeight(), settings.getWidth(), points, normals, colors);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
 }
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const

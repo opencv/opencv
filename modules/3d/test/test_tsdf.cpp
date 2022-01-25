@@ -478,7 +478,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -557,7 +557,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -636,7 +636,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = true;
@@ -736,7 +736,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = true;

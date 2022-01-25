@@ -427,7 +427,7 @@ PERF_TEST(Perf_TSDF, integrate_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -459,7 +459,7 @@ PERF_TEST(Perf_TSDF, integrate_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -493,7 +493,7 @@ PERF_TEST(Perf_TSDF, raycast_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -532,7 +532,7 @@ PERF_TEST(Perf_TSDF, raycast_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -581,7 +581,7 @@ PERF_TEST(Perf_TSDF_CPU, integrate_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -614,7 +614,7 @@ PERF_TEST(Perf_TSDF_CPU, integrate_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -648,7 +648,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -687,7 +687,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -736,7 +736,7 @@ PERF_TEST(Perf_HashTSDF, integrate_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -768,7 +768,7 @@ PERF_TEST(Perf_HashTSDF, integrate_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -802,7 +802,7 @@ PERF_TEST(Perf_HashTSDF, raycast_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -841,7 +841,7 @@ PERF_TEST(Perf_HashTSDF, raycast_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -890,7 +890,7 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -923,7 +923,7 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -957,7 +957,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -995,7 +995,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -1043,7 +1043,7 @@ PERF_TEST(Perf_ColorTSDF, integrate_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -1076,7 +1076,7 @@ PERF_TEST(Perf_ColorTSDF, integrate_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -1112,7 +1112,7 @@ PERF_TEST(Perf_ColorTSDF, raycast_mat)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;
@@ -1152,7 +1152,7 @@ PERF_TEST(Perf_ColorTSDF, raycast_frame)
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getWidth(), vs.getHeight());
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
     Matx33f intr;
     vs.getCameraIntegrateIntrinsics(intr);
     bool onlySemisphere = false;

@@ -16,10 +16,14 @@ public:
     Impl() {};
     virtual ~Impl() {};
 
-    virtual void  setWidth(int  val) = 0;
-    virtual int   getWidth() const = 0;
-    virtual void  setHeight(int  val) = 0;
-    virtual int   getHeight() const = 0;
+    virtual void  setIntegrateWidth(int  val) = 0;
+    virtual int   getIntegrateWidth() const = 0;
+    virtual void  setIntegrateHeight(int  val) = 0;
+    virtual int   getIntegrateHeight() const = 0;
+    virtual void  setRaycastWidth(int  val) = 0;
+    virtual int   getRaycastWidth() const = 0;
+    virtual void  setRaycastHeight(int  val) = 0;
+    virtual int   getRaycastHeight() const = 0;
     virtual void  setDepthFactor(float val) = 0;
     virtual float getDepthFactor() const = 0;
     virtual void  setVoxelSize(float  val) = 0;
@@ -55,10 +59,14 @@ public:
     VolumeSettingsImpl(VolumeType volumeType);
     ~VolumeSettingsImpl();
 
-    virtual void  setWidth(int  val) override;
-    virtual int   getWidth() const override;
-    virtual void  setHeight(int  val) override;
-    virtual int   getHeight() const override;
+    virtual void  setIntegrateWidth(int  val) override;
+    virtual int   getIntegrateWidth() const override;
+    virtual void  setIntegrateHeight(int  val) override;
+    virtual int   getIntegrateHeight() const override;
+    virtual void  setRaycastWidth(int  val) override;
+    virtual int   getRaycastWidth() const override;
+    virtual void  setRaycastHeight(int  val) override;
+    virtual int   getRaycastHeight() const override;
     virtual void  setDepthFactor(float val) override;
     virtual float getDepthFactor() const override;
     virtual void  setVoxelSize(float  val) override;
@@ -89,8 +97,10 @@ public:
 private:
     VolumeType volumeType;
 
-    int   width;
-    int   height;
+    int   integrateWidth;
+    int   integrateHeight;
+    int   raycastWidth;
+    int   raycastHeight;
     float depthFactor;
     float voxelSize;
     float tsdfTruncateDistance;
@@ -112,12 +122,24 @@ public:
 
     class DefaultTsdfSets {
     public:
-        static const int width  = 640;
-        static const int height = 480;
-        static constexpr float fx = 525.f; // focus point x axis
-        static constexpr float fy = 525.f; // focus point y axis
-        static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
-        static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
+        static const int integrateWidth  = 640;
+        static const int integrateHeight = 480;
+        float ifx = 525.f; // focus point x axis
+        float ify = 525.f; // focus point y axis
+        float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
+        float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+
+        static const int raycastWidth = 640;
+        static const int raycastHeight = 480;
+        float rfx = 525.f; // focus point x axis
+        float rfy = 525.f; // focus point y axis
+        float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
+        float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
@@ -127,10 +149,6 @@ public:
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
 
-        const Matx33f  cameraIntegrateIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  cameraRaycastIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -140,12 +158,24 @@ public:
 
     class DefaultHashTsdfSets {
     public:
-        static const int width = 640;
-        static const int height = 480;
-        static constexpr float fx = 525.f; // focus point x axis
-        static constexpr float fy = 525.f; // focus point y axis
-        static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
-        static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
+        static const int integrateWidth = 640;
+        static const int integrateHeight = 480;
+        float ifx = 525.f; // focus point x axis
+        float ify = 525.f; // focus point y axis
+        float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
+        float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+
+        static const int raycastWidth = 640;
+        static const int raycastHeight = 480;
+        float rfx = 525.f; // focus point x axis
+        float rfy = 525.f; // focus point y axis
+        float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
+        float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 512.f; //meters
@@ -155,10 +185,6 @@ public:
         static constexpr float raycastStepFactor = 0.25f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
 
-        const Matx33f  cameraIntegrateIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  cameraRaycastIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -168,16 +194,32 @@ public:
 
     class DefaultColorTsdfSets {
     public:
-        static const int width = 640;
-        static const int height = 480;
-        static constexpr float fx = 525.f; // focus point x axis
-        static constexpr float fy = 525.f; // focus point y axis
-        static constexpr float cx = float(width) / 2.f - 0.5f;  // central point x axis
-        static constexpr float cy = float(height) / 2.f - 0.5f; // central point y axis
-        static constexpr float rgb_fx = 525.f; // focus point x axis
-        static constexpr float rgb_fy = 525.f; // focus point y axis
-        static constexpr float rgb_cx = float(width) / 2.f - 0.5f;  // central point x axis
-        static constexpr float rgb_cy = float(height) / 2.f - 0.5f; // central point y axis
+        static const int integrateWidth = 640;
+        static const int integrateHeight = 480;
+        float ifx = 525.f; // focus point x axis
+        float ify = 525.f; // focus point y axis
+        float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
+        float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
+        float rgb_ifx = 525.f; // focus point x axis
+        float rgb_ify = 525.f; // focus point y axis
+        float rgb_icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
+        float rgb_icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(rgb_ifx, 0, rgb_icx, 0, rgb_ify, rgb_icy, 0, 0, 1); // camera settings
+
+        static const int raycastWidth = 640;
+        static const int raycastHeight = 480;
+        float rfx = 525.f; // focus point x axis
+        float rfy = 525.f; // focus point y axis
+        float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
+        float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
+        float rgb_rfx = 525.f; // focus point x axis
+        float rgb_rfy = 525.f; // focus point y axis
+        float rgb_rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
+        float rgb_rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rgb_rfx, 0, rgb_rcx, 0, rgb_rfy, rgb_rcy, 0, 0, 1); // camera settings
+
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
@@ -187,10 +229,6 @@ public:
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
 
-        const Matx33f  cameraIntegrateIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(rgb_fx, 0, rgb_cx, 0, rgb_fy, rgb_cy, 0, 0, 1); // camera settings
-        const Matx33f  cameraRaycastIntrinsics = Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rgb_fx, 0, rgb_cx, 0, rgb_fy, rgb_cy, 0, 0, 1); // camera settings
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
@@ -213,10 +251,14 @@ VolumeSettings::VolumeSettings(VolumeType volumeType)
 
 VolumeSettings::~VolumeSettings() {}
 
-void  VolumeSettings::setWidth(int val) { this->impl->setWidth(val); };
-int   VolumeSettings::getWidth() const { return this->impl->getWidth(); };
-void  VolumeSettings::setHeight(int val) { this->impl->setHeight(val); };
-int   VolumeSettings::getHeight() const { return this->impl->getHeight(); };
+void  VolumeSettings::setIntegrateWidth(int val) { this->impl->setIntegrateWidth(val); };
+int   VolumeSettings::getIntegrateWidth() const { return this->impl->getIntegrateWidth(); };
+void  VolumeSettings::setIntegrateHeight(int val) { this->impl->setIntegrateHeight(val); };
+int   VolumeSettings::getIntegrateHeight() const { return this->impl->getIntegrateHeight(); };
+void  VolumeSettings::setRaycastWidth(int val) { this->impl->setRaycastWidth(val); };
+int   VolumeSettings::getRaycastWidth() const { return this->impl->getRaycastWidth(); };
+void  VolumeSettings::setRaycastHeight(int val) { this->impl->setRaycastHeight(val); };
+int   VolumeSettings::getRaycastHeight() const { return this->impl->getRaycastHeight(); };
 void  VolumeSettings::setVoxelSize(float val) { this->impl->setVoxelSize(val); };
 float VolumeSettings::getVoxelSize() const { return this->impl->getVoxelSize(); };
 void  VolumeSettings::setRaycastStepFactor(float val) { this->impl->setRaycastStepFactor(val); };
@@ -257,8 +299,10 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
     {
         DefaultTsdfSets ds = DefaultTsdfSets();
 
-        this->width = ds.width;
-        this->height = ds.height;
+        this->integrateWidth = ds.integrateWidth;
+        this->integrateHeight = ds.integrateHeight;
+        this->raycastWidth = ds.raycastWidth;
+        this->raycastHeight = ds.raycastHeight;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
         this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
@@ -279,8 +323,10 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
     {
         DefaultHashTsdfSets ds = DefaultHashTsdfSets();
 
-        this->width = ds.width;
-        this->height = ds.height;
+        this->integrateWidth = ds.integrateWidth;
+        this->integrateHeight = ds.integrateHeight;
+        this->raycastWidth = ds.raycastWidth;
+        this->raycastHeight = ds.raycastHeight;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
         this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
@@ -301,8 +347,10 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
     {
         DefaultColorTsdfSets ds = DefaultColorTsdfSets();
 
-        this->width = ds.width;
-        this->height = ds.height;
+        this->integrateWidth = ds.integrateWidth;
+        this->integrateHeight = ds.integrateHeight;
+        this->raycastWidth = ds.raycastWidth;
+        this->raycastHeight = ds.raycastHeight;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
         this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
@@ -325,24 +373,44 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 VolumeSettingsImpl::~VolumeSettingsImpl() {}
 
 
-void VolumeSettingsImpl::setWidth(int val)
+void VolumeSettingsImpl::setIntegrateWidth(int val)
 {
-    this->width = val;
+    this->integrateWidth = val;
 }
 
-int VolumeSettingsImpl::getWidth() const
+int VolumeSettingsImpl::getIntegrateWidth() const
 {
-    return this->width;
+    return this->integrateWidth;
 }
 
-void VolumeSettingsImpl::setHeight(int val)
+void VolumeSettingsImpl::setIntegrateHeight(int val)
 {
-    this->height = val;
+    this->integrateHeight = val;
 }
 
-int VolumeSettingsImpl::getHeight() const
+int VolumeSettingsImpl::getIntegrateHeight() const
 {
-    return this->height;
+    return this->integrateHeight;
+}
+
+void VolumeSettingsImpl::setRaycastWidth(int val)
+{
+    this->raycastWidth = val;
+}
+
+int VolumeSettingsImpl::getRaycastWidth() const
+{
+    return this->raycastWidth;
+}
+
+void VolumeSettingsImpl::setRaycastHeight(int val)
+{
+    this->raycastHeight = val;
+}
+
+int VolumeSettingsImpl::getRaycastHeight() const
+{
+    return this->raycastHeight;
 }
 
 void VolumeSettingsImpl::setDepthFactor(float val)

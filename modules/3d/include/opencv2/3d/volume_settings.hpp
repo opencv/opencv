@@ -27,10 +27,14 @@ public:
     VolumeSettings(VolumeType volumeType);
     ~VolumeSettings();
 
-    void  setWidth(int val);
-    int   getWidth() const;
-    void  setHeight(int val);
-    int   getHeight() const;
+    void  setIntegrateWidth(int val);
+    int   getIntegrateWidth() const;
+    void  setIntegrateHeight(int val);
+    int   getIntegrateHeight() const;
+    void  setRaycastWidth(int val);
+    int   getRaycastWidth() const;
+    void  setRaycastHeight(int val);
+    int   getRaycastHeight() const;
     void  setDepthFactor(float val);
     float getDepthFactor() const;
     void  setVoxelSize(float val);
