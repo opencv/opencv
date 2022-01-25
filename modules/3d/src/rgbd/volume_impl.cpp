@@ -43,19 +43,25 @@ TsdfVolume::~TsdfVolume() {}
 void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
     CV_TRACE_FUNCTION();
-    Depth depth;
+#ifndef HAVE_OPENCL
+    Mat depth;
+#else
+    UMat depth;
+#endif
     frame.getDepth(depth);
     // dependence from OdometryFrame
-    depth = depth * settings.getDepthFactor();
-
+    multiply(depth, settings.getDepthFactor(), depth, 1, depth.type());
     integrate(depth, _cameraPose);
 }
 
 void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
     CV_TRACE_FUNCTION();
-    Depth depth = _depth.getMat();
-    CV_Assert(depth.type() == DEPTH_TYPE);
+#ifndef HAVE_OPENCL
+    Mat depth = _depth.getMat();
+#else
+    UMat depth = _depth.getUMat();
+#endif
     CV_Assert(!depth.empty());
 
     Matx33f intr;
@@ -246,17 +252,24 @@ HashTsdfVolume::~HashTsdfVolume() {}
 void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
 {
     CV_TRACE_FUNCTION();
-    Depth depth;
+#ifndef HAVE_OPENCL
+    Mat depth;
+#else
+    UMat depth;
+#endif
     frame.getDepth(depth);
     // dependence from OdometryFrame
-    depth = depth * settings.getDepthFactor();
-
+    multiply(depth, settings.getDepthFactor(), depth, 1, depth.type());
     integrate(depth, _cameraPose);
 }
 
 void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 {
-    Depth depth = _depth.getMat();
+#ifndef HAVE_OPENCL
+    Mat depth = _depth.getMat();
+#else
+    UMat depth = _depth.getUMat();
+#endif
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
     settings.getCameraIntegrateIntrinsics(intr);
@@ -449,7 +462,7 @@ ColorTsdfVolume::~ColorTsdfVolume() {}
 void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPose)
 {
     CV_TRACE_FUNCTION();
-    Depth depth;
+    Mat depth;
     frame.getDepth(depth);
     // dependence from OdometryFrame
     depth = depth * settings.getDepthFactor();
@@ -466,7 +479,7 @@ void ColorTsdfVolume::integrate(InputArray, InputArray)
 
 void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
 {
-    Depth depth = _depth.getMat();
+    Mat depth = _depth.getMat();
     Colors image = _image.getMat();
     const Matx44f cameraPose = _cameraPose.getMat();
     Matx33f intr;
