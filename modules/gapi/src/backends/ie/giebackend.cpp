@@ -184,7 +184,6 @@ inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
         }
         case cv::MediaFormat::GRAY: {
             auto gray = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
-            auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             return wrapIE(gray, cv::gapi::ie::TraitAs::IMAGE);
         }
         default:
