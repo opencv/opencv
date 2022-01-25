@@ -35,10 +35,10 @@ public:
     float getDepthFactor() const;
     void  setVoxelSize(float val);
     float getVoxelSize() const;
-    void  setTruncatedDistance(float val);
-    float getTruncatedDistance() const;
-    void  setTruncateThreshold(float val);
-    float getTruncateThreshold() const;
+    void  setTsdfTruncateDistance(float val);
+    float getTsdfTruncateDistance() const;
+    void  setMaxDepth(float val);
+    float getMaxDepth() const;
     void  setMaxWeight(int val);
     int   getMaxWeight() const;
     void  setRaycastStepFactor(float val);

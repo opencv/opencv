@@ -54,7 +54,7 @@ void integrateColorTsdfVolumeUnit(
     const Intr::Projector projColor = Intr(rgb_intr);
 
     const float dfac(1.f / settings.getDepthFactor());
-    const float truncDist = settings.getTruncatedDistance();
+    const float truncDist = settings.getTsdfTruncateDistance();
     const float truncDistInv = 1.f / truncDist;
     const int maxWeight = settings.getMaxWeight();
 
@@ -764,7 +764,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
-    float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
+    float tstep = settings.getTsdfTruncateDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
 

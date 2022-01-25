@@ -86,7 +86,7 @@ void integrateTsdfVolumeUnit(
     settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector proj = Intr(intr).makeProjector();
     const float dfac(1.f / settings.getDepthFactor());
-    const float truncDist = settings.getTruncatedDistance();
+    const float truncDist = settings.getTsdfTruncateDistance();
     const float truncDistInv = 1.f / truncDist;
     const int maxWeight = settings.getMaxWeight();
 
@@ -377,7 +377,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
     settings.getVolumeDimentions(volDims);
 
     const float voxelSize = settings.getVoxelSize();
-    const float truncatedDistance = settings.getTruncatedDistance();
+    const float truncatedDistance = settings.getTsdfTruncateDistance();
     const int maxWeight = settings.getMaxWeight();
 
     // TODO: optimization possible
@@ -669,7 +669,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
     const Intr::Reprojector reproj = Intr(intr).makeReprojector();
-    float tstep = settings.getTruncatedDistance() * settings.getRaycastStepFactor();
+    float tstep = settings.getTsdfTruncateDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
     //TODO::  swap realization, they are missplaced :)
@@ -988,7 +988,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     const UMat volume = _volume.getUMat();
     float voxelSize = settings.getVoxelSize();
     float raycastStepFactor = settings.getRaycastStepFactor();
-    float truncatedDistance = settings.getTruncatedDistance();
+    float truncatedDistance = settings.getTsdfTruncateDistance();
 
     // We do subtract voxel size to minimize checks after
     // Note: origin of volume coordinate is placed

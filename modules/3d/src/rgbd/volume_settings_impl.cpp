@@ -24,10 +24,10 @@ public:
     virtual float getDepthFactor() const = 0;
     virtual void  setVoxelSize(float  val) = 0;
     virtual float getVoxelSize() const = 0;
-    virtual void  setTruncatedDistance(float val) = 0;
-    virtual float getTruncatedDistance() const = 0;
-    virtual void  setTruncateThreshold(float val) = 0;
-    virtual float getTruncateThreshold() const = 0;
+    virtual void  setTsdfTruncateDistance(float val) = 0;
+    virtual float getTsdfTruncateDistance() const = 0;
+    virtual void  setMaxDepth(float val) = 0;
+    virtual float getMaxDepth() const = 0;
     virtual void  setMaxWeight(int val) = 0;
     virtual int   getMaxWeight() const = 0;
     virtual void  setRaycastStepFactor(float val) = 0;
@@ -65,10 +65,10 @@ public:
     virtual float getDepthFactor() const override;
     virtual void  setVoxelSize(float  val) override;
     virtual float getVoxelSize() const override;
-    virtual void  setTruncatedDistance(float val) override;
-    virtual float getTruncatedDistance() const override;
-    virtual void  setTruncateThreshold(float val) override;
-    virtual float getTruncateThreshold() const override;
+    virtual void  setTsdfTruncateDistance(float val) override;
+    virtual float getTsdfTruncateDistance() const override;
+    virtual void  setMaxDepth(float val) override;
+    virtual float getMaxDepth() const override;
     virtual void  setMaxWeight(int val) override;
     virtual int   getMaxWeight() const override;
     virtual void  setRaycastStepFactor(float val) override;
@@ -97,8 +97,8 @@ private:
     int   height;
     float depthFactor;
     float voxelSize;
-    float truncatedDistance;
-    float truncateThreshold;
+    float tsdfTruncateDistance;
+    float maxDepth;
     int   maxWeight;
     float raycastStepFactor;
     bool  zFirstMemOrder;
@@ -125,8 +125,8 @@ public:
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
-        static constexpr float truncatedDistance = 2 * voxelSize;
-        static constexpr float truncateThreshold = 0.f;
+        static constexpr float tsdfTruncateDistance = 2 * voxelSize;
+        static constexpr float maxDepth = 0.f;
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
@@ -153,8 +153,8 @@ public:
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 512.f; //meters
-        static constexpr float truncatedDistance = 7 * voxelSize;
-        static constexpr float truncateThreshold = 4.f;
+        static constexpr float tsdfTruncateDistance = 7 * voxelSize;
+        static constexpr float maxDepth = 4.f;
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.25f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
@@ -185,8 +185,8 @@ public:
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
         static constexpr float voxelSize = volumeSize / 128.f; //meters
-        static constexpr float truncatedDistance = 2 * voxelSize;
-        static constexpr float truncateThreshold = 0.f;
+        static constexpr float tsdfTruncateDistance = 2 * voxelSize;
+        static constexpr float maxDepth = 0.f;
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
@@ -225,10 +225,10 @@ void  VolumeSettings::setVoxelSize(float val) { this->impl->setVoxelSize(val); }
 float VolumeSettings::getVoxelSize() const { return this->impl->getVoxelSize(); };
 void  VolumeSettings::setRaycastStepFactor(float val) { this->impl->setRaycastStepFactor(val); };
 float VolumeSettings::getRaycastStepFactor() const { return this->impl->getRaycastStepFactor(); };
-void  VolumeSettings::setTruncatedDistance(float val) { this->impl->setTruncatedDistance(val); };
-float VolumeSettings::getTruncatedDistance() const { return this->impl->getTruncatedDistance(); };
-void  VolumeSettings::setTruncateThreshold(float val) { this->impl->setTruncateThreshold(val); };
-float VolumeSettings::getTruncateThreshold() const { return this->impl->getTruncateThreshold(); };
+void  VolumeSettings::setTsdfTruncateDistance(float val) { this->impl->setTsdfTruncateDistance(val); };
+float VolumeSettings::getTsdfTruncateDistance() const { return this->impl->getTsdfTruncateDistance(); };
+void  VolumeSettings::setMaxDepth(float val) { this->impl->setMaxDepth(val); };
+float VolumeSettings::getMaxDepth() const { return this->impl->getMaxDepth(); };
 void  VolumeSettings::setDepthFactor(float val) { this->impl->setDepthFactor(val); };
 float VolumeSettings::getDepthFactor() const { return this->impl->getDepthFactor(); };
 void  VolumeSettings::setMaxWeight(int val) { this->impl->setMaxWeight(val); };
@@ -267,8 +267,8 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->height = ds.height;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
-        this->truncatedDistance = ds.truncatedDistance;
-        this->truncateThreshold = ds.truncateThreshold;
+        this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
+        this->maxDepth = ds.maxDepth;
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
@@ -289,8 +289,8 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->height = ds.height;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
-        this->truncatedDistance = ds.truncatedDistance;
-        this->truncateThreshold = ds.truncateThreshold;
+        this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
+        this->maxDepth = ds.maxDepth;
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
@@ -311,8 +311,8 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->height = ds.height;
         this->depthFactor = ds.depthFactor;
         this->voxelSize = ds.voxelSize;
-        this->truncatedDistance = ds.truncatedDistance;
-        this->truncateThreshold = ds.truncateThreshold;
+        this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
+        this->maxDepth = ds.maxDepth;
         this->maxWeight = ds.maxWeight;
         this->raycastStepFactor = ds.raycastStepFactor;
         this->zFirstMemOrder = ds.zFirstMemOrder;
@@ -371,24 +371,24 @@ float VolumeSettingsImpl::getVoxelSize() const
     return this->voxelSize;
 }
 
-void VolumeSettingsImpl::setTruncatedDistance(float val)
+void VolumeSettingsImpl::setTsdfTruncateDistance(float val)
 {
-    this->truncatedDistance = val;
+    this->tsdfTruncateDistance = val;
 }
 
-float VolumeSettingsImpl::getTruncatedDistance() const
+float VolumeSettingsImpl::getTsdfTruncateDistance() const
 {
-    return this->truncatedDistance;
+    return this->tsdfTruncateDistance;
 }
 
-void VolumeSettingsImpl::setTruncateThreshold(float val)
+void VolumeSettingsImpl::setMaxDepth(float val)
 {
-    this->truncateThreshold = val;
+    this->maxDepth = val;
 }
 
-float VolumeSettingsImpl::getTruncateThreshold() const
+float VolumeSettingsImpl::getMaxDepth() const
 {
-    return this->truncateThreshold;
+    return this->maxDepth;
 }
 
 void VolumeSettingsImpl::setMaxWeight(int val)

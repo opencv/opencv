@@ -58,7 +58,7 @@ int calcVolumeUnitDegree(Point3i volumeResolution)
 
 void allocateVolumeUnits(
     const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
-    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize);
+    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float maxDepth, const float volumeUnitSize);
 
 TsdfVoxel atVolumeUnit(
     const Mat& volUnitsData, const VolumeUnitIndexes& volumeUnits,
@@ -80,7 +80,7 @@ Point3f getNormalVoxel(
 void markActive(
     const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId,
     const Affine3f volumePose, CustomHashSet& hashTable, UMat& isActiveFlags, UMat& lastVisibleIndices,
-    const float truncateThreshold, const float volumeUnitSize);
+    const float maxDepth, const float volumeUnitSize);
 
 Point3f ocl_getNormalVoxel(
     const Point3f& point, const float voxelSizeInv,
@@ -104,8 +104,8 @@ void integrateHashTsdfVolumeUnit(
     //! Compute volumes to be allocated
     const int depthStride = volumeUnitDegree;
     const float invDepthFactor = 1.f / settings.getDepthFactor();
-    const float truncDist = settings.getTruncatedDistance();
-    const float truncateThreshold = settings.getTruncateThreshold();
+    const float truncDist = settings.getTsdfTruncateDistance();
+    const float maxDepth = settings.getMaxDepth();
     const float voxelSize = settings.getVoxelSize();
 
     Vec3i resolution;
@@ -136,7 +136,7 @@ void integrateHashTsdfVolumeUnit(
             {
                 depthType z = depthRow[x] * invDepthFactor;
 
-                if (z <= 0 || z > truncateThreshold)
+                if (z <= 0 || z > maxDepth)
                     continue;
 
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
@@ -220,7 +220,7 @@ void integrateHashTsdfVolumeUnit(
 
             Point3f volumeUnitPos = volumeUnitIdxToVolume(it->first, volumeUnitSize);
             Point3f volUnitInCamSpace = vol2cam * volumeUnitPos;
-            if (volUnitInCamSpace.z < 0 || volUnitInCamSpace.z > truncateThreshold)
+            if (volUnitInCamSpace.z < 0 || volUnitInCamSpace.z > maxDepth)
             {
                 it->second.isActive = false;
                 continue;
@@ -261,7 +261,7 @@ void integrateHashTsdfVolumeUnit(
 
 void allocateVolumeUnits(
     const UMat& _depth, float depthFactor, const Affine3f volumePose, const Matx44f& cameraPose, const Intr& intrinsics,
-    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float truncateThreshold, const float volumeUnitSize)
+    CustomHashSet& hashTable, const int volumeUnitDegree, const float truncDist, const float maxDepth, const float volumeUnitSize)
 {
     constexpr int pixCapacity = 16;
     typedef std::array<Vec3i, pixCapacity> LocalVolUnits;
@@ -287,7 +287,7 @@ void allocateVolumeUnits(
             for (int x = xrange.start; x < xrange.end; x += depthStride)
             {
                 depthType z = depthRow[x] * invDepthFactor;
-                if (z <= 0 || z > truncateThreshold)
+                if (z <= 0 || z > maxDepth)
                     continue;
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
                 Point3f volPoint = cam2vol * camPoint;
@@ -435,7 +435,7 @@ void allocateVolumeUnits(
 void markActive(
     const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId,
     const Affine3f volumePose, CustomHashSet& hashTable, UMat& isActiveFlags, UMat& lastVisibleIndices,
-    const float truncateThreshold, const float volumeUnitSize)
+    const float maxDepth, const float volumeUnitSize)
 {
     //! Mark volumes in the camera frustum as active
     String errorStr;
@@ -464,7 +464,7 @@ void markActive(
         frameSz,
         volumeUnitSize,
         hashTable.last,
-        truncateThreshold,
+        maxDepth,
         frameId
     );
 
@@ -499,8 +499,8 @@ void ocl_integrateHashTsdfVolumeUnit(
     settings.getVolumeResolution(resolution);
     const int volumeUnitResolution = resolution[0];
     const int maxWeight = settings.getMaxWeight();
-    const float truncDist = settings.getTruncatedDistance();
-    const float truncateThreshold = settings.getTruncateThreshold();
+    const float truncDist = settings.getTsdfTruncateDistance();
+    const float maxDepth = settings.getMaxDepth();
     const float voxelSize = settings.getVoxelSize();
     const float depthFactor = settings.getDepthFactor();
     const float dfac = 1.f / depthFactor;
@@ -514,7 +514,7 @@ void ocl_integrateHashTsdfVolumeUnit(
 
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
-    allocateVolumeUnits(depth, depthFactor, pose, cameraPose, intrinsics, hashTable, volumeUnitDegree, truncDist, truncateThreshold, volumeUnitSize);
+    allocateVolumeUnits(depth, depthFactor, pose, cameraPose, intrinsics, hashTable, volumeUnitDegree, truncDist, maxDepth, volumeUnitSize);
     int sizeAfter = hashTable.last;
     //! Perform the allocation
 
@@ -555,7 +555,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     }
 
     //! Mark volumes in the camera frustum as active
-    markActive(cameraPose, intrinsics, depth.size(), frameId, pose, hashTable, isActiveFlags, lastVisibleIndices, truncateThreshold, volumeUnitSize);
+    markActive(cameraPose, intrinsics, depth.size(), frameId, pose, hashTable, isActiveFlags, lastVisibleIndices, maxDepth, volumeUnitSize);
 
     //! Integrate the correct volumeUnits
     String errorStr;
@@ -1005,10 +1005,10 @@ void raycastHashTsdfVolumeUnit(
     Points& points(points1);
     Normals& normals(normals1);
 
-    const float truncDist = settings.getTruncatedDistance();
+    const float truncDist = settings.getTsdfTruncateDistance();
     const float raycastStepFactor = settings.getRaycastStepFactor();
     const float tstep = truncDist * raycastStepFactor;
-    const float truncateThreshold = settings.getTruncateThreshold();
+    const float maxDepth = settings.getMaxDepth();
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
 
@@ -1055,7 +1055,7 @@ void raycastHashTsdfVolumeUnit(
                 Point3f rayDirV = normalize(Vec3f(cam2volRot * reproj(Point3f(float(x), float(y), 1.f))));
 
                 float tmin = 0;
-                float tmax = truncateThreshold;
+                float tmax = maxDepth;
                 float tcurr = tmin;
 
                 cv::Vec3i prevVolumeUnitIdx =
@@ -1159,10 +1159,10 @@ void ocl_raycastHashTsdfVolumeUnit(
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
 
-    const float truncDist = settings.getTruncatedDistance();
+    const float truncDist = settings.getTsdfTruncateDistance();
     const float raycastStepFactor = settings.getRaycastStepFactor();
     const float tstep = truncDist * raycastStepFactor;
-    const float truncateThreshold = settings.getTruncateThreshold();
+    const float maxDepth = settings.getMaxDepth();
     const float voxelSize = settings.getVoxelSize();
     const float voxelSizeInv = 1.f / voxelSize;
 
@@ -1201,7 +1201,7 @@ void ocl_raycastHashTsdfVolumeUnit(
         ocl::KernelArg::ReadOnly(volUnitsData),
         cam2volRotGPU,
         vol2camRotGPU,
-        float(truncateThreshold),
+        float(maxDepth),
         finv.val, cxy.val,
         boxMin.val, boxMax.val,
         tstep,
