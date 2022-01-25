@@ -319,7 +319,7 @@ TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
     EXPECT_EQ(0, surf->get_locks_count());
 
     {
-        mfxSession stub_session{};
+        mfxSession stub_session = reinterpret_cast<mfxSession>(0x1);
         VPLMediaFrameCPUAdapter adapter(surf, stub_session);
         EXPECT_EQ(1, surf->get_locks_count());
     }
@@ -529,9 +529,9 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
     VPLDX11AccelerationPolicy accel(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11));
 
-    mfxLoader mfx_handle = MFXLoad();
+    mfxLoader test_mfx_handle = MFXLoad();
 
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_0 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
@@ -539,7 +539,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation_name(),
                                                     mfx_param_0), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_1 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_1);
     mfxVariant mfx_param_1;
     mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
@@ -547,7 +547,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode_name(),
                                                     mfx_param_1), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_2 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_2 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_2);
     mfxVariant mfx_param_2;
     mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
@@ -557,7 +557,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
 
     // create session
     mfxSession mfx_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
+    mfxStatus sts = MFXCreateSession(test_mfx_handle, 0, &mfx_session);
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // assign acceleration
@@ -601,7 +601,7 @@ TEST(OneVPL_Source_DX11_Accel, Init)
 
     EXPECT_NO_THROW(accel.deinit(mfx_session));
     MFXClose(mfx_session);
-    MFXUnload(mfx_handle);
+    MFXUnload(test_mfx_handle);
 }
 
 TEST(OneVPL_Source_DX11_Accel_VPL, Init)
@@ -612,9 +612,9 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
     std::unique_ptr<VPLAccelerationPolicy> acceleration_policy (new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
 
-    mfxLoader mfx_handle = MFXLoad();
+    mfxLoader test_mfx_handle = MFXLoad();
 
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_0 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
@@ -622,7 +622,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation_name(),
                                                     mfx_param_0), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_1 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_1);
     mfxVariant mfx_param_1;
     mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
@@ -630,7 +630,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode_name(),
                                                     mfx_param_1), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_2 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_2 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_2);
     mfxVariant mfx_param_2;
     mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
@@ -638,7 +638,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)CfgParam::decoder_id_name(),
                                                     mfx_param_2), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_3 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_3 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_3);
     mfxVariant mfx_param_3;
     mfx_param_3.Type = MFX_VARIANT_TYPE_U32;
@@ -648,7 +648,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                                          mfx_param_3), MFX_ERR_NONE);
     // create session
     mfxSession mfx_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
+    mfxStatus sts = MFXCreateSession(test_mfx_handle, 0, &mfx_session);
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // assign acceleration
@@ -818,9 +818,9 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
     cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
     std::unique_ptr<VPLAccelerationPolicy> acceleration_policy (new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
 
-    mfxLoader mfx_handle = MFXLoad();
+    mfxLoader test_mfx_handle = MFXLoad();
 
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_0 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
@@ -828,7 +828,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation_name(),
                                                     mfx_param_0), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_1 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_1);
     mfxVariant mfx_param_1;
     mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
@@ -836,7 +836,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode_name(),
                                                     mfx_param_1), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_2 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_2 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_2);
     mfxVariant mfx_param_2;
     mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
@@ -844,7 +844,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)CfgParam::decoder_id_name(),
                                                     mfx_param_2), MFX_ERR_NONE);
 
-    mfxConfig cfg_inst_3 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_3 = MFXCreateConfig(test_mfx_handle);
     EXPECT_TRUE(cfg_inst_3);
     mfxVariant mfx_param_3;
     mfx_param_3.Type = MFX_VARIANT_TYPE_U32;
@@ -854,7 +854,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
                                          mfx_param_3), MFX_ERR_NONE);
     // create session
     mfxSession mfx_decode_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_decode_session);
+    mfxStatus sts = MFXCreateSession(test_mfx_handle, 0, &mfx_decode_session);
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // assign acceleration
@@ -896,7 +896,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
 
     // initialize VPL session
     mfxSession mfx_vpl_session{};
-    sts = MFXCreateSession(mfx_handle, 0, &mfx_vpl_session);
+    sts = MFXCreateSession(test_mfx_handle, 0, &mfx_vpl_session);
     // assign acceleration
     EXPECT_NO_THROW(acceleration_policy->init(mfx_vpl_session));
     EXPECT_EQ(MFX_ERR_NONE, sts);
