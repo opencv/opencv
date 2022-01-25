@@ -32,8 +32,6 @@ public:
     virtual int   getMaxWeight() const = 0;
     virtual void  setRaycastStepFactor(float val) = 0;
     virtual float getRaycastStepFactor() const = 0;
-    virtual void  setZFirstMemOrder(bool val) = 0;
-    virtual bool  getZFirstMemOrder() const = 0;
 
     virtual void setVolumePose(InputArray val) = 0;
     virtual void getVolumePose(OutputArray val) const = 0;
@@ -73,8 +71,6 @@ public:
     virtual int   getMaxWeight() const override;
     virtual void  setRaycastStepFactor(float val) override;
     virtual float getRaycastStepFactor() const override;
-    virtual void  setZFirstMemOrder(bool val) override;
-    virtual bool  getZFirstMemOrder() const override;
 
     virtual void setVolumePose(InputArray val) override;
     virtual void getVolumePose(OutputArray val) const override;
@@ -233,8 +229,6 @@ void  VolumeSettings::setDepthFactor(float val) { this->impl->setDepthFactor(val
 float VolumeSettings::getDepthFactor() const { return this->impl->getDepthFactor(); };
 void  VolumeSettings::setMaxWeight(int val) { this->impl->setMaxWeight(val); };
 int   VolumeSettings::getMaxWeight() const { return this->impl->getMaxWeight(); };
-void  VolumeSettings::setZFirstMemOrder(bool val) { this->impl->setZFirstMemOrder(val); };
-bool  VolumeSettings::getZFirstMemOrder() const { return this->impl->getZFirstMemOrder(); };
 
 void VolumeSettings::setVolumePose(InputArray val) { this->impl->setVolumePose(val); };
 void VolumeSettings::getVolumePose(OutputArray val) const { this->impl->getVolumePose(val); };
@@ -409,16 +403,6 @@ void VolumeSettingsImpl::setRaycastStepFactor(float val)
 float VolumeSettingsImpl::getRaycastStepFactor() const
 {
     return this->raycastStepFactor;
-}
-
-void VolumeSettingsImpl::setZFirstMemOrder(bool val)
-{
-    this->zFirstMemOrder = val;
-}
-
-bool VolumeSettingsImpl::getZFirstMemOrder() const
-{
-    return this->zFirstMemOrder;
 }
 
 void VolumeSettingsImpl::setVolumePose(InputArray val)

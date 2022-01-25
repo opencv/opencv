@@ -43,8 +43,6 @@ public:
     int   getMaxWeight() const;
     void  setRaycastStepFactor(float val);
     float getRaycastStepFactor() const;
-    void  setZFirstMemOrder(bool val);
-    bool  getZFirstMemOrder() const;
 
     void setVolumePose(InputArray val);
     void getVolumePose(OutputArray val) const;
