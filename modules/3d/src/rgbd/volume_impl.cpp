@@ -458,7 +458,7 @@ void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPos
 
 void ColorTsdfVolume::integrate(InputArray, InputArray)
 {
-    CV_Error(cv::Error::StsBadFunc, "There is no color data");
+    CV_Error(cv::Error::StsBadFunc, "Color data should be passed for this volume type");
 }
 
 void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray _cameraPose)
