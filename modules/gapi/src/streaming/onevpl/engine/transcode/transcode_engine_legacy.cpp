@@ -26,34 +26,29 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+using vpp_param_storage = const std::map<std::string, mfxVariant>;
+using vpp_param_storage_cit = typename vpp_param_storage::const_iterator;
 
 template<typename Type>
-bool set_vpp_param(const char* name, Type& out_vpp_param,
-                   const std::map<std::string, mfxVariant> &params_storage,
-                   mfxSession session);
+Type get_mfx_value(const vpp_param_storage_cit &cit);
 
 template<>
-bool set_vpp_param<uint32_t>(const char* name, uint32_t& out_vpp_param,
-                             const std::map<std::string, mfxVariant> &params_storage,
-                             mfxSession session) {
-    auto it = params_storage.find(name);
-    if (it != params_storage.end()) {
-        auto value = it->second.Data.U32;
-        GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
-                               "\": " << value);
-        out_vpp_param = value;
-        return true;
-    }
-    return false;
+uint16_t get_mfx_value<uint16_t>(const vpp_param_storage_cit& cit) {
+    return cit->second.Data.U16;
 }
 
 template<>
-bool set_vpp_param<uint16_t>(const char* name, uint16_t& out_vpp_param,
-                             const std::map<std::string, mfxVariant> &params_storage,
-                             mfxSession session) {
+uint32_t get_mfx_value<uint32_t>(const vpp_param_storage_cit& cit) {
+    return cit->second.Data.U32;
+}
+
+template<typename Type>
+bool set_vpp_param(const char* name, Type& out_vpp_param,
+                   const vpp_param_storage &params_storage,
+                   mfxSession session) {
     auto it = params_storage.find(name);
     if (it != params_storage.end()) {
-        auto value = it->second.Data.U16;
+        auto value = get_mfx_value<Type>(it);
         GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
                                "\": " << value);
         out_vpp_param = value;
@@ -81,7 +76,6 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
  : VPLLegacyDecodeEngine(std::move(accel)) {
 
     GAPI_LOG_INFO(nullptr, "Create Legacy Transcode Engine");
-    //inject_pipeline_operations(2,
     create_pipeline(
         // 1) Read File
         [this] (EngineSession& sess) -> ExecutionStatus
@@ -287,11 +281,11 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
 
     // override some in-params
     if (set_vpp_param(CfgParam::vpp_in_width_name(), mfxVPPParams.vpp.In.Width,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.In.Width = ALIGN16(mfxVPPParams.vpp.In.Width);
     }
     if (set_vpp_param(CfgParam::vpp_in_height_name(), mfxVPPParams.vpp.In.Height,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.In.Height = ALIGN16(mfxVPPParams.vpp.In.Height);
     }
     set_vpp_param(CfgParam::vpp_in_crop_x_name(), mfxVPPParams.vpp.In.CropX,
@@ -309,11 +303,11 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     set_vpp_param(CfgParam::vpp_out_chroma_format_name(), mfxVPPParams.vpp.Out.ChromaFormat,
                   cfg_vpp_params, mfx_session);
     if (set_vpp_param(CfgParam::vpp_out_width_name(), mfxVPPParams.vpp.Out.Width,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.Out.Width = ALIGN16(mfxVPPParams.vpp.Out.Width);
     }
     if (set_vpp_param(CfgParam::vpp_out_height_name(), mfxVPPParams.vpp.Out.Height,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.Out.Height = ALIGN16(mfxVPPParams.vpp.Out.Height);
     }
     set_vpp_param(CfgParam::vpp_out_crop_x_name(), mfxVPPParams.vpp.Out.CropX,
