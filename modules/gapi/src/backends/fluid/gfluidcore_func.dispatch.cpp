@@ -207,6 +207,13 @@ ABSDIFFC_SIMD(float)
 
 #undef ABSDIFFC_SIMD
 
+int split3_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], const int width)
+{
+    CV_CPU_DISPATCH(split3_simd, (in, out1, out2, out3, width),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
