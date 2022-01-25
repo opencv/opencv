@@ -282,6 +282,16 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(bgr);
             break;
         }
+        case cv::MediaFormat::GRAY:
+        {
+            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
+                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
+                [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
+                    return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
+                });
+            break;
+        }
+
         default:
             cv::util::throw_error(
                     std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
@@ -337,6 +347,22 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v){
                 return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
             });
+            break;
+        }
+        case cv::MediaFormat::GRAY:
+        {
+            std::call_once(m_warnFlag,
+                []() {
+                    GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from GRAY to NV12 Y plane will "
+                        "happen.\n"
+                        "Conversion may cost a lot for images with high resolution.\n"
+                        "To retrieve cv::Mat from BGR cv::MediaFrame for free, you may use "
+                        "cv::gapi::streaming::BGR accessor.\n");
+                });
+
+            auto view = frame.access(cv::MediaFrame::Access::R);
+            cv::Mat tmp_gray(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(tmp_gray.rowRange(0, desc.size.height));
             break;
         }
         default:
@@ -406,6 +432,15 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v){
                 return cv::Mat(d.size / 2, CV_8UC2, v.ptr[1], v.stride[1]);
             });
+            break;
+        }
+        case cv::MediaFormat::GRAY:
+        {
+            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
+                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
+                [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
+                    return cv::Mat(d.size, CV_8UC1, v.ptr[1], v.stride[1]);
+                });
             break;
         }
         default:
