@@ -44,6 +44,9 @@ public:
 
 public:
     const VolumeSettings& settings;
+#ifdef HAVE_OPENCL
+    const bool useGPU;
+#endif
 };
 
 
