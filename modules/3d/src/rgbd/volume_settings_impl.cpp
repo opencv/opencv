@@ -8,7 +8,7 @@
 namespace cv
 {
 
-Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder);
+Vec4i calcVolumeDimensions(Point3i volumeResolution, bool ZFirstMemOrder);
 
 class VolumeSettings::Impl
 {
@@ -37,7 +37,7 @@ public:
     virtual void getVolumePose(OutputArray val) const = 0;
     virtual void setVolumeResolution(InputArray val) = 0;
     virtual void getVolumeResolution(OutputArray val) const = 0;
-    virtual void getVolumeDimentions(OutputArray val) const = 0;
+    virtual void getVolumeDimensions(OutputArray val) const = 0;
     virtual void setCameraIntegrateIntrinsics(InputArray val) = 0;
     virtual void getCameraIntegrateIntrinsics(OutputArray val) const = 0;
     virtual void setRGBCameraIntegrateIntrinsics(InputArray val) = 0;
@@ -76,7 +76,7 @@ public:
     virtual void getVolumePose(OutputArray val) const override;
     virtual void setVolumeResolution(InputArray val) override;
     virtual void getVolumeResolution(OutputArray val) const override;
-    virtual void getVolumeDimentions(OutputArray val) const override;
+    virtual void getVolumeDimensions(OutputArray val) const override;
     virtual void setCameraIntegrateIntrinsics(InputArray val) override;
     virtual void getCameraIntegrateIntrinsics(OutputArray val) const override;
     virtual void setRGBCameraIntegrateIntrinsics(InputArray val) override;
@@ -101,7 +101,7 @@ private:
 
     Matx44f volumePose;
     Point3i volumeResolution;
-    Vec4i volumeDimentions;
+    Vec4i volumeDimensions;
     Matx33f cameraIntegrateIntrinsics;
     Matx33f rgb_cameraIntegrateIntrinsics;
     Matx33f cameraRaycastIntrinsics;
@@ -234,7 +234,7 @@ void VolumeSettings::setVolumePose(InputArray val) { this->impl->setVolumePose(v
 void VolumeSettings::getVolumePose(OutputArray val) const { this->impl->getVolumePose(val); };
 void VolumeSettings::setVolumeResolution(InputArray val) { this->impl->setVolumeResolution(val); };
 void VolumeSettings::getVolumeResolution(OutputArray val) const { this->impl->getVolumeResolution(val); };
-void VolumeSettings::getVolumeDimentions(OutputArray val) const { this->impl->getVolumeDimentions(val); };
+void VolumeSettings::getVolumeDimensions(OutputArray val) const { this->impl->getVolumeDimensions(val); };
 void VolumeSettings::setCameraIntegrateIntrinsics(InputArray val) { this->impl->setCameraIntegrateIntrinsics(val); };
 void VolumeSettings::getCameraIntegrateIntrinsics(OutputArray val) const { this->impl->getCameraIntegrateIntrinsics(val); };
 void VolumeSettings::setRGBCameraIntegrateIntrinsics(InputArray val) { this->impl->setRGBCameraIntegrateIntrinsics(val); };
@@ -269,7 +269,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
-        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
@@ -291,7 +291,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
-        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
@@ -313,7 +313,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 
         this->volumePose = ds.volumePoseMatrix;
         this->volumeResolution = ds.volumeResolution;
-        this->volumeDimentions = calcVolumeDimentions(ds.volumeResolution, ds.zFirstMemOrder);
+        this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
@@ -431,9 +431,9 @@ void VolumeSettingsImpl::getVolumeResolution(OutputArray val) const
     Mat(this->volumeResolution).copyTo(val);
 }
 
-void VolumeSettingsImpl::getVolumeDimentions(OutputArray val) const
+void VolumeSettingsImpl::getVolumeDimensions(OutputArray val) const
 {
-    Mat(this->volumeDimentions).copyTo(val);
+    Mat(this->volumeDimensions).copyTo(val);
 }
 
 void VolumeSettingsImpl::setCameraIntegrateIntrinsics(InputArray val)
@@ -490,7 +490,7 @@ void VolumeSettingsImpl::getRGBCameraRaycastIntrinsics(OutputArray val) const
 }
 
 
-Vec4i calcVolumeDimentions(Point3i volumeResolution, bool ZFirstMemOrder)
+Vec4i calcVolumeDimensions(Point3i volumeResolution, bool ZFirstMemOrder)
 {
     // (xRes*yRes*zRes) array
     // Depending on zFirstMemOrder arg:

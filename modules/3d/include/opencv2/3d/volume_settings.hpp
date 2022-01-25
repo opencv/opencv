@@ -48,7 +48,7 @@ public:
     void getVolumePose(OutputArray val) const;
     void setVolumeResolution(InputArray val);
     void getVolumeResolution(OutputArray val) const;
-    void getVolumeDimentions(OutputArray val) const;
+    void getVolumeDimensions(OutputArray val) const;
     void setCameraIntegrateIntrinsics(InputArray val);
     void getCameraIntegrateIntrinsics(OutputArray val) const;
     void setRGBCameraIntegrateIntrinsics(InputArray val);

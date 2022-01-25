@@ -493,7 +493,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     const Intr intrinsics(intr);
 
     Vec4i volStrides;
-    settings.getVolumeDimentions(volStrides);
+    settings.getVolumeDimensions(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -1013,7 +1013,7 @@ void raycastHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
@@ -1167,7 +1167,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volStrides;
-    settings.getVolumeDimentions(volStrides);
+    settings.getVolumeDimensions(volStrides);
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
@@ -1243,7 +1243,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1288,7 +1288,7 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1334,7 +1334,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * resolution[0];
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
 
     std::vector<Vec3i> totalVolUnits;
     for (const auto& keyvalue : volumeUnits)
@@ -1461,7 +1461,7 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * resolution[0];
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
 
     Range _fetchRange(0, hashTable.last);
 

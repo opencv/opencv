@@ -35,7 +35,7 @@ void integrateColorTsdfVolumeUnit(
     RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
 
     Vec4i volStrides;
-    settings.getVolumeDimentions(volStrides);
+    settings.getVolumeDimensions(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -731,7 +731,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     Colors colors = _colors.getMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1058,7 +1058,7 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1171,7 +1171,7 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimentions(volDims);
+    settings.getVolumeDimensions(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
