@@ -128,7 +128,7 @@ void Submap<MatType>::raycast(const Odometry& icp, const cv::Affine3f& _cameraPo
         renderFrame = frame;
 
         Mat depth;
-        frame.getDepth(depth);
+        frame.getScaledDepth(depth);
         frame = icp.createOdometryFrame();
         frame.setDepth(depth);
     }

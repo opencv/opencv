@@ -49,8 +49,6 @@ void TsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPose)
     UMat depth;
 #endif
     frame.getDepth(depth);
-    // dependence from OdometryFrame
-    multiply(depth, settings.getDepthFactor(), depth, 1, depth.type());
     integrate(depth, _cameraPose);
 }
 
@@ -258,8 +256,6 @@ void HashTsdfVolume::integrate(const OdometryFrame& frame, InputArray _cameraPos
     UMat depth;
 #endif
     frame.getDepth(depth);
-    // dependence from OdometryFrame
-    multiply(depth, settings.getDepthFactor(), depth, 1, depth.type());
     integrate(depth, _cameraPose);
 }
 
@@ -464,8 +460,6 @@ void ColorTsdfVolume::integrate(const OdometryFrame& frame, InputArray cameraPos
     CV_TRACE_FUNCTION();
     Mat depth;
     frame.getDepth(depth);
-    // dependence from OdometryFrame
-    depth = depth * settings.getDepthFactor();
     Mat rgb;
     frame.getImage(rgb);
 

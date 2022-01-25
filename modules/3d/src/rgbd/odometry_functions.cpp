@@ -72,7 +72,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
 
     TMat depth;
-    frame.getDepth(depth);
+    frame.getScaledDepth(depth);
     if (depth.empty())
     {
         if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
@@ -174,7 +174,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     typedef Mat TMat;
 
     TMat depth;
-    frame.getDepth(depth);
+    frame.getScaledDepth(depth);
     if (depth.empty())
     {
         if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
@@ -253,7 +253,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     settings.getCameraMatrix(cameraMatrix);
 
     TMat depth, mask, normals;
-    frame.getDepth(depth);
+    frame.getScaledDepth(depth);
     frame.getMask(mask);
     frame.getNormals(normals);
 
