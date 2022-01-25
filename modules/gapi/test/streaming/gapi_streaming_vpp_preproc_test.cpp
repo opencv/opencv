@@ -48,6 +48,9 @@
 
 #include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_session.hpp"
+
+#include "streaming/onevpl/engine/transcode/transcode_engine_legacy.hpp"
+#include "streaming/onevpl/engine/transcode/transcode_session.hpp"
 #undef protected
 #undef private
 #include "logger.hpp"
@@ -72,21 +75,22 @@ InferenceEngine::InputInfo::CPtr mock_network_info(size_t width, size_t height) 
     return cptr;
 }
 
-cv::MediaFrame extract_decoded_frame(mfxSession sessId, cv::gapi::wip::onevpl::VPLLegacyDecodeEngine& decode_engine) {
+template<class ProcessingEngine>
+cv::MediaFrame extract_decoded_frame(mfxSession sessId, ProcessingEngine& engine) {
     using namespace cv::gapi::wip::onevpl;
     ProcessingEngineBase::ExecutionStatus status = ProcessingEngineBase::ExecutionStatus::Continue;
-    while (0 == decode_engine.get_ready_frames_count() &&
+    while (0 == engine.get_ready_frames_count() &&
            status == ProcessingEngineBase::ExecutionStatus::Continue) {
-        status = decode_engine.process(sessId);
+        status = engine.process(sessId);
     }
 
-    if (decode_engine.get_ready_frames_count() == 0) {
+    if (engine.get_ready_frames_count() == 0) {
         GAPI_LOG_WARNING(nullptr, "failed: cannot obtain preprocessed frames, last status: " <<
                                   ProcessingEngineBase::status_to_string(status));
         throw std::runtime_error("cannot finalize VPP preprocessing operation");
     }
     cv::gapi::wip::Data data;
-    decode_engine.get_frame(data);
+    engine.get_frame(data);
     return cv::util::get<cv::MediaFrame>(data);
 }
 
@@ -187,7 +191,7 @@ struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 using source_t          = std::string;
 using decoder_t         = int;
 using acceleration_t    = int;
-using out_resolution_t  = std::pair<size_t, size_t>;
+using out_resolution_t  = std::pair<uint16_t, uint16_t>;
 using preproc_args_t    = std::tuple<source_t, decoder_t, acceleration_t, out_resolution_t>;
 
 class VPPPreprocParams : public ::testing::TestWithParam<preproc_args_t> {};
@@ -195,10 +199,10 @@ class VPPPreprocParams : public ::testing::TestWithParam<preproc_args_t> {};
 preproc_args_t files[] = {
     preproc_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
-                    out_resolution_t{1920, 1080}},
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1080)}},
     preproc_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
-                    out_resolution_t{1920, 1280}}
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1280)}}
 };
 
 #ifdef HAVE_DIRECTX
@@ -418,6 +422,72 @@ TEST_P(VPPPreprocParams, functional_different_threads)
 }
 
 INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngine, VPPPreprocParams,
+                        testing::ValuesIn(files));
+
+using VPPInnerPreprocParams = VPPPreprocParams;
+TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
+{
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+    source_t file_path;
+    decoder_t decoder_id;
+    acceleration_t accel;
+    out_resolution_t resolution;
+    std::tie(file_path, decoder_id, accel, resolution) = GetParam();
+
+    file_path = findDataFile(file_path);
+
+    std::vector<CfgParam> cfg_params_w_dx11_vpp;
+
+    // create accel policy
+    cfg_params_w_dx11_vpp.push_back(CfgParam::create_acceleration_mode(accel));
+    std::unique_ptr<VPLAccelerationPolicy> accel_policy (
+                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11_vpp)));
+
+    // create file data provider
+    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
+                                                    {CfgParam::create_decoder_id(decoder_id)}));
+
+    // create decode session
+    mfxLoader mfx{};
+    mfxConfig mfx_cfg{};
+    std::tie(mfx, mfx_cfg) = prepare_mfx(decoder_id, accel);
+
+    mfxSession mfx_decode_session{};
+    mfxStatus sts = MFXCreateSession(mfx, 0, &mfx_decode_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // fill vpp params beforehand: resolution
+    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_width(resolution.first));
+    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_height(resolution.second));
+
+    // create transcode engine
+    auto device_selector = accel_policy->get_device_selector();
+    VPLLegacyTranscodeEngine engine(std::move(accel_policy));
+    auto sess_ptr = engine.initialize_session(mfx_decode_session,
+                                              cfg_params_w_dx11_vpp,
+                                              data_provider);
+   // make test in loop
+    bool in_progress = false;
+    size_t frames_processed_count = 1;
+    try {
+        while(true) {
+            cv::MediaFrame decoded_frame = extract_decoded_frame(sess_ptr->session, engine);
+            in_progress = true;
+            ASSERT_EQ(decoded_frame.desc().size.width, ALIGN16(resolution.first));
+            ASSERT_EQ(decoded_frame.desc().size.height, ALIGN16(resolution.second));
+            ASSERT_EQ(decoded_frame.desc().fmt, MediaFormat::NV12);
+            frames_processed_count++;
+            in_progress = false;
+        }
+    } catch (...) {}
+
+    // test if interruption has happened
+    ASSERT_FALSE(in_progress);
+    ASSERT_NE(frames_processed_count, 1);
+}
+
+INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocInner, VPPInnerPreprocParams,
                         testing::ValuesIn(files));
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
