@@ -163,6 +163,9 @@ ABSDIFFC_SIMD(float)
 
 #undef ABSDIFFC_SIMD
 
+int split3_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], const int width);
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
