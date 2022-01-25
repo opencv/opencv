@@ -617,8 +617,19 @@ struct HWFeatures
                 have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
+    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+        unsigned long hwcap = 0;
+        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        // TODO: AIX, FreeBSD
+        // TODO: AIX, OpenBSD
         #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
             have[CV_CPU_VSX] = true;
         #endif
