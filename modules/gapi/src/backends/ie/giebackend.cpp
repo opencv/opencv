@@ -671,7 +671,7 @@ static void setBlob(InferenceEngine::InferRequest& req,
 static void setROIBlob(InferenceEngine::InferRequest& req,
                        const std::string&             layer_name,
                        const IE::Blob::Ptr&           blob,
-                       const cv::Rect &roi,
+                       const cv::Rect                 &roi,
                        const IECallContext&           ctx) {
     if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
         GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
@@ -1335,9 +1335,15 @@ struct InferList: public cv::detail::KernelTag {
             return;
         }
 
+        // in case of using blobParam() for collecting remote handles for remote ctx
+        // we must assure that frame is alive otherwise remote handles might expire
+        // So retain remote_frame as slot per each inference request
+        cv::MediaFrame remote_frame_slot_candidate;
+
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
-        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                              &remote_frame_slot_candidate);
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
@@ -1360,9 +1366,15 @@ struct InferList: public cv::detail::KernelTag {
             const auto& rc  = ade::util::value(it);
             reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
-                        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        setBlob(req, ctx->uu.params.input_names[0u], roi_blob, *ctx);
+                    [ctx, rc, this_blob, &remote_frame_slot_candidate]
+                    (InferenceEngine::InferRequest &req) {
+                        // reserve unique slot per request for keep alive preprocessed frame
+                        // each post-callback for each frame decrement this frame
+                        // adapter reference counting to keep it alive till last request is in progress
+                        cv::MediaFrame* slot_ptr = ctx->prepare_keep_alive_frame_slot(&req);
+                        *slot_ptr = remote_frame_slot_candidate;
+
+                        setROIBlob(req, ctx->uu.params.input_names[0u], this_blob, rc, *ctx);
                         req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, pos)
@@ -1481,9 +1493,15 @@ struct InferList2: public cv::detail::KernelTag {
                     cv::gimpl::ie::RequestPool    &reqPool) {
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
+        // in case of using blobParam() for collecting remote handles for remote ctx
+        // we must assure that frame is alive otherwise remote handles might expire
+        // So retain remote_frame as slot per each inference request
+        cv::MediaFrame remote_frame_slot_candidate;
+
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
-        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE);
+        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE,
+                                           &remote_frame_slot_candidate);
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
         if (list_size == 0u) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
@@ -1513,23 +1531,29 @@ struct InferList2: public cv::detail::KernelTag {
         for (const auto &list_idx : ade::util::iota(list_size)) {
             reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx, list_idx, list_size, blob_0](InferenceEngine::InferRequest &req) {
+                    [ctx, list_idx, list_size, blob_0, &remote_frame_slot_candidate]
+                    (InferenceEngine::InferRequest &req) {
                         for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
                             GAPI_Assert(this_vec.size() == list_size);
-                            IE::Blob::Ptr this_blob;
                             if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
+                                // associate frame with request
+                                cv::MediaFrame* slot_ptr = ctx->prepare_keep_alive_frame_slot(&req);
+                                *slot_ptr = remote_frame_slot_candidate;
+
                                 const auto &vec = this_vec.rref<cv::Rect>();
-                                this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
+                                setROIBlob(req, ctx->uu.params.input_names[in_idx],
+                                           blob_0, vec[list_idx], *ctx);
                             } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                                 const auto &vec = this_vec.rref<cv::Mat>();
                                 const auto &mat = vec[list_idx];
-                                this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
+                                setBlob(req, ctx->uu.params.input_names[in_idx],
+                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR),
+                                        *ctx);
                             } else {
                                 GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
-                            setBlob(req, ctx->uu.params.input_names[in_idx], this_blob, *ctx);
                         }
                         req.StartAsync();
                     },
