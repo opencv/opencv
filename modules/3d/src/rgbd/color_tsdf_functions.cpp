@@ -50,7 +50,7 @@ void integrateColorTsdfVolumeUnit(
     const Intr::Projector projDepth = Intr(intr).makeProjector();
 
     Matx33f rgb_intr;
-    settings.getRGBCameraIntegrateIntrinsics(rgb_intr);
+    settings.getCameraIntegrateIntrinsics(rgb_intr);
     const Intr::Projector projColor = Intr(rgb_intr);
 
     const float dfac(1.f / settings.getDepthFactor());

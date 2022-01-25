@@ -44,12 +44,8 @@ public:
     virtual void getVolumeDimensions(OutputArray val) const = 0;
     virtual void setCameraIntegrateIntrinsics(InputArray val) = 0;
     virtual void getCameraIntegrateIntrinsics(OutputArray val) const = 0;
-    virtual void setRGBCameraIntegrateIntrinsics(InputArray val) = 0;
-    virtual void getRGBCameraIntegrateIntrinsics(OutputArray val) const = 0;
     virtual void setCameraRaycastIntrinsics(InputArray val) = 0;
     virtual void getCameraRaycastIntrinsics(OutputArray val) const = 0;
-    virtual void setRGBCameraRaycastIntrinsics(InputArray val) = 0;
-    virtual void getRGBCameraRaycastIntrinsics(OutputArray val) const = 0;
 };
 
 class VolumeSettingsImpl : public VolumeSettings::Impl
@@ -87,12 +83,8 @@ public:
     virtual void getVolumeDimensions(OutputArray val) const override;
     virtual void setCameraIntegrateIntrinsics(InputArray val) override;
     virtual void getCameraIntegrateIntrinsics(OutputArray val) const override;
-    virtual void setRGBCameraIntegrateIntrinsics(InputArray val) override;
-    virtual void getRGBCameraIntegrateIntrinsics(OutputArray val) const override;
     virtual void setCameraRaycastIntrinsics(InputArray val) override;
     virtual void getCameraRaycastIntrinsics(OutputArray val) const override;
-    virtual void setRGBCameraRaycastIntrinsics(InputArray val) override;
-    virtual void getRGBCameraRaycastIntrinsics(OutputArray val) const override;
 
 private:
     VolumeType volumeType;
@@ -113,9 +105,7 @@ private:
     Point3i volumeResolution;
     Vec4i volumeDimensions;
     Matx33f cameraIntegrateIntrinsics;
-    Matx33f rgb_cameraIntegrateIntrinsics;
     Matx33f cameraRaycastIntrinsics;
-    Matx33f rgb_cameraRaycastIntrinsics;
 
 public:
     // duplicate classes for all volumes
@@ -129,7 +119,6 @@ public:
         float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
         float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
 
         static const int raycastWidth = 640;
         static const int raycastHeight = 480;
@@ -138,7 +127,6 @@ public:
         float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
         float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
 
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
@@ -165,7 +153,6 @@ public:
         float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
         float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
 
         static const int raycastWidth = 640;
         static const int raycastHeight = 480;
@@ -174,7 +161,6 @@ public:
         float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
         float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
 
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
@@ -205,7 +191,6 @@ public:
         float rgb_icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
         float rgb_icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraIntegrateIntrinsics = Matx33f(rgb_ifx, 0, rgb_icx, 0, rgb_ify, rgb_icy, 0, 0, 1); // camera settings
 
         static const int raycastWidth = 640;
         static const int raycastHeight = 480;
@@ -218,7 +203,6 @@ public:
         float rgb_rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
         float rgb_rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
         const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
-        const Matx33f  rgb_cameraRaycastIntrinsics = Matx33f(rgb_rfx, 0, rgb_rcx, 0, rgb_rfy, rgb_rcy, 0, 0, 1); // camera settings
 
         static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
         static constexpr float volumeSize = 3.f; // meters
@@ -279,12 +263,8 @@ void VolumeSettings::getVolumeResolution(OutputArray val) const { this->impl->ge
 void VolumeSettings::getVolumeDimensions(OutputArray val) const { this->impl->getVolumeDimensions(val); };
 void VolumeSettings::setCameraIntegrateIntrinsics(InputArray val) { this->impl->setCameraIntegrateIntrinsics(val); };
 void VolumeSettings::getCameraIntegrateIntrinsics(OutputArray val) const { this->impl->getCameraIntegrateIntrinsics(val); };
-void VolumeSettings::setRGBCameraIntegrateIntrinsics(InputArray val) { this->impl->setRGBCameraIntegrateIntrinsics(val); };
-void VolumeSettings::getRGBCameraIntegrateIntrinsics(OutputArray val) const { this->impl->getRGBCameraIntegrateIntrinsics(val); };
 void VolumeSettings::setCameraRaycastIntrinsics(InputArray val) { this->impl->setCameraRaycastIntrinsics(val); };
 void VolumeSettings::getCameraRaycastIntrinsics(OutputArray val) const { this->impl->getCameraRaycastIntrinsics(val); };
-void VolumeSettings::setRGBCameraRaycastIntrinsics(InputArray val) { this->impl->setRGBCameraRaycastIntrinsics(val); };
-void VolumeSettings::getRGBCameraRaycastIntrinsics(OutputArray val) const { this->impl->getRGBCameraRaycastIntrinsics(val); };
 
 
 VolumeSettingsImpl::VolumeSettingsImpl()
@@ -315,9 +295,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
-        this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
-        this->rgb_cameraRaycastIntrinsics = ds.rgb_cameraRaycastIntrinsics;
     }
     else if (volumeType == VolumeType::HashTSDF)
     {
@@ -339,9 +317,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
-        this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
-        this->rgb_cameraRaycastIntrinsics = ds.rgb_cameraRaycastIntrinsics;
     }
     else if (volumeType == VolumeType::ColorTSDF)
     {
@@ -363,9 +339,7 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeResolution = ds.volumeResolution;
         this->volumeDimensions = calcVolumeDimensions(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
-        this->rgb_cameraIntegrateIntrinsics = ds.rgb_cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
-        this->rgb_cameraRaycastIntrinsics = ds.rgb_cameraRaycastIntrinsics;
     }
 }
 
@@ -517,19 +491,6 @@ void VolumeSettingsImpl::getCameraIntegrateIntrinsics(OutputArray val) const
     Mat(this->cameraIntegrateIntrinsics).copyTo(val);
 }
 
-void VolumeSettingsImpl::setRGBCameraIntegrateIntrinsics(InputArray val)
-{
-    if (!val.empty())
-    {
-        this->rgb_cameraIntegrateIntrinsics = Matx33f(val.getMat());
-    }
-}
-
-void VolumeSettingsImpl::getRGBCameraIntegrateIntrinsics(OutputArray val) const
-{
-    Mat(this->rgb_cameraIntegrateIntrinsics).copyTo(val);
-}
-
 
 void VolumeSettingsImpl::setCameraRaycastIntrinsics(InputArray val)
 {
@@ -542,19 +503,6 @@ void VolumeSettingsImpl::setCameraRaycastIntrinsics(InputArray val)
 void VolumeSettingsImpl::getCameraRaycastIntrinsics(OutputArray val) const
 {
     Mat(this->cameraRaycastIntrinsics).copyTo(val);
-}
-
-void VolumeSettingsImpl::setRGBCameraRaycastIntrinsics(InputArray val)
-{
-    if (!val.empty())
-    {
-        this->rgb_cameraRaycastIntrinsics = Matx33f(val.getMat());
-    }
-}
-
-void VolumeSettingsImpl::getRGBCameraRaycastIntrinsics(OutputArray val) const
-{
-    Mat(this->rgb_cameraRaycastIntrinsics).copyTo(val);
 }
 
 

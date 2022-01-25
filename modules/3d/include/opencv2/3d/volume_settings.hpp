@@ -55,12 +55,8 @@ public:
     void getVolumeDimensions(OutputArray val) const;
     void setCameraIntegrateIntrinsics(InputArray val);
     void getCameraIntegrateIntrinsics(OutputArray val) const;
-    void setRGBCameraIntegrateIntrinsics(InputArray val);
-    void getRGBCameraIntegrateIntrinsics(OutputArray val) const;
     void setCameraRaycastIntrinsics(InputArray val);
     void getCameraRaycastIntrinsics(OutputArray val) const;
-    void setRGBCameraRaycastIntrinsics(InputArray val);
-    void getRGBCameraRaycastIntrinsics(OutputArray val) const;
 
 
     class Impl;
