@@ -2509,26 +2509,18 @@ GAPI_FLUID_KERNEL(GFluidSplit3, cv::gapi::core::GSplit3, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3)
     {
-        const auto *in   =  src.InLine<uchar>(0);
-              auto *out1 = dst1.OutLine<uchar>();
-              auto *out2 = dst2.OutLine<uchar>();
-              auto *out3 = dst3.OutLine<uchar>();
+        const auto *in = src.InLine<uchar>(0);
+        auto *out1     = dst1.OutLine<uchar>();
+        auto *out2     = dst2.OutLine<uchar>();
+        auto *out3     = dst3.OutLine<uchar>();
 
         GAPI_Assert(3 == src.meta().chan);
         int width = src.length();
+        int w = 0;
 
-        int w = 0; // cycle counter
-
-    #if CV_SIMD128
-        for (; w <= width-16; w+=16)
-        {
-            v_uint8x16 a, b, c;
-            v_load_deinterleave(&in[3*w], a, b, c);
-            v_store(&out1[w], a);
-            v_store(&out2[w], b);
-            v_store(&out3[w], c);
-        }
-    #endif
+#if CV_SIMD
+        w = split3_simd(in, out1, out2, out3, width);
+#endif
 
         for (; w < width; w++)
         {
