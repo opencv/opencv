@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <iterator>
 
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv
 {
 
@@ -499,21 +501,29 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         if (!isGZ) {
             file = fopen(filename.c_str(), !write_mode ? "rt" : !append ? "wt" : "a+t");
             if (!file)
+            {
+                CV_LOG_ERROR(NULL, "Can't open file: '" << filename << "' in " << (!write_mode ? "read" : !append ? "write" : "append") << " mode");
                 return false;
+            }
         } else {
 #if USE_ZLIB
             char mode[] = {write_mode ? 'w' : 'r', 'b', compression ? compression : '3', '\0'};
             gzfile = gzopen(filename.c_str(), mode);
             if (!gzfile)
+            {
+                CV_LOG_ERROR(NULL, "Can't open archive: '" << filename << "' mode=" << mode);
                 return false;
+            }
 #else
             CV_Error(cv::Error::StsNotImplemented, "There is no compressed file storage support in this configuration");
 #endif
         }
     }
 
+    // FIXIT release() must do that, use CV_Assert() here instead
     roots.clear();
     fs_data.clear();
+
     wrap_margin = 71;
     fmt = FileStorage::FORMAT_AUTO;
 
@@ -616,14 +626,14 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                 puts("\n");
             }
 
-            emitter = createXMLEmitter(this);
+            emitter_do_not_use_direct_dereference = createXMLEmitter(this);
         } else if (fmt == FileStorage::FORMAT_YAML) {
             if (!append)
                 puts("%YAML:1.0\n---\n");
             else
                 puts("...\n---\n");
 
-            emitter = createYAMLEmitter(this);
+            emitter_do_not_use_direct_dereference = createYAMLEmitter(this);
         } else {
             CV_Assert(fmt == FileStorage::FORMAT_JSON);
             if (!append)
@@ -653,7 +663,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                 }
             }
             write_stack.back().indent = 4;
-            emitter = createJSONEmitter(this);
+            emitter_do_not_use_direct_dereference = createJSONEmitter(this);
         }
         is_opened = true;
     } else {
@@ -701,20 +711,20 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
 
             switch (fmt) {
                 case FileStorage::FORMAT_XML:
-                    parser = createXMLParser(this);
+                    parser_do_not_use_direct_dereference = createXMLParser(this);
                     break;
                 case FileStorage::FORMAT_YAML:
-                    parser = createYAMLParser(this);
+                    parser_do_not_use_direct_dereference = createYAMLParser(this);
                     break;
                 case FileStorage::FORMAT_JSON:
-                    parser = createJSONParser(this);
+                    parser_do_not_use_direct_dereference = createJSONParser(this);
                     break;
                 default:
-                    parser = Ptr<FileStorageParser>();
+                    parser_do_not_use_direct_dereference = Ptr<FileStorageParser>();
             }
 
-            if (!parser.empty()) {
-                ok = parser->parse(ptr);
+            if (!parser_do_not_use_direct_dereference.empty()) {
+                ok = getParser().parse(ptr);
                 if (ok) {
                     finalizeCollection(root_nodes);
 
@@ -728,7 +738,9 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                 }
             }
         }
-        catch (...) {
+        catch (...)
+        {
+            // FIXIT log error message
             is_opened = true;
             release();
             throw;
@@ -926,7 +938,7 @@ void FileStorage::Impl::endWriteStruct() {
     if (fmt == FileStorage::FORMAT_JSON && !FileNode::isFlow(current_struct.flags) && write_stack.size() > 1)
         current_struct.indent = write_stack[write_stack.size() - 2].indent;
 
-    emitter->endWriteStruct(current_struct);
+    getEmitter().endWriteStruct(current_struct);
 
     write_stack.pop_back();
     if (!write_stack.empty())
@@ -945,7 +957,7 @@ void FileStorage::Impl::startWriteStruct_helper(const char *key, int struct_flag
     if (type_name && type_name[0] == '\0')
         type_name = 0;
 
-    FStructData s = emitter->startWriteStruct(write_stack.back(), key, struct_flags, type_name);
+    FStructData s = getEmitter().startWriteStruct(write_stack.back(), key, struct_flags, type_name);
 
     write_stack.push_back(s);
     size_t write_stack_size = write_stack.size();
@@ -956,7 +968,7 @@ void FileStorage::Impl::startWriteStruct_helper(const char *key, int struct_flag
         flush();
 
     if (fmt == FileStorage::FORMAT_JSON && type_name && type_name[0] && FileNode::isMap(struct_flags)) {
-        emitter->write("type_id", type_name, false);
+        getEmitter().write("type_id", type_name, false);
     }
 }
 
@@ -997,7 +1009,7 @@ void FileStorage::Impl::startWriteStruct(const char *key, int struct_flags,
 
 void FileStorage::Impl::writeComment(const char *comment, bool eol_comment) {
     CV_Assert(write_mode);
-    emitter->writeComment(comment, eol_comment);
+    getEmitter().writeComment(comment, eol_comment);
 }
 
 void FileStorage::Impl::startNextStream() {
@@ -1006,7 +1018,7 @@ void FileStorage::Impl::startNextStream() {
         while (!write_stack.empty())
             endWriteStruct();
         flush();
-        emitter->startNextStream();
+        getEmitter().startNextStream();
         empty_stream = true;
         write_stack.push_back(FStructData("", FileNode::EMPTY, 0));
         bufofs = 0;
@@ -1015,17 +1027,17 @@ void FileStorage::Impl::startNextStream() {
 
 void FileStorage::Impl::write(const String &key, int value) {
     CV_Assert(write_mode);
-    emitter->write(key.c_str(), value);
+    getEmitter().write(key.c_str(), value);
 }
 
 void FileStorage::Impl::write(const String &key, double value) {
     CV_Assert(write_mode);
-    emitter->write(key.c_str(), value);
+    getEmitter().write(key.c_str(), value);
 }
 
 void FileStorage::Impl::write(const String &key, const String &value) {
     CV_Assert(write_mode);
-    emitter->write(key.c_str(), value.c_str(), false);
+    getEmitter().write(key.c_str(), value.c_str(), false);
 }
 
 void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, size_t len) {
@@ -1111,7 +1123,7 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         return;
                 }
 
-                emitter->writeScalar(0, ptr);
+                getEmitter().writeScalar(0, ptr);
             }
 
             offset = (int) (data - data0);
@@ -1597,8 +1609,8 @@ FileStorage::Impl::Base64Decoder::Base64Decoder() {
     eos = true;
 }
 
-void FileStorage::Impl::Base64Decoder::init(Ptr<FileStorageParser> &_parser, char *_ptr, int _indent) {
-    parser = _parser;
+void FileStorage::Impl::Base64Decoder::init(const Ptr<FileStorageParser> &_parser, char *_ptr, int _indent) {
+    parser_do_not_use_direct_dereference = _parser;
     ptr = _ptr;
     indent = _indent;
     encoded.clear();
@@ -1641,9 +1653,9 @@ bool FileStorage::Impl::Base64Decoder::readMore(int needed) {
     decoded.resize(sz);
     ofs = 0;
 
-    CV_Assert(!parser.empty() && ptr);
+    CV_Assert(ptr);
     char *beg = 0, *end = 0;
-    bool ok = parser->getBase64Row(ptr, indent, beg, end);
+    bool ok = getParser().getBase64Row(ptr, indent, beg, end);
     ptr = end;
     std::copy(beg, end, std::back_inserter(encoded));
     totalchars += end - beg;
@@ -1730,7 +1742,7 @@ char *FileStorage::Impl::Base64Decoder::getPtr() const { return ptr; }
 char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection) {
     const int BASE64_HDR_SIZE = 24;
     char dt[BASE64_HDR_SIZE + 1] = {0};
-    base64decoder.init(parser, ptr, indent);
+    base64decoder.init(parser_do_not_use_direct_dereference, ptr, indent);
 
     int i, k;
 

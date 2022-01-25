@@ -133,10 +133,10 @@ struct DX11AllocationRecord : public std::enable_shared_from_this<DX11Allocation
     size_t size() const;
 private:
     DX11AllocationRecord();
+
     void init(unsigned int items, ID3D11DeviceContext* origin_ctx,
               mfxFrameAllocator origin_allocator,
-              ComPtrGuard<ID3D11Texture2D>&& texture, std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures);
-
+              std::vector<ComPtrGuard<ID3D11Texture2D>>&& textures, std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures);
     std::vector<AllocationId> resources;
     ComSharedPtrGuard<ID3D11Texture2D> texture_ptr;
 };

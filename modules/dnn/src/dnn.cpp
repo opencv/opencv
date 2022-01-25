@@ -895,11 +895,11 @@ public:
     // layer blob.
     int numReferences(const LayerPin& lp)
     {
-        std::map<LayerPin, LayerPin>::iterator mapIt = reuseMap.find(lp);
+        std::map<LayerPin, LayerPin>::const_iterator mapIt = reuseMap.find(lp);
         CV_Assert(mapIt != reuseMap.end());
         LayerPin memHost = mapIt->second;
 
-        std::map<LayerPin, int>::iterator refIt = refCounter.find(memHost);
+        std::map<LayerPin, int>::const_iterator refIt = refCounter.find(memHost);
         CV_Assert(refIt != refCounter.end());
         return refIt->second;
     }
@@ -927,7 +927,7 @@ public:
     // Decrease references counter to allocated memory inside specific blob.
     void releaseReference(const LayerPin& lp)
     {
-        std::map<LayerPin, LayerPin>::iterator mapIt = reuseMap.find(lp);
+        std::map<LayerPin, LayerPin>::const_iterator mapIt = reuseMap.find(lp);
         CV_Assert(mapIt != reuseMap.end());
 
         std::map<LayerPin, int>::iterator refIt = refCounter.find(mapIt->second);
@@ -951,8 +951,8 @@ public:
             Mat bestBlob;
             LayerPin bestBlobPin;
 
-            std::map<LayerPin, Mat>::iterator hostIt;
-            std::map<LayerPin, int>::iterator refIt;
+            std::map<LayerPin, Mat>::const_iterator hostIt;
+            std::map<LayerPin, int>::const_iterator refIt;
 
             const int targetTotal = total(shape);
             int bestBlobTotal = INT_MAX;
@@ -964,7 +964,7 @@ public:
                 // it might be used as output.
                 if (refIt != refCounter.end() && refIt->second == 0)
                 {
-                    Mat& unusedBlob = hostIt->second;
+                    const Mat& unusedBlob = hostIt->second;
                     if (unusedBlob.total() >= targetTotal &&
                         unusedBlob.total() < bestBlobTotal &&
                         unusedBlob.type() == dtype)
@@ -1177,7 +1177,7 @@ detail::NetImplBase::NetImplBase()
     // nothing
 }
 
-std::string detail::NetImplBase::getDumpFileNameBase()
+std::string detail::NetImplBase::getDumpFileNameBase() const
 {
     std::string dumpFileNameBase = cv::format("ocv_dnn_net_%05d_%02d", networkId, networkDumpCounter++);
     return dumpFileNameBase;
@@ -1230,7 +1230,6 @@ struct Net::Impl : public detail::NetImplBase
     bool fusion;
     bool isAsync;
     std::vector<int64> layersTimings;
-    Mat output_blob;
 
 #ifdef HAVE_CUDA
     struct CudaInfo_t
@@ -1329,7 +1328,7 @@ struct Net::Impl : public detail::NetImplBase
         std::vector< std::reference_wrapper<LayerData> > compileList; compileList.reserve(64);
         for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
         {
-            LayerData &ld = it->second;
+            LayerData& ld = it->second;
             Ptr<Layer> layer = ld.layerInstance;
             if (layer->supportBackend(DNN_BACKEND_HALIDE) && !ld.skip)
             {
@@ -1522,19 +1521,19 @@ struct Net::Impl : public detail::NetImplBase
         }
     }
 
-    int getLayerId(const String &layerName)
+    int getLayerId(const String &layerName) const
     {
-        std::map<String, int>::iterator it = layerNameToId.find(layerName);
+        std::map<String, int>::const_iterator it = layerNameToId.find(layerName);
         return (it != layerNameToId.end()) ? it->second : -1;
     }
 
-    int getLayerId(int id)
+    int getLayerId(int id) const
     {
-        MapIdToLayerData::iterator it = layers.find(id);
+        MapIdToLayerData::const_iterator it = layers.find(id);
         return (it != layers.end()) ? id : -1;
     }
 
-    int getLayerId(DictValue &layerDesc)
+    int getLayerId(DictValue &layerDesc) const
     {
         if (layerDesc.isInt())
             return getLayerId(layerDesc.get<int>());
@@ -1545,23 +1544,23 @@ struct Net::Impl : public detail::NetImplBase
         return -1;
     }
 
-    String getLayerName(int id)
+    String getLayerName(int id) const
     {
-        MapIdToLayerData::iterator it = layers.find(id);
+        MapIdToLayerData::const_iterator it = layers.find(id);
         return (it != layers.end()) ? it->second.name : "(unknown layer)";
     }
 
-    LayerData& getLayerData(int id)
+    LayerData& getLayerData(int id) const
     {
-        MapIdToLayerData::iterator it = layers.find(id);
+        MapIdToLayerData::const_iterator it = layers.find(id);
 
         if (it == layers.end())
             CV_Error(Error::StsObjectNotFound, format("Layer with requested id=%d not found", id));
 
-        return it->second;
+        return const_cast<LayerData&>(it->second);
     }
 
-    LayerData& getLayerData(const String &layerName)
+    LayerData& getLayerData(const String &layerName) const
     {
         int id = getLayerId(layerName);
 
@@ -1571,7 +1570,7 @@ struct Net::Impl : public detail::NetImplBase
         return getLayerData(id);
     }
 
-    LayerData& getLayerData(const DictValue &layerDesc)
+    LayerData& getLayerData(const DictValue &layerDesc) const
     {
         CV_Assert(layerDesc.isInt() || layerDesc.isString());
         if (layerDesc.isInt())
@@ -1597,14 +1596,14 @@ struct Net::Impl : public detail::NetImplBase
         ld.inputBlobsId[inNum] = from;
     }
 
-    int resolvePinOutputName(LayerData &ld, const String &outName)
+    int resolvePinOutputName(LayerData &ld, const String &outName) const
     {
         if (outName.empty())
             return 0;
         return ld.getLayerInstance()->outputNameToIndex(outName);
     }
 
-    LayerPin getPinByAlias(const String &layerName)
+    LayerPin getPinByAlias(const String &layerName) const
     {
         LayerPin pin;
         pin.lid = (layerName.empty()) ? 0 : getLayerId(layerName);
@@ -1615,13 +1614,17 @@ struct Net::Impl : public detail::NetImplBase
         return pin;
     }
 
-    std::vector<LayerPin> getLayerOutPins(const String &layerName)
+    std::vector<LayerPin> getLayerOutPins(const String &layerName) const
     {
         int lid = (layerName.empty()) ? 0 : getLayerId(layerName);
 
-        std::vector<LayerPin> pins;
+        MapIdToLayerData::const_iterator it = layers.find(lid);
+        if (it == layers.end())
+            CV_Error_(Error::StsOutOfRange, ("Layer #%d is not valid", lid));
+        const size_t nOutputs = it->second.outputBlobs.size();
 
-        for (int i = 0; i < layers[lid].outputBlobs.size(); i++)
+        std::vector<LayerPin> pins;
+        for (int i = 0; i < nOutputs; i++)
         {
             pins.push_back(LayerPin(lid, i));
         }
@@ -2087,12 +2090,11 @@ struct Net::Impl : public detail::NetImplBase
         CV_TRACE_FUNCTION();
         CV_Assert_N(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, haveInfEngine());
 
-        MapIdToLayerData::iterator it;
         Ptr<InfEngineNgraphNet> net;
 
-        for (it = layers.begin(); it != layers.end(); ++it)
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it)
         {
-            LayerData &ld = it->second;
+            const LayerData& ld = it->second;
             if (ld.id == 0)
             {
                 CV_Assert((netInputLayer->outNames.empty() && ld.outputBlobsWrappers.size() == 1) ||
@@ -2128,9 +2130,9 @@ struct Net::Impl : public detail::NetImplBase
             InfEngineNgraphNet& ienet = *ieNode->net;
             ienet.reset();
 
-            for (it = layers.begin(); it != layers.end(); ++it)
+            for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
             {
-                LayerData &ld = it->second;
+                LayerData& ld = it->second;
                 if (ld.id == 0)
                 {
                     for (int i = 0; i < ld.inputBlobsWrappers.size(); ++i)
@@ -2172,9 +2174,9 @@ struct Net::Impl : public detail::NetImplBase
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
         // some of layers are not implemented.
-        for (it = layers.begin(); it != layers.end(); ++it)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
         {
-            LayerData &ld = it->second;
+            LayerData& ld = it->second;
 
             if (ld.id == 0 && ld.skip)
                 continue;
@@ -2430,10 +2432,9 @@ struct Net::Impl : public detail::NetImplBase
         CV_TRACE_FUNCTION();
         CV_Assert_N(preferableBackend == DNN_BACKEND_WEBNN, haveWebnn());
 
-        MapIdToLayerData::iterator it;
         Ptr<WebnnNet> net;
 
-        for (it = layers.begin(); it != layers.end(); ++it)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
             if (ld.id == 0)
@@ -2462,7 +2463,7 @@ struct Net::Impl : public detail::NetImplBase
         // Build WebNN networks from sets of layers that support this
         // backend. Split a whole model on several WebNN networks if
         // some of layers are not implemented.
-        for (it = layers.begin(); it != layers.end(); ++it)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
         {
             LayerData &ld = it->second;
 
@@ -2662,8 +2663,7 @@ struct Net::Impl : public detail::NetImplBase
         if (!haveVulkan())
             return;
 
-        MapIdToLayerData::iterator it = layers.begin();
-        for (; it != layers.end(); it++)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
         {
             LayerData &ld = it->second;
             Ptr<Layer> layer = ld.layerInstance;
@@ -2812,7 +2812,7 @@ struct Net::Impl : public detail::NetImplBase
             ld.inputLayersId.insert(ld.inputBlobsId[i].lid);
 
         //allocate parents
-        for (set<int>::iterator i = ld.inputLayersId.begin(); i != ld.inputLayersId.end(); i++)
+        for (set<int>::const_iterator i = ld.inputLayersId.begin(); i != ld.inputLayersId.end(); i++)
             allocateLayer(*i, layersShapes);
 
         //bind inputs
@@ -2902,8 +2902,7 @@ struct Net::Impl : public detail::NetImplBase
         // we try to embed this activation into the convolution and disable separate execution of the activation
         std::set<LayerPin> pinsToKeep(blobsToKeep_.begin(),
                                       blobsToKeep_.end());
-        MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it != layers.end(); it++)
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
         {
             int lid = it->first;
             LayerData& ld = layers[lid];
@@ -3450,8 +3449,7 @@ struct Net::Impl : public detail::NetImplBase
     {
         CV_TRACE_FUNCTION();
 
-        MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it != layers.end(); it++)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
             it->second.flag = 0;
 
         CV_Assert(!layers[0].outputBlobs.empty());
@@ -3485,7 +3483,7 @@ struct Net::Impl : public detail::NetImplBase
         // Fake references to input blobs.
         for (int i = 0; i < layers[0].outputBlobs.size(); ++i)
             blobManager.addReference(LayerPin(0, i));
-        for (it = layers.begin(); it != layers.end(); ++it)
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it)
         {
             const LayerData& ld = it->second;
             blobManager.addReferences(ld.inputBlobsId);
@@ -3496,7 +3494,7 @@ struct Net::Impl : public detail::NetImplBase
             blobManager.addReference(blobsToKeep_[i]);
         }
 
-        for (it = layers.begin(); it != layers.end(); it++)
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
         {
             int lid = it->first;
             allocateLayer(lid, layersShapes);
@@ -3517,7 +3515,11 @@ struct Net::Impl : public detail::NetImplBase
             TickMeter tm;
             tm.start();
 
+#ifndef HAVE_VULKAN
+            std::map<int, Ptr<BackendNode> >::const_iterator it = ld.backendNodes.find(preferableBackend);
+#else
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
+#endif
             if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
                 if (isAsync)
@@ -3711,6 +3713,7 @@ struct Net::Impl : public detail::NetImplBase
                 {
                     forwardWebnn(ld.outputBlobsWrappers, node, isAsync);
                 }
+#ifdef HAVE_VULKAN
                 else if (preferableBackend == DNN_BACKEND_VKCOM)
                 {
                     try
@@ -3724,6 +3727,7 @@ struct Net::Impl : public detail::NetImplBase
                         forwardLayer(ld);
                     }
                 }
+#endif
                 else
                 {
                     CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -3748,8 +3752,7 @@ struct Net::Impl : public detail::NetImplBase
 
         if (clearFlags)
         {
-            MapIdToLayerData::iterator it;
-            for (it = layers.begin(); it != layers.end(); it++)
+            for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
                 it->second.flag = 0;
         }
 
@@ -3758,8 +3761,7 @@ struct Net::Impl : public detail::NetImplBase
             return;
 
         //forward parents
-        MapIdToLayerData::iterator it;
-        for (it = layers.begin(); it != layers.end() && (it->second.id < ld.id); ++it)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end() && (it->second.id < ld.id); ++it)
         {
             LayerData &ld = it->second;
             if (ld.flag)
@@ -3845,7 +3847,7 @@ struct Net::Impl : public detail::NetImplBase
             for(int i = 0; i < inputLayerIds.size(); i++)
             {
                 int layerId = inputLayerIds[i].lid;
-                LayersShapesMap::iterator it =
+                LayersShapesMap::const_iterator it =
                         inOutShapes.find(layerId);
                 if(it == inOutShapes.end() ||
                         it->second.out.empty())
@@ -3928,7 +3930,7 @@ struct Net::Impl : public detail::NetImplBase
         inOutShapes.clear();
 
         inOutShapes[0].in = netInputShapes; //insert shape for first input layer
-        for (MapIdToLayerData::iterator it = layers.begin();
+        for (MapIdToLayerData::const_iterator it = layers.begin();
              it != layers.end(); it++)
         {
             getLayerShapesRecursively(it->first, inOutShapes);
@@ -3969,12 +3971,11 @@ struct Net::Impl : public detail::NetImplBase
         CV_LOG_DEBUG(NULL, toString(inputShapes, "Network input shapes"));
         LayersShapesMap layersShapes;
         layersShapes[0].in = inputShapes;
-        for (MapIdToLayerData::iterator it = layers.begin();
-             it != layers.end(); it++)
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
         {
             int layerId = it->first;
             LayerData& layerData = it->second;
-            std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
+            const std::vector<LayerPin>& inputLayerIds = layerData.inputBlobsId;
             LayerShapes& layerShapes = layersShapes[layerId];
             CV_LOG_DEBUG(NULL, "layer " << layerId << ": [" << layerData.type << "]:(" << layerData.name << ") with inputs.size=" << inputLayerIds.size());
             if (layerShapes.in.empty())
@@ -3984,7 +3985,7 @@ struct Net::Impl : public detail::NetImplBase
                     const LayerPin& inputPin = inputLayerIds[i];
                     int inputLayerId = inputPin.lid;
                     CV_LOG_DEBUG(NULL, "    input[" << i << "] " << inputLayerId << ":" << inputPin.oid << " as [" << layers[inputLayerId].type << "]:(" << layers[inputLayerId].name << ")");
-                    LayersShapesMap::iterator inputIt = layersShapes.find(inputLayerId);
+                    LayersShapesMap::const_iterator inputIt = layersShapes.find(inputLayerId);
                     if (inputIt == layersShapes.end() || inputIt->second.out.empty())
                     {
                         getLayerShapesRecursively(inputLayerId, layersShapes);
@@ -4001,19 +4002,23 @@ struct Net::Impl : public detail::NetImplBase
         CV_LOG_DEBUG(NULL, "updateLayersShapes() - DONE");
     }
 
-    LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins)
+    LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins) const
     {
         return *std::max_element(pins.begin(), pins.end());
     }
 
-    Mat getBlob(const LayerPin& pin)
+    Mat getBlob(const LayerPin& pin) const
     {
         CV_TRACE_FUNCTION();
 
         if (!pin.valid())
             CV_Error(Error::StsObjectNotFound, "Requested blob not found");
 
-        LayerData &ld = layers[pin.lid];
+        MapIdToLayerData::const_iterator it = layers.find(pin.lid);
+        if (it == layers.end())
+            CV_Error_(Error::StsOutOfRange, ("Layer #%d is not valid (output #%d requested)", pin.lid, pin.oid));
+
+        const LayerData &ld = it->second;
         if ((size_t)pin.oid >= ld.outputBlobs.size())
         {
             CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %zu outputs, "
@@ -4029,6 +4034,7 @@ struct Net::Impl : public detail::NetImplBase
 
         if (ld.outputBlobs[pin.oid].depth() == CV_16S)
         {
+            Mat output_blob;
             convertFp16(ld.outputBlobs[pin.oid], output_blob);
             return output_blob;
         }
@@ -4036,7 +4042,7 @@ struct Net::Impl : public detail::NetImplBase
             return ld.outputBlobs[pin.oid];
     }
 
-    Mat getBlob(String outputName)
+    Mat getBlob(String outputName) const
     {
         return getBlob(getPinByAlias(outputName));
     }
@@ -4096,9 +4102,9 @@ struct Net::Impl : public detail::NetImplBase
     Net createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet);
 #endif
 
-    string dump();
+    string dump() const;
 
-    void dumpNetworkToFile()
+    void dumpNetworkToFile() const
     {
 #ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
         string dumpFileNameBase = getDumpFileNameBase();
@@ -5059,7 +5065,7 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     impl->netWasAllocated = impl->netWasAllocated && oldShape;
 }
 
-Mat Net::getParam(LayerId layer, int numParam)
+Mat Net::getParam(int layer, int numParam) const
 {
     LayerData &ld = impl->getLayerData(layer);
     std::vector<Mat> &layerBlobs = ld.getLayerInstance()->blobs;
@@ -5067,7 +5073,7 @@ Mat Net::getParam(LayerId layer, int numParam)
     return layerBlobs[numParam];
 }
 
-void Net::setParam(LayerId layer, int numParam, const Mat &blob)
+void Net::setParam(int layer, int numParam, const Mat &blob)
 {
     LayerData &ld = impl->getLayerData(layer);
 
@@ -5077,7 +5083,7 @@ void Net::setParam(LayerId layer, int numParam, const Mat &blob)
     layerBlobs[numParam] = blob;
 }
 
-int Net::getLayerId(const String &layer)
+int Net::getLayerId(const String &layer) const
 {
     return impl->getLayerId(layer);
 }
@@ -5120,7 +5126,7 @@ String Net::dump()
     return impl->dump();
 }
 
-string Net::Impl::dump()
+string Net::Impl::dump() const
 {
     bool hasInput = !netInputLayer->inputsData.empty();
 
@@ -5388,13 +5394,18 @@ void Net::dumpToFile(const String& path) {
     file.close();
 }
 
-Ptr<Layer> Net::getLayer(LayerId layerId)
+Ptr<Layer> Net::getLayer(int layerId) const
+{
+    LayerData &ld = impl->getLayerData(layerId);
+    return ld.getLayerInstance();
+}
+Ptr<Layer> Net::getLayer(const LayerId& layerId) const
 {
     LayerData &ld = impl->getLayerData(layerId);
     return ld.getLayerInstance();
 }
 
-std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)
+std::vector<Ptr<Layer> > Net::getLayerInputs(int layerId) const
 {
     LayerData &ld = impl->getLayerData(layerId);
 
@@ -5413,7 +5424,7 @@ std::vector<String> Net::getLayerNames() const
     std::vector<String> res;
     res.reserve(impl->layers.size());
 
-    Impl::MapIdToLayerData::iterator it;
+    Impl::MapIdToLayerData::const_iterator it;
     for (it = impl->layers.begin(); it != impl->layers.end(); it++)
     {
         if (it->second.id) //skip Data layer
@@ -5432,11 +5443,11 @@ std::vector<int> Net::getUnconnectedOutLayers() const
 {
     std::vector<int> layersIds;
 
-    Impl::MapIdToLayerData::iterator it;
+    Impl::MapIdToLayerData::const_iterator it;
     for (it = impl->layers.begin(); it != impl->layers.end(); it++)
     {
         int lid = it->first;
-        LayerData &ld = it->second;
+        const LayerData &ld = it->second;
 
         if (ld.requiredOutputs.size() == 0)
             layersIds.push_back(lid);
@@ -5536,13 +5547,13 @@ int64 Net::getFLOPS(const MatShape& netInputShape) const
 int64 Net::getFLOPS(const int layerId,
               const std::vector<MatShape>& netInputShapes) const
 {
-    Impl::MapIdToLayerData::iterator layer = impl->layers.find(layerId);
+    Impl::MapIdToLayerData::const_iterator layer = impl->layers.find(layerId);
     CV_Assert(layer != impl->layers.end());
 
     LayerShapes shapes;
     impl->getLayerShapes(netInputShapes, layerId, shapes);
 
-    return layer->second.getLayerInstance()->getFLOPS(shapes.in, shapes.out);
+    return const_cast<LayerData&>(layer->second).getLayerInstance()->getFLOPS(shapes.in, shapes.out);
 }
 
 int64 Net::getFLOPS(const int layerId,
@@ -5556,7 +5567,7 @@ void Net::getLayerTypes(std::vector<String>& layersTypes) const
     layersTypes.clear();
 
     std::map<String, int> layers;
-    for (Impl::MapIdToLayerData::iterator it = impl->layers.begin();
+    for (Impl::MapIdToLayerData::const_iterator it = impl->layers.begin();
          it != impl->layers.end(); it++)
     {
         if (layers.find(it->second.type) == layers.end())
@@ -5564,7 +5575,7 @@ void Net::getLayerTypes(std::vector<String>& layersTypes) const
         layers[it->second.type]++;
     }
 
-    for (std::map<String, int>::iterator it = layers.begin();
+    for (std::map<String, int>::const_iterator it = layers.begin();
          it != layers.end(); it++)
     {
         layersTypes.push_back(it->first);
@@ -5574,7 +5585,7 @@ void Net::getLayerTypes(std::vector<String>& layersTypes) const
 int Net::getLayersCount(const String& layerType) const
 {
     int count = 0;
-    for (Impl::MapIdToLayerData::iterator it = impl->layers.begin();
+    for (Impl::MapIdToLayerData::const_iterator it = impl->layers.begin();
          it != impl->layers.end(); it++)
     {
         if (it->second.type == layerType)
@@ -5589,7 +5600,7 @@ void Net::getMemoryConsumption(const int layerId,
 {
     CV_TRACE_FUNCTION();
 
-    Impl::MapIdToLayerData::iterator layer = impl->layers.find(layerId);
+    Impl::MapIdToLayerData::const_iterator layer = impl->layers.find(layerId);
     CV_Assert(layer != impl->layers.end());
 
     weights = blobs = 0;
@@ -5658,7 +5669,7 @@ void Net::getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
     for(int i = 0; i < layerIds.size(); i++)
     {
         int w = 0, b = 0;
-        Impl::MapIdToLayerData::iterator layer = impl->layers.find(layerIds[i]);
+        Impl::MapIdToLayerData::const_iterator layer = impl->layers.find(layerIds[i]);
         CV_Assert(layer != impl->layers.end());
 
         for(int j = 0; j < layer->second.params.blobs.size(); j++)
@@ -6090,6 +6101,13 @@ void LayerFactory::unregisterLayer(const String &type)
         else
             getLayerFactoryImpl().erase(it);
     }
+}
+
+bool LayerFactory::isLayerRegistered(const std::string& type)
+{
+    cv::AutoLock lock(getLayerFactoryMutex());
+    auto& registeredLayers = getLayerFactoryImpl();
+    return registeredLayers.find(type) != registeredLayers.end();
 }
 
 Ptr<Layer> LayerFactory::createLayerInstance(const String &type, LayerParams& params)

@@ -112,6 +112,8 @@ static bool cv_tiffSetErrorHandler()
 
 static const char fmtSignTiffII[] = "II\x2a\x00";
 static const char fmtSignTiffMM[] = "MM\x00\x2a";
+static const char fmtSignBigTiffII[] = "II\x2b\x00";
+static const char fmtSignBigTiffMM[] = "MM\x00\x2b";
 
 TiffDecoder::TiffDecoder()
 {
@@ -140,7 +142,9 @@ bool TiffDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 4 &&
         (memcmp(signature.c_str(), fmtSignTiffII, 4) == 0 ||
-        memcmp(signature.c_str(), fmtSignTiffMM, 4) == 0);
+        memcmp(signature.c_str(), fmtSignTiffMM, 4) == 0 ||
+        memcmp(signature.c_str(), fmtSignBigTiffII, 4) == 0 ||
+        memcmp(signature.c_str(), fmtSignBigTiffMM, 4) == 0);
 }
 
 int TiffDecoder::normalizeChannelsNumber(int channels) const

@@ -455,6 +455,29 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     }
 }
 
+TEST(Imgcodecs_Tiff, read_bigtiff_images)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenamesInput[] = {
+        "readwrite/BigTIFF.tif",
+        "readwrite/BigTIFFMotorola.tif",
+        "readwrite/BigTIFFLong.tif",
+        "readwrite/BigTIFFLong8.tif",
+        "readwrite/BigTIFFMotorolaLongStrips.tif",
+        "readwrite/BigTIFFLong8Tiles.tif",
+        "readwrite/BigTIFFSubIFD4.tif",
+        "readwrite/BigTIFFSubIFD8.tif"
+    };
+
+    for (int i = 0; i < 8; i++)
+    {
+        const Mat bigtiff_img = imread(root + filenamesInput[i], IMREAD_UNCHANGED);
+        ASSERT_FALSE(bigtiff_img.empty());
+        EXPECT_EQ(64, bigtiff_img.cols);
+        EXPECT_EQ(64, bigtiff_img.rows);
+        ASSERT_EQ(CV_8UC3, bigtiff_img.type());
+    }
+}
 
 #endif
 
