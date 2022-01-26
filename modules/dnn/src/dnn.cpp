@@ -55,6 +55,8 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
@@ -3504,6 +3506,9 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     CV_UNUSED(xml); CV_UNUSED(bin);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
 #else
+
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
     InferenceEngine::CNNNetReader reader;
     reader.ReadNetwork(xml);
@@ -3539,6 +3544,8 @@ Net Net::readFromModelOptimizer(
     CV_UNUSED(bufferModelConfigSize); CV_UNUSED(bufferModelConfigSize);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
 #else
+
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
     InferenceEngine::CNNNetReader reader;
@@ -3639,6 +3646,7 @@ Mat Net::forward(const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     String layerName = outputName;
 
@@ -3660,6 +3668,7 @@ AsyncArray Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
 #ifdef CV_CXX11
     String layerName = outputName;
@@ -3691,6 +3700,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     String layerName = outputName;
 
@@ -3769,6 +3779,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
                   const std::vector<String>& outBlobNames)
 {
     CV_TRACE_FUNCTION();
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -3796,6 +3807,7 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
                      const std::vector<String>& outBlobNames)
 {
     CV_TRACE_FUNCTION();
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -3886,6 +3898,7 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     LayerPin pin;
     pin.lid = 0;

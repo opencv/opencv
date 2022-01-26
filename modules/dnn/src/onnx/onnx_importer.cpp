@@ -8,6 +8,8 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
@@ -40,6 +42,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 class ONNXImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     opencv_onnx::ModelProto model_proto;
     struct LayerInfo {
         int layerId;
