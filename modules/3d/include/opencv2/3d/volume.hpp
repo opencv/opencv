@@ -51,15 +51,9 @@ public:
     * @param cameraPose the pose of camera (camera in volume environment, not real).
     * @param points the storage of points in the image.
     * @param normals the storage of normals (corresponding to points) in the image.
-    */
-    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals) const;
-    /** @brief Extract the points of volume from set position.
-    * @param cameraPose the pose of camera (camera in volume environment, not real).
-    * @param points the storage of points in the image.
-    * @param normals the storage of normals (corresponding to points) in the image.
     * @param colors the storage of colors (corresponding to points) in the image (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const;
+    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Extract the points of volume from set position.
     * @param cameraPose the pose of camera (camera in volume environment, not real).
@@ -74,17 +68,9 @@ public:
     * @param width the width of result image.
     * @param points the storage of points in the image.
     * @param normals the storage of normals (corresponding to points) in the image.
-    */
-    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
-    /** @brief Extract the points of volume from set position.
-    * @param cameraPose the pose of camera (camera in volume environment, not real).
-    * @param height the height of result image.
-    * @param width the width of result image.
-    * @param points the storage of points in the image.
-    * @param normals the storage of normals (corresponding to points) in the image.
     * @param colors the storage of colors (corresponding to points) in the image (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const;
+    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.
