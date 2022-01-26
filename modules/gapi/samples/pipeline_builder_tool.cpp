@@ -9,7 +9,7 @@
 #include <opencv2/highgui.hpp> // cv::CommandLineParser
 #include <opencv2/core/utils/filesystem.hpp>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #endif
 
@@ -203,7 +203,7 @@ static void loadConfig(const std::string&                        filename,
 }
 
 int main(int argc, char* argv[]) {
-#if defined(WIN32)
+#if defined(_WIN32)
     timeBeginPeriod(1);
 #endif
     try {

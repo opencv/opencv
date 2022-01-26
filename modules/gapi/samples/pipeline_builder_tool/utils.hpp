@@ -3,7 +3,7 @@
 
 #include <opencv2/core.hpp>
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #endif
 
@@ -34,7 +34,7 @@ inline void generateRandom(cv::Mat& out) {
 }
 
 inline void sleep(double ms) {
-#if defined(WIN32)
+#if defined(_WIN32)
     // NB: It takes portions of 100 nanoseconds.
     int64_t ns_units = static_cast<int64_t>(ms * 1e4);
     // FIXME: Wrap it to RAII and instance only once.
