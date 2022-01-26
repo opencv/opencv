@@ -47,9 +47,8 @@ public:
 
     Camera intrinsics are taken from volume settings structure.
 
-    * @param frame the object from which to take depth and image data.
     * @param depth the depth image.
-    * @param color the color image (only for ColorTSDF).
+    * @param image the color image (only for ColorTSDF).
     * @param pose the pose of camera in global coordinates.
     */
     void integrate(InputArray depth, InputArray image, InputArray pose);

@@ -127,7 +127,6 @@ public:
 
     /** @brief Returns length of single raycast step.
         Describes the percentage of voxel length that is skipped per march.
-    * @param val input value.
     */
     float getRaycastStepFactor() const;
 
