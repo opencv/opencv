@@ -104,10 +104,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -128,11 +125,11 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(*this);
+                        my_sess.swap_decode_surface(*this);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -388,7 +385,7 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     sess_ptr->init_transcode_surface_pool(vpp_out_pool_key);
 
     // prepare working surfaces
-    sess_ptr->swap_surface(*this);
+    sess_ptr->swap_decode_surface(*this);
     sess_ptr->swap_transcode_surface(*this);
     return sess_ptr;
 }
@@ -444,10 +441,6 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
     }
 
     GAPI_LOG_INFO(nullptr, "Finished VPP param validation");
-}
-
-ProcessingEngineBase::ExecutionStatus VPLLegacyTranscodeEngine::execute_op(operation_t& op, EngineSession& sess) {
-    return op(sess);
 }
 
 void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,

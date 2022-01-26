@@ -21,7 +21,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 vpp_pp_session::vpp_pp_session(mfxSession sess, const mfxVideoParam& vpp_out_param) :
-    EngineSession(sess, {}),
+    EngineSession(sess),
     mfx_vpp_out_param(vpp_out_param),
     procesing_surface_ptr(),
     sync_in_queue(),
@@ -49,22 +49,8 @@ Data::Meta vpp_pp_session::generate_frame_meta() {
 void vpp_pp_session::swap_surface(VPPPreprocEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
-    try {
-        auto cand = acceleration_policy->get_free_surface(vpp_pool_id).lock();
-
-        GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
-                                ", old: " << (!procesing_surface_ptr.expired()
-                                              ? procesing_surface_ptr.lock()->get_handle()
-                                              : nullptr) <<
-                                ", new: "<< cand->get_handle());
-
-        procesing_surface_ptr = cand;
-    } catch (const std::runtime_error& ex) {
-        GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what());
-
-        // Delegate exception processing on caller
-        throw;
-    }
+    request_free_surface(session, vpp_pool_id, *acceleration_policy,
+                         procesing_surface_ptr, true);
 }
 
 void vpp_pp_session::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {

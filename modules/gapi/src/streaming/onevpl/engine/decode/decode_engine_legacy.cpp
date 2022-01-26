@@ -83,10 +83,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -98,11 +95,11 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(*this);
+                        my_sess.swap_decode_surface(*this);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -282,12 +279,8 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
 
     sess_ptr->init_surface_pool(param.decode_pool_key);
     // prepare working decode surface
-    sess_ptr->swap_surface(*this);
+    sess_ptr->swap_decode_surface(*this);
     return sess_ptr;
-}
-
-ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
-    return op(sess);
 }
 
 void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
@@ -314,7 +307,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
         {
             // prepare sync object for new surface
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -335,7 +328,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -381,7 +374,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             break;
         case MFX_WRN_IN_EXECUTION:
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());

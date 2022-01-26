@@ -58,7 +58,7 @@ private:
                                    std::shared_ptr<IDataProvider> provider) override;
     size_t preprocessed_frames_count;
 
-    // NB: no nee to protect by mutex at now
+    // NB: no need to protect by mutex at now
     using decoded_frame_key_t = void*;
     std::unordered_map<decoded_frame_key_t, cv::MediaFrame> pending_decoded_frames_sync;
 

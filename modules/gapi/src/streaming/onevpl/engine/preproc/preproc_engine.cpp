@@ -10,7 +10,6 @@
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
-#include "streaming/onevpl/data_provider_defines.hpp"
 
 #include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_session.hpp"

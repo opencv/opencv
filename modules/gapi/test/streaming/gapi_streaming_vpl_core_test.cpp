@@ -68,7 +68,7 @@ struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
 struct TestProcessingSession : public cv::gapi::wip::onevpl::EngineSession {
     TestProcessingSession(mfxSession mfx_session) :
-        EngineSession(mfx_session, {}) {
+        EngineSession(mfx_session) {
     }
 
     const mfxFrameInfo& get_video_param() const override {
@@ -733,7 +733,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
     sess_ptr->init_transcode_surface_pool(vpp_out_pool_key);
 
     // prepare working surfaces
-    sess_ptr->swap_surface(engine);
+    sess_ptr->swap_decode_surface(engine);
     sess_ptr->swap_transcode_surface(engine);
 
     // launch pipeline
@@ -757,10 +757,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
         {
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -772,11 +769,11 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(engine);
+                        my_sess.swap_decode_surface(engine);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -944,7 +941,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
     sess_ptr->init_surface_pool(decode_pool_key);
 
     // prepare working surfaces
-    sess_ptr->swap_surface(engine);
+    sess_ptr->swap_decode_surface(engine);
 
     // launch pipeline
     LegacyDecodeSession &my_sess = *sess_ptr;
@@ -972,10 +969,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
         {
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
@@ -987,11 +981,11 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(engine);
+                        my_sess.swap_decode_surface(engine);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
                                                     my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);

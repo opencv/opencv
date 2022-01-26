@@ -21,8 +21,8 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-
 class VPPPreprocEngine;
+
 class vpp_pp_session : public EngineSession {
 public:
     friend class VPPPreprocEngine;
@@ -38,9 +38,6 @@ public:
 private:
     mfxVideoParam mfx_vpp_out_param;
     VPLAccelerationPolicy::pool_key_t vpp_pool_id;
-    mfxFrameAllocRequest request;
-
-protected:
     std::weak_ptr<Surface> procesing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_in_queue;
