@@ -73,9 +73,9 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
     EXPECT_TRUE(dd_result);
 
     // initialize MFX
-    mfxLoader mfx_handle = MFXLoad();
+    mfxLoader mfx = MFXLoad();
 
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx);
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
@@ -85,7 +85,7 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
 
     // create MFX session
     mfxSession mfx_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
+    mfxStatus sts = MFXCreateSession(mfx, 0, &mfx_session);
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // create proper bitstream
@@ -112,7 +112,7 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
 
     MFXVideoDECODE_Close(mfx_session);
     MFXClose(mfx_session);
-    MFXUnload(mfx_handle);
+    MFXUnload(mfx);
 }
 
 

@@ -30,6 +30,9 @@
 #include <opencv2/gapi/streaming/format.hpp>
 
 #ifdef HAVE_ONEVPL
+#ifdef HAVE_INF_ENGINE
+#include <inference_engine.hpp>
+
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
@@ -492,4 +495,5 @@ INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocInner, VPPInnerPreprocParams,
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
 } // namespace opencv_test
+#endif // HAVE_INF_ENGINE
 #endif // HAVE_ONEVPL

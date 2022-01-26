@@ -16,6 +16,7 @@
 
 #ifdef HAVE_ONEVPL
 #ifdef HAVE_INF_ENGINE
+
 namespace cv {
 namespace gapi {
 namespace wip {

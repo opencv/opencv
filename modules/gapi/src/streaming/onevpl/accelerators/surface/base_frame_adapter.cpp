@@ -21,10 +21,9 @@ BaseFrameAdapter::BaseFrameAdapter(std::shared_ptr<Surface> surface, SessionHand
     GAPI_Assert(parent_handle && "mfxSession is nullptr");
 
     const Surface::info_t& info = parent_surface_ptr->get_info();
-    const Surface::data_t& data = parent_surface_ptr->get_data();
     GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
                             ", w: " << info.Width << ", h: " << info.Height <<
-                            ", p: " << data.Pitch <<
+                            ", p: " << parent_surface_ptr->get_data().Pitch <<
                             ", frame id: " << reinterpret_cast<void*>(this));
     switch(info.FourCC) {
         case MFX_FOURCC_I420:
