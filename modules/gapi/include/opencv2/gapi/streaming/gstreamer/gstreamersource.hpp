@@ -82,6 +82,14 @@ protected:
 
 using GStreamerSource = gst::GStreamerSource;
 
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_gst_src(const std::string& pipeline,
+                    const GStreamerSource::OutputType outputType =
+                    GStreamerSource::OutputType::MAT)
+{
+    return make_src<GStreamerSource>(pipeline, outputType);
+}
 } // namespace wip
 } // namespace gapi
 } // namespace cv
