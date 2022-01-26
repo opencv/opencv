@@ -150,20 +150,25 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 }
+static resize_t full_hd = resize_t{static_cast<uint16_t>(1920),
+                                   static_cast<uint16_t>(1080)};
+
+static resize_t cif = resize_t{static_cast<uint16_t>(352),
+                               static_cast<uint16_t>(288)};
 
 INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
-                        Values(source_description_preproc_t(files[0], codec[0], "", {1920, 1080}),
-                               source_description_preproc_t(files[0], codec[0], "", {352, 288}),
-                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
-                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288}),
-                               source_description_preproc_t(files[1], codec[1], "", {1920, 1080}),
-                               source_description_preproc_t(files[1], codec[1], "", {352, 288}),
-                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{1920, 1080}),
-                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{352, 288}),
-                               source_description_preproc_t(files[2], codec[2], "", {1920, 1080}),
-                               source_description_preproc_t(files[2], codec[2], "", {352, 288}),
-                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
-                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288})));
+                        Values(source_description_preproc_t(files[0], codec[0], "", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "", cif),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", cif),
+                               source_description_preproc_t(files[1], codec[1], "", full_hd),
+                               source_description_preproc_t(files[1], codec[1], "", cif),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",full_hd),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",cif),
+                               source_description_preproc_t(files[2], codec[2], "", full_hd),
+                               source_description_preproc_t(files[2], codec[2], "", cif),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", cif)));
 
 #ifdef HAVE_INF_ENGINE
 class OneVPLSourcePerf_PP_Engine_Test : public TestPerfParams<source_description_preproc_t> {};
@@ -231,18 +236,18 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
 }
 
 INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP, OneVPLSourcePerf_PP_Engine_Test,
-                        Values(source_description_preproc_t(files[0], codec[0], "", {1920, 1080}),
-                               source_description_preproc_t(files[0], codec[0], "", {352, 288}),
-                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
-                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288}),
-                               source_description_preproc_t(files[1], codec[1], "", {1920, 1080}),
-                               source_description_preproc_t(files[1], codec[1], "", {352, 288}),
-                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{1920, 1080}),
-                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{352, 288}),
-                               source_description_preproc_t(files[2], codec[2], "", {1920, 1080}),
-                               source_description_preproc_t(files[2], codec[2], "", {352, 288}),
-                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {1920, 1080}),
-                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {352, 288})));
+                        Values(source_description_preproc_t(files[0], codec[0], "", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "", cif),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", cif),
+                               source_description_preproc_t(files[1], codec[1], "", full_hd),
+                               source_description_preproc_t(files[1], codec[1], "", cif),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",full_hd),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",cif),
+                               source_description_preproc_t(files[2], codec[2], "", full_hd),
+                               source_description_preproc_t(files[2], codec[2], "", cif),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", cif)));
 
 class OneVPLSourcePerf_PP_Engine_Bypass_Test : public TestPerfParams<source_description_preproc_t> {};
 
@@ -295,13 +300,18 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
+static resize_t res_672x384 = resize_t{static_cast<uint16_t>(672),
+                                       static_cast<uint16_t>(384)};
+static resize_t res_336x256 = resize_t{static_cast<uint16_t>(336),
+                                       static_cast<uint16_t>(256)};
+
 INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_Bypass_Test,
-                        Values(source_description_preproc_t(files[0], codec[0], "", {672, 384}),
-                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", {672, 384}),
-                               source_description_preproc_t(files[1], codec[1], "", {672, 384}),
-                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11",{672, 384}),
-                               source_description_preproc_t(files[2], codec[2], "", {336, 256}),
-                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", {336, 256})));
+                        Values(source_description_preproc_t(files[0], codec[0], "", res_672x384),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", res_672x384),
+                               source_description_preproc_t(files[1], codec[1], "", res_672x384),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11", res_672x384),
+                               source_description_preproc_t(files[2], codec[2], "", res_336x256),
+                               source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", res_336x256)));
 #endif // HAVE_INF_ENGINE
 } // namespace opencv_test
 
