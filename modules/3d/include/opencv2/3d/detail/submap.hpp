@@ -187,7 +187,7 @@ public:
     typedef std::map<int, Ptr<SubmapT>> IdToSubmapPtr;
     typedef std::unordered_map<int, ActiveSubmapData> IdToActiveSubmaps;
 
-    SubmapManager(const VolumeSettings& _volumeSettings) : volumeSettings(_volumeSettings) {}
+    explicit SubmapManager(const VolumeSettings& _volumeSettings) : volumeSettings(_volumeSettings) {}
     virtual ~SubmapManager() = default;
 
     void reset() { submapList.clear(); };
