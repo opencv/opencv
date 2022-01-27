@@ -219,6 +219,12 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+namespace nested {
+CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
+    return flag;
+}
+} // namespace nested
+
 namespace fs {
     CV_EXPORTS_W cv::String getCacheDirectoryForDownloads();
 } // namespace fs
