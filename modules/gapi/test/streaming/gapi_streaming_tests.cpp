@@ -1868,8 +1868,9 @@ TEST(GAPI_Streaming, CopyFrameGray)
         cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
         num_frames++;
         cap >> ocv_mat;
-
-        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+        cv::Mat y, uv;
+        cvtBGR2NV12(ocv_mat, y, uv);
+        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
     }
 }
 
