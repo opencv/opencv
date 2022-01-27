@@ -602,10 +602,18 @@ class Arguments(NewOpenCVTests):
                         msg="Module is not generated for nested namespace")
         self.assertTrue(hasattr(cv.utils.nested, "testEchoBooleanFunction"),
                         msg="Function in nested module is not available")
-        self.assertEqual(sys.getrefcount(cv.utils.nested), 2,
-                         msg="Nested submodule lifetime should be managed by "
-                         "the parent module so the reference count should be "
-                         "2, because `getrefcount` temporary increases it.")
+
+        # Nested submodule is managed by the global submodules dictionary
+        # and parent native module
+        expected_ref_count = 2
+
+        # `getrefcount` temporary increases reference counter by 1
+        actual_ref_count = sys.getrefcount(cv.utils.nested) - 1
+
+        self.assertEqual(actual_ref_count, expected_ref_count,
+                         msg="Nested submodule reference counter has wrong value\n"
+                         "Expected: {}. Actual: {}".format(expected_ref_count, actual_ref_count))
+
         for flag in (True, False):
             self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
                              msg="Function in nested module returns wrong result")
