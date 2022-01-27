@@ -465,6 +465,7 @@ void VolumeSettingsImpl::setVolumeResolution(InputArray val)
     if (!val.empty())
     {
         this->volumeResolution = Point3i(val.getMat());
+        this->volumeDimensions = calcVolumeDimensions(this->volumeResolution, this->zFirstMemOrder);
     }
 }
 
