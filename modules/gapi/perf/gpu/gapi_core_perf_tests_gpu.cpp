@@ -334,7 +334,7 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestGPU, ResizePerfTest,
             Values(cv::compile_args(CORE_GPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestGPU, ResizeFxFyPerfTest,
-    Combine(Values(AbsExact().to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
             Values(CV_8UC1, CV_16UC1, CV_16SC1),
             Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
             Values(szSmall128, szVGA, sz720p, sz1080p),

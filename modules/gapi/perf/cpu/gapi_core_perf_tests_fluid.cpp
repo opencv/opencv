@@ -49,8 +49,8 @@ INSTANTIATE_TEST_CASE_P(SubPerfTestFluid, SubPerfTest,
 INSTANTIATE_TEST_CASE_P(SubCPerfTestFluid, SubCPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
-            Values(-1, CV_8U, CV_32F),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(SubRCPerfTestFluid, SubRCPerfTest,
@@ -78,8 +78,8 @@ INSTANTIATE_TEST_CASE_P(MulDoublePerfTestFluid, MulDoublePerfTest,
 INSTANTIATE_TEST_CASE_P(MulCPerfTestFluid, MulCPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
-            Values(-1, CV_8U, CV_32F),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(DivPerfTestFluid, DivPerfTest,
@@ -342,7 +342,7 @@ INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsConstIn
     Combine(Values(AbsSimilarPoints(0, 1).to_compare_f()),
             Values("cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
                    "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
-            Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
+            Values(cv::compile_args(cv::gapi::combine(IMGPROC_FLUID, CORE_FLUID)))));
 
 INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
@@ -350,14 +350,14 @@ INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPer
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(0.5),
             Values(0.5),
-            Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
+            Values(cv::compile_args(cv::gapi::combine(IMGPROC_FLUID, CORE_FLUID)))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
-    Combine(Values(AbsExact().to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
             Values(CV_8UC3),
             Values(cv::INTER_LINEAR),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(0.5, 0.1),
-            Values(0.5, 0.1),
+            Values(0.5, 0.25, 2),
+            Values(0.5, 0.25, 2),
             Values(cv::compile_args(CORE_FLUID))));
 } // opencv_test

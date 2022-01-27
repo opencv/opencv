@@ -2342,7 +2342,7 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat1, mean, stddev);
-    cv::Size sz_out = cv::Size();
+    cv::Size sz_out = cv::Size(saturate_cast<int>(sz.width*fx), saturate_cast<int>(sz.height*fy));
     out_mat_gapi = cv::Mat(sz_out, type);
     out_mat_ocv = cv::Mat(sz_out, type);
 
