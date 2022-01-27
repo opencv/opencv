@@ -33,12 +33,12 @@ public:
     VolumeSettings(VolumeType volumeType);
     ~VolumeSettings();
 
-    /** @brief Sets the with of the image for integration.
+    /** @brief Sets the width of the image for integration.
     * @param val input value.
     */
     void  setIntegrateWidth(int val);
 
-    /** @brief Returns the with of the image for integration.
+    /** @brief Returns the width of the image for integration.
     */
     int   getIntegrateWidth() const;
 
@@ -52,12 +52,12 @@ public:
     int   getIntegrateHeight() const;
 
 
-    /** @brief Sets the with of the raycasted image.
+    /** @brief Sets the width of the raycasted image.
     * @param val input value.
     */
     void  setRaycastWidth(int val);
 
-    /** @brief Returns the with of the raycasted image.
+    /** @brief Returns the width of the raycasted image.
     */
     int   getRaycastWidth() const;
 
@@ -156,7 +156,8 @@ public:
     */
     void getVolumeResolution(OutputArray val) const;
 
-    /** @brief Returns volume dimensions.
+    /** @brief Returns 3 integers representing strides by x, y and z dimension.
+        Can be used to iterate over volume unit raw data.
     * @param val output value.
     */
     void getVolumeDimensions(OutputArray val) const;
