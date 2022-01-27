@@ -2021,7 +2021,7 @@ TEST(GAPI_Streaming, ReshapeGray)
     filepath = findDataFile("cv/video/1920x1080.avi");
     cc.stop();
     try {
-        cc.setSource<BGRSource>(filepath);
+        cc.setSource<GRAYSource>(filepath);
     }
     catch (...) {
         throw SkipTestException("Video file can not be opened");
