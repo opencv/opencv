@@ -285,9 +285,12 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         case cv::MediaFormat::GRAY:
         {
             rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
-                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
+                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 3, d.size); },
                 [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
-                    return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
+                    cv::Mat bgr;
+                    cv::Mat gray(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
+                    cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+                    return bgr;
                 });
             break;
         }
@@ -351,18 +354,11 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::GRAY:
         {
-            std::call_once(m_warnFlag,
-                []() {
-                    GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from GRAY to NV12 Y plane will "
-                        "happen.\n"
-                        "Conversion may cost a lot for images with high resolution.\n"
-                        "To retrieve cv::Mat from BGR cv::MediaFrame for free, you may use "
-                        "cv::gapi::streaming::BGR accessor.\n");
-                });
-
-            auto view = frame.access(cv::MediaFrame::Access::R);
-            cv::Mat tmp_gray(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
-            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(tmp_gray.rowRange(0, desc.size.height));
+            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
+            [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
+            [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
+                return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
+            });
             break;
         }
         default:
@@ -436,12 +432,40 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::GRAY:
         {
-            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
-                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
-                [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
-                    return cv::Mat(d.size, CV_8UC1, v.ptr[1], v.stride[1]);
+#if 0
+            std::call_once(m_warnFlag,
+                []() {
+                    GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from Y to NV12 UV plane will "
+                        "happen.\n"
+                        "Conversion may cost a lot for images with high resolution.\n"
+                        "To retrieve cv::Mat from GRAY cv::MediaFrame for free, you may use "
+                        "cv::gapi::streaming::BGR accessor.\n");
                 });
+            auto view = frame.access(cv::MediaFrame::Access::R);
+            cv::Mat tmp_bgr;
+            cv::Mat tmp_gray(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            cv::cvtColor(tmp_gray, tmp_bgr, cv::COLOR_GRAY2BGR);
+
+            cv::Mat yuv;
+            cvtColor(tmp_bgr, yuv, cv::COLOR_BGR2YUV_I420);
+
+            cv::Mat uv;
+            std::vector<int> dims = { desc.size.height / 2,
+                                        desc.size.width / 2 };
+            auto start = desc.size.height;
+            auto range_h = desc.size.height / 4;
+            std::vector<cv::Mat> uv_planes = {
+                yuv.rowRange(start, start + range_h).reshape(0, dims),
+                yuv.rowRange(start + range_h, start + range_h * 2).reshape(0, dims)
+            };
+            cv::merge(uv_planes, uv);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(uv);
             break;
+#else
+            cv::Mat uv(desc.size / 2, CV_8UC2, cv::Scalar::all(127));
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(uv);
+            break;
+#endif
         }
         default:
             cv::util::throw_error(
