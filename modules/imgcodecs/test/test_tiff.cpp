@@ -150,15 +150,14 @@ TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
 TEST(Imgcodecs_Tiff, readWrite_unsigned)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
-    const string filenameInput = root + "readwrite/gray_8u.tiff";
+    const string filenameInput = root + "readwrite/gray_8u.tif";
     const string filenameOutput = cv::tempfile(".tiff");
     const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC1, img.type());
 
     Mat matS8;
-    img.copyTo(matS8);
-    matS8.flags |= CV_8SC1;	//hard code set type as CV_8SC1 for testing.
+    img.convertTo(matS8, CV_8SC1);
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, matS8));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
