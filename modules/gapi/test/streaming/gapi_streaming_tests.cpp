@@ -258,7 +258,10 @@ public:
 
     bool pull(cv::gapi::wip::Data& data) {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
-            data = cv::MediaFrame::Create<TestMediaGRAY>(cv::util::get<cv::Mat>(data));
+            cv::Mat bgr = cv::util::get<cv::Mat>(data);
+            cv::Mat y, uv;
+            cvtBGR2NV12(bgr, y, uv);
+            data = cv::MediaFrame::Create<TestMediaGRAY>(y);
             return true;
         }
         return false;
@@ -266,8 +269,8 @@ public:
 
     GMetaArg descr_of() const override {
         return cv::GMetaArg{ cv::GFrameDesc{cv::MediaFormat::GRAY,
-                                           cv::util::get<cv::GMatDesc>(
-                                                   cv::gapi::wip::GCaptureSource::descr_of()).size} };
+                                            cv::util::get<cv::GMatDesc>(
+                                            cv::gapi::wip::GCaptureSource::descr_of()).size} };
     }
 };
 
@@ -1824,6 +1827,45 @@ TEST(GAPI_Streaming, CopyFrame)
     {
         auto view = frame.access(cv::MediaFrame::Access::R);
         cv::Mat gapi_mat(frame.desc().size, CV_8UC3, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+}
+
+TEST(GAPI_Streaming, CopyFrameGray)
+{
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
         num_frames++;
         cap >> ocv_mat;
 
