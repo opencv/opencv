@@ -433,6 +433,7 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         case cv::MediaFormat::GRAY:
         {
 #if 0
+
             std::call_once(m_warnFlag,
                 []() {
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from Y to NV12 UV plane will "
