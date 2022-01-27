@@ -2078,8 +2078,8 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        int outSz_h;
        if (outSz.width == 0 || outSz.height == 0)
        {
-           outSz_w = static_cast<int>(round(in.size.width * fx));
-           outSz_h = static_cast<int>(round(in.size.height * fy));
+           outSz_w = saturate_cast<int>(in.size.width * fx);
+           outSz_h = saturate_cast<int>(in.size.height * fy);
        }
        else
        {
