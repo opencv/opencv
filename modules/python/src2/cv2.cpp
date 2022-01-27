@@ -2184,18 +2184,22 @@ static PyObject* createSubmodule(PyObject* parent_module, const std::string& nam
                                          submodule_name.c_str());
         if (!submodule)
         {
+            /// Populates global modules dictionary and returns borrowed reference to it
             submodule = PyImport_AddModule(full_submodule_name.c_str());
+            if (!submodule)
+            {
+                /// Return `PyImport_AddModule` NULL with an exception set on failure.
+                return NULL;
+            }
+            /// Populates parent module dictionary. Submodule lifetime should be managed
+            /// by the global modules dictionary and parent module dictionary, so Py_DECREF after
+            /// successfull call to the `PyDict_SetItemString` is redundant.
             if (PyDict_SetItemString(parent_module_dict, submodule_name.c_str(), submodule) < 0) {
-                Py_CLEAR(submodule);
                 return PyErr_Format(PyExc_ImportError,
                     "Can't register a submodule '%s' (full name: '%s')",
                     submodule_name.c_str(), full_submodule_name.c_str()
                 );
             }
-            /// PyDict_SetItemString doesn't steal a reference so the reference counter
-            /// of the submodule should be decremented to bind submodule lifetime to the
-            /// parent module
-            Py_DECREF(submodule);
         }
 
         submodule_name_start = submodule_name_end + 1;
