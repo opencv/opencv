@@ -1977,6 +1977,80 @@ TEST(GAPI_Streaming, Reshape)
     }
 }
 
+TEST(GAPI_Streaming, ReshapeGray)
+{
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+        cv::Mat y, uv;
+        cvtBGR2NV12(ocv_mat, y, uv);
+
+        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
+    }
+
+    // Reshape the graph meta
+    filepath = findDataFile("cv/video/1920x1080.avi");
+    cc.stop();
+    try {
+        cc.setSource<BGRSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame2;
+    cv::Mat ocv_mat2;
+
+    num_frames = 0u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame2)) && num_frames < max_frames)
+    {
+        auto view = frame2.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame2.desc().size, CV_8UC1, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat2;
+        cv::Mat y, uv;
+        cvtBGR2NV12(ocv_mat, y, uv);
+
+        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
+    }
+}
+
+
 namespace {
     enum class TestSourceType {
         BGR,
