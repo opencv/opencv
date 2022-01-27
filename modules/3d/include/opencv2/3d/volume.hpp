@@ -31,7 +31,7 @@ public:
 
     * @param frame the object from which to take depth and image data.
       For color TSDF a depth data should be registered with color data, i.e. have the same intrinsics & camera pose.
-      This can be done using function register Depth() from 3d module.
+      This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
     void integrate(const OdometryFrame& frame, InputArray pose);
@@ -52,7 +52,7 @@ public:
     * @param depth the depth image.
     * @param image the color image (only for ColorTSDF).
       For color TSDF a depth data should be registered with color data, i.e. have the same intrinsics & camera pose.
-      This can be done using function register Depth() from 3d module.
+      This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
     void integrate(InputArray depth, InputArray image, InputArray pose);
