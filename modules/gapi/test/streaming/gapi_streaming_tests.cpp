@@ -2016,7 +2016,7 @@ TEST(GAPI_Streaming, ReshapeGray)
 
         EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
     }
-
+    std::cout << "RESHAPE GRAY SECOND PART!!!!!!!" <<std::endl;
     // Reshape the graph meta
     filepath = findDataFile("cv/video/1920x1080.avi");
     cc.stop();
@@ -2045,7 +2045,7 @@ TEST(GAPI_Streaming, ReshapeGray)
         cap >> ocv_mat2;
         cv::Mat y, uv;
         cvtBGR2NV12(ocv_mat, y, uv);
-
+        std::cout << "y size " << y.size() << " gapi_mat size " << gapi_mat.size() << std::endl;
         EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
     }
 }
