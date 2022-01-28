@@ -2781,16 +2781,20 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
 
     // opset-10: input = [X, scales]
     // opset-11: input = [X, roi, scales] or [x, roi, scales, sizes]
+    // opset-13: may have empty input, [X, "", "", sizes] or [x, "", scales]
     int scalesInputId = node_proto.input_size() == 2 ? 1 : 2;
+    const std::string& scale_name = node_proto.input(scalesInputId);
+    Mat scales;
+    if(!scale_name.empty())
+        scales = getBlob(node_proto, scalesInputId);
 
-    Mat scales = getBlob(node_proto, scalesInputId);
     if (!scales.empty())
     {
         CV_CheckEQ(scales.total(), (size_t)4, "HCHW layout is expected");
         layerParams.set("zoom_factor_y", scales.at<float>(2));
         layerParams.set("zoom_factor_x", scales.at<float>(3));
     }
-    else if (node_proto.input_size() >= 4)  // opset-11
+    else if (node_proto.input_size() >= 4)  // opset-11 [x, roi, scales, sizes] or opset-13: input = [X, "", "", sizes]
     {
         const std::string& inputSizes = node_proto.input(3);
         if (constBlobs.find(inputSizes) != constBlobs.end())
