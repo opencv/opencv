@@ -168,7 +168,7 @@ public:
                 sc = initScalarRandU(UCHAR_MAX + 1U);
                 break;
             case CV_16U:
-                sc = {46800, 1, 1, 1};// initScalarRandU(USHRT_MAX + 1U);
+                sc = initScalarRandU(USHRT_MAX + 1U);
                 break;
             case CV_16S:
                 sc = initScalarRandU(SHRT_MAX + 1U);
