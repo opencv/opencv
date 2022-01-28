@@ -108,7 +108,7 @@ bool Subgraph::match(const Ptr<ImportGraphWrapper>& net, int nodeId,
 
         for (int j = 0; j < inputNodes.size(); ++j)
         {
-            if (nodes[inputNodes[j]].empty())  // Unknown input node type.
+            if (nodes[inputNodes[j]].empty() || node->getInputName(j).empty())  // Unknown input node type.
                 continue;
             nodeId = getInputNodeId(net, node, j);
             const Ptr<ImportNodeWrapper> inpNode = net->getNode(nodeId);

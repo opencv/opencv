@@ -885,9 +885,14 @@ TEST_P(Test_ONNX_layers, DynamicResize)
     testONNXModels("dynamic_resize_9", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_10", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_11", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_13", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_scale_9", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_scale_10", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_scale_13", npy, 0, 0, false, true, 2);
+
+    testONNXModels("resize_size_opset11");
+    testONNXModels("resize_size_opset13");
 }
 
 TEST_P(Test_ONNX_layers, Resize_HumanSeg)
