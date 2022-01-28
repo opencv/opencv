@@ -963,6 +963,8 @@ void cv::imshow( const String& winname, InputArray _img )
 {
     CV_TRACE_FUNCTION();
 
+    const Size size = _img.size();
+    CV_Assert(size.width>0 && size.height>0);
     {
         cv::AutoLock lock(cv::getWindowMutex());
         cleanupClosedWindows_();
@@ -995,9 +997,7 @@ void cv::imshow( const String& winname, InputArray _img )
         }
     }
 
-    const Size size = _img.size();
 #ifndef HAVE_OPENGL
-    CV_Assert(size.width>0 && size.height>0);
     {
         Mat img = _img.getMat();
         CvMat c_img = cvMat(img);
@@ -1005,7 +1005,6 @@ void cv::imshow( const String& winname, InputArray _img )
     }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
-    CV_Assert(size.width>0 && size.height>0);
 
     if (useGl <= 0)
     {
