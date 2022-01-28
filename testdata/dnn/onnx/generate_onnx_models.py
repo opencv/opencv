@@ -783,6 +783,7 @@ model = DynamicResize()
 save_data_and_model_multy_inputs("dynamic_resize_9", model, input_0, input_1, version=9)
 save_data_and_model_multy_inputs("dynamic_resize_10", model, input_0, input_1, version=10)
 save_data_and_model_multy_inputs("dynamic_resize_11", model, input_0, input_1, version=11)
+save_data_and_model_multy_inputs("dynamic_resize_13", model, input_0, input_1, version=13)
 
 class DynamicResizeScale(nn.Module):
     def forward(self, x, y):
@@ -795,6 +796,19 @@ model = DynamicResizeScale()
 save_data_and_model_multy_inputs("dynamic_resize_scale_9", model, input_0, input_1, version=9, export_params=True)
 save_data_and_model_multy_inputs("dynamic_resize_scale_10", model, input_0, input_1, version=10, export_params=True)
 save_data_and_model_multy_inputs("dynamic_resize_scale_11", model, input_0, input_1, version=11, export_params=True)
+save_data_and_model_multy_inputs("dynamic_resize_scale_13", model, input_0, input_1, version=13, export_params=True)
+
+class Resize(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(Resize, self).__init__()
+
+    def forward(self, x):
+        return F.interpolate(input, [12, 12], mode="bilinear", align_corners=True)
+
+input = Variable(torch.randn(1, 2, 6, 6))
+model = Resize(input)
+save_data_and_model("resize_size_opset11", input, model, 11)
+save_data_and_model("resize_size_opset13", input, model, 13)
 
 class ShapeConst(nn.Module):
     def __init__(self):
