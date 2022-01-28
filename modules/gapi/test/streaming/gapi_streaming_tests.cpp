@@ -1983,7 +1983,7 @@ TEST(GAPI_Streaming, Reshape)
     }
 }
 
-TEST(DISABLED_GAPI_Streaming, ReshapeGray)
+TEST(GAPI_Streaming, ReshapeGray)
 {
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
@@ -2050,7 +2050,7 @@ TEST(DISABLED_GAPI_Streaming, ReshapeGray)
         num_frames++;
         cap >> ocv_mat2;
         cv::Mat y, uv;
-        cvtBGR2NV12(ocv_mat, y, uv);
+        cvtBGR2NV12(ocv_mat2, y, uv);
         std::cout << "y size " << y.size() << " gapi_mat size " << gapi_mat.size() << std::endl;
         EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
     }
