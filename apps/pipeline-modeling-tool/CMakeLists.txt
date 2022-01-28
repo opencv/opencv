@@ -1,0 +1,11 @@
+set(DEPS opencv_highgui opencv_gapi)
+file(GLOB SRCS *.cpp)
+ocv_add_application(opencv_pipeline_modeling_tool MODULES ${DEPS} SRCS ${SRCS})
+
+if (TARGET opencv_pipeline_modeling_tool)
+  if (WIN32)
+    ocv_target_link_libraries(opencv_pipeline_modeling_tool winmm.lib)
+  endif()
+  file(GLOB_RECURSE pipeline_modeling_tool_configs "${CMAKE_CURRENT_LIST_DIR}/*.yml")
+  install(FILES ${pipeline_modeling_tool_configs} DESTINATION "${OPENCV_OTHER_INSTALL_PATH}/pipeline_modeling_tool_configs" COMPONENT samples)
+endif()

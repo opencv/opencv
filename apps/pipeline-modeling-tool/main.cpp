@@ -13,9 +13,9 @@
 #include <windows.h>
 #endif
 
-#include "pipeline_modeling_tool/dummy_source.hpp"
-#include "pipeline_modeling_tool/utils.hpp"
-#include "pipeline_modeling_tool/pipeline_builder.hpp"
+#include "dummy_source.hpp"
+#include "utils.hpp"
+#include "pipeline_builder.hpp"
 
 enum class AppMode {
     REALTIME,
