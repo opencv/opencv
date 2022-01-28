@@ -569,7 +569,8 @@ using GConstGIEModel = ade::ConstTypedGraph
     >;
 
 inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
-                                       cv::MediaFrame* out_keep_alive_frame) {
+                                       cv::MediaFrame* out_keep_alive_frame,
+                                       const cv::util::optional<cv::Rect> &opt_roi) {
     GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
                 "Remote blob is supported for MediaFrame only");
     cv::MediaFrame frame = ctx.inFrame(i);
@@ -590,7 +591,7 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
             cv::gapi::wip::pp_session pp_sess =
                     ctx.uu.prepoc_engine_impl->initialize_preproc(param.value(), ii);
 
-            frame = ctx.uu.prepoc_engine_impl->run_sync(pp_sess, frame);
+            frame = ctx.uu.prepoc_engine_impl->run_sync(pp_sess, frame, opt_roi);
 
             if (out_keep_alive_frame != nullptr) {
                 GAPI_LOG_DEBUG(nullptr, "remember preprocessed frame to keep it busy from reuse, slot: " <<
@@ -631,9 +632,10 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
                                  cv::gapi::ie::TraitAs hint,
+                                 const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr) {
     if (ctx.uu.rctx != nullptr) {
-        return extractRemoteBlob(ctx, i, out_keep_alive_frame);
+        return extractRemoteBlob(ctx, i, out_keep_alive_frame, opt_roi);
     }
 
     switch (ctx.inShape(i)) {
@@ -1144,7 +1146,8 @@ struct Infer: public cv::detail::KernelTag {
                                 (layout == IE::Layout::NCHW || layout == IE::Layout::NHWC)
                                 ? cv::gapi::ie::TraitAs::IMAGE : cv::gapi::ie::TraitAs::TENSOR;
 
-                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint);
+                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint,
+                                                                  cv::util::optional<cv::Rect>{});
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
                         // FIXME: Should it be done by kernel ?
@@ -1241,6 +1244,7 @@ struct InferROI: public cv::detail::KernelTag {
 
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                        cv::util::make_optional(this_roi),
                                         slot_ptr);
                         setROIBlob(req,
                                    *(ctx->uu.params.input_names.begin()),
@@ -1343,6 +1347,7 @@ struct InferList: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                              cv::util::optional<cv::Rect>{},
                                               &remote_frame_slot_candidate);
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
@@ -1501,6 +1506,7 @@ struct InferList2: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE,
+                                           cv::util::optional<cv::Rect>{},
                                            &remote_frame_slot_candidate);
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
         if (list_size == 0u) {

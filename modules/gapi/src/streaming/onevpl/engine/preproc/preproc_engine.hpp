@@ -46,8 +46,8 @@ public:
                                   const InferenceEngine::InputInfo::CPtr& net_input) override;
 
     cv::MediaFrame run_sync(const pp_session &session_handle,
-                            const cv::MediaFrame& in_frame) override;
-
+                            const cv::MediaFrame& in_frame,
+                            const cv::util::optional<cv::Rect> &opt_roi) override;
 private:
     std::map<mfxFrameInfo, session_ptr_type> preproc_session_map;
     void on_frame_ready(session_type& sess,

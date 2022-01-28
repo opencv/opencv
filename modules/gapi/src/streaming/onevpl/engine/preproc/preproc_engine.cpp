@@ -33,6 +33,36 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+cv::util::optional<cv::Rect> apply_roi(mfxFrameSurface1* surface_handle,
+                                       cv::util::optional<cv::Rect> &&opt_roi,
+                                       const char *preamb = "apply ROI: ") {
+    if (opt_roi.has_value()) {
+        cv::Rect &roi = opt_roi.value();
+
+        mfxU16 tmp = surface_handle->Info.CropX;
+        surface_handle->Info.CropX = static_cast<mfxU16>(roi.x);
+        roi.x = tmp;
+
+        tmp = surface_handle->Info.CropY;
+        surface_handle->Info.CropY = static_cast<mfxU16>(roi.y);
+        roi.y = tmp;
+
+        tmp = surface_handle->Info.CropW;
+        surface_handle->Info.CropW = static_cast<mfxU16>(roi.width);
+        roi.width = tmp;
+
+        tmp = surface_handle->Info.CropH;
+        surface_handle->Info.CropH = static_cast<mfxU16>(roi.height);
+        roi.height = tmp;
+
+        GAPI_LOG_DEBUG(nullptr, preamb << " {" << surface_handle->Info.CropX <<
+                                ", " << surface_handle->Info.CropY << "}, "
+                                "{ " << surface_handle->Info.CropX + surface_handle->Info.CropW <<
+                                ", " << surface_handle->Info.CropY + surface_handle->Info.CropH << "}");
+    }
+    return std::move(opt_roi);
+}
+
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
     ProcessingEngineBase(std::move(accel)) {
     GAPI_LOG_INFO(nullptr, "Create VPP preprocessing engine");
@@ -45,56 +75,55 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             while (!my_sess.sync_in_queue.empty()) {
                 do {
                     if (!my_sess.procesing_surface_ptr.expired()) {
-                        session_type::op_handle_t pending_op = my_sess.sync_in_queue.front();
+                        session_type::in_op_handle pending_op = my_sess.sync_in_queue.front();
+                        auto *dec_surface = pending_op.surface_handle;
                         GAPI_LOG_DEBUG(nullptr, "pending IN operations count: " <<
                                                 my_sess.sync_in_queue.size() <<
                                                 ", sync id:  " <<
-                                                pending_op.first <<
+                                                pending_op.sync_handle <<
                                                 ", surface:  " <<
-                                                pending_op.second);
-
+                                                dec_surface);
                         my_sess.sync_in_queue.pop();
-                        auto *dec_surface = pending_op.second;
-                        auto *vpp_suface = my_sess.procesing_surface_ptr.lock()->get_handle();
 
-                       /* TODO: consider CROP/ROI here
-                        static int x_offset = 0;
-                        static int y_offset = 0;
-                        dec_surface->Info.CropX = x_offset;
-                        dec_surface->Info.CropY = y_offset;
-                        dec_surface->Info.CropW = 100 + x_offset++;
-                        dec_surface->Info.CropH = 100 + y_offset++;
-                        */
+                        cv::util::optional<cv::Rect> old_roi =
+                                apply_roi(dec_surface, std::move(pending_op.roi));
+                        auto *vpp_suface = my_sess.procesing_surface_ptr.lock()->get_handle();
+/*                        vpp_suface->Info.CropX = dec_surface->Info.CropX;
+                        vpp_suface->Info.CropY = dec_surface->Info.CropY;
+                        vpp_suface->Info.CropW = dec_surface->Info.CropW;
+                        vpp_suface->Info.CropH = dec_surface->Info.CropH;
+*/
+                        session_type::out_op_handle_t vpp_op {pending_op.sync_handle, nullptr};
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,
-                                                                           nullptr, &pending_op.first);
-                        pending_op.second = vpp_suface;
-
+                                                                           nullptr, &vpp_op.first);
+                        vpp_op.second = vpp_suface;
                         GAPI_LOG_DEBUG(nullptr, "Got VPP async operation" <<
                                                 ", sync id:  " <<
-                                                pending_op.first <<
+                                                vpp_op.first <<
                                                 ", dec surface:  " <<
                                                 dec_surface <<
                                                 ", trans surface: " <<
-                                                pending_op.second <<
+                                                vpp_op.second <<
                                                 ", status: " <<
                                                 mfxstatus_to_string(my_sess.last_status));
-
+                        GAPI_Assert(dec_surface != vpp_op.second &&
+                                    "Unexpected out VPP surface");
                         // NB: independently from result code
                         // we no need in decoding frame anymore: because we had pulled
                         // decoding frames to this point by onevpl::Surface highlevel locking
                         // mechanism and after that we adhere existing MFX/VPL inner locking mechanism
                         // on native mfxSurface pointer
+                        apply_roi(dec_surface, std::move(old_roi),
+                                  "restore ROI: ");
                         abandon_decode_frame(dec_surface);
 
-                        GAPI_Assert(dec_surface != pending_op.second &&
-                                    "Unexpected out VPP surface");
-                        // NB: process status
+                         // NB: process status
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
-                            pending_op.second->Data.Locked++; // TODO -S- workaround
-                            my_sess.vpp_out_queue.emplace(pending_op);
+                            vpp_op.second->Data.Locked++; // TODO -S- workaround
+                            my_sess.vpp_out_queue.emplace(vpp_op);
                         }
                     }
 
@@ -125,7 +154,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             session_type& my_sess = static_cast<session_type&>(sess);
             do {
                 if (!my_sess.vpp_out_queue.empty()) { // FIFO: check the oldest async operation complete
-                    session_type::op_handle_t& pending_op = my_sess.vpp_out_queue.front();
+                    session_type::out_op_handle_t& pending_op = my_sess.vpp_out_queue.front();
                     sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
 
                     GAPI_LOG_DEBUG(nullptr, "pending VPP operations count: " <<
@@ -336,8 +365,8 @@ VPPPreprocEngine::initialize_session(mfxSession,
     return {};
 }
 
-cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame) {
-
+cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session &sess, const cv::MediaFrame& in_frame,
+                                          const cv::util::optional<cv::Rect> &roi) {
     std::shared_ptr<EngineSession> pp_sess_impl = sess.get<EngineSession>();
     if (!pp_sess_impl) {
         // bypass case
@@ -355,8 +384,9 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
     }
 
     // schedule decoded surface into preproc queue
-    session_type::op_handle_t in_preproc_request {nullptr,
-                                                    vpl_adapter->get_surface()->get_handle()};
+    session_type::in_op_handle in_preproc_request {nullptr,
+                                                   vpl_adapter->get_surface()->get_handle(),
+                                                   roi};
     s->sync_in_queue.emplace(in_preproc_request);
     remember_decode_frame(vpl_adapter->get_surface()->get_handle(), in_frame);
 
@@ -374,7 +404,7 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
                                         ProcessingEngineBase::status_to_string(status));
             throw std::runtime_error("cannot finalize VPP preprocessing operation");
         }
-    } catch(const std::exception& ex) {
+    } catch(const std::exception&) {
         throw;
     }
     // obtain new frame is available

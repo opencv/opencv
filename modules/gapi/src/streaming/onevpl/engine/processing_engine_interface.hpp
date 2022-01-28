@@ -30,7 +30,8 @@ struct IProcessingEngine {
         initialize_preproc(const pp_params& params,
                            const InferenceEngine::InputInfo::CPtr& net_input) = 0;
     virtual cv::MediaFrame
-        run_sync(const pp_session &sess, const cv::MediaFrame& in_frame) = 0;
+        run_sync(const pp_session &sess, const cv::MediaFrame& in_frame,
+                 const cv::util::optional<cv::Rect> &opt_roi = {}) = 0;
 };
 } // namespace wip
 } // namespace gapi

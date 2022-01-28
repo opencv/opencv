@@ -197,6 +197,7 @@ using acceleration_t    = int;
 using out_resolution_t  = std::pair<uint16_t, uint16_t>;
 using preproc_args_t    = std::tuple<source_t, decoder_t, acceleration_t, out_resolution_t>;
 
+static cv::util::optional<cv::Rect> empty_roi;
 class VPPPreprocParams : public ::testing::TestWithParam<preproc_args_t> {};
 
 preproc_args_t files[] = {
@@ -267,7 +268,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
                                                                  cptr);
 
     // 2) make preproc using incoming decoded frame & preproc session
-    cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
+    cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame, empty_roi);
     cv::GFrameDesc first_outcome_pp_desc = pp_frame.desc();
     ASSERT_FALSE(first_frame_decoded_desc == first_outcome_pp_desc);
 
@@ -288,7 +289,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                       first_pp_sess.get<EngineSession>().get());
 
-            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
+            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame, empty_roi);
             cv::GFrameDesc pp_desc = pp_frame.desc();
             ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
             in_progress = false;
@@ -302,6 +303,77 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     ASSERT_NE(frames_processed_count, 1);
 }
 
+
+void decode_function(cv::gapi::wip::onevpl::VPLLegacyDecodeEngine &decode_engine,
+                     cv::gapi::wip::onevpl::ProcessingEngineBase::session_ptr sess_ptr,
+                     SafeQueue &queue, size_t &decoded_number) {
+    // decode first frame
+    {
+        cv::MediaFrame decoded_frame;
+        ASSERT_NO_THROW(decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
+        queue.push(std::move(decoded_frame));
+    }
+
+    // launch pipeline
+    try {
+        while(true) {
+            queue.push(extract_decoded_frame(sess_ptr->session, decode_engine));
+            decoded_number++;
+        }
+    } catch (...) {}
+
+    // send stop
+    queue.push_stop();
+}
+
+void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, SafeQueue&queue,
+                      size_t &preproc_number, InferenceEngine::InputInfo::CPtr cptr,
+                      const cv::util::optional<cv::Rect> &roi_rect = {}) {
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+    // create preproc session based on frame description & network info
+    cv::MediaFrame decoded_frame = queue.pop();
+    cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
+    ASSERT_TRUE(first_pp_params.has_value());
+    pp_session first_pp_sess =
+                    preproc_engine.initialize_preproc(first_pp_params.value(), cptr);
+
+    // make preproc using incoming decoded frame & preproc session
+    cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame, roi_rect);
+    cv::GFrameDesc first_outcome_pp_desc = pp_frame.desc();
+
+    // launch pipeline
+    bool in_progress = false;
+    preproc_number = 1;
+    try {
+        while(true) {
+            decoded_frame = queue.pop();
+            if (SafeQueue::is_stop(decoded_frame)) {
+                break;
+            }
+            in_progress = true;
+
+            cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
+            ASSERT_TRUE(params.has_value());
+            ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
+
+            pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
+            ASSERT_EQ(pp_sess.get<EngineSession>().get(),
+                      first_pp_sess.get<EngineSession>().get());
+
+            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame, empty_roi);
+            cv::GFrameDesc pp_desc = pp_frame.desc();
+            ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
+            in_progress = false;
+            decoded_frame = cv::MediaFrame();
+            preproc_number++;
+        }
+    } catch (...) {}
+
+    // test if interruption has happened
+    ASSERT_FALSE(in_progress);
+    ASSERT_NE(preproc_number, 1);
+}
 
 TEST_P(VPPPreprocParams, functional_different_threads)
 {
@@ -353,71 +425,11 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     size_t decoded_number = 1;
     size_t preproc_number = 0;
 
-    std::thread decode_thread([&decode_engine, sess_ptr,
-                               &queue, &decoded_number] () {
-        // decode first frame
-        {
-            cv::MediaFrame decoded_frame;
-            ASSERT_NO_THROW(decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
-            queue.push(std::move(decoded_frame));
-        }
-
-        // launch pipeline
-        try {
-            while(true) {
-                queue.push(extract_decoded_frame(sess_ptr->session, decode_engine));
-                decoded_number++;
-            }
-        } catch (...) {}
-
-        // send stop
-        queue.push_stop();
-    });
-
-    std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, cptr] () {
-        // create preproc session based on frame description & network info
-        cv::MediaFrame decoded_frame = queue.pop();
-        cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
-        ASSERT_TRUE(first_pp_params.has_value());
-        pp_session first_pp_sess =
-                    preproc_engine.initialize_preproc(first_pp_params.value(), cptr);
-
-        // make preproc using incoming decoded frame & preproc session
-        cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
-        cv::GFrameDesc first_outcome_pp_desc = pp_frame.desc();
-
-        // launch pipeline
-        bool in_progress = false;
-        preproc_number = 1;
-        try {
-            while(true) {
-                decoded_frame = queue.pop();
-                if (SafeQueue::is_stop(decoded_frame)) {
-                    break;
-                }
-                in_progress = true;
-
-                cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
-                ASSERT_TRUE(params.has_value());
-                ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
-
-                pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
-                ASSERT_EQ(pp_sess.get<EngineSession>().get(),
-                          first_pp_sess.get<EngineSession>().get());
-
-                pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
-                cv::GFrameDesc pp_desc = pp_frame.desc();
-                ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
-                in_progress = false;
-                decoded_frame = cv::MediaFrame();
-                preproc_number++;
-            }
-        } catch (...) {}
-
-        // test if interruption has happened
-        ASSERT_FALSE(in_progress);
-        ASSERT_NE(preproc_number, 1);
-    });
+    std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
+                              std::ref(queue), std::ref(decoded_number));
+    std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
+                               std::ref(queue), std::ref(preproc_number), cptr,
+                               std::cref(empty_roi));
 
     decode_thread.join();
     preproc_thread.join();
@@ -426,6 +438,101 @@ TEST_P(VPPPreprocParams, functional_different_threads)
 
 INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngine, VPPPreprocParams,
                         testing::ValuesIn(files));
+
+using roi_t = cv::Rect;
+using preproc_roi_args_t = decltype(std::tuple_cat(std::declval<preproc_args_t>(),
+                                                   std::declval<std::tuple<roi_t>>()));
+
+class VPPPreprocROIParams : public ::testing::TestWithParam<preproc_roi_args_t> {};
+TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
+{
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+    source_t file_path;
+    decoder_t decoder_id;
+    acceleration_t accel;
+    out_resolution_t resolution;
+    cv::Rect roi;
+    std::tie(file_path, decoder_id, accel, resolution, roi) = GetParam();
+
+    file_path = findDataFile(file_path);
+
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(accel));
+    std::unique_ptr<VPLAccelerationPolicy> decode_accel_policy (
+                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
+
+    // create file data provider
+    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
+                                                    {CfgParam::create_decoder_id(decoder_id)}));
+
+    mfxLoader mfx{};
+    mfxConfig mfx_cfg{};
+    std::tie(mfx, mfx_cfg) = prepare_mfx(decoder_id, accel);
+
+    // create decode session
+    mfxSession mfx_decode_session{};
+    mfxStatus sts = MFXCreateSession(mfx, 0, &mfx_decode_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // create decode engine
+    auto device_selector = decode_accel_policy->get_device_selector();
+    VPLLegacyDecodeEngine decode_engine(std::move(decode_accel_policy));
+    auto sess_ptr = decode_engine.initialize_session(mfx_decode_session,
+                                                     cfg_params_w_dx11,
+                                                     data_provider);
+
+    // put mock net info
+    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(resolution.first,
+                                                              resolution.second);
+
+    // create VPP preproc engine
+    VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
+                                                new VPLDX11AccelerationPolicy(device_selector)});
+
+    // launch threads
+    SafeQueue queue;
+    size_t decoded_number = 1;
+    size_t preproc_number = 0;
+
+    cv::util::optional<cv::Rect> opt_roi = cv::util::make_optional(roi);
+    std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
+                              std::ref(queue), std::ref(decoded_number));
+    std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
+                               std::ref(queue), std::ref(preproc_number), cptr,
+                               std::cref(opt_roi));
+
+    decode_thread.join();
+    preproc_thread.join();
+    ASSERT_EQ(preproc_number, decoded_number);
+}
+
+preproc_roi_args_t files_w_roi[] = {
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1080)},
+                    roi_t{0,0,50,50}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1080)},
+                    roi_t{0,0,100,100}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1080)},
+                    roi_t{100,100,200,200}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1280)},
+                    roi_t{0,0,100,100}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1280)},
+                    roi_t{100,100,200,200}}
+};
+
+INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI, VPPPreprocROIParams,
+                        testing::ValuesIn(files_w_roi));
+
 
 using VPPInnerPreprocParams = VPPPreprocParams;
 TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
