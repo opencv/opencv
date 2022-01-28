@@ -1,17 +1,18 @@
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
 set(ade_filename "v0.1.1f.zip")
 set(ade_subdir "ade-0.1.1f")
-set(ade_md5 "b624b995ec9c439cbc2e9e6ee940d3a2")
+set(ade_GITHUB_md5 "b624b995ec9c439cbc2e9e6ee940d3a2")
+set(ade_GITCODE_md5 "aa2ec43abe534f8b1db13274b5ed92dd")
 
-# https://gitcode.net/opencv/ade/-/archive/v0.1.1f.zip
-ocv_download_set_url_and_md5sum(OPENCV_ADE_URL "opencv" "ade" ade_md5 aa2ec43abe534f8b1db13274b5ed92dd)
+set(OPENCV_ADE_GITHUB_URL "https://github.com/opencv/ade/archive/")
+set(OPENCV_ADE_GITCODE_URL "https://gitcode.net/opencv/ade/-/archive/")
 
 ocv_download(FILENAME ${ade_filename}
-             HASH ${ade_md5}
+             HASH ${ade_${OPENCV_DOWNLOAD_HOST}_md5}
              URL
                "${OPENCV_ADE_URL}"
                "$ENV{OPENCV_ADE_URL}"
-               "https://github.com/opencv/ade/archive/"
+               "${OPENCV_ADE_${OPENCV_DOWNLOAD_HOST}_URL}"
              DESTINATION_DIR ${ade_src_dir}
              ID ADE
              STATUS res

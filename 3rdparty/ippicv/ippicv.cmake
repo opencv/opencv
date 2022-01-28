@@ -33,7 +33,9 @@ function(download_ippicv root_var)
     return()
   endif()
 
-  ocv_download_set_url(OPENCV_IPPICV_URL "${IPPICV_COMMIT}/ippicv/")
+  set(IPPICV_GITHUB_URL "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${IPPICV_COMMIT}/ippicv/")
+  set(IPPICV_GITCODE_URL "https://gitcode.net/opencv/opencv_3rdparty/-/raw/${IPPICV_COMMIT}/ippicv/")
+  set(IPPICV_CUSTOM_URL "https://${OPENCV_MIRROR_CUSTOM}/opencv/opencv_3rdparty/-/raw/${IPPICV_COMMIT}/ippicv/")
 
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/ippicv")
   ocv_download(FILENAME ${OPENCV_ICV_NAME}
@@ -41,7 +43,7 @@ function(download_ippicv root_var)
                URL
                  "${OPENCV_IPPICV_URL}"
                  "$ENV{OPENCV_IPPICV_URL}"
-                 "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${IPPICV_COMMIT}/ippicv/"
+                 "${IPPICV_${OPENCV_DOWNLOAD_HOST}_URL}"
                DESTINATION_DIR "${THE_ROOT}"
                ID IPPICV
                STATUS res

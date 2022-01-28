@@ -6,21 +6,22 @@ if (WIN32 AND NOT ARM)
 endif()
 
 ocv_update(OPENCV_TBB_RELEASE "v2020.2")
-ocv_update(OPENCV_TBB_RELEASE_MD5 "5af6f6c2a24c2043e62e47205e273b1f")
+ocv_update(OPENCV_TBB_RELEASE_GITHUB_MD5 "5af6f6c2a24c2043e62e47205e273b1f")
+ocv_update(OPENCV_TBB_RELEASE_GITCODE_MD5 "3ff457ea49220a3523755af4f6b92bb4")
 ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
 string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
 #ocv_update(OPENCV_TBB_SUBDIR ...)
 
-# https://gitcode.net/01org/tbb/-/archive/v2020.2.zip
-ocv_download_set_url_and_md5sum(OPENCV_TBB_URL "01org" "tbb" OPENCV_TBB_RELEASE_MD5 3ff457ea49220a3523755af4f6b92bb4)
+set(OPENCV_TBB_GITHUB_URL "https://github.com/01org/tbb/archive/")
+set(OPENCV_TBB_GITCODE_URL "https://gitcode.net/01org/tbb/-/archive/")
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
-             HASH ${OPENCV_TBB_RELEASE_MD5}
+             HASH ${OPENCV_TBB_RELEASE_${OPENCV_DOWNLOAD_HOST}_MD5}
              URL
                "${OPENCV_TBB_URL}"
                "$ENV{OPENCV_TBB_URL}"
-               "https://github.com/01org/tbb/archive/"
+               "${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_URL}"
              DESTINATION_DIR ${tbb_src_dir}
              ID TBB
              STATUS res

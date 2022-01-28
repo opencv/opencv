@@ -32,18 +32,17 @@ IF(EXISTS "${OCV_TENGINE_SOURCE_PATH}")
 	SET(BUILD_TENGINE ON)
 ELSE()
 	SET(OCV_TENGINE_FILENAME "${TENGINE_COMMIT_VERSION}.zip")#name
-	SET(OCV_TENGINE_URL "https://github.com/OAID/Tengine/archive/") #url
-	SET(tengine_md5sum 23f61ebb1dd419f1207d8876496289c5) #md5sum
-
-	# https://gitcode.net/OAID/Tengine/-/archive/e89cf8870de2ff0a80cfe626c0b52b2a16fb302e.zip
-	ocv_download_set_url_and_md5sum(OPENCV_TENGINE_URL "OAID" "Tengine" tengine_md5sum 1b5908632b557275cd6e85b0c03f9690)
+	SET(OCV_TENGINE_GITHUB_URL "https://github.com/OAID/Tengine/archive/") #url on github
+	SET(tengine_GITHUB_md5sum 23f61ebb1dd419f1207d8876496289c5) #md5sum on github package
+	SET(OCV_TENGINE_GITCODE_URL "https://gitcode.net/OAID/Tengine/-/archive/") #url on gitcode
+	SET(tengine_GITCODE_md5sum 1b5908632b557275cd6e85b0c03f9690) #md5sum on gitcode package
 
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
-						HASH ${tengine_md5sum}
+						HASH ${tengine_${OPENCV_DOWNLOAD_HOST}_md5sum}
 						URL
 						"${OPENCV_TENGINE_URL}"
 						"$ENV{OPENCV_TENGINE_URL}"
-						"${OCV_TENGINE_URL}"
+						"${OCV_TENGINE_${OPENCV_DOWNLOAD_HOST}_URL}"
 						DESTINATION_DIR "${OCV_TENGINE_DIR}"
 						ID TENGINE
 						STATUS res

@@ -37,34 +37,11 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-set(OPENCV_MIRROR_ARCHIVE_URL "" CACHE INTERNAL "Mirror for https://github.com")
-set(OPENCV_MIRROR_USERCONTENT_URL "" CACHE INTERNAL "Mirror for https://raw.githubusercontent.com")
-set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE STRING "Link to mirror hosted by gitcode")
-
-macro(ocv_download_set_url pkg_url suffix)
-  if(NOT ${pkg_url})
-    if(OPENCV_MIRROR_USERCONTENT_URL)
-      set(${pkg_url} "${OPENCV_MIRROR_USERCONTENT_URL}")
-      list(APPEND ${pkg_url} "${suffix}")
-      list(JOIN ${pkg_url} "/" ${pkg_url})
-    endif()
-  endif()
-endmacro()
-
-# e.g. https://github.com/opencv/ade/archive/
-#   -> https://gitcode.net/opencv/ade/-/archive/
-# set(OPENCV_MIRROR_ARCHIVE_URL "https://gitcode.net;-;archive;" PARENT_SCOPE)
-macro(ocv_download_set_url_and_md5sum pkg_url pkg_owner pkg_name pkg_md5sum new_md5sum)
-  if(NOT ${pkg_url})
-    if(OPENCV_MIRROR_ARCHIVE_URL)
-      set(${pkg_url} "${OPENCV_MIRROR_ARCHIVE_URL}/") # make sure it ends with "/"
-      list(INSERT ${pkg_url} 1 ${pkg_owner})
-      list(INSERT ${pkg_url} 2 ${pkg_name})
-      list(JOIN ${pkg_url} "/" ${pkg_url})
-      set(${pkg_md5sum} ${new_md5sum})
-    endif()
-  endif()
-endmacro()
+# host
+set(OPENCV_DOWNLOAD_HOST "GITHUB" CACHE INTERNAL "Used for 3rdparty archives")
+# mirrors
+set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE INTERNAL "Link to mirror hosted by gitcode")
+set(OPENCV_MIRROR_CUSTOM "" CACHE INTERNAL "Link to another mirror hosted in gitlab-style")
 
 function(ocv_init_download)
   # Run `git remote get-url origin` to get remote source
@@ -77,32 +54,18 @@ function(ocv_init_download)
       OCV_GIT_ORIGIN_URL_OUT
     ERROR_QUIET
   )
-  # if source code is non-git, OCV_GIT_ORIGIN_URL_OUT is empty
+  # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
   if(NOT OCV_GIT_ORIGIN_URL_OUT)
-    message(STATUS "ocv_init_download: This is not a git repo. Download 3rdparty resources from github by default. Or you can specify mirrors using option -DOPENCV_MIRROR_ARCHIVE_URL and -DOPENCV_MIRROR_USERCONTENT_URL")
+    message(STATUS "ocv_init_download: This is not a git repo. 3rdparty resources will be downloaded from github by default. You can use mirrors with CMake option -DOPENCV_MIRROR_CUSTOM=gitcode.net for example.")
   else()
-    if(OPENCV_MIRROR_ARCHIVE_URL)
-        message(STATUS "ocv_init_download: Use ${OPENCV_MIRROR_ARCHIVE_URL} as mirror to download 3rdparty archives.")
-        set(OPENCV_MIRROR_ARCHIVE_URL "${OPENCV_MIRROR_ARCHIVE_URL};archive" PARENT_SCOPE)
-    endif()
-    if(OPENCV_MIRROR_USERCONTENT_URL)
-        message(STATUS "ocv_init_download: Use ${OPENCV_MIRROR_USERCONTENT_URL} as mirror to download 3rdparty raw files.")
-        set(OPENCV_MIRROR_USERCONTENT_URL "${OPENCV_MIRROR_USERCONTENT_URL};opencv/opencv_3rdparty" PARENT_SCOPE)
-    endif()
-
-    string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
-    if(NOT ${_found_gitcode} EQUAL -1)
-      if(NOT OPENCV_MIRROR_ARCHIVE_URL)
-        # e.g. https://github.com/opencv/ade/archive/
-        #   -> https://gitcode.net/opencv/ade/-/archive/
-        set(OPENCV_MIRROR_ARCHIVE_URL "https://${OPENCV_MIRROR_GITCODE};-;archive" PARENT_SCOPE)
-        message(STATUS "ocv_init_download: Use ${OPENCV_MIRROR_GITCODE} as mirror to download 3rdparty archives.")
-      endif()
-      if(NOT OPENCV_MIRROR_USERCONTENT_URL)
-        # e.g. https://raw.githubusercontent.net/opencv/opencv_3rdparty/${COMMIT_ID}/${PACKAGE_NAME}/
-        #   -> https://gitcode.net/opencv/opencv_3rdparty/-/raw/${COMMIT_ID}/${PACKAGE_NAME}/
-        set(OPENCV_MIRROR_USERCONTENT_URL "https://${OPENCV_MIRROR_GITCODE};opencv/opencv_3rdparty/-/raw" PARENT_SCOPE)
-        message(STATUS "ocv_init_download: Use ${OPENCV_MIRROR_GITCODE} as mirror to download 3rdparty raw files.")
+    if(OPENCV_MIRROR_CUSTOM)
+      message(STATUS "ocv_init_download: Use mirror ${OPENCV_MIRROR_CUSTOM} to download 3rdparty resources.")
+      set(OPENCV_DOWNLOAD_HOST "CUSTOM" PARENT_SCOPE)
+    else()
+      string(FIND "${OCV_GIT_ORIGIN_URL_OUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
+      if(NOT ${_found_gitcode} EQUAL -1)
+        message(STATUS "ocv_init_download: Use mirror ${OPENCV_MIRROR_CUSTOM} to download 3rdparty resources.")
+        set(OPENCV_DOWNLOAD_HOST "GITCODE" PARENT_SCOPE)
       endif()
     endif()
   endif()
