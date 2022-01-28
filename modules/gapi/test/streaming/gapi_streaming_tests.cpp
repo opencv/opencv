@@ -1977,7 +1977,7 @@ TEST(GAPI_Streaming, Reshape)
     }
 }
 
-TEST(GAPI_Streaming, ReshapeGray)
+TEST(DISABLED_GAPI_Streaming, ReshapeGray)
 {
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
