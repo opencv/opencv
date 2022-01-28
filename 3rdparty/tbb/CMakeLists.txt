@@ -39,7 +39,9 @@ elseif(EXISTS "${tbb_src_dir}/tbb-${OPENCV_TBB_RELEASE_}")
 else()
   message(FATAL_ERROR "TBB: Can't configure TBB. Specify OPENCV_TBB_SUBDIR through command-line.")
 endif()
-set(tbb_src_dir "${tbb_src_dir}/${OPENCV_TBB_SUBDIR}")
+set(OPENCV_TBB_GITHUB_SUBDIR "${OPENCV_TBB_SUBDIR}")
+set(OPENCV_TBB_GITCODE_SUBDIR "tbb-${OPENCV_TBB_RELEASE}-60b7d0a78f8910976678ba63a19fdaee22c0ef65") # suffix is the commit id
+set(tbb_src_dir "${tbb_src_dir}/${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_SUBDIR}")
 
 ocv_include_directories("${tbb_src_dir}/include"
                         "${tbb_src_dir}/src/"
