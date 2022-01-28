@@ -196,7 +196,7 @@ static void loadConfig(const std::string&                        filename,
         if (!device.isMap()) {
             throw std::runtime_error("Failed to parse config: " + filename);
         }
-        for (const auto& item : device) {
+        for (auto item : device) {
             config.emplace(item.name(), item.string());
         }
     }
