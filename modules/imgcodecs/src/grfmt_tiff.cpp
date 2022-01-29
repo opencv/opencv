@@ -889,6 +889,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         {
             case CV_8U:
                 sample_format = SAMPLEFORMAT_UINT;
+                /* FALLTHRU */
             case CV_8S:
             {
                 bitsPerChannel = 8;
@@ -897,6 +898,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
             case CV_16U:
                 sample_format = SAMPLEFORMAT_UINT;
+                /* FALLTHRU */
             case CV_16S:
             {
                 bitsPerChannel = 16;
@@ -905,6 +907,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
             case CV_32F:
                 sample_format = SAMPLEFORMAT_IEEEFP;
+                /* FALLTHRU */
             case CV_32S:
             {
                 bitsPerChannel = 32;
