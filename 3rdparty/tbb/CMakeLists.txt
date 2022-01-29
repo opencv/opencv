@@ -16,6 +16,16 @@ ocv_update(OPENCV_TBB_GITHUB_SUBDIR "oneTBB-${OPENCV_TBB_COMMIT_ID}")
 set(OPENCV_TBB_GITCODE_URL "https://gitcode.net/01org/tbb/-/archive/")
 ocv_update(OPENCV_TBB_PKG_GITCODE_MD5 "e813f5df302410841f3a84b2a6fe8056")
 ocv_update(OPENCV_TBB_GITCODE_SUBDIR "tbb-${OPENCV_TBB_COMMIT_ID}")
+# Custom
+set(OPENCV_TBB_CUSTOM_URL "https://${OPENCV_MIRROR_CUSTOM}/01org/tbb/-/archive/")
+ocv_update(OPENCV_TBB_PKG_CUSTOM_MD5 "")
+ocv_update(OPENCV_TBB_CUSTOM_SUBDIR "oneTBB-${OPENCV_TBB_COMMIT_ID}")
+if(NOT OPENCV_TBB_PKG_CUSTOM_MD5)
+  message(STATUS "TBB: Need to assign OPENCV_TBB_PKG_CUSTOM_MD5 before downloading from custom source. Switching back to Github.")
+  set(OPENCV_TBB_CUSTOM_URL "${OPENCV_TBB_GITHUB_URL}")
+  ocv_update(OPENCV_TBB_PKG_CUSTOM_MD5 "${OPENCV_TBB_PKG_GITHUB_MD5}")
+  ocv_update(OPENCV_TBB_CUSTOM_SUBDIR "{OPENCV_TBB_GITHUB_SUBDIR}")
+endif()
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${OPENCV_TBB_FILENAME}

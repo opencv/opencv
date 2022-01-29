@@ -9,6 +9,14 @@ set(ade_GITHUB_md5 "0ebc8ee5486a005050b2a31ab1104b97")
 # Gitcode
 set(OPENCV_ADE_GITCODE_URL "https://gitcode.net/opencv/ade/-/archive/")
 set(ade_GITCODE_md5 "862c207ca796e3f9be305c0cac29cad4")
+# Custom
+set(OPENCV_ADE_CUSTOM_URL "https://${OPENCV_MIRROR_CUSTOM}/opencv/ade/-/archive/"
+set(ade_CUSTOM_md5 "")
+if(NOT ade_CUSTOM_md5)
+  message(STATUS "ADE: Need to assign ade_CUSTOM_md5 before downloading from custom source. Switching back to Github.")
+  set(OPENCV_ADE_CUSTOM_URL "${OPENCV_ADE_GITHUB_URL}")
+  set(ade_CUSTOM_md5 "${ade_GITHUB_md5}")
+endif()
 
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_${OPENCV_DOWNLOAD_HOST}_md5}

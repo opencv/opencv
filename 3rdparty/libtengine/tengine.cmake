@@ -32,10 +32,21 @@ IF(EXISTS "${OCV_TENGINE_SOURCE_PATH}")
 	SET(BUILD_TENGINE ON)
 ELSE()
 	SET(OCV_TENGINE_FILENAME "${TENGINE_COMMIT_VERSION}.zip")#name
-	SET(OCV_TENGINE_GITHUB_URL "https://github.com/OAID/Tengine/archive/") #url on github
-	SET(tengine_GITHUB_md5sum 23f61ebb1dd419f1207d8876496289c5) #md5sum on github package
-	SET(OCV_TENGINE_GITCODE_URL "https://gitcode.net/OAID/Tengine/-/archive/") #url on gitcode
-	SET(tengine_GITCODE_md5sum 1b5908632b557275cd6e85b0c03f9690) #md5sum on gitcode package
+	# Github
+	SET(OCV_TENGINE_GITHUB_URL "https://github.com/OAID/Tengine/archive/") #url
+	SET(tengine_GITHUB_md5sum 23f61ebb1dd419f1207d8876496289c5) #md5sum
+	# Gitcode
+	SET(OCV_TENGINE_GITCODE_URL "https://gitcode.net/OAID/Tengine/-/archive/")
+	SET(tengine_GITCODE_md5sum 1b5908632b557275cd6e85b0c03f9690)
+	# Custom
+	SET(OCV_TENGINE_CUSTOM_URL "https://${OPENCV_MIRROR_CUSTOM}/OAID/Tengine/-/archive/")
+	SET(tengine_CUSTOM_md5sum "")
+	# if md5sum of custom source is empty, switching back to github by default
+	if(NOT tengine_CUSTOM_md5sum)
+		message(STATUS "Tengine: Need to assign tengine_CUSTOM_md5sum before downloading from custom source. Switching back to Github.")
+		SET(OCV_TENGINE_CUSTOM_URL "${OCV_TENGINE_GITHUB_URL}")
+		SET(tengine_CUSTOM_md5sum "${tengine_GITHUB_md5sum}")
+	endif()
 
 	ocv_download(FILENAME ${OCV_TENGINE_FILENAME}
 						HASH ${tengine_${OPENCV_DOWNLOAD_HOST}_md5sum}
