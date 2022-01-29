@@ -218,8 +218,16 @@ TEST_P(Test_Int8_layers, ReLU6)
 TEST_P(Test_Int8_layers, Sigmoid)
 {
     testLayer("maxpooling_sigmoid", "ONNX", 0.0011, 0.0032);
-    testLayer("maxpooling_sigmoid_dynamic_axes", "ONNX", 0.0011, 0.0032);
-    testLayer("maxpooling_sigmoid_1d", "ONNX", 0.0011, 0.0037);
+}
+
+TEST_P(Test_Int8_layers, Sigmoid_dynamic_axes)
+{
+    testLayer("maxpooling_sigmoid_dynamic_axes", "ONNX", 0.002, 0.0032);
+}
+
+TEST_P(Test_Int8_layers, Sigmoid_1d)
+{
+    testLayer("maxpooling_sigmoid_1d", "ONNX", 0.002, 0.0037);
 }
 
 TEST_P(Test_Int8_layers, Mish)
@@ -316,16 +324,48 @@ TEST_P(Test_Int8_layers, Identity)
     testLayer("expand_neg_batch", "ONNX", 0.00071, 0.0019);
 }
 
-TEST_P(Test_Int8_layers, Slice)
+TEST_P(Test_Int8_layers, Slice_split_tf)
 {
     testLayer("split", "TensorFlow", 0.0033, 0.0056);
+}
+
+TEST_P(Test_Int8_layers, Slice_4d_tf)
+{
     testLayer("slice_4d", "TensorFlow", 0.003, 0.0073);
+}
+
+TEST_P(Test_Int8_layers, Slice_strided_tf)
+{
     testLayer("strided_slice", "TensorFlow", 0.008, 0.0142);
+}
+
+TEST_P(Test_Int8_layers, Slice_onnx)
+{
     testLayer("slice", "ONNX", 0.0046, 0.0077);
-    testLayer("slice_dynamic_axes", "ONNX", 0.0039, 0.0084);
-    testLayer("slice_opset_11_steps_2d", "ONNX", 0.0052, 0.0124);
+}
+
+TEST_P(Test_Int8_layers, Slice_dynamic_axes_onnx)
+{
+    testLayer("slice_dynamic_axes", "ONNX", 0.0039, 0.02);
+}
+
+TEST_P(Test_Int8_layers, Slice_steps_2d_onnx11)
+{
+    testLayer("slice_opset_11_steps_2d", "ONNX", 0.01, 0.0124);
+}
+
+TEST_P(Test_Int8_layers, Slice_steps_3d_onnx11)
+{
     testLayer("slice_opset_11_steps_3d", "ONNX", 0.0068, 0.014);
+}
+
+TEST_P(Test_Int8_layers, Slice_steps_4d_onnx11)
+{
     testLayer("slice_opset_11_steps_4d", "ONNX", 0.0041, 0.008);
+}
+
+TEST_P(Test_Int8_layers, Slice_steps_5d_onnx11)
+{
     testLayer("slice_opset_11_steps_5d", "ONNX", 0.0085, 0.021);
 }
 
