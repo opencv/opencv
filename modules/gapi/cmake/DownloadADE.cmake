@@ -1,12 +1,14 @@
+set(ade_commit_id "58b2595a1a95cc807be8bf6222f266a9a1f393a9") # tag: v0.1.1f
+set(ade_filename "${ade_commit_id}.zip")
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
-set(ade_filename "v0.1.1f.zip")
-set(ade_GITHUB_md5 "b624b995ec9c439cbc2e9e6ee940d3a2")
-set(ade_GITCODE_md5 "aa2ec43abe534f8b1db13274b5ed92dd")
-set(ade_GITHUB_subdir "ade-0.1.1f")
-set(ade_GITCODE_subdir "ade-v0.1.1f-58b2595a1a95cc807be8bf6222f266a9a1f393a9") # suffix is the commit id
+set(ade_subdir "ade-${ade_commit_id}")
 
+# Github
 set(OPENCV_ADE_GITHUB_URL "https://github.com/opencv/ade/archive/")
+set(ade_GITHUB_md5 "0ebc8ee5486a005050b2a31ab1104b97")
+# Gitcode
 set(OPENCV_ADE_GITCODE_URL "https://gitcode.net/opencv/ade/-/archive/")
+set(ade_GITCODE_md5 "862c207ca796e3f9be305c0cac29cad4")
 
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_${OPENCV_DOWNLOAD_HOST}_md5}
@@ -23,8 +25,7 @@ if (NOT res)
     return()
 endif()
 
-set(ADE_root "${ade_src_dir}/${ade_${OPENCV_DOWNLOAD_HOST}_subdir}/sources/ade")
-message(STATUS "OCV_DOWNLOAD: ADE ${ADE_root}")
+set(ADE_root "${ade_src_dir}/${ade_subdir}/sources/ade")
 file(GLOB_RECURSE ADE_sources "${ADE_root}/source/*.cpp")
 file(GLOB_RECURSE ADE_include "${ADE_root}/include/ade/*.hpp")
 add_library(ade STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL}

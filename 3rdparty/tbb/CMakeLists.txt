@@ -5,15 +5,17 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-ocv_update(OPENCV_TBB_RELEASE "v2020.2")
-ocv_update(OPENCV_TBB_RELEASE_GITHUB_MD5 "5af6f6c2a24c2043e62e47205e273b1f")
-ocv_update(OPENCV_TBB_RELEASE_GITCODE_MD5 "3ff457ea49220a3523755af4f6b92bb4")
-ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
-string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
-#ocv_update(OPENCV_TBB_SUBDIR ...)
+ocv_update(OPENCV_TBB_COMMIT_ID "60b7d0a78f8910976678ba63a19fdaee22c0ef65")
+ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_COMMIT_ID}.tar.gz")
 
+# Github
 set(OPENCV_TBB_GITHUB_URL "https://github.com/01org/tbb/archive/")
+ocv_update(OPENCV_TBB_PKG_GITHUB_MD5 "1aa458f5110734932ace37d3b7cdde1d")
+ocv_update(OPENCV_TBB_GITHUB_SUBDIR "oneTBB-${OPENCV_TBB_COMMIT_ID}")
+# Gitcode
 set(OPENCV_TBB_GITCODE_URL "https://gitcode.net/01org/tbb/-/archive/")
+ocv_update(OPENCV_TBB_PKG_GITCODE_MD5 "e813f5df302410841f3a84b2a6fe8056")
+ocv_update(OPENCV_TBB_GITCODE_SUBDIR "tbb-${OPENCV_TBB_COMMIT_ID}")
 
 set(tbb_src_dir "${OpenCV_BINARY_DIR}/3rdparty/tbb")
 ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
@@ -29,23 +31,10 @@ ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
 if(NOT res)
   return()
 endif()
-if(OPENCV_TBB_SUBDIR)
-  # use current value
-  ocv_assert(EXISTS "${tbb_src_dir}/${OPENCV_TBB_SUBDIR}")
-elseif(EXISTS "${tbb_src_dir}/oneTBB-${OPENCV_TBB_RELEASE_}")
-  set(OPENCV_TBB_SUBDIR "oneTBB-${OPENCV_TBB_RELEASE_}")
-elseif(EXISTS "${tbb_src_dir}/tbb-${OPENCV_TBB_RELEASE_}")
-  set(OPENCV_TBB_SUBDIR "oneTBB-${OPENCV_TBB_RELEASE_}")
-else()
-  message(FATAL_ERROR "TBB: Can't configure TBB. Specify OPENCV_TBB_SUBDIR through command-line.")
-endif()
-set(OPENCV_TBB_GITHUB_SUBDIR "${OPENCV_TBB_SUBDIR}")
-set(OPENCV_TBB_GITCODE_SUBDIR "tbb-${OPENCV_TBB_RELEASE}-60b7d0a78f8910976678ba63a19fdaee22c0ef65") # suffix is the commit id
-set(tbb_src_dir "${tbb_src_dir}/${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_SUBDIR}")
 
-ocv_include_directories("${tbb_src_dir}/include"
-                        "${tbb_src_dir}/src/"
-                        "${tbb_src_dir}/src/rml/include"
+ocv_include_directories("${tbb_src_dir}/${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_SUBDIR}/include"
+                        "${tbb_src_dir}/${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_SUBDIR}/src/"
+                        "${tbb_src_dir}/${OPENCV_TBB_${OPENCV_DOWNLOAD_HOST}_SUBDIR}/src/rml/include"
                         "${CMAKE_CURRENT_SOURCE_DIR}")
 
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
