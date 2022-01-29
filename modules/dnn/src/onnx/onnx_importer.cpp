@@ -130,6 +130,7 @@ protected:
 
     std::map<std::string, LayerInfo> layer_id;
     typedef std::map<std::string, LayerInfo>::iterator IterLayerId_t;
+    typedef std::map<std::string, LayerInfo>::const_iterator ConstIterLayerId_t;
 
     void handleNode(const opencv_onnx::NodeProto& node_proto);
 
@@ -687,9 +688,31 @@ void ONNXImporter::populateNet()
         handleNode(node_proto);
     }
 
+    // register outputs
+    for (int i = 0; i < graph_proto.output_size(); ++i)
+    {
+        const std::string& output_name = graph_proto.output(i).name();
+        if (output_name.empty())
+        {
+            CV_LOG_ERROR(NULL, "DNN/ONNX: can't register output without name: " << i);
+            continue;
+        }
+        ConstIterLayerId_t layerIt = layer_id.find(output_name);
+        if (layerIt == layer_id.end())
+        {
+            CV_LOG_ERROR(NULL, "DNN/ONNX: can't find layer for output name: '" << output_name << "'. Does model imported properly?");
+            continue;
+        }
+
+        const LayerInfo& li = layerIt->second;
+        int outputId = dstNet.registerOutput(output_name, li.layerId, li.outputId); CV_UNUSED(outputId);
+        // no need to duplicate message from engine: CV_LOG_DEBUG(NULL, "DNN/ONNX: registered output='" << output_name << "' with id=" << outputId);
+    }
+
     CV_LOG_DEBUG(NULL, "DNN/ONNX: import completed!");
 }
 
+static
 const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
 {
     if (node_proto.has_name() && !node_proto.name().empty())
