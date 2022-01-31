@@ -1584,14 +1584,26 @@ int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width)
 {
     constexpr int nlanes = v_uint8::nlanes;
+    if (width < nlanes)
+        return 0;
+
     int x = 0;
-    for (; x <= width - nlanes; x += nlanes)
+    for (;;)
     {
-        v_uint8 a, b, c;
-        v_load_deinterleave(&in[3 * x], a, b, c);
-        vx_store(&out1[x], a);
-        vx_store(&out2[x], b);
-        vx_store(&out3[x], c);
+        for (; x <= width - nlanes; x += nlanes)
+        {
+            v_uint8 a, b, c;
+            v_load_deinterleave(&in[3 * x], a, b, c);
+            vx_store(&out1[x], a);
+            vx_store(&out2[x], b);
+            vx_store(&out3[x], c);
+        }
+        if (x < width)
+        {
+            x = width - nlanes;
+            continue;
+        }
+        break;
     }
     return x;
 }
@@ -1606,15 +1618,27 @@ int split4_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], uchar out4[], const int width)
 {
     constexpr int nlanes = v_uint8::nlanes;
+    if (width < nlanes)
+        return 0;
+
     int x = 0;
-    for (; x <= width - nlanes; x += nlanes)
+    for (;;)
     {
-        v_uint8 a, b, c, d;
-        v_load_deinterleave(&in[4 * x], a, b, c, d);
-        vx_store(&out1[x], a);
-        vx_store(&out2[x], b);
-        vx_store(&out3[x], c);
-        vx_store(&out4[x], d);
+        for (; x <= width - nlanes; x += nlanes)
+        {
+            v_uint8 a, b, c, d;
+            v_load_deinterleave(&in[4 * x], a, b, c, d);
+            vx_store(&out1[x], a);
+            vx_store(&out2[x], b);
+            vx_store(&out3[x], c);
+            vx_store(&out4[x], d);
+        }
+        if (x < width)
+        {
+            x = width - nlanes;
+            continue;
+        }
+        break;
     }
     return x;
 }
