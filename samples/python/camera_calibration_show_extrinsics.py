@@ -1,5 +1,18 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
+'''
+Plot camera calibration extrinsics.
+
+usage:
+    camera_calibration_show_extrinsics.py [--calibration <input path>] [--cam_width] [--cam_height] [--scale_focal] [--patternCentric ]
+
+default values:
+    --calibration    : left_intrinsics.yml
+    --cam_width      : 0.064/2
+    --cam_height     : 0.048/2
+    --scale_focal    : 40
+    --patternCentric : True
+'''
 
 # Python 2/3 compatibility
 from __future__ import print_function

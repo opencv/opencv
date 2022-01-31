@@ -66,6 +66,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
@@ -1214,6 +1216,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<LayerPin> blobsToKeep;
     MapIdToLayerData layers;
     std::map<String, int> layerNameToId;
+    std::map<std::string, int> outputNameToId;  // use registerOutput() to populate outputs
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
@@ -1632,6 +1635,38 @@ struct Net::Impl : public detail::NetImplBase
         return pins;
     }
 
+    // FIXIT remove dtype
+    int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params)
+    {
+        int id = getLayerId(name);
+        if (id >= 0)
+        {
+            if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
+            {
+                CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+                return -1;
+            }
+            else
+            {
+                LayerData& ld = layers.find(id)->second;
+                ld.type = type;
+                ld.params = params;
+                return -1;
+            }
+        }
+
+        id = ++lastLayerId;
+        layerNameToId.insert(std::make_pair(name, id));
+        layers.insert(std::make_pair(id, LayerData(id, name, type, dtype, params)));
+        if (params.get<bool>("has_dynamic_shapes", false))
+            hasDynamicShapes = true;
+
+        if (dtype == CV_8S)
+            netWasQuantized = true;
+
+        return id;
+    }
+
     void connect(int outLayerId, int outNum, int inLayerId, int inNum)
     {
         CV_Assert(outLayerId < inLayerId);
@@ -1641,6 +1676,40 @@ struct Net::Impl : public detail::NetImplBase
         addLayerInput(ldInp, inNum, LayerPin(outLayerId, outNum));
         ldOut.requiredOutputs.insert(outNum);
         ldOut.consumers.push_back(LayerPin(inLayerId, outNum));
+
+        CV_LOG_VERBOSE(NULL, 0, "DNN: connect(" << outLayerId << ":" << outNum << " ==> " << inLayerId << ":" << inNum << ")");
+    }
+
+    int registerOutput(const std::string& outputName, int layerId, int outputPort)
+    {
+        int checkLayerId = getLayerId(outputName);
+        if (checkLayerId >= 0)
+        {
+            if (checkLayerId == layerId)
+            {
+                if (outputPort == 0)
+                {
+                    // layer name correlates with its output name
+                    CV_LOG_DEBUG(NULL, "DNN: register output='" << outputName << "': reuse layer with the same name and id=" << layerId << " to be linked");
+                    outputNameToId.insert(std::make_pair(outputName, layerId));
+                    return checkLayerId;
+                }
+            }
+            CV_Error_(Error::StsBadArg, ("Layer with name='%s' already exists id=%d (to be linked with %d:%d)", outputName.c_str(), checkLayerId, layerId, outputPort));
+        }
+#if 0  // TODO
+        if (outputPort == 0)
+            // make alias only, need to adopt getUnconnectedOutLayers() call
+#endif
+        LayerParams outputLayerParams;
+        outputLayerParams.name = outputName;
+        outputLayerParams.type = "Identity";
+        int dtype = CV_32F;  // FIXIT remove
+        int outputLayerId = addLayer(outputLayerParams.name, outputLayerParams.type, dtype, outputLayerParams);
+        connect(layerId, outputPort, outputLayerId, 0);
+        CV_LOG_DEBUG(NULL, "DNN: register output='" << outputName << "' id=" << outputLayerId << " defined as " << layerId << ":" << outputPort);
+        outputNameToId.insert(std::make_pair(outputName, outputLayerId));
+        return outputLayerId;
     }
 
     void initBackend(const std::vector<LayerPin>& blobsToKeep_)
@@ -4324,6 +4393,9 @@ Net Net::readFromModelOptimizer(const String& xml, const String& bin)
     CV_UNUSED(xml); CV_UNUSED(bin);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
 #else
+
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
     InferenceEngine::CNNNetReader reader;
     reader.ReadNetwork(xml);
@@ -4359,6 +4431,8 @@ Net Net::readFromModelOptimizer(
     CV_UNUSED(bufferModelConfigSize); CV_UNUSED(bufferModelConfigSize);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
 #else
+
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R3)
     InferenceEngine::CNNNetReader reader;
@@ -4410,34 +4484,8 @@ Net::~Net()
 int Net::addLayer(const String &name, const String &type, const int &dtype, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
-
-    int id = impl->getLayerId(name);
-    if (id >= 0)
-    {
-        if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
-        {
-            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
-            return -1;
-        }
-        else
-        {
-            LayerData& ld = impl->layers.find(id)->second;
-            ld.type = type;
-            ld.params = params;
-            return -1;
-        }
-    }
-
-    id = ++impl->lastLayerId;
-    impl->layerNameToId.insert(std::make_pair(name, id));
-    impl->layers.insert(std::make_pair(id, LayerData(id, name, type, dtype, params)));
-    if (params.get<bool>("has_dynamic_shapes", false))
-        impl->hasDynamicShapes = true;
-
-    if (dtype == CV_8S)
-        impl->netWasQuantized = true;
-
-    return id;
+    CV_Assert(impl);
+    return impl->addLayer(name, type, dtype, params);
 }
 
 int Net::addLayer(const String &name, const String &type, LayerParams &params)
@@ -4481,10 +4529,18 @@ void Net::connect(String _outPin, String _inPin)
     impl->connect(outPin.lid, outPin.oid, inpPin.lid, inpPin.oid);
 }
 
+int Net::registerOutput(const std::string& outputName, int layerId, int outputPort)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->registerOutput(outputName, layerId, outputPort);
+}
+
 Mat Net::forward(const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     String layerName = outputName;
 
@@ -4506,6 +4562,7 @@ AsyncArray Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
 #ifdef CV_CXX11
     String layerName = outputName;
@@ -4537,6 +4594,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!empty());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     String layerName = outputName;
 
@@ -4618,6 +4676,7 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
                   const std::vector<String>& outBlobNames)
 {
     CV_TRACE_FUNCTION();
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -4645,6 +4704,7 @@ void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
                      const std::vector<String>& outBlobNames)
 {
     CV_TRACE_FUNCTION();
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -5006,6 +5066,7 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
 {
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     LayerPin pin;
     pin.lid = 0;
@@ -5441,7 +5502,21 @@ bool Net::empty() const
 
 std::vector<int> Net::getUnconnectedOutLayers() const
 {
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+
     std::vector<int> layersIds;
+
+    // registerOutput() flow
+    const std::map<std::string, int>& outputNameToId = impl->outputNameToId;
+    if (!outputNameToId.empty())
+    {
+        for (std::map<std::string, int>::const_iterator it = outputNameToId.begin(); it != outputNameToId.end(); ++it)
+        {
+            layersIds.push_back(it->second);
+        }
+        return layersIds;
+    }
 
     Impl::MapIdToLayerData::const_iterator it;
     for (it = impl->layers.begin(); it != impl->layers.end(); it++)

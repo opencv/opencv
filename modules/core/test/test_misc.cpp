@@ -4,6 +4,15 @@
 #include "test_precomp.hpp"
 #include <cmath>
 
+#include "opencv2/core/utils/logger.hpp"
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
+#ifdef CV_CXX11
+#include <chrono>
+#include <thread>
+#endif
+
 namespace opencv_test { namespace {
 
 TEST(Core_OutputArrayCreate, _1997)
@@ -241,6 +250,62 @@ TEST(Core_Parallel, propagate_exceptions)
     ASSERT_THROW({
         parallel_for_(cv::Range(0, dst2.rows), ThrowErrorParallelLoopBody(dst2, dst2.rows / 2));
     }, cv::Exception);
+}
+
+class FPDenormalsHintCheckerParallelLoopBody : public cv::ParallelLoopBody
+{
+public:
+    FPDenormalsHintCheckerParallelLoopBody()
+        : isOK(true)
+    {
+        state_values_to_check = cv::details::saveFPDenormalsState(base_state);
+    }
+    ~FPDenormalsHintCheckerParallelLoopBody() {}
+    void operator()(const cv::Range& r) const
+    {
+        CV_UNUSED(r);
+        cv::details::FPDenormalsModeState state;
+        if (cv::details::saveFPDenormalsState(state))
+        {
+            for (int i = 0; i < state_values_to_check; ++i)
+            {
+                if (base_state.reserved[i] != state.reserved[i])
+                {
+                    CV_LOG_ERROR(NULL, cv::format("FP state[%d] mismatch: base=0x%08x thread=0x%08x", i, base_state.reserved[i], state.reserved[i]));
+                    isOK = false;
+                    cv::details::restoreFPDenormalsState(base_state);
+                }
+            }
+        }
+        else
+        {
+            // FP state is not supported
+            // no checks
+        }
+#ifdef CV_CXX11
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#endif
+    }
+
+    cv::details::FPDenormalsModeState base_state;
+    int state_values_to_check;
+
+    mutable bool isOK;
+};
+
+TEST(Core_Parallel, propagate_fp_denormals_ignore_hint)
+{
+    int nThreads = std::max(1, cv::getNumThreads()) * 3;
+    for (int i = 0; i < 4; ++i)
+    {
+        SCOPED_TRACE(cv::format("Case=%d: FP denormals ignore hint: %s\n", i, ((i & 1) != 0) ? "enable" : "disable"));
+        FPDenormalsIgnoreHintScope fp_denormals_scope((i & 1) != 0);
+        FPDenormalsHintCheckerParallelLoopBody job;
+        ASSERT_NO_THROW({
+            parallel_for_(cv::Range(0, nThreads), job);
+        });
+        EXPECT_TRUE(job.isOK);
+    }
 }
 
 TEST(Core_Version, consistency)

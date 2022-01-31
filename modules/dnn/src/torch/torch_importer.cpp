@@ -40,6 +40,9 @@
 //M*/
 
 #include "../precomp.hpp"
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <limits>
 #include <set>
 #include <map>
@@ -106,6 +109,8 @@ static inline bool endsWith(const String &str, const char *substr)
 
 struct TorchImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     typedef std::map<String, std::pair<int, Mat> > TensorsMap;
     Net net;
 

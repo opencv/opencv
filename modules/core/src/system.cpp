@@ -55,6 +55,9 @@
 
 #include <opencv2/core/utils/filesystem.private.hpp>
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
+
 #ifndef OPENCV_WITH_THREAD_SANITIZER
   #if defined(__clang__) && defined(__has_feature)
   #if __has_feature(thread_sanitizer)
@@ -630,7 +633,7 @@ struct HWFeatures
             }
         }
     #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
-        unsigned int hwcap = 0;
+        unsigned long hwcap = 0;
         elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
@@ -2771,6 +2774,82 @@ void setUseIPP_NotExact(bool flag)
 }
 
 } // namespace ipp
+
+
+namespace details {
+
+#if OPENCV_IMPL_FP_HINTS_X86
+#ifndef _MM_DENORMALS_ZERO_ON  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_ON 0x0040
+#endif
+#ifndef _MM_DENORMALS_ZERO_MASK  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_MASK 0x0040
+#endif
+#endif
+
+void setFPDenormalsIgnoreHint(bool ignore, CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    unsigned value = ignore ? _MM_FLUSH_ZERO_ON : 0;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+        value |= ignore ? _MM_DENORMALS_ZERO_ON : 0;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: update FP mxcsr flags = " << cv::format("0x%08x", flags));
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    _mm_setcsr(flags);
+#else
+    CV_UNUSED(ignore); CV_UNUSED(state);
+#endif
+}
+
+int saveFPDenormalsState(CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    return 2;
+#else
+    CV_UNUSED(state);
+    return 0;
+#endif
+}
+
+bool restoreFPDenormalsState(const FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    const unsigned mask = (unsigned)state.reserved[0];
+    CV_DbgAssert(mask != 0); // invalid state (ensure that state is properly saved earlier)
+    const unsigned value = (unsigned)state.reserved[1];
+    CV_DbgCheck((int)value, value == (value & mask), "invalid SSE FP state");
+    const unsigned old_flags = _mm_getcsr();
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: restore FP mxcsr flags = " << cv::format("0x%08x", flags));
+    _mm_setcsr(flags);
+    return true;
+#else
+    CV_UNUSED(state);
+    return false;
+#endif
+}
+
+}  // namespace details
+
 
 } // namespace cv
 
