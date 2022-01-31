@@ -2296,8 +2296,8 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyGrayTest)
 
 INSTANTIATE_TEST_CASE_P(TestAccessor, GAPI_Accessors_In_Streaming,
                         Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::BGR, TestSourceType::NV12),
-                                Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV)
+                                Values(TestSourceType::BGR, TestSourceType::NV12, TestSourceType::GRAY),
+                                Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV, TestAccessType::GRAY)
                         ));
 
 struct GAPI_Accessors_Meta_In_Streaming : public TestWithParam<
