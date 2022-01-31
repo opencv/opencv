@@ -2200,18 +2200,19 @@ namespace {
           [](const cv::Mat& bgr) {
               cv::Mat gray;
               cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
-              return gray;
+              cv::Mat out_bgr;
+              cv::cvtColor(gray, out_bgr, cv::COLOR_GRAY2BGR);
+              return out_bgr;
           } },
         { std::make_pair(TestSourceType::GRAY, TestAccessType::Y),
           [](const cv::Mat& bgr) {
-              cv::Mat y, uv;
-              cvtBGR2NV12(bgr, y, uv);
-              return y;
+              cv::Mat gray;
+              cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+              return gray;
           } },
         { std::make_pair(TestSourceType::GRAY, TestAccessType::UV),
           [](const cv::Mat& bgr) {
-              cv::Mat y, uv;
-              cvtBGR2NV12(bgr, y, uv);
+              cv::Mat uv(bgr.size() / 2, CV_8UC2, cv::Scalar::all(127));
               return uv;
           } },
     };
