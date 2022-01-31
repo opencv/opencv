@@ -2197,23 +2197,19 @@ namespace {
               return uv;
           } },
         { std::make_pair(TestSourceType::GRAY, TestAccessType::BGR),
-          [](const cv::Mat& gray) {
-              cv::Mat bgr;
-              cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
-              return bgr;
+          [](const cv::Mat& bgr) {
+              cv::Mat gray;
+              cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+              return gray;
           } },
         { std::make_pair(TestSourceType::GRAY, TestAccessType::Y),
-          [](const cv::Mat& gray) {
-              cv::Mat bgr;
-              cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+          [](const cv::Mat& bgr) {
               cv::Mat y, uv;
               cvtBGR2NV12(bgr, y, uv);
               return y;
           } },
         { std::make_pair(TestSourceType::GRAY, TestAccessType::UV),
-          [](const cv::Mat& gray) {
-              cv::Mat bgr;
-              cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+          [](const cv::Mat& bgr) {
               cv::Mat y, uv;
               cvtBGR2NV12(bgr, y, uv);
               return uv;
