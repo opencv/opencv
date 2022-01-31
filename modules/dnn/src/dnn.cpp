@@ -1135,6 +1135,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<LayerPin> blobsToKeep;
     MapIdToLayerData layers;
     std::map<String, int> layerNameToId;
+    std::map<std::string, int> outputNameToId;  // use registerOutput() to populate outputs
     BlobManager blobManager;
     int preferableBackend;
     int preferableTarget;
@@ -1483,6 +1484,23 @@ struct Net::Impl : public detail::NetImplBase
         return pins;
     }
 
+    int addLayer(const String &name, const String &type, LayerParams &params)
+    {
+        if (getLayerId(name) >= 0)
+        {
+            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+            return -1;
+        }
+
+        int id = ++lastLayerId;
+        layerNameToId.insert(std::make_pair(name, id));
+        layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
+        if (params.get<bool>("has_dynamic_shapes", false))
+            hasDynamicShapes = true;
+
+        return id;
+    }
+
     void connect(int outLayerId, int outNum, int inLayerId, int inNum)
     {
         CV_Assert(outLayerId < inLayerId);
@@ -1492,6 +1510,39 @@ struct Net::Impl : public detail::NetImplBase
         addLayerInput(ldInp, inNum, LayerPin(outLayerId, outNum));
         ldOut.requiredOutputs.insert(outNum);
         ldOut.consumers.push_back(LayerPin(inLayerId, outNum));
+
+        CV_LOG_VERBOSE(NULL, 0, "DNN: connect(" << outLayerId << ":" << outNum << " ==> " << inLayerId << ":" << inNum << ")");
+    }
+
+    int registerOutput(const std::string& outputName, int layerId, int outputPort)
+    {
+        int checkLayerId = getLayerId(outputName);
+        if (checkLayerId >= 0)
+        {
+            if (checkLayerId == layerId)
+            {
+                if (outputPort == 0)
+                {
+                    // layer name correlates with its output name
+                    CV_LOG_DEBUG(NULL, "DNN: register output='" << outputName << "': reuse layer with the same name and id=" << layerId << " to be linked");
+                    outputNameToId.insert(std::make_pair(outputName, layerId));
+                    return checkLayerId;
+                }
+            }
+            CV_Error_(Error::StsBadArg, ("Layer with name='%s' already exists id=%d (to be linked with %d:%d)", outputName.c_str(), checkLayerId, layerId, outputPort));
+        }
+#if 0  // TODO
+        if (outputPort == 0)
+            // make alias only, need to adopt getUnconnectedOutLayers() call
+#endif
+        LayerParams outputLayerParams;
+        outputLayerParams.name = outputName;
+        outputLayerParams.type = "Identity";
+        int outputLayerId = addLayer(outputLayerParams.name, outputLayerParams.type, outputLayerParams);
+        connect(layerId, outputPort, outputLayerId, 0);
+        CV_LOG_DEBUG(NULL, "DNN: register output='" << outputName << "' id=" << outputLayerId << " defined as " << layerId << ":" << outputPort);
+        outputNameToId.insert(std::make_pair(outputName, outputLayerId));
+        return outputLayerId;
     }
 
     void initBackend(const std::vector<LayerPin>& blobsToKeep_)
@@ -3599,20 +3650,8 @@ Net::~Net()
 int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
-
-    if (impl->getLayerId(name) >= 0)
-    {
-        CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
-        return -1;
-    }
-
-    int id = ++impl->lastLayerId;
-    impl->layerNameToId.insert(std::make_pair(name, id));
-    impl->layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
-    if (params.get<bool>("has_dynamic_shapes", false))
-        impl->hasDynamicShapes = true;
-
-    return id;
+    CV_Assert(impl);
+    return impl->addLayer(name, type, params);
 }
 
 int Net::addLayerToPrev(const String &name, const String &type, LayerParams &params)
@@ -3642,6 +3681,13 @@ void Net::connect(String _outPin, String _inPin)
     CV_Assert(outPin.valid() && inpPin.valid());
 
     impl->connect(outPin.lid, outPin.oid, inpPin.lid, inpPin.oid);
+}
+
+int Net::registerOutput(const std::string& outputName, int layerId, int outputPort)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->registerOutput(outputName, layerId, outputPort);
 }
 
 Mat Net::forward(const String& outputName)
@@ -4328,7 +4374,21 @@ bool Net::empty() const
 
 std::vector<int> Net::getUnconnectedOutLayers() const
 {
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+
     std::vector<int> layersIds;
+
+    // registerOutput() flow
+    const std::map<std::string, int>& outputNameToId = impl->outputNameToId;
+    if (!outputNameToId.empty())
+    {
+        for (std::map<std::string, int>::const_iterator it = outputNameToId.begin(); it != outputNameToId.end(); ++it)
+        {
+            layersIds.push_back(it->second);
+        }
+        return layersIds;
+    }
 
     Impl::MapIdToLayerData::const_iterator it;
     for (it = impl->layers.begin(); it != impl->layers.end(); it++)
