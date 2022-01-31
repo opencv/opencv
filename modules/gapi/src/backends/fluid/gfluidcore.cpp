@@ -2537,27 +2537,18 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3, Buffer &dst4)
     {
-        const auto *in   =  src.InLine<uchar>(0);
-              auto *out1 = dst1.OutLine<uchar>();
-              auto *out2 = dst2.OutLine<uchar>();
-              auto *out3 = dst3.OutLine<uchar>();
-              auto *out4 = dst4.OutLine<uchar>();
+        const auto *in = src.InLine<uchar>(0);
+        auto *out1     = dst1.OutLine<uchar>();
+        auto *out2     = dst2.OutLine<uchar>();
+        auto *out3     = dst3.OutLine<uchar>();
+        auto *out4     = dst4.OutLine<uchar>();
 
         GAPI_Assert(4 == src.meta().chan);
         int width = src.length();
+        int w = 0;
 
-        int w = 0; // cycle counter
-
-    #if CV_SIMD128
-        for (; w <= width-16; w+=16)
-        {
-            v_uint8x16 a, b, c, d;
-            v_load_deinterleave(&in[4*w], a, b, c, d);
-            v_store(&out1[w], a);
-            v_store(&out2[w], b);
-            v_store(&out3[w], c);
-            v_store(&out4[w], d);
-        }
+    #if CV_SIMD
+        w = split4_simd(in, out1, out2, out3, out4, width);
     #endif
 
         for (; w < width; w++)

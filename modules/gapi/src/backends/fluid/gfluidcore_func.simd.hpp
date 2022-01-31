@@ -187,6 +187,9 @@ ABSDIFFC_SIMD(float)
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width);
 
+int split4_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], uchar out4[], const int width);
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 struct scale_tag {};
@@ -1589,6 +1592,29 @@ int split3_simd(const uchar in[], uchar out1[], uchar out2[],
         vx_store(&out1[x], a);
         vx_store(&out2[x], b);
         vx_store(&out3[x], c);
+    }
+    return x;
+}
+
+//-------------------------
+//
+// Fluid kernels: Split4
+//
+//-------------------------
+
+int split4_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], uchar out4[], const int width)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+    int x = 0;
+    for (; x <= width - nlanes; x += nlanes)
+    {
+        v_uint8 a, b, c, d;
+        v_load_deinterleave(&in[4 * x], a, b, c, d);
+        vx_store(&out1[x], a);
+        vx_store(&out2[x], b);
+        vx_store(&out3[x], c);
+        vx_store(&out4[x], d);
     }
     return x;
 }
