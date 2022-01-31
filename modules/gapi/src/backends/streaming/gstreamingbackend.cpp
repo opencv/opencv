@@ -228,9 +228,7 @@ public:
     virtual void extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat) = 0;
 
 protected:
-    std::once_flag m_warnFlagBGR;
-    std::once_flag m_warnFlagY;
-    std::once_flag m_warnFlagUV;
+    std::once_flag m_warnFlag;
 };
 
 struct GOCVBGR: public cv::detail::KernelTag
@@ -268,7 +266,7 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::NV12:
         {
-            std::call_once(m_warnFlagBGR,
+            std::call_once(m_warnFlag,
                 [](){
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from NV12 to BGR will happen.\n"
                         "Conversion may cost a lot for images with high resolution.\n"
@@ -286,7 +284,7 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::GRAY:
         {
-            std::call_once(m_warnFlagBGR,
+            std::call_once(m_warnFlag,
                 []() {
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from GRAY to BGR will happen.\n"
                         "Conversion may cost a lot for images with high resolution.\n"
@@ -333,7 +331,7 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
     {
         case cv::MediaFormat::BGR:
         {
-            std::call_once(m_warnFlagY,
+            std::call_once(m_warnFlag,
                 [](){
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from BGR to NV12 Y plane will "
                         "happen.\n"
@@ -399,7 +397,7 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
     {
         case cv::MediaFormat::BGR:
         {
-            std::call_once(m_warnFlagUV,
+            std::call_once(m_warnFlag,
                 [](){
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from BGR to NV12 UV plane will "
                         "happen.\n"
