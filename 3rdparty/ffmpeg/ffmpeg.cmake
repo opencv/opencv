@@ -15,10 +15,6 @@ function(download_win_ffmpeg script_var)
 
   set(FFMPEG_DOWNLOAD_DIR "${OpenCV_BINARY_DIR}/3rdparty/ffmpeg")
 
-  set(FFMPEG_GITHUB_URL "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/")
-  set(FFMPEG_GITCODE_URL "https://gitcode.net/opencv/opencv_3rdparty/-/raw/${FFMPEG_BINARIES_COMMIT}/ffmpeg/")
-  set(FFMPEG_CUSTOM_URL "https://${OPENCV_MIRROR_CUSTOM}/opencv/opencv_3rdparty/-/raw/${FFMPEG_BINARIES_COMMIT}/ffmpeg/")
-
   set(status TRUE)
   foreach(id ${ids})
     ocv_download(FILENAME ${name_${id}}
@@ -26,7 +22,7 @@ function(download_win_ffmpeg script_var)
                URL
                  "$ENV{OPENCV_FFMPEG_URL}"
                  "${OPENCV_FFMPEG_URL}"
-                 "${FFMPEG_${OPENCV_DOWNLOAD_HOST}_URL}"
+                 "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/"
                DESTINATION_DIR ${FFMPEG_DOWNLOAD_DIR}
                ID FFMPEG
                RELATIVE_URL
