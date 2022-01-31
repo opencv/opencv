@@ -2201,9 +2201,15 @@ namespace {
           } },
         { std::make_pair(TestSourceType::BGR, TestAccessType::GRAY),
           [](const cv::Mat& bgr) {
+#if 0
               cv::Mat gray;
               cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
               return gray;
+#else
+               cv::Mat y, uv;
+               cvtBGR2NV12(bgr, y, uv);
+               return y;
+#endif
           } },
     };
 } // anonymous namespace
