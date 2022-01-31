@@ -147,6 +147,26 @@ TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
     EXPECT_EQ(0, remove(filename.c_str()));
 }
 
+TEST(Imgcodecs_Tiff, readWrite_unsigned)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/gray_8u.tif";
+    const string filenameOutput = cv::tempfile(".tiff");
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC1, img.type());
+
+    Mat matS8;
+    img.convertTo(matS8, CV_8SC1);
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, matS8));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), matS8.type());
+    ASSERT_EQ(img2.size(), matS8.size());
+    EXPECT_LE(cvtest::norm(matS8, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
 TEST(Imgcodecs_Tiff, readWrite_32FC1)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
