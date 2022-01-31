@@ -259,15 +259,9 @@ public:
     bool pull(cv::gapi::wip::Data& data) {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
-#if 0
-            cv::Mat y, uv;
-            cvtBGR2NV12(bgr, y, uv);
-            data = cv::MediaFrame::Create<TestMediaGRAY>(y);
-#else
             cv::Mat gray;
             cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
             data = cv::MediaFrame::Create<TestMediaGRAY>(gray);
-#endif
             return true;
         }
         return false;
@@ -1874,16 +1868,9 @@ TEST(GAPI_Streaming, CopyFrameGray)
         cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
         num_frames++;
         cap >> ocv_mat;
-#if 0
-
-        cv::Mat y, uv;
-        cvtBGR2NV12(ocv_mat, y, uv);
-        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
-#else
         cv::Mat gray;
         cvtColor(ocv_mat, gray, cv::COLOR_BGR2GRAY);
         EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
-#endif
     }
 }
 
@@ -2024,16 +2011,9 @@ TEST(GAPI_Streaming, ReshapeGray)
         cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
         num_frames++;
         cap >> ocv_mat;
-#if 0
-
-        cv::Mat y, uv;
-        cvtBGR2NV12(ocv_mat, y, uv);
-        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
-#else
         cv::Mat gray;
         cvtColor(ocv_mat, gray, cv::COLOR_BGR2GRAY);
         EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
-#endif
     }
 
     // Reshape the graph meta
@@ -2062,16 +2042,9 @@ TEST(GAPI_Streaming, ReshapeGray)
         cv::Mat gapi_mat(frame2.desc().size, CV_8UC1, view.ptr[0]);
         num_frames++;
         cap >> ocv_mat2;
-#if 0
-
-        cv::Mat y, uv;
-        cvtBGR2NV12(ocv_mat2, y, uv);
-        EXPECT_EQ(0, cvtest::norm(y, gapi_mat, NORM_INF));
-#else
         cv::Mat gray;
         cvtColor(ocv_mat2, gray, cv::COLOR_BGR2GRAY);
         EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
-#endif
     }
 }
 
