@@ -2201,7 +2201,7 @@ namespace {
           } },
         { std::make_pair(TestSourceType::BGR, TestAccessType::GRAY),
           [](const cv::Mat& bgr) {
-#if 0
+#if 1
               cv::Mat gray;
               cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
               return gray;
@@ -2302,7 +2302,7 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyGrayTest)
 
 INSTANTIATE_TEST_CASE_P(TestAccessor, GAPI_Accessors_In_Streaming,
                         Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::BGR, TestSourceType::NV12, TestSourceType::GRAY),
+                                Values(TestSourceType::BGR, TestSourceType::NV12),
                                 Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV, TestAccessType::GRAY)
                         ));
 
