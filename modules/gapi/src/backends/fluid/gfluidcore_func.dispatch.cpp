@@ -214,6 +214,13 @@ int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
+int split4_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], uchar out4[], const int width)
+{
+    CV_CPU_DISPATCH(split4_simd, (in, out1, out2, out3, out4, width),
+                    CV_CPU_DISPATCH_MODES_ALL);
+}
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
