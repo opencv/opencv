@@ -2141,7 +2141,8 @@ namespace {
     enum class TestAccessType {
         BGR,
         Y,
-        UV
+        UV,
+        GRAY
     };
     std::ostream& operator<<(std::ostream& os, TestAccessType a) {
         os << "Accessor:";
@@ -2149,6 +2150,7 @@ namespace {
             case TestAccessType::BGR: return os << "BGR";
             case TestAccessType::Y:   return os << "Y";
             case TestAccessType::UV:  return os << "UV";
+            case TestAccessType::GRAY:  return os << "GRAY";
             default: CV_Assert(false && "unknown TestAccessType");
         }
     }
@@ -2157,7 +2159,8 @@ namespace {
     static std::map<TestAccessType, GapiFunction> gapi_functions = {
         { TestAccessType::BGR, cv::gapi::streaming::BGR },
         { TestAccessType::Y,   cv::gapi::streaming::Y   },
-        { TestAccessType::UV,  cv::gapi::streaming::UV  }
+        { TestAccessType::UV,  cv::gapi::streaming::UV  },
+        { TestAccessType::GRAY,  cv::gapi::streaming::Y  }
     };
 
     using RefFunction = std::function<cv::Mat(const cv::Mat&)>;
@@ -2195,6 +2198,12 @@ namespace {
               cv::Mat y, uv;
               cvtBGR2NV12(bgr, y, uv);
               return uv;
+          } },
+        { std::make_pair(TestSourceType::BGR, TestAccessType::GRAY),
+          [](const cv::Mat& bgr) {
+              cv::Mat gray;
+              cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+              return gray;
           } },
     };
 } // anonymous namespace
@@ -2237,6 +2246,47 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
         num_frames++;
         cap >> cap_mat;
         ocv_mat = fromBGR(cap_mat);
+
+        EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
+    }
+
+    cc.stop();
+}
+
+TEST_P(GAPI_Accessors_In_Streaming, AccuracyGrayTest)
+{
+    std::string filepath{};
+    TestSourceType sourceType = TestSourceType::GRAY;
+    TestAccessType accessType = TestAccessType::GRAY;
+    std::tie(filepath, sourceType, accessType) = GetParam();
+    auto accessor = gapi_functions[accessType];
+    auto fromGRAY = ref_functions[std::make_pair(sourceType, accessType)];
+
+    const std::string& absFilePath = findDataFile(filepath);
+
+    cv::GFrame in;
+    cv::GMat out = accessor(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    auto src = createTestSource(sourceType, absFilePath);
+    cc.setSource(src);
+
+    cv::VideoCapture cap;
+    cap.open(absFilePath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::Mat cap_mat, ocv_mat, gapi_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (num_frames < max_frames && cc.pull(cv::gout(gapi_mat)))
+    {
+        num_frames++;
+        cap >> cap_mat;
+        ocv_mat = fromGRAY(cap_mat);
 
         EXPECT_EQ(0, cvtest::norm(ocv_mat, gapi_mat, NORM_INF));
     }
@@ -2428,7 +2478,7 @@ TEST(GAPI_Streaming, TestDesyncRMat) {
     cv::optional<cv::RMat> out_desync;
     cv::optional<cv::RMat> out_rmat;
     while (true) {
-        // Initially it throwed "bad variant access" since there was
+        // Initially it threw "bad variant access" since there was
         // no RMat handling in wrap_opt_arg
         EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_rmat)));
         if (out_rmat) break;
@@ -2469,7 +2519,7 @@ TEST(GAPI_Streaming, TestDesyncMediaFrame) {
     cv::optional<cv::MediaFrame> out_desync;
     cv::optional<cv::MediaFrame> out_frame;
     while (true) {
-        // Initially it throwed "bad variant access" since there was
+        // Initially it threw "bad variant access" since there was
         // no MediaFrame handling in wrap_opt_arg
         EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
         if (out_frame) break;
@@ -2511,7 +2561,7 @@ TEST(GAPI_Streaming, TestDesyncMediaFrameGray) {
     cv::optional<cv::MediaFrame> out_desync;
     cv::optional<cv::MediaFrame> out_frame;
     while (true) {
-        // Initially it throwed "bad variant access" since there was
+        // Initially it threw "bad variant access" since there was
         // no MediaFrame handling in wrap_opt_arg
         EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
         if (out_frame) break;
