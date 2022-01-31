@@ -1000,9 +1000,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     Mat image, mask = _mask.getMat();
     switch (type)
     {
-    case CV_16UC1:
-        image = _image.getMat() / 256;
+    case CV_16UC1: {
+        Mat imageTmp = _image.getMat() / 256;
+        imageTmp.convertTo(image, CV_8UC1);
         break;
+    }
 
     case CV_16UC3: {
         Mat imageTmp;
