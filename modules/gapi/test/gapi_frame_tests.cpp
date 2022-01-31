@@ -40,8 +40,8 @@ GAPI_OCV_KERNEL(OCVBlurFrameGray, GBlurFrameGray) {
         GAPI_Assert(in.desc().fmt == cv::MediaFormat::GRAY);
         cv::MediaFrame::View view = in.access(cv::MediaFrame::Access::R);
         cv::blur(cv::Mat(in.desc().size, CV_8UC1, view.ptr[0], view.stride[0]),
-            out,
-            cv::Size{ 3,3 });
+        out,
+        cv::Size{ 3,3 });
     }
 };
 

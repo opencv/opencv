@@ -228,7 +228,7 @@ public:
     virtual void extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat) = 0;
 
 protected:
-    std::once_flag m_warnFlagRGB;
+    std::once_flag m_warnFlagBGR;
     std::once_flag m_warnFlagY;
     std::once_flag m_warnFlagUV;
 };
@@ -268,7 +268,7 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::NV12:
         {
-            std::call_once(m_warnFlagRGB,
+            std::call_once(m_warnFlagBGR,
                 [](){
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from NV12 to BGR will happen.\n"
                         "Conversion may cost a lot for images with high resolution.\n"
@@ -286,7 +286,7 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
         }
         case cv::MediaFormat::GRAY:
         {
-            std::call_once(m_warnFlagRGB,
+            std::call_once(m_warnFlagBGR,
                 []() {
                     GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from GRAY to BGR will happen.\n"
                         "Conversion may cost a lot for images with high resolution.\n"
