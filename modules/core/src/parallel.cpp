@@ -658,7 +658,7 @@ unsigned defaultNumberOfThreads()
     // than 2 threads by default not to overheat the devices
     const unsigned int default_number_of_threads = 2;
 #else
-    const unsigned int default_number_of_threads = (unsigned int)std::max(1, cv::getNumberOfCPUs());
+    const unsigned int default_number_of_threads = (unsigned int)std::max(1, std::min(4, cv::getNumberOfCPUs()));
 #endif
 
     unsigned result = default_number_of_threads;
