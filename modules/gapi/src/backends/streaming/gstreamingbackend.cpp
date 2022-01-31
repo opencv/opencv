@@ -293,14 +293,11 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
                         "To retrieve cv::Mat from GRAY cv::MediaFrame for free, you may use "
                         "cv::gapi::streaming::Y.\n");
                 });
-            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
-                [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 3, d.size); },
-                [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
-                    cv::Mat bgr;
-                    cv::Mat gray(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
-                    cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
-                    return bgr;
-                });
+            cv::Mat bgr;
+            auto view = frame.access(cv::MediaFrame::Access::R);
+            cv::Mat gray(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(bgr);
             break;
         }
 
