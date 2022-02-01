@@ -222,12 +222,6 @@ public:
 
 };
 
-
-VolumeSettings::VolumeSettings()
-{
-    this->impl = makePtr<VolumeSettingsImpl>();
-}
-
 VolumeSettings::VolumeSettings(VolumeType volumeType)
 {
     this->impl = makePtr<VolumeSettingsImpl>(volumeType);
@@ -267,10 +261,9 @@ void VolumeSettings::setCameraRaycastIntrinsics(InputArray val) { this->impl->se
 void VolumeSettings::getCameraRaycastIntrinsics(OutputArray val) const { this->impl->getCameraRaycastIntrinsics(val); };
 
 
-VolumeSettingsImpl::VolumeSettingsImpl()
-    : VolumeSettingsImpl(VolumeType::TSDF)
-{
-}
+VolumeSettingsImpl::VolumeSettingsImpl() :
+    VolumeSettingsImpl(VolumeType::TSDF)
+{}
 
 VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
 {

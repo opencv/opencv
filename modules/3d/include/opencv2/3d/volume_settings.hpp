@@ -23,14 +23,10 @@ enum class VolumeType
 class CV_EXPORTS_W VolumeSettings
 {
 public:
-    /** @brief Constructor of settings for common TSDF volume type.
-    */
-    VolumeSettings();
-
     /** @brief Constructor of settings for custom Volume type.
     * @param volumeType volume type.
     */
-    VolumeSettings(VolumeType volumeType);
+    VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
     ~VolumeSettings();
 
     /** @brief Sets the width of the image for integration.

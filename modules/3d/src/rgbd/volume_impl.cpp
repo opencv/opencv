@@ -13,16 +13,17 @@
 namespace cv
 {
 
-Volume::Impl::Impl(const VolumeSettings& _settings) :
-    settings(_settings)
+Volume::Impl::Impl(VolumeSettings _settings) :
 #ifdef HAVE_OPENCL
-    , useGPU(ocl::useOpenCL())
+    useGPU(ocl::useOpenCL())
 #endif
-{}
+{
+    settings = _settings;
+}
 
 // TSDF
 
-TsdfVolume::TsdfVolume(const VolumeSettings& _settings) :
+TsdfVolume::TsdfVolume(VolumeSettings _settings) :
     Volume::Impl(_settings)
 {
     Vec3i volResolution;
@@ -216,7 +217,7 @@ size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 // HASH_TSDF
 
-HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
+HashTsdfVolume::HashTsdfVolume(VolumeSettings _settings) :
     Volume::Impl(_settings)
 {
     Vec3i resolution;
@@ -435,7 +436,7 @@ size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 // COLOR_TSDF
 
-ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& _settings) :
+ColorTsdfVolume::ColorTsdfVolume(VolumeSettings _settings) :
     Volume::Impl(_settings)
 {
     Vec3i volResolution;

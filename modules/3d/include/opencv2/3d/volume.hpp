@@ -17,12 +17,12 @@ class CV_EXPORTS_W Volume
 public:
     /** @brief Constructor of default volume - TSDF.
     */
-    Volume();
+    CV_WRAP Volume();
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
-    Volume(VolumeType vtype, const VolumeSettings& settings);
+    Volume(VolumeType vtype, VolumeSettings settings);
     ~Volume();
 
     /** @brief Integrates the input data to the volume.
@@ -43,7 +43,7 @@ public:
     * @param depth the depth image.
     * @param pose the pose of camera in global coordinates.
     */
-    void integrate(InputArray depth, InputArray pose);
+    CV_WRAP void integrate(InputArray depth, InputArray pose);
 
     /** @brief Integrates the input data to the volume.
 
@@ -99,7 +99,7 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.
@@ -120,7 +120,7 @@ public:
 
     /** @brief clear all data in volume.
     */
-    void reset();
+    CV_WRAP void reset();
 
     /** @brief return visible blocks in volume.
     */

@@ -19,7 +19,7 @@ private:
     // TODO: make debug function, which show histogram of volume points values
     // make this function run with debug lvl == 10
 public:
-    Impl(const VolumeSettings& settings);
+    Impl(VolumeSettings settings);
     virtual ~Impl() {};
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) = 0;
@@ -41,7 +41,7 @@ public:
     virtual size_t getTotalVolumeUnits() const = 0;
 
 public:
-    const VolumeSettings& settings;
+    VolumeSettings settings;
 #ifdef HAVE_OPENCL
     const bool useGPU;
 #endif
@@ -51,7 +51,7 @@ public:
 class TsdfVolume : public Volume::Impl
 {
 public:
-    TsdfVolume(const VolumeSettings& settings);
+    TsdfVolume(VolumeSettings settings);
     ~TsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
@@ -94,7 +94,7 @@ typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 class HashTsdfVolume : public Volume::Impl
 {
 public:
-    HashTsdfVolume(const VolumeSettings& settings);
+    HashTsdfVolume(VolumeSettings settings);
     ~HashTsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
@@ -145,7 +145,7 @@ public:
 class ColorTsdfVolume : public Volume::Impl
 {
 public:
-    ColorTsdfVolume(const VolumeSettings& settings);
+    ColorTsdfVolume(VolumeSettings settings);
     ~ColorTsdfVolume();
 
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
@@ -176,10 +176,10 @@ private:
 
 Volume::Volume()
 {
-    VolumeSettings settings;
+    VolumeSettings settings(VolumeType::TSDF);
     this->impl = makePtr<TsdfVolume>(settings);
 }
-Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
+Volume::Volume(VolumeType vtype, VolumeSettings settings)
 {
     switch (vtype)
     {
