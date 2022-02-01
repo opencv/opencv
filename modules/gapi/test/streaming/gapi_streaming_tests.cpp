@@ -2067,7 +2067,7 @@ namespace {
 
     cv::gapi::wip::IStreamSource::Ptr createTestSource(TestSourceType sourceType,
                                                        const std::string& pipeline) {
-        assert(sourceType == TestSourceType::BGR || sourceType == TestSourceType::NV12);
+        assert(sourceType == TestSourceType::BGR || sourceType == TestSourceType::NV12 || sourceType == TestSourceType::GRAY);
 
         cv::gapi::wip::IStreamSource::Ptr ptr { };
 
