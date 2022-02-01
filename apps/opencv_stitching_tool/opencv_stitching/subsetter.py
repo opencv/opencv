@@ -44,13 +44,12 @@ class Subsetter:
         indices = cv.detail.leaveBiggestComponent(features,
                                                   pairwise_matches,
                                                   self.confidence_threshold)
-        indices_as_list = [int(idx) for idx in list(indices[:, 0])]
 
-        if len(indices_as_list) < 2:
+        if len(indices) < 2:
             raise StitchingError("No match exceeds the "
                                  "given confidence theshold.")
 
-        return indices_as_list
+        return indices
 
     @staticmethod
     def subset_list(list_to_subset, indices):
