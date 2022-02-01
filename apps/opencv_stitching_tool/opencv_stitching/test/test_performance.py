@@ -14,6 +14,7 @@ from stitching_detailed import main
 
 class TestStitcher(unittest.TestCase):
 
+    @unittest.skip("skip performance test (not needed in every run)")
     def test_performance(self):
 
         print("Run new Stitcher class:")
@@ -25,7 +26,6 @@ class TestStitcher(unittest.TestCase):
         stitcher.stitch(["boat5.jpg", "boat2.jpg",
                          "boat3.jpg", "boat4.jpg",
                          "boat1.jpg", "boat6.jpg"])
-        stitcher.collect_garbage()
 
         _, peak_memory = tracemalloc.get_traced_memory()
         tracemalloc.stop()

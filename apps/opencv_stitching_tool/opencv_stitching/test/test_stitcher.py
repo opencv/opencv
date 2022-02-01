@@ -15,7 +15,7 @@ from opencv_stitching.stitcher import Stitcher
 class TestStitcher(unittest.TestCase):
 
     def test_stitcher_aquaduct(self):
-        stitcher = Stitcher(n_features=250)
+        stitcher = Stitcher(nfeatures=250)
         result = stitcher.stitch(["s1.jpg", "s2.jpg"])
         cv.imwrite("result.jpg", result)
 
@@ -30,7 +30,7 @@ class TestStitcher(unittest.TestCase):
                     "wave_correct_kind": "no",
                     "finder": "dp_colorgrad",
                     "compensator": "no",
-                    "conf_thresh": 0.3}
+                    "confidence_threshold": 0.3}
 
         stitcher = Stitcher(**settings)
         result = stitcher.stitch(["boat5.jpg", "boat2.jpg",
@@ -49,7 +49,7 @@ class TestStitcher(unittest.TestCase):
         settings = {"warper_type": "compressedPlaneA2B1",
                     "finder": "dp_colorgrad",
                     "compensator": "channel_blocks",
-                    "conf_thresh": 0.3}
+                    "confidence_threshold": 0.3}
 
         stitcher = Stitcher(**settings)
         result = stitcher.stitch(["boat5.jpg", "boat2.jpg",
@@ -64,7 +64,7 @@ class TestStitcher(unittest.TestCase):
                                    atol=max_image_shape_derivation)
 
     def test_stitcher_boat_aquaduct_subset(self):
-        settings = {"final_megapix": 1}
+        settings = {"final_megapix": 1, "crop": True}
 
         stitcher = Stitcher(**settings)
         result = stitcher.stitch(["boat5.jpg",
@@ -76,7 +76,7 @@ class TestStitcher(unittest.TestCase):
 
         max_image_shape_derivation = 100
         np.testing.assert_allclose(result.shape[:2],
-                                   (839, 3384),
+                                   (705, 3374),
                                    atol=max_image_shape_derivation)
 
     def test_stitcher_budapest(self):

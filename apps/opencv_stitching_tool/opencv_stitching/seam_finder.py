@@ -63,7 +63,14 @@ class SeamFinder:
         return cv.dilate(seam_lines, kernel)
 
     @staticmethod
-    def blend_seam_masks(seam_masks, corners, sizes, colors=[
+    def blend_seam_masks(seam_masks, corners, sizes):
+        imgs = colored_img_generator(sizes)
+        blended_seam_masks, _ = \
+            Blender.create_panorama(imgs, seam_masks, corners, sizes)
+        return blended_seam_masks
+
+
+def colored_img_generator(sizes, colors=(
             (255, 000, 000),      # Blue
             (000, 000, 255),      # Red
             (000, 255, 000),      # Green
@@ -72,21 +79,13 @@ class SeamFinder:
             (128, 128, 255),      # Pink
             (128, 128, 128),      # Gray
             (000, 000, 128),      # Brown
-            (000, 128, 255)]      # Orange
+            (000, 128, 255))      # Orange
             ):
-
-        blender = Blender("no")
-        blender.prepare(corners, sizes)
-
-        for idx, (seam_mask, size, corner) in enumerate(
-                zip(seam_masks, sizes, corners)):
-            if idx+1 > len(colors):
-                raise ValueError("Not enough default colors! Pass additional "
-                                 "colors to \"colors\" parameter")
-            one_color_img = create_img_by_size(size, colors[idx])
-            blender.feed(one_color_img, seam_mask, corner)
-
-        return blender.blend()
+    for idx, size in enumerate(sizes):
+        if idx+1 > len(colors):
+            raise ValueError("Not enough default colors! Pass additional "
+                             "colors to \"colors\" parameter")
+        yield create_img_by_size(size, colors[idx])
 
 
 def create_img_by_size(size, color=(0, 0, 0)):
