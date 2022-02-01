@@ -2130,7 +2130,7 @@ namespace {
     static std::map<TestAccessType, GapiFunction> gapi_functions = {
         { TestAccessType::BGR, cv::gapi::streaming::BGR },
         { TestAccessType::Y,   cv::gapi::streaming::Y   },
-        { TestAccessType::UV,  cv::gapi::streaming::UV  },
+        { TestAccessType::UV,  cv::gapi::streaming::UV  }
     };
 
     using RefFunction = std::function<cv::Mat(const cv::Mat&)>;
