@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..')))
 
 from opencv_stitching.megapix_scaler import MegapixScaler, MegapixDownscaler
-#%%
+# %%
 
 
 class TestScaler(unittest.TestCase):

@@ -21,8 +21,8 @@ class TestStitcher(unittest.TestCase):
 
         max_image_shape_derivation = 3
         np.testing.assert_allclose(result.shape[:2],
-                                    (700, 1811),
-                                    atol=max_image_shape_derivation)
+                                   (700, 1811),
+                                   atol=max_image_shape_derivation)
 
     @unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat1(self):
@@ -76,8 +76,8 @@ class TestStitcher(unittest.TestCase):
 
         max_image_shape_derivation = 100
         np.testing.assert_allclose(result.shape[:2],
-                                    (705, 3374),
-                                    atol=max_image_shape_derivation)
+                                   (705, 3374),
+                                   atol=max_image_shape_derivation)
 
     def test_stitcher_budapest(self):
         settings = {"matcher_type": "affine",
@@ -96,8 +96,8 @@ class TestStitcher(unittest.TestCase):
 
         max_image_shape_derivation = 50
         np.testing.assert_allclose(result.shape[:2],
-                                    (1155, 2310),
-                                    atol=max_image_shape_derivation)
+                                   (1155, 2310),
+                                   atol=max_image_shape_derivation)
 
 
 def starttest():

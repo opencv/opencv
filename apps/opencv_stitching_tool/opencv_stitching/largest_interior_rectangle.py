@@ -2,6 +2,8 @@ import numpy as np
 import numba as nb
 import cv2 as cv
 
+from .stitching_error import StitchingError
+
 
 def largest_interior_rectangle(cells):
     outline = get_outline(cells)
@@ -22,8 +24,8 @@ def get_outline(cells):
         cv.findContours(cells, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
     # TODO support multiple contours
     # test that only one regular contour exists
-    assert hierarchy.shape == (1, 1, 4)
-    assert np.all(hierarchy == -1)
+    if not hierarchy.shape == (1, 1, 4) or not np.all(hierarchy == -1):
+        raise StitchingError("Invalid Contour. Try without cropping.")
     contour = contours[0][:, 0, :]
     x_values = contour[:, 0].astype("uint32", order="C")
     y_values = contour[:, 1].astype("uint32", order="C")
@@ -212,7 +214,7 @@ def get_xy_arrays(x, y, spans_all_directions):
 
 
 @nb.njit(cache=True)
-def check_if_point_on_outline(x, y, outline):
+def point_on_outline(x, y, outline):
     x_vals, y_vals = outline
     x_true = x_vals == x
     y_true = y_vals == y
@@ -221,7 +223,7 @@ def check_if_point_on_outline(x, y, outline):
 
 
 @nb.njit('Tuple((uint32[:,:,::1], uint8[:,::1], uint8[:,::1]))'
-         '(UniTuple(uint32[:], 2), UniTuple(uint32[:,::1], 4))', 
+         '(UniTuple(uint32[:], 2), UniTuple(uint32[:,::1], 4))',
          parallel=True, cache=True)
 def create_maps(outline, adjacencies):
     x_values, y_values = outline
@@ -248,9 +250,8 @@ def create_maps(outline, adjacencies):
                 w, h = span_array[span_idx][0], span_array[span_idx][1]
                 if w*h > span_map[y, x, 0] * span_map[y, x, 1]:
                     span_map[y, x, :] = np.array([w, h], "uint32")
-                if n == 3:
-                    if not check_if_point_on_outline(x, y, outline):
-                        saddle_candidates_map[y, x] = np.uint8(255)
+                if n == 3 and not point_on_outline(x, y, outline):
+                    saddle_candidates_map[y, x] = np.uint8(255)
 
     return span_map, direction_map, saddle_candidates_map
 
