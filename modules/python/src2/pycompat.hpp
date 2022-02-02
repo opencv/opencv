@@ -207,7 +207,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyTypeObject pyopencv_##WNAME##_TypeXXX = \
     { \
         CVPY_TYPE_HEAD \
-        MODULESTR #SCOPE"."#NAME, \
+        MODULESTR SCOPE"."#NAME, \
         sizeof(pyopencv_##WNAME##_t), \
     }; \
     static PyTypeObject * pyopencv_##WNAME##_TypePtr = &pyopencv_##WNAME##_TypeXXX; \
@@ -234,7 +234,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##WNAME##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR #SCOPE"."#NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#NAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
@@ -255,9 +255,9 @@ PyObject* pyopencv_from(const TYPE& src)                                        
             ERROR_HANDLER; \
         } \
         CVPY_TYPE_INCREF(pyopencv_##WNAME##_TypePtr); \
-        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, #SCOPE, #WNAME)) \
+        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, SCOPE, #WNAME)) \
         { \
-            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " #SCOPE " \n"); \
+            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " SCOPE " \n"); \
             ERROR_HANDLER; \
         } \
     }
@@ -294,7 +294,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##WNAME##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR #SCOPE"."#NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#NAME" %p>", self); \
         return PyString_FromString(str); \
     } \
     static PyType_Slot pyopencv_##WNAME##_Slots[] =  \
@@ -310,7 +310,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     }; \
     static PyType_Spec pyopencv_##WNAME##_Spec = \
     { \
-        MODULESTR #SCOPE"."#NAME, \
+        MODULESTR SCOPE"."#NAME, \
         sizeof(pyopencv_##WNAME##_t), \
         0, \
         Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, \
@@ -335,9 +335,9 @@ PyObject* pyopencv_from(const TYPE& src)                                        
             printf("Failed to create type from spec: " #WNAME ", base (" #BASE ")\n"); \
             ERROR_HANDLER; \
         } \
-        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, #SCOPE, #WNAME)) \
+        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, SCOPE, #WNAME)) \
         { \
-            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " #SCOPE " \n"); \
+            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " SCOPE " \n"); \
             ERROR_HANDLER; \
         } \
     }

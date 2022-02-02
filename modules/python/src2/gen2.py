@@ -365,7 +365,7 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return "CVPY_TYPE({}, {}, {}, {}, {}, {}, {});\n".format(
+        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}");\n'.format(
             self.wname,
             self.sname,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
