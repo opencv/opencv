@@ -142,18 +142,20 @@ void GStreamerSource::Priv::configureAppsink() {
     gst_app_sink_set_emit_signals(GST_APP_SINK(m_appsink.get()), FALSE);
 
     //GStreamerPtr<GstCaps> nv12Caps(gst_caps_from_string(NV12_CAPS_STRING));
-    GStreamerPtr<GstCaps> gstCaps;
+    //GStreamerPtr<GstCaps> *gstCaps;
+    GstCaps *gstCaps;
     switch (m_type) {
-        case NV12: {
-            gstCaps(gst_caps_from_string(NV12_CAPS_STRING));
+        case GST_VIDEO_FORMAT_NV12: {
+            gstCaps = gst_caps_from_string(NV12_CAPS_STRING);
             break;
         }
-        case GRAY8: {
-            gstCaps(gst_caps_from_string(GRAY_CAPS_STRING));
+        case GST_VIDEO_FORMAT_GRAY8: {
+            gstCaps = gst_caps_from_string(GRAY_CAPS_STRING);
             break;
         }
         default: {
             GAPI_Assert(false && "Can't retrieve gstCaps from string - unsupported GStreamerSource FRAME type.");
+        }
     }
 
 
@@ -209,11 +211,11 @@ void GStreamerSource::Priv::prepareVideoMeta()
             case GStreamerSource::OutputType::FRAME: {
                 // Construct metadata for media frame.
                 switch (m_type) {
-                    case NV12: {
+                    case GST_VIDEO_FORMAT_NV12: {
                         m_mediaFrameMeta = GFrameDesc{ cv::MediaFormat::NV12, cv::Size(width, height) };
                         break;
                     }
-                    case GRAY8: {
+                    case GST_VIDEO_FORMAT_GRAY8: {
                         m_mediaFrameMeta = GFrameDesc{ cv::MediaFormat::GRAY, cv::Size(width, height) };
                         break;
                     }
@@ -306,36 +308,37 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
     try
     {
         switch (m_type) {
-        case NV12: {
-            // m_matMeta holds width and height for 8U BGR frame, but actual
-            // frame m_buffer we request from GStreamer pipeline has 8U NV12 format.
-            // Constructing y and uv cv::Mat-s from such a m_buffer:
-            GAPI_Assert((uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 1) ==
-                (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
+            case GST_VIDEO_FORMAT_NV12: {
+                // m_matMeta holds width and height for 8U BGR frame, but actual
+                // frame m_buffer we request from GStreamer pipeline has 8U NV12 format.
+                // Constructing y and uv cv::Mat-s from such a m_buffer:
+                GAPI_Assert((uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 1) ==
+                    (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
                 GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1));
 
-            cv::Mat y(m_matMeta.size, CV_8UC1,
-                (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
-                GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
-                GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 0));
-            cv::Mat uv(m_matMeta.size / 2, CV_8UC2,
-                (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
-                GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1),
-                GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 1));
+                cv::Mat y(m_matMeta.size, CV_8UC1,
+                    (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
+                    GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
+                    GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 0));
+                cv::Mat uv(m_matMeta.size / 2, CV_8UC2,
+                    (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
+                    GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1),
+                    GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 1));
 
-            cv::cvtColorTwoPlane(y, uv, data, cv::COLOR_YUV2BGR_NV12);
-            break;
-        }
-        case GRAY8: {
-            cv::Mat y(m_matMeta.size, CV_8UC1,
-                (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
-                GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
-                GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 0));
-            cv::cvtColor(y, data, cv::COLOR_GRAY2BGR);
-            break;
-        }
-        default: {
-            GAPI_Assert(false && "retrieveFrame - unsupported GStreamerSource FRAME type.");
+                cv::cvtColorTwoPlane(y, uv, data, cv::COLOR_YUV2BGR_NV12);
+                break;
+           }
+           case GST_VIDEO_FORMAT_GRAY8: {
+                cv::Mat y(m_matMeta.size, CV_8UC1,
+                    (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
+                    GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
+                    GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 0));
+                cv::cvtColor(y, data, cv::COLOR_GRAY2BGR);
+                break;
+           }
+           default: {
+                GAPI_Assert(false && "retrieveFrame - unsupported GStreamerSource FRAME type.");
+           }
         }
     }
     catch (...)
