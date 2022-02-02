@@ -192,6 +192,34 @@ MULC_SIMD(float, float)
 
 #undef MULC_SIMD
 
+#define DIVC_SIMD(SRC, DST)                                                              \
+int divc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan, const float scale,                       \
+              const int set_mask_flag)                                                   \
+{                                                                                        \
+    CV_CPU_DISPATCH(divc_simd, (in, scalar, out, length, chan, scale, set_mask_flag),    \
+                    CV_CPU_DISPATCH_MODES_ALL);                                          \
+}
+
+DIVC_SIMD(uchar, uchar)
+DIVC_SIMD(ushort, uchar)
+DIVC_SIMD(short, uchar)
+DIVC_SIMD(float, uchar)
+DIVC_SIMD(short, short)
+DIVC_SIMD(ushort, short)
+DIVC_SIMD(uchar, short)
+DIVC_SIMD(float, short)
+DIVC_SIMD(ushort, ushort)
+DIVC_SIMD(uchar, ushort)
+DIVC_SIMD(short, ushort)
+DIVC_SIMD(float, ushort)
+DIVC_SIMD(uchar, float)
+DIVC_SIMD(ushort, float)
+DIVC_SIMD(short, float)
+DIVC_SIMD(float, float)
+
+#undef DIVC_SIMD
+
 #define ABSDIFFC_SIMD(SRC)                                               \
 int absdiffc_simd(const SRC in[], const float scalar[], SRC out[],       \
                   const int length, const int chan)                      \
