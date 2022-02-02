@@ -161,14 +161,12 @@ void GStreamerSource::Priv::configureAppsink() {
 
     GStreamerPtr<GstPad> appsinkPad(gst_element_get_static_pad(m_appsink, "sink"));
     GStreamerPtr<GstCaps> peerCaps(gst_pad_peer_query_caps(appsinkPad, NULL));
-    //if (!gst_caps_can_intersect(peerCaps, nv12Caps)) {
     if (!gst_caps_can_intersect(peerCaps, gstCaps)) {
         cv::util::throw_error(
             std::logic_error("appsink element can only consume video-frame in NV12 or GRAY8 format in "
                              "GStreamerSource"));
     }
 
-    //gst_app_sink_set_caps(GST_APP_SINK(m_appsink.get()), nv12Caps);
     gst_app_sink_set_caps(GST_APP_SINK(m_appsink.get()), gstCaps);
 
     gst_pad_add_probe(appsinkPad, GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM, appsinkQueryCallback,
@@ -314,7 +312,7 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
                 // Constructing y and uv cv::Mat-s from such a m_buffer:
                 GAPI_Assert((uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 1) ==
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
-                GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1));
+                    GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1));
 
                 cv::Mat y(m_matMeta.size, CV_8UC1,
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
@@ -327,18 +325,18 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
 
                 cv::cvtColorTwoPlane(y, uv, data, cv::COLOR_YUV2BGR_NV12);
                 break;
-           }
-           case GST_VIDEO_FORMAT_GRAY8: {
+            }
+            case GST_VIDEO_FORMAT_GRAY8: {
                 cv::Mat y(m_matMeta.size, CV_8UC1,
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
                     GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
                     GST_VIDEO_FRAME_PLANE_STRIDE(&videoFrame, 0));
                 cv::cvtColor(y, data, cv::COLOR_GRAY2BGR);
                 break;
-           }
-           default: {
+            }
+            default: {
                 GAPI_Assert(false && "retrieveFrame - unsupported GStreamerSource FRAME type.");
-           }
+            }
         }
     }
     catch (...)
