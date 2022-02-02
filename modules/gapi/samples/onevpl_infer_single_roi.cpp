@@ -145,12 +145,6 @@ using GRect       = cv::GOpaque<cv::Rect>;
 using GSize       = cv::GOpaque<cv::Size>;
 using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-ssd") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &, const cv::GOpaqueDesc &) {
-        return cv::empty_array_desc();
-    }
-};
-
 // TODO: It duplicates infer_single_roi sample
 G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
     static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &) {
@@ -160,6 +154,12 @@ G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
 
 G_API_OP(BBoxes, <GPrims(GDetections, GRect)>, "sample.custom.b-boxes") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GOpaqueDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
+G_API_OP(RescaleByROI, <GDetections(GDetections, GRect, GSize)>, "sample.custom.rescale-by-roi") {
+    static cv::GArrayDesc outMeta(const cv::GArrayDesc&, const cv::GOpaqueDesc&, const cv::GOpaqueDesc&) {
         return cv::empty_array_desc();
     }
 };
@@ -207,51 +207,16 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
     }
 };
 
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Rect &in_roi,
-                    const cv::Size &in_parent_size,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        GAPI_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-        GAPI_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Size up_roi = in_roi.size();
-        const cv::Rect surface({0,0}, in_parent_size);
-
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-            (void) label; // unused
-
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-
-            // map relative coordinates to the original image scale
-            // taking the ROI into account
-            cv::Rect rc;
-            rc.x      = static_cast<int>(rc_left   * up_roi.width);
-            rc.y      = static_cast<int>(rc_top    * up_roi.height);
-            rc.width  = static_cast<int>(rc_right  * up_roi.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * up_roi.height) - rc.y;
-            rc.x += in_roi.x;
-            rc.y += in_roi.y;
-            out_objects.emplace_back(rc & surface);
+GAPI_OCV_KERNEL(OCVRescaleByROI, RescaleByROI) {
+    static void run(const std::vector<cv::Rect>& in_objects,
+                    const cv::Rect& in_roi,
+                    const cv::Size& in_size,
+                    std::vector<cv::Rect>& out_objects) {
+        for (auto&& rc : in_objects) {
+            out_objects.emplace_back(int(float(rc.x) / in_size.width * in_roi.width) + in_roi.x,
+                                     int(float(rc.y) / in_size.height * in_roi.height) + in_roi.y,
+                                     int(float(rc.width) / in_size.width * in_roi.width),
+                                     int(float(rc.height) / in_size.height * in_roi.height));
         }
     }
 };
@@ -403,8 +368,8 @@ int main(int argc, char *argv[]) {
 
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
-        , custom::OCVParseSSD
-        , custom::OCVBBoxes>();
+        , custom::OCVBBoxes
+        , custom::OCVRescaleByROI>();
     auto networks = cv::gapi::networks(face_net);
     auto face_detection_args = cv::compile_args(networks, kernels);
     if (streaming_queue_capacity != 0) {
@@ -449,9 +414,9 @@ int main(int argc, char *argv[]) {
                   << std::endl;
         graph_inputs += cv::GIn(in_roi);
         inputs += cv::gin(opt_roi.value());
-    }
     auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
-    cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, in_roi, size);
+    auto temp_rcs = cv::gapi::parseSSD(blob, size, 0.5f, false, true);
+    auto rcs = custom::RescaleByROI::on(temp_rcs, in_roi, size);
     auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, in_roi));
     auto out = cv::gapi::streaming::BGR(out_frame);
     cv::GStreamingCompiled pipeline = cv::GComputation(std::move(graph_inputs), cv::GOut(out))   // and move here

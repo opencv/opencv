@@ -82,6 +82,12 @@ G_API_OP(BBoxes, <GPrims(GDetections, GRect)>, "sample.custom.b-boxes") {
     }
 };
 
+G_API_OP(RescaleByROI, <GDetections(GDetections, GRect, GSize)>, "sample.custom.rescale-by-roi") {
+    static cv::GArrayDesc outMeta(const cv::GArrayDesc&, const cv::GOpaqueDesc&, const cv::GOpaqueDesc&) {
+        return cv::empty_array_desc();
+    }
+};
+
 GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     // This is the place where we can run extra analytics
     // on the input image frame and select the ROI (region
@@ -124,6 +130,21 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
     }
 };
 
+
+GAPI_OCV_KERNEL(OCVRescaleByROI, RescaleByROI) {
+    static void run(const std::vector<cv::Rect>& in_objects,
+                    const cv::Rect& in_roi,
+                    const cv::Size& in_size,
+                    std::vector<cv::Rect>& out_objects) {
+        for (auto&& rc : in_objects) {
+            out_objects.emplace_back(int(float(rc.x) / in_size.width * in_roi.width) + in_roi.x,
+                                     int(float(rc.y) / in_size.height * in_roi.height) + in_roi.y,
+                                     int(float(rc.width) / in_size.width * in_roi.width),
+                                     int(float(rc.height) / in_size.height * in_roi.height));
+        }
+    }
+};
+
 } // namespace custom
 
 int main(int argc, char *argv[])
@@ -146,7 +167,8 @@ int main(int argc, char *argv[])
     };
     auto kernels = cv::gapi::kernels
         <custom::OCVLocateROI
-        , custom::OCVBBoxes>();
+        , custom::OCVBBoxes
+        , custom::OCVRescaleByROI>();
     auto networks = cv::gapi::networks(face_net);
 
     // Now build the graph. The graph structure may vary
@@ -164,7 +186,8 @@ int main(int argc, char *argv[])
                   << std::endl;
         cv::GOpaque<cv::Rect> in_roi;
         auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
-        cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
+        auto temp_rcs = cv::gapi::parseSSD(blob, sz, 0.5f, false, true);
+        auto rcs = custom::RescaleByROI::on(temp_rcs, in_roi, sz);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, in_roi));
         pipeline  = cv::GComputation(cv::GIn(in, in_roi), cv::GOut(out))
             .compileStreaming(cv::compile_args(kernels, networks));
@@ -177,7 +200,8 @@ int main(int argc, char *argv[])
                   << std::endl;
         cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(in);
         auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-        cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
+        auto temp_rcs = cv::gapi::parseSSD(blob, sz, 0.5f, false, true);
+        auto rcs = custom::RescaleByROI::on(temp_rcs, roi, sz);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, roi));
         pipeline  = cv::GComputation(cv::GIn(in), cv::GOut(out))
             .compileStreaming(cv::compile_args(kernels, networks));
