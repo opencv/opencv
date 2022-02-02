@@ -75,7 +75,7 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 

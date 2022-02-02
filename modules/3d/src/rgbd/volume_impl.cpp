@@ -141,8 +141,8 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryF
 
 void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
-    if (_colors.needed())
-        CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+    //if (_colors.needed())
+    //    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 
     CV_Assert(height > 0);
     CV_Assert(width > 0);
