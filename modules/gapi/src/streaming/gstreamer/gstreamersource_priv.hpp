@@ -59,6 +59,7 @@ protected:
     bool m_isPipelinePlaying = false;
 
     int64_t m_frameId = 0L;
+    size_t m_type = 0;
 
 protected:
     void configureAppsink();
