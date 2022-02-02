@@ -179,27 +179,6 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                         auto *dec_surface = pending_op.second;
                         auto *vpp_suface = my_sess.vpp_surface_ptr.lock()->get_handle();
 
-
-                        // TODO: consider CROP/ROI here
-                        static int x_offset = 0;
-                        static int y_offset = 0;
-                        if (100 + x_offset >=dec_surface->Info.Width
-                            ||
-                            100 + y_offset >= dec_surface->Info.Height) {
-                            x_offset = 0;
-                            y_offset = 0;
-                        }
-                        dec_surface->Info.CropX = x_offset;
-                        dec_surface->Info.CropY = y_offset;
-                        dec_surface->Info.CropW = 100 + x_offset;
-                        dec_surface->Info.CropH = 100 + y_offset;
-
-                        vpp_suface->Info.CropX = x_offset;
-                        vpp_suface->Info.CropY = y_offset;
-                        vpp_suface->Info.CropW = 100 + x_offset;
-                        vpp_suface->Info.CropH = 100 + y_offset;
-                        x_offset++;
-                        y_offset++;
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,

@@ -326,6 +326,22 @@ void decode_function(cv::gapi::wip::onevpl::VPLLegacyDecodeEngine &decode_engine
     queue.push_stop();
 }
 
+void decode_function_engine_shutdown(mfxSession mfx_decode_session,
+                                     const std::vector<cv::gapi::wip::onevpl::CfgParam> &cfg_params,
+                                     std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> data_provider,
+                                     SafeQueue &queue,
+                                     size_t &decoded_number,
+                                     std::unique_ptr<cv::gapi::wip::onevpl::VPLAccelerationPolicy> &&accel) {
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+
+    VPLLegacyDecodeEngine decode_engine(std::move(accel));
+    auto sess_ptr = decode_engine.initialize_session(mfx_decode_session,
+                                                     cfg_params,
+                                                     data_provider);
+    decode_function(decode_engine, sess_ptr, queue, decoded_number);
+}
+
 void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, SafeQueue&queue,
                       size_t &preproc_number, InferenceEngine::InputInfo::CPtr cptr,
                       const cv::util::optional<cv::Rect> &roi_rect = {}) {
@@ -361,12 +377,22 @@ void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, S
             ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                       first_pp_sess.get<EngineSession>().get());
 
-            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame, empty_roi);
+            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame, roi_rect);
             cv::GFrameDesc pp_desc = pp_frame.desc();
             ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
             in_progress = false;
             decoded_frame = cv::MediaFrame();
             preproc_number++;
+
+            /*
+            cv::Mat bgr;
+            auto view = pp_frame.access(cv::MediaFrame::Access::R);
+            auto desc = pp_frame.desc();
+            cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
+            cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
+            cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
+            cv::imshow("PP", bgr);
+            cv::waitKey(1);*/
         }
     } catch (...) {}
 
@@ -533,6 +559,71 @@ preproc_roi_args_t files_w_roi[] = {
 INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI, VPPPreprocROIParams,
                         testing::ValuesIn(files_w_roi));
 
+using VPPPreprocROIParamsShutdown = VPPPreprocROIParams;
+TEST_P(VPPPreprocROIParamsShutdown, functional_roi_different_threads_with_shutdown)
+{
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+    source_t file_path;
+    decoder_t decoder_id;
+    acceleration_t accel;
+    out_resolution_t resolution;
+    cv::Rect roi;
+    std::tie(file_path, decoder_id, accel, resolution, roi) = GetParam();
+
+    file_path = findDataFile(file_path);
+
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(accel));
+    std::unique_ptr<VPLAccelerationPolicy> decode_accel_policy (
+                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
+
+    // create file data provider
+    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
+                                                    {CfgParam::create_decoder_id(decoder_id)}));
+
+    mfxLoader mfx{};
+    mfxConfig mfx_cfg{};
+    std::tie(mfx, mfx_cfg) = prepare_mfx(decoder_id, accel);
+
+    // create decode session
+    mfxSession mfx_decode_session{};
+    mfxStatus sts = MFXCreateSession(mfx, 0, &mfx_decode_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // create decode engine
+    auto device_selector = decode_accel_policy->get_device_selector();
+
+    // put mock net info
+    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(resolution.first,
+                                                              resolution.second);
+
+    // create VPP preproc engine
+    VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
+                                                new VPLDX11AccelerationPolicy(device_selector)});
+
+    // launch threads
+    SafeQueue queue;
+    size_t decoded_number = 1;
+    size_t preproc_number = 0;
+
+    cv::util::optional<cv::Rect> opt_roi = cv::util::make_optional(roi);
+    cfg_params_w_dx11.push_back(CfgParam::create_frames_pool_size(50));
+    std::thread decode_thread(decode_function_engine_shutdown, mfx_decode_session,
+                              std::cref(cfg_params_w_dx11), data_provider,
+                              std::ref(queue), std::ref(decoded_number),
+                              std::move(decode_accel_policy));
+    std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
+                               std::ref(queue), std::ref(preproc_number), cptr,
+                               std::cref(opt_roi));
+
+    decode_thread.join();
+    preproc_thread.join();
+    ASSERT_EQ(preproc_number, decoded_number);
+}
+
+INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI_EngineShutdown, VPPPreprocROIParamsShutdown,
+                        testing::ValuesIn(files_w_roi));
 
 using VPPInnerPreprocParams = VPPPreprocParams;
 TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)

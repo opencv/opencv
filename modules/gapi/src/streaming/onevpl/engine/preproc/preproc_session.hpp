@@ -46,9 +46,14 @@ private:
         cv::util::optional<cv::Rect> roi;
     };
 
-    using out_op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
+    struct out_op_handle {
+        mfxSyncPoint sync_handle;
+        mfxFrameSurface1* surface_handle;
+        mfxFrameSurface1* retained_handle;
+    };
+
     std::queue<in_op_handle> sync_in_queue;
-    std::queue<out_op_handle_t> vpp_out_queue;
+    std::queue<out_op_handle> vpp_out_queue;
 
     int64_t preprocessed_frames_count;
 };

@@ -60,10 +60,15 @@ private:
 
     // NB: no need to protect by mutex at now
     using decoded_frame_key_t = void*;
-    std::unordered_map<decoded_frame_key_t, cv::MediaFrame> pending_decoded_frames_sync;
+    struct PreprocFrameDescr {
+        cv::MediaFrame frame;
+        Surface::info_t frame_info;
+    };
+    std::unordered_map<decoded_frame_key_t, PreprocFrameDescr> pending_decoded_frames_sync;
 
     void abandon_decode_frame(decoded_frame_key_t key);
-    void remember_decode_frame(decoded_frame_key_t key, const cv::MediaFrame& in_frame);
+    void remember_decode_frame(decoded_frame_key_t key, const cv::MediaFrame& in_frame,
+                               const Surface::info_t &frame_info);
 };
 } // namespace onevpl
 } // namespace wip

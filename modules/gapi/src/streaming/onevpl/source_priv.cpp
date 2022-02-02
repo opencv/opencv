@@ -335,13 +335,15 @@ bool GSource::Priv::pull(cv::gapi::wip::Data& data)
         status = engine->process(mfx_session);
     }
 
+    bool result = false;
     if (engine->get_ready_frames_count()) {
         engine->get_frame(data);
         consumed_frames_count++;
-        return true;
-    } else {
-        return false;
+        result = true;
     }
+    GAPI_LOG_DEBUG(nullptr, "result: " << result <<
+                            ", total consumed frames: " << consumed_frames_count);
+    return result;
 }
 
 GMetaArg GSource::Priv::descr_of() const

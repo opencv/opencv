@@ -88,41 +88,30 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         cv::util::optional<cv::Rect> old_roi =
                                 apply_roi(dec_surface, std::move(pending_op.roi));
                         auto *vpp_suface = my_sess.procesing_surface_ptr.lock()->get_handle();
-/*                        vpp_suface->Info.CropX = dec_surface->Info.CropX;
-                        vpp_suface->Info.CropY = dec_surface->Info.CropY;
-                        vpp_suface->Info.CropW = dec_surface->Info.CropW;
-                        vpp_suface->Info.CropH = dec_surface->Info.CropH;
-*/
-                        session_type::out_op_handle_t vpp_op {pending_op.sync_handle, nullptr};
+
+                        session_type::out_op_handle vpp_op {pending_op.sync_handle, nullptr};
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            dec_surface,
                                                                            vpp_suface,
-                                                                           nullptr, &vpp_op.first);
-                        vpp_op.second = vpp_suface;
+                                                                           nullptr, &vpp_op.sync_handle);
+                        vpp_op.surface_handle = vpp_suface;
+                        vpp_op.retained_handle = dec_surface;
                         GAPI_LOG_DEBUG(nullptr, "Got VPP async operation" <<
                                                 ", sync id:  " <<
-                                                vpp_op.first <<
+                                                vpp_op.sync_handle <<
                                                 ", dec surface:  " <<
                                                 dec_surface <<
                                                 ", trans surface: " <<
-                                                vpp_op.second <<
+                                                vpp_op.surface_handle <<
                                                 ", status: " <<
                                                 mfxstatus_to_string(my_sess.last_status));
-                        GAPI_Assert(dec_surface != vpp_op.second &&
+                        GAPI_Assert(dec_surface != vpp_op.surface_handle &&
                                     "Unexpected out VPP surface");
-                        // NB: independently from result code
-                        // we no need in decoding frame anymore: because we had pulled
-                        // decoding frames to this point by onevpl::Surface highlevel locking
-                        // mechanism and after that we adhere existing MFX/VPL inner locking mechanism
-                        // on native mfxSurface pointer
-                        apply_roi(dec_surface, std::move(old_roi),
-                                  "restore ROI: ");
-                        abandon_decode_frame(dec_surface);
 
                          // NB: process status
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
-                            vpp_op.second->Data.Locked++; // TODO -S- workaround
+                            vpp_op.surface_handle->Data.Locked++; // TODO -S- workaround
                             my_sess.vpp_out_queue.emplace(vpp_op);
                         }
                     }
@@ -154,21 +143,28 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             session_type& my_sess = static_cast<session_type&>(sess);
             do {
                 if (!my_sess.vpp_out_queue.empty()) { // FIFO: check the oldest async operation complete
-                    session_type::out_op_handle_t& pending_op = my_sess.vpp_out_queue.front();
-                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
+                    session_type::out_op_handle& pending_op = my_sess.vpp_out_queue.front();
+                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.sync_handle, 0);
 
                     GAPI_LOG_DEBUG(nullptr, "pending VPP operations count: " <<
                                             my_sess.vpp_out_queue.size() <<
                                             ", sync id:  " <<
-                                            pending_op.first <<
+                                            pending_op.sync_handle <<
                                             ", surface:  " <<
-                                            pending_op.second <<
+                                            pending_op.surface_handle <<
                                             ", status: " <<
                                             mfxstatus_to_string(my_sess.last_status));
 
                     // put frames in ready queue on success
                     if (MFX_ERR_NONE == sess.last_status) {
-                        on_frame_ready(my_sess, pending_op.second);
+                        // we no need in decoding frame anymore: because we had pulled
+                        // decoding frames to this point by onevpl::Surface highlevel locking
+                        // mechanism and after that we adhere existing MFX/VPL inner locking mechanism
+                        // on native mfxSurface pointer
+                        //apply_roi(dec_surface, std::move(old_roi),
+                        //          "restore ROI: ");
+                        abandon_decode_frame(pending_op.retained_handle);
+                        on_frame_ready(my_sess, pending_op.surface_handle);
                     }
                 }
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_out_queue.empty());
@@ -191,8 +187,9 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
         ret = cv::util::make_optional<pp_params>(
                         pp_params::create<vpp_pp_params>(vpl_adapter->get_session_handle(),
                                                          vpl_adapter->get_surface()->get_info()));
-        GAPI_LOG_DEBUG(nullptr, "VPP preprocessing applicable, session [" <<
-                                vpl_adapter->get_session_handle() << "]");
+        GAPI_LOG_DEBUG(nullptr, "VPP preprocessing applicable, session producer [" <<
+                                vpl_adapter->get_session_handle() << "]" <<
+                                ", frame id: " << reinterpret_cast<void*>(vpl_adapter));
     }
     return ret;
 }
@@ -388,7 +385,9 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session &sess, const cv::Medi
                                                    vpl_adapter->get_surface()->get_handle(),
                                                    roi};
     s->sync_in_queue.emplace(in_preproc_request);
-    remember_decode_frame(vpl_adapter->get_surface()->get_handle(), in_frame);
+    remember_decode_frame(vpl_adapter->get_surface()->get_handle(),
+                          in_frame,
+                          vpl_adapter->get_surface()->get_info());
 
     // invoke pipeline to transform decoded surface into preprocessed surface
     try
@@ -508,13 +507,17 @@ void VPPPreprocEngine::abandon_decode_frame(decoded_frame_key_t key) {
         GAPI_Assert(false && "Frame is missing");
     }
 
+    memcpy(&(reinterpret_cast<Surface::handle_t*>(key)->Info),
+            &it->second.frame_info, sizeof(Surface::info_t));
     pending_decoded_frames_sync.erase(it);
 }
 
 void VPPPreprocEngine::remember_decode_frame(decoded_frame_key_t key,
-                                             const cv::MediaFrame& in_frame) {
+                                             const cv::MediaFrame& in_frame,
+                                             const Surface::info_t& frame_info) {
     if (!pending_decoded_frames_sync.emplace(key,
-                                             in_frame).second) {
+                                             PreprocFrameDescr{in_frame,
+                                                               frame_info}).second) {
         GAPI_LOG_WARNING(nullptr, "Cannot remember decoded_frame for key: " <<
                                   key <<
                                   " - it has existed already, total frames: " <<
