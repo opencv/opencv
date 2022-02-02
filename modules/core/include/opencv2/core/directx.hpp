@@ -44,6 +44,7 @@
 
 #include "mat.hpp"
 #include "ocl.hpp"
+#include <CL/cl.h> // cl_mem
 
 #if !defined(__d3d11_h__)
 struct ID3D11Device;
@@ -128,6 +129,14 @@ CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11T
 //! @param pD3D11Texture2D - source D3D11 texture
 //! @param dst             - destination OutputArray
 CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst);
+
+//! @brief Converts ID3D11Texture2D to cl_mem (OpenCL image2d_t).
+//
+//! @note Note: Function creates an OpenCL 2D image object from a subresource of a Direct3D 11 2D texture
+//
+//! @param pD3D11Texture2D - source D3D11 texture
+//! @return OpenCL image2d_t object
+CV_EXPORTS cl_mem convertFromD3D11Texture2DtoCLImage(ID3D11Texture2D* pD3D11Texture2D);
 
 //! @brief Converts InputArray to ID3D10Texture2D
 //

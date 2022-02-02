@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "test_precomp.hpp"
@@ -13,6 +13,10 @@
 #include <opencv2/gapi/gpu/ggpukernel.hpp>
 #include "opencl_kernels_test_gapi.hpp"
 
+#ifdef HAVE_DIRECTX
+#include <d3d11.h>
+#include "opencv2/core/directx.hpp"
+#endif // HAVE_DIRECTX
 
 namespace cv
 {
@@ -202,6 +206,89 @@ TEST(GPU, Symm7x7_test)
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
-#endif
+
+#ifdef HAVE_DIRECTX
+TEST(GPU_D3D11, ConvTexture2DtoCLmem)
+{
+    // Create test data ///////////////////////////////////////////////////////
+    const int width = 100;
+    const int height = 100;
+    const int total = width * height;
+
+    std::vector<uint8_t> test_data;
+    for (int i = 0; i < total; ++i) {
+        test_data.push_back(uint8_t(i));
+    }
+
+    // Associate subresource with test data
+    D3D11_SUBRESOURCE_DATA initData = { test_data.data(),
+                                        sizeof(uint8_t) * width,
+                                        height };
+
+    // Create texture description
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_A8_UNORM; // CV_8U
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+    desc.CPUAccessFlags = 0; // 0 if CPU access is not required
+
+    HRESULT hr;
+
+    // Create device
+    ID3D11Device* mDevice = nullptr;
+    hr = D3D11CreateDevice(nullptr,
+                           D3D_DRIVER_TYPE_HARDWARE,
+                           nullptr,
+                           0,
+                           nullptr,
+                           0,
+                           D3D11_SDK_VERSION,
+                           &mDevice,
+                           nullptr,
+                           nullptr);
+    if(!SUCCEEDED(hr)) {
+        CV_Error(cv::Error::OpenCLApiCallError, "D3D11CreateDevice was failed\n");
+    }
+
+    // Create texture2D by test data
+    ID3D11Texture2D* texture = nullptr;
+    hr = mDevice->CreateTexture2D(&desc, &initData, &texture);
+
+    if(!SUCCEEDED(hr)) {
+        CV_Error(cv::Error::OpenCLApiCallError, "CreateTexture2D was failed\n");
+    }
+
+    // Convert texture2D to cl_mem_image
+    cl_mem image_mem;
+    image_mem = cv::directx::convertFromD3D11Texture2DtoCLImage(texture);
+
+    if (image_mem == nullptr) {
+        CV_Error(cv::Error::OpenCLApiCallError, "convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
+    }
+
+    // Run function ///////////////////////////////////////////////////////////
+    // Create cv::Umat
+    cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
+    // Copy data from cl_mem_image to cv::Umat buffer
+    cv::ocl::convertFromImage(image_mem, umt_test);
+
+    // Comparison /////////////////////////////////////////////////////////////
+    EXPECT_EQ(umt_test.total(), total);
+    EXPECT_EQ(umt_test.size(), cv::Size(width, height));
+    EXPECT_EQ(umt_test.type(), CV_8U);
+
+    uint8_t* umt_data = umt_test.getMat(ACCESS_READ).ptr<uint8_t>();
+    for (int i = 0; i < umt_test.total(); ++i) {
+        EXPECT_EQ(umt_data[i], test_data[i]);
+    }
+}
+#endif // HAVE_DIRECTX
+#endif // HAVE_OPENCL
 
 } // namespace opencv_test

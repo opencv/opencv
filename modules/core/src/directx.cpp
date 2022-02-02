@@ -1397,6 +1397,26 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
+cl_mem convertFromD3D11Texture2DtoCLImage(ID3D11Texture2D* pD3D11Texture2D)
+{
+    ID3D11Device *ppDevice = nullptr;
+    pD3D11Texture2D->GetDevice(&ppDevice);
+    cv::ocl::Context ctx = ocl::initializeContextFromD3D11Device(ppDevice);
+
+    OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+    cl_context context = (cl_context)ctx.ptr();
+    if (nullptr == impl)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+
+    cl_int status = 0;
+    cl_mem clImage = 0;
+
+    clImage = impl->clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
+    return clImage;
+}
+
 void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 {
     CV_UNUSED(src); CV_UNUSED(pD3D10Texture2D);
