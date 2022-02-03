@@ -343,7 +343,15 @@ INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTestGRAY8,
 
 INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,width=1280,height=720 ! appsink "
+                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
+                                       "videotestsrc pattern=colors num-buffers=10 ! "
+                                       "fakesink"),
+                                Values(cv::Size(1280, 720)),
+                                Values(10UL)));
+
+INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTestGRAY8,
+                        Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
+                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
