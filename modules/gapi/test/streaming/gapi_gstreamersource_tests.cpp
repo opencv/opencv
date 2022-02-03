@@ -143,6 +143,16 @@ G_TYPED_KERNEL(GGstFrameCopyToNV12, <std::tuple<cv::GMat,cv::GMat>(GFrame)>,
     }
 };
 
+G_TYPED_KERNEL(GGstFrameCopyToGRAY8, cv::GMat(GFrame)>,
+    "org.opencv.test.gstframe_copy_to_gray8")
+{
+    static GMatDesc outMeta(GFrameDesc desc) {
+        GMatDesc y{ CV_8U, 1, desc.size, false };
+        return y;
+    }
+};
+
+
 GAPI_OCV_KERNEL(GOCVGstFrameCopyToNV12, GGstFrameCopyToNV12)
 {
     static void run(const cv::MediaFrame& in, cv::Mat& y, cv::Mat& uv)
@@ -156,7 +166,18 @@ GAPI_OCV_KERNEL(GOCVGstFrameCopyToNV12, GGstFrameCopyToNV12)
     }
 };
 
-TEST_P(GStreamerSourceTest, GFrameTest)
+GAPI_OCV_KERNEL(GOCVGstFrameCopyToGRAY8, GGstFrameCopyToGRAY8)
+{
+    static void run(const cv::MediaFrame & in, cv::Mat & y)
+    {
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat ly(y.size(), y.type(), view.ptr[0], view.stride[0]);
+        ly.copyTo(y);
+    }
+};
+
+
+TEST_P(GStreamerSourceTestNV12, GFrameTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
@@ -224,7 +245,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
 // FIXME: Need to launch with sudo. May be infrastructure problems.
 // TODO: It is needed to add tests for streaming from native KMB camera: kmbcamsrc
 //       GStreamer element.
-INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,width=1920,height=1080,framerate=3/1 ! "
@@ -232,7 +253,7 @@ INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                                 Values(cv::Size(1920, 1080)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,width=640,height=420,framerate=3/1 ! "
@@ -240,19 +261,24 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                                 Values(cv::Size(640, 420)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
-                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "fakesink",
-                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
+//INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
+//                        Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+//                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
+//                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+//                                       "fakesink"),
+//                                Values(cv::Size(1280, 720)),
+//                                Values(10UL)));
+//
+
+INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
