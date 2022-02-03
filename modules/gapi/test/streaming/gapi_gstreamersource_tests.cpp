@@ -143,7 +143,7 @@ G_TYPED_KERNEL(GGstFrameCopyToNV12, <std::tuple<cv::GMat,cv::GMat>(GFrame)>,
     }
 };
 
-G_TYPED_KERNEL(GGstFrameCopyToGRAY8, cv::GMat(GFrame),
+G_TYPED_KERNEL(GGstFrameCopyToGRAY8, <cv::GMat(GFrame)>,
     "org.opencv.test.gstframe_copy_to_gray8")
 {
     static GMatDesc outMeta(GFrameDesc desc) {
