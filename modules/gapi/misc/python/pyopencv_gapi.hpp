@@ -19,6 +19,7 @@ using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
 using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
 using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
+using GStreamerSource_OutputType    = cv::gapi::wip::GStreamerSource::OutputType;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs
@@ -230,7 +231,7 @@ PyObject* pyopencv_from(const cv::GArg& value)
     {
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
-        HANDLE_CASE(INT64,   int64_t);
+        HANDLE_CASE(INT64,     int64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);

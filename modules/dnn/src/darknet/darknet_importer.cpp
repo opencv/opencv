@@ -51,6 +51,7 @@
 
 #include "darknet_io.hpp"
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
 
 namespace cv {
 namespace dnn {
@@ -61,6 +62,8 @@ namespace
 
 class DarknetImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     darknet::NetParameter net;
 
 public:
