@@ -105,7 +105,7 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
 
             //GAPI_Assert(GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 2);
             GAPI_Assert(GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_NV12 ||
-                        GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_GRAY);
+                        GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_GRAY8);
 
             // TODO: Use RAII for map/unmap
             if (access == cv::MediaFrame::Access::W) {
