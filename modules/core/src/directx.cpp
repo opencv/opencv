@@ -45,7 +45,7 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/directx.hpp"
 #include "opencl_kernels_core.hpp"
-#include <iostream>
+
 #ifdef HAVE_DIRECTX
 #include <vector>
 #include "directx.inc.hpp"
