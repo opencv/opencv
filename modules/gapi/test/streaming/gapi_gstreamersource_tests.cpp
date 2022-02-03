@@ -311,18 +311,36 @@ TEST_P(GStreamerSourceTestGRAY8, GFrameTest)
 INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
-                                       "video/x-raw,width=1920,height=1080,framerate=3/1 ! "
+                                       "video/x-raw,format=NV12,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(1920, 1080)),
                                 Values(10UL)));
 
+INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTestGRAY8,
+                        Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                       "videorate ! videoscale ! "
+                                       "video/x-raw,format=GRAY8,width=1920,height=1080,framerate=3/1 ! "
+                                       "appsink"),
+                                Values(cv::Size(1920, 1080)),
+                                Values(10UL)));
+
+
 INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
-                                       "video/x-raw,width=640,height=420,framerate=3/1 ! "
+                                       "video/x-raw,format=NV12,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(640, 420)),
                                 Values(10UL)));
+
+INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTestGRAY8,
+                        Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
+                                       "videorate ! videoscale ! "
+                                       "video/x-raw,format=GRAY8,width=640,height=420,framerate=3/1 ! "
+                                       "appsink"),
+                                Values(cv::Size(640, 420)),
+                                Values(10UL)));
+
 
 INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTestNV12,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
