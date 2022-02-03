@@ -2412,8 +2412,15 @@ struct Net::Impl : public detail::NetImplBase
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
            return;
 
+#if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
+        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return;
+#endif
+
         // scan through all the layers. If there is convolution layer followed by the activation layer,
         // we try to embed this activation into the convolution and disable separate execution of the activation
+
+        // FIXIT replace by layersToKeep to avoid hacks like "LayerPin(lid, 0)"
         std::set<LayerPin> pinsToKeep(blobsToKeep_.begin(),
                                       blobsToKeep_.end());
         for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
@@ -2438,6 +2445,13 @@ struct Net::Impl : public detail::NetImplBase
                 LayerPin lpNext(ld.consumers[0].lid, 0);
                 while (nextData)
                 {
+#ifdef HAVE_INF_ENGINE
+                    if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && pinsToKeep.count(lpNext) != 0)
+                    {
+                        CV_LOG_DEBUG(NULL, "DNN/IE: skip fusing with 'output' node: " << nextData->name << "@" << nextData->type);
+                        break;
+                    }
+#endif
                     Ptr<Layer> nextLayer = nextData->layerInstance;
                     if (currLayer->tryFuse(nextLayer))
                     {
