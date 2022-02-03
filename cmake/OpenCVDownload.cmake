@@ -295,3 +295,8 @@ ${OPENCV_DOWNLOAD_LOG}
     set(${OCV_DOWNLOAD_HASH_NAME} "${DL_HASH}" CACHE INTERNAL "")
   endif()
 endfunction()
+
+# ----------------------------------------------------------------------------
+#  Initialize download in case mirror is used
+# ----------------------------------------------------------------------------
+ocv_init_download()
