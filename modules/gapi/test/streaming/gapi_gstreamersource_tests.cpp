@@ -29,6 +29,10 @@ namespace opencv_test
 struct GStreamerSourceTestNV12 : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
 { };
 
+struct GStreamerSourceTestGRAY8 : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
+{ };
+
+
 TEST_P(GStreamerSourceTestNV12, AccuracyTest)
 {
     std::string pipeline;
