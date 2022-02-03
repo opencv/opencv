@@ -9,6 +9,8 @@
 #include "color_tsdf_functions.hpp"
 #include "opencl_kernels_3d.hpp"
 
+#define USE_INTRINSICS 0
+
 namespace cv {
 
 
@@ -49,10 +51,6 @@ void integrateColorTsdfVolumeUnit(
     settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector projDepth = Intr(intr).makeProjector();
 
-    Matx33f rgb_intr;
-    settings.getCameraIntegrateIntrinsics(rgb_intr);
-    const Intr::Projector projColor = Intr(rgb_intr);
-
     const float dfac(1.f / settings.getDepthFactor());
     const float truncDist = settings.getTsdfTruncateDistance();
     const float truncDistInv = 1.f / truncDist;
@@ -70,7 +68,6 @@ void integrateColorTsdfVolumeUnit(
 
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
         v_float32x4 vfxy(projDepth.fx, projDepth.fy, 0.f, 0.f), vcxy(projDepth.cx, projDepth.cy, 0.f, 0.f);
-        v_float32x4 rgb_vfxy(projColor.fx, projColor.fy, 0.f, 0.f), rgb_vcxy(projColor.cx, projColor.cy, 0.f, 0.f);
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols - 1, depth.rows - 1, 0, 0));
 
         for (int x = range.start; x < range.end; x++)
@@ -177,7 +174,6 @@ void integrateColorTsdfVolumeUnit(
                             continue;
                     }
 
-                    v_float32x4 projectedRGB = v_muladd(camPixVec, rgb_vfxy, rgb_vcxy);
                     // leave only first 2 lanes
                     projectedRGB = v_reinterpret_as_f32(v_reinterpret_as_u32(projected) &
                         v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
@@ -185,15 +181,12 @@ void integrateColorTsdfVolumeUnit(
                     // norm(camPixVec) produces double which is too slow
                     int _u = (int)projected.get0();
                     int _v = (int)v_rotate_right<1>(projected).get0();
-                    int rgb_u = (int)projectedRGB.get0();
-                    int rgb_v = (int)v_rotate_right<1>(projectedRGB).get0();
 
-                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows &&
-                        rgb_v >= 0 && rgb_v < color.rows && rgb_u >= 0 && rgb_u < color.cols))
+                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(rgb_v, rgb_u);
+                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
                     //float pixNorm = sqrt(v_reduce_sum(camPixVec*camPixVec));
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - zCamSpace);
@@ -283,7 +276,6 @@ void integrateColorTsdfVolumeUnit(
 
                     Point3f camPixVec;
                     Point2f projected = projDepth(camSpacePt, camPixVec);
-                    Point2f projectedRGB = projColor(camSpacePt, camPixVec);
 
                     depthType v = bilinearDepth(depth, projected);
                     if (v == 0) {
@@ -292,17 +284,12 @@ void integrateColorTsdfVolumeUnit(
                     int _u = projected.x;
                     int _v = projected.y;
 
-                    int rgb_u = (int)projectedRGB.x;
-                    int rgb_v = (int)projectedRGB.y;
-
-                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows
-                        && rgb_v >= 0 && rgb_v < color.rows && rgb_u >= 0 && rgb_u < color.cols
-                        ))
+                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
 
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(rgb_v, rgb_u);
+                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
 
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - camSpacePt.z);

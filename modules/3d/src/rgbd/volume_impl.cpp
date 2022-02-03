@@ -345,8 +345,8 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odome
 }
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
-    if (_colors.needed())
-        CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
+    //if (_colors.needed())
+    //    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 
     const Matx44f cameraPose = _cameraPose.getMat();
 

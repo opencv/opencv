@@ -20,6 +20,10 @@ public:
     CV_WRAP Volume();
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
+    */
+    CV_WRAP Volume(VolumeType vtype);
+    /** @brief Constructor of custom volume.
+    * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
     Volume(VolumeType vtype, VolumeSettings settings);
@@ -55,7 +59,7 @@ public:
       This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
-    void integrate(InputArray depth, InputArray image, InputArray pose);
+    CV_WRAP void integrate(InputArray depth, InputArray image, InputArray pose);
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 

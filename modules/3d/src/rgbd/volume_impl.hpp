@@ -179,6 +179,27 @@ Volume::Volume()
     VolumeSettings settings(VolumeType::TSDF);
     this->impl = makePtr<TsdfVolume>(settings);
 }
+
+Volume::Volume(VolumeType vtype)
+{
+    VolumeSettings settings(vtype);
+    switch (vtype)
+    {
+    case VolumeType::TSDF:
+        this->impl = makePtr<TsdfVolume>(settings);
+        break;
+    case VolumeType::HashTSDF:
+        this->impl = makePtr<HashTsdfVolume>(settings);
+        break;
+    case VolumeType::ColorTSDF:
+        this->impl = makePtr<ColorTsdfVolume>(settings);
+        break;
+    default:
+        CV_Error(Error::StsInternal, "Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
+        break;
+    }
+}
+
 Volume::Volume(VolumeType vtype, VolumeSettings settings)
 {
     switch (vtype)
