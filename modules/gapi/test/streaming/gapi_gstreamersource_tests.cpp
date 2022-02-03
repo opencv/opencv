@@ -242,7 +242,11 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
 
 INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,width=1280,height=720 ! appsink "
+                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
+                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                       "fakesink",
+                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
