@@ -208,6 +208,7 @@ TEST(GPU, Symm7x7_test)
 }
 
 #ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
 TEST(GPU_D3D11, ConvTexture2DtoCLmem)
 {
     // Create test data ///////////////////////////////////////////////////////
@@ -265,8 +266,8 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
     }
 
     // Convert texture2D to cl_mem_image
-    cl_mem image_mem;
-    image_mem = cv::directx::convertFromD3D11Texture2DtoCLImage(texture);
+    cl_mem image_mem = nullptr;
+    cv::directx::convertFromD3D11Texture2DtoCLImage(texture, &image_mem);
 
     if (image_mem == nullptr) {
         CV_Error(cv::Error::OpenCLApiCallError, "convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
@@ -288,6 +289,7 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
         EXPECT_EQ(umt_data[i], test_data[i]);
     }
 }
+#endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 #endif // HAVE_OPENCL
 
