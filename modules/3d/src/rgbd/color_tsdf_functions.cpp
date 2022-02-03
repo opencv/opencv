@@ -9,8 +9,6 @@
 #include "color_tsdf_functions.hpp"
 #include "opencl_kernels_3d.hpp"
 
-#define USE_INTRINSICS 0
-
 namespace cv {
 
 
@@ -173,10 +171,6 @@ void integrateColorTsdfVolumeUnit(
                         else
                             continue;
                     }
-
-                    // leave only first 2 lanes
-                    projectedRGB = v_reinterpret_as_f32(v_reinterpret_as_u32(projected) &
-                        v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
 
                     // norm(camPixVec) produces double which is too slow
                     int _u = (int)projected.get0();
