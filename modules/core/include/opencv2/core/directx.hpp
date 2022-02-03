@@ -139,7 +139,7 @@ CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, Outp
 //! @note Note: Function creates an OpenCL 2D image object from a subresource of a Direct3D 11 2D texture
 //
 //! @param pD3D11Texture2D - source D3D11 texture
-//! @return OpenCL image2d_t object
+//! @param pointer to OpenCL image2d_t object
 CV_EXPORTS void convertFromD3D11Texture2DtoCLImage(ID3D11Texture2D* pD3D11Texture2D, cl_mem* clImage);
 #endif
 
