@@ -56,7 +56,7 @@ function(ocv_init_download)
   )
   # if non-git, OCV_GIT_ORIGIN_URL_OUT is empty
   if(NOT OCV_GIT_ORIGIN_URL_OUT)
-    message(STATUS "ocv_init_download: This is not a git repo. 3rdparty resources will be downloaded from Github.com by default. You can use mirrors with CMake option -DOPENCV_MIRROR_CUSTOM=gitcode.net for example.")
+    message(STATUS "ocv_init_download: OpenCV source tree is not fetched as git repository. 3rdparty resources will be downloaded from Github.com by default. You can use mirrors with CMake option -DOPENCV_MIRROR_CUSTOM=gitcode.net for example.")
   else()
     if(OPENCV_MIRROR_CUSTOM)
       set(__HOST "CUSTOM")
