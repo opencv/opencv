@@ -13,6 +13,7 @@
 #include <opencv2/gapi/gpu/ggpukernel.hpp>
 #include "opencl_kernels_test_gapi.hpp"
 
+#include <opencv2/gapi/streaming/cap.hpp>
 
 namespace cv
 {
@@ -202,6 +203,85 @@ TEST(GPU, Symm7x7_test)
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
 }
+
+// MB it deserves own test file
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+    public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+        }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+class BGRSource : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit BGRSource(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        if (cv::gapi::wip::GCaptureSource::pull(data)) {
+            data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
+            return true;
+        }
+        return false;
+    }
+
+    GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::BGR,
+                                           cv::util::get<cv::GMatDesc>(
+                                                   cv::gapi::wip::GCaptureSource::descr_of()).size}};
+    }
+};
+
+G_API_OP(MFUmt, <GMat(GFrame)>, "test.MediaFrame_UMt") {
+    static GMatDesc outMeta(GFrameDesc d) { return GMatDesc{CV_8U, 3, d.size}; }
+};
+GAPI_OCL_KERNEL(GMFUmt, MFUmt) {
+    static void run(const cv::MediaFrame& in, cv::UMat& out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        // NOTE: use convertFromD3D11Texture2DtoCLMem and convertFromImage
+        // to create UMat to avoid host-device copy
+        cv::Mat mt(d.size, CV_8UC3, view.ptr[0]);
+        mt.copyTo(out);
+    }
+};
+
+TEST(GPU, MediaFrameToUMat) {
+    cv::GFrame in;
+    auto out = MFUmt::on(in);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GMFUmt>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::Mat out_mat;
+    bool run = true;
+    while (run) {
+        EXPECT_NO_THROW(run = pipe.pull(cv::gout(out_mat)));
+        EXPECT_FALSE(out_mat.empty());
+    }
+}
+
 #endif
 
 } // namespace opencv_test
