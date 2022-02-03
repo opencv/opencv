@@ -980,7 +980,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if(options == NULL)
     {
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
+#if LIBAVFORMAT_VERSION_MICRO >= 100  && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
         av_dict_set(&dict, "rtsp_flags", "prefer_tcp", 0);
 #else
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
