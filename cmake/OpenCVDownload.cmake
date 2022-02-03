@@ -108,6 +108,8 @@ function(ocv_download)
     set(${DL_STATUS} TRUE PARENT_SCOPE)
   endif()
 
+  ocv_cmake_hook(OCV_DOWNLOAD_MIRROR_${OPENCV_DOWNLOAD_HOST})
+
   # Check CMake cache for already processed tasks
   string(FIND "${DL_DESTINATION_DIR}" "${CMAKE_BINARY_DIR}" DL_BINARY_PATH_POS)
   if(DL_BINARY_PATH_POS EQUAL 0)
@@ -138,8 +140,6 @@ function(ocv_download)
       break()
     endif()
   endforeach()
-
-  ocv_cmake_hook(OCV_DOWNLOAD_MIRROR_${OPENCV_DOWNLOAD_HOST})
 
   # Append filename to url if needed
   if(DL_RELATIVE_URL)
