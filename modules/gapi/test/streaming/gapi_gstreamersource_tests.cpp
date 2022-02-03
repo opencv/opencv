@@ -181,7 +181,7 @@ GAPI_OCV_KERNEL(GOCVGstFrameCopyToGRAY8, GGstFrameCopyToGRAY8)
 };
 
 
-TEST_P(GStreamerSourceTestNV12, GFrameTestNV12)
+TEST_P(GStreamerSourceTestNV12, GFrameTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
@@ -246,7 +246,7 @@ TEST_P(GStreamerSourceTestNV12, GFrameTestNV12)
     EXPECT_EQ(streamLength, framesCount);
 }
 
-TEST_P(GStreamerSourceTestGRAY8, GFrameTestGRAY8)
+TEST_P(GStreamerSourceTestGRAY8, GFrameTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
@@ -288,7 +288,6 @@ TEST_P(GStreamerSourceTestGRAY8, GFrameTestGRAY8)
     std::size_t framesCount = 1UL;
     while (ccomp.pull(cv::gout(y_mat))) {
         EXPECT_TRUE(!y_mat.empty());
-        EXPECT_TRUE(!uv_mat.empty());
 
         EXPECT_EQ(expectedYSize, y_mat.size());
 
