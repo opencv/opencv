@@ -39,6 +39,9 @@ constexpr char GRAY_CAPS_STRING[] =
 constexpr char CAPS_STRING[] =
     "video/x-raw;video/x-raw(memory:DMABuf)";
 
+constexpr char ALLOWED_CAPS_STRING[] =
+    "video/x-raw,format=(string){NV12, GRAY8};video/x-raw(memory:DMABuf),format=(string){NV12, GRAY8}";
+
 
 namespace {
 GstPadProbeReturn appsinkQueryCallback(GstPad*, GstPadProbeInfo* info, gpointer)
@@ -148,8 +151,9 @@ void GStreamerSource::Priv::configureAppsink() {
     //GStreamerPtr<GstCaps> *gstCaps;
     // Prepare metadata if it isn't prepared yet.
     //prepareVideoMeta();
-    GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(NV12_CAPS_STRING));
+    //GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(NV12_CAPS_STRING));
     //GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(CAPS_STRING));
+    GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(ALLOWED_CAPS_STRING));
 #if 0
     GstCaps *gstCaps;
     std::cout << "m_type = " << m_type << std::endl;
