@@ -13,9 +13,9 @@
 namespace cv
 {
 
-Volume::Impl::Impl(VolumeSettings _settings) :
+Volume::Impl::Impl(VolumeSettings _settings)
 #ifdef HAVE_OPENCL
-    useGPU(ocl::useOpenCL())
+    : useGPU(ocl::useOpenCL())
 #endif
 {
     settings = _settings;
@@ -139,7 +139,7 @@ void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryF
 }
 
 
-void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray /*_colors*/) const
 {
     //if (_colors.needed())
     //    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -343,7 +343,7 @@ void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, Odome
     }
 #endif
 }
-void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray /*_colors*/) const
 {
     //if (_colors.needed())
     //    CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
