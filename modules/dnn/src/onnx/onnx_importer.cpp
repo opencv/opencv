@@ -733,8 +733,52 @@ const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
     CV_Error(Error::StsAssert, "Couldn't deduce Node name.");
 }
 
-void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
+// strip trailing optional inputs and outputs
+opencv_onnx::NodeProto stripTrailingOptional(opencv_onnx::NodeProto node_proto)
 {
+    std::vector<std::string> inputs;
+    bool flag = false;
+    for (int i = node_proto.input_size() - 1; i >= 0; --i)
+    {
+        const std::string& input = node_proto.input(i);
+        flag |= !input.empty();
+        if (flag)
+        {
+            inputs.push_back(input);
+        }
+    }
+
+    std::vector<std::string> outputs;
+    flag = false;
+    for (int i = node_proto.output_size() - 1; i >= 0; --i)
+    {
+        const std::string& output = node_proto.output(i);
+        flag |= !output.empty();
+        if (flag)
+        {
+            outputs.push_back(output);
+        }
+    }
+
+    node_proto.clear_input();
+    node_proto.clear_output();
+
+    for (int i = inputs.size() - 1; i >= 0; --i)
+    {
+        node_proto.add_input(inputs[i]);
+    }
+
+    for (int i = outputs.size() - 1; i >= 0; --i)
+    {
+        node_proto.add_output(outputs[i]);
+    }
+
+    return node_proto;
+}
+
+void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
+{
+    opencv_onnx::NodeProto node_proto = stripTrailingOptional(node_proto_);
     CV_Assert(node_proto.output_size() >= 1);
     const std::string& name = extractNodeName(node_proto);
     const std::string& layer_type = node_proto.op_type();
