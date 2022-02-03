@@ -26,10 +26,10 @@
 namespace opencv_test
 {
 
-struct GStreamerSourceTest : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
+struct GStreamerSourceTestNV12 : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
 { };
 
-TEST_P(GStreamerSourceTest, AccuracyTest)
+TEST_P(GStreamerSourceTestNV12, AccuracyTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
@@ -79,7 +79,7 @@ TEST_P(GStreamerSourceTest, AccuracyTest)
     EXPECT_EQ(streamLength, framesCount);
 }
 
-TEST_P(GStreamerSourceTest, TimestampsTest)
+TEST_P(GStreamerSourceTestNV12, TimestampsTest)
 {
     std::string pipeline;
     std::size_t streamLength { };
@@ -143,7 +143,7 @@ G_TYPED_KERNEL(GGstFrameCopyToNV12, <std::tuple<cv::GMat,cv::GMat>(GFrame)>,
     }
 };
 
-G_TYPED_KERNEL(GGstFrameCopyToGRAY8, cv::GMat(GFrame)>,
+G_TYPED_KERNEL(GGstFrameCopyToGRAY8, cv::GMat(GFrame),
     "org.opencv.test.gstframe_copy_to_gray8")
 {
     static GMatDesc outMeta(GFrameDesc desc) {
