@@ -86,6 +86,7 @@ enum class MediaFormat: int
 {
     BGR = 0,
     NV12,
+    GRAY,
 };
 
 /**

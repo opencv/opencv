@@ -182,6 +182,10 @@ inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
             auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             return cv::gapi::ie::util::to_ie(y_plane, uv_plane);
         }
+        case cv::MediaFormat::GRAY: {
+            auto gray = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            return wrapIE(gray, cv::gapi::ie::TraitAs::IMAGE);
+        }
         default:
             GAPI_Assert(false && "Unsupported media format for IE backend");
     }
@@ -835,6 +839,9 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
                     ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
                     break;
                 case cv::MediaFormat::BGR:
+                    // NB: Do nothing
+                    break;
+                case cv::MediaFormat::GRAY:
                     // NB: Do nothing
                     break;
                 default:
