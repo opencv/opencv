@@ -30,15 +30,6 @@ namespace gst {
 
 #ifdef HAVE_GSTREAMER
 
-constexpr char NV12_CAPS_STRING[] =
-    "video/x-raw,format=NV12;video/x-raw(memory:DMABuf),format=NV12";
-
-constexpr char GRAY_CAPS_STRING[] =
-    "video/x-raw,format=GRAY8;video/x-raw(memory:DMABuf),format=GRAY8";
-
-constexpr char CAPS_STRING[] =
-    "video/x-raw;video/x-raw(memory:DMABuf)";
-
 constexpr char ALLOWED_CAPS_STRING[] =
     "video/x-raw,format=(string){NV12, GRAY8};video/x-raw(memory:DMABuf),format=(string){NV12, GRAY8}";
 
@@ -147,30 +138,7 @@ void GStreamerSource::Priv::configureAppsink() {
     // Do not emit signals: all calls will be synchronous and blocking.
     gst_app_sink_set_emit_signals(GST_APP_SINK(m_appsink.get()), FALSE);
 
-    //GStreamerPtr<GstCaps> nv12Caps(gst_caps_from_string(NV12_CAPS_STRING));
-    //GStreamerPtr<GstCaps> *gstCaps;
-    // Prepare metadata if it isn't prepared yet.
-    //prepareVideoMeta();
-    //GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(NV12_CAPS_STRING));
-    //GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(CAPS_STRING));
     GStreamerPtr<GstCaps> gstCaps(gst_caps_from_string(ALLOWED_CAPS_STRING));
-#if 0
-    GstCaps *gstCaps;
-    std::cout << "m_type = " << m_type << std::endl;
-    switch (m_type) {
-        case GST_VIDEO_FORMAT_NV12: {
-            gstCaps = gst_caps_from_string(NV12_CAPS_STRING);
-            break;
-        }
-        case GST_VIDEO_FORMAT_GRAY8: {
-            gstCaps = gst_caps_from_string(GRAY_CAPS_STRING);
-            break;
-        }
-        default: {
-            GAPI_Assert(false && "Can't retrieve gstCaps from string - unsupported GStreamerSource FRAME type.");
-        }
-    }
-#endif
 
     GStreamerPtr<GstPad> appsinkPad(gst_element_get_static_pad(m_appsink, "sink"));
     GStreamerPtr<GstCaps> peerCaps(gst_pad_peer_query_caps(appsinkPad, NULL));
@@ -216,16 +184,12 @@ void GStreamerSource::Priv::prepareVideoMeta()
         {
             cv::util::throw_error(std::logic_error("Cannot query video width/height."));
         }
-        //m_type = gst_video_format_get_type();
-        //gchar *gst_format;
-        //const gchar* gst_format = gst_structure_get_string(structure, "format");
-        //std::endl << "gst_format = " << gst_format << std::endl;
+
         // Fill GstVideoInfo structure to work further with GstVideoFrame class.
         if (!gst_video_info_from_caps(&m_videoInfo, prerollCaps)) {
             cv::util::throw_error(std::logic_error("preroll sample has invalid caps."));
         }
         m_type = GST_VIDEO_INFO_FORMAT(&m_videoInfo);
-        std::cout << "m_type = " << m_type << std::endl;
         switch(m_outputType) {
             case GStreamerSource::OutputType::FRAME: {
                 // Construct metadata for media frame.
@@ -250,13 +214,6 @@ void GStreamerSource::Priv::prepareVideoMeta()
                 break;
             }
         }
-
-        // Fill GstVideoInfo structure to work further with GstVideoFrame class.
-        //if (!gst_video_info_from_caps(&m_videoInfo, prerollCaps)) {
-        //    cv::util::throw_error(std::logic_error("preroll sample has invalid caps."));
-        //}
-        //GAPI_Assert(GST_VIDEO_INFO_N_PLANES(&m_videoInfo) == 2);
-        //GAPI_Assert(GST_VIDEO_INFO_FORMAT(&m_videoInfo) == GST_VIDEO_FORMAT_NV12);
 
         m_isMetaPrepared = true;
     }
