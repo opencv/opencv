@@ -39,10 +39,8 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 m_offsets = { videoMeta->offset[0]};
                 break;
             }
-            case cv::MediaFormat::BGR: {
-                GAPI_Assert(false && "BGR Media format is not expected here");
-                //m_strides = { videoMeta->stride[0] };
-                //m_offsets = { videoMeta->offset[0] };
+            default: {
+                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -60,10 +58,8 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0)};
                 break;
             }
-            case cv::MediaFormat::BGR: {
-                GAPI_Assert(false && "BGR Media format is not expected here");
-                //m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0) };
-                //m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0) };
+            default: {
+                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -162,26 +158,12 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
             };
             break;
         }
-        case cv::MediaFormat::BGR: {
-            GAPI_Assert(false && "BGR Media format is not expected here");
+        default: {
+            GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
             break;
         }
     }
 
-
-    //cv::MediaFrame::View::Ptrs ps {
-    //    static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[0], // Y-plane
-    //    static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[1], // UV-plane
-    //    nullptr,
-    //    nullptr
-    //};
-
-    //cv::MediaFrame::View::Strides ss = {
-    //    static_cast<std::size_t>(m_strides[0]), // Y-plane stride
-    //    static_cast<std::size_t>(m_strides[1]), // UV-plane stride
-    //    0u,
-    //    0u
-    //};
 
     --thread_counters;
     return cv::MediaFrame::View(std::move(ps), std::move(ss));
