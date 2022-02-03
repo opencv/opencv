@@ -39,6 +39,12 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 m_offsets = { videoMeta->offset[0]};
                 break;
             }
+            case cv::MediaFormat::BGR: {
+                GAPI_Assert(false && "BGR Media format is not expected here");
+                //m_strides = { videoMeta->stride[0] };
+                //m_offsets = { videoMeta->offset[0] };
+                break;
+            }
         }
     } else {
         switch (m_frameDesc.fmt) {
@@ -52,6 +58,12 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
             case cv::MediaFormat::GRAY: {
                 m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0)};
                 m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0)};
+                break;
+            }
+            case cv::MediaFormat::BGR: {
+                GAPI_Assert(false && "BGR Media format is not expected here");
+                //m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0) };
+                //m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0) };
                 break;
             }
         }
