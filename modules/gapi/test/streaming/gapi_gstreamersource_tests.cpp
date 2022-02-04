@@ -183,7 +183,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     std::string pipeline;
     cv::Size expectedFrameSize;
     std::size_t streamLength { };
-    bool isNV12 = true;
+    bool isNV12 = false;
     std::tie(pipeline, expectedFrameSize, streamLength) = GetParam();
 
     //Check if pipline string contains NV12 sub-string
