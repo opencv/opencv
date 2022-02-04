@@ -371,13 +371,9 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
     // Preliminary result is in CV_32SC3 format, but will be converted to 8U or 16U depending on the input.
     if (CV_16UC3 == imgs_[0].type())
-    {
         result.convertTo(pano, CV_16U);
-    }
     else
-    {
         result.convertTo(pano, CV_8U);
-    }
 
     return OK;
 }

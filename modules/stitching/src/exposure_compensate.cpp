@@ -113,6 +113,42 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
     LOGLN("Exposure compensation, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
+
+template<typename value_type>
+static void calculateISum(int rows, int cols, int num_channels, const Mat& subimg1, const Mat& subimg2, double& Isum1, double& Isum2, const Mat_<uchar>& intersect)
+{
+    for (int y = 0; y < rows; ++y)
+    {
+        if (num_channels == 3)
+        {
+            const Vec<value_type, 3>* r1 = subimg1.ptr<Vec<value_type, 3> >(y);
+            const Vec<value_type, 3>* r2 = subimg2.ptr<Vec<value_type, 3> >(y);
+            for (int x = 0; x < cols; ++x)
+            {
+                if (intersect(y, x))
+                {
+                    Isum1 += norm(r1[x]);
+                    Isum2 += norm(r2[x]);
+                }
+            }
+        }
+        else // if (num_channels == 1)
+        {
+            const value_type* r1 = subimg1.ptr<value_type>(y);
+            const value_type* r2 = subimg2.ptr<value_type>(y);
+            for (int x = 0; x < cols; ++x)
+            {
+                if (intersect(y, x))
+                {
+                    Isum1 += r1[x];
+                    Isum2 += r2[x];
+                }
+            }
+        }
+    }
+}
+
+
 void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::vector<UMat> &images,
                                  const std::vector<std::pair<UMat,uchar> > &masks)
 {
@@ -176,35 +212,18 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
                 }
 
                 double Isum1 = 0, Isum2 = 0;
-                for (int y = 0; y < roi.height; ++y)
+                if (CV_16UC3 == subimg1.type() || CV_16UC1 == subimg1.type())
                 {
-                    if (num_channels == 3)
-                    {
-                        const Vec<uchar, 3>* r1 = subimg1.ptr<Vec<uchar, 3> >(y);
-                        const Vec<uchar, 3>* r2 = subimg2.ptr<Vec<uchar, 3> >(y);
-                        for (int x = 0; x < roi.width; ++x)
-                        {
-                            if (intersect(y, x))
-                            {
-                                Isum1 += norm(r1[x]);
-                                Isum2 += norm(r2[x]);
-                            }
-                        }
-                    }
-                    else // if (num_channels == 1)
-                    {
-                        const uchar* r1 = subimg1.ptr<uchar>(y);
-                        const uchar* r2 = subimg2.ptr<uchar>(y);
-                        for (int x = 0; x < roi.width; ++x)
-                        {
-                            if (intersect(y, x))
-                            {
-                                Isum1 += r1[x];
-                                Isum2 += r2[x];
-                            }
-                        }
-                    }
+                    calculateISum<ushort>(roi.height, roi.width, num_channels, subimg1, subimg2, Isum1, Isum2, intersect);
+                    //keep the range 0..256 for avoid changing everywhere
+                    Isum1 /= 256.;
+                    Isum2 /= 256.;
                 }
+                else
+                {
+                    calculateISum<uchar>(roi.height, roi.width, num_channels, subimg1, subimg2, Isum1, Isum2, intersect);
+                }
+
                 I(i, j) = Isum1 / N(i, j);
                 I(j, i) = Isum2 / N(i, j);
             }
@@ -344,6 +363,40 @@ void GainCompensator::prepareSimilarityMask(
     }
 }
 
+template<typename value_type>
+static void calculateSimilarityMat(const Mat& src1, const Mat& src2, Mat similarity, double similarity_threshold_, float alpha)
+{
+    if (src1.channels() == 3)
+    {
+        for (int y = 0; y < similarity.rows; ++y)
+        {
+            for (int x = 0; x < similarity.cols; ++x)
+            {
+                Vec<float, 3> vec_diff =
+                    Vec<float, 3>(*src1.ptr<Vec<value_type, 3>>(y, x))
+                    - Vec<float, 3>(*src2.ptr<Vec<value_type, 3>>(y, x));
+                double diff = norm(vec_diff * (1.f / alpha));
+
+                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
+            }
+        }
+    }
+    else // if (src1.channels() == 1)
+    {
+        for (int y = 0; y < similarity.rows; ++y)
+        {
+            for (int x = 0; x < similarity.cols; ++x)
+            {
+                float diff = std::abs(static_cast<int>(*src1.ptr<value_type>(y, x))
+                    - static_cast<int>(*src2.ptr<value_type>(y, x))) / alpha;
+
+                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
+            }
+        }
+    }
+}
+
+
 UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_array2)
 {
     CV_Assert(src_array1.rows() == src_array2.rows() && src_array1.cols() == src_array2.cols());
@@ -356,34 +409,15 @@ UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_
     UMat umat_similarity(src1.rows, src1.cols, CV_8UC1);
     Mat similarity = umat_similarity.getMat(ACCESS_WRITE);
 
-    if (src1.channels() == 3)
+    if (CV_16UC3 == src1.type() || CV_16UC1 == src1.type())
     {
-        for (int y = 0; y < similarity.rows; ++y)
-        {
-            for (int x = 0; x < similarity.cols; ++x)
-            {
-                Vec<float, 3> vec_diff =
-                    Vec<float, 3>(*src1.ptr<Vec<uchar, 3>>(y, x))
-                    - Vec<float, 3>(*src2.ptr<Vec<uchar, 3>>(y, x));
-                double diff = norm(vec_diff * (1.f / 255.f));
-
-                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
-            }
-        }
+        calculateSimilarityMat<ushort>(src1, src2, similarity, similarity_threshold_, 65536.f);
     }
-    else // if (src1.channels() == 1)
+    else
     {
-        for (int y = 0; y < similarity.rows; ++y)
-        {
-            for (int x = 0; x < similarity.cols; ++x)
-            {
-                float diff = std::abs(static_cast<int>(*src1.ptr<uchar>(y, x))
-                    - static_cast<int>(*src2.ptr<uchar>(y, x))) / 255.f;
-
-                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
-            }
-        }
+        calculateSimilarityMat<uchar>(src1, src2, similarity, similarity_threshold_, 256.f);
     }
+
     similarity.release();
 
     Mat kernel = getStructuringElement(MORPH_RECT, Size(3,3));
@@ -561,7 +595,7 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_image.type() == CV_8UC3);
+    CV_Assert(_image.type() == CV_8UC3 || _image.type() == CV_16UC3);
 
     UMat u_gain_map;
     if (gain_maps_.at(index).size() == _image.size())
