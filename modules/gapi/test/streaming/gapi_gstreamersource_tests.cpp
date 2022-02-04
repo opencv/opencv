@@ -184,7 +184,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     cv::Size expectedFrameSize;
     std::size_t streamLength { };
     bool isNV12 = true;
-    std::tie(pipeline, expectedFrameSize, streamLength, isNV12) = GetParam();
+    std::tie(pipeline, expectedFrameSize, streamLength) = GetParam();
 
     //Check if pipline string contains NV12 sub-string
     if (pipeline.find("NV12") != std::string::npos) {
@@ -279,7 +279,7 @@ INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                                        "video/x-raw,format=NV12,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(1920, 1080)),
-                                Values(10UL), Values(true)));
+                                Values(10UL)));
 
 INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
@@ -287,7 +287,7 @@ INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                                        "video/x-raw,format=GRAY8,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(1920, 1080)),
-                                Values(10UL), Values(false)));
+                                Values(10UL)));
 
 
 INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
@@ -296,7 +296,7 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                                        "video/x-raw,format=NV12,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(640, 420)),
-                                Values(10UL), Values(true)));
+                                Values(10UL)));
 
 INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
@@ -304,7 +304,7 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                                        "video/x-raw,format=GRAY8,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(640, 420)),
-                                Values(10UL), Values(false)));
+                                Values(10UL)));
 
 
 INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
@@ -313,7 +313,7 @@ INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL), Values(true)));
+                                Values(10UL)));
 
 INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
@@ -321,7 +321,7 @@ INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL), Values(false)));
+                                Values(10UL)));
 
 
 INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
@@ -330,7 +330,7 @@ INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL), Values(true)));
+                                Values(10UL)));
 
 INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
@@ -338,7 +338,7 @@ INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL), Values(false)));
+                                Values(10UL)));
 
 
 TEST(GStreamerMultiSourceSmokeTest, Test)
