@@ -205,11 +205,11 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     cv::GComputation c(cv::GIn(in), isNV12 ? cv::GOut(copiedY, copiedUV) : cv::GOut(copiedY));
 
     // Graph compilation for streaming mode:
-    cv::GCompileArgs ccomp;
+    cv::GStreamingCompiled ccomp;
     if (isNV12) {
         ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToNV12>()));
     } else {
-        ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>)));
+        ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>()));
     }
 
 
@@ -286,7 +286,7 @@ INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                                 Values(cv::Size(1920, 1080)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(CameraEmulatingPipelineGRAY, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=1920,height=1080,framerate=3/1 ! "
@@ -303,7 +303,7 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                                 Values(cv::Size(640, 420)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(FileEmulatingPipelineGRAY, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=640,height=420,framerate=3/1 ! "
@@ -320,7 +320,7 @@ INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                                 Values(cv::Size(1280, 720)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(MultipleLiveSourcesGRAY, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
@@ -337,7 +337,7 @@ INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                                 Values(cv::Size(1280, 720)),
                                 Values(10UL)));
 
-INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
+INSTANTIATE_TEST_CASE_P(MultipleNotLiveSourcesGRAY, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
