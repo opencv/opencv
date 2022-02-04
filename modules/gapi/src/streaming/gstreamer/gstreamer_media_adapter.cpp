@@ -99,7 +99,8 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
 
         if(!m_isMapped.load(std::memory_order_relaxed)) {
 
-            //GAPI_Assert(GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 2);
+            GAPI_Assert(GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 2 ||
+                        GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 1);
             GAPI_Assert(GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_NV12 ||
                         GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_GRAY8);
 
