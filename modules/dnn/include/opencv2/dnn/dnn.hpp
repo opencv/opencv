@@ -1807,7 +1807,7 @@ public:
  * YuNet
  * https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet
  * https://github.com/ShiqiYu/libfacedetection
- * 
+ *
  */
 class CV_EXPORTS_W_SIMPLE FaceDetectionModel_YN : public FaceDetectionModel
 {
