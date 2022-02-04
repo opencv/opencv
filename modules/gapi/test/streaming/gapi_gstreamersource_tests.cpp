@@ -205,8 +205,13 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     cv::GComputation c(cv::GIn(in), isNV12 ? cv::GOut(copiedY, copiedUV) : cv::GOut(copiedY));
 
     // Graph compilation for streaming mode:
-    auto ccomp = c.compileStreaming(cv::compile_args(isNV12 ? cv::gapi::kernels<GOCVGstFrameCopyToNV12>() :
-                                                              cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>));
+    cv::GCompileArgs ccomp;
+    if (isNV12) {
+        ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToNV12>()));
+    } else {
+        ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>)));
+    }
+
 
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
