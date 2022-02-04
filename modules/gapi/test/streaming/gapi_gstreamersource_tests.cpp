@@ -26,14 +26,11 @@
 namespace opencv_test
 {
 
-struct GStreamerSourceTestNV12 : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
-{ };
-
-struct GStreamerSourceTestGRAY8 : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
+struct GStreamerSourceTest : public TestWithParam<std::tuple<std::string, cv::Size, std::size_t>>
 { };
 
 
-TEST_P(GStreamerSourceTestNV12, AccuracyTest)
+TEST_P(GStreamerSourceTest, AccuracyTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
@@ -83,7 +80,7 @@ TEST_P(GStreamerSourceTestNV12, AccuracyTest)
     EXPECT_EQ(streamLength, framesCount);
 }
 
-TEST_P(GStreamerSourceTestNV12, TimestampsTest)
+TEST_P(GStreamerSourceTest, TimestampsTest)
 {
     std::string pipeline;
     std::size_t streamLength { };
@@ -181,21 +178,35 @@ GAPI_OCV_KERNEL(GOCVGstFrameCopyToGRAY8, GGstFrameCopyToGRAY8)
 };
 
 
-TEST_P(GStreamerSourceTestNV12, GFrameTest)
+TEST_P(GStreamerSourceTest, GFrameTest)
 {
     std::string pipeline;
     cv::Size expectedFrameSize;
     std::size_t streamLength { };
-    std::tie(pipeline, expectedFrameSize, streamLength) = GetParam();
+    bool isNV12 = true;
+    std::tie(pipeline, expectedFrameSize, streamLength, isNV12) = GetParam();
+
+    //Check if pipline string contains NV12 sub-string
+    if (pipeline.find("NV12") != std::string::npos) {
+        std::cout << "NV12 found!!!!!!!!" << std::endl;
+        isNV12 = true;
+    }
 
     // Graph declaration:
     cv::GFrame in;
     cv::GMat copiedY, copiedUV;
-    std::tie(copiedY, copiedUV) = GGstFrameCopyToNV12::on(in);
-    cv::GComputation c(cv::GIn(in), cv::GOut(copiedY, copiedUV));
+    if (isNV12) {
+        std::tie(copiedY, copiedUV) = GGstFrameCopyToNV12::on(in);
+    }
+    else {
+        copiedY = GGstFrameCopyToGRAY8::on(in);
+    }
+
+    cv::GComputation c(cv::GIn(in), isNV12 ? cv::GOut(copiedY, copiedUV) : cv::GOut(copiedY));
 
     // Graph compilation for streaming mode:
-    auto ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToNV12>()));
+    auto ccomp = c.compileStreaming(cv::compile_args(isNV12 ? cv::gapi::kernels<GOCVGstFrameCopyToNV12>() :
+                                                              cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>));
 
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());
@@ -213,85 +224,39 @@ TEST_P(GStreamerSourceTestNV12, GFrameTest)
 
     EXPECT_TRUE(ccomp.pull(cv::gout(y_mat, uv_mat)));
     EXPECT_TRUE(!y_mat.empty());
-    EXPECT_TRUE(!uv_mat.empty());
+    if (isNV12) {
+        EXPECT_TRUE(!uv_mat.empty());
+    }
 
     cv::Size expectedYSize = expectedFrameSize;
     cv::Size expectedUVSize = expectedFrameSize / 2;
 
     EXPECT_EQ(expectedYSize, y_mat.size());
-    EXPECT_EQ(expectedUVSize, uv_mat.size());
+    if (isNV12) {
+        EXPECT_EQ(expectedUVSize, uv_mat.size());
+    }
 
     EXPECT_EQ(CV_8UC1, y_mat.type());
-    EXPECT_EQ(CV_8UC2, uv_mat.type());
+    if (isNV12) {
+        EXPECT_EQ(CV_8UC2, uv_mat.type());
+    }
 
     std::size_t framesCount = 1UL;
     while (ccomp.pull(cv::gout(y_mat, uv_mat))) {
         EXPECT_TRUE(!y_mat.empty());
-        EXPECT_TRUE(!uv_mat.empty());
+        if (isNV12) {
+            EXPECT_TRUE(!uv_mat.empty());
+        }
 
         EXPECT_EQ(expectedYSize, y_mat.size());
-        EXPECT_EQ(expectedUVSize, uv_mat.size());
+        if (isNV12) {
+            EXPECT_EQ(expectedUVSize, uv_mat.size());
+        }
 
         EXPECT_EQ(CV_8UC1, y_mat.type());
-        EXPECT_EQ(CV_8UC2, uv_mat.type());
-
-        framesCount++;
-    }
-
-    EXPECT_FALSE(ccomp.running());
-    ccomp.stop();
-
-    EXPECT_FALSE(ccomp.running());
-
-    EXPECT_EQ(streamLength, framesCount);
-}
-
-TEST_P(GStreamerSourceTestGRAY8, GFrameTest)
-{
-    std::string pipeline;
-    cv::Size expectedFrameSize;
-    std::size_t streamLength{ };
-    std::tie(pipeline, expectedFrameSize, streamLength) = GetParam();
-
-    // Graph declaration:
-    cv::GFrame in;
-    cv::GMat copiedY;
-    copiedY = GGstFrameCopyToGRAY8::on(in);
-    cv::GComputation c(cv::GIn(in), cv::GOut(copiedY));
-
-    // Graph compilation for streaming mode:
-    auto ccomp = c.compileStreaming(cv::compile_args(cv::gapi::kernels<GOCVGstFrameCopyToGRAY8>()));
-
-    EXPECT_TRUE(ccomp);
-    EXPECT_FALSE(ccomp.running());
-
-    // GStreamer streaming source configuration:
-    ccomp.setSource<cv::gapi::wip::GStreamerSource>
-        (pipeline, cv::gapi::wip::GStreamerSource::OutputType::FRAME);
-
-    // Start of streaming:
-    ccomp.start();
-    EXPECT_TRUE(ccomp.running());
-
-    // Streaming - pulling of frames until the end:
-    cv::Mat y_mat;
-
-    EXPECT_TRUE(ccomp.pull(cv::gout(y_mat)));
-    EXPECT_TRUE(!y_mat.empty());
-
-    cv::Size expectedYSize = expectedFrameSize;
-
-    EXPECT_EQ(expectedYSize, y_mat.size());
-
-    EXPECT_EQ(CV_8UC1, y_mat.type());
-
-    std::size_t framesCount = 1UL;
-    while (ccomp.pull(cv::gout(y_mat))) {
-        EXPECT_TRUE(!y_mat.empty());
-
-        EXPECT_EQ(expectedYSize, y_mat.size());
-
-        EXPECT_EQ(CV_8UC1, y_mat.type());
+        if (isNV12) {
+            EXPECT_EQ(CV_8UC2, uv_mat.type());
+        }
 
         framesCount++;
     }
@@ -308,72 +273,72 @@ TEST_P(GStreamerSourceTestGRAY8, GFrameTest)
 // FIXME: Need to launch with sudo. May be infrastructure problems.
 // TODO: It is needed to add tests for streaming from native KMB camera: kmbcamsrc
 //       GStreamer element.
-INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTestNV12,
+INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=NV12,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(1920, 1080)),
-                                Values(10UL)));
+                                Values(10UL), Values(true)));
 
-INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTestGRAY8,
+INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(1920, 1080)),
-                                Values(10UL)));
+                                Values(10UL), Values(false)));
 
 
-INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTestNV12,
+INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=NV12,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(640, 420)),
-                                Values(10UL)));
+                                Values(10UL), Values(true)));
 
-INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTestGRAY8,
+INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
                                 Values(cv::Size(640, 420)),
-                                Values(10UL)));
+                                Values(10UL), Values(false)));
 
 
-INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTestNV12,
+INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL)));
+                                Values(10UL), Values(true)));
 
-INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTestGRAY8,
+INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL)));
+                                Values(10UL), Values(false)));
 
 
-INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTestNV12,
+INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL)));
+                                Values(10UL), Values(true)));
 
-INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTestGRAY8,
+INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
-                                Values(10UL)));
+                                Values(10UL), Values(false)));
 
 
 TEST(GStreamerMultiSourceSmokeTest, Test)
