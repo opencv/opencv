@@ -202,14 +202,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
         copiedY = GGstFrameCopyToGRAY8::on(in);
     }
 
-    cv::GComputation c;
-    if (isNV12) {
-        c(cv::GIn(in), cv::GOut(copiedY, copiedUV));
-    } else {
-        c(cv::GIn(in), cv::GOut(copiedY));
-    }
-
-
+    cv::GComputation c(cv::GIn(in), isNV12 ? cv::GOut(copiedY, copiedUV) : cv::GOut(copiedY));
 
     // Graph compilation for streaming mode:
     cv::GStreamingCompiled ccomp;
@@ -234,7 +227,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     // Streaming - pulling of frames until the end:
     cv::Mat y_mat, uv_mat;
 
-    EXPECT_TRUE(ccomp.pull(cv::gout(y_mat, uv_mat)));
+    EXPECT_TRUE(isNV12 ? ccomp.pull(cv::gout(y_mat, uv_mat)) : ccomp.pull(cv::gout(y_mat)));
     EXPECT_TRUE(!y_mat.empty());
     if (isNV12) {
         EXPECT_TRUE(!uv_mat.empty());
@@ -254,7 +247,7 @@ TEST_P(GStreamerSourceTest, GFrameTest)
     }
 
     std::size_t framesCount = 1UL;
-    while (ccomp.pull(cv::gout(y_mat, uv_mat))) {
+    while (isNV12 ? ccomp.pull(cv::gout(y_mat, uv_mat)) : ccomp.pull(cv::gout(y_mat))) {
         EXPECT_TRUE(!y_mat.empty());
         if (isNV12) {
             EXPECT_TRUE(!uv_mat.empty());
