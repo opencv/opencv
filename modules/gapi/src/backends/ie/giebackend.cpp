@@ -21,8 +21,6 @@
 #include <atomic>
 #include <tuple>
 
-#include <opencv2/imgproc.hpp>
-//#include <opencv2/highgui.hpp> // CommandLineParser
 
 #include <ade/util/algorithm.hpp>
 
@@ -576,8 +574,7 @@ static void setROIBlob(InferenceEngine::InferRequest& req,
                        const IE::Blob::Ptr&           blob,
                        const cv::Rect &roi,
                        const IECallContext&           ctx) {
-    if (ctx.uu.params.device_id.find("GPU") != std::string::npos &&
-        ctx.uu.rctx) {
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
         GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
                        ctx.uu.params.device_id << ", layer: " << layer_name);
         setBlob(req, layer_name, blob, ctx);

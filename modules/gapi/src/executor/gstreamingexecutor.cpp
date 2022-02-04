@@ -322,25 +322,7 @@ public:
                           const std::size_t        out_size,
                           cv::GRunArgs            &out_results);
 };
-/*
-void rewindToStop(std::vector<Q*> &in_queues,
-                  const std::size_t  this_id)
-{
-    GAPI_LOG_INFO(nullptr, "id: " << this_id << ", queues count: " << in_queues.size());
-    for (auto &&qit : ade::util::indexed(in_queues))
-    {
-        auto id2 = ade::util::index(qit);
-        auto &q2 = ade::util::value(qit);
-        if (this_id == id2) continue;
 
-        GAPI_LOG_INFO(nullptr, "drain id: " << id2);
-        Cmd cmd;
-        while (q2 && !cv::util::holds_alternative<Stop>(cmd))
-            q2->pop(cmd);
-    }
-    GAPI_LOG_INFO(nullptr, "finished");
-}
-*/
 void rewindToStop(std::vector<Q*> &in_queues,
                   const std::size_t  this_id)
 {
