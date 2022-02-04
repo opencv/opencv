@@ -14,6 +14,20 @@ struct OutputDescr {
 };
 
 namespace utils {
+
+inline void createNDMat(cv::Mat& mat, const std::vector<int>& dims, int depth) {
+    GAPI_Assert(!dims.empty());
+    // FIXME: Now G-API doesn't create type for ND cv::Mat's, so it's needed to
+    // create cv::Mat the same way in order to achieve meta matching.
+    // Change this line when it's fixed to:
+    // mat.create(dims, CV_MAKETYPE(depth, dims.size()));
+    mat.create(dims, depth);
+    if (dims.size() == 1) {
+        //FIXME: Well-known 1D mat WA
+        mat.dims = 1;
+    }
+}
+
 inline void generateRandom(cv::Mat& out) {
     switch (out.depth()) {
         case CV_8U:
@@ -23,7 +37,12 @@ inline void generateRandom(cv::Mat& out) {
             cv::randu(out, 0.f, 1.f);
             break;
         case CV_16F: {
-            cv::Mat fp32_mat(out.size(), CV_MAKETYPE(CV_32F, out.channels()));
+            std::vector<int> dims;
+            for (int i = 0; i < out.size.dims(); ++i) {
+                dims.push_back(out.size[i]);
+            }
+            cv::Mat fp32_mat;
+            createNDMat(fp32_mat, dims, CV_32F);
             cv::randu(fp32_mat, 0.f, 1.f);
             fp32_mat.convertTo(out, out.type());
             break;

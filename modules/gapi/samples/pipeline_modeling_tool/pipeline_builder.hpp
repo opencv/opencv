@@ -73,7 +73,7 @@ struct DummyCall {
                               std::shared_ptr<DummyState>& state,
                               const cv::GCompileArgs&      /*args*/) {
             state.reset(new DummyState{});
-            state->mat.create(output.dims, output.precision);
+            utils::createNDMat(state->mat, output.dims, output.precision);
             utils::generateRandom(state->mat);
         }
 
