@@ -206,9 +206,10 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         exposure_comp_->apply(int(i), corners[i], images_warped[i], masks_warped[i]);
 
     // Find seams
+    double alpha = (images_warped[0].type() == CV_16UC3) ? 1./256. : 1.;
     std::vector<UMat> images_warped_f(imgs_.size());
     for (size_t i = 0; i < imgs_.size(); ++i)
-        images_warped[i].convertTo(images_warped_f[i], CV_32F);
+        images_warped[i].convertTo(images_warped_f[i], CV_32F, alpha);
     seam_finder_->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory
@@ -325,7 +326,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         pt = getTickCount();
 #endif
 
-        img_warped.convertTo(img_warped_s, CV_16S);
+        img_warped.convertTo(img_warped_s, CV_32S);
         img_warped.release();
         img.release();
         mask.release();
@@ -368,9 +369,15 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-    // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
-    // so convert it to avoid user confusing
-    result.convertTo(pano, CV_8U);
+    // Preliminary result is in CV_32SC3 format, but will be converted to 8U or 16U depending on the input.
+    if (CV_16UC3 == imgs_[0].type())
+    {
+        result.convertTo(pano, CV_16U);
+    }
+    else
+    {
+        result.convertTo(pano, CV_8U);
+    }
 
     return OK;
 }
