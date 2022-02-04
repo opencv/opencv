@@ -202,7 +202,14 @@ TEST_P(GStreamerSourceTest, GFrameTest)
         copiedY = GGstFrameCopyToGRAY8::on(in);
     }
 
-    cv::GComputation c(cv::GIn(in), isNV12 ? cv::GOut(copiedY, copiedUV) : cv::GOut(copiedY));
+    cv::GComputation c;
+    if (isNV12) {
+        c(cv::GIn(in), cv::GOut(copiedY, copiedUV));
+    } else {
+        c(cv::GIn(in), cv::GOut(copiedY));
+    }
+
+
 
     // Graph compilation for streaming mode:
     cv::GStreamingCompiled ccomp;
