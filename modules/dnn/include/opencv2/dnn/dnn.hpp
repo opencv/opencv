@@ -1682,6 +1682,273 @@ public:
     CV_WRAP int getMaxCandidates() const;
 };
 
+/** @brief Base class for face detection networks
+ */
+class CV_EXPORTS_W_SIMPLE FaceDetectionModel : public Model
+{
+protected:
+    // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL
+    FaceDetectionModel();
+
+public:
+    /**
+     * @brief Detect faces from image.
+     * @param[in] frame Input image.
+     * @param[out] confidences Confidences of detected faces.
+     * @param[out] boxes Bounding boxes of detected faces.
+     * @param[in] confThreshold A threshold used to filter boxes by confidences.
+     * @param[in] nmsThreshold A threshold used in non maximum suppression.
+     * @overload
+     */
+    CV_WRAP
+    void detect(
+        InputArray frame,
+        CV_OUT std::vector<float>& confidences,
+        CV_OUT std::vector<Rect>& boxes,
+        float confThreshold = 0.9f,
+        float nmsThreshold = 0.3f
+    ) const;
+};
+
+/** @brief This class represents high-level API for face detection networks compatible with SSD model.
+ *  @note FaceDetectionModel_SSD has been implemented using DetectionModel.
+ *
+ * OpenCV Face Detector (ResNet10 SSD)
+ * https://github.com/opencv/opencv/tree/4.x/samples/dnn/face_detector
+ *
+ */
+class CV_EXPORTS_W_SIMPLE FaceDetectionModel_SSD : public FaceDetectionModel
+{
+public:
+    // avoid using in C++ code (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL
+    FaceDetectionModel_SSD();
+
+    /**
+     * @brief Create face detection model from deep learning network.
+     * @param[in] network Net object.
+     */
+    CV_WRAP
+    FaceDetectionModel_SSD( const Net& network );
+
+    /**
+     * @brief Create face detection model from network represented in one of the supported formats.
+     * An order of @p model and @p config arguments does not matter.
+     * @param[in] model Binary file contains trained weights.
+     * @param[in] config Text file contains network configuration.
+     */
+    CV_WRAP inline
+    FaceDetectionModel_SSD( const std::string& model, const std::string& config = "" )
+        : FaceDetectionModel_SSD( readNet( model, config ) )
+    {
+        /* nothing */
+    }
+
+    /**
+     * @brief Set input size for frame.
+     * @param[in] size New input size.
+     * @note If shape of the new blob less than 0, then frame size not change.
+    */
+    CV_WRAP
+    FaceDetectionModel_SSD& setInputSize( const Size& size );
+
+    /**
+     * @param[in] width New input width.
+     * @param[in] height New input height.
+     */
+    CV_WRAP inline
+    FaceDetectionModel_SSD& setInputSize( int width, int height ) { return setInputSize( Size( width, height ) ); }
+
+    /**
+     * @brief Set mean value for frame.
+     * @param[in] mean Scalar with mean values which are subtracted from channels.
+     */
+    CV_WRAP
+    FaceDetectionModel_SSD& setInputMean( const Scalar& mean );
+
+    /**
+     * @brief Set scalefactor value for frame.
+     * @param[in] scale Multiplier for frame values.
+     */
+    CV_WRAP
+    FaceDetectionModel_SSD& setInputScale( double scale );
+
+    /**
+     * @brief Set flag crop for frame.
+     * @param[in] crop Flag which indicates whether image will be cropped after resize or not.
+     */
+    CV_WRAP
+    FaceDetectionModel_SSD& setInputCrop( bool crop );
+
+    /**
+     * @brief Set flag swapRB for frame.
+     * @param[in] swapRB Flag which indicates that swap first and last channels.
+     */
+    CV_WRAP
+    FaceDetectionModel_SSD& setInputSwapRB( bool swapRB );
+
+    /**
+     * @brief Set preprocessing parameters for frame.
+     * @param[in] size New input size.
+     * @param[in] mean Scalar with mean values which are subtracted from channels.
+     * @param[in] scale Multiplier for frame values.
+     * @param[in] swapRB Flag which indicates that swap first and last channels.
+     * @param[in] crop Flag which indicates whether image will be cropped after resize or not.
+     * blob(n, c, y, x) = scale * resize( frame(y, x, c) ) - mean(c) )
+     */
+    CV_WRAP
+    void setInputParams( double scale = 1.0, const Size& size = Size(),
+                         const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false );
+};
+
+/** @brief This class represents high-level API for face detection networks compatible with YuNet model.
+ *
+ * YuNet
+ * https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet
+ * https://github.com/ShiqiYu/libfacedetection
+ * 
+ */
+class CV_EXPORTS_W_SIMPLE FaceDetectionModel_YN : public FaceDetectionModel
+{
+public:
+    // avoid using in C++ code (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL
+    FaceDetectionModel_YN();
+
+    /**
+     * @brief Create face detection model from deep learning network.
+     * @param[in] network Net object.
+     */
+    CV_WRAP
+    FaceDetectionModel_YN( const Net& network );
+
+    /**
+     * @brief Create face detection model from network represented in one of the supported formats.
+     * An order of @p model and @p config arguments does not matter.
+     * @param[in] model Binary file contains trained weights.
+     * @param[in] config Text file contains network configuration.
+     */
+    CV_WRAP inline
+    FaceDetectionModel_YN( const std::string& model, const std::string& config = "" )
+        : FaceDetectionModel_YN( readNet( model, config ) )
+    {
+        /* nothing */
+    }
+
+    /**
+     * @brief Get face landmarks.
+     * @param[out] landmarks Face landmarks. face landmarks order is Right Eye, Left Eye, Nose, Right Corner of Mouth, and Left Corner of Mouth.
+     * @note If you want to get face landmarks, you need call FaceDetectionModel_YN::detect() beforehand.
+     */
+    CV_WRAP
+    void getLandmarks( std::vector<std::vector<Point>>& landmarks ) const;
+
+    /**
+     * @brief Get face landmarks.
+     * @param[out] landmarks Face landmarks. face landmarks order is Right Eye, Left Eye, Nose, Right Corner of Mouth, and Left Corner of Mouth.
+     * @note If you want to get face landmarks, you need call FaceDetectionModel_YN::detect() beforehand.
+     */
+    CV_WRAP
+    std::vector<std::vector<Point>> getLandmarks() const;
+};
+
+/** @brief Base class for face recognition networks
+ */
+class CV_EXPORTS_W_SIMPLE FaceRecognitionModel : public Model
+{
+protected:
+    // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL
+    FaceRecognitionModel();
+
+public:
+    /**
+     * @brief Definition of distance used for calculating the distance between two face features.
+     * @see FaceRecognitionModel::match()
+     */
+    enum DisType
+    {
+        FR_COSINE = 0, //!< Cosine Distance
+        FR_NORM_L2 = 1 //!< L2 Norm Distance
+    };
+
+    /**
+     * @brief Aligning image to put face on the standard position.
+     * @param[in] frame Input image.
+     * @param[out] align_image Aligned image.
+     * @param[in] face_landmarks Face landmarks.
+     * @note If you want to use FaceRecognitionModel_SF, face landmarks order is Right Eye, Left Eye, Nose, Right Corner of Mouth, and Left Corner of Mouth.
+     * @overload
+     */
+    CV_WRAP
+    void alignCrop(
+        InputArray frame,
+        CV_OUT OutputArray align_image,
+        std::vector<Point> face_landmarks
+    ) const;
+
+    /**
+     * @brief Extracting face feature from aligned image.
+     * @param[in] align_image Input aligned face image.
+     * @param[out] face_feature Face feature.
+     * @overload
+     */
+    CV_WRAP
+    void feature(
+        InputArray align_image,
+        CV_OUT OutputArray face_feature
+    ) const;
+
+    /**
+     * @brief Calculating the distance between two face features.
+     * @param[in] face_feature1 First input feature.
+     * @param[in] face_feature2 Second input feature. (the same size and the same type as face_feature1)
+     * @param[in] dis_type Defining the similarity with FaceRecognitionModel::DisType.
+     */
+    CV_WRAP
+    double match(
+        InputArray face_feature1,
+        InputArray face_feature2,
+        int dis_type = FaceRecognitionModel::DisType::FR_COSINE
+    ) const;
+};
+
+/** @brief This class represents high-level API for face recognition networks compatible with SFace model.
+ *
+ * SFace
+ * https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface
+ * https://github.com/zhongyy/SFace
+ *
+ */
+class CV_EXPORTS_W_SIMPLE FaceRecognitionModel_SF : public FaceRecognitionModel
+{
+public:
+    // avoid using in C++ code (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL
+    FaceRecognitionModel_SF();
+
+    /**
+     * @brief Create face recognition model from deep learning network.
+     * @param[in] network Net object.
+     */
+    CV_WRAP
+    FaceRecognitionModel_SF( const Net& network );
+
+    /**
+     * @brief Create face recognition model from network represented in one of the supported formats.
+     * An order of @p model and @p config arguments does not matter.
+     * @param[in] model Binary file contains trained weights.
+     * @param[in] config Text file contains network configuration.
+     */
+    CV_WRAP inline
+    FaceRecognitionModel_SF( const std::string& model, const std::string& config = "" )
+        : FaceRecognitionModel_SF( readNet( model, config ) )
+    {
+        /* nothing */
+    }
+};
+
 //! @}
 CV__DNN_INLINE_NS_END
 }
