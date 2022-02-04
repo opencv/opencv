@@ -282,12 +282,8 @@ INSTANTIATE_TEST_CASE_P(CameraEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=NV12,width=1920,height=1080,framerate=3/1 ! "
-                                       "appsink"),
-                                Values(cv::Size(1920, 1080)),
-                                Values(10UL)));
-
-INSTANTIATE_TEST_CASE_P(CameraEmulatingPipelineGRAY, GStreamerSourceTest,
-                        Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                       "appsink",
+                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=1920,height=1080,framerate=3/1 ! "
                                        "appsink"),
@@ -299,12 +295,8 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=NV12,width=640,height=420,framerate=3/1 ! "
-                                       "appsink"),
-                                Values(cv::Size(640, 420)),
-                                Values(10UL)));
-
-INSTANTIATE_TEST_CASE_P(FileEmulatingPipelineGRAY, GStreamerSourceTest,
-                        Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
+                                       "appsink",
+                                       "videotestsrc pattern=colors num-buffers=10 ! "
                                        "videorate ! videoscale ! "
                                        "video/x-raw,format=GRAY8,width=640,height=420,framerate=3/1 ! "
                                        "appsink"),
@@ -316,12 +308,8 @@ INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "fakesink"),
-                                Values(cv::Size(1280, 720)),
-                                Values(10UL)));
-
-INSTANTIATE_TEST_CASE_P(MultipleLiveSourcesGRAY, GStreamerSourceTest,
-                        Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                       "fakesink",
+                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
                                        "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
                                        "fakesink"),
@@ -333,13 +321,9 @@ INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
                         Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
                                        "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
-                                       "fakesink"),
-                                Values(cv::Size(1280, 720)),
-                                Values(10UL)));
-
-INSTANTIATE_TEST_CASE_P(MultipleNotLiveSourcesGRAY, GStreamerSourceTest,
-                        Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
+                                       "fakesink",
+                                       "videotestsrc pattern=colors num-buffers=10 ! "
+                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
                                        "videotestsrc pattern=colors num-buffers=10 ! "
                                        "fakesink"),
                                 Values(cv::Size(1280, 720)),
