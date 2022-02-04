@@ -188,7 +188,6 @@ TEST_P(GStreamerSourceTest, GFrameTest)
 
     //Check if pipline string contains NV12 sub-string
     if (pipeline.find("NV12") != std::string::npos) {
-        std::cout << "NV12 found!!!!!!!!" << std::endl;
         isNV12 = true;
     }
 
