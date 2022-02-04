@@ -1844,11 +1844,7 @@ public:
     CV_WRAP
     void getLandmarks( std::vector<std::vector<Point>>& landmarks ) const;
 
-    /**
-     * @brief Get face landmarks.
-     * @param[out] landmarks Face landmarks. face landmarks order is Right Eye, Left Eye, Nose, Right Corner of Mouth, and Left Corner of Mouth.
-     * @note If you want to get face landmarks, you need call FaceDetectionModel_YN::detect() beforehand.
-     */
+    /** @overload */
     CV_WRAP
     std::vector<std::vector<Point>> getLandmarks() const;
 };
