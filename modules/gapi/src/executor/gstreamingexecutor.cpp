@@ -50,6 +50,8 @@ class VideoEmitter final: public cv::gimpl::GIslandEmitter {
         arg = std::move(static_cast<cv::GRunArg&>(newData));
         return true;
     }
+
+    const char* name() const override { return "VideoEmitter"; }
 public:
     explicit VideoEmitter(const cv::GRunArg &arg) {
         src = cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(arg);
@@ -66,6 +68,7 @@ class ConstEmitter final: public cv::gimpl::GIslandEmitter {
     }
 public:
 
+    const char* name() const override { return "ConstEmitter"; }
     explicit ConstEmitter(const cv::GRunArg &arg) : m_arg(arg) {
     }
 };
@@ -319,20 +322,60 @@ public:
                           const std::size_t        out_size,
                           cv::GRunArgs            &out_results);
 };
-
+/*
 void rewindToStop(std::vector<Q*> &in_queues,
                   const std::size_t  this_id)
 {
+    GAPI_LOG_INFO(nullptr, "id: " << this_id << ", queues count: " << in_queues.size());
     for (auto &&qit : ade::util::indexed(in_queues))
     {
         auto id2 = ade::util::index(qit);
         auto &q2 = ade::util::value(qit);
         if (this_id == id2) continue;
 
+        GAPI_LOG_INFO(nullptr, "drain id: " << id2);
         Cmd cmd;
         while (q2 && !cv::util::holds_alternative<Stop>(cmd))
             q2->pop(cmd);
     }
+    GAPI_LOG_INFO(nullptr, "finished");
+}
+*/
+void rewindToStop(std::vector<Q*> &in_queues,
+                  const std::size_t  this_id)
+{
+    // Will draining all queue & waiting for stop cmd for all queues except own queue
+    size_t expected_stop_count = std::count_if(in_queues.begin(), in_queues.end(), [] (const Q* ptr) {
+        return ptr != nullptr;
+    });
+
+    // NB: extract 1 to skip own queue because stop cmd from own queue truggered rewind
+    expected_stop_count = expected_stop_count > 0 ? expected_stop_count - 1: expected_stop_count;
+    GAPI_LOG_INFO(nullptr, "id: " << this_id << ", queues count: " << in_queues.size() <<
+                           ", expected stop msg count: " << expected_stop_count);
+    size_t got_stop_count = 0;
+    while(got_stop_count < expected_stop_count) {
+        for (auto &&qit : ade::util::indexed(in_queues)) {
+            auto id2 = ade::util::index(qit);
+            auto &q2 = ade::util::value(qit);
+            if (this_id == id2) continue;
+
+            GAPI_LOG_INFO(nullptr, "drain next id: " << id2);
+            bool got_cmd = true;
+            while (q2 && got_cmd) {
+                Cmd cmd;
+                got_cmd = q2->try_pop(cmd);
+                if (got_cmd && cv::util::holds_alternative<Stop>(cmd)) {
+                    got_stop_count ++;
+                    GAPI_LOG_INFO(nullptr, "got stop from id: " << id2 <<
+                                           "(" << got_stop_count << "/" << expected_stop_count
+                                           << ")");
+                    break;
+                }
+            }
+        }
+    }
+    GAPI_LOG_INFO(nullptr, "finished");
 }
 
 // This method handles a stop sign got from some input
@@ -385,6 +428,7 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
             const auto &stop = cv::util::get<Stop>(m_cmd[id]);
             if (stop.kind == Stop::Kind::CNST)
             {
+                GAPI_LOG_INFO(nullptr, "Got `Stop::Kind::CNST`")
                 // We've got a Stop signal from a const source,
                 // propagated as a result of real stream reaching its
                 // end.  Sometimes these signals come earlier than
@@ -405,6 +449,7 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
             }
             else
             {
+                GAPI_LOG_INFO(nullptr, "Got `Stop::Kind::HARD` in id: " << id)
                 GAPI_Assert(stop.kind == Stop::Kind::HARD);
                 rewindToStop(in_queues, id);
                 // After queues are read to the proper indicator,
@@ -472,6 +517,7 @@ bool QueueReader::getResultsVector(std::vector<Q*>   &in_queues,
             // Collector thread never handles the inputs directly
             // (collector's input queues are always produced by
             // islands in the graph).
+            GAPI_LOG_INFO(nullptr, "try on theory...");
             rewindToStop(in_queues, ii);
             return false;
         } // if(Stop)
@@ -497,6 +543,7 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
                 || cv::util::holds_alternative<Stop>(cmd));
     if (cv::util::holds_alternative<Stop>(cmd))
     {
+        GAPI_LOG_INFO(nullptr, "Early stop for: " << emitter->name() << " detected");
         for (auto &&oq : out_queues) oq->push(cmd);
         return;
     }
@@ -506,6 +553,7 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
     GAPI_ITT_STATIC_LOCAL_HANDLE(emitter_push_hndl, "emitter_push");
 
     // Now start emitting the data from the source to the pipeline.
+    GAPI_LOG_INFO(nullptr, "starting: " << emitter->name());
     while (true)
     {
         GAPI_ITT_AUTO_TRACE_GUARD(emitter_hndl);
@@ -516,7 +564,11 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
             // if we just popped a cancellation command...
             GAPI_Assert(cv::util::holds_alternative<Stop>(cancel));
             // Broadcast it to the readers and quit.
+            GAPI_LOG_INFO(nullptr, emitter->name() <<
+                          " detected `Stop` from input queue, broadcast it");
             for (auto &&oq : out_queues) oq->push(cancel);
+            GAPI_LOG_INFO(nullptr, emitter->name() <<
+                          " will finish due to cancel from input queue");
             return;
         }
 
@@ -537,16 +589,23 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
                 // FIXME: FOR SOME REASON, oq->push(Cmd{data}) doesn't work!!
                 // empty mats are arrived to the receivers!
                 // There may be a fatal bug in our variant!
+                GAPI_LOG_DEBUG(nullptr, emitter->name() <<
+                                        " got stream data");
                 const auto tmp = data;
                 oq->push(Cmd{tmp});
+                GAPI_LOG_DEBUG(nullptr, emitter->name() <<
+                                        " produced");
             }
         }
         else
         {
+            GAPI_LOG_INFO(nullptr, emitter->name() <<
+                                   " end-of-stream detected from source, broadcast `Stop`");
             // Otherwise, broadcast STOP message to our readers and quit.
             // This usually means end-of-stream, so trigger a callback
             for (auto &&oq : out_queues) oq->push(Cmd{Stop{}});
             if (cb_completion) cb_completion();
+            GAPI_LOG_INFO(nullptr, emitter->name() << " will finish due to end-of-stream");
             return;
         }
     }
@@ -564,6 +623,8 @@ void syncActorThread(std::vector<Q*> in_queues,
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_hndl, "sync_actor");
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_pull_1_queue_hndl, "sync_actor_pull_from_1_queue");
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_push_hndl, "sync_actor_push");
+
+    GAPI_LOG_INFO(nullptr, "started");
     while (true) {
         GAPI_ITT_AUTO_TRACE_GUARD(sync_hndl);
         // pop_nexts indicates which queue still contains earlier timestamps and
@@ -602,6 +663,7 @@ void syncActorThread(std::vector<Q*> in_queues,
                             oq->push(Cmd{Stop{}});
                         }
                     }
+                    GAPI_LOG_INFO(nullptr, "finished after rewindToStop");
                     return;
                 }
 
@@ -633,14 +695,17 @@ void syncActorThread(std::vector<Q*> in_queues,
 
         // Finally we got all our inputs synchronized, push them further down the graph
         {
+            GAPI_LOG_DEBUG(nullptr, "produce synchronized input data");
             GAPI_ITT_AUTO_TRACE_GUARD(sync_push_hndl);
             for (auto &&it : ade::util::zip(out_queues, cmds)) {
                 for (auto &&q : std::get<0>(it)) {
                     q->push(std::get<1>(it));
                 }
             }
+            GAPI_LOG_DEBUG(nullptr, "produced synchronized input data");
         }
     }
+    GAPI_LOG_INFO(nullptr, "finished");
 }
 
 class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
@@ -659,6 +724,7 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
         if (!qr.getInputVector(in_queues, in_constants, isl_input_args))
         {
             // Stop case
+            GAPI_LOG_INFO(nullptr, "EndOfStream detected");
             return cv::gimpl::StreamMsg{cv::gimpl::EndOfStream{}};
         }
         // Wrap all input cv::Mats with RMats
@@ -801,46 +867,56 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
         GAPI_ITT_STATIC_LOCAL_HANDLE(outputs_post_hndl, "StreamingOutput::post");
         GAPI_ITT_AUTO_TRACE_GUARD(outputs_post_hndl);
 
-        std::lock_guard<std::mutex> lock{m_mutex};
-
-        // Mark the output ready for posting. If it is the first in the line,
-        // actually post it and all its successors which are ready for posting too.
-        auto it = m_postIdx.find(cv::gimpl::proto::ptr(argp));
-        GAPI_Assert(it != m_postIdx.end());
-        const int out_idx = it->second.first;
-        const auto out_iter = it->second.second;
-        out_iter->ready = true;
-        m_postIdx.erase(it); // Drop the link from the cache anyway
-        if (out_iter != m_postings[out_idx].begin())
+        bool stop_triggered = false;
         {
-            return; // There are some pending postings in the beginning, return
+            std::lock_guard<std::mutex> lock{m_mutex};
+
+            // Mark the output ready for posting. If it is the first in the line,
+            // actually post it and all its successors which are ready for posting too.
+            auto it = m_postIdx.find(cv::gimpl::proto::ptr(argp));
+            GAPI_Assert(it != m_postIdx.end());
+            const int out_idx = it->second.first;
+            const auto out_iter = it->second.second;
+            out_iter->ready = true;
+            m_postIdx.erase(it); // Drop the link from the cache anyway
+            if (out_iter != m_postings[out_idx].begin())
+            {
+                return; // There are some pending postings in the beginning, return
+            }
+
+            GAPI_Assert(out_iter == m_postings[out_idx].begin());
+            auto post_iter = m_postings[out_idx].begin();
+            while (post_iter != m_postings[out_idx].end() && post_iter->ready == true)
+            {
+                Cmd cmd;
+                if (cv::util::holds_alternative<cv::GRunArg>(post_iter->data))
+                {
+                    cmd = Cmd{cv::util::get<cv::GRunArg>(post_iter->data)};
+                }
+                else
+                {
+                    GAPI_Assert(cv::util::holds_alternative<cv::gimpl::EndOfStream>(post_iter->data));
+                    cmd = Cmd{Stop{}};
+                    m_stops_sent++;
+                    stop_triggered = true;
+                }
+                for (auto &&q : m_out_queues[out_idx])
+                {
+                    q->push(cmd);
+                }
+                post_iter = m_postings[out_idx].erase(post_iter);
+            }
         }
 
-        GAPI_Assert(out_iter == m_postings[out_idx].begin());
-        auto post_iter = m_postings[out_idx].begin();
-        while (post_iter != m_postings[out_idx].end() && post_iter->ready == true)
-        {
-            Cmd cmd;
-            if (cv::util::holds_alternative<cv::GRunArg>(post_iter->data))
-            {
-                cmd = Cmd{cv::util::get<cv::GRunArg>(post_iter->data)};
-            }
-            else
-            {
-                GAPI_Assert(cv::util::holds_alternative<cv::gimpl::EndOfStream>(post_iter->data));
-                cmd = Cmd{Stop{}};
-                m_stops_sent++;
-            }
-            for (auto &&q : m_out_queues[out_idx])
-            {
-                q->push(cmd);
-            }
-            post_iter = m_postings[out_idx].erase(post_iter);
+        if (stop_triggered) {
+            GAPI_LOG_INFO(nullptr, "got EndOfStream in: " << m_island->name() <<
+                                   " , sent cmd Stop count: " << m_stops_sent);
         }
     }
 
     virtual void post(cv::gimpl::EndOfStream&&) override
     {
+        GAPI_LOG_INFO(nullptr, "try post EndOfStream in: " << m_island->name());
         std::lock_guard<std::mutex> lock{m_mutex};
         // If the posting list is empty, just broadcast the stop message.
         // If it is not, enqueue the Stop message in the postings list.
@@ -919,12 +995,17 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                   
     StreamingInput input(qr, in_queues, in_constants, in_rcs);
     StreamingOutput output(out_metas, out_queues, out_rcs, island_exec);
 
+    GAPI_LOG_INFO(nullptr, "Starting: " << island_exec->name() <<
+                           ", in queues count: " << in_queues.size() <<
+                           ", out queus count: " << out_queues.size());
     GAPI_ITT_DYNAMIC_LOCAL_HANDLE(island_hndl, island_meta_info.c_str());
     while (!output.done())
     {
         GAPI_ITT_AUTO_TRACE_GUARD(island_hndl);
         island_exec->run(input, output);
     }
+
+    GAPI_LOG_INFO(nullptr, "Finished: " << island_exec->name());
 }
 
 // The idea of collectorThread is easy.  If there're multiple outputs
@@ -1099,6 +1180,7 @@ public:
         // so do nothing in this case
         if (   m_sync_policy == cv::gapi::streaming::sync_policy::drop
             && emitters.size() > 1u) {
+            GAPI_LOG_INFO(nullptr, "emitters count: " << emitters.size());
             m_synchronized_emitters = std::move(emitters);
             m_sync_queues.reserve(m_synchronized_emitters.size());
         }
@@ -1119,6 +1201,8 @@ public:
     // Start a thread which will handle the synchronization.
     // Do nothing if synchronization is not needed
     void start() {
+        GAPI_LOG_INFO(nullptr, "try to start syncActorThread for emitters count: " <<
+                                m_synchronized_emitters.size());
         if (m_synchronized_emitters.size() != 0) {
             GAPI_Assert(m_synchronized_emitters.size() > 1u);
             std::vector<Q*> sync_in_queues(m_synchronized_emitters.size());
@@ -1516,6 +1600,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             Stop stop;
             stop.kind = Stop::Kind::CNST;
             stop.cdata = std::get<1>(it);
+
+            GAPI_LOG_INFO(nullptr, "Send `Stop::Kind::CNST` from completion callback");
             std::get<0>(it)->push(Cmd{std::move(stop)});
         }
     };

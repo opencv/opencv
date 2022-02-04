@@ -59,6 +59,7 @@ public:
 
     int getReshapeCounter()  const { return m_priv->m_reshape_counter;  }
     int getAllocateCounter() const { return m_priv->m_allocate_counter; }
+    const char* name() const override { return "GMockExecutable"; };
 };
 
 class GMockBackendImpl final: public cv::gapi::GBackend::Priv

@@ -21,6 +21,8 @@
 #include <atomic>
 #include <tuple>
 
+#include <opencv2/imgproc.hpp>
+//#include <opencv2/highgui.hpp> // CommandLineParser
 
 #include <ade/util/algorithm.hpp>
 
@@ -574,7 +576,8 @@ static void setROIBlob(InferenceEngine::InferRequest& req,
                        const IE::Blob::Ptr&           blob,
                        const cv::Rect &roi,
                        const IECallContext&           ctx) {
-    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos &&
+        ctx.uu.rctx) {
         GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
                        ctx.uu.params.device_id << ", layer: " << layer_name);
         setBlob(req, layer_name, blob, ctx);
@@ -732,8 +735,9 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        // (3) Wait until all passed task are done.
+        GAPI_LOG_INFO(nullptr, "Got EndOfStream - wait until all passed task are done");
         m_reqPool->waitAll();
+        GAPI_LOG_INFO(nullptr, "all done");
         out.post(cv::gimpl::EndOfStream{});
         return;
     }

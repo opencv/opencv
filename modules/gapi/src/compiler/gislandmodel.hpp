@@ -150,6 +150,7 @@ public:
     // now.
     virtual void handleStopStream() {} // do nothing here by default
 
+    virtual const char* name() const = 0;
     virtual ~GIslandExecutable() = default;
 };
 
@@ -186,6 +187,7 @@ public:
     // Obtain next value from the emitter
     virtual bool pull(GRunArg &) = 0;
     virtual ~GIslandEmitter() = default;
+    virtual const char* name() const = 0;
 };
 
 // Couldn't reuse NodeType here - FIXME unify (move meta to a shared place)

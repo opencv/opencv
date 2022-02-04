@@ -64,6 +64,7 @@ public:
 
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
+    const char* name() const override { return "GOCLExecutable"; };
 };
 
 }}

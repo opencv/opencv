@@ -73,6 +73,7 @@ public:
     virtual void run(GIslandExecutable::IInput  &in,
                      GIslandExecutable::IOutput &out) override;
 
+    const char* name() const override { return "GIEExecutable"; };
 };
 
 }}}

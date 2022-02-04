@@ -107,6 +107,7 @@ public:
 
     virtual void handleNewStream() override;
     virtual void handleStopStream() override;
+    const char* name() const override { return "GOAKExecutable"; };
 };
 
 class GOAKContext {
