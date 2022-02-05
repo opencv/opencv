@@ -2235,12 +2235,15 @@ struct Net::Impl : public detail::NetImplBase
                 {
                     CV_LOG_DEBUG(NULL, "DNN/IE: wrap layer " << ld.name << "@" << ld.type << " - outputs: " << ld.outputBlobsWrappers.size());
                     node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
-                    // FIXIT doesn't work with multiple outputs (set name is applied to the same node)
+#if 0  // FIXIT doesn't work with multiple outputs (set name is applied to the same node)
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
                         InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
                         node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
                     }
+#else
+                    node.dynamicCast<InfEngineNgraphNode>()->setName(layer->name);
+#endif
                 }
                 else
                 {
