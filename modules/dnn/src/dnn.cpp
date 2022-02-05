@@ -1937,6 +1937,9 @@ struct Net::Impl : public detail::NetImplBase
 
 
 #ifdef HAVE_DNN_NGRAPH
+    /** mark input pins as outputs from other subnetworks
+     * FIXIT must be done by DNN engine not ngraph.
+     */
     void addNgraphOutputs(LayerData &ld)
     {
         CV_TRACE_FUNCTION();
@@ -1967,8 +1970,7 @@ struct Net::Impl : public detail::NetImplBase
                 if (layerNet != ieInpNode->net)
                 {
                     CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node->get_friendly_name());
-                    ieInpNode->net->addOutput(ieInpNode->node->get_friendly_name());
-                    ieInpNode->net->setUnconnectedNodes(ieInpNode);
+                    ieInpNode->net->addOutput(ieInpNode);
                 }
             }
         }
@@ -2118,7 +2120,7 @@ struct Net::Impl : public detail::NetImplBase
                         if (!inpNode.empty()) {
                             Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
                             CV_Assert(!ieNode.empty());
-                            ieNode->net->setUnconnectedNodes(ieNode);
+                            ieNode->net->addOutput(ieNode);
                         }
                     }
                     continue;
@@ -2259,15 +2261,11 @@ struct Net::Impl : public detail::NetImplBase
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
-            if (ld.consumers.empty()) {
-                // TF EAST_text_detection
-                ieNode->net->setUnconnectedNodes(ieNode);
-            }
             for (const auto& pin : blobsToKeep_)
             {
                 if (pin.lid == ld.id)
                 {
-                    ieNode->net->addOutput(ieNode->node->get_friendly_name());
+                    ieNode->net->addOutput(ieNode);
                     break;
                 }
             }
@@ -2298,7 +2296,7 @@ struct Net::Impl : public detail::NetImplBase
 
             if (!ieNode->net->isInitialized())
             {
-                ieNode->net->setUnconnectedNodes(ieNode);
+                ieNode->net->addOutput(ieNode);
                 ieNode->net->createNet((Target)preferableTarget);
                 ld.skip = false;
             }
