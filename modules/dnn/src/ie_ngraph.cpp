@@ -449,6 +449,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
         ngraph::ResultVector outs;
         for (auto& node : unconnectedNodes)
         {
+            CV_LOG_DEBUG(NULL, "DNN/IE: +network_output[" << outs.size() << "]: name='" << node->get_friendly_name() << "'");
             auto out = std::make_shared<ngraph::op::Result>(node);
             outs.push_back(out);
         }
@@ -456,6 +457,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
         ngraph_function = std::make_shared<ngraph::Function>(outs, inputs_vec);
 
         int num_comp = getNumComponents();
+        CV_LOG_DEBUG(NULL, "DNN/IE: number of subgraphs: " << num_comp);
         if (num_comp > 1) {
             for (int i = num_comp - 1; i >= 0; --i) {
                 ngraph::ResultVector outputs;
@@ -466,6 +468,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
 #else
                     if (node->is_parameter()) {
 #endif
+                        CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << "]: +input[" << inps.size() << "] = '" << node->get_friendly_name() << "'");
                         auto parameter = std::dynamic_pointer_cast<ngraph::op::Parameter>(node);
                         inps.push_back(parameter);
                     }
@@ -474,10 +477,12 @@ void InfEngineNgraphNet::createNet(Target targetId) {
 #else
                     else if (node->is_output()) {
 #endif
+                        CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << "]: +output[" << outputs.size() << "] = '" << node->get_friendly_name() << "'");
                         auto result = std::dynamic_pointer_cast<ngraph::op::Result>(node);
                         outputs.push_back(result);
                     }
                 }
+                CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << ": nodes=" << components.back().size() << " inputs=" << inps.size() << " outputs=" << outputs.size());
                 isInit = false;
                 CV_Assert_N(!inps.empty(), !outputs.empty());
                 ngraph_function = std::make_shared<ngraph::Function>(outputs, inps);
@@ -729,10 +734,10 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 }
             }
         }
-        if (isHetero)
-            netExec = ie.LoadNetwork(net, "HETERO:" + device_name + ",CPU", config);
-        else
-            netExec = ie.LoadNetwork(net, device_name, config);
+
+        std::string ieDevice = isHetero ? ("HETERO:" + device_name + ",CPU") : device_name;
+        CV_LOG_INFO(NULL, "DNN/IE: Calling LoadNetwork(device=" << ieDevice << ")...");
+        netExec = ie.LoadNetwork(net, ieDevice, config);
     }
     catch (const std::exception& ex)
     {
