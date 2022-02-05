@@ -330,7 +330,7 @@ public:
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
 
-InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node)
+InfEngineNgraphNode::InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {}
 
 InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes,
