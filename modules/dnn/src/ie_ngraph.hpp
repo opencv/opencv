@@ -102,7 +102,7 @@ public:
                         std::vector<Mat>& internals);
 
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
-    InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node);
+    InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node);
 
     void setName(const std::string& name);
 
