@@ -13,7 +13,7 @@ def main():
         help="""DEPTH - works with depth,
                 RGB - works with images,
                 RGB_DEPTH - works with all,
-                defalt - runs all algos""",
+                default - runs all algos""",
         default="")
     parser.add_argument(
         '-src_d',
@@ -34,11 +34,17 @@ def main():
 
     args = parser.parse_args()
 
-    depth1 = cv.imread(args.source_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
-    depth2 = cv.imread(args.destination_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
+    if args.algo == "RGB_DEPTH" or args.algo == "DEPTH" or args.algo == "":
+        source_depth_frame = cv.samples.findFile(args.source_depth_frame)
+        destination_depth_frame = cv.samples.findFile(args.destination_depth_frame)
+        depth1 = cv.imread(source_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        depth2 = cv.imread(destination_depth_frame, cv.IMREAD_ANYDEPTH).astype(np.float32)
 
-    rgb1 = cv.imread(args.source_rgb_frame, cv.IMREAD_COLOR)
-    rgb2 = cv.imread(args.destination_rgb_frame, cv.IMREAD_COLOR)
+    if args.algo == "RGB_DEPTH" or args.algo == "RGB" or args.algo == "":
+        source_rgb_frame = cv.samples.findFile(args.source_rgb_frame)
+        destination_rgb_frame = cv.samples.findFile(args.destination_rgb_frame)
+        rgb1 = cv.imread(source_rgb_frame, cv.IMREAD_COLOR)
+        rgb2 = cv.imread(destination_rgb_frame, cv.IMREAD_COLOR)
 
     if args.algo == "DEPTH" or args.algo == "":
         odometry = cv.Odometry(cv.DEPTH)
