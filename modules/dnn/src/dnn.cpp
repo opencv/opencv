@@ -2394,6 +2394,8 @@ struct Net::Impl : public detail::NetImplBase
     {
         CV_TRACE_FUNCTION();
 
+        return;
+
         if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 &&
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
