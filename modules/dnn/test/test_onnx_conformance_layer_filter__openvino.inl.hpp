@@ -1771,26 +1771,11 @@ CASE(test_spacetodepth)
 CASE(test_spacetodepth_example)
     // no filter
 CASE(test_split_equal_parts_1d)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP_CPU;
-    // MYRIAD is ok
-    SKIP_OPENCL;
-    SKIP_OPENCL_FP16;
-#endif
+    // no filter
 CASE(test_split_equal_parts_2d)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP_CPU;
-    // MYRIAD is ok
-    SKIP_OPENCL;
-    SKIP_OPENCL_FP16;
-#endif
+    // no filter
 CASE(test_split_equal_parts_default_axis)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    SKIP_CPU;
-    // MYRIAD is ok
-    SKIP_OPENCL;
-    SKIP_OPENCL_FP16;
-#endif
+    // no filter
 CASE(test_split_variable_parts_1d)
     // no filter
 CASE(test_split_variable_parts_2d)
