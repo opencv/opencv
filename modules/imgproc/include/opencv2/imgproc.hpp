@@ -4898,13 +4898,11 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
-/** @brief Line iterator
+/** @brief Class for iterating over all pixels on a raster line segment.
 
-The class is used to iterate over all the pixels on the raster line
-segment connecting two specified points.
-
-The class LineIterator is used to get each pixel of a raster line. It
-can be treated as versatile implementation of the Bresenham algorithm
+The class LineIterator is used to get each pixel of a raster line connecting
+two specified points.
+It can be treated as a versatile implementation of the Bresenham algorithm
 where you can stop at each pixel and do some extra processing, for
 example, grab pixel values along the line or draw a line with an effect
 (for example, with XOR operation).
@@ -4933,27 +4931,40 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief initializes the iterator
+    /** @brief Initializes iterator object for the given line and image.
 
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped on the image boundaries.
+
+    @param img Underlying image.
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false );
-    /** @brief returns pointer to the current pixel
+
+    /** @brief Returns pointer to the current pixel.
     */
     uchar* operator *();
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the prefix version (++it).
     */
     LineIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the postfix version (it++).
     */
     LineIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
+
+    /** @brief Returns coordinates of the current pixel.
     */
     Point pos() const;
 
