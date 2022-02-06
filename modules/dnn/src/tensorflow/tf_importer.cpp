@@ -11,6 +11,8 @@ Implementation of Tensorflow models parser
 
 #include "../precomp.hpp"
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <opencv2/core/utils/logger.defines.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -513,6 +515,7 @@ class TFLayerHandler;
 
 class TFImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 public:
     TFImporter(Net& net, const char *model, const char *config = NULL);
     TFImporter(Net& net, const char *dataModel, size_t lenModel,

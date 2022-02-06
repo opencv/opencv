@@ -19,10 +19,10 @@ class FeatureMatcher:
             self.matcher = cv.detail_AffineBestOf2NearestMatcher(**kwargs)
         elif range_width == -1:
             """https://docs.opencv.org/4.x/d4/d26/classcv_1_1detail_1_1BestOf2NearestMatcher.html"""  # noqa
-            self.matcher = cv.detail.BestOf2NearestMatcher_create(**kwargs)
+            self.matcher = cv.detail_BestOf2NearestMatcher(**kwargs)
         else:
             """https://docs.opencv.org/4.x/d8/d72/classcv_1_1detail_1_1BestOf2NearestRangeMatcher.html"""  # noqa
-            self.matcher = cv.detail.BestOf2NearestRangeMatcher_create(
+            self.matcher = cv.detail_BestOf2NearestRangeMatcher(
                 range_width, **kwargs
                 )
 

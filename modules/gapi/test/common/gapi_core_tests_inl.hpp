@@ -1701,11 +1701,44 @@ namespace {
     };
 };
 
+namespace {
+    class TestMediaGray final : public cv::MediaFrame::IAdapter {
+        cv::Mat m_mat;
+
+    public:
+        explicit TestMediaGray(cv::Mat m)
+            : m_mat(m) {
+        }
+        cv::GFrameDesc meta() const override {
+            return cv::GFrameDesc{ cv::MediaFormat::GRAY, cv::Size(m_mat.cols, m_mat.rows) };
+        }
+        cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+            cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+            return cv::MediaFrame::View(std::move(pp), std::move(ss));
+        }
+    };
+};
+
 TEST_P(SizeMFTest, ParseTest)
 {
     cv::Size out_sz;
     cv::Mat bgr = cv::Mat::eye(sz.height, sz.width, CV_8UC3);
     cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(frame), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(sz, out_sz);
+}
+
+TEST_P(SizeMFTest, ParseGrayTest)
+{
+    cv::Size out_sz;
+    cv::Mat gray = cv::Mat::eye(sz.height, sz.width, CV_8UC1);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaGray>(gray);
 
     cv::GFrame in;
     auto out = cv::gapi::streaming::size(in);

@@ -239,6 +239,21 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     else if(typeid(fptype) == typeid(double))
         OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
 
+#if defined(__clang__) && defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    // Make sure MSAN sees the memory as having been written.
+    // MSAN does not think it has been written because a different language was called.
+    __msan_unpoison(a, a_step * n);
+    __msan_unpoison(buffer, sizeof(fptype) * (lwork + 1));
+    if (u)
+      __msan_unpoison(u, u_step * m);
+    if (vt)
+      __msan_unpoison(vt, v_step * n);
+    if (w)
+      __msan_unpoison(w, sizeof(fptype) * std::min(m, n));
+#endif  // __has_feature(memory_sanitizer)
+#endif  // defined(__clang__) && defined(__has_feature)
+
     if(!(flags & CV_HAL_SVD_NO_UV))
         transpose_square_inplace(vt, ldv, n);
 

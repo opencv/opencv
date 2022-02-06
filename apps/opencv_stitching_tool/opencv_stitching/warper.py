@@ -1,3 +1,5 @@
+from statistics import median
+
 import cv2 as cv
 import numpy as np
 
@@ -15,48 +17,54 @@ class Warper:
 
     DEFAULT_WARP_TYPE = 'spherical'
 
-    def __init__(self, warper_type=DEFAULT_WARP_TYPE, scale=1):
+    def __init__(self, warper_type=DEFAULT_WARP_TYPE):
         self.warper_type = warper_type
-        self.warper = cv.PyRotationWarper(warper_type, scale)
-        self.scale = scale
+        self.scale = None
 
-    def warp_images_and_image_masks(self, imgs, cameras, scale=None, aspect=1):
-        self.update_scale(scale)
+    def set_scale(self, cameras):
+        focals = [cam.focal for cam in cameras]
+        self.scale = median(focals)
+
+    def warp_images(self, imgs, cameras, aspect=1):
         for img, camera in zip(imgs, cameras):
-            yield self.warp_image_and_image_mask(img, camera, scale, aspect)
+            yield self.warp_image(img, camera, aspect)
 
-    def warp_image_and_image_mask(self, img, camera, scale=None, aspect=1):
-        self.update_scale(scale)
-        corner, img_warped = self.warp_image(img, camera, aspect)
-        mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
-        _, mask_warped = self.warp_image(mask, camera, aspect, mask=True)
-        return img_warped, mask_warped, corner
+    def warp_image(self, img, camera, aspect=1):
+        warper = cv.PyRotationWarper(self.warper_type, self.scale*aspect)
+        _, warped_image = warper.warp(img,
+                                      Warper.get_K(camera, aspect),
+                                      camera.R,
+                                      cv.INTER_LINEAR,
+                                      cv.BORDER_REFLECT)
+        return warped_image
 
-    def warp_image(self, image, camera, aspect=1, mask=False):
-        if mask:
-            interp_mode = cv.INTER_NEAREST
-            border_mode = cv.BORDER_CONSTANT
-        else:
-            interp_mode = cv.INTER_LINEAR
-            border_mode = cv.BORDER_REFLECT
+    def create_and_warp_masks(self, sizes, cameras, aspect=1):
+        for size, camera in zip(sizes, cameras):
+            yield self.create_and_warp_mask(size, camera, aspect)
 
-        corner, warped_image = self.warper.warp(image,
-                                                Warper.get_K(camera, aspect),
-                                                camera.R,
-                                                interp_mode,
-                                                border_mode)
-        return corner, warped_image
+    def create_and_warp_mask(self, size, camera, aspect=1):
+        warper = cv.PyRotationWarper(self.warper_type, self.scale*aspect)
+        mask = 255 * np.ones((size[1], size[0]), np.uint8)
+        _, warped_mask = warper.warp(mask,
+                                     Warper.get_K(camera, aspect),
+                                     camera.R,
+                                     cv.INTER_NEAREST,
+                                     cv.BORDER_CONSTANT)
+        return warped_mask
 
-    def warp_roi(self, width, height, camera, scale=None, aspect=1):
-        self.update_scale(scale)
-        roi = (width, height)
+    def warp_rois(self, sizes, cameras, aspect=1):
+        roi_corners = []
+        roi_sizes = []
+        for size, camera in zip(sizes, cameras):
+            roi = self.warp_roi(size, camera, aspect)
+            roi_corners.append(roi[0:2])
+            roi_sizes.append(roi[2:4])
+        return roi_corners, roi_sizes
+
+    def warp_roi(self, size, camera, aspect=1):
+        warper = cv.PyRotationWarper(self.warper_type, self.scale*aspect)
         K = Warper.get_K(camera, aspect)
-        return self.warper.warpRoi(roi, K, camera.R)
-
-    def update_scale(self, scale):
-        if scale is not None and scale != self.scale:
-            self.warper = cv.PyRotationWarper(self.warper_type, scale)  # setScale not working: https://docs.opencv.org/4.x/d5/d76/classcv_1_1PyRotationWarper.html#a90b000bb75f95294f9b0b6ec9859eb55
-            self.scale = scale
+        return warper.warpRoi(size, K, camera.R)
 
     @staticmethod
     def get_K(camera, aspect=1):
