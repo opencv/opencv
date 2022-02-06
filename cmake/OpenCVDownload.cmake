@@ -37,46 +37,46 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-# host
-set(OPENCV_DOWNLOAD_HOST "GITHUB" CACHE INTERNAL "Used for 3rdparty archives")
-# mirrors
-set(OPENCV_MIRROR_GITCODE "gitcode.net" CACHE INTERNAL "Link to mirror hosted by gitcode")
-set(OPENCV_MIRROR_CUSTOM "" CACHE INTERNAL "Link to another mirror hosted in gitlab-style")
+# host (use internal)
+set(OPENCV_DOWNLOAD_MIRROR_ID "" CACHE STRING "Available mirror ID: gitcode, custom")
 
 function(ocv_init_download)
-  # Run `git remote get-url origin` to get remote source
-  execute_process(
-    COMMAND
-      git remote get-url origin
-    WORKING_DIRECTORY
-      ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE
-      RESULT_STATUS
-    OUTPUT_VARIABLE
-      OCV_GIT_ORIGIN_URL_OUTPUT
-    ERROR_QUIET
-  )
-  # if non-git, OCV_GIT_ORIGIN_URL_OUTPUT is empty
-  if(NOT OCV_GIT_ORIGIN_URL_OUTPUT)
-    message(STATUS "ocv_init_download: OpenCV source tree is not fetched as git repository. 3rdparty resources will be downloaded from Github.com by default. You can use mirrors with CMake option -DOPENCV_MIRROR_CUSTOM=gitcode.net for example.")
+  set(__HOST "unknown") # unknown by default
+  if("m${OPENCV_DOWNLOAD_MIRROR_ID}" STREQUAL "mgitcode")
+    set(__HOST "gitcode")
+  elseif("m${OPENCV_DOWNLOAD_MIRROR_ID}" STREQUAL "mcustom")
+    set(__HOST "custom")
   else()
-    if(OPENCV_MIRROR_CUSTOM)
-      set(__HOST "CUSTOM")
-      ocv_cmake_hook_append(OCV_DOWNLOAD_MIRROR_CUSTOM "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mirrors/custom.cmake")
+    # Run `git remote get-url origin` to get remote source
+    execute_process(
+      COMMAND
+        git remote get-url origin
+      WORKING_DIRECTORY
+        ${CMAKE_SOURCE_DIR}
+      RESULT_VARIABLE
+        RESULT_STATUS
+      OUTPUT_VARIABLE
+        OCV_GIT_ORIGIN_URL_OUTPUT
+      ERROR_QUIET
+    )
+    # if non-git, OCV_GIT_ORIGIN_URL_OUTPUT is empty
+    if(NOT OCV_GIT_ORIGIN_URL_OUTPUT)
+      message(STATUS "ocv_init_download: OpenCV source tree is not fetched as git repository. 3rdparty resources will be downloaded from github.com by default.")
+      return()
     else()
       string(FIND "${OCV_GIT_ORIGIN_URL_OUTPUT}" "${OPENCV_MIRROR_GITCODE}" _found_gitcode)
       if(NOT ${_found_gitcode} EQUAL -1)
-        set(__HOST "GITCODE")
-        ocv_cmake_hook_append(OCV_DOWNLOAD_MIRROR_GITCODE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mirrors/gitcode.cmake")
+        set(__HOST "gitcode")
       endif()
     endif()
+  endif()
 
-    if(DEFINED __HOST)
-      message(STATUS "ocv_init_download: Use mirror ${__HOST} to download 3rdparty resources.")
-      set(OPENCV_DOWNLOAD_HOST "${__HOST}" PARENT_SCOPE)
-    else()
-      message(STATUS "ocv_init_download: Try -DOPENCV_MIRROR_CUSTOM=gitcode.net if connection to Github.com is poor.")
-    endif()
+  if(__HOST STREQUAL "unknown")
+    message(STATUS "ocv_init_download: Unknown host detected. Using github.com to download 3rdparty components.")
+  else()
+    message(STATUS "ocv_init_download: Using ${__HOST}-hosted mirror to download 3rdparty components.")
+    ocv_cmake_hook_append(OCV_DOWNLOAD_MIRROR_${__HOST} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mirrors/${__HOST}.cmake")
+    set(OPENCV_DOWNLOAD_MIRROR_ID "${__HOST}" PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -110,7 +110,7 @@ function(ocv_download)
     set(${DL_STATUS} TRUE PARENT_SCOPE)
   endif()
 
-  ocv_cmake_hook(OCV_DOWNLOAD_MIRROR_${OPENCV_DOWNLOAD_HOST})
+  ocv_cmake_hook(OCV_DOWNLOAD_MIRROR_${OPENCV_DOWNLOAD_MIRROR_ID})
 
   # Check CMake cache for already processed tasks
   string(FIND "${DL_DESTINATION_DIR}" "${CMAKE_BINARY_DIR}" DL_BINARY_PATH_POS)
