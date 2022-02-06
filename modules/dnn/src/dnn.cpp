@@ -1937,9 +1937,14 @@ struct Net::Impl : public detail::NetImplBase
 
 
 #ifdef HAVE_DNN_NGRAPH
+    /** mark input pins as outputs from other subnetworks
+     * FIXIT must be done by DNN engine not ngraph.
+     */
     void addNgraphOutputs(LayerData &ld)
     {
         CV_TRACE_FUNCTION();
+
+        CV_LOG_DEBUG(NULL, "DNN/IE: layer of new subnet: " << ld.name << "@" << ld.type);
 
         Ptr<InfEngineNgraphNet> layerNet;
         auto it = ld.backendNodes.find(preferableBackend);
@@ -1964,8 +1969,8 @@ struct Net::Impl : public detail::NetImplBase
                 CV_Assert(!ieInpNode.empty()); CV_Assert(!ieInpNode->net.empty());
                 if (layerNet != ieInpNode->net)
                 {
-                    ieInpNode->net->addOutput(ieInpNode->node->get_friendly_name());
-                    ieInpNode->net->setUnconnectedNodes(ieInpNode);
+                    CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node->get_friendly_name());
+                    ieInpNode->net->addOutput(ieInpNode);
                 }
             }
         }
@@ -2064,13 +2069,19 @@ struct Net::Impl : public detail::NetImplBase
         {
             LayerData& ld = it->second;
 
+            CV_LOG_DEBUG(NULL, "DNN/IE: processing layer " << ld.name << "@" << ld.type << " (" << ld.id << ") ...");
+
             if (ld.id == 0 && ld.skip)
+            {
+                CV_LOG_DEBUG(NULL, "DNN/IE:    SKIP!");
                 continue;
+            }
 
             bool fused = ld.skip;
             Ptr<Layer> layer = ld.layerInstance;
             if (!fused && !layer->supportBackend(preferableBackend))
             {
+                CV_LOG_DEBUG(NULL, "DNN/IE:    NOT supported!");
                 bool customizable = ld.id != 0 && supportsCPUFallback;
 
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
@@ -2097,6 +2108,7 @@ struct Net::Impl : public detail::NetImplBase
 
                 if (!customizable)
                 {
+                    CV_LOG_DEBUG(NULL, "DNN/IE:    NOT customizable!");
                     addNgraphOutputs(ld);
                     net = Ptr<InfEngineNgraphNet>();
                     layer->preferableTarget = DNN_TARGET_CPU;
@@ -2108,7 +2120,7 @@ struct Net::Impl : public detail::NetImplBase
                         if (!inpNode.empty()) {
                             Ptr<InfEngineNgraphNode> ieNode = inpNode.dynamicCast<InfEngineNgraphNode>();
                             CV_Assert(!ieNode.empty());
-                            ieNode->net->setUnconnectedNodes(ieNode);
+                            ieNode->net->addOutput(ieNode);
                         }
                     }
                     continue;
@@ -2221,21 +2233,30 @@ struct Net::Impl : public detail::NetImplBase
 
                 if (layer->supportBackend(preferableBackend))
                 {
+                    CV_LOG_DEBUG(NULL, "DNN/IE: wrap layer " << ld.name << "@" << ld.type << " - outputs: " << ld.outputBlobsWrappers.size());
                     node = layer->initNgraph(ld.inputBlobsWrappers, inputNodes);
+#if 0  // FIXIT doesn't work with multiple outputs (set name is applied to the same node)
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
                         InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
                         node.dynamicCast<InfEngineNgraphNode>()->setName(dataPtr->getName());
                     }
+#else
+                    node.dynamicCast<InfEngineNgraphNode>()->setName(layer->name);
+#endif
                 }
                 else
                 {
+                    CV_LOG_DEBUG(NULL, "DNN/IE: layer is not supported: " << ld.name << "@" << ld.type);
                     node = Ptr<BackendNode>(new InfEngineNgraphNode(inputNodes,
                         ld.layerInstance, ld.inputBlobs, ld.outputBlobs, ld.internals));
                 }
             }
             else if (node.empty())
+            {
+                CV_LOG_DEBUG(NULL, "DNN/IE: node.empty() bypass...");
                 continue;
+            }
 
             ld.backendNodes[preferableBackend] = node;
 
@@ -2243,15 +2264,11 @@ struct Net::Impl : public detail::NetImplBase
             CV_Assert(!ieNode.empty());
             ieNode->net = net;
 
-            if (ld.consumers.empty()) {
-                // TF EAST_text_detection
-                ieNode->net->setUnconnectedNodes(ieNode);
-            }
             for (const auto& pin : blobsToKeep_)
             {
                 if (pin.lid == ld.id)
                 {
-                    ieNode->net->addOutput(ieNode->node->get_friendly_name());
+                    ieNode->net->addOutput(ieNode);
                     break;
                 }
             }
@@ -2282,7 +2299,7 @@ struct Net::Impl : public detail::NetImplBase
 
             if (!ieNode->net->isInitialized())
             {
-                ieNode->net->setUnconnectedNodes(ieNode);
+                ieNode->net->addOutput(ieNode);
                 ieNode->net->createNet((Target)preferableTarget);
                 ld.skip = false;
             }
@@ -2412,8 +2429,15 @@ struct Net::Impl : public detail::NetImplBase
                         preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
            return;
 
+#if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
+        if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return;
+#endif
+
         // scan through all the layers. If there is convolution layer followed by the activation layer,
         // we try to embed this activation into the convolution and disable separate execution of the activation
+
+        // FIXIT replace by layersToKeep to avoid hacks like "LayerPin(lid, 0)"
         std::set<LayerPin> pinsToKeep(blobsToKeep_.begin(),
                                       blobsToKeep_.end());
         for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
@@ -2438,6 +2462,13 @@ struct Net::Impl : public detail::NetImplBase
                 LayerPin lpNext(ld.consumers[0].lid, 0);
                 while (nextData)
                 {
+#ifdef HAVE_INF_ENGINE
+                    if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && pinsToKeep.count(lpNext) != 0)
+                    {
+                        CV_LOG_DEBUG(NULL, "DNN/IE: skip fusing with 'output' node: " << nextData->name << "@" << nextData->type);
+                        break;
+                    }
+#endif
                     Ptr<Layer> nextLayer = nextData->layerInstance;
                     if (currLayer->tryFuse(nextLayer))
                     {
