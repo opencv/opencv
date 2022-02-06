@@ -13,8 +13,14 @@ if(NOT TARGET ade)
   return()
 endif()
 
-if(INF_ENGINE_TARGET)
-  ocv_option(OPENCV_GAPI_INF_ENGINE "Build GraphAPI module with Inference Engine support" ON)
+if(TARGET ocv.3rdparty.openvino)
+  # TODO: remove OPENCV_GAPI_INF_ENGINE option
+  set(initial_value ON)
+  if(DEFINED OPENCV_GAPI_INF_ENGINE)
+    set(initial_value ${OPENCV_GAPI_INF_ENGINE})
+    message(WARNING "OPENCV_GAPI_INF_ENGINE option is deprecated. Use OPENCV_GAPI_WITH_OPENVINO option instead.")
+  endif()
+  ocv_option(OPENCV_GAPI_WITH_OPENVINO "G-API: Enable OpenVINO Toolkit support" ${initial_value})
 endif()
 
 set(the_description "OpenCV G-API Core Module")
@@ -228,12 +234,8 @@ ocv_create_module()
 
 ocv_target_link_libraries(${the_module} PRIVATE ade)
 
-if(OPENCV_GAPI_INF_ENGINE)
-  ocv_target_link_libraries(${the_module} PRIVATE ${INF_ENGINE_TARGET})
-endif()
-
-if (HAVE_NGRAPH)
-    ocv_target_link_libraries(${the_module} PRIVATE ngraph::ngraph)
+if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
+  ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.openvino)
 endif()
 
 if(HAVE_TBB)
@@ -248,11 +250,8 @@ if(CV_TRACE AND HAVE_ITT)
 endif()
 
 set(__test_extra_deps "")
-if(OPENCV_GAPI_INF_ENGINE)
-  list(APPEND __test_extra_deps ${INF_ENGINE_TARGET})
-endif()
-if(HAVE_NGRAPH)
-  list(APPEND __test_extra_deps ngraph::ngraph)
+if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
+  list(APPEND __test_extra_deps ocv.3rdparty.openvino)
 endif()
 ocv_add_accuracy_tests(${__test_extra_deps})
 
@@ -263,9 +262,6 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
-  if (HAVE_NGRAPH)
-      ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_NGRAPH)
-  endif()
 endif()
 
 if(HAVE_TBB AND TARGET opencv_test_gapi)
@@ -346,13 +342,18 @@ ocv_add_samples()
 
 
 # Required for sample with inference on host
-if (TARGET example_gapi_onevpl_infer_single_roi)
-  if(OPENCV_GAPI_INF_ENGINE)
-    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ${INF_ENGINE_TARGET})
-    ocv_target_compile_definitions(example_gapi_onevpl_infer_single_roi PRIVATE -DHAVE_INF_ENGINE)
+if(TARGET example_gapi_onevpl_infer_single_roi)
+  if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ocv.3rdparty.openvino)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
+
+if(TARGET example_gapi_pipeline_modeling_tool)
+  if(WIN32)
+    ocv_target_link_libraries(example_gapi_pipeline_modeling_tool winmm.lib)
   endif()
 endif()
 

@@ -542,6 +542,18 @@ CV__DNN_INLINE_NS_BEGIN
          */
         void connect(int outLayerId, int outNum, int inpLayerId, int inpNum);
 
+        /** @brief Registers network output with name
+         *
+         *  Function may create additional 'Identity' layer.
+         *
+         *  @param outputName identifier of the output
+         *  @param layerId identifier of the second layer
+         *  @param outputPort number of the second layer input
+         *
+         *  @returns index of bound layer (the same as layerId or newly created)
+         */
+        int registerOutput(const std::string& outputName, int layerId, int outputPort);
+
         /** @brief Sets outputs names of the network input pseudo layer.
          *
          * Each net always has special own the network input pseudo layer with id=0.
@@ -685,10 +697,14 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP inline Mat getParam(const String& layerName, int numParam = 0) const { return getParam(getLayerId(layerName), numParam); }
 
         /** @brief Returns indexes of layers with unconnected outputs.
+         *
+         * FIXIT: Rework API to registerOutput() approach, deprecate this call
          */
         CV_WRAP std::vector<int> getUnconnectedOutLayers() const;
 
         /** @brief Returns names of layers with unconnected outputs.
+         *
+         * FIXIT: Rework API to registerOutput() approach, deprecate this call
          */
         CV_WRAP std::vector<String> getUnconnectedOutLayersNames() const;
 

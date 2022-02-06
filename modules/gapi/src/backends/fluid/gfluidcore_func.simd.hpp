@@ -173,6 +173,30 @@ MULC_SIMD(float, float)
 
 #undef MULC_SIMD
 
+#define DIVC_SIMD(SRC, DST)                                                              \
+int divc_simd(const SRC in[], const float scalar[], DST out[],                           \
+              const int length, const int chan, const float scale,                       \
+              const int set_mask_flag);
+
+DIVC_SIMD(uchar, uchar)
+DIVC_SIMD(ushort, uchar)
+DIVC_SIMD(short, uchar)
+DIVC_SIMD(float, uchar)
+DIVC_SIMD(short, short)
+DIVC_SIMD(ushort, short)
+DIVC_SIMD(uchar, short)
+DIVC_SIMD(float, short)
+DIVC_SIMD(ushort, ushort)
+DIVC_SIMD(uchar, ushort)
+DIVC_SIMD(short, ushort)
+DIVC_SIMD(float, ushort)
+DIVC_SIMD(uchar, float)
+DIVC_SIMD(ushort, float)
+DIVC_SIMD(short, float)
+DIVC_SIMD(float, float)
+
+#undef DIVC_SIMD
+
 #define ABSDIFFC_SIMD(T)                                            \
 int absdiffc_simd(const T in[], const float scalar[], T out[],      \
                   const int length, const int chan);
@@ -186,6 +210,9 @@ ABSDIFFC_SIMD(float)
 
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width);
+
+int split4_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], uchar out4[], const int width);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -938,6 +965,7 @@ struct add_tag {};
 struct sub_tag {};
 struct subr_tag {};
 struct mul_tag {};
+struct div_tag {};
 struct absdiff_tag {};
 
 CV_ALWAYS_INLINE void arithmOpScalar_pack_store_c3(short* outx,       const v_int32& c1,
@@ -980,6 +1008,21 @@ CV_ALWAYS_INLINE v_float32 oper(subr_tag, const v_float32& a, const v_float32& s
 CV_ALWAYS_INLINE v_float32 oper(mul_tag, const v_float32& a, const v_float32& sc)
 {
     return a * sc;
+}
+
+CV_ALWAYS_INLINE v_float32 oper_scaled(mul_tag, const v_float32& a, const v_float32& v_scalar, const v_float32& v_scale)
+{
+    return v_scale * a * v_scalar;
+}
+
+CV_ALWAYS_INLINE v_float32 oper(div_tag, const v_float32& a, const v_float32& sc)
+{
+    return a / sc;
+}
+
+CV_ALWAYS_INLINE v_float32 oper_scaled(div_tag, const v_float32& a, const v_float32& v_scalar, const v_float32& v_scale)
+{
+    return a*v_scale / v_scalar;
 }
 
 CV_ALWAYS_INLINE v_float32 oper(absdiff_tag, const v_float32& a, const v_float32& sc)
@@ -1291,16 +1334,17 @@ SUBRC_SIMD(float, float)
 
 //-------------------------
 //
-// Fluid kernels: MulC
+// Fluid kernels: MulC, DivC
 //
 //-------------------------
 
-template<typename SRC, typename DST>
+template<typename oper_tag, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
                         std::is_same<DST, ushort>::value, void>::type
-mulc_scale_simd_c3_impl(const SRC* inx, DST* outx, const v_float32& s1, const v_float32& s2,
-                        const v_float32& s3, const v_float32& scale, const int nlanes)
+arithmOpScalarScaled_simd_c3_impl(oper_tag op, SRC* inx, DST* outx, const v_float32& s1,
+                                  const v_float32& s2, const v_float32& s3,
+                                  const v_float32& v_scale, const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
     v_float32 a2 = vg_load_f32(&inx[nlanes / 2]);
@@ -1309,62 +1353,64 @@ mulc_scale_simd_c3_impl(const SRC* inx, DST* outx, const v_float32& s1, const v_
     v_float32 a5 = vg_load_f32(&inx[2 * nlanes]);
     v_float32 a6 = vg_load_f32(&inx[5 * nlanes / 2]);
 
-    arithmOpScalar_pack_store_c3(outx, v_round(scale*a1*s1),
-                                       v_round(scale*a2*s2),
-                                       v_round(scale*a3*s3),
-                                       v_round(scale*a4*s1),
-                                       v_round(scale*a5*s2),
-                                       v_round(scale*a6*s3));
+    arithmOpScalar_pack_store_c3(outx, v_round(oper_scaled(op, a1, s1, v_scale)),
+                                       v_round(oper_scaled(op, a2, s2, v_scale)),
+                                       v_round(oper_scaled(op, a3, s3, v_scale)),
+                                       v_round(oper_scaled(op, a4, s1, v_scale)),
+                                       v_round(oper_scaled(op, a5, s2, v_scale)),
+                                       v_round(oper_scaled(op, a6, s3, v_scale)));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC>
-CV_ALWAYS_INLINE void mulc_scale_simd_c3_impl(const SRC* inx, uchar* outx,
-                                              const v_float32& s1, const v_float32& s2,
-                                              const v_float32& s3, const v_float32& scale, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalarScaled_simd_c3_impl(oper_tag op, const SRC* inx, uchar* outx,
+                                                        const v_float32& s1, const v_float32& s2,
+                                                        const v_float32& s3, const v_float32& v_scale,
+                                                        const int nlanes)
 {
     vx_store(outx,
-               v_pack_u(v_pack(v_round(scale * vg_load_f32(inx)* s1),
-                               v_round(scale * vg_load_f32(&inx[nlanes/4])* s2)),
-                        v_pack(v_round(scale * vg_load_f32(&inx[nlanes/2])* s3),
-                               v_round(scale * vg_load_f32(&inx[3*nlanes/4])* s1))));
+               v_pack_u(v_pack(v_round(oper_scaled(op, vg_load_f32(inx), s1, v_scale)),
+                               v_round(oper_scaled(op, vg_load_f32(&inx[nlanes/4]), s2, v_scale))),
+                        v_pack(v_round(oper_scaled(op, vg_load_f32(&inx[nlanes/2]), s3, v_scale)),
+                               v_round(oper_scaled(op, vg_load_f32(&inx[3*nlanes/4]), s1, v_scale)))));
 
     vx_store(&outx[nlanes],
-                v_pack_u(v_pack(v_round(scale * vg_load_f32(&inx[nlanes])* s2),
-                                v_round(scale * vg_load_f32(&inx[5*nlanes/4])* s3)),
-                         v_pack(v_round(scale * vg_load_f32(&inx[3*nlanes/2])* s1),
-                                v_round(scale * vg_load_f32(&inx[7*nlanes/4])* s2))));
+                v_pack_u(v_pack(v_round(oper_scaled(op, vg_load_f32(&inx[nlanes]), s2, v_scale)),
+                                v_round(oper_scaled(op, vg_load_f32(&inx[5*nlanes/4]), s3, v_scale))),
+                         v_pack(v_round(oper_scaled(op, vg_load_f32(&inx[3*nlanes/2]), s1, v_scale)),
+                                v_round(oper_scaled(op, vg_load_f32(&inx[7*nlanes/4]), s2, v_scale)))));
 
     vx_store(&outx[2 * nlanes],
-                v_pack_u(v_pack(v_round(scale * vg_load_f32(&inx[2*nlanes])* s3),
-                                v_round(scale * vg_load_f32(&inx[9*nlanes/4])* s1)),
-                         v_pack(v_round(scale * vg_load_f32(&inx[5*nlanes/2])* s2),
-                                v_round(scale * vg_load_f32(&inx[11*nlanes/4])* s3))));
+                v_pack_u(v_pack(v_round(oper_scaled(op, vg_load_f32(&inx[2*nlanes]), s3, v_scale)),
+                                v_round(oper_scaled(op, vg_load_f32(&inx[9*nlanes/4]), s1, v_scale))),
+                         v_pack(v_round(oper_scaled(op, vg_load_f32(&inx[5*nlanes/2]), s2, v_scale)),
+                                v_round(oper_scaled(op, vg_load_f32(&inx[11*nlanes/4]), s3, v_scale)))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC>
-CV_ALWAYS_INLINE void mulc_scale_simd_c3_impl(const SRC* in, float* out,
-                                        const v_float32& s1, const v_float32& s2,
-                                        const v_float32& s3, const v_float32& scale, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalarScaled_simd_c3_impl(oper_tag op, const SRC* in, float* out,
+                                                        const v_float32& s1, const v_float32& s2,
+                                                        const v_float32& s3, const v_float32& v_scale,
+                                                        const int nlanes)
 {
     v_float32 a1 = vg_load_f32(in);
     v_float32 a2 = vg_load_f32(&in[nlanes]);
     v_float32 a3 = vg_load_f32(&in[2*nlanes]);
 
-    vx_store(out, scale * a1* s1);
-    vx_store(&out[nlanes], scale * a2* s2);
-    vx_store(&out[2*nlanes], scale * a3* s3);
+    vx_store(out, oper_scaled(op, a1, s1, v_scale));
+    vx_store(&out[nlanes], oper_scaled(op, a2, s2, v_scale));
+    vx_store(&out[2*nlanes], oper_scaled(op, a3, s3, v_scale));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int mulc_scale_simd_c3(const SRC in[],
-                                        const float scalar[], DST out[],
-                                        const int length, const float _scale)
+template<typename oper_tag, typename SRC, typename DST>
+CV_ALWAYS_INLINE int arithmOpScalarScaled_simd_c3(oper_tag op, const SRC in[],
+                                                  const float scalar[], DST out[],
+                                                  const int length, const float scale)
 {
     constexpr int chan = 3;
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;
@@ -1373,7 +1419,7 @@ CV_ALWAYS_INLINE int mulc_scale_simd_c3(const SRC in[],
     if (length < lanes)
         return 0;
 
-    v_float32 scale = vx_setall_f32(_scale);
+    v_float32 v_scale = vx_setall_f32(scale);
 
     v_float32 s1 = vx_load(scalar);
 #if CV_SIMD_WIDTH == 32
@@ -1389,7 +1435,7 @@ CV_ALWAYS_INLINE int mulc_scale_simd_c3(const SRC in[],
     {
         for (; x <= length - lanes; x += lanes)
         {
-            mulc_scale_simd_c3_impl(&in[x], &out[x], s1, s2, s3, scale, nlanes);
+            arithmOpScalarScaled_simd_c3_impl(op, &in[x], &out[x], s1, s2, s3, v_scale, nlanes);
         }
 
         if (x < length)
@@ -1404,70 +1450,70 @@ CV_ALWAYS_INLINE int mulc_scale_simd_c3(const SRC in[],
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC, typename DST>
+template<typename oper_tag, typename SRC, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<DST, ushort>::value ||
                          std::is_same<DST, short>::value), void>::type
-mulc_scale_simd_common_impl(const SRC* inx, DST* outx,
-                            const v_float32& sc, const v_float32& scale,
-                            const int nlanes)
+arithmOpScalarScaled_simd_common_impl(oper_tag op, const SRC* inx, DST* outx,
+                                      const v_float32& v_scalar, const v_float32& v_scale,
+                                      const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
     v_float32 a2 = vg_load_f32(&inx[nlanes/2]);
 
-    v_store_i16(outx, v_round(scale * a1* sc), v_round(scale * a2* sc));
+    v_store_i16(outx, v_round(oper_scaled(op, a1, v_scalar, v_scale)), v_round(oper_scaled(op, a2, v_scalar, v_scale)));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC>
-CV_ALWAYS_INLINE void mulc_scale_simd_common_impl(const SRC* inx,
-                                                  uchar* outx, const v_float32& sc,
-                                                  const v_float32& scale, const int nlanes)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalarScaled_simd_common_impl(oper_tag op, const SRC* inx,
+                                                            uchar* outx, const v_float32& v_scalar,
+                                                            const v_float32& v_scale, const int nlanes)
 {
     v_float32 a1 = vg_load_f32(inx);
     v_float32 a2 = vg_load_f32(&inx[nlanes/4]);
     v_float32 a3 = vg_load_f32(&inx[nlanes/2]);
     v_float32 a4 = vg_load_f32(&inx[3 * nlanes/4]);
 
-    vx_store(outx, v_pack_u(v_pack(v_round(scale * a1* sc),
-                                   v_round(scale * a2* sc)),
-                            v_pack(v_round(scale * a3* sc),
-                                   v_round(scale * a4* sc))));
+    vx_store(outx, v_pack_u(v_pack(v_round(oper_scaled(op, a1, v_scalar, v_scale)),
+                                   v_round(oper_scaled(op, a2, v_scalar, v_scale))),
+                            v_pack(v_round(oper_scaled(op, a3, v_scalar, v_scale)),
+                                   v_round(oper_scaled(op, a4, v_scalar, v_scale)))));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC>
-CV_ALWAYS_INLINE void mulc_scale_simd_common_impl(const SRC* inx,
-                                                  float* outx, const v_float32& sc,
-                                                  const v_float32& scale, const int)
+template<typename oper_tag, typename SRC>
+CV_ALWAYS_INLINE void arithmOpScalarScaled_simd_common_impl(oper_tag op, const SRC* inx,
+                                                            float* outx, const v_float32& v_scalar,
+                                                            const v_float32& v_scale, const int)
 {
-    v_float32 a1 = vg_load_f32(inx);
-    vx_store(outx, scale * a1* sc);
+    v_float32 a = vg_load_f32(inx);
+    vx_store(outx, oper_scaled(op, a, v_scalar, v_scale));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int mulc_scale_simd_common(const SRC in[],
-                                            const float scalar[], DST out[],
-                                            const int length, const float _scale)
+template<typename oper_tag, typename SRC, typename DST>
+CV_ALWAYS_INLINE int arithmOpScalarScaled_simd_common(oper_tag op, const SRC in[],
+                                                      const float scalar[], DST out[],
+                                                      const int length, const float scale)
 {
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;
 
     if (length < nlanes)
         return 0;
 
-    v_float32 _scalar = vx_load(scalar);
-    v_float32 scale = vx_setall_f32(_scale);
+    v_float32 v_scalar = vx_load(scalar);
+    v_float32 v_scale = vx_setall_f32(scale);
 
     int x = 0;
     for (;;)
     {
         for (; x <= length - nlanes; x += nlanes)
         {
-            mulc_scale_simd_common_impl(&in[x], &out[x], _scalar, scale, nlanes);
+            arithmOpScalarScaled_simd_common_impl(op, &in[x], &out[x], v_scalar, v_scale, nlanes);
         }
 
         if (x < length)
@@ -1479,6 +1525,8 @@ CV_ALWAYS_INLINE int mulc_scale_simd_common(const SRC in[],
     }
     return x;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 #define MULC_SIMD(SRC, DST)                                                    \
 int mulc_simd(const SRC in[], const float scalar[], DST out[],                 \
@@ -1498,7 +1546,8 @@ int mulc_simd(const SRC in[], const float scalar[], DST out[],                 \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            return mulc_scale_simd_common(in, scalar, out, length, scale);     \
+            return arithmOpScalarScaled_simd_common(op_t, in, scalar, out,     \
+                   length, scale);                                             \
         }                                                                      \
     }                                                                          \
     case 3:                                                                    \
@@ -1510,7 +1559,8 @@ int mulc_simd(const SRC in[], const float scalar[], DST out[],                 \
         }                                                                      \
         else                                                                   \
         {                                                                      \
-            return mulc_scale_simd_c3(in, scalar, out, length, scale);         \
+            return arithmOpScalarScaled_simd_c3(op_t, in, scalar, out,         \
+                                                length, scale);                \
         }                                                                      \
     }                                                                          \
     default:                                                                   \
@@ -1539,6 +1589,355 @@ MULC_SIMD(float, float)
 
 #undef MULC_SIMD
 
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<(std::is_same<DST, ushort>::value ||
+                         std::is_same<DST, short>::value), int>::type
+divc_simd_common_impl(scale_tag_t s_tag, const SRC in[], DST out[],
+                      const v_float32& v_scalar, const v_float32& v_scale,
+                      const int length)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    v_float32 v_zero = vx_setzero_f32();
+    v_float32 v_mask = (v_scalar == v_zero);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes/2]);
+
+            v_store_i16(&out[x], v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
+                                 v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale))));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC in[],
+                                           uchar out[], const v_float32& v_scalar,
+                                           const v_float32& v_scale, const int length)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    v_float32 v_zero = vx_setzero_f32();
+    v_float32 v_mask = (v_scalar == v_zero);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes/4]);
+            v_float32 a3 = vg_load_f32(&in[x + nlanes/2]);
+            v_float32 a4 = vg_load_f32(&in[x + 3 * nlanes/4]);
+
+            vx_store(&out[x], v_pack_u(v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a1, v_scalar, v_scale))),
+                                              v_round(v_select(v_mask, v_zero, div_op(s_tag, a2, v_scalar, v_scale)))),
+                                       v_pack(v_round(v_select(v_mask, v_zero, div_op(s_tag, a3, v_scalar, v_scale))),
+                                              v_round(v_select(v_mask, v_zero, div_op(s_tag, a4, v_scalar, v_scale))))));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE int divc_simd_common_impl(scale_tag_t s_tag, const SRC in[],
+                                           float out[], const v_float32& v_scalar,
+                                           const v_float32& v_scale, const int length)
+{
+    constexpr int nlanes = v_float32::nlanes;
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = vg_load_f32(&in[x]);
+            vx_store(&out[x], div_op(s_tag, a1, v_scalar, v_scale));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE int divc_mask_simd_common(scale_tag_t tag, const SRC in[],
+                                           const float scalar[], DST out[],
+                                           const int length, const float scale)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 v_scalar = vx_load(scalar);
+    v_float32 v_scale = vx_setall_f32(scale);
+    return divc_simd_common_impl(tag, in, out, v_scalar, v_scale, length);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, int>::type
+divc_simd_c3_impl(scale_tag_t s_tag, SRC in[], DST out[], const v_float32& s1,
+                  const v_float32& s2, const v_float32& s3,
+                  const v_float32& v_scale, const int length,
+                  const int nlanes, const int lanes)
+{
+    v_float32 v_zero = vx_setzero_f32();
+    v_float32 v_mask1 = (s1 == v_zero);
+    v_float32 v_mask2 = (s2 == v_zero);
+    v_float32 v_mask3 = (s3 == v_zero);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - lanes; x += lanes)
+        {
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes / 2]);
+            v_float32 a3 = vg_load_f32(&in[x + nlanes]);
+            v_float32 a4 = vg_load_f32(&in[x + 3 * nlanes / 2]);
+            v_float32 a5 = vg_load_f32(&in[x + 2 * nlanes]);
+            v_float32 a6 = vg_load_f32(&in[x + 5 * nlanes / 2]);
+
+            arithmOpScalar_pack_store_c3(&out[x], v_round(v_select(v_mask1, v_zero, div_op(s_tag, a1, s1, v_scale))),
+                                               v_round(v_select(v_mask2, v_zero, div_op(s_tag, a2, s2, v_scale))),
+                                               v_round(v_select(v_mask3, v_zero, div_op(s_tag, a3, s3, v_scale))),
+                                               v_round(v_select(v_mask1, v_zero, div_op(s_tag, a4, s1, v_scale))),
+                                               v_round(v_select(v_mask2, v_zero, div_op(s_tag, a5, s2, v_scale))),
+                                               v_round(v_select(v_mask3, v_zero, div_op(s_tag, a6, s3, v_scale))));
+        }
+
+        if (x < length)
+        {
+            x = length - lanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE int divc_simd_c3_impl(scale_tag_t s_tag, const SRC* in, uchar* out,
+                                       const v_float32& s1, const v_float32& s2,
+                                       const v_float32& s3, const v_float32& v_scale,
+                                       const int length, const int nlanes, const int lanes)
+{
+    v_float32 v_zero = vx_setzero_f32();
+    v_float32 v_mask1 = (s1 == v_zero);
+    v_float32 v_mask2 = (s2 == v_zero);
+    v_float32 v_mask3 = (s3 == v_zero);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - lanes; x += lanes)
+        {
+            vx_store(&out[x],
+                       v_pack_u(v_pack(v_round(v_select(v_mask1, v_zero, div_op(s_tag, vg_load_f32(&in[x]), s1, v_scale))),
+                                       v_round(v_select(v_mask2, v_zero, div_op(s_tag, vg_load_f32(&in[x + nlanes/4]), s2, v_scale)))),
+                                v_pack(v_round(v_select(v_mask3, v_zero, div_op(s_tag, vg_load_f32(&in[x + nlanes/2]), s3, v_scale))),
+                                       v_round(v_select(v_mask1, v_zero, div_op(s_tag, vg_load_f32(&in[x + 3*nlanes/4]), s1, v_scale))))));
+
+            vx_store(&out[x + nlanes],
+                        v_pack_u(v_pack(v_round(v_select(v_mask2, v_zero, div_op(s_tag, vg_load_f32(&in[x + nlanes]), s2, v_scale))),
+                                        v_round(v_select(v_mask3, v_zero, div_op(s_tag, vg_load_f32(&in[x + 5*nlanes/4]), s3, v_scale)))),
+                                 v_pack(v_round(v_select(v_mask1, v_zero, div_op(s_tag, vg_load_f32(&in[x + 3*nlanes/2]), s1, v_scale))),
+                                        v_round(v_select(v_mask2, v_zero, div_op(s_tag, vg_load_f32(&in[x + 7*nlanes/4]), s2, v_scale))))));
+
+            vx_store(&out[x + 2 * nlanes],
+                        v_pack_u(v_pack(v_round(v_select(v_mask3, v_zero, div_op(s_tag, vg_load_f32(&in[x + 2*nlanes]), s3, v_scale))),
+                                        v_round(v_select(v_mask1, v_zero, div_op(s_tag, vg_load_f32(&in[x + 9*nlanes/4]), s1, v_scale)))),
+                                 v_pack(v_round(v_select(v_mask2, v_zero, div_op(s_tag, vg_load_f32(&in[x + 5*nlanes/2]), s2, v_scale))),
+                                        v_round(v_select(v_mask3, v_zero, div_op(s_tag, vg_load_f32(&in[x + 11*nlanes/4]), s3, v_scale))))));
+        }
+
+        if (x < length)
+        {
+            x = length - lanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC>
+CV_ALWAYS_INLINE int divc_simd_c3_impl(scale_tag_t s_tag, const SRC* in, float* out,
+                                       const v_float32& s1, const v_float32& s2,
+                                       const v_float32& s3, const v_float32& v_scale, const int length,
+                                       const int nlanes, const int lanes)
+{
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - lanes; x += lanes)
+        {
+            v_float32 a1 = vg_load_f32(&in[x]);
+            v_float32 a2 = vg_load_f32(&in[x + nlanes]);
+            v_float32 a3 = vg_load_f32(&in[x + 2*nlanes]);
+
+            vx_store(&out[x], div_op(s_tag, a1, s1, v_scale));
+            vx_store(&out[x + nlanes], div_op(s_tag, a2, s2, v_scale));
+            vx_store(&out[x + 2*nlanes], div_op(s_tag, a3, s3, v_scale));
+        }
+
+        if (x < length)
+        {
+            x = length - lanes;
+            continue;  // process unaligned tail
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE int divc_mask_simd_c3(scale_tag_t s_tag, const SRC in[],
+                                       const float scalar[], DST out[],
+                                       const int length, const float scale)
+{
+    constexpr int chan = 3;
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+    constexpr int lanes = chan * nlanes;
+
+    if (length < lanes)
+        return 0;
+
+    v_float32 v_scale = vx_setall_f32(scale);
+
+    v_float32 s1 = vx_load(scalar);
+#if CV_SIMD_WIDTH == 32
+    v_float32 s2 = vx_load(&scalar[2]);
+    v_float32 s3 = vx_load(&scalar[1]);
+#else
+    v_float32 s2 = vx_load(&scalar[1]);
+    v_float32 s3 = vx_load(&scalar[2]);
+#endif
+     return divc_simd_c3_impl(s_tag, in, out, s1, s2, s3, v_scale, length, nlanes, lanes);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+#define DIVC_SIMD(SRC, DST)                                                    \
+int divc_simd(const SRC in[], const float scalar[], DST out[],                 \
+              const int length, const int chan, const float scale,             \
+              const int set_mask_flag)                                         \
+{                                                                              \
+    switch (chan)                                                              \
+    {                                                                          \
+    case 1:                                                                    \
+    case 2:                                                                    \
+    case 4:                                                                    \
+    {                                                                          \
+        if (std::fabs(scale - 1.0f) <= FLT_EPSILON)                            \
+        {                                                                      \
+            if (set_mask_flag == 1)                                            \
+                return divc_mask_simd_common(not_scale_tag{}, in, scalar,      \
+                                             out, length, scale);              \
+            else                                                               \
+                return arithmOpScalar_simd_common(div_tag{}, in, scalar,       \
+                                                  out, length);                \
+        }                                                                      \
+        else                                                                   \
+        {   if (set_mask_flag == 1)                                            \
+                return divc_mask_simd_common(scale_tag{}, in, scalar,          \
+                                             out, length, scale);              \
+            else                                                               \
+                return arithmOpScalarScaled_simd_common(div_tag{}, in, scalar, \
+                                                        out, length, scale);   \
+        }                                                                      \
+    }                                                                          \
+    case 3:                                                                    \
+    {                                                                          \
+        if (std::fabs(scale - 1.0f) <= FLT_EPSILON)                            \
+        {                                                                      \
+            if (set_mask_flag == 1)                                            \
+                return divc_mask_simd_c3(not_scale_tag{}, in, scalar,          \
+                                             out, length, scale);              \
+            else                                                               \
+                return arithmOpScalar_simd_c3(div_tag{}, in, scalar,           \
+                                              out, length);                    \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            if (set_mask_flag == 1)                                            \
+                return divc_mask_simd_c3(scale_tag{}, in, scalar,              \
+                                         out, length, scale);                  \
+            else                                                               \
+                return arithmOpScalarScaled_simd_c3(div_tag{}, in, scalar, out,\
+                                                    length, scale);            \
+        }                                                                      \
+    }                                                                          \
+    default:                                                                   \
+        GAPI_Assert(chan <= 4);                                                \
+        break;                                                                 \
+    }                                                                          \
+    return 0;                                                                  \
+}
+
+DIVC_SIMD(uchar, uchar)
+DIVC_SIMD(ushort, uchar)
+DIVC_SIMD(short, uchar)
+DIVC_SIMD(float, uchar)
+DIVC_SIMD(short, short)
+DIVC_SIMD(ushort, short)
+DIVC_SIMD(uchar, short)
+DIVC_SIMD(float, short)
+DIVC_SIMD(ushort, ushort)
+DIVC_SIMD(uchar, ushort)
+DIVC_SIMD(short, ushort)
+DIVC_SIMD(float, ushort)
+DIVC_SIMD(uchar, float)
+DIVC_SIMD(ushort, float)
+DIVC_SIMD(short, float)
+DIVC_SIMD(float, float)
+
+#undef DIVC_SIMD
+
 //-------------------------
 //
 // Fluid kernels: AbsDiffC
@@ -1547,7 +1946,7 @@ MULC_SIMD(float, float)
 
 #define ABSDIFFC_SIMD(SRC)                                                          \
 int absdiffc_simd(const SRC in[], const float scalar[], SRC out[],                  \
-              const int length, const int chan)                                     \
+                  const int length, const int chan)                                 \
 {                                                                                   \
     switch (chan)                                                                   \
     {                                                                               \
@@ -1581,14 +1980,61 @@ int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width)
 {
     constexpr int nlanes = v_uint8::nlanes;
+    if (width < nlanes)
+        return 0;
+
     int x = 0;
-    for (; x <= width - nlanes; x += nlanes)
+    for (;;)
     {
-        v_uint8 a, b, c;
-        v_load_deinterleave(&in[3 * x], a, b, c);
-        vx_store(&out1[x], a);
-        vx_store(&out2[x], b);
-        vx_store(&out3[x], c);
+        for (; x <= width - nlanes; x += nlanes)
+        {
+            v_uint8 a, b, c;
+            v_load_deinterleave(&in[3 * x], a, b, c);
+            vx_store(&out1[x], a);
+            vx_store(&out2[x], b);
+            vx_store(&out3[x], c);
+        }
+        if (x < width)
+        {
+            x = width - nlanes;
+            continue;
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------
+//
+// Fluid kernels: Split4
+//
+//-------------------------
+
+int split4_simd(const uchar in[], uchar out1[], uchar out2[],
+                uchar out3[], uchar out4[], const int width)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+    if (width < nlanes)
+        return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= width - nlanes; x += nlanes)
+        {
+            v_uint8 a, b, c, d;
+            v_load_deinterleave(&in[4 * x], a, b, c, d);
+            vx_store(&out1[x], a);
+            vx_store(&out2[x], b);
+            vx_store(&out3[x], c);
+            vx_store(&out4[x], d);
+        }
+        if (x < width)
+        {
+            x = width - nlanes;
+            continue;
+        }
+        break;
     }
     return x;
 }
