@@ -243,7 +243,7 @@ OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/Mac)" ON
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
   VERIFY HAVE_CAP_IOS)
-OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" ON
+OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS)
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID

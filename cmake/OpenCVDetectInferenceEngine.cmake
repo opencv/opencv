@@ -16,6 +16,19 @@ endif()
 
 # ======================
 
+if(WITH_OPENVINO)
+  find_package(OpenVINO QUIET)
+  if(OpenVINO_FOUND)
+    message(STATUS "OpenVINO FOUND: ${OpenVINO_VERSION}")
+    math(EXPR ver "${OpenVINO_VERSION_MAJOR} * 1000000 + ${OpenVINO_VERSION_MINOR} * 10000 + ${OpenVINO_VERSION_PATCH} * 100")
+    ocv_add_external_target(openvino "" "openvino::runtime" "INF_ENGINE_RELEASE=${ver};HAVE_NGRAPH;HAVE_DNN_NGRAPH;HAVE_INF_ENGINE")
+    set(HAVE_OPENVINO 1)
+    return()
+  endif()
+endif()
+
+# ======================
+
 macro(ocv_ie_find_extra_libraries find_prefix find_suffix)
   file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${find_prefix}inference_engine*${find_suffix}")
   foreach(full_path IN LISTS libraries)
