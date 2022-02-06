@@ -37,7 +37,6 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
-# host (use internal)
 set(OPENCV_DOWNLOAD_MIRROR_ID "" CACHE STRING "Available mirror ID: gitcode, custom")
 
 function(ocv_init_download)
