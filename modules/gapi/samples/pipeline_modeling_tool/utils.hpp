@@ -17,10 +17,6 @@ namespace utils {
 
 inline void createNDMat(cv::Mat& mat, const std::vector<int>& dims, int depth) {
     GAPI_Assert(!dims.empty());
-    // FIXME: Now G-API doesn't create type for ND cv::Mat's, so it's needed to
-    // create cv::Mat the same way in order to achieve meta matching.
-    // Change this line when it's fixed to:
-    // mat.create(dims, CV_MAKETYPE(depth, dims.size()));
     mat.create(dims, depth);
     if (dims.size() == 1) {
         //FIXME: Well-known 1D mat WA

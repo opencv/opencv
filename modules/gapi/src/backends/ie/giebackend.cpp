@@ -857,7 +857,7 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 
 static bool isApplicableForResize(const IE::TensorDesc& desc) {
     const auto layout = desc.getLayout();
-    const auto prec   = desc.getLayout();
+    const auto prec   = desc.getPrecision();
     return (layout == IE::Layout::NCHW || layout == IE::Layout::NHWC) &&
            (prec == IE::Precision::FP32 || prec == IE::Precision::U8);
 }
