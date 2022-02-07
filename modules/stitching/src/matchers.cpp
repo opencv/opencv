@@ -282,30 +282,13 @@ namespace detail {
 
 static
 UMat convertToGray8BitPerChannel(UMat image) {
-    switch (image.type())
-    {
-    case CV_16UC3: {
-        UMat image_gray;
-        cvtColor(image, image_gray, COLOR_RGB2GRAY);
-        UMat image_8_bit_per_channel;
-        image_gray.convertTo(image_8_bit_per_channel, CV_8UC1, 1. / 256.);
-        return image_8_bit_per_channel;
-    }
+    int image_type = image.type();
 
-    case CV_16UC1: {
-        UMat image_8_bit_per_channel;
-        image.convertTo(image_8_bit_per_channel, CV_8UC1, 1. / 256.);
-        return image_8_bit_per_channel;
-    }
-
-    case CV_8UC3: {
-        UMat image_gray;
-        cvtColor(image, image_gray, COLOR_RGB2GRAY);
-        return image_gray;
-    }
-
-    default: // expected CV_8UC1
-        return image;
+    if (CV_16UC1 == image_type || CV_16UC3 == image_type) {
+        int output_type = (CV_16UC1 == image_type) ? CV_8UC1 : CV_8UC3;
+        UMat output_image;
+        image.convertTo(output_image, output_type, 1. / 256.);
+        return output_image;
     }
 
     return image;
