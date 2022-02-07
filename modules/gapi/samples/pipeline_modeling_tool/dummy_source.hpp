@@ -28,11 +28,8 @@ private:
 
 DummySource::DummySource(const double       latency,
                          const OutputDescr& output)
-    : m_latency(latency), m_mat(output.dims, output.precision) {
-    if (output.dims.size() == 1) {
-        //FIXME: Well-known 1D mat WA
-        m_mat.dims = 1;
-    }
+    : m_latency(latency) {
+    utils::createNDMat(m_mat, output.dims, output.precision);
     utils::generateRandom(m_mat);
 }
 

@@ -855,6 +855,13 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
     }
 }
 
+static bool isApplicableForResize(const IE::TensorDesc& desc) {
+    const auto layout = desc.getLayout();
+    const auto prec   = desc.getPrecision();
+    return (layout == IE::Layout::NCHW || layout == IE::Layout::NHWC) &&
+           (prec == IE::Precision::FP32 || prec == IE::Precision::U8);
+}
+
 static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
                                                const cv::GMetaArg&        mm) {
     IE::PreProcessInfo info;
@@ -864,9 +871,7 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
             info.setColorFormat(IE::ColorFormat::NV12);
         }
     }
-    const auto layout = ii->getTensorDesc().getLayout();
-    if (layout == IE::Layout::NCHW ||
-        layout == IE::Layout::NHWC) {
+    if (isApplicableForResize(ii->getTensorDesc())) {
         info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
     }
     return info;
@@ -986,11 +991,7 @@ struct Infer: public cv::detail::KernelTag {
                         configureInputReshapeByImage(ii, mm, input_reshape_table);
                     }
 
-                    // NB: Configure resize only for NCHW/NHWC layout,
-                    // since it isn't supposed to work with others.
-                    auto layout = ii->getTensorDesc().getLayout();
-                    if (layout == IE::Layout::NCHW ||
-                        layout == IE::Layout::NHWC) {
+                    if (isApplicableForResize(ii->getTensorDesc())) {
                         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
                     }
             }
@@ -1095,7 +1096,9 @@ struct InferROI: public cv::detail::KernelTag {
                 uu.params.layer_names_to_reshape.end()) {
                 configureInputReshapeByImage(ii, mm, input_reshape_table);
             }
-            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            if (isApplicableForResize(ii->getTensorDesc())) {
+                ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            }
 
             // FIXME: This isn't the best place to call reshape function.
             // Сorrect solution would be to do this in compile() method of network,
@@ -1193,7 +1196,9 @@ struct InferList: public cv::detail::KernelTag {
                     uu.params.layer_names_to_reshape.end()) {
                     configureInputReshapeByImage(ii, mm, input_reshape_table);
                 }
-                ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                if (isApplicableForResize(ii->getTensorDesc())) {
+                    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                }
             }
 
             // FIXME: This isn't the best place to call reshape function.
@@ -1346,7 +1351,9 @@ struct InferList2: public cv::detail::KernelTag {
                         uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm_0, input_reshape_table);
                     }
-                    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    if (isApplicableForResize(ii->getTensorDesc())) {
+                        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    }
 
                     // FIXME: This isn't the best place to call reshape function.
                     // Сorrect solution would be to do this in compile() method of network,
