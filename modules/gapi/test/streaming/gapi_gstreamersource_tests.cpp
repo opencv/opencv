@@ -302,29 +302,25 @@ INSTANTIATE_TEST_CASE_P(FileEmulatingPipeline, GStreamerSourceTest,
                                 Values(cv::Size(640, 420)),
                                 Values(10UL)));
 
+std::string camEmulPipeline720p = "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                  "videoscale ! video/x-raw,format={},width=1280,height=720 ! appsink "
+                                  "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
+                                  "fakesink";
+
 
 INSTANTIATE_TEST_CASE_P(MultipleLiveSources, GStreamerSourceTest,
-                        Combine(Values("videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
-                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "fakesink",
-                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=GRAY8,width=1280,height=720 ! appsink "
-                                       "videotestsrc is-live=true pattern=colors num-buffers=10 ! "
-                                       "fakesink"),
+                        Combine(Values(std::format(camEmulPipeline720p, "NV12"), std::format(camEmulPipeline720p, "GRAY8")),
                                 Values(cv::Size(1280, 720)),
                                 Values(10UL)));
 
+std::string camEmulPipeline720p_NLS = "videotestsrc pattern=colors num-buffers=10 ! "
+                                       "videoscale ! video/x-raw,format={},width=1280,height=720 ! appsink "
+                                       "videotestsrc pattern=colors num-buffers=10 ! "
+                                       "fakesink";
+
 
 INSTANTIATE_TEST_CASE_P(MultipleNotLiveSources, GStreamerSourceTest,
-                        Combine(Values("videotestsrc pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
-                                       "videotestsrc pattern=colors num-buffers=10 ! "
-                                       "fakesink",
-                                       "videotestsrc pattern=colors num-buffers=10 ! "
-                                       "videoscale ! video/x-raw,format=NV12,width=1280,height=720 ! appsink "
-                                       "videotestsrc pattern=colors num-buffers=10 ! "
-                                       "fakesink"),
+                        Combine(Values(std::format(camEmulPipeline720p_NLS, "NV12"), std::format(camEmulPipeline720p_NLS, "GRAY8"))
                                 Values(cv::Size(1280, 720)),
                                 Values(10UL)));
 
