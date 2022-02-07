@@ -304,7 +304,9 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         int64 pt = getTickCount();
 #endif
         // Warp the current image
-        w->warp(img, K, cameras_[img_idx].R, interp_flags_, BORDER_REFLECT, img_warped);
+        int img_type = img.type();
+        int is_16_bits_per_channel = (CV_16UC1 == img_type || CV_16UC3 == img_type);
+        w->warp(is_16_bits_per_channel ? img.mul(.5) : img, K, cameras_[img_idx].R, interp_flags_, BORDER_REFLECT, img_warped);
         LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -326,7 +328,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         pt = getTickCount();
 #endif
 
-        img_warped.convertTo(img_warped_s, CV_32S);
+        img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
         img.release();
         mask.release();
@@ -371,7 +373,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
     // Preliminary result is in CV_32SC3 format, but will be converted to 8U or 16U depending on the input.
     if (CV_16UC3 == imgs_[0].type())
-        result.convertTo(pano, CV_16U);
+        result.convertTo(pano, CV_16U, 2.);
     else
         result.convertTo(pano, CV_8U);
 
