@@ -8,6 +8,7 @@
 constexpr double COSINE_THRESHOLD = 0.363;
 constexpr double L2NORM_THRESHOLD = 1.128;
 
+static
 void visualize(
     cv::Mat& image1,
     const cv::Rect box1,

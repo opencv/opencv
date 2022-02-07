@@ -1,11 +1,13 @@
 #include <iostream>
 #include <vector>
-#include <string>
+#include <cctype>
+#include <algorithm>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
+static
 void visualize(
     cv::Mat& image,
     const std::vector<float> confidences,
