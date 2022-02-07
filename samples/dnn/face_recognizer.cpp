@@ -83,7 +83,7 @@ int main(int argc, char** argv)
 
     std::vector<float> confidences1;
     std::vector<cv::Rect> boxes1;
-    face_detector.detect(image1, confidences1, boxes1);
+    face_detector.detect(image1, confidences1, boxes1, score_threshold, nms_threshold);
 
     std::vector<std::vector<cv::Point>> landmarks1;
     face_detector.getLandmarks( landmarks1 );
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 
     std::vector<float> confidences2;
     std::vector<cv::Rect> boxes2;
-    face_detector.detect(image2, confidences2, boxes2);
+    face_detector.detect(image2, confidences2, boxes2, score_threshold, nms_threshold);
 
     std::vector<std::vector<cv::Point>> landmarks2;
     face_detector.getLandmarks( landmarks2 );

@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     image1 = cv.resize(image1, dsize=None, fx=scale, fy=scale)
 
-    _, boxes1 = face_detector.detect(image1)
+    _, boxes1 = face_detector.detect(image1, score_threshold, nms_threshold)
     landmarks1 = face_detector.getLandmarks()
     if len(landmarks1) == 0:
         raise Exception("can't detect face from image1")
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     image2= cv.resize(image2, dsize=None, fx=scale, fy=scale)
 
-    _, boxes2 = face_detector.detect(image2)
+    _, boxes2 = face_detector.detect(image2, score_threshold, nms_threshold)
     landmarks2 = face_detector.getLandmarks()
     if len(landmarks2) == 0:
         raise Exception("can't detect face from image2")

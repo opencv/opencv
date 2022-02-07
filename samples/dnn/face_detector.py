@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
         ## [Face_Detection]
         # Detect faces from image.
-        confidences, boxes = face_detector.detect(image)
+        confidences, boxes = face_detector.detect(image, score_threshold, nms_threshold)
         ## [Face_Detection]
 
         ## [Face_Landmarks]
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
             tm.start()
 
-            confidences, boxes = face_detector.detect(frame)
+            confidences, boxes = face_detector.detect(frame, score_threshold, nms_threshold)
 
             landmarks = face_detector.getLandmarks()
 

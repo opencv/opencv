@@ -90,7 +90,7 @@ int main(int argc, char** argv)
         // Detect faces from image.
         std::vector<float> confidences;
         std::vector<cv::Rect> boxes;
-        face_detector.detect(image, confidences, boxes);
+        face_detector.detect(image, confidences, boxes, score_threshold, nms_threshold);
         //! [Face_Detection]
 
         //! [Face_Landmarks]
@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 
             std::vector<float> confidences;
             std::vector<cv::Rect> boxes;
-            face_detector.detect(frame, confidences, boxes);
+            face_detector.detect(frame, confidences, boxes, score_threshold, nms_threshold);
 
             std::vector<std::vector<cv::Point>> landmarks;
             face_detector.getLandmarks( landmarks );
