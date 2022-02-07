@@ -975,9 +975,6 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
     CV_Assert(patchSize >= 2);
 
-    int type = _image.type();
-    CV_Assert( CV_8UC1 == type || CV_8UC3 == type || CV_16UC1 == type || CV_16UC3 == type );
-
     bool do_keypoints = !useProvidedKeypoints;
     bool do_descriptors = _descriptors.needed();
 
@@ -997,34 +994,9 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     bool useOCL = false;
 #endif
 
-    Mat image, mask = _mask.getMat();
-    switch (type)
-    {
-    case CV_16UC1: {
-        Mat imageTmp = _image.getMat() / 256;
-        imageTmp.convertTo(image, CV_8UC1);
-        break;
-    }
-
-    case CV_16UC3: {
-        Mat imageTmp;
-        cvtColor(_image.getMat(), imageTmp, COLOR_BGR2GRAY);
-        imageTmp /= 256;
-        imageTmp.convertTo(image, CV_8UC1);
-        break;
-    }
-
-    case CV_8UC3:
-        cvtColor(_image.getMat(), image, COLOR_BGR2GRAY);
-        break;
-
-    case CV_8UC1:
-        image = _image.getMat();
-        break;
-
-    default:
-        return;
-    }
+    Mat image = _image.getMat(), mask = _mask.getMat();
+    if( image.type() != CV_8UC1 )
+        cvtColor(_image, image, COLOR_BGR2GRAY);
 
     int i, level, nLevels = this->nlevels, nkeypoints = (int)keypoints.size();
     bool sortedByLevel = true;

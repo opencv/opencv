@@ -279,6 +279,39 @@ void GpuMatcher::collectGarbage()
 namespace cv {
 namespace detail {
 
+
+static
+UMat convertToGray8BitPerChannel(UMat image) {
+    switch (image.type())
+    {
+    case CV_16UC3: {
+        UMat image_gray;
+        cvtColor(image, image_gray, COLOR_RGB2GRAY);
+        UMat image_8_bit_per_channel;
+        image_gray.convertTo(image_8_bit_per_channel, CV_8UC1, 1. / 256.);
+        return image_8_bit_per_channel;
+    }
+
+    case CV_16UC1: {
+        UMat image_8_bit_per_channel;
+        image.convertTo(image_8_bit_per_channel, CV_8UC1, 1. / 256.);
+        return image_8_bit_per_channel;
+    }
+
+    case CV_8UC3: {
+        UMat image_gray;
+        cvtColor(image, image_gray, COLOR_RGB2GRAY);
+        return image_gray;
+    }
+
+    default: // expected CV_8UC1
+        return image;
+    }
+
+    return image;
+}
+
+
 void computeImageFeatures(
     const Ptr<Feature2D> &featuresFinder,
     InputArrayOfArrays  images,
@@ -288,12 +321,22 @@ void computeImageFeatures(
     // compute all features
     std::vector<std::vector<KeyPoint>> keypoints;
     std::vector<UMat> descriptors;
+    size_t count = images.total();
+    std::vector<UMat> images_8_bit_per_channel(count);
+    std::vector<UMat> images_org;
+    images.getUMatVector(images_org);
+
+    for (size_t i = 0; i < count; i++)
+    {
+        images_8_bit_per_channel[i] = convertToGray8BitPerChannel(images_org[i]);
+    }
+
     // TODO replace with 1 call to new over load of detectAndCompute
-    featuresFinder->detect(images, keypoints, masks);
-    featuresFinder->compute(images, keypoints, descriptors);
+    featuresFinder->detect(images_8_bit_per_channel, keypoints, masks);
+    featuresFinder->compute(images_8_bit_per_channel, keypoints, descriptors);
+    images_8_bit_per_channel.clear();
 
     // store to ImageFeatures
-    size_t count = images.total();
     features.resize(count);
     CV_Assert(count == keypoints.size() && count == descriptors.size());
     for (size_t i = 0; i < count; ++i)
@@ -311,7 +354,7 @@ void computeImageFeatures(
     InputArray mask)
 {
     features.img_size = image.size();
-    featuresFinder->detectAndCompute(image, mask, features.keypoints, features.descriptors);
+    featuresFinder->detectAndCompute(convertToGray8BitPerChannel(image.getUMat()), mask, features.keypoints, features.descriptors);
 }
 
 //////////////////////////////////////////////////////////////////////////////
