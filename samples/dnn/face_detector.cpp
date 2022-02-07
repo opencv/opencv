@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     {
         cv::VideoCapture capture;
         const cv::String video_path = parser.get<cv::String>("video");
-        if (video_path.size() == 1 && std::all_of(video_path.cbegin(), video_path.cend(), std::isdigit))
+        if (video_path.size() == 1 && std::all_of(video_path.cbegin(), video_path.cend(), isdigit))
         {
             capture.open(std::stoi(video_path));
         }
