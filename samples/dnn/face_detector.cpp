@@ -21,7 +21,7 @@ void visualize(
     std::cout << fps_string << std::endl;
     cv::putText(image, fps_string, cv::Point(0, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
 
-    const int num_faces = boxes.size();
+    const int num_faces = static_cast<int>(boxes.size());
     for (int i = 0; i < num_faces; i++)
     {
         const float confidence = confidences[i];
