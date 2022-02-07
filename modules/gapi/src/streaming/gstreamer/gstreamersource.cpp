@@ -196,10 +196,12 @@ void GStreamerSource::Priv::prepareVideoMeta()
                 switch (m_type) {
                     case GST_VIDEO_FORMAT_NV12: {
                         m_mediaFrameMeta = GFrameDesc{ cv::MediaFormat::NV12, cv::Size(width, height) };
+                        GAPI_Assert(GST_VIDEO_INFO_N_PLANES(&m_videoInfo) == 2);
                         break;
                     }
                     case GST_VIDEO_FORMAT_GRAY8: {
                         m_mediaFrameMeta = GFrameDesc{ cv::MediaFormat::GRAY, cv::Size(width, height) };
+                        GAPI_Assert(GST_VIDEO_INFO_N_PLANES(&m_videoInfo) == 1);
                         break;
                     }
                     default: {
@@ -291,6 +293,7 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
                 GAPI_Assert((uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 1) ==
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
                     GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 1));
+                GAPI_Assert(GST_VIDEO_INFO_N_PLANES(&m_videoInfo) == 2);
 
                 cv::Mat y(m_matMeta.size, CV_8UC1,
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
@@ -305,6 +308,7 @@ bool GStreamerSource::Priv::retrieveFrame(cv::Mat& data)
                 break;
             }
             case GST_VIDEO_FORMAT_GRAY8: {
+                GAPI_Assert(GST_VIDEO_INFO_N_PLANES(&m_videoInfo) == 1);
                 cv::Mat y(m_matMeta.size, CV_8UC1,
                     (uint8_t*)GST_VIDEO_FRAME_PLANE_DATA(&videoFrame, 0) +
                     GST_VIDEO_FRAME_PLANE_OFFSET(&videoFrame, 0),
