@@ -48,13 +48,13 @@
     {
         namespace blend
         {
-            void addSrcWeightGpu16S(const PtrStep<int32_t> src, const PtrStep<short> src_weight,
-                                    PtrStep<int32_t> dst, PtrStep<short> dst_weight, cv::Rect &rc);
-            void addSrcWeightGpu32F(const PtrStep<int32_t> src, const PtrStepf src_weight,
-                                    PtrStep<int32_t> dst, PtrStepf dst_weight, cv::Rect &rc);
-            void normalizeUsingWeightMapGpu16S(const PtrStep<short> weight, PtrStep<int32_t> src,
+            void addSrcWeightGpu16S(const PtrStep<short> src, const PtrStep<short> src_weight,
+                                    PtrStep<short> dst, PtrStep<short> dst_weight, cv::Rect &rc);
+            void addSrcWeightGpu32F(const PtrStep<short> src, const PtrStepf src_weight,
+                                    PtrStep<short> dst, PtrStepf dst_weight, cv::Rect &rc);
+            void normalizeUsingWeightMapGpu16S(const PtrStep<short> weight, PtrStep<short> src,
                                                const int width, const int height);
-            void normalizeUsingWeightMapGpu32F(const PtrStepf weight, PtrStep<int32_t> src,
+            void normalizeUsingWeightMapGpu32F(const PtrStepf weight, PtrStep<short> src,
                                                const int width, const int height);
         }
     }}}
@@ -85,7 +85,7 @@ void Blender::prepare(const std::vector<Point> &corners, const std::vector<Size>
 
 void Blender::prepare(Rect dst_roi)
 {
-    dst_.create(dst_roi.size(), CV_32SC3);
+    dst_.create(dst_roi.size(), CV_16SC3);
     dst_.setTo(Scalar::all(0));
     dst_mask_.create(dst_roi.size(), CV_8U);
     dst_mask_.setTo(Scalar::all(0));
@@ -100,15 +100,15 @@ void Blender::feed(InputArray _img, InputArray _mask, Point tl)
     Mat dst = dst_.getMat(ACCESS_RW);
     Mat dst_mask = dst_mask_.getMat(ACCESS_RW);
 
-    CV_Assert(img.type() == CV_32SC3);
+    CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
 
     for (int y = 0; y < img.rows; ++y)
     {
-        const Point3_<int32_t> *src_row = img.ptr<Point3_<int32_t> >(y);
-        Point3_<int32_t> *dst_row = dst.ptr<Point3_<int32_t> >(dy + y);
+        const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
+        Point3_<short> *dst_row = dst.ptr<Point3_<short> >(dy + y);
         const uchar *mask_row = mask.ptr<uchar>(y);
         uchar *dst_mask_row = dst_mask.ptr<uchar>(dy + y);
 
@@ -146,7 +146,7 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
     Mat img = _img.getMat();
     Mat dst = dst_.getMat(ACCESS_RW);
 
-    CV_Assert(img.type() == CV_32SC3);
+    CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
     createWeightMap(mask, sharpness_, weight_map_);
@@ -158,16 +158,16 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
 
     for (int y = 0; y < img.rows; ++y)
     {
-        const Point3_<int32_t>* src_row = img.ptr<Point3_<int32_t> >(y);
-        Point3_<int32_t>* dst_row = dst.ptr<Point3_<int32_t> >(dy + y);
+        const Point3_<short>* src_row = img.ptr<Point3_<short> >(y);
+        Point3_<short>* dst_row = dst.ptr<Point3_<short> >(dy + y);
         const float* weight_row = weight_map.ptr<float>(y);
         float* dst_weight_row = dst_weight_map.ptr<float>(dy + y);
 
         for (int x = 0; x < img.cols; ++x)
         {
-            dst_row[dx + x].x += static_cast<int32_t>(src_row[x].x * weight_row[x]);
-            dst_row[dx + x].y += static_cast<int32_t>(src_row[x].y * weight_row[x]);
-            dst_row[dx + x].z += static_cast<int32_t>(src_row[x].z * weight_row[x]);
+            dst_row[dx + x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+            dst_row[dx + x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+            dst_row[dx + x].z += static_cast<short>(src_row[x].z * weight_row[x]);
             dst_weight_row[dx + x] += weight_row[x];
         }
     }
@@ -257,7 +257,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
         gpu_imgs_with_border_.clear();
 
         gpu_dst_pyr_laplace_.resize(num_bands_ + 1);
-        gpu_dst_pyr_laplace_[0].create(dst_roi.size(), CV_32SC3);
+        gpu_dst_pyr_laplace_[0].create(dst_roi.size(), CV_16SC3);
         gpu_dst_pyr_laplace_[0].setTo(Scalar::all(0));
 
         gpu_dst_band_weights_.resize(num_bands_ + 1);
@@ -267,7 +267,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
         for (int i = 1; i <= num_bands_; ++i)
         {
             gpu_dst_pyr_laplace_[i].create((gpu_dst_pyr_laplace_[i - 1].rows + 1) / 2,
-                (gpu_dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_32SC3);
+                (gpu_dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
             gpu_dst_band_weights_[i].create((gpu_dst_band_weights_[i - 1].rows + 1) / 2,
                 (gpu_dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
             gpu_dst_pyr_laplace_[i].setTo(Scalar::all(0));
@@ -287,7 +287,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
         for (int i = 1; i <= num_bands_; ++i)
         {
             dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2,
-                (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_32SC3);
+                (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
             dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
                 (dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
             dst_pyr_laplace_[i].setTo(Scalar::all(0));
@@ -359,7 +359,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     }
 #endif
 
-    CV_Assert(img.type() == CV_32SC3);
+    CV_Assert(img.type() == CV_16SC3 || img.type() == CV_8UC3);
     CV_Assert(mask.type() == CV_8U);
 
     // Keep source image in memory with small border
@@ -412,7 +412,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
         // Create the source image Laplacian pyramid
         cuda::copyMakeBorder(gpu_img_, gpu_imgs_with_border_[gpu_feed_idx_], top, bottom,
                              left, right, BORDER_REFLECT);
-        gpu_imgs_with_border_[gpu_feed_idx_].convertTo(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][0], CV_32S);
+        gpu_imgs_with_border_[gpu_feed_idx_].convertTo(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][0], CV_16S);
         for (int i = 0; i < num_bands_; ++i)
             cuda::pyrDown(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i],
                           gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i + 1]);
@@ -550,16 +550,16 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
             {
                 for (int y = 0; y < rc.height; ++y)
                 {
-                    const Point3_<int32_t>* src_row = _src_pyr_laplace.ptr<Point3_<int32_t> >(y);
-                    Point3_<int32_t>* dst_row = _dst_pyr_laplace.ptr<Point3_<int32_t> >(y);
+                    const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y);
+                    Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
                     const float* weight_row = _weight_pyr_gauss.ptr<float>(y);
                     float* dst_weight_row = _dst_band_weights.ptr<float>(y);
 
                     for (int x = 0; x < rc.width; ++x)
                     {
-                        dst_row[x].x += static_cast<int32_t>(src_row[x].x * weight_row[x]);
-                        dst_row[x].y += static_cast<int32_t>(src_row[x].y * weight_row[x]);
-                        dst_row[x].z += static_cast<int32_t>(src_row[x].z * weight_row[x]);
+                        dst_row[x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+                        dst_row[x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+                        dst_row[x].z += static_cast<short>(src_row[x].z * weight_row[x]);
                         dst_weight_row[x] += weight_row[x];
                     }
                 }
@@ -568,16 +568,16 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
             {
                 for (int y = 0; y < y_br - y_tl; ++y)
                 {
-                    const Point3_<int32_t>* src_row = _src_pyr_laplace.ptr<Point3_<int32_t> >(y);
-                    Point3_<int32_t>* dst_row = _dst_pyr_laplace.ptr<Point3_<int32_t> >(y);
+                    const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y);
+                    Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
                     const short* weight_row = _weight_pyr_gauss.ptr<short>(y);
                     short* dst_weight_row = _dst_band_weights.ptr<short>(y);
 
                     for (int x = 0; x < x_br - x_tl; ++x)
                     {
-                        dst_row[x].x += int32_t((src_row[x].x * weight_row[x]) >> 8);
-                        dst_row[x].y += int32_t((src_row[x].y * weight_row[x]) >> 8);
-                        dst_row[x].z += int32_t((src_row[x].z * weight_row[x]) >> 8);
+                        dst_row[x].x += short((src_row[x].x * weight_row[x]) >> 8);
+                        dst_row[x].y += short((src_row[x].y * weight_row[x]) >> 8);
+                        dst_row[x].z += short((src_row[x].z * weight_row[x]) >> 8);
                         dst_weight_row[x] += weight_row[x];
                     }
                 }
@@ -645,7 +645,7 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
             cuda::compare(gpu_dst_mask_, 0, gpu_mask_, CMP_EQ);
 
             gpu_dst_pyr_laplace_[0](dst_rc).setTo(Scalar::all(0), gpu_mask_);
-            gpu_dst_pyr_laplace_[0](dst_rc).convertTo(gpu_dst, CV_32S);
+            gpu_dst_pyr_laplace_[0](dst_rc).convertTo(gpu_dst, CV_16S);
 
         }
         else
@@ -727,20 +727,20 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
         src = _src.getMat();
         weight = _weight.getMat();
 
-        CV_Assert(src.type() == CV_32SC3);
+        CV_Assert(src.type() == CV_16SC3);
 
         if (weight.type() == CV_32FC1)
         {
             for (int y = 0; y < src.rows; ++y)
             {
-                Point3_<int32_t> *row = src.ptr<Point3_<int32_t> >(y);
+                Point3_<short> *row = src.ptr<Point3_<short> >(y);
                 const float *weight_row = weight.ptr<float>(y);
 
                 for (int x = 0; x < src.cols; ++x)
                 {
-                    row[x].x = static_cast<int32_t>(row[x].x / (weight_row[x] + WEIGHT_EPS));
-                    row[x].y = static_cast<int32_t>(row[x].y / (weight_row[x] + WEIGHT_EPS));
-                    row[x].z = static_cast<int32_t>(row[x].z / (weight_row[x] + WEIGHT_EPS));
+                    row[x].x = static_cast<short>(row[x].x / (weight_row[x] + WEIGHT_EPS));
+                    row[x].y = static_cast<short>(row[x].y / (weight_row[x] + WEIGHT_EPS));
+                    row[x].z = static_cast<short>(row[x].z / (weight_row[x] + WEIGHT_EPS));
                 }
             }
         }
@@ -751,14 +751,14 @@ void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
             for (int y = 0; y < src.rows; ++y)
             {
                 const short *weight_row = weight.ptr<short>(y);
-                Point3_<int32_t> *row = src.ptr<Point3_<int32_t> >(y);
+                Point3_<short> *row = src.ptr<Point3_<short> >(y);
 
                 for (int x = 0; x < src.cols; ++x)
                 {
                     int w = weight_row[x] + 1;
-                    row[x].x = static_cast<int32_t>((row[x].x << 8) / w);
-                    row[x].y = static_cast<int32_t>((row[x].y << 8) / w);
-                    row[x].z = static_cast<int32_t>((row[x].z << 8) / w);
+                    row[x].x = static_cast<short>((row[x].x << 8) / w);
+                    row[x].y = static_cast<short>((row[x].y << 8) / w);
+                    row[x].z = static_cast<short>((row[x].z << 8) / w);
                 }
             }
         }
@@ -790,7 +790,7 @@ void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
     {
         if(num_levels == 0)
         {
-            img.getUMat().convertTo(pyr[0], CV_32S);
+            img.getUMat().convertTo(pyr[0], CV_16S);
             return;
         }
 
@@ -805,7 +805,7 @@ void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 
             pyrDown(downNext, lvl_down);
             pyrUp(downNext, lvl_up, current.size());
-            subtract(current, lvl_up, pyr[i-1], noArray(), CV_32S);
+            subtract(current, lvl_up, pyr[i-1], noArray(), CV_16S);
 
             current = downNext;
             downNext = lvl_down;
@@ -814,9 +814,9 @@ void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
         {
             UMat lvl_up;
             pyrUp(downNext, lvl_up, current.size());
-            subtract(current, lvl_up, pyr[num_levels-1], noArray(), CV_32S);
+            subtract(current, lvl_up, pyr[num_levels-1], noArray(), CV_16S);
 
-            downNext.convertTo(pyr[num_levels], CV_32S);
+            downNext.convertTo(pyr[num_levels], CV_16S);
         }
     }
     else
