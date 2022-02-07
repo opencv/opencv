@@ -116,7 +116,7 @@ int main(int argc, char** argv)
         std::cerr << "can't detect face from image2" << std::endl;
         return -1;
     }
- 
+
     //! [Align_Crop]
     // Aligning and Cropping facial image through the first face of faces detected.
     // In the case of SFace, It use five landmarks that lined up in a specific order.
