@@ -401,7 +401,7 @@ UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_
 {
     CV_Assert(src_array1.rows() == src_array2.rows() && src_array1.cols() == src_array2.cols());
     CV_Assert(src_array1.type() == src_array2.type());
-    CV_Assert(src_array1.type() == CV_8UC3 || src_array1.type() == CV_8UC1);
+    CV_Assert(src_array1.type() == CV_8UC3 || src_array1.type() == CV_8UC1 || src_array1.type() == CV_16UC3 || src_array1.type() == CV_16UC1);
 
     Mat src1 = src_array1.getMat();
     Mat src2 = src_array2.getMat();
