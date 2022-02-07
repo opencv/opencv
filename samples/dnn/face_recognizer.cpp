@@ -27,7 +27,7 @@ void visualize(
     else{
         same_identity = (score <= L2NORM_THRESHOLD);
     }
-    color = same_identity ? cv::Scalar(0, 255, 0) : cv::Scalar(255, 0, 0);
+    const cv::Scalar color = same_identity ? cv::Scalar(0, 255, 0) : cv::Scalar(255, 0, 0);
 
     // Draw Bounding Box
     cv::rectangle(image1, box1, color, thickness);
