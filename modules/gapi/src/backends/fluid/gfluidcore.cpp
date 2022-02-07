@@ -2686,16 +2686,8 @@ GAPI_FLUID_KERNEL(GFluidMerge4, cv::gapi::core::GMerge4, false)
 
         int w = 0; // cycle counter
 
-    #if CV_SIMD128
-        for (; w <= width-16; w+=16)
-        {
-            v_uint8x16 a, b, c, d;
-            a = v_load(&in1[w]);
-            b = v_load(&in2[w]);
-            c = v_load(&in3[w]);
-            d = v_load(&in4[w]);
-            v_store_interleave(&out[4*w], a, b, c, d);
-        }
+    #if CV_SIMD
+        w = merge4_simd(in1, in2, in3, in4, out, width);
     #endif
 
         for (; w < width; w++)
