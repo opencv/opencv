@@ -3660,10 +3660,11 @@ a mask and then extract the contour, or copy the region to another image, and so
 function unless the #FLOODFILL_MASK_ONLY flag is set in the second variant of the function. See
 the details below.
 @param mask Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels
-taller than image. Since this is both an input and output parameter, you must take responsibility
-of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
+taller than image. If an empty Mat is passed it will be created automatically. Since this is both an
+input and output parameter, you must take responsibility of initializing it.
+Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
-mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
+mask corresponding to filled pixels in the image are set to 1 or to the specified value in flags
 as described below. Additionally, the function fills the border of the mask with ones to simplify
 internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
