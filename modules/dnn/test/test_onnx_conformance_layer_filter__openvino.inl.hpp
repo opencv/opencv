@@ -59,6 +59,12 @@ EOF_LABEL:
 
 bool filterApplied = false;
 
+#if INF_ENGINE_VER_MAJOR_EQ(2021040000) || INF_ENGINE_VER_MAJOR_EQ(2022010000)
+#define SKIP_SET_1 1
+#else
+#define SKIP_SET_1 0
+#endif
+
 // Update note: execute <opencv_extra>/testdata/dnn/onnx/generate_conformance_list.py
 BEGIN_SWITCH()
 CASE(test_abs)
@@ -82,7 +88,7 @@ CASE(test_adam_multiple)
 CASE(test_add)
     // no filter
 CASE(test_add_bcast)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_add_uint8)
@@ -190,11 +196,11 @@ CASE(test_averagepool_2d_ceil)
 CASE(test_averagepool_2d_default)
     // no filter
 CASE(test_averagepool_2d_pads)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_averagepool_2d_pads_count_include_pad)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_CPU;
     // MYRIAD is ok
     SKIP_OPENCL;
@@ -203,7 +209,7 @@ CASE(test_averagepool_2d_pads_count_include_pad)
 CASE(test_averagepool_2d_precomputed_pads)
     // no filter
 CASE(test_averagepool_2d_precomputed_pads_count_include_pad)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_averagepool_2d_precomputed_same_upper)
@@ -211,7 +217,7 @@ CASE(test_averagepool_2d_precomputed_same_upper)
 CASE(test_averagepool_2d_precomputed_strides)
     // no filter
 CASE(test_averagepool_2d_same_lower)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_averagepool_2d_same_upper)
@@ -221,11 +227,11 @@ CASE(test_averagepool_2d_strides)
 CASE(test_averagepool_3d_default)
     // no filter
 CASE(test_basic_conv_with_padding)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_basic_conv_without_padding)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_basic_convinteger)
@@ -283,11 +289,11 @@ CASE(test_cast_FLOAT_to_DOUBLE)
 CASE(test_cast_FLOAT_to_FLOAT16)
     // no filter
 CASE(test_cast_FLOAT_to_STRING)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_cast_STRING_to_FLOAT)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_castlike_BFLOAT16_to_FLOAT)
@@ -325,13 +331,13 @@ CASE(test_castlike_FLOAT_to_FLOAT16_expanded)
 CASE(test_castlike_FLOAT_to_STRING)
     // no filter
 CASE(test_castlike_FLOAT_to_STRING_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_castlike_STRING_to_FLOAT)
     // no filter
 CASE(test_castlike_STRING_to_FLOAT_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_ceil)
@@ -375,7 +381,7 @@ CASE(test_compress_negative_axis)
 CASE(test_concat_1d_axis_0)
     // no filter
 CASE(test_concat_1d_axis_negative_1)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_concat_2d_axis_0)
@@ -409,19 +415,19 @@ CASE(test_constantofshape_int_shape_zero)
 CASE(test_constantofshape_int_zeros)
     // no filter
 CASE(test_conv_with_autopad_same)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_conv_with_strides_and_asymmetric_padding)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_conv_with_strides_no_padding)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_conv_with_strides_padding)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_convinteger_with_padding)
@@ -489,7 +495,7 @@ CASE(test_det_nd)
 CASE(test_div)
     // no filter
 CASE(test_div_bcast)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_div_example)
@@ -505,7 +511,7 @@ CASE(test_dropout_default_mask_ratio)
 CASE(test_dropout_default_old)
     // no filter
 CASE(test_dropout_default_ratio)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_dropout_random_old)
@@ -629,11 +635,11 @@ CASE(test_globalaveragepool)
 CASE(test_globalaveragepool_precomputed)
     // no filter
 CASE(test_globalmaxpool)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_globalmaxpool_precomputed)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_greater)
@@ -743,12 +749,12 @@ CASE(test_log)
 CASE(test_log_example)
     // no filter
 CASE(test_logsoftmax_axis_0)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
 CASE(test_logsoftmax_axis_0_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
@@ -761,7 +767,7 @@ CASE(test_logsoftmax_axis_2)
 CASE(test_logsoftmax_axis_2_expanded)
     // no filter
 CASE(test_logsoftmax_default_axis)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_logsoftmax_default_axis_expanded)
@@ -771,12 +777,12 @@ CASE(test_logsoftmax_example_1)
 CASE(test_logsoftmax_example_1_expanded)
     // no filter
 CASE(test_logsoftmax_large_number)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
 CASE(test_logsoftmax_large_number_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
@@ -839,67 +845,67 @@ CASE(test_max_uint64)
 CASE(test_max_uint8)
     // no filter
 CASE(test_maxpool_1d_default)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_ceil)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_default)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_dilations)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_maxpool_2d_pads)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_precomputed_pads)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_precomputed_same_upper)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_precomputed_strides)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_same_lower)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_maxpool_2d_same_upper)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_strides)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_uint8)
     // no filter
 CASE(test_maxpool_3d_default)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_NON_CPU;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_maxunpool_export_with_output_shape)
     // no filter
 CASE(test_maxunpool_export_without_output_shape)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_mean_example)
@@ -969,7 +975,7 @@ CASE(test_momentum_multiple)
 CASE(test_mul)
     // no filter
 CASE(test_mul_bcast)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_mul_example)
@@ -1643,12 +1649,12 @@ CASE(test_slice_negative_axes)
 CASE(test_slice_start_out_of_bounds)
     // no filter
 CASE(test_softmax_axis_0)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
 CASE(test_softmax_axis_0_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
@@ -1661,7 +1667,7 @@ CASE(test_softmax_axis_2)
 CASE(test_softmax_axis_2_expanded)
     // no filter
 CASE(test_softmax_default_axis)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_softmax_default_axis_expanded)
@@ -1671,12 +1677,12 @@ CASE(test_softmax_example)
 CASE(test_softmax_example_expanded)
     // no filter
 CASE(test_softmax_large_number)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
 CASE(test_softmax_large_number_expanded)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
@@ -1733,7 +1739,7 @@ CASE(test_strnormalizer_nostopwords_nochangecase)
 CASE(test_sub)
     // no filter
 CASE(test_sub_bcast)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_sub_example)
@@ -1873,7 +1879,7 @@ CASE(test_unsqueeze_two_axes)
 CASE(test_unsqueeze_unsorted_axes)
     // no filter
 CASE(test_upsample_nearest)
-#if INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_where_example)
