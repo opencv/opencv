@@ -531,11 +531,11 @@ TEST(Imgproc_FloodFill, maskValue)
 {
     const int n = 50;
     Mat img = Mat::zeros(n, n, CV_8U);
-    Mat mask = Mat::zeros(n + 2, n + 2, CV_8U);
+    Mat mask;
 
     circle(img, Point(n/2, n/2), 20, Scalar(100), 4);
 
-    int flags = 4 + CV_FLOODFILL_MASK_ONLY;
+    int flags = 4 + FLOODFILL_MASK_ONLY;
     floodFill(img, mask, Point(n/2 + 13, n/2), Scalar(100), NULL, Scalar(),  Scalar(), flags);
 
     ASSERT_EQ(1, cvtest::norm(mask.rowRange(1, n-1).colRange(1, n-1), NORM_INF));
