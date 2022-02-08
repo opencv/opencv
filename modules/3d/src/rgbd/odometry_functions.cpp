@@ -648,8 +648,7 @@ void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask
     }
 }
 
-
-bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
+bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
                          const OdometryFrame srcFrame,
                          const OdometryFrame dstFrame,
                          const Matx33f& cameraMatrix,
@@ -657,15 +656,29 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          double maxTranslation, double maxRotation, double sobelScale,
                          OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype)
 {
+    bool isScaleNeeds = false;
+    if (scale)
+        isScaleNeeds = true;
+    else
+        scale = 1.0f;
     int transformDim = -1;
     CalcRgbdEquationCoeffsPtr rgbdEquationFuncPtr = 0;
     CalcICPEquationCoeffsPtr icpEquationFuncPtr = 0;
     switch(transfromType)
     {
     case OdometryTransformType::RIGID_TRANSFORMATION:
-        transformDim = 6;
-        rgbdEquationFuncPtr = calcRgbdEquationCoeffs;
-        icpEquationFuncPtr = calcICPEquationCoeffs;
+        if (isScaleNeeds)
+        {
+            transformDim = 7;
+            rgbdEquationFuncPtr = calcRgbdScaleEquationCoeffs;
+            icpEquationFuncPtr = calcICPScaleEquationCoeffs;
+        }
+        else
+        {
+            transformDim = 6;
+            rgbdEquationFuncPtr = calcRgbdEquationCoeffs;
+            icpEquationFuncPtr = calcICPEquationCoeffs;
+        }
         break;
     case OdometryTransformType::ROTATION:
         transformDim = 3;
@@ -776,7 +789,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
-                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
+                        corresps_icp, AtA_icp, AtB_icp, scale, icpEquationFuncPtr, transformDim);
                 }
                 else
                 {
@@ -792,7 +805,24 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 AtB += AtB_icp;
             }
 
+            if (isScaleNeeds)
+                if (countNonZero(AtA.rowRange(6, 6)) == 0)
+                {
+                    Mat tmp(6, 6, CV_64FC1, Scalar(0));
+                    AtA(Range(0, 6), Range(0, 6)).copyTo(tmp);
+                    AtA = tmp;
+                    isScaleNeeds = false;
+                    transformDim = 6;
+                    rgbdEquationFuncPtr = calcRgbdEquationCoeffs;
+                    icpEquationFuncPtr = calcICPEquationCoeffs;
+                    break;
+                }
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
+
+            //std::cout << "level: " << level << " iter: " << iter << std::endl;
+            //std::cout << AtA << std::endl;
+            //std::cout << AtB << std::endl;
+            //std::cout << ksi << std::endl;
 
             if (!solutionExist)
             {
@@ -808,6 +838,13 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             {
                 Mat tmp(6, 1, CV_64FC1, Scalar(0));
                 ksi.copyTo(tmp.rowRange(3,6));
+                ksi = tmp;
+            }
+            else if (isScaleNeeds)
+            {
+                scale = ksi.at<double>(6, 0);
+                Mat tmp(6, 1, CV_64FC1, Scalar(0));
+                ksi.rowRange(0, 6).copyTo(tmp);
                 ksi = tmp;
             }
 
@@ -1034,7 +1071,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     const Mat& cloud1, const Mat& normals1,
     const Mat& corresps,
-    Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
+    Mat& AtA, Mat& AtB, float& scale, CalcICPEquationCoeffsPtr func, int transformDim)
 {
     AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
     AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
@@ -1062,9 +1099,9 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
         Point3f tp0;
-        tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0[0] * Rt_ptr[4] + p0[1] * Rt_ptr[5] + p0[2] * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
+        tp0.x = (float)(p0[0] * scale * Rt_ptr[0] + p0[1] * scale * Rt_ptr[1] + p0[2] * scale * Rt_ptr[2] + Rt_ptr[3]);
+        tp0.y = (float)(p0[0] * scale * Rt_ptr[4] + p0[1] * scale * Rt_ptr[5] + p0[2] * scale * Rt_ptr[6] + Rt_ptr[7]);
+        tp0.z = (float)(p0[0] * scale * Rt_ptr[8] + p0[1] * scale * Rt_ptr[9] + p0[2] * scale * Rt_ptr[10] + Rt_ptr[11]);
 
         Vec4f n1 = normals1.at<Vec4f>(v1, u1);
         Vec4f _v = cloud1.at<Vec4f>(v1, u1);
@@ -1082,13 +1119,16 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     for (int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
         const Vec4i& c = corresps_ptr[correspIndex];
+        int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
         double w = sigma + std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1. / w : 1.;
 
         Vec4f n4 = normals1.at<Vec4f>(v1, u1);
-        func(A_ptr, tps0_ptr[correspIndex], Vec3f(n4[0], n4[1], n4[2]) * w);
+        Vec4f p1 = cloud1.at<Vec4f>(v1, u1);
+
+        func(A_ptr, tps0_ptr[correspIndex], Point3f(p1[0], p1[1], p1[2]), Vec3f(n4[0], n4[1], n4[2]) * w);
 
         for (int y = 0; y < transformDim; y++)
         {

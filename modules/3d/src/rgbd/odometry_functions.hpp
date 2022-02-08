@@ -57,6 +57,23 @@ void checkNormals(InputArray normals, const Size& depthSize)
 
 
 static inline
+void calcRgbdScaleEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+{
+    double invz = 1. / p3d.z,
+        v0 = dIdx * fx * invz,
+        v1 = dIdy * fy * invz,
+        v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+
+    C[0] = -p3d.z * v1 + p3d.y * v2;
+    C[1] = p3d.z * v0 - p3d.x * v2;
+    C[2] = -p3d.y * v0 + p3d.x * v1;
+    C[3] = v0;
+    C[4] = v1;
+    C[5] = v2;
+    C[6] = 0;
+}
+
+static inline
 void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
@@ -100,7 +117,19 @@ typedef
 void (*CalcRgbdEquationCoeffsPtr)(double*, double, double, const Point3f&, double, double);
 
 static inline
-void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPScaleEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
+{
+    C[0] = -p0.z * n1[1] + p0.y * n1[2];
+    C[1] = p0.z * n1[0] - p0.x * n1[2];
+    C[2] = -p0.y * n1[0] + p0.x * n1[1];
+    C[3] = n1[0];
+    C[4] = n1[1];
+    C[5] = n1[2];
+    C[6] = n1.dot(p1-p0);
+}
+
+static inline
+void calcICPEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] = p0.z * n1[0] - p0.x * n1[2];
@@ -111,7 +140,7 @@ void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
 }
 
 static inline
-void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] = p0.z * n1[0] - p0.x * n1[2];
@@ -119,7 +148,7 @@ void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Vec3f& n1
 }
 
 static inline
-void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Vec3f& n1)
+void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Point3f& p1, const Vec3f& n1)
 {
     C[0] = n1[0];
     C[1] = n1[1];
@@ -127,7 +156,7 @@ void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Ve
 }
 
 typedef
-void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
+void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Point3f&, const Vec3f&);
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
@@ -170,7 +199,8 @@ void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask
     InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask);
 
 
-bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
+// scale = 0, if not needs scale; otherwise scale = 1;
+bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
     const OdometryFrame srcFrame,
     const OdometryFrame dstFrame,
     const Matx33f& cameraMatrix,
@@ -192,7 +222,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     const Mat& cloud1, const Mat& normals1,
     const Mat& corresps,
-    Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim);
+    Mat& AtA, Mat& AtB, float& scale, CalcICPEquationCoeffsPtr func, int transformDim);
 
 void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
     cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
