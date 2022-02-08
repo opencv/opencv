@@ -477,11 +477,10 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     nv_buf._[0] = nv_buf._[1] = nv_buf._[2] = nv_buf._[3] = 0;
 
     struct { Vec3b b; Vec3i i; Vec3f f; } ld_buf, ud_buf;
-    Mat img = _image.getMat(), mask;
-    if( !_mask.empty() )
-        mask = _mask.getMat();
-    Size size = img.size();
 
+    Mat img = _image.getMat(), mask;
+
+    Size size = img.size();
     int type = img.type();
     int depth = img.depth();
     int cn = img.channels();
@@ -494,6 +493,20 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
     const int connectivity = flags & 255;
     if( connectivity != 0 && connectivity != 4 && connectivity != 8 )
         CV_Error( CV_StsBadFlag, "Connectivity must be 4, 0(=4) or 8" );
+
+    if( _mask.empty() )
+    {
+        _mask.create( size.height + 2, size.width + 2, CV_8UC1 );
+        _mask.setTo(0);
+    }
+
+    mask = _mask.getMat();
+    CV_CheckTypeEQ( mask.type(), CV_8U, "" );
+    CV_CheckEQ( mask.rows, size.height + 2, "" );
+    CV_CheckEQ( mask.cols, size.width + 2, "" );
+
+    Mat mask_inner = mask( Rect(1, 1, mask.cols - 2, mask.rows - 2) );
+    copyMakeBorder( mask_inner, mask, 1, 1, 1, 1, BORDER_ISOLATED | BORDER_CONSTANT, Scalar(1) );
 
     bool is_simple = mask.empty() && (flags & FLOODFILL_MASK_ONLY) == 0;
 
@@ -542,26 +555,6 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                 *rect = comp.rect;
             return comp.area;
         }
-    }
-
-    if( mask.empty() )
-    {
-        Mat tempMask( size.height + 2, size.width + 2, CV_8UC1 );
-        tempMask.setTo(Scalar::all(0));
-        mask = tempMask;
-    }
-    else
-    {
-        CV_Assert( mask.rows == size.height+2 && mask.cols == size.width+2 );
-        CV_Assert( mask.type() == CV_8U );
-    }
-
-    memset( mask.ptr(), 1, mask.cols );
-    memset( mask.ptr(mask.rows-1), 1, mask.cols );
-
-    for( i = 1; i <= size.height; i++ )
-    {
-        mask.at<uchar>(i, 0) = mask.at<uchar>(i, mask.cols-1) = (uchar)1;
     }
 
     if( depth == CV_8U )
@@ -632,7 +625,8 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
 {
     CV_INSTRUMENT_REGION();
 
-    return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
+    Mat mask;
+    return floodFill(_image, mask, seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
 
 
