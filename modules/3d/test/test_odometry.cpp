@@ -124,11 +124,13 @@ public:
                  OdometryAlgoType _algtype,
                  double _maxError1,
                  double _maxError5,
+                 bool _testScale = false,
                  double _idError = DBL_EPSILON) :
         otype(_otype),
         algtype(_algtype),
         maxError1(_maxError1),
         maxError5(_maxError5),
+        testScale(_testScale),
         idError(_idError)
     { }
 
@@ -154,6 +156,7 @@ public:
     OdometryAlgoType algtype;
     double maxError1;
     double maxError5;
+    bool testScale;
     double idError;
 };
 
@@ -248,21 +251,27 @@ void OdometryTest::run()
     odf.setImage(image);
     odf.setDepth(depth);
     Mat calcRt;
+    float scale = 1.0f;
 
     // 1. Try to find Rt between the same frame (try masks also).
     Mat mask(image.size(), CV_8UC1, Scalar(255));
 
     odometry.prepareFrame(odf);
-    bool isComputed = odometry.compute(odf, odf, calcRt);
+    bool isComputed;
+    if (testScale)
+        isComputed = odometry.compute(odf, odf, calcRt, scale);
+    else
+        isComputed = odometry.compute(odf, odf, calcRt);
 
     if(!isComputed)
     {
         FAIL() << "Can not find Rt between the same frame" << std::endl;
     }
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    if(ndiff > idError)
+    float sdiff = abs(scale - 1.f);
+    if (ndiff > idError && abs(scale - 1.f) < FLT_EPSILON)
     {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
+        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << " sdiff = " << sdiff << std::endl;
     }
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
@@ -279,23 +288,36 @@ void OdometryTest::run()
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
 
-        Mat warpedImage, warpedDepth;
-        warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
+        Mat warpedImage, warpedDepth, scaledDepth;
+
+        float test_scale = 1.03f;
+        scaledDepth = testScale ? depth * test_scale : depth;
+
+        warpFrame(image, scaledDepth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
         OdometryFrame odfSrc = odometry.createOdometryFrame();
         OdometryFrame odfDst = odometry.createOdometryFrame();
+
+        float scale_error = 0.05f;
+
         odfSrc.setImage(image);
         odfSrc.setDepth(depth);
         odfDst.setImage(warpedImage);
         odfDst.setDepth(warpedDepth);
 
         odometry.prepareFrames(odfSrc, odfDst);
-        isComputed = odometry.compute(odfSrc, odfDst, calcRt);
+        if (testScale)
+            isComputed = odometry.compute(odfSrc, odfDst, calcRt, scale);
+        else
+            isComputed = odometry.compute(odfSrc, odfDst, calcRt);
 
         if (!isComputed)
+        {
+            CV_LOG_INFO(NULL, "Iter " << iter << "; Odometry compute returned false");
             continue;
-        Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
+        }
+        Mat calcR = calcRt(Rect(0, 0, 3, 3)), calcRvec;
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
         Mat calcTvec = calcRt(Rect(3,0,1,3));
@@ -312,6 +334,8 @@ void OdometryTest::run()
 
         // compare rotation
         double possibleError = algtype == OdometryAlgoType::COMMON ? 0.11f : 0.015f;
+        if (testScale)
+            possibleError = 0.2f;
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
@@ -320,16 +344,15 @@ void OdometryTest::run()
         double rdiffnorm = cv::norm(diff.rvec());
         double tdiffnorm = cv::norm(diff.translation());
 
-        if (rdiffnorm < possibleError && tdiffnorm < possibleError)
-        {
+        if (rdiffnorm < possibleError && tdiffnorm < possibleError && abs(scale - test_scale) < scale_error)
             better_1time_count++;
-        }
-        if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError)
+        if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError && abs(scale - test_scale) < scale_error)
             better_5times_count++;
 
         CV_LOG_INFO(NULL, "Iter " << iter);
         CV_LOG_INFO(NULL, "rdiff: " << Vec3f(diff.rvec()) << "; rdiffnorm: " << rdiffnorm);
         CV_LOG_INFO(NULL, "tdiff: " << Vec3f(diff.translation()) << "; tdiffnorm: " << tdiffnorm);
+        CV_LOG_INFO(NULL, "test_scale: " << test_scale << "; scale: " << scale);
 
         CV_LOG_INFO(NULL, "better_1time_count " << better_1time_count << "; better_5time_count " << better_5times_count);
     }
@@ -400,6 +423,12 @@ TEST(RGBD_Odometry_ICP, algorithmic)
     test.run();
 }
 
+TEST(RGBD_Odometry_ICP_Scale, algorithmic)
+{
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::COMMON, 0.65, 0.0, true);
+    test.run();
+}
+
 TEST(RGBD_Odometry_RgbdICP, algorithmic)
 {
     OdometryTest test(OdometryType::RGB_DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
@@ -408,7 +437,7 @@ TEST(RGBD_Odometry_RgbdICP, algorithmic)
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, false, FLT_EPSILON);
     test.run();
 }
 
@@ -433,7 +462,7 @@ TEST(RGBD_Odometry_RgbdICP, UMats)
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, false, FLT_EPSILON);
     test.checkUMats();
 }
 

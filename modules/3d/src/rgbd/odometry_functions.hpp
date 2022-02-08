@@ -12,8 +12,25 @@ namespace cv
 {
 enum class OdometryTransformType
 {
-    ROTATION = 1, TRANSLATION = 2, RIGID_TRANSFORMATION = 4
+    // rotation, translation, rotation+translation, rotation*scale+translation
+    ROTATION = 1, TRANSLATION = 2, RIGID_TRANSFORMATION = 4, SIM_TRANSFORMATION = 8
 };
+
+static inline int getTransformDim(OdometryTransformType transformType)
+{
+    switch(transformType)
+    {
+    case OdometryTransformType::SIM_TRANSFORMATION:
+        return 7;
+    case OdometryTransformType::RIGID_TRANSFORMATION:
+        return 6;
+    case OdometryTransformType::ROTATION:
+    case OdometryTransformType::TRANSLATION:
+        return 3;
+    default:
+        CV_Error(Error::StsBadArg, "Incorrect transformation type");
+    }
+}
 
 static inline
 void checkImage(InputArray image)
@@ -55,18 +72,39 @@ void checkNormals(InputArray normals, const Size& depthSize)
         CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
 }
 
+static inline
+void calcRgbdScaleEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+{
+    double invz = 1. / p3d.z,
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+    Point3d v(v0, v1, v2);
+    Point3d pxv = p3d.cross(v);
+
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
+    C[3] = v0;
+    C[4] = v1;
+    C[5] = v2;
+    //TODO: fixit
+    C[6] = 0;
+}
 
 static inline
 void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
-        v0 = dIdx * fx * invz,
-        v1 = dIdy * fy * invz,
-        v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+    Point3d v(v0, v1, v2);
+    Point3d pxv = p3d.cross(v);
 
-    C[0] = -p3d.z * v1 + p3d.y * v2;
-    C[1] = p3d.z * v0 - p3d.x * v2;
-    C[2] = -p3d.y * v0 + p3d.x * v1;
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
     C[3] = v0;
     C[4] = v1;
     C[5] = v2;
@@ -76,58 +114,125 @@ static inline
 void calcRgbdEquationCoeffsRotation(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
-        v0 = dIdx * fx * invz,
-        v1 = dIdy * fy * invz,
-        v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
-    C[0] = -p3d.z * v1 + p3d.y * v2;
-    C[1] = p3d.z * v0 - p3d.x * v2;
-    C[2] = -p3d.y * v0 + p3d.x * v1;
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+
+    Point3d v(v0, v1, v2);
+    Point3d pxv = p3d.cross(v);
+
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
 }
 
 static inline
 void calcRgbdEquationCoeffsTranslation(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
-        v0 = dIdx * fx * invz,
-        v1 = dIdy * fy * invz,
-        v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+           v0 = dIdx * fx * invz,
+           v1 = dIdy * fy * invz,
+           v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
     C[0] = v0;
     C[1] = v1;
     C[2] = v2;
 }
 
-typedef
-void (*CalcRgbdEquationCoeffsPtr)(double*, double, double, const Point3f&, double, double);
+static inline void rgbdCoeffsFunc(OdometryTransformType transformType,
+                                  double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+{
+    switch(transformType)
+    {
+    case OdometryTransformType::SIM_TRANSFORMATION:
+        calcRgbdScaleEquationCoeffs(C, dIdx, dIdy, p3d, fx, fy);
+        break;
+    case OdometryTransformType::RIGID_TRANSFORMATION:
+        calcRgbdEquationCoeffs(C, dIdx, dIdy, p3d, fx, fy);
+        break;
+    case OdometryTransformType::ROTATION:
+        calcRgbdEquationCoeffsRotation(C, dIdx, dIdy, p3d, fx, fy);
+        break;
+    case OdometryTransformType::TRANSLATION:
+        calcRgbdEquationCoeffsTranslation(C, dIdx, dIdy, p3d, fx, fy);
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Incorrect transformation type");
+    }
+}
 
 static inline
-void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPScaleEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
 {
-    C[0] = -p0.z * n1[1] + p0.y * n1[2];
-    C[1] = p0.z * n1[0] - p0.x * n1[2];
-    C[2] = -p0.y * n1[0] + p0.x * n1[1];
+    Point3d pxv = p0.cross(Point3d(n1));
+        
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
+    C[3] = n1[0];
+    C[4] = n1[1];
+    C[5] = n1[2];
+    double diff = n1.dot(p1 - p0);
+    //TODO: fixit
+    if (diff < DBL_EPSILON || abs(diff) > 1000000)
+        C[6] = 0;
+    else
+        //C[6] = n1.dot(p1-p0);
+        C[6] = -n1.dot(p0);
+        //C[6] = n1.dot((p0 - currentTranslation)/currentScale);
+}
+
+static inline
+void calcICPEquationCoeffs(double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
+{
+    Point3d pxv = p0.cross(Point3d(n1));
+
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
     C[3] = n1[0];
     C[4] = n1[1];
     C[5] = n1[2];
 }
 
 static inline
-void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
 {
-    C[0] = -p0.z * n1[1] + p0.y * n1[2];
-    C[1] = p0.z * n1[0] - p0.x * n1[2];
-    C[2] = -p0.y * n1[0] + p0.x * n1[1];
+    Point3d pxv = p0.cross(Point3d(n1));
+
+    C[0] = pxv.x;
+    C[1] = pxv.y;
+    C[2] = pxv.z;
 }
 
 static inline
-void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Vec3f& n1)
+void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Point3f& /*p1*/, const Vec3f& n1)
 {
     C[0] = n1[0];
     C[1] = n1[1];
     C[2] = n1[2];
 }
 
-typedef
-void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
+static inline
+void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
+{
+    switch(transformType)
+    {
+    case OdometryTransformType::SIM_TRANSFORMATION:
+        calcICPScaleEquationCoeffs(C, p0, p1, n1);
+        break;
+    case OdometryTransformType::RIGID_TRANSFORMATION:
+        calcICPEquationCoeffs(C, p0, p1, n1);;
+        break;
+    case OdometryTransformType::ROTATION:
+        calcICPEquationCoeffsRotation(C, p0, p1, n1);;
+        break;
+    case OdometryTransformType::TRANSLATION:
+        calcICPEquationCoeffsTranslation(C, p0, p1, n1);;
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Incorrect transformation type");
+    }
+}
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
@@ -159,47 +264,48 @@ template<typename TMat>
 void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputOutputArrayOfArrays pyramidSobel, int sobelSize);
 
 void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
-    InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
-    InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale);
+                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
+                                InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale);
 
 void randomSubsetOfMask(InputOutputArray _mask, float part);
 
 void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals);
 
 void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
-    InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask);
+                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask);
 
 
-bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
-    const OdometryFrame srcFrame,
-    const OdometryFrame dstFrame,
-    const Matx33f& cameraMatrix,
-    float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
-    double maxTranslation, double maxRotation, double sobelScale,
-    OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype);
+// scale = 0, if not needs scale; otherwise scale = 1;
+bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
+                         const OdometryFrame srcFrame,
+                         const OdometryFrame dstFrame,
+                         const Matx33f& cameraMatrix,
+                         float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
+                         double maxTranslation, double maxRotation, double sobelScale,
+                         OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype);
 
 void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
-    const Mat& image0, const Mat& depth0, const Mat& validMask0,
-    const Mat& image1, const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
-    Mat& _corresps, Mat& _diffs, double& _sigma, OdometryType method);
+                     const Mat& image0, const Mat& depth0, const Mat& validMask0,
+                     const Mat& image1, const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
+                     Mat& _corresps, Mat& _diffs, double& _sigma, OdometryType method);
 
 void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
-    const Mat& dI_dx1, const Mat& dI_dy1,
-    const Mat& corresps, const Mat& diffs, const double sigma,
-    double fx, double fy, double sobelScaleIn,
-    Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim);
+                         const Mat& dI_dx1, const Mat& dI_dy1,
+                         const Mat& corresps, const Mat& diffs, const double sigma,
+                         double fx, double fy, double sobelScaleIn,
+                         Mat& AtA, Mat& AtB, OdometryTransformType transformType);
 
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
-    const Mat& cloud1, const Mat& normals1,
-    const Mat& corresps,
-    Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim);
+                        const Mat& cloud1, const Mat& normals1,
+                        const Mat& corresps,
+                        Mat& AtA, Mat& AtB, double& scale, OdometryTransformType transformType);
 
 void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
-    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
+                            cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
 
 #ifdef HAVE_OPENCL
 bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
-    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
+                                cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
 #endif
 
 void computeProjectiveMatrix(const Mat& ksi, Mat& Rt);
