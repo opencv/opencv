@@ -804,9 +804,11 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
                 AtA += AtA_icp;
                 AtB += AtB_icp;
             }
-
+            //std::cout << std::endl;
+            //std::cout << "level: " << level << " iter: " << iter << std::endl;
+            //std::cout << AtA << std::endl;
             if (isScaleNeeds)
-                if (countNonZero(AtA.rowRange(6, 6)) == 0)
+                if (countNonZero(AtA(Range::all(), Range(6, 7))) == 0)
                 {
                     Mat tmp(6, 6, CV_64FC1, Scalar(0));
                     AtA(Range(0, 6), Range(0, 6)).copyTo(tmp);
