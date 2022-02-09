@@ -1211,12 +1211,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
     Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
@@ -1256,12 +1251,7 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     int blobSize[] = {2, 6, 75, 113};
     Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
@@ -1294,12 +1284,7 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     std::string xmlPath = _tf("layer_convolution.xml");
     std::string binPath = _tf("layer_convolution.bin");

@@ -215,7 +215,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !_locPredTransposed && _bboxesNormalized);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -944,30 +944,6 @@ public:
             return 0.;
         }
     }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::DetectionOutputLayer ieLayer(name);
-
-        ieLayer.setNumClasses(_numClasses);
-        ieLayer.setShareLocation(_shareLocation);
-        ieLayer.setBackgroudLabelId(_backgroundLabelId);
-        ieLayer.setNMSThreshold(_nmsThreshold);
-        ieLayer.setTopK(_topK > 0 ? _topK : _keepTopK);
-        ieLayer.setKeepTopK(_keepTopK);
-        ieLayer.setConfidenceThreshold(_confidenceThreshold);
-        ieLayer.setVariantEncodedInTarget(_varianceEncodedInTarget);
-        ieLayer.setCodeType("caffe.PriorBoxParameter." + _codeType);
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(3));
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        l.getParameters()["eta"] = std::string("1.0");
-        l.getParameters()["clip"] = _clip;
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

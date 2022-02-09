@@ -143,10 +143,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return axis == 1;
+#endif
+
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
-                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -533,23 +536,6 @@ public:
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::FullyConnectedLayer ieLayer(name);
-
-        const int outNum = blobs[0].size[0];
-        ieLayer.setOutputNum(outNum);
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        addConstantData("weights", wrapToInfEngineBlob(blobs[0], {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW), l);
-        if (bias)
-            addConstantData("biases", wrapToInfEngineBlob(blobs[1], {(size_t)outNum}, InferenceEngine::Layout::C), l);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH
