@@ -588,7 +588,6 @@ void syncActorThread(std::vector<Q*> in_queues,
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_hndl, "sync_actor");
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_pull_1_queue_hndl, "sync_actor_pull_from_1_queue");
     GAPI_ITT_STATIC_LOCAL_HANDLE(sync_push_hndl, "sync_actor_push");
-
     while (true) {
         GAPI_ITT_AUTO_TRACE_GUARD(sync_hndl);
         // pop_nexts indicates which queue still contains earlier timestamps and
