@@ -45,6 +45,16 @@ namespace cv
 
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
+// Portable implementation of int left shift by XY_SHIFT.
+// Shift of negative values is implementation-defined for C++ < 20.
+#define SHL_XY(X) \
+((X) * XY_ONE)
+
+// Portable implementation of int right shift by XY_SHIFT.
+// Shift of negative values is implementation-defined for C++ < 20.
+#define SHR_XY(X) \
+((X) < 0 ? ~(~(X) >> XY_SHIFT) : (X) >> XY_SHIFT)
+
 static const int MAX_THICKNESS = 32767;
 
 struct PolyEdge
@@ -312,7 +322,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
     if( !((nch == 1 || nch == 3 || nch == 4) && img.depth() == CV_8U) )
     {
-        Line(img, Point((int)(pt1.x>>XY_SHIFT), (int)(pt1.y>>XY_SHIFT)), Point((int)(pt2.x>>XY_SHIFT), (int)(pt2.y>>XY_SHIFT)), color);
+        Line(img, Point((int)SHR_XY(pt1.x), (int)SHR_XY(pt1.y)), Point((int)SHR_XY(pt2.x), (int)SHR_XY(pt2.y)), color);
         return;
     }
 
@@ -340,11 +350,11 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         pt1.y ^= pt2.y & j;
 
         x_step = XY_ONE;
-        y_step = (dy << XY_SHIFT) / (ax | 1);
+        y_step = SHL_XY(dy) / (ax | 1);
         pt2.x += XY_ONE;
-        ecount = (int)((pt2.x >> XY_SHIFT) - (pt1.x >> XY_SHIFT));
+        ecount = (int)(SHR_XY(pt2.x) - SHR_XY(pt1.x));
         j = -(pt1.x & (XY_ONE - 1));
-        pt1.y += ((y_step * j) >> XY_SHIFT) + (XY_ONE >> 1);
+        pt1.y += (SHR_XY(y_step * j)) + (XY_ONE >> 1);
         slope = (y_step >> (XY_SHIFT - 5)) & 0x3f;
         slope ^= (y_step < 0 ? 0x3f : 0);
 
@@ -362,12 +372,12 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         pt2.y ^= pt1.y & i;
         pt1.y ^= pt2.y & i;
 
-        x_step = (dx << XY_SHIFT) / (ay | 1);
+        x_step = SHL_XY(dx) / (ay | 1);
         y_step = XY_ONE;
         pt2.y += XY_ONE;
-        ecount = (int)((pt2.y >> XY_SHIFT) - (pt1.y >> XY_SHIFT));
+        ecount = (int)(SHR_XY(pt2.y) - SHR_XY(pt1.y));
         j = -(pt1.y & (XY_ONE - 1));
-        pt1.x += ((x_step * j) >> XY_SHIFT) + (XY_ONE >> 1);
+        pt1.x += SHR_XY(x_step * j) + (XY_ONE >> 1);
         slope = (x_step >> (XY_SHIFT - 5)) & 0x3f;
         slope ^= (x_step < 0 ? 0x3f : 0);
 
@@ -414,13 +424,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         if( ax > ay )
         {
-            int x = (int)(pt1.x >> XY_SHIFT);
+            int x = (int)SHR_XY(pt1.x);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (int)((pt1.y >> XY_SHIFT) - 1);
+                int y = (int)(SHR_XY(pt1.y) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -441,13 +451,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = (int)(pt1.y >> XY_SHIFT);
+            int y = (int)SHR_XY(pt1.y);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (int)((pt1.x >> XY_SHIFT) - 1);
+                int x = (int)(SHR_XY(pt1.x) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
@@ -480,13 +490,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
         if( ax > ay )
         {
-            int x = (int)(pt1.x >> XY_SHIFT);
+            int x = (int)SHR_XY(pt1.x);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (int)((pt1.y >> XY_SHIFT) - 1);
+                int y = (int)(SHR_XY(pt1.y) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -507,13 +517,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = (int)(pt1.y >> XY_SHIFT);
+            int y = (int)SHR_XY(pt1.y);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (int)((pt1.x >> XY_SHIFT) - 1);
+                int x = (int)(SHR_XY(pt1.x) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
@@ -557,13 +567,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         if( ax > ay )
         {
-            int x = (int)(pt1.x >> XY_SHIFT);
+            int x = (int)SHR_XY(pt1.x);
 
             for( ; ecount >= 0; x++, pt1.y += y_step, scount++, ecount-- )
             {
                 if( (unsigned)x >= (unsigned)size0.width )
                     continue;
-                int y = (int)((pt1.y >> XY_SHIFT) - 1);
+                int y = (int)(SHR_XY(pt1.y) - 1);
 
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
@@ -584,13 +594,13 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         }
         else
         {
-            int y = (int)(pt1.y >> XY_SHIFT);
+            int y = (int)SHR_XY(pt1.y);
 
             for( ; ecount >= 0; y++, pt1.x += x_step, scount++, ecount-- )
             {
                 if( (unsigned)y >= (unsigned)size0.height )
                     continue;
-                int x = (int)((pt1.x >> XY_SHIFT) - 1);
+                int x = (int)(SHR_XY(pt1.x) - 1);
                 int ep_corr = ep_table[(((scount >= 2) + 1) & (scount | 2)) * 3 +
                                        (((ecount >= 2) + 1) & (ecount | 2))];
                 int a, dist = (pt1.x >> (XY_SHIFT - 5)) & 31;
@@ -632,7 +642,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
     //assert( img && (nch == 1 || nch == 3) && img.depth() == CV_8U );
 
-    Size2l sizeScaled(((int64)size.width) << XY_SHIFT, ((int64)size.height) << XY_SHIFT);
+    Size2l sizeScaled(SHL_XY((int64)size.width), SHL_XY((int64)size.height));
     if( !clipLine( sizeScaled, pt1, pt2 ))
         return;
 
@@ -655,8 +665,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
         pt1.y ^= pt2.y & j;
 
         x_step = XY_ONE;
-        y_step = dy * (1 << XY_SHIFT) / (ax | 1);
-        ecount = (int)((pt2.x - pt1.x) >> XY_SHIFT);
+        y_step = SHL_XY(dy) / (ax | 1);
+        ecount = (int)SHR_XY(pt2.x - pt1.x);
     }
     else
     {
@@ -668,9 +678,9 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
         pt2.y ^= pt1.y & i;
         pt1.y ^= pt2.y & i;
 
-        x_step = dx * (1 << XY_SHIFT) / (ay | 1);
+        x_step = SHL_XY(dx) / (ay | 1);
         y_step = XY_ONE;
-        ecount = (int)((pt2.y - pt1.y) >> XY_SHIFT);
+        ecount = (int)SHR_XY(pt2.y - pt1.y);
     }
 
     pt1.x += (XY_ONE >> 1);
@@ -689,8 +699,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             tptr[2] = (uchar)cr;        \
         }
 
-        ICV_PUT_POINT((int)((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT),
-                      (int)((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT));
+        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
+                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
 
         if( ax > ay )
         {
@@ -698,7 +708,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x), (int)(pt1.y >> XY_SHIFT));
+                ICV_PUT_POINT((int)(pt1.x), (int)SHR_XY(pt1.y));
                 pt1.x++;
                 pt1.y += y_step;
                 ecount--;
@@ -710,7 +720,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x >> XY_SHIFT), (int)(pt1.y));
+                ICV_PUT_POINT((int)SHR_XY(pt1.x), (int)(pt1.y));
                 pt1.x += x_step;
                 pt1.y++;
                 ecount--;
@@ -730,8 +740,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             tptr[0] = (uchar)cb;    \
         }
 
-        ICV_PUT_POINT((int)((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT),
-                      (int)((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT));
+        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
+                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
 
         if( ax > ay )
         {
@@ -739,7 +749,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x), (int)(pt1.y >> XY_SHIFT));
+                ICV_PUT_POINT((int)(pt1.x), (int)SHR_XY(pt1.y));
                 pt1.x++;
                 pt1.y += y_step;
                 ecount--;
@@ -751,7 +761,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x >> XY_SHIFT), (int)(pt1.y));
+                ICV_PUT_POINT((int)SHR_XY(pt1.x), (int)(pt1.y));
                 pt1.x += x_step;
                 pt1.y++;
                 ecount--;
@@ -772,8 +782,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
                 tptr[j] = ((uchar*)color)[j]; \
         }
 
-        ICV_PUT_POINT((int)((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT),
-                      (int)((pt2.y + (XY_ONE >> 1)) >> XY_SHIFT));
+        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
+                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
 
         if( ax > ay )
         {
@@ -781,7 +791,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x), (int)(pt1.y >> XY_SHIFT));
+                ICV_PUT_POINT((int)(pt1.x), (int)SHR_XY(pt1.y));
                 pt1.x++;
                 pt1.y += y_step;
                 ecount--;
@@ -793,7 +803,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
 
             while( ecount >= 0 )
             {
-                ICV_PUT_POINT((int)(pt1.x >> XY_SHIFT), (int)(pt1.y));
+                ICV_PUT_POINT((int)SHR_XY(pt1.x), (int)(pt1.y));
                 pt1.x += x_step;
                 pt1.y++;
                 ecount--;
@@ -995,7 +1005,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
            const void* color, int thickness, int line_type )
 {
     axes.width = std::abs(axes.width), axes.height = std::abs(axes.height);
-    int delta = (int)((std::max(axes.width,axes.height)+(XY_ONE>>1))>>XY_SHIFT);
+    int delta = (int)SHR_XY(std::max(axes.width,axes.height)+(XY_ONE>>1));
     delta = delta < 3 ? 90 : delta < 10 ? 30 : delta < 15 ? 18 : 5;
 
     std::vector<Point2d> _v;
@@ -1007,8 +1017,8 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
     for (unsigned int i = 0; i < _v.size(); ++i)
     {
         Point2l pt;
-        pt.x = (int64)cvRound(_v[i].x / XY_ONE) << XY_SHIFT;
-        pt.y = (int64)cvRound(_v[i].y / XY_ONE) << XY_SHIFT;
+        pt.x = SHL_XY((int64)cvRound(_v[i].x / XY_ONE));
+        pt.y = SHL_XY((int64)cvRound(_v[i].y / XY_ONE));
         pt.x += cvRound(_v[i].x - pt.x);
         pt.y += cvRound(_v[i].y - pt.y);
         if (pt != prevPt) {
@@ -1127,10 +1137,10 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
             if( shift == 0 )
             {
                 Point pt0, pt1;
-                pt0.x = (int)(p0.x >> XY_SHIFT);
-                pt0.y = (int)(p0.y >> XY_SHIFT);
-                pt1.x = (int)(p.x >> XY_SHIFT);
-                pt1.y = (int)(p.y >> XY_SHIFT);
+                pt0.x = (int)SHR_XY(p0.x);
+                pt0.y = (int)SHR_XY(p0.y);
+                pt1.x = (int)SHR_XY(p.x);
+                pt1.y = (int)SHR_XY(p.y);
                 Line( img, pt0, pt1, color, line_type );
             }
             else
@@ -1212,8 +1222,8 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                 left = 1, right = 0;
             }
 
-            int xx1 = (int)((edge[left].x + delta1) >> XY_SHIFT);
-            int xx2 = (int)((edge[right].x + delta2) >> XY_SHIFT);
+            int xx1 = (int)SHR_XY(edge[left].x + delta1);
+            int xx2 = (int)SHR_XY(edge[right].x + delta2);
 
             if( xx2 >= 0 && xx1 < size.width )
             {
@@ -1262,15 +1272,15 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
         if( line_type < CV_AA )
         {
             t0.y = pt0.y; t1.y = pt1.y;
-            t0.x = (pt0.x + (XY_ONE >> 1)) >> XY_SHIFT;
-            t1.x = (pt1.x + (XY_ONE >> 1)) >> XY_SHIFT;
+            t0.x = SHR_XY(pt0.x + (XY_ONE >> 1));
+            t1.x = SHR_XY(pt1.x + (XY_ONE >> 1));
             Line( img, t0, t1, color, line_type );
         }
         else
         {
             t0.x = pt0.x; t1.x = pt1.x;
-            t0.y = pt0.y << XY_SHIFT;
-            t1.y = pt1.y << XY_SHIFT;
+            t0.y = SHL_XY(pt0.y);
+            t1.y = SHL_XY(pt1.y);
             LineAA( img, t0, t1, color );
         }
 
@@ -1334,7 +1344,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
         x_max = std::max( x_max, x1 );
     }
 
-    if( y_max < 0 || y_min >= size.height || x_max < 0 || x_min >= ((int64)size.width<<XY_SHIFT) )
+    if( y_max < 0 || y_min >= size.height || x_max < 0 || x_min >= (SHL_XY((int64)size.width)) )
         return;
 
     std::sort( edges.begin(), edges.end(), CmpEdges() );
@@ -1394,13 +1404,13 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
 
                     if (keep_prelast->x > prelast->x)
                     {
-                        x1 = (int)((prelast->x + XY_ONE - 1) >> XY_SHIFT);
-                        x2 = (int)(keep_prelast->x >> XY_SHIFT);
+                        x1 = (int)SHR_XY(prelast->x + XY_ONE - 1);
+                        x2 = (int)SHR_XY(keep_prelast->x);
                     }
                     else
                     {
-                        x1 = (int)((keep_prelast->x + XY_ONE - 1) >> XY_SHIFT);
-                        x2 = (int)(prelast->x >> XY_SHIFT);
+                        x1 = (int)SHR_XY(keep_prelast->x + XY_ONE - 1);
+                        x2 = (int)SHR_XY(prelast->x);
                     }
 
                     // clip and draw the line
@@ -1606,10 +1616,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
 {
     static const double INV_XY_ONE = 1./XY_ONE;
 
-    p0.x <<= XY_SHIFT - shift;
-    p0.y <<= XY_SHIFT - shift;
-    p1.x <<= XY_SHIFT - shift;
-    p1.y <<= XY_SHIFT - shift;
+    p0.x *= (int)(1 << (XY_SHIFT - shift));
+    p0.y *= (int)(1 << (XY_SHIFT - shift));
+    p1.x *= (int)(1 << (XY_SHIFT - shift));
+    p1.y *= (int)(1 << (XY_SHIFT - shift));
 
     if( thickness <= 1 )
     {
@@ -1617,10 +1627,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
         {
             if( line_type == 1 || line_type == 4 || shift == 0 )
             {
-                p0.x = (p0.x + (XY_ONE>>1)) >> XY_SHIFT;
-                p0.y = (p0.y + (XY_ONE>>1)) >> XY_SHIFT;
-                p1.x = (p1.x + (XY_ONE>>1)) >> XY_SHIFT;
-                p1.y = (p1.y + (XY_ONE>>1)) >> XY_SHIFT;
+                p0.x = SHR_XY(p0.x + (XY_ONE>>1));
+                p0.y = SHR_XY(p0.y + (XY_ONE>>1));
+                p1.x = SHR_XY(p1.x + (XY_ONE>>1));
+                p1.y = SHR_XY(p1.y + (XY_ONE>>1));
                 Line( img, p0, p1, color, line_type );
             }
             else
@@ -1662,9 +1672,9 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
                 if( line_type < CV_AA )
                 {
                     Point center;
-                    center.x = (int)((p0.x + (XY_ONE>>1)) >> XY_SHIFT);
-                    center.y = (int)((p0.y + (XY_ONE>>1)) >> XY_SHIFT);
-                    Circle( img, center, (thickness + (XY_ONE>>1)) >> XY_SHIFT, color, 1 );
+                    center.x = (int)SHR_XY(p0.x + (XY_ONE>>1));
+                    center.y = (int)SHR_XY(p0.y + (XY_ONE>>1));
+                    Circle( img, center, SHR_XY(thickness + (XY_ONE>>1)), color, 1 );
                 }
                 else
                 {
@@ -1935,8 +1945,8 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
     int _angle = cvRound(box.angle);
     Point2l center(cvRound(box.center.x),
                  cvRound(box.center.y));
-    center.x = (center.x << XY_SHIFT) + cvRound((box.center.x - center.x)*XY_ONE);
-    center.y = (center.y << XY_SHIFT) + cvRound((box.center.y - center.y)*XY_ONE);
+    center.x = SHL_XY(center.x) + cvRound(SHL_XY(box.center.x - center.x));
+    center.y = SHL_XY(center.y) + cvRound(SHL_XY(box.center.y - center.y));
     Size2l axes(cvRound(box.size.width),
               cvRound(box.size.height));
     axes.width  = (axes.width  << (XY_SHIFT - 1)) + cvRound((box.size.width - axes.width)*(XY_ONE>>1));
@@ -2258,8 +2268,8 @@ void putText( InputOutputArray _img, const String& text, Point org,
     if( bottomLeftOrigin )
         vscale = -vscale;
 
-    int64 view_x = (int64)org.x << XY_SHIFT;
-    int64 view_y = ((int64)org.y << XY_SHIFT) + base_line*vscale;
+    int64 view_x = SHL_XY((int64)org.x);
+    int64 view_y = SHL_XY((int64)org.y) + base_line*vscale;
     std::vector<Point2l> pts;
     pts.reserve(1 << 10);
     const char **faces = cv::g_HersheyGlyphs;
