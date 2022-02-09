@@ -710,17 +710,26 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           size_t id,
                                           IE::InferRequest request,
-                                          IE::StatusCode /* code */) {
-    // FIXME: Ignore IE::StatusCode so far,
-    // since it's imposible to handle it properly now...
-
-    task.callback(request);
-    // NB: IE::InferRequest keeps the callback until the new one is set.
-    // Since user's callback might keep resources that should be released,
-    // need to destroy its after execution.
-    // Let's set the empty one to cause the destruction of a callback.
-    request.SetCompletionCallback([](){});
-    m_idle_ids.push(id);
+                                          IE::StatusCode code) {
+    // FIXME: Any exception which is arrised here must not leave this callback,
+    // because it won't be handled.
+    try {
+        if (code != IE::StatusCode::OK) {
+            throw std::logic_error("IE::InferRequest finished with not OK status");
+        }
+        task.callback(request);
+        // NB: IE::InferRequest keeps the callback until the new one is set.
+        // Since user's callback might keep resources that should be released,
+        // need to destroy its after execution.
+        // Let's set the empty one to cause the destruction of a callback.
+        request.SetCompletionCallback([](){});
+        m_idle_ids.push(id);
+    } catch (std::exception& e) {
+        GAPI_LOG_FATAL(NULL, "Callback failed with error: " << e.what());
+        //FIXME: Exception CAN't be rethrown here, since this callback works
+        // in separate IE thread and such scenarios aren't handled properly in
+        // G-API so far.
+    }
 }
 
 // NB: Not thread-safe.
