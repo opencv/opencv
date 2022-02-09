@@ -14,10 +14,12 @@
 #  define GAPI_LOG_INFO(tag, ...)    CV_LOG_INFO(tag, __VA_ARGS__)
 #  define GAPI_LOG_WARNING(tag, ...) CV_LOG_WARNING(tag, __VA_ARGS__)
 #  define GAPI_LOG_DEBUG(tag, ...)    CV_LOG_DEBUG(tag, __VA_ARGS__)
+#  define GAPI_LOG_FATAL(tag, ...)   CV_LOG_FATAL(tag, __VA_ARGS__)
 #else
 #  define GAPI_LOG_INFO(tag, ...)
 #  define GAPI_LOG_WARNING(tag, ...)
 #  define GAPI_LOG_DEBUG(tag, ...)
+#  define GAPI_LOG_FATAL(tag, ...)
 #endif //  !defined(GAPI_STANDALONE)
 
 

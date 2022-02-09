@@ -46,6 +46,7 @@ public:
     void compile();
     void run(double work_time_ms);
     const PerfReport& report() const;
+    const std::string& name() const { return m_name;}
 
     virtual ~Pipeline() = default;
 
