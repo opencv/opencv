@@ -702,6 +702,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
 
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
     Mat currRt, ksi;
+    double currScale = 1.0;
     Affine3f transform = Affine3f::Identity();
 
     bool isOk = false;
@@ -789,7 +790,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
-                        corresps_icp, AtA_icp, AtB_icp, scale, icpEquationFuncPtr, transformDim);
+                        corresps_icp, AtA_icp, AtB_icp, currScale, icpEquationFuncPtr, transformDim);
                 }
                 else
                 {
@@ -804,9 +805,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
                 AtA += AtA_icp;
                 AtB += AtB_icp;
             }
-            //std::cout << std::endl;
-            //std::cout << "level: " << level << " iter: " << iter << std::endl;
-            //std::cout << AtA << std::endl;
+
             if (isScaleNeeds)
                 if (countNonZero(AtA(Range::all(), Range(6, 7))) == 0)
                 {
@@ -820,11 +819,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
                     break;
                 }
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
-
-            //std::cout << "level: " << level << " iter: " << iter << std::endl;
-            //std::cout << AtA << std::endl;
-            //std::cout << AtB << std::endl;
-            //std::cout << ksi << std::endl;
 
             if (!solutionExist)
             {
@@ -844,7 +838,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
             }
             else if (isScaleNeeds)
             {
-                scale = ksi.at<double>(6, 0);
+                currScale = ksi.at<double>(6, 0);
                 Mat tmp(6, 1, CV_64FC1, Scalar(0));
                 ksi.rowRange(0, 6).copyTo(tmp);
                 ksi = tmp;
@@ -857,7 +851,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
             transform = tinc * transform;
 
             isOk = true;
-
         }
 
     }
@@ -865,7 +858,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, float& scale, const Mat& initRt,
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
-
+    scale =(float)currScale;
     if(isOk)
     {
         Mat deltaRt;
@@ -1073,7 +1066,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     const Mat& cloud1, const Mat& normals1,
     const Mat& corresps,
-    Mat& AtA, Mat& AtB, float& scale, CalcICPEquationCoeffsPtr func, int transformDim)
+    Mat& AtA, Mat& AtB, double& scale, CalcICPEquationCoeffsPtr func, int transformDim)
 {
     AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
     AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
@@ -1124,20 +1117,20 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
-        double w = sigma + std::abs(diffs_ptr[correspIndex]);
+        double w = sigma +std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1. / w : 1.;
 
         Vec4f n4 = normals1.at<Vec4f>(v1, u1);
         Vec4f p1 = cloud1.at<Vec4f>(v1, u1);
 
         func(A_ptr, tps0_ptr[correspIndex], Point3f(p1[0], p1[1], p1[2]), Vec3f(n4[0], n4[1], n4[2]) * w);
-
         for (int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for (int x = y; x < transformDim; x++)
+            {
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
-
+            }
             AtB_ptr[y] += A_ptr[y] * w * diffs_ptr[correspIndex];
         }
     }

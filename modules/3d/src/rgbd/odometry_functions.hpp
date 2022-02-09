@@ -125,7 +125,11 @@ void calcICPScaleEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1,
     C[3] = n1[0];
     C[4] = n1[1];
     C[5] = n1[2];
-    C[6] = n1.dot(p1-p0);
+    double diff = n1.dot(p1 - p0);
+    if (diff < DBL_EPSILON || abs(diff) > 1000000)
+        C[6] = 0;
+    else
+        C[6] = n1.dot(p1-p0);
 }
 
 static inline
@@ -222,7 +226,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     const Mat& cloud1, const Mat& normals1,
     const Mat& corresps,
-    Mat& AtA, Mat& AtB, float& scale, CalcICPEquationCoeffsPtr func, int transformDim);
+    Mat& AtA, Mat& AtB, double& scale, CalcICPEquationCoeffsPtr func, int transformDim);
 
 void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
     cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
