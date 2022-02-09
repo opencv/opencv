@@ -76,7 +76,6 @@ public:
     GPythonExecutable(const ade::Graph                   &,
                       const std::vector<ade::NodeHandle> &);
 
-    const char* name() const override { return "GPythonExecutable"; };
     const ade::Graph& m_g;
     cv::gimpl::GModel::ConstGraph m_gm;
     cv::gapi::python::GPythonKernel m_kernel;

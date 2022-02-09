@@ -63,7 +63,6 @@ public:
                                const cv::GCompileArgs             &,
                                const std::vector<ade::NodeHandle> &);
 
-    const char* name() const override { return "GStreamingIntrinExecutable"; };
     const ade::Graph& m_g;
     cv::gimpl::GModel::ConstGraph m_gm;
     cv::gapi::streaming::IActor::Ptr m_actor;

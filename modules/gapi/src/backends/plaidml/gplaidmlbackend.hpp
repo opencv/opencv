@@ -59,7 +59,6 @@ public:
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) override;
 
-    const char* name() const override { return "GPlaidMLExecutable"; };
 private:
     void initBuffers(const std::vector<cv::gimpl::Data>& ins_data,
                      std::vector<plaidml::exec::Binding>& bindings);

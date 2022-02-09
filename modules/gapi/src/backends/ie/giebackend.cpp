@@ -732,9 +732,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        GAPI_LOG_INFO(nullptr, "Got EndOfStream - wait until all passed task are done");
+        // (3) Wait until all passed task are done.
         m_reqPool->waitAll();
-        GAPI_LOG_INFO(nullptr, "all done");
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
