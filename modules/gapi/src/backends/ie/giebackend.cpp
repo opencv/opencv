@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -216,6 +216,39 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     }
 }
 
+template <typename MapT>
+void checkLayerNames(const MapT&                     network_map,
+                     const std::vector<std::string>& layer_names,
+                     const std::string&              layer_type) {
+    for (const auto& layer_name : layer_names) {
+        const auto it = network_map.find(layer_name);
+        if (it == network_map.end()) {
+            std::stringstream ss;
+            ss << "Failed to find " << layer_type << " layer with name: "
+               << "\"" << layer_name << "\"" << std::endl;
+            ss << "Network " << layer_type << " layers: " << std::endl;
+            for (const auto& p : network_map) {
+                const auto& desc = p.second->getTensorDesc();
+                ss << p.first << " : " << desc.getPrecision()
+                   << " / " << desc.getLayout() << std::endl;
+            }
+            throw std::logic_error(ss.str());
+        }
+    }
+}
+
+template <typename MapT>
+void checkInputLayerNames(const MapT&                     network_map,
+                          const std::vector<std::string>& layer_names) {
+    checkLayerNames(network_map, layer_names, "input");
+}
+
+template <typename MapT>
+void checkOutputLayerNames(const MapT&                     network_map,
+                          const std::vector<std::string>& layer_names) {
+    checkLayerNames(network_map, layer_names, "output");
+}
+
 // IE-specific metadata, represents a network with its parameters
 struct IEUnit {
     static const char *name() { return "IEModelConfig"; }
@@ -292,6 +325,16 @@ struct IEUnit {
             GAPI_Assert((params.reshape_table.size() + params.layer_names_to_reshape.size()) <=
                          params.num_in &&
                         "Number of layers to reshape must be less than or equal to number of inputs");
+        }
+
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            checkInputLayerNames(net.getInputsInfo(), params.input_names);
+            checkOutputLayerNames(net.getOutputsInfo(), params.output_names);
+        } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
+            checkInputLayerNames(this_network.GetInputsInfo(), params.input_names);
+            checkOutputLayerNames(this_network.GetOutputsInfo(), params.output_names);
+        } else {
+            cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
         }
     }
 
@@ -627,7 +670,10 @@ public:
     void waitAll();
 
 private:
-    void callback(Task task, InferenceEngine::InferRequest& request, size_t id);
+    void callback(Task task,
+                  size_t id,
+                  IE::InferRequest request,
+                  IE::StatusCode code);
     void setup();
 
     QueueClass<size_t>                         m_idle_ids;
@@ -652,14 +698,22 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
 
     auto& request = m_requests[id];
 
+    using namespace std::placeholders;
+    using callback_t = std::function<void(IE::InferRequest, IE::StatusCode)>;
     request.SetCompletionCallback(
-            std::bind(&cv::gimpl::ie::RequestPool::callback, this, t, std::ref(request), id));
+            static_cast<callback_t>(
+                std::bind(&cv::gimpl::ie::RequestPool::callback, this,
+                          t, id, _1, _2)));
     t.run(request);
 }
 
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
-                                          InferenceEngine::InferRequest& request,
-                                          size_t id) {
+                                          size_t id,
+                                          IE::InferRequest request,
+                                          IE::StatusCode /* code */) {
+    // FIXME: Ignore IE::StatusCode so far,
+    // since it's imposible to handle it properly now...
+
     task.callback(request);
     // NB: IE::InferRequest keeps the callback until the new one is set.
     // Since user's callback might keep resources that should be released,

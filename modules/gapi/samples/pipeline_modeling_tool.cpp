@@ -379,10 +379,15 @@ int main(int argc, char* argv[]) {
         }
 
         // NB: Execute pipelines
+        std::vector<std::exception_ptr> eptrs(pipelines.size(), nullptr);
         std::vector<std::thread> threads(pipelines.size());
         for (size_t i = 0; i < pipelines.size(); ++i) {
             threads[i] = std::thread([&, i]() {
-                pipelines[i]->run(work_time_ms);
+                try {
+                    pipelines[i]->run(work_time_ms);
+                } catch (...) {
+                    eptrs[i] = std::current_exception();
+                }
             });
         }
 
@@ -393,6 +398,16 @@ int main(int argc, char* argv[]) {
 
         for (size_t i = 0; i < threads.size(); ++i) {
             threads[i].join();
+        }
+
+        for (size_t i = 0; i < threads.size(); ++i) {
+            if (eptrs[i] != nullptr) {
+                try {
+                    std::rethrow_exception(eptrs[i]);
+                } catch (std::exception& e) {
+                    throw std::logic_error(pipelines[i]->name() + " failed: " + e.what());
+                }
+            }
             if (file.is_open()) {
                 file << pipelines[i]->report().toStr(true) << std::endl;
             }
