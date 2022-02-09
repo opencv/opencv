@@ -724,7 +724,7 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
         // Let's set the empty one to cause the destruction of a callback.
         request.SetCompletionCallback([](){});
         m_idle_ids.push(id);
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         GAPI_LOG_FATAL(NULL, "Callback failed with error: " << e.what());
         //FIXME: Exception CAN't be rethrown here, since this callback works
         // in separate IE thread and such scenarios aren't handled properly in

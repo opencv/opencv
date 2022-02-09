@@ -413,7 +413,7 @@ int main(int argc, char* argv[]) {
             }
             std::cout << pipelines[i]->report().toStr() << std::endl;
         }
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         std::cout << e.what() << std::endl;
         throw;
     }
