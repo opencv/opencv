@@ -883,9 +883,9 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
         for (int u1 = 0; u1 < depth1.cols; u1++)
         {
             float d1 = depth1_row[u1];
-            if (mask1_row[u1])
+            if (mask1_row[u1] && !cvIsNaN(d1))
             {
-                CV_DbgAssert(!cvIsNaN(d1));
+                //CV_DbgAssert(!cvIsNaN(d1));
                 float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
                     Kt_ptr[2]);
 
