@@ -365,7 +365,7 @@ bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt,
     _scale.create(Size(1, 1), CV_64FC1);
     Mat scaleValue = _scale.getMat();
     float scale = 1.f;
-    bool res = this->impl->compute(srcFrame, dstFrame, Rt, scale); 
+    bool res = this->impl->compute(srcFrame, dstFrame, Rt, scale);
     Mat(1, 1, CV_64FC1, Scalar(scale)).copyTo(scaleValue);
     return res;
 }

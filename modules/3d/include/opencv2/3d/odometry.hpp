@@ -62,7 +62,7 @@ public:
      */
     void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame);
 
-    /** Compute Rigid Transformation between two frames 
+    /** Compute Rigid Transformation between two frames
      * @param srcFrame src frame ("original" image)
      * @param dstFrame dsr frame ("rotated" image)
      * @param Rt Rigid transformation, which will be calculated, in form:

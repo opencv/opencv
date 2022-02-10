@@ -133,7 +133,7 @@ void calcICPScaleEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1,
 }
 
 static inline
-void calcICPEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
+void calcICPEquationCoeffs(double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] = p0.z * n1[0] - p0.x * n1[2];
@@ -144,7 +144,7 @@ void calcICPEquationCoeffs(double* C, const Point3f& p0, const Point3f& p1, cons
 }
 
 static inline
-void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Point3f& p1, const Vec3f& n1)
+void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] = p0.z * n1[0] - p0.x * n1[2];
@@ -152,7 +152,7 @@ void calcICPEquationCoeffsRotation(double* C, const Point3f& p0, const Point3f& 
 }
 
 static inline
-void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Point3f& p1, const Vec3f& n1)
+void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Point3f& /*p1*/, const Vec3f& n1)
 {
     C[0] = n1[0];
     C[1] = n1[1];

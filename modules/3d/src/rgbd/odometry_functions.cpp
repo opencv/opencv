@@ -1114,7 +1114,6 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     for (int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
         const Vec4i& c = corresps_ptr[correspIndex];
-        int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
         double w = sigma +std::abs(diffs_ptr[correspIndex]);
