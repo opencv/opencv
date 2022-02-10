@@ -15,9 +15,10 @@
 #include <vector>
 
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
+#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
@@ -26,19 +27,21 @@ namespace onevpl {
 
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS DecoderParams {
-    mfxBitstream stream;
+    std::shared_ptr<IDataProvider::mfx_bitstream> stream;
     mfxVideoParam param;
 };
 
 struct GAPI_EXPORTS EngineSession {
     mfxSession session;
-    mfxBitstream stream;
+    std::shared_ptr<IDataProvider::mfx_bitstream> stream;
     mfxSyncPoint sync;
     mfxStatus last_status;
 
-    EngineSession(mfxSession sess, mfxBitstream&& str);
+    EngineSession(mfxSession sess, std::shared_ptr<IDataProvider::mfx_bitstream>&& str);
     std::string error_code_to_str() const;
     virtual ~EngineSession();
+
+    virtual const mfxVideoParam& get_video_param() const = 0;
 };
 } // namespace onevpl
 } // namespace wip

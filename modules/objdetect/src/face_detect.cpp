@@ -142,6 +142,7 @@ private:
             {64.0f,  96.0f},
             {128.0f, 192.0f, 256.0f}
         };
+        CV_Assert(min_sizes.size() == feature_map_sizes.size()); // just to keep vectors in sync
         const std::vector<int> steps = { 8, 16, 32, 64 };
 
         // Generate priors

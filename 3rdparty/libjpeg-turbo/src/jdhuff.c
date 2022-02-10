@@ -584,7 +584,7 @@ decode_mcu_slow(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
        * behavior is, to the best of our understanding, innocuous, and it is
        * unclear how to work around it without potentially affecting
        * performance.  Thus, we (hopefully temporarily) suppress UBSan integer
-       * overflow errors for this function.
+       * overflow errors for this function and decode_mcu_fast().
        */
       s += state.last_dc_val[ci];
       state.last_dc_val[ci] = s;
@@ -651,6 +651,12 @@ decode_mcu_slow(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 }
 
 
+#if defined(__has_feature)
+#if __has_feature(undefined_behavior_sanitizer)
+__attribute__((no_sanitize("signed-integer-overflow"),
+               no_sanitize("unsigned-integer-overflow")))
+#endif
+#endif
 LOCAL(boolean)
 decode_mcu_fast(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 {
@@ -681,6 +687,9 @@ decode_mcu_fast(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 
     if (entropy->dc_needed[blkn]) {
       int ci = cinfo->MCU_membership[blkn];
+      /* Refer to the comment in decode_mcu_slow() regarding the supression of
+       * a UBSan integer overflow error in this line of code.
+       */
       s += state.last_dc_val[ci];
       state.last_dc_val[ci] = s;
       if (block)

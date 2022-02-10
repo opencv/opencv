@@ -27,7 +27,7 @@ LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
     mfx_decoder_param(std::move(decoder_param.param)),
     data_provider(std::move(provider)),
     procesing_surface_ptr(),
-    output_surface_ptr(),
+    sync_queue(),
     decoded_frames_count()
 {
 }
@@ -41,18 +41,21 @@ LegacyDecodeSession::~LegacyDecodeSession()
 void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
-    auto old_locked = procesing_surface_ptr.lock();
     try {
         auto cand = acceleration_policy->get_free_surface(decoder_pool_id).lock();
 
         GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
-                                ", old: " << (old_locked ? old_locked->get_handle() : nullptr) <<
+                                ", old: " << (!procesing_surface_ptr.expired()
+                                              ? procesing_surface_ptr.lock()->get_handle()
+                                              : nullptr) <<
                                 ", new: "<< cand->get_handle());
 
         procesing_surface_ptr = cand;
-    } catch (const std::exception& ex) {
-        GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what() <<
-                                   "Abort");
+    } catch (const std::runtime_error& ex) {
+        GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what());
+
+        // Delegate exception processing on caller
+        throw;
     }
 }
 
@@ -70,6 +73,10 @@ Data::Meta LegacyDecodeSession::generate_frame_meta() {
                         {cv::gapi::streaming::meta_tag::seq_id, int64_t{decoded_frames_count++}}
                     };
     return meta;
+}
+
+const mfxVideoParam& LegacyDecodeSession::get_video_param() const {
+    return mfx_decoder_param;
 }
 } // namespace onevpl
 } // namespace wip

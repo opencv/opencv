@@ -1147,7 +1147,7 @@ namespace {
             return EPtr{new cv::gimpl::onnx::GONNXExecutable(graph, nodes)};
         }
 
-        virtual cv::gapi::GKernelPackage auxiliaryKernels() const override {
+        virtual cv::GKernelPackage auxiliaryKernels() const override {
             return cv::gapi::kernels< cv::gimpl::onnx::Infer
                                     , cv::gimpl::onnx::InferROI
                                     , cv::gimpl::onnx::InferList

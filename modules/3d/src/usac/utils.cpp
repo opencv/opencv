@@ -8,9 +8,9 @@
 #include <map>
 
 namespace cv { namespace usac {
-double Utils::getCalibratedThreshold (double threshold, const Mat &K1, const Mat &K2) {
-    return threshold / ((K1.at<double>(0, 0) + K1.at<double>(1, 1) +
-                         K2.at<double>(0, 0) + K2.at<double>(1, 1)) / 4.0);
+double Utils::getCalibratedThreshold (double threshold, const Matx33d &K1, const Matx33d &K2) {
+    return threshold / ((K1(0, 0) + K1(1, 1) +
+                         K2(0, 0) + K2(1, 1)) / 4.0);
 }
 
 /*
@@ -20,22 +20,20 @@ double Utils::getCalibratedThreshold (double threshold, const Mat &K1, const Mat
  *              0  k22 k23
  *              0   0   1]
  */
-void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Mat &calib_points) {
-    const auto * const points_ = (float *) points.data;
-    const auto * const k1 = (double *) K1.data;
-    const auto inv1_k11 = float(1 / k1[0]); // 1 / k11
-    const auto inv1_k12 = float(-k1[1] / (k1[0]*k1[4])); // -k12 / (k11*k22)
+void Utils::calibratePoints (const Matx33d &K1, const Matx33d &K2, const Mat &points, Mat &calib_points) {
+    const auto inv1_k11 = float(1 / K1(0, 0)); // 1 / k11
+    const auto inv1_k12 = float(-K1(0, 1) / (K1(0, 0)*K1(1, 1))); // -k12 / (k11*k22)
     // (-k13*k22 + k12*k23) / (k11*k22)
-    const auto inv1_k13 = float((-k1[2]*k1[4] + k1[1]*k1[5]) / (k1[0]*k1[4]));
-    const auto inv1_k22 = float(1 / k1[4]); // 1 / k22
-    const auto inv1_k23 = float(-k1[5] / k1[4]); // -k23 / k22
+    const auto inv1_k13 = float((-K1(0, 2)*K1(1, 1) + K1(0, 1)*K1(1, 2)) / (K1(0, 0)*K1(1, 1)));
+    const auto inv1_k22 = float(1 / K1(1, 1)); // 1 / k22
+    const auto inv1_k23 = float(-K1(1, 2) / K1(1, 1)); // -k23 / k22
 
-    const auto * const k2 = (double *) K2.data;
-    const auto inv2_k11 = float(1 / k2[0]);
-    const auto inv2_k12 = float(-k2[1] / (k2[0]*k2[4]));
-    const auto inv2_k13 = float((-k2[2]*k2[4] + k2[1]*k2[5]) / (k2[0]*k2[4]));
-    const auto inv2_k22 = float(1 / k2[4]);
-    const auto inv2_k23 = float(-k2[5] / k2[4]);
+    const auto inv2_k11 = float(1 / K2(0, 0));
+    const auto inv2_k12 = float(-K2(0, 1) / (K2(0, 0)*K2(1, 1)));
+    const auto inv2_k13 = float((-K2(0, 2)*K2(1, 1) + K2(0, 1)*K2(1, 2)) / (K2(0, 0)*K2(1, 1)));
+    const auto inv2_k22 = float(1 / K2(1, 1));
+    const auto inv2_k23 = float(-K2(1, 2) / K2(1, 1));
+    const auto * const points_ = (float *) points.data;
 
     calib_points = Mat ( points.rows, 4, points.type());
     auto * calib_points_ = (float *) calib_points.data;
@@ -54,15 +52,13 @@ void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Ma
  * points is matrix of size |N| x 5, first two columns are image points [u_i, v_i]
  * calib_norm_pts are  K^-1 [u v 1]^T / ||K^-1 [u v 1]^T||
  */
-void Utils::calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &calib_norm_pts) {
+void Utils::calibrateAndNormalizePointsPnP (const Matx33d &K, const Mat &pts, Mat &calib_norm_pts) {
     const auto * const points = (float *) pts.data;
-    const auto * const k = (double *) K.data;
-    const auto inv_k11 = float(1 / k[0]);
-    const auto inv_k12 = float(-k[1] / (k[0]*k[4]));
-    const auto inv_k13 = float((-k[2]*k[4] + k[1]*k[5]) / (k[0]*k[4]));
-    const auto inv_k22 = float(1 / k[4]);
-    const auto inv_k23 = float(-k[5] / k[4]);
-
+    const auto inv_k11 = float(1 / K(0, 0));
+    const auto inv_k12 = float(-K(0, 1) / (K(0, 0)*K(1, 1)));
+    const auto inv_k13 = float((-K(0, 2)*K(1, 1) + K(0, 1)*K(1, 2)) / (K(0, 0)*K(1, 1)));
+    const auto inv_k22 = float(1 / K(1, 1));
+    const auto inv_k23 = float(-K(1, 2) / K(1, 1));
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
     auto * calib_norm_pts_ = (float *) calib_norm_pts.data;
 
@@ -77,10 +73,9 @@ void Utils::calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &c
     }
 }
 
-void Utils::normalizeAndDecalibPointsPnP (const Mat &K_, Mat &pts, Mat &calib_norm_pts) {
-    const auto * const K = (double *) K_.data;
-    const auto k11 = (float)K[0], k12 = (float)K[1], k13 = (float)K[2],
-               k22 = (float)K[4], k23 = (float)K[5];
+void Utils::normalizeAndDecalibPointsPnP (const Matx33d &K_, Mat &pts, Mat &calib_norm_pts) {
+    const auto k11 = (float)K_(0, 0), k12 = (float)K_(0, 1), k13 = (float)K_(0, 2),
+               k22 = (float)K_(1, 1), k23 = (float)K_(1, 2);
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
     auto * points = (float *) pts.data;
     auto * calib_norm_pts_ = (float *) calib_norm_pts.data;
@@ -103,20 +98,19 @@ void Utils::normalizeAndDecalibPointsPnP (const Mat &K_, Mat &pts, Mat &calib_no
  *             0   fy  ty
  *             0   0   1]
  */
-void Utils::decomposeProjection (const Mat &P, Mat &K_, Mat &R, Mat &t, bool same_focal) {
+void Utils::decomposeProjection (const Mat &P, Matx33d &K_, Mat &R, Mat &t, bool same_focal) {
     const Mat M = P.colRange(0,3);
     double scale = norm(M.row(2)); scale *= scale;
-    Matx33d K = Matx33d::eye();
-    K(1,2) = M.row(1).dot(M.row(2)) / scale;
-    K(0,2) = M.row(0).dot(M.row(2)) / scale;
-    K(1,1) = sqrt(M.row(1).dot(M.row(1)) / scale - K(1,2)*K(1,2));
-    K(0,0) = sqrt(M.row(0).dot(M.row(0)) / scale - K(0,2)*K(0,2));
+    K_ = Matx33d::eye();
+    K_(1,2) = M.row(1).dot(M.row(2)) / scale;
+    K_(0,2) = M.row(0).dot(M.row(2)) / scale;
+    K_(1,1) = sqrt(M.row(1).dot(M.row(1)) / scale - K_(1,2)*K_(1,2));
+    K_(0,0) = sqrt(M.row(0).dot(M.row(0)) / scale - K_(0,2)*K_(0,2));
     if (same_focal)
-        K(0,0) = K(1,1) = (K(0,0) + K(1,1)) / 2;
-    R = K.inv() * M / sqrt(scale);
+        K_(0,0) = K_(1,1) = (K_(0,0) + K_(1,1)) / 2;
+    R = K_.inv() * M / sqrt(scale);
     if (determinant(M) < 0) R *= -1;
     t = R * M.inv() * P.col(3);
-    K_ = Mat(K);
 }
 
 Matx33d Math::getSkewSymmetric(const Vec3d &v) {

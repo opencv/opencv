@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -80,6 +81,9 @@ class BaseConvolutionLayerImpl : public ConvolutionLayer
 public:
     bool fusedWeights, fusedBias;
     std::vector<double> weightsMultipliers;
+#ifdef HAVE_WEBNN
+    int groups;
+#endif
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
@@ -87,6 +91,9 @@ public:
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
+#ifdef HAVE_WEBNN
+        groups = ngroups;
+#endif
         CV_Assert(numOutput % ngroups == 0);
 
         if (kernel_size.size() == 2) {
@@ -347,6 +354,17 @@ public:
 #ifdef HAVE_VULKAN
         if (backendId == DNN_BACKEND_VKCOM)
             return ksize == 2;
+#endif
+#ifdef HAVE_WEBNN
+        if (backendId == DNN_BACKEND_WEBNN)
+        {
+            if (ksize != 2)
+            {
+                CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
+                return false;
+            }
+            return true;
+        }
 #endif
         return false;
     }
@@ -629,6 +647,7 @@ public:
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
+        CV_Assert(!blobs.empty());
         int out_channel = blobs[0].size[0];
         bool has_bias = hasBias() || fusedBias;
         int filter_size[2] = {kernel.height, kernel.width};
@@ -694,6 +713,7 @@ public:
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
+        CV_Assert(!blobs.empty());
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inpCn = inputBuffer.channels();
@@ -742,6 +762,7 @@ public:
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
         std::vector<size_t> dims = input->getDims();
         CV_Assert(dims.size() == 4 || dims.size() == 5);
@@ -806,6 +827,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
@@ -895,6 +917,109 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(!blobs.empty());
+        CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        ml::Operand webnnWeights = nodes.size() > 1 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
+        if (nodes.size() > 1)
+            CV_Assert(webnnWeights);
+        const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
+        const int group = groups;
+        const int inpGroupCn = inpCn / group;
+        std::vector<int32_t> kernel_shape;
+        if (group != 1)
+        {
+            kernel_shape.push_back(group);
+        }
+        kernel_shape.push_back(numOutput / group);
+        kernel_shape.push_back(inpGroupCn);
+        std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
+
+        if (nodes.size() == 1)
+        {
+            webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+            if (fusedWeights)
+            {
+                if (weightsMat.isContinuous())
+                {
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(weightsMat), weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
+                }
+                else
+                {
+                    Mat newWeights;
+                    Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / numOutput);
+                    cvWeights.copyTo(newWeights);
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(newWeights), newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
+                }
+            }
+        }
+        else
+        {
+            webnnWeights  = webnnGraphBuilder.Reshape(webnnWeights, kernel_shape.data(), kernel_shape.size());
+        }
+
+        ml::AutoPad pad_type = ml::AutoPad::Explicit;
+        if (!padMode.empty())
+            pad_type = padMode == "VALID" ? ml::AutoPad::Explicit : ml::AutoPad::SameUpper;
+
+        ml::Conv2dOptions options = {};
+        options.groups = group;
+        options.autoPad = pad_type;
+        std::vector<int32_t> Strides(strides.begin(), strides.end());
+        if (!Strides.empty())
+        {
+            options.stridesCount = Strides.size();
+            options.strides = Strides.data();
+        }
+        std::vector<int32_t> Padding;
+        if (padMode.empty())
+        {
+            Padding = {static_cast<int32_t>(pads_begin[0]),
+                       static_cast<int32_t>(pads_end[0]),
+                       static_cast<int32_t>(pads_begin[1]),
+                       static_cast<int32_t>(pads_end[1])};
+        }
+        else if (padMode == "VALID")
+        {
+            Padding = {0, 0, 0, 0};
+        }
+        if (!Padding.empty())
+        {
+            options.paddingCount = Padding.size();
+            options.padding = Padding.data();
+        }
+        std::vector<int32_t> Dilations(dilations.begin(), dilations.end());
+        if (!Dilations.empty())
+        {
+            options.dilationsCount = Dilations.size();
+            options.dilations = Dilations.data();
+        }
+        ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, webnnWeights, &options);
+
+        // ml::Operand result = operand;
+        if (hasBias() || fusedBias || nodes.size() == 3)
+        {
+            ml::Operand webnnBias = nullptr;
+            if (nodes.size() == 3)
+            {
+                std::vector<int32_t> bias_shape = {1, numOutput, 1, 1};
+                webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, bias_shape.data(), bias_shape.size());
+            }
+            else
+            {
+                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput, 1, 1}, biasvec.data(), (numOutput) * sizeof(float), ml::OperandType::Float32);
+            }
+            operand = webnnGraphBuilder.Add(operand, webnnBias);
+        }
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif // HAVE_WEBNN
 
     class ParallelConv : public cv::ParallelLoopBody
     {
@@ -2036,6 +2161,7 @@ public:
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
         auto output_shape = output_wrapper->getShape();
 
+        CV_Assert(!blobs.empty());
         const auto output_feature_maps = blobs[0].size[0];
         const auto input_feature_maps = input_shape[1];
         const auto input_feature_maps_per_group = blobs[0].size[1];
@@ -2797,6 +2923,7 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        CV_Assert(!blobs.empty());
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(inputs.size() == 1);
@@ -2854,6 +2981,7 @@ public:
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
+        CV_Assert(!blobs.empty());
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         int inW, inH, inC, inN;
@@ -2907,6 +3035,7 @@ public:
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &) CV_OVERRIDE
     {
+        CV_Assert(!blobs.empty());
         InferenceEngine::Layout layout = blobs[0].dims == 5? InferenceEngine::Layout::NCDHW :
                                                              InferenceEngine::Layout::OIHW;
 
@@ -2966,6 +3095,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+       CV_Assert(!blobs.empty());
        const int outGroupCn = blobs[0].size[1];
        const int group = numOutput / outGroupCn;
        CV_Assert(group == 1);

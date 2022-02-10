@@ -113,12 +113,23 @@ objdetect = {'': ['groupRectangles'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
              'QRCodeDetector': ['QRCodeDetector', 'decode', 'decodeCurved', 'detect', 'detectAndDecode', 'detectMulti', 'setEpsX', 'setEpsY']}
 
-video = {'': ['CamShift', 'calcOpticalFlowFarneback', 'calcOpticalFlowPyrLK', 'createBackgroundSubtractorMOG2', \
-             'findTransformECC', 'meanShift'],
-         'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
-         'BackgroundSubtractor': ['apply', 'getBackgroundImage']}
+video = {
+    '': [
+        'CamShift',
+        'calcOpticalFlowFarneback',
+        'calcOpticalFlowPyrLK',
+        'createBackgroundSubtractorMOG2',
+        'findTransformECC',
+        'meanShift',
+    ],
+    'BackgroundSubtractorMOG2': ['BackgroundSubtractorMOG2', 'apply'],
+    'BackgroundSubtractor': ['apply', 'getBackgroundImage'],
+    # issue #21070: 'Tracker': ['init', 'update'],
+    'TrackerMIL': ['create'],
+    'TrackerMIL_Params': [],
+}
 
-dnn = {'dnn_Net': ['setInput', 'forward'],
+dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend'],
        '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
             'readNetFromONNX', 'readNet', 'blobFromImage']}
 

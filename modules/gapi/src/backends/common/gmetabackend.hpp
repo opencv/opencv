@@ -7,7 +7,7 @@ namespace cv {
 namespace gimpl {
 namespace meta {
 
-cv::gapi::GKernelPackage kernels();
+cv::GKernelPackage kernels();
 
 } // namespace meta
 } // namespace gimpl

@@ -81,6 +81,44 @@ struct NetImplBase
 
 }  // namespace detail
 
+
+typedef std::vector<MatShape> ShapesVec;
+
+static inline std::string toString(const ShapesVec& shapes, const std::string& name = std::string())
+{
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    ss << '[';
+    for(size_t i = 0, n = shapes.size(); i < n; ++i)
+        ss << ' ' << toString(shapes[i]);
+    ss << " ]";
+    return ss.str();
+}
+
+static inline std::string toString(const Mat& blob, const std::string& name = std::string())
+{
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    if (blob.empty())
+    {
+        ss << "<empty>";
+    }
+    else if (blob.dims == 1)
+    {
+        Mat blob_ = blob;
+        blob_.dims = 2;  // hack
+        ss << blob_.t();
+    }
+    else
+    {
+        ss << blob.reshape(1, 1);
+    }
+    return ss.str();
+}
+
+
 CV__DNN_INLINE_NS_END
 }}  // namespace
 

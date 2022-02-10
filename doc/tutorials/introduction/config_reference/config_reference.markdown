@@ -339,7 +339,7 @@ Integration with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg) library for deco
 - _swscale_
 - _avresample_ (optional)
 
-Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/master) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
+Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/5.x) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
 
 @note [Libav](https://en.wikipedia.org/wiki/Libav) library can be used instead of FFmpeg, but this combination is not actively supported.
 

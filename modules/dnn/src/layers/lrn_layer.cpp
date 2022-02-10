@@ -87,7 +87,7 @@ public:
         if (size % 2 != 1 || size <= 0)
             CV_Error(Error::StsBadArg, "LRN layer supports only positive odd values for local_size");
 
-        alpha = params.get<double>("alpha", 1);
+        alpha = params.get<double>("alpha", 0.0001);
         beta = params.get<double>("beta", 0.75);
         bias = params.get<double>("bias", 1);
         normBySize = params.get<bool>("norm_by_size", true);

@@ -463,7 +463,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     }
     else
     {
-        CV_Assert(_step >= minstep);
+        CV_CheckGE(_step, minstep, "");
 
         if (_step % esz1 != 0)
         {

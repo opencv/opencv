@@ -63,7 +63,7 @@ GAPI_OCV_KERNEL(MyNV12toBGRImpl, MyNV12toBGR)
 };
 G_TYPED_KERNEL(MyPlanarResize, <GMatP(GMatP, Size, int)>, "test.my_planar_resize") {
     static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
-        return cv::gapi::core::GResizeP::outMeta(in, sz, interp);
+        return cv::gapi::imgproc::GResizeP::outMeta(in, sz, interp);
     }
 };
 GAPI_OCV_KERNEL(MyPlanarResizeImpl, MyPlanarResize) {
@@ -83,7 +83,7 @@ GAPI_OCV_KERNEL(MyPlanarResizeImpl, MyPlanarResize) {
 };
 G_TYPED_KERNEL(MyInterleavedResize, <GMat(GMat, Size, int)>, "test.my_interleaved_resize") {
     static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
-        return cv::gapi::core::GResize::outMeta(in, sz, 0.0, 0.0, interp);
+        return cv::gapi::imgproc::GResize::outMeta(in, sz, 0.0, 0.0, interp);
     }
 };
 GAPI_OCV_KERNEL(MyInterleavedResizeImpl, MyInterleavedResize) {

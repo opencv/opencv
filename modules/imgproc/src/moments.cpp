@@ -52,7 +52,7 @@ static void completeMomentState( Moments* moments )
     double cx = 0, cy = 0;
     double mu20, mu11, mu02;
     double inv_m00 = 0.0;
-    assert( moments != 0 );
+    CV_Assert( moments != 0 );
 
     if( fabs(moments->m00) > DBL_EPSILON )
     {

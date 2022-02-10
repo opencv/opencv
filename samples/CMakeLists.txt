@@ -110,8 +110,6 @@ if(MSVC)
   endif()
 endif()
 
-add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
-
 if(OPENCV_EXAMPLES_DISABLE_THREADS)
   # nothing
 elseif(MSVC OR APPLE)
@@ -120,6 +118,7 @@ else()
   find_package(Threads)
 endif()
 if((TARGET Threads::Threads OR HAVE_THREADS) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  set(HAVE_THREADS 1)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 

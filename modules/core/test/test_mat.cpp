@@ -28,7 +28,7 @@ protected:
 template<class Type>
 void testReduce( const Mat& src, Mat& sum, Mat& avg, Mat& max, Mat& min, int dim )
 {
-    assert( src.channels() == 1 );
+    CV_Assert( src.channels() == 1 );
     if( dim == 0 ) // row
     {
         sum.create( 1, src.cols, CV_64FC1 );
@@ -138,7 +138,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
             eps = 0.6;
     }
 
-    assert( opRes.type() == CV_64FC1 );
+    CV_Assert( opRes.type() == CV_64FC1 );
     Mat _dst, dst, diff;
     cv::reduce( src, _dst, dim, opType, dstType );
     _dst.convertTo( dst, CV_64FC1 );
@@ -192,7 +192,7 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
     else if( srcType == CV_64FC1 )
         testReduce<double>( src, sum, avg, max, min, dim );
     else
-        assert( 0 );
+        CV_Assert( 0 );
 
     // 1. sum
     tempCode = checkOp( src, dstType, CV_REDUCE_SUM, sum, dim );

@@ -169,7 +169,7 @@ GEMM_TransposeBlock( const uchar* src, size_t src_step,
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
             return;
         }
     }
@@ -2062,7 +2062,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
 
     if( delta && delta_cols < size.width )
     {
-        assert( delta_cols == 1 );
+        CV_Assert( delta_cols == 1 );
         buf_size *= 5;
     }
     buf.allocate(buf_size);

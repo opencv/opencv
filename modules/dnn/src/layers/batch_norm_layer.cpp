@@ -15,6 +15,7 @@ Implementation of Batch Normalization layer.
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -172,6 +173,7 @@ public:
         return (backendId == DNN_BACKEND_OPENCV) ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
+               backendId == DNN_BACKEND_WEBNN ||
                ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
 
@@ -420,6 +422,27 @@ public:
         params.blobs.push_back(origin_bias);
         return true;
     }
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<int32_t> weights_shape = webnn::getShape(weights_);
+        ml::Operand weights = webnn::BuildConstant(webnnGraphBuilder, weights_shape, weights_.data, weights_.total()*weights_.elemSize(), ml::OperandType::Float32);
+        std::vector<int32_t> shape(dims, 1);
+        shape[1] = weights_shape[1];
+        ml::Operand weights_reshaped = webnnGraphBuilder.Reshape(weights, shape.data(), shape.size());
+        ml::Operand mul_res = webnnGraphBuilder.Mul(webnnInpOperand, weights_reshaped);
+        std::vector<int32_t> bias_shape = webnn::getShape(bias_);
+        ml::Operand bias = webnn::BuildConstant(webnnGraphBuilder, bias_shape, bias_.data, bias_.total()*bias_.elemSize(), ml::OperandType::Float32);
+        shape[1] = bias_shape[1];
+        ml::Operand bias_reshaped = webnnGraphBuilder.Reshape(bias, shape.data(), shape.size());
+        ml::Operand add_res = webnnGraphBuilder.Add(mul_res, bias_reshaped);
+        return Ptr<BackendNode>(new WebnnBackendNode(add_res));
+    }
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

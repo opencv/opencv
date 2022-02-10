@@ -83,21 +83,6 @@ cv::Mat initMatrixRandU(const int type, const cv::Size& sz_in) {
 namespace opencv_test
 {
 namespace {
-void initTestDataPath()
-{
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath) {
-            cvtest::addDataSearchPath(testDataPath);
-        }
-        initialized = true;
-    }
-#endif // WINRT
-}
 
 // FIXME: taken from the DNN module
 void normAssert(cv::InputArray& ref, cv::InputArray& test,
@@ -231,7 +216,7 @@ void remapToIESSDOut(const std::vector<cv::Mat> &detections,
     }
 
     // SSD-MobilenetV1 structure check
-    ASSERT_EQ(detections[0].total(), 1u);
+    ASSERT_EQ(1u, detections[0].total());
     ASSERT_EQ(detections[2].total(), detections[0].total() * 100);
     ASSERT_EQ(detections[2].total(), detections[3].total());
     ASSERT_EQ((detections[2].total() * 4), detections[1].total());
@@ -322,7 +307,6 @@ public:
     cv::Mat in_mat;
 
     ONNXtest() {
-        initTestDataPath();
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         out_gapi.resize(1);
