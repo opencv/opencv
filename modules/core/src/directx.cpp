@@ -56,7 +56,7 @@
 #ifndef HAVE_OPENCL
 #define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
-
+#include <iostream>
 using namespace cv::ocl;
 
 namespace cv { namespace directx {
@@ -978,7 +978,7 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     cl_int status = 0;
     cl_mem clImage = 0;
@@ -1078,7 +1078,7 @@ static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11T
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11_NV* impl = ctx.getUserContext<OpenCL_D3D11_NV>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     cl_int status = 0;
     cl_mem clImage = 0;
@@ -1174,7 +1174,7 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     cl_int status = 0;
     cl_mem clImage = 0;
@@ -1271,7 +1271,7 @@ static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, Outp
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11_NV* impl = ctx.getUserContext<OpenCL_D3D11_NV>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     cl_int status = 0;
     cl_mem clImage = 0;
@@ -1366,7 +1366,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
         __convertToD3D11Texture2DKHR(src, pD3D11Texture2D);
     }
     else {
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
     }
 #endif
 }
@@ -1392,34 +1392,147 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
         __convertFromD3D11Texture2DKHR(pD3D11Texture2D, dst);
     }
     else {
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
     }
 #endif
 }
 
 #ifdef HAVE_OPENCL
-void convertFromD3D11Texture2DtoCLImage(ID3D11Texture2D* pD3D11Texture2D, cl_mem* clImage)
+void convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, void* clMem, void* clContext, void* clDeviceID)
 {
-    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(clImage);
+    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(clMem);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    ID3D11Device *ppDevice = nullptr;
-    pD3D11Texture2D->GetDevice(&ppDevice);
-    cv::ocl::Context ctx = ocl::initializeContextFromD3D11Device(ppDevice);
+    ID3D11Device *pD3D11Device = nullptr;
+    pD3D11Texture2D->GetDevice(&pD3D11Device);
+    cl_uint numPlatforms;
+    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
+    if (numPlatforms == 0)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
+
+    std::vector<cl_platform_id> platforms(numPlatforms);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
+
+    cv::ocl::Context ctx;
+
+    for (int i = 0; i < (int)numPlatforms; i++)
+    {
+        cl_platform_id platform = platforms[i];
+        std::string platformName = PlatformInfo(&platform).name();
+
+        int found = -1;
+        cl_device_id* device = static_cast<cl_device_id*>(clDeviceID);
+        cl_uint numDevices = 0;
+        cl_context context = NULL;
+
+        // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
+        clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+        if (clGetDeviceIDsFromD3D11KHR)
+        {
+            // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
+            do {
+                *device = NULL;
+                numDevices = 0;
+
+                status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
+                    CL_PREFERRED_DEVICES_FOR_D3D11_KHR, 1, &(*device), &numDevices);
+
+                if (status != CL_SUCCESS)
+                    break;
+                if (numDevices > 0)
+                {
+                    cl_context_properties properties[] = {
+                            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+                            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                            NULL, NULL
+                    };
+                    context = clCreateContext(properties, 1, &(*device), NULL, NULL, &status);
+                    if (status != CL_SUCCESS)
+                    {
+                        clReleaseDevice(*device);
+                    }
+                    else
+                    {
+                        found = i;
+                    }
+                }
+            } while (0);
+
+            // try with CL_ALL_DEVICES_FOR_D3D11_KHR
+            if (found < 0) do {
+                device = NULL;
+                numDevices = 0;
+                status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
+                    CL_ALL_DEVICES_FOR_D3D11_KHR, 1, &(*device), &numDevices);
+                if (status != CL_SUCCESS)
+                    break;
+                if (numDevices > 0)
+                {
+                    cl_context_properties properties[] = {
+                            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+                            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                            NULL, NULL
+                    };
+                    context = clCreateContext(properties, 1, &(*device), NULL, NULL, &status);
+                    if (status != CL_SUCCESS)
+                    {
+                        clReleaseDevice(*device);
+                    }
+                    else
+                    {
+                        found = i;
+                    }
+                }
+            } while (0);
+
+            if (found >= 0) {
+                OpenCLExecutionContext clExecCtx;
+                try
+                {
+                    size_t out_size = 0;
+                    clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, 0, nullptr, &out_size);
+                    std::vector<char> extensions(out_size);
+                    clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, out_size, extensions.data(), nullptr);
+                    std::string ext(extensions.data(), out_size);
+                    if (!(ext.find("cl_khr_d3d11_sharing") != std::string::npos)) {
+                        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't contain cl_khr_d3d11_sharing extension");
+                    }
+                    clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, *device);
+                    clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
+                }
+                catch (...)
+                {
+                    clReleaseDevice(*device);
+                    clReleaseContext(context);
+                    throw;
+                }
+                clExecCtx.bind();
+                ctx = const_cast<Context&>(clExecCtx.getContext());
+                break;
+            }
+        }
+    }
 
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
-    cl_context context = (cl_context)ctx.ptr();
+    cl_context* context = static_cast<cl_context*>(clContext);
+    *context = (cl_context)ctx.ptr();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
-    cl_int status = 0;
-    *clImage = impl->clCreateFromD3D11Texture2DKHR(context, CL_MEM_WRITE_ONLY, pD3D11Texture2D, 0, &status);
+    auto cl_m = static_cast<cl_mem*>(clMem);
+    *cl_m = impl->clCreateFromD3D11Texture2DKHR(*context, CL_MEM_READ_WRITE, pD3D11Texture2D, 0, &status);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
-    return;
 #endif
 }
 #endif
@@ -1434,7 +1547,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
     pD3D10Texture2D->GetDesc(&desc);
@@ -1497,7 +1610,7 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
     pD3D10Texture2D->GetDesc(&desc);
@@ -1559,7 +1672,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     D3DSURFACE_DESC desc;
     if (FAILED(pDirect3DSurface9->GetDesc(&desc)))
@@ -1629,7 +1742,7 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
     if (nullptr == impl)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
 
     D3DSURFACE_DESC desc;
     if (FAILED(pDirect3DSurface9->GetDesc(&desc)))

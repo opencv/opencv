@@ -17,6 +17,9 @@
 #include <d3d11.h>
 #include "opencv2/core/directx.hpp"
 #endif // HAVE_DIRECTX
+#ifdef HAVE_OPENCL
+#  include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#endif // HAVE_OPENCL
 
 namespace cv
 {
@@ -209,18 +212,8 @@ TEST(GPU, Symm7x7_test)
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-TEST(GPU_D3D11, ConvTexture2DtoCLmem)
-{
-    // Create test data ///////////////////////////////////////////////////////
-    const int width = 100;
-    const int height = 100;
-    const int total = width * height;
-
-    std::vector<uint8_t> test_data;
-    for (int i = 0; i < total; ++i) {
-        test_data.push_back(uint8_t(i));
-    }
-
+void prepareD3D11Texture2D(const UINT width, const UINT height, std::vector<uint8_t>& test_data, ID3D11Texture2D** texture) {
+    std::iota(test_data.begin(), test_data.end(), uint8_t(0));
     // Associate subresource with test data
     D3D11_SUBRESOURCE_DATA initData = { test_data.data(),
                                         sizeof(uint8_t) * width,
@@ -240,7 +233,6 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
     desc.CPUAccessFlags = 0; // 0 if CPU access is not required
 
     HRESULT hr;
-
     // Create device
     ID3D11Device* mDevice = nullptr;
     hr = D3D11CreateDevice(nullptr,
@@ -253,34 +245,111 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
                            &mDevice,
                            nullptr,
                            nullptr);
+
     if(!SUCCEEDED(hr)) {
-        CV_Error(cv::Error::OpenCLApiCallError, "D3D11CreateDevice was failed\n");
+        CV_Error(cv::Error::BadCallBack, "D3D11CreateDevice was failed: " +
+                    std::to_string(HRESULT_CODE(hr)));
     }
 
     // Create texture2D by test data
-    ID3D11Texture2D* texture = nullptr;
-    hr = mDevice->CreateTexture2D(&desc, &initData, &texture);
+    hr = mDevice->CreateTexture2D(&desc, &initData, &(*texture));
 
     if(!SUCCEEDED(hr)) {
-        CV_Error(cv::Error::OpenCLApiCallError, "CreateTexture2D was failed\n");
+        CV_Error(cv::Error::BadCallBack, "CreateTexture2D was failed: " +
+                    std::to_string(HRESULT_CODE(hr)));
     }
 
-    // Convert texture2D to cl_mem_image
-    cl_mem image_mem = nullptr;
-    cv::directx::convertFromD3D11Texture2DtoCLImage(texture, &image_mem);
+    if(texture == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "CreateTexture2D was failed: texture is NULL");
+    }
+}
 
+TEST(GPU_D3D11, ConvTexture2DtoCLmem)
+{
+    // Create test data ///////////////////////////////////////////////////////
+    const UINT width = 100;
+    const UINT height = 150;
+    ID3D11Texture2D* texture = nullptr;
+    std::vector<uint8_t> test_data(width * height, 0);
+
+    prepareD3D11Texture2D(width, height, test_data, &texture);
+
+    // Convert texture2D to cl_mem_image //////////////////////////////////////
+    cl_mem       image_mem = nullptr;
+    cl_context   context = nullptr;
+    cl_device_id device = nullptr;
+
+    cv::directx::convertFromD3D11Texture2DtoCLMem(texture, &image_mem, &context, &device);
+
+    if (context == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
+    }
     if (image_mem == nullptr) {
-        CV_Error(cv::Error::OpenCLApiCallError, "convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
+    }
+    if (device == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_device_id\n");
     }
 
-    // Run function ///////////////////////////////////////////////////////////
+    // Move data to host
+    std::vector<uint8_t> out_test_data(width * height, 0);
+    // Target data
+    const size_t sz0[3] = {0, 0, 0};
+    const size_t sz1[3] = {width, height, 1};
+
+    cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
+    cl_int status = clEnqueueReadImage(q, image_mem, CL_FALSE, sz0, sz1,
+                                       width * sizeof(uint8_t),
+                                       height * sizeof(uint8_t),
+                                       &out_test_data.front(), 0, NULL, NULL);
+    if (status != CL_SUCCESS) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReadImage failed");
+    }
+    clFinish(q);
+    clReleaseMemObject(image_mem);
+    clReleaseContext(context);
+    clReleaseDevice(device);
+    // Comparison /////////////////////////////////////////////////////////////
+    EXPECT_EQ(out_test_data, test_data);
+}
+
+TEST(GPU_D3D11, ConvTexture2DtoUMat)
+{
+    // Create test data ///////////////////////////////////////////////////////
+    const UINT width = 150;
+    const UINT height = 100;
+    ID3D11Texture2D* texture = nullptr;
+    std::vector<uint8_t> test_data(width * height, 0);
+
+    prepareD3D11Texture2D(width, height, test_data, &texture);
+
+    // Convert texture2D to cl_mem_image //////////////////////////////////////
+    cl_mem       image_mem = nullptr;
+    cl_context   context = nullptr;
+    cl_device_id device = nullptr;
+    cv::directx::convertFromD3D11Texture2DtoCLMem(texture, &image_mem, &context, &device);
+
+    if (context == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
+    }
+    if (image_mem == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_context\n");
+    }
+    if (device == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_device_id\n");
+    }
+
+    // Convert to UMat function ///////////////////////////////////////////////
     // Create cv::Umat
     cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
     // Copy data from cl_mem_image to cv::Umat buffer
     cv::ocl::convertFromImage(image_mem, umt_test);
+    clReleaseMemObject(image_mem);
+    clReleaseContext(context);
+    clReleaseDevice(device);
 
     // Comparison /////////////////////////////////////////////////////////////
-    EXPECT_EQ(umt_test.total(), total);
+    EXPECT_EQ(umt_test.total(), test_data.size());
     EXPECT_EQ(umt_test.size(), cv::Size(width, height));
     EXPECT_EQ(umt_test.type(), CV_8U);
 
@@ -289,6 +358,7 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
         EXPECT_EQ(umt_data[i], test_data[i]);
     }
 }
+
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 #endif // HAVE_OPENCL
