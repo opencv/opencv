@@ -68,15 +68,11 @@
 #if __has_feature(memory_sanitizer)
 #define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
 __msan_unpoison(adresse, size)
-#else
-#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
-do { } while(0)
 #endif
-#else
-#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
-do { } while(0)
 #endif
-
+#ifndef CV_ANNOTATE_MEMORY_IS_INITIALIZED
+#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) do { } while(0)
+#endif
 
 //lapack stores matrices in column-major order so transposing is needed everywhere
 template <typename fptype> static inline void
