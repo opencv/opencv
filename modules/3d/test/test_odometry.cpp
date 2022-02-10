@@ -296,7 +296,7 @@ void OdometryTest::run()
         OdometryFrame odfDst = odometry.createOdometryFrame();
 
         float test_scale = 1.03f;
-        float scale_error = 0.05;
+        float scale_error = 0.05f;
         if (testScale)
             warpedDepth *= test_scale;
 

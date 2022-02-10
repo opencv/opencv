@@ -69,8 +69,6 @@ def main():
         scale = np.zeros((1, 1))
         odometry.compute(depth1, depth2*1.05, Rt, scale)
         print("Rt:\n {}\nScale: {}".format(Rt, scale))
-       
-
 
 
 if __name__ == '__main__':
