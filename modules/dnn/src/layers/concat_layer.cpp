@@ -104,10 +104,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding);
     }
 
     class ChannelConcatInvoker : public ParallelLoopBody
@@ -299,18 +301,6 @@ public:
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-
-        InferenceEngine::Builder::ConcatLayer ieLayer(name);
-        ieLayer.setAxis(normalize_axis(axis, input->getDims().size()));
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH
