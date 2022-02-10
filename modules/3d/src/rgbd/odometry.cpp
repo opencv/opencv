@@ -360,9 +360,14 @@ bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt)
     return this->impl->compute(srcFrame, dstFrame, Rt, scale);
 }
 
-bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt, float& scale) const
+bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt, OutputArray _scale) const
 {
-    return this->impl->compute(srcFrame, dstFrame, Rt, scale);
+    _scale.create(Size(1, 1), CV_64FC1);
+    Mat scaleValue = _scale.getMat();
+    float scale = 1.f;
+    bool res = this->impl->compute(srcFrame, dstFrame, Rt, scale); 
+    Mat(1, 1, CV_64FC1, Scalar(scale)).copyTo(scaleValue);
+    return res;
 }
 
 bool Odometry::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
