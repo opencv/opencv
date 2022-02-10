@@ -55,6 +55,9 @@ enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 
 #define SHR_XY(X) \
 ((X) < 0 ? ~(~(X) >> XY_SHIFT) : (X) >> XY_SHIFT)
 
+#define SHR_XY_ROUND(X) \
+SHR_XY((X) + (XY_ONE >> 1))
+
 static const int MAX_THICKNESS = 32767;
 
 struct PolyEdge
@@ -354,7 +357,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         pt2.x += XY_ONE;
         ecount = (int)(SHR_XY(pt2.x) - SHR_XY(pt1.x));
         j = -(pt1.x & (XY_ONE - 1));
-        pt1.y += (SHR_XY(y_step * j)) + (XY_ONE >> 1);
+        pt1.y += SHR_XY(y_step * j) + (XY_ONE >> 1);;
         slope = (y_step >> (XY_SHIFT - 5)) & 0x3f;
         slope ^= (y_step < 0 ? 0x3f : 0);
 
@@ -699,8 +702,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             tptr[2] = (uchar)cr;        \
         }
 
-        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
-                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
+        ICV_PUT_POINT((int)SHR_XY_ROUND(pt2.x),
+                      (int)SHR_XY_ROUND(pt2.y));
 
         if( ax > ay )
         {
@@ -740,8 +743,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             tptr[0] = (uchar)cb;    \
         }
 
-        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
-                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
+        ICV_PUT_POINT((int)SHR_XY_ROUND(pt2.x),
+                      (int)SHR_XY_ROUND(pt2.y));
 
         if( ax > ay )
         {
@@ -782,8 +785,8 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
                 tptr[j] = ((uchar*)color)[j]; \
         }
 
-        ICV_PUT_POINT((int)SHR_XY(pt2.x + (XY_ONE >> 1)),
-                      (int)SHR_XY(pt2.y + (XY_ONE >> 1)));
+        ICV_PUT_POINT((int)SHR_XY_ROUND(pt2.x),
+                      (int)SHR_XY_ROUND(pt2.y));
 
         if( ax > ay )
         {
@@ -1005,7 +1008,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
            const void* color, int thickness, int line_type )
 {
     axes.width = std::abs(axes.width), axes.height = std::abs(axes.height);
-    int delta = (int)SHR_XY(std::max(axes.width,axes.height)+(XY_ONE>>1));
+    int delta = (int)SHR_XY_ROUND(std::max(axes.width,axes.height));
     delta = delta < 3 ? 90 : delta < 10 ? 30 : delta < 15 ? 18 : 5;
 
     std::vector<Point2d> _v;
@@ -1272,8 +1275,8 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
         if( line_type < CV_AA )
         {
             t0.y = pt0.y; t1.y = pt1.y;
-            t0.x = SHR_XY(pt0.x + (XY_ONE >> 1));
-            t1.x = SHR_XY(pt1.x + (XY_ONE >> 1));
+            t0.x = SHR_XY_ROUND(pt0.x);
+            t1.x = SHR_XY_ROUND(pt1.x);
             Line( img, t0, t1, color, line_type );
         }
         else
@@ -1627,10 +1630,10 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
         {
             if( line_type == 1 || line_type == 4 || shift == 0 )
             {
-                p0.x = SHR_XY(p0.x + (XY_ONE>>1));
-                p0.y = SHR_XY(p0.y + (XY_ONE>>1));
-                p1.x = SHR_XY(p1.x + (XY_ONE>>1));
-                p1.y = SHR_XY(p1.y + (XY_ONE>>1));
+                p0.x = SHR_XY_ROUND(p0.x);
+                p0.y = SHR_XY_ROUND(p0.y);
+                p1.x = SHR_XY_ROUND(p1.x);
+                p1.y = SHR_XY_ROUND(p1.y);
                 Line( img, p0, p1, color, line_type );
             }
             else
@@ -1672,9 +1675,9 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
                 if( line_type < CV_AA )
                 {
                     Point center;
-                    center.x = (int)SHR_XY(p0.x + (XY_ONE>>1));
-                    center.y = (int)SHR_XY(p0.y + (XY_ONE>>1));
-                    Circle( img, center, SHR_XY(thickness + (XY_ONE>>1)), color, 1 );
+                    center.x = (int)SHR_XY_ROUND(p0.x);
+                    center.y = (int)SHR_XY_ROUND(p0.y);
+                    Circle( img, center, SHR_XY_ROUND(thickness), color, 1 );
                 }
                 else
                 {
