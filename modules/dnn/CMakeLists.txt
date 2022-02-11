@@ -165,7 +165,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 set(dnn_runtime_libs "")
-if(TARGET ocv.3rdparty.openvino)
+
+ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
+if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
+  if(NOT HAVE_OPENVINO AND NOT HAVE_NGRAPH)
+    message(FATAL_ERROR "DNN: Inference Engine is not supported without enabled 'nGraph'. Check build configuration.")
+  endif()
   list(APPEND dnn_runtime_libs ocv.3rdparty.openvino)
 endif()
 

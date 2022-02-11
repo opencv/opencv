@@ -388,10 +388,9 @@ class Builder:
         if self.config.dldt_release:
             cmake_vars['INF_ENGINE_RELEASE'] = str(self.config.dldt_release)
 
-        cmake_vars['INF_ENGINE_LIB_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/lib/intel64')
-        assert os.path.exists(cmake_vars['INF_ENGINE_LIB_DIRS:PATH']), cmake_vars['INF_ENGINE_LIB_DIRS:PATH']
-        cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/include')
-        assert os.path.exists(cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']), cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']
+        InferenceEngine_DIR = str(builderDLDT.sysrootdir / 'deployment_tools' / 'inference_engine' / 'cmake')
+        assert os.path.exists(InferenceEngine_DIR), InferenceEngine_DIR
+        cmake_vars['InferenceEngine_DIR:PATH'] = InferenceEngine_DIR
 
         ngraph_DIR = str(builderDLDT.sysrootdir / 'ngraph/cmake')
         if not os.path.exists(ngraph_DIR):
