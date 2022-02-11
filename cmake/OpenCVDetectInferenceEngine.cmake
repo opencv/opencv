@@ -26,7 +26,7 @@ endif()
 find_package(InferenceEngine QUIET)
 if(InferenceEngine_FOUND)
   set(INF_ENGINE_TARGET ${InferenceEngine_LIBRARIES})
-  set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}" CACHE STRING "")
+  set(INF_ENGINE_VERSION "${InferenceEngine_VERSION}")
   message(STATUS "Detected InferenceEngine: cmake package (${InferenceEngine_VERSION})")
 endif()
 
