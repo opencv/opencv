@@ -115,13 +115,16 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && preferableTarget == DNN_TARGET_CPU)
-            return _order.size() <= 4 || !isArmComputePlugin();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            if (preferableTarget == DNN_TARGET_CPU)
+                return _order.size() <= 4 || !isArmComputePlugin();
+            return true;
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
@@ -416,16 +419,6 @@ public:
             }
         }
     }
-
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::PermuteLayer ieLayer(name);
-        ieLayer.setOrder(_order);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

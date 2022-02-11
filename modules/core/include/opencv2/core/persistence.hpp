@@ -309,8 +309,8 @@ public:
         READ        = 0, //!< value, open the file for reading
         WRITE       = 1, //!< value, open the file for writing
         APPEND      = 2, //!< value, open the file for appending
-        MEMORY      = 4, //!< flag, read data from source or write data to the internal buffer (which is
-        //!< returned by FileStorage::release)
+        MEMORY      = 4, /**< flag, read data from source or write data to the internal buffer (which is
+                              returned by FileStorage::release) */
         FORMAT_MASK = (7<<3), //!< mask for format flags
         FORMAT_AUTO = 0,      //!< flag, auto format
         FORMAT_XML  = (1<<3), //!< flag, XML format

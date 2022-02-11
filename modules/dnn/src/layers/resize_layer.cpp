@@ -78,7 +78,7 @@ public:
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
 
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             return (interpolation == "nearest" && scaleWidth == scaleHeight) ||
                    (interpolation == "bilinear");
@@ -306,38 +306,6 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
-
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        if (interpolation == "nearest")
-        {
-            ieLayer.setType("Resample");
-            ieLayer.getParameters()["type"] = std::string("caffe.ResampleParameter.NEAREST");
-            ieLayer.getParameters()["antialias"] = false;
-            if (scaleWidth != scaleHeight)
-                CV_Error(Error::StsNotImplemented, "resample with sw != sh");
-            ieLayer.getParameters()["factor"] = 1.0f / scaleWidth;
-        }
-        else if (interpolation == "bilinear")
-        {
-            ieLayer.setType("Interp");
-            ieLayer.getParameters()["pad_beg"] = 0;
-            ieLayer.getParameters()["pad_end"] = 0;
-            ieLayer.getParameters()["align_corners"] = alignCorners;
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
-        ieLayer.getParameters()["width"] = outWidth;
-        ieLayer.getParameters()["height"] = outHeight;
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

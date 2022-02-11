@@ -87,11 +87,6 @@ public:
         CV_Error(Error::StsNotImplemented, msg);
     }
 
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
