@@ -78,7 +78,7 @@ TEST(Objdetect_face_detection, regression)
     // }
 
     // Initialize detector
-    std::string model = findDataFile("dnn/onnx/models/yunet-202109.onnx", false);
+    std::string model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
