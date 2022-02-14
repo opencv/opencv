@@ -1026,8 +1026,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
 
-        Mat kxmat(1, ksize, CV_32FC1, kx);
-        Mat kymat(ksize, 1, CV_32FC1, ky);
+        Mat kxmat(1, ksz, CV_32FC1, kx);
+        Mat kymat(ksz, 1, CV_32FC1, ky);
         getDerivKernels(kxmat, kymat, dx, dy, ksize);
     }
 
@@ -1185,12 +1185,12 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
         auto *kx_dy = buf_helper.kx_dy;
         auto *ky_dy = buf_helper.ky_dy;
 
-        Mat kxmatX(1, ksize, CV_32FC1, kx_dx);
-        Mat kymatX(ksize, 1, CV_32FC1, ky_dx);
+        Mat kxmatX(1, ksz, CV_32FC1, kx_dx);
+        Mat kymatX(ksz, 1, CV_32FC1, ky_dx);
         getDerivKernels(kxmatX, kymatX, order, 0, ksize);
 
-        Mat kxmatY(1, ksize, CV_32FC1, kx_dy);
-        Mat kymatY(ksize, 1, CV_32FC1, ky_dy);
+        Mat kxmatY(1, ksz, CV_32FC1, kx_dy);
+        Mat kymatY(ksz, 1, CV_32FC1, ky_dy);
         getDerivKernels(kxmatY, kymatY, 0, order, ksize);
     }
 
