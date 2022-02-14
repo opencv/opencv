@@ -967,8 +967,8 @@ TEST_P(Test_Model, FaceRecognitionBySF)
             int label;
             std::istringstream iss(line);
             iss >> image1_path >> image2_path >> label;
-            image1_path = "cv/dnn_face/recognition/" + image1_path;
-            image2_path = "cv/dnn_face/recognition/" + image2_path;
+            image1_path = findDataFile("cv/dnn_face/recognition/" + image1_path);
+            image2_path = findDataFile("cv/dnn_face/recognition/" + image2_path);
             image_path_pairs.push_back(std::make_pair(image1_path, image2_path));
             gt_labels.push_back(label);
         }
