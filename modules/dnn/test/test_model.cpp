@@ -267,62 +267,130 @@ public:
     void testFaceDetectionModelByYN(
         const std::string& weights,
         const std::string& cfg,
-        const std::string& imgPath,
-        const std::vector<Rect>& refBoxes,
-        const std::vector<std::vector<Point>>& refLandmarks,
-        const double iouDiff,
-        const double l2dDiff,
-        const double confThreshold = 0.9,
-        const double nmsThreshold = 0.3
+        const std::string& imgage_path,
+        const std::vector<Rect>& ref_boxes,
+        const std::vector<std::vector<Point>>& ref_landmarks,
+        const double iou_diff,
+        const double l2d_diff,
+        const double conf_threshold = 0.9,
+        const double nms_threshold = 0.3
     )
     {
+        CV_Assert(ref_boxes.size() == ref_landmarks.size());
+
         checkBackend();
 
-        Mat frame = imread(imgPath);
-        FaceDetectionModel_YN model(weights, cfg);
+        const Mat image = imread(imgage_path);
 
-        model.setPreferableBackend(backend);
-        model.setPreferableTarget(target);
+        FaceDetectionModel_YN face_detector(weights, cfg);
+        face_detector.setPreferableBackend(backend);
+        face_detector.setPreferableTarget(target);
 
         std::vector<float> confidences;
         std::vector<Rect> boxes;
+        face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
 
-        model.detect(frame, confidences, boxes, confThreshold, nmsThreshold);
-
-        std::vector<Rect2d> boxesDouble(boxes.size());
+        std::vector<Rect2d> boxes_double(boxes.size());
         for (int i = 0; i < boxes.size(); i++)
         {
-            boxesDouble[i] = boxes[i];
+            boxes_double[i] = boxes[i];
         }
-        std::vector<Rect2d> refBoxesDouble(refBoxes.size());
-        for (int i = 0; i < refBoxes.size(); i++)
+        std::vector<Rect2d> ref_boxes_double(ref_boxes.size());
+        for (int i = 0; i < ref_boxes.size(); i++)
         {
-            refBoxesDouble[i] = refBoxes[i];
+            ref_boxes_double[i] = ref_boxes[i];
         }
 
         // In the case of face detection, class id don't exist.
         // Therefor, all give 1 to class id and reference.
-        std::vector<int> classIds(boxes.size(), 1);
-        std::vector<int> refClassIds(refBoxes.size(), 1);
+        std::vector<int> class_ids(boxes.size(), 1);
+        std::vector<int> ref_class_ids(ref_boxes.size(), 1);
 
         // Not test for confidences.
         // Therefor, all give 1 to confidences and reference.
         confidences.assign(boxes.size(), 1.0f);
-        std::vector<float> refConfidences(refBoxes.size(), 1.0f);
-        const double scoreDiff = 1e-5;
+        std::vector<float> ref_confidences(ref_boxes.size(), 1.0f);
+        const double score_diff = 1e-5;
 
         normAssertDetections(
-            refClassIds, refConfidences, refBoxesDouble,
-            classIds, confidences, boxesDouble,
-            "", confThreshold, scoreDiff, iouDiff);
+            ref_class_ids, ref_confidences, ref_boxes_double,
+            class_ids, confidences, boxes_double,
+            "", conf_threshold, score_diff, iou_diff);
 
         std::vector<std::vector<Point>> landmarks;
-        model.getLandmarks(landmarks);
+        face_detector.getLandmarks(landmarks);
 
-        for(int i = 0; i < landmarks.size(); i++)
+        for (int i = 0; i < landmarks.size(); i++)
         {
             normAssertLandmarkDetections(
-                refLandmarks[i], landmarks[i], "", l2dDiff);
+                ref_landmarks[i], landmarks[i], "", l2d_diff);
+        }
+    }
+
+    void testFaceRecognitionModelBySF(
+        const std::string& face_detection_weights,
+        const std::string& face_detection_cfg,
+        const std::string& face_recognition_weights,
+        const std::string& face_recognition_cfg,
+        const std::vector<std::pair<std::string, std::string>>& image_pairs,
+        const std::vector<int>& gt_labels,
+        const double cos_threshold = 0.363,
+        const double l2norm_threshold = 1.128
+    )
+    {
+        CV_Assert(image_pairs.size() == gt_labels.size());
+
+        checkBackend();
+
+        FaceDetectionModel_YN face_detector(face_detection_weights, face_detection_cfg);
+        face_detector.setPreferableBackend(backend);
+        face_detector.setPreferableTarget(target);
+
+        FaceRecognitionModel_SF face_recognizer(face_recognition_weights, face_recognition_cfg);
+        face_recognizer.setPreferableBackend(backend);
+        face_recognizer.setPreferableTarget(target);
+
+        const double conf_threshold = 0.9;
+        const double nms_threshold = 0.3;
+
+        const int numPairs = image_pairs.size();
+        for (int i = 0; i < numPairs; i++)
+        {
+            const std::string image_path1 = image_pairs[i].first;
+            const std::string image_path2 = image_pairs[i].second;
+            const Mat image1 = imread(image_path1);
+            const Mat image2 = imread(image_path2);
+
+            std::vector<float> confidences;
+            std::vector<Rect> boxes;
+
+            std::vector<std::vector<Point>> landmarks1;
+            face_detector.detect(image1, confidences, boxes, conf_threshold, nms_threshold);
+            face_detector.getLandmarks(landmarks1);
+            CV_Assert(landmarks1.size() == 1);
+
+            std::vector<std::vector<Point>> landmarks2;
+            face_detector.detect(image2, confidences, boxes, conf_threshold, nms_threshold);
+            face_detector.getLandmarks(landmarks2);
+            CV_Assert(landmarks2.size() == 1);
+
+            cv::Mat aligned_face1, aligned_face2;
+            face_recognizer.alignCrop(image1, aligned_face1, landmarks1[0]);
+            face_recognizer.alignCrop(image2, aligned_face2, landmarks2[0]);
+
+            cv::Mat face_feature1, face_feature2;
+            face_recognizer.feature(aligned_face1, face_feature1);
+            face_recognizer.feature(aligned_face2, face_feature2);
+
+            const double cos_score = face_recognizer.match(face_feature1, face_feature2, cv::dnn::FaceRecognitionModel::DisType::FR_COSINE);
+            const double l2norm_score = face_recognizer.match(face_feature1, face_feature2, cv::dnn::FaceRecognitionModel::DisType::FR_NORM_L2);
+
+            const int cos_label = (cos_score >= cos_threshold) ? 1 : 0;
+            const int l2norm_label = (l2norm_score <= l2norm_threshold) ? 1 : 0;
+
+            const int gt_label = gt_labels[i];
+            EXPECT_TRUE(gt_label == cos_label);
+            EXPECT_TRUE(gt_label == l2norm_label);
         }
     }
 };
@@ -803,7 +871,7 @@ TEST_P(Test_Model, TextDetectionByEAST)
 TEST_P(Test_Model, FaceDetectionByYN)
 {
     // Weight
-    std::string weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
 
     // Ground Truth
     std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
@@ -869,13 +937,51 @@ TEST_P(Test_Model, FaceDetectionByYN)
 
     // Run Test
     testFaceDetectionModelByYN(
-        weight_path,
+        face_detection_weight_path,
         "",
         image_path,
         gt_boxes,
         gt_landmarks,
         iouDiff,
         l2dDiff
+    );
+}
+
+TEST_P(Test_Model, FaceRecognitionBySF)
+{
+    // Weight
+    std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    std::string face_recognition_weight_path = _tf("onnx/models/face_recognizer_fast.onnx", false);
+
+    // Ground Truth
+    std::string test_labels = findDataFile("cv/dnn_face/recognition/cascades_label.txt");
+    std::ifstream ifs(test_labels.c_str());
+    CV_Assert(ifs.is_open());
+
+    std::vector<std::pair<std::string, std::string>> image_path_pairs; // image1_path, image2_path
+    std::vector<int> gt_labels; // labels (1:same identity, 0:different identities)
+    {
+        for(std::string line, key; getline(ifs, line);)
+        {
+            std::string image1_path, image2_path;
+            int label;
+            std::istringstream iss(line);
+            iss >> image1_path >> image2_path >> label;
+            image1_path = "cv/dnn_face/recognition/" + image1_path;
+            image2_path = "cv/dnn_face/recognition/" + image2_path;
+            image_path_pairs.push_back(std::make_pair(image1_path, image2_path));
+            gt_labels.push_back(label);
+        }
+    }
+
+    // Run Test
+    testFaceRecognitionModelBySF(
+        face_detection_weight_path,
+        "",
+        face_recognition_weight_path,
+        "",
+        image_path_pairs,
+        gt_labels
     );
 }
 
