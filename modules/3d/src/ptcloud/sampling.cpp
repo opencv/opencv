@@ -1,6 +1,9 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021, Yechun Ruan <ruanyc@mail.sustech.edu.cn>
+// Acknowledgement of the support from Huawei Technologies Co., Ltd.
 
 
 #include "../precomp.hpp"
