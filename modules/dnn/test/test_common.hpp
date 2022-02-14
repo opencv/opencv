@@ -127,6 +127,13 @@ void normAssertTextDetections(
         const std::vector<std::vector<Point>>& testPolys,
         const char *comment = "", double boxes_iou_diff = 1e-4);
 
+// For landmarks detection networks
+// This test requires the same number of references and test points.
+void normAssertLandmarkDetections(
+        const std::vector<Point>& referencePoints,
+        const std::vector<Point>& testPoints,
+        const char* comment = "", double l2dis_diff = 1e-2);
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
 #ifdef HAVE_INF_ENGINE

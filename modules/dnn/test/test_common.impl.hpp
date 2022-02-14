@@ -224,6 +224,29 @@ void normAssertTextDetections(
     }
 }
 
+// For landmarks detection networks
+// This test requires the same number of references and test points.
+void normAssertLandmarkDetections(
+    const std::vector<Point>& referencePoints,
+    const std::vector<Point>& testPoints,
+    const char*comment /*= ""*/, double l2dis_diff /*= 1e-4 */)
+{
+    // Check unmatched size with reference points and test points.
+    ASSERT_EQ(referencePoints.size(), testPoints.size());
+
+    // Check unmatched groundtruth.
+    const int numPoints = testPoints.size();
+    std::vector<bool> matchedRefPoints(numPoints, false);
+    for (uint i = 0; i < numPoints; ++i)
+    {
+        const Point referencePoint = referencePoints[i];
+        const Point testPoint = testPoints[i];
+        const float l2dis = cv::norm(referencePoint - testPoint);
+        if(l2dis <= l2dis_diff) matchedRefPoints[i] = true;
+    }
+    EXPECT_TRUE(std::all_of(matchedRefPoints.begin(), matchedRefPoints.end(), [](bool matched){return matched;}));
+}
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
     const std::ios::openmode mode = std::ios::in | std::ios::binary;

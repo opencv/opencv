@@ -263,6 +263,68 @@ public:
             EXPECT_NEAR(box.angle, gtBox.angle, eps_angle);
         }
     }
+
+    void testFaceDetectionModelByYN(
+        const std::string& weights,
+        const std::string& cfg,
+        const std::string& imgPath,
+        const std::vector<Rect>& refBoxes,
+        const std::vector<std::vector<Point>>& refLandmarks,
+        const double iouDiff,
+        const double l2dDiff,
+        const double confThreshold = 0.9,
+        const double nmsThreshold = 0.3
+    )
+    {
+        checkBackend();
+
+        Mat frame = imread(imgPath);
+        FaceDetectionModel_YN model(weights, cfg);
+
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+
+        std::vector<float> confidences;
+        std::vector<Rect> boxes;
+
+        model.detect(frame, confidences, boxes, confThreshold, nmsThreshold);
+
+        std::vector<Rect2d> boxesDouble(boxes.size());
+        for (int i = 0; i < boxes.size(); i++)
+        {
+            boxesDouble[i] = boxes[i];
+        }
+        std::vector<Rect2d> refBoxesDouble(refBoxes.size());
+        for (int i = 0; i < refBoxes.size(); i++)
+        {
+            refBoxesDouble[i] = refBoxes[i];
+        }
+
+        // In the case of face detection, class id don't exist.
+        // Therefor, all give 1 to class id and reference.
+        std::vector<int> classIds(boxes.size(), 1);
+        std::vector<int> refClassIds(refBoxes.size(), 1);
+
+        // Not test for confidences.
+        // Therefor, all give 1 to confidences and reference.
+        confidences.assign(boxes.size(), 1.0f);
+        std::vector<float> refConfidences(refBoxes.size(), 1.0f);
+        const double scoreDiff = 1e-5;
+
+        normAssertDetections(
+            refClassIds, refConfidences, refBoxesDouble,
+            classIds, confidences, boxesDouble,
+            "", confThreshold, scoreDiff, iouDiff);
+
+        std::vector<std::vector<Point>> landmarks;
+        model.getLandmarks(landmarks);
+
+        for(int i = 0; i < landmarks.size(); i++)
+        {
+            normAssertLandmarkDetections(
+                refLandmarks[i], landmarks[i], "", l2dDiff);
+        }
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -735,6 +797,85 @@ TEST_P(Test_Model, TextDetectionByEAST)
 
     testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB, false/*crop*/,
         eps_center, eps_size, eps_angle
+    );
+}
+
+TEST_P(Test_Model, FaceDetectionByYN)
+{
+    // Weight
+    std::string weight_path = findDataFile("cv/dnn/onnx/models/yunet-202109.onnx", false);
+
+    // Ground Truth
+    std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
+    std::ifstream ifs(test_labels.c_str());
+    CV_Assert(ifs.is_open());
+
+    std::string image_path;
+    {
+        std::string line;
+        getline(ifs, line);
+        std::istringstream iss(line);
+        iss >> image_path;
+    }
+    CV_Assert(!image_path.empty());
+    image_path = findDataFile("cv/cascadeandhog/images/" + image_path);
+
+    int num_faces = -1;
+    {
+        std::string line;
+        getline(ifs, line);
+        std::istringstream iss(line);
+        iss >> num_faces;
+    }
+    CV_Assert(0 < num_faces);
+
+    std::vector<Rect> gt_boxes;
+    std::vector<std::vector<Point>> gt_landmarks;
+    {
+        for (int i = 0; i < num_faces; i++)
+        {
+            std::string line, part;
+            getline(ifs, line);
+            std::stringstream ss{ line };
+
+            int box[4];
+            for (int j = 0; j < 4; j++)
+            {
+                getline(ss, part, ' ');
+                std::istringstream iss(line);
+                iss >> box[j];
+            }
+            gt_boxes.push_back(Rect(box[0], box[1], box[2], box[3]));
+
+            std::vector<Point> points;
+            for(int j = 4; j < 10; j+=2)
+            {
+                int x, y;
+                getline(ss, part, ' ');
+                std::istringstream iss_x(line);
+                iss_x >> x;
+                getline(ss, part, ' ');
+                std::istringstream iss_y(line);
+                iss_y >> y;
+                points.push_back(Point(x, y));
+            }
+            gt_landmarks.push_back(points);
+        }
+    }
+
+    // Threshold
+    const float iouDiff = 1e-5;
+    const float l2dDiff = 1e-2;
+
+    // Run Test
+    testFaceDetectionModelByYN(
+        weight_path,
+        "",
+        image_path,
+        gt_boxes,
+        gt_landmarks,
+        iouDiff,
+        l2dDiff
     );
 }
 
