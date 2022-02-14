@@ -803,7 +803,7 @@ TEST_P(Test_Model, TextDetectionByEAST)
 TEST_P(Test_Model, FaceDetectionByYN)
 {
     // Weight
-    std::string weight_path = findDataFile("cv/dnn/onnx/models/yunet-202109.onnx", false);
+    std::string weight_path = _tf("onnx/models/yunet-202109.onnx", false);
 
     // Ground Truth
     std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
