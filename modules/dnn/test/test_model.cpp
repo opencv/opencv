@@ -910,7 +910,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
             for (int j = 0; j < 4; j++)
             {
                 getline(ss, part, ' ');
-                std::istringstream iss(line);
+                std::istringstream iss(part);
                 iss >> box[j];
             }
             gt_boxes.push_back(Rect(box[0], box[1], box[2], box[3]));
@@ -920,10 +920,10 @@ TEST_P(Test_Model, FaceDetectionByYN)
             {
                 int x, y;
                 getline(ss, part, ' ');
-                std::istringstream iss_x(line);
+                std::istringstream iss_x(part);
                 iss_x >> x;
                 getline(ss, part, ' ');
-                std::istringstream iss_y(line);
+                std::istringstream iss_y(part);
                 iss_y >> y;
                 points.push_back(Point(x, y));
             }
