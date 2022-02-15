@@ -684,7 +684,8 @@ VSX_IMPL_LOAD_L8(vec_double2, double)
 #endif
 
 // absolute difference
-#ifndef vec_absd
+#ifndef _ARCH_PWR9
+#   undef vec_absd
 #   define vec_absd(a, b) vec_sub(vec_max(a, b), vec_min(a, b))
 #endif
 
