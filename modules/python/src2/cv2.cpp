@@ -79,9 +79,9 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_enums.h"
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE_DYNAMIC(WNAME, NAME, STORAGE, SNAME, SCOPE)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE_DYNAMIC(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE)
 #else
-#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE(WNAME, NAME, STORAGE, SNAME, SCOPE)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE)
 #endif
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
@@ -418,8 +418,7 @@ PyObject* findTypeScope(PyObject* root_module, const std::string& scope_name)
 }
 
 static bool registerNewType(PyObject* root_module, const char* type_name,
-                            PyObject* type_obj, const std::string& scope_name,
-                            const char* alias_name)
+                            PyObject* type_obj, const std::string& scope_name)
 {
     PyObject* scope = findTypeScope(root_module, scope_name);
 
@@ -452,7 +451,15 @@ static bool registerNewType(PyObject* root_module, const char* type_name,
     /// required
     if (scope != root_module)
     {
-        return registerTypeInModuleScope(root_module, alias_name, type_obj);
+        std::string type_name_str(type_name);
+
+        std::string alias_name;
+        alias_name.reserve(scope_name.size() + type_name_str.size());
+        std::replace_copy(scope_name.begin() + 1, scope_name.end(), std::back_inserter(alias_name), '.', '_');
+        alias_name += '_';
+        alias_name += type_name_str;
+
+        return registerTypeInModuleScope(root_module, alias_name.c_str(), type_obj);
     }
     return true;
 }
@@ -470,10 +477,10 @@ static bool init_body(PyObject * m)
 #undef CVPY_MODULE
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_DYNAMIC(WNAME, NAME, return false, BASE, CONSTRUCTOR, SCOPE)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_DYNAMIC(EXPORT_NAME, CLASS_ID, return false, BASE, CONSTRUCTOR, SCOPE)
     PyObject * pyopencv_NoBase_TypePtr = NULL;
 #else
-#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_STATIC(WNAME, NAME, return false, BASE, CONSTRUCTOR, SCOPE)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_STATIC(EXPORT_NAME, CLASS_ID, return false, BASE, CONSTRUCTOR, SCOPE)
     PyTypeObject * pyopencv_NoBase_TypePtr = NULL;
 #endif
     #include "pyopencv_generated_types.h"

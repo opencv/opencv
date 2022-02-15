@@ -198,106 +198,106 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 #endif
 
 
-#define CVPY_TYPE_DECLARE(WNAME, NAME, STORAGE, SNAME, SCOPE) \
-    struct pyopencv_##WNAME##_t \
+#define CVPY_TYPE_DECLARE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE) \
+    struct pyopencv_##CLASS_ID##_t \
     { \
         PyObject_HEAD \
         STORAGE v; \
     }; \
-    static PyTypeObject pyopencv_##WNAME##_TypeXXX = \
+    static PyTypeObject pyopencv_##CLASS_ID##_TypeXXX = \
     { \
         CVPY_TYPE_HEAD \
-        MODULESTR SCOPE"."#NAME, \
-        sizeof(pyopencv_##WNAME##_t), \
+        MODULESTR SCOPE"."#EXPORT_NAME, \
+        sizeof(pyopencv_##CLASS_ID##_t), \
     }; \
-    static PyTypeObject * pyopencv_##WNAME##_TypePtr = &pyopencv_##WNAME##_TypeXXX; \
-    static bool pyopencv_##WNAME##_getp(PyObject * self, STORAGE * & dst) \
+    static PyTypeObject * pyopencv_##CLASS_ID##_TypePtr = &pyopencv_##CLASS_ID##_TypeXXX; \
+    static bool pyopencv_##CLASS_ID##_getp(PyObject * self, STORAGE * & dst) \
     { \
-        if (PyObject_TypeCheck(self, pyopencv_##WNAME##_TypePtr)) \
+        if (PyObject_TypeCheck(self, pyopencv_##CLASS_ID##_TypePtr)) \
         { \
-            dst = &(((pyopencv_##WNAME##_t*)self)->v); \
+            dst = &(((pyopencv_##CLASS_ID##_t*)self)->v); \
             return true; \
         } \
         return false; \
     } \
-    static PyObject * pyopencv_##WNAME##_Instance(const STORAGE &r) \
+    static PyObject * pyopencv_##CLASS_ID##_Instance(const STORAGE &r) \
     { \
-        pyopencv_##WNAME##_t *m = PyObject_NEW(pyopencv_##WNAME##_t, pyopencv_##WNAME##_TypePtr); \
+        pyopencv_##CLASS_ID##_t *m = PyObject_NEW(pyopencv_##CLASS_ID##_t, pyopencv_##CLASS_ID##_TypePtr); \
         new (&(m->v)) STORAGE(r); \
         return (PyObject*)m; \
     } \
-    static void pyopencv_##WNAME##_dealloc(PyObject* self) \
+    static void pyopencv_##CLASS_ID##_dealloc(PyObject* self) \
     { \
-        ((pyopencv_##WNAME##_t*)self)->v.STORAGE::~SNAME(); \
+        ((pyopencv_##CLASS_ID##_t*)self)->v.STORAGE::~SNAME(); \
         PyObject_Del(self); \
     } \
-    static PyObject* pyopencv_##WNAME##_repr(PyObject* self) \
+    static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
 
-#define CVPY_TYPE_INIT_STATIC(WNAME, NAME, ERROR_HANDLER, BASE, CONSTRUCTOR, SCOPE) \
+#define CVPY_TYPE_INIT_STATIC(EXPORT_NAME, CLASS_ID, ERROR_HANDLER, BASE, CONSTRUCTOR, SCOPE) \
     { \
-        pyopencv_##WNAME##_TypePtr->tp_base = pyopencv_##BASE##_TypePtr; \
-        pyopencv_##WNAME##_TypePtr->tp_dealloc = pyopencv_##WNAME##_dealloc; \
-        pyopencv_##WNAME##_TypePtr->tp_repr = pyopencv_##WNAME##_repr; \
-        pyopencv_##WNAME##_TypePtr->tp_getset = pyopencv_##WNAME##_getseters; \
-        pyopencv_##WNAME##_TypePtr->tp_init = (initproc) CONSTRUCTOR; \
-        pyopencv_##WNAME##_TypePtr->tp_methods = pyopencv_##WNAME##_methods; \
-        pyopencv_##WNAME##_TypePtr->tp_alloc = PyType_GenericAlloc; \
-        pyopencv_##WNAME##_TypePtr->tp_new = PyType_GenericNew; \
-        pyopencv_##WNAME##_TypePtr->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
-        if (PyType_Ready(pyopencv_##WNAME##_TypePtr) != 0) \
+        pyopencv_##CLASS_ID##_TypePtr->tp_base = pyopencv_##BASE##_TypePtr; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_dealloc = pyopencv_##CLASS_ID##_dealloc; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_repr = pyopencv_##CLASS_ID##_repr; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_getset = pyopencv_##CLASS_ID##_getseters; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_init = (initproc) CONSTRUCTOR; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_methods = pyopencv_##CLASS_ID##_methods; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_alloc = PyType_GenericAlloc; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_new = PyType_GenericNew; \
+        pyopencv_##CLASS_ID##_TypePtr->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE; \
+        if (PyType_Ready(pyopencv_##CLASS_ID##_TypePtr) != 0) \
         { \
             ERROR_HANDLER; \
         } \
-        CVPY_TYPE_INCREF(pyopencv_##WNAME##_TypePtr); \
-        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, SCOPE, #WNAME)) \
+        CVPY_TYPE_INCREF(pyopencv_##CLASS_ID##_TypePtr); \
+        if (!registerNewType(m, #EXPORT_NAME, (PyObject*)pyopencv_##CLASS_ID##_TypePtr, SCOPE)) \
         { \
-            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " SCOPE " \n"); \
+            printf("Failed to register a new type: " #EXPORT_NAME  ", base (" #BASE ") in " SCOPE " \n"); \
             ERROR_HANDLER; \
         } \
     }
 
 //==================================================================================================
 
-#define CVPY_TYPE_DECLARE_DYNAMIC(WNAME, NAME, STORAGE, SNAME, SCOPE) \
-    struct pyopencv_##WNAME##_t \
+#define CVPY_TYPE_DECLARE_DYNAMIC(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE) \
+    struct pyopencv_##CLASS_ID##_t \
     { \
         PyObject_HEAD \
         STORAGE v; \
     }; \
-    static PyObject * pyopencv_##WNAME##_TypePtr = 0; \
-    static bool pyopencv_##WNAME##_getp(PyObject * self, STORAGE * & dst) \
+    static PyObject * pyopencv_##CLASS_ID##_TypePtr = 0; \
+    static bool pyopencv_##CLASS_ID##_getp(PyObject * self, STORAGE * & dst) \
     { \
-        if (PyObject_TypeCheck(self, (PyTypeObject*)pyopencv_##WNAME##_TypePtr)) \
+        if (PyObject_TypeCheck(self, (PyTypeObject*)pyopencv_##CLASS_ID##_TypePtr)) \
         { \
-            dst = &(((pyopencv_##WNAME##_t*)self)->v); \
+            dst = &(((pyopencv_##CLASS_ID##_t*)self)->v); \
             return true; \
         } \
         return false; \
     } \
-    static PyObject * pyopencv_##WNAME##_Instance(const STORAGE &r) \
+    static PyObject * pyopencv_##CLASS_ID##_Instance(const STORAGE &r) \
     { \
-        pyopencv_##WNAME##_t *m = PyObject_New(pyopencv_##WNAME##_t, (PyTypeObject*)pyopencv_##WNAME##_TypePtr); \
+        pyopencv_##CLASS_ID##_t *m = PyObject_New(pyopencv_##CLASS_ID##_t, (PyTypeObject*)pyopencv_##CLASS_ID##_TypePtr); \
         new (&(m->v)) STORAGE(r); \
         return (PyObject*)m; \
     } \
-    static void pyopencv_##WNAME##_dealloc(PyObject* self) \
+    static void pyopencv_##CLASS_ID##_dealloc(PyObject* self) \
     { \
-        ((pyopencv_##WNAME##_t*)self)->v.STORAGE::~SNAME(); \
+        ((pyopencv_##CLASS_ID##_t*)self)->v.STORAGE::~SNAME(); \
         PyObject_Del(self); \
     } \
-    static PyObject* pyopencv_##WNAME##_repr(PyObject* self) \
+    static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     } \
-    static PyType_Slot pyopencv_##WNAME##_Slots[] =  \
+    static PyType_Slot pyopencv_##CLASS_ID##_Slots[] =  \
     { \
         {Py_tp_dealloc, 0}, \
         {Py_tp_repr, 0}, \
@@ -308,36 +308,36 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         {Py_tp_new, 0}, \
         {0, 0} \
     }; \
-    static PyType_Spec pyopencv_##WNAME##_Spec = \
+    static PyType_Spec pyopencv_##CLASS_ID##_Spec = \
     { \
-        MODULESTR SCOPE"."#NAME, \
-        sizeof(pyopencv_##WNAME##_t), \
+        MODULESTR SCOPE"."#EXPORT_NAME, \
+        sizeof(pyopencv_##CLASS_ID##_t), \
         0, \
         Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, \
-        pyopencv_##WNAME##_Slots  \
+        pyopencv_##CLASS_ID##_Slots  \
     };
 
-#define CVPY_TYPE_INIT_DYNAMIC(WNAME, NAME, ERROR_HANDLER, BASE, CONSTRUCTOR, SCOPE) \
+#define CVPY_TYPE_INIT_DYNAMIC(EXPORT_NAME, CLASS_ID, ERROR_HANDLER, BASE, CONSTRUCTOR, SCOPE) \
     { \
-        pyopencv_##WNAME##_Slots[0].pfunc /*tp_dealloc*/ = (void*)pyopencv_##WNAME##_dealloc; \
-        pyopencv_##WNAME##_Slots[1].pfunc /*tp_repr*/ = (void*)pyopencv_##WNAME##_repr; \
-        pyopencv_##WNAME##_Slots[2].pfunc /*tp_getset*/ = (void*)pyopencv_##WNAME##_getseters; \
-        pyopencv_##WNAME##_Slots[3].pfunc /*tp_init*/ = (void*) CONSTRUCTOR; \
-        pyopencv_##WNAME##_Slots[4].pfunc /*tp_methods*/ = pyopencv_##WNAME##_methods; \
-        pyopencv_##WNAME##_Slots[5].pfunc /*tp_alloc*/ = (void*)PyType_GenericAlloc; \
-        pyopencv_##WNAME##_Slots[6].pfunc /*tp_new*/ = (void*)PyType_GenericNew; \
+        pyopencv_##CLASS_ID##_Slots[0].pfunc /*tp_dealloc*/ = (void*)pyopencv_##CLASS_ID##_dealloc; \
+        pyopencv_##CLASS_ID##_Slots[1].pfunc /*tp_repr*/ = (void*)pyopencv_##CLASS_ID##_repr; \
+        pyopencv_##CLASS_ID##_Slots[2].pfunc /*tp_getset*/ = (void*)pyopencv_##CLASS_ID##_getseters; \
+        pyopencv_##CLASS_ID##_Slots[3].pfunc /*tp_init*/ = (void*) CONSTRUCTOR; \
+        pyopencv_##CLASS_ID##_Slots[4].pfunc /*tp_methods*/ = pyopencv_##CLASS_ID##_methods; \
+        pyopencv_##CLASS_ID##_Slots[5].pfunc /*tp_alloc*/ = (void*)PyType_GenericAlloc; \
+        pyopencv_##CLASS_ID##_Slots[6].pfunc /*tp_new*/ = (void*)PyType_GenericNew; \
         PyObject * bases = 0; \
         if (pyopencv_##BASE##_TypePtr) \
             bases = PyTuple_Pack(1, pyopencv_##BASE##_TypePtr); \
-        pyopencv_##WNAME##_TypePtr = PyType_FromSpecWithBases(&pyopencv_##WNAME##_Spec, bases); \
-        if (!pyopencv_##WNAME##_TypePtr) \
+        pyopencv_##CLASS_ID##_TypePtr = PyType_FromSpecWithBases(&pyopencv_##CLASS_ID##_Spec, bases); \
+        if (!pyopencv_##CLASS_ID##_TypePtr) \
         { \
-            printf("Failed to create type from spec: " #WNAME ", base (" #BASE ")\n"); \
+            printf("Failed to create type from spec: " #CLASS_ID ", base (" #BASE ")\n"); \
             ERROR_HANDLER; \
         } \
-        if (!registerNewType(m, #NAME, (PyObject*)pyopencv_##WNAME##_TypePtr, SCOPE, #WNAME)) \
+        if (!registerNewType(m, #EXPORT_NAME, (PyObject*)pyopencv_##CLASS_ID##_TypePtr, SCOPE)) \
         { \
-            printf("Failed to register a new type: " #NAME  ", base (" #BASE ") in " SCOPE " \n"); \
+            printf("Failed to register a new type: " #EXPORT_NAME  ", base (" #BASE ") in " SCOPE " \n"); \
             ERROR_HANDLER; \
         } \
     }
