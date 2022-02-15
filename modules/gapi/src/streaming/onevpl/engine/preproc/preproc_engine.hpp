@@ -13,7 +13,7 @@
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 
-#include "streaming/onevpl/engine/processing_engine_interface.hpp"
+#include "streaming/onevpl/engine/preproc_engine_interface.hpp"
 
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
@@ -33,7 +33,7 @@ struct IDataProvider;
 struct VPLAccelerationPolicy;
 
 class GAPI_EXPORTS VPPPreprocEngine final : public ProcessingEngineBase,
-                                            public cv::gapi::wip::IProcessingEngine {
+                                            public cv::gapi::wip::IPreprocEngine {
 public:
     using session_type     = vpp_pp_session;
     using session_ptr_type = std::shared_ptr<session_type>;

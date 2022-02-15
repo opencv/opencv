@@ -20,8 +20,8 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-struct IProcessingEngine {
-    virtual ~IProcessingEngine() = default;
+struct IPreprocEngine {
+    virtual ~IPreprocEngine() = default;
 
     virtual cv::util::optional<pp_params>
         is_applicable(const cv::MediaFrame& in_frame) = 0;
