@@ -938,7 +938,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
 
     // Threshold
     const float iouDiff = 1e-5;
-    const float l2dDiff = 1e-2;
+    const float l2dDiff = 3;
 
     // Run Test
     testFaceDetectionModelByYN(
