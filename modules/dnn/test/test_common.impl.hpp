@@ -244,7 +244,8 @@ void normAssertLandmarkDetections(
         const float l2dis = cv::norm(referencePoint - testPoint);
         if(l2dis <= l2dis_diff) matchedRefPoints[i] = true;
     }
-    EXPECT_TRUE(std::all_of(matchedRefPoints.begin(), matchedRefPoints.end(), [](bool matched){return matched;}));
+    const bool all_matched = std::all_of(matchedRefPoints.begin(), matchedRefPoints.end(), [](bool matched){return matched;});
+    EXPECT_TRUE(all_matched);
 }
 
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
