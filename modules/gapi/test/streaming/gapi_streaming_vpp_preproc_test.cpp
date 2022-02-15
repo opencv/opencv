@@ -30,8 +30,6 @@
 #include <opencv2/gapi/streaming/format.hpp>
 
 #ifdef HAVE_ONEVPL
-#ifdef HAVE_INF_ENGINE
-#include <inference_engine.hpp>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include "streaming/onevpl/file_data_provider.hpp"
@@ -64,18 +62,10 @@ namespace opencv_test
 {
 namespace
 {
-InferenceEngine::InputInfo::CPtr mock_network_info(size_t width, size_t height) {
-    auto net_input = std::make_shared<InferenceEngine::InputInfo>();
-    InferenceEngine::SizeVector dims_src = {1         /* batch, N*/,
-                                            height,
-                                            width,
-                                            3 /*Channels,*/,
-                                            };
-    InferenceEngine::DataPtr dataPtr(
-        new InferenceEngine::Data("data", InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, dims_src, InferenceEngine::NHWC)));
-    net_input->setInputData(dataPtr);
-    InferenceEngine::InputInfo::CPtr cptr = std::make_shared<InferenceEngine::InputInfo>(*net_input);
-    return cptr;
+cv::GFrameDesc mock_network_info(int width, int height) {
+    cv::GFrameDesc ret {cv::MediaFormat::NV12,
+                        {width, height}};
+    return ret;
 }
 
 template<class ProcessingEngine>
@@ -248,7 +238,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     */
 
     // put mock net info
-    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(1920, 1080);
+    auto required_frame_param = mock_network_info(1920, 1080);
 
     // create VPP preproc engine
     VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
@@ -264,7 +254,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
     ASSERT_TRUE(first_pp_params.has_value());
     pp_session first_pp_sess = preproc_engine.initialize_preproc(first_pp_params.value(),
-                                                                 cptr);
+                                                                 required_frame_param);
 
     // 2) make preproc using incoming decoded frame & preproc session
     cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
@@ -284,7 +274,8 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_TRUE(params.has_value());
             ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params::value_type)));
 
-            pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
+            pp_session pp_sess = preproc_engine.initialize_preproc(params.value(),
+                                                                   required_frame_param);
             ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                       first_pp_sess.get<EngineSession>().get());
 
@@ -341,8 +332,8 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                                                      data_provider);
 
     // put mock net info
-    InferenceEngine::InputInfo::CPtr cptr = mock_network_info(resolution.first,
-                                                              resolution.second);
+    auto required_frame_param = mock_network_info(resolution.first,
+                                                  resolution.second);
 
     // create VPP preproc engine
     VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
@@ -374,13 +365,13 @@ TEST_P(VPPPreprocParams, functional_different_threads)
         queue.push_stop();
     });
 
-    std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, cptr] () {
+    std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, required_frame_param] () {
         // create preproc session based on frame description & network info
         cv::MediaFrame decoded_frame = queue.pop();
         cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
         ASSERT_TRUE(first_pp_params.has_value());
         pp_session first_pp_sess =
-                    preproc_engine.initialize_preproc(first_pp_params.value(), cptr);
+                    preproc_engine.initialize_preproc(first_pp_params.value(), required_frame_param);
 
         // make preproc using incoming decoded frame & preproc session
         cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
@@ -401,7 +392,8 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                 ASSERT_TRUE(params.has_value());
                 ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
 
-                pp_session pp_sess = preproc_engine.initialize_preproc(params.value(), cptr);
+                pp_session pp_sess = preproc_engine.initialize_preproc(params.value(),
+                                                                       required_frame_param);
                 ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                           first_pp_sess.get<EngineSession>().get());
 
@@ -495,5 +487,4 @@ INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocInner, VPPInnerPreprocParams,
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
 } // namespace opencv_test
-#endif // HAVE_INF_ENGINE
 #endif // HAVE_ONEVPL

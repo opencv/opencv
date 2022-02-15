@@ -369,11 +369,6 @@ if(HAVE_GAPI_ONEVPL)
     if(HAVE_D3D11 AND HAVE_OPENCL)
         ocv_target_include_directories(opencv_perf_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
     endif()
-
-    if(OPENCV_GAPI_INF_ENGINE)
-        ocv_target_link_libraries(opencv_perf_gapi PRIVATE ${INF_ENGINE_TARGET})
-        ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_INF_ENGINE)
-    endif()
   endif()
 endif()
 

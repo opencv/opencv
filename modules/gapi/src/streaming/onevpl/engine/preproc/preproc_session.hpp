@@ -15,7 +15,6 @@
 #include "streaming/onevpl/engine/preproc/vpp_preproc_defines.hpp"
 
 #ifdef HAVE_ONEVPL
-#ifdef HAVE_INF_ENGINE
 
 namespace cv {
 namespace gapi {
@@ -48,6 +47,5 @@ private:
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_INF_ENGINE
 #endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP

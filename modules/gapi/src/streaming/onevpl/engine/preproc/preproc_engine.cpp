@@ -19,9 +19,6 @@
 #include "streaming/onevpl/cfg_params_parser.hpp"
 #include "logger.hpp"
 
-#ifdef HAVE_INF_ENGINE
-#include <inference_engine.hpp>
-
 #define ALIGN16(value)           (((value + 15) >> 4) << 4)
 
 bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
@@ -168,10 +165,9 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
     return ret;
 }
 
-pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
-                                                const InferenceEngine::InputInfo::CPtr& net_input) {
-    GAPI_Assert(net_input && "InferenceEngine::InputInfo::CPtr is nullptr");
-    const vpp_pp_params &params = preproc_params.get<vpp_pp_params>();
+pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_param,
+                                                const GFrameDesc& required_frame_descr) {
+    const vpp_pp_params &params = initial_frame_param.get<vpp_pp_params>();
 
     // adjust preprocessing settings
     mfxVideoParam mfxVPPParams{0};
@@ -179,23 +175,23 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& preproc_params,
     mfxVPPParams.vpp.In = params.info;
 
     // NB: OUT params must refer to IN params of a network
-    const InferenceEngine::SizeVector& inDims = net_input->getTensorDesc().getDims();
-    auto layout = net_input->getTensorDesc().getLayout();
-    GAPI_LOG_DEBUG(nullptr, "network input: " << net_input->name() <<
-                            ", tensor dims: " << inDims[0] << ", " << inDims[1] <<
-                             ", " << inDims[2] << ", " << inDims[3]);
+    GAPI_LOG_DEBUG(nullptr, "network input size: " << required_frame_descr.size.width <<
+                            "x" << required_frame_descr.size.height);
     mfxVPPParams.vpp.Out = mfxVPPParams.vpp.In;
-    mfxVPPParams.vpp.Out.FourCC        = MFX_FOURCC_NV12;
-    mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
-    if (layout == InferenceEngine::NHWC) {
-        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(inDims[2]);
-        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(inDims[1]);
-    } else if (layout == InferenceEngine::NCHW) {
-        mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(inDims[3]);
-        mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(inDims[2]);
-    } else {
-        GAPI_Assert(false && "Unsupported layout for VPP preproc");
+    switch (required_frame_descr.fmt) {
+        case MediaFormat::NV12:
+            mfxVPPParams.vpp.Out.FourCC = MFX_FOURCC_NV12;
+            break;
+        default:
+            GAPI_LOG_WARNING(nullptr, "Unsupported MediaFormat in preprocessing: " <<
+                                      static_cast<int>(required_frame_descr.fmt) <<
+                                      ". Frame will be rejected");
+            throw std::runtime_error("unsupported MediaFormat value in VPP preprocessing");
     }
+
+    mfxVPPParams.vpp.Out.ChromaFormat  = MFX_CHROMAFORMAT_YUV420;
+    mfxVPPParams.vpp.Out.Width         = static_cast<mfxU16>(required_frame_descr.size.width);
+    mfxVPPParams.vpp.Out.Height        = static_cast<mfxU16>(required_frame_descr.size.height);
     mfxVPPParams.vpp.Out.CropW         = mfxVPPParams.vpp.Out.Width;
     mfxVPPParams.vpp.Out.CropH         = mfxVPPParams.vpp.Out.Height;
 
@@ -374,7 +370,7 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
                                         ProcessingEngineBase::status_to_string(status));
             throw std::runtime_error("cannot finalize VPP preprocessing operation");
         }
-    } catch(const std::exception& ex) {
+    } catch(const std::exception&) {
         throw;
     }
     // obtain new frame is available
@@ -493,4 +489,3 @@ void VPPPreprocEngine::remember_decode_frame(decoded_frame_key_t key,
 } // namespace gapi
 } // namespace cv
 #endif // HAVE_ONEVPL
-#endif // HAVE_INF_ENGINE

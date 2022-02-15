@@ -18,9 +18,6 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 
-#ifdef HAVE_INF_ENGINE
-#include <inference_engine.hpp>
-
 bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs);
 
 namespace cv {
@@ -42,8 +39,8 @@ public:
 
     cv::util::optional<pp_params> is_applicable(const cv::MediaFrame& in_frame) override;
 
-    pp_session initialize_preproc(const pp_params& params,
-                                  const InferenceEngine::InputInfo::CPtr& net_input) override;
+    pp_session initialize_preproc(const pp_params& initial_frame_param,
+                                  const GFrameDesc& required_frame_descr) override;
 
     cv::MediaFrame run_sync(const pp_session &session_handle,
                             const cv::MediaFrame& in_frame) override;
@@ -70,5 +67,4 @@ private:
 } // namespace gapi
 } // namespace cv
 #endif // HAVE_ONEVPL
-#endif // HAVE_INF_ENGINE
 #endif // GAPI_STREAMING_ONVPL_PREPROC_ENGINE_HPP

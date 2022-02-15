@@ -13,9 +13,6 @@
 
 #include "streaming\onevpl\engine\preproc_defines.hpp"
 
-#ifdef HAVE_INF_ENGINE
-#include <inference_engine.hpp>
-
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -27,13 +24,12 @@ struct IPreprocEngine {
         is_applicable(const cv::MediaFrame& in_frame) = 0;
 
     virtual pp_session
-        initialize_preproc(const pp_params& params,
-                           const InferenceEngine::InputInfo::CPtr& net_input) = 0;
+        initialize_preproc(const pp_params& initial_frame_param,
+                           const GFrameDesc& required_frame_descr) = 0;
     virtual cv::MediaFrame
         run_sync(const pp_session &sess, const cv::MediaFrame& in_frame) = 0;
 };
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_INF_ENGINE
 #endif // GAPI_STREAMING_ONEVPL_ENGINE_PROCESSING_ENGINE_INTERFACE_HPP

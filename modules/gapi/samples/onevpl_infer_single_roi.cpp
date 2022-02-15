@@ -317,8 +317,7 @@ int main(int argc, char *argv[]) {
     // set ctx_config for GPU device only - no need in case of CPU device type
     if (is_gpu(device_id)) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                              {"VA_DEVICE", accel_device_ptr},
-        /*TODO turn on auto vpp preproc*/     {"GAPI_DEVICE_CTX", accel_ctx_ptr} });
+                                              {"VA_DEVICE", accel_device_ptr} });
         face_net.cfgContextParams(ctx_config);
 
         // NB: consider NV12 surface because it's one of native GPU image format

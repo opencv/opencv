@@ -309,7 +309,8 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         main_textures_count = request->NumFrameSuggested;
     }
     */
-    size_t main_textures_count = request->NumFrameSuggested; // enforcement do not use texture array
+    size_t main_textures_count = request->NumFrameSuggested; // enforcement to use array of textures
+    desc.ArraySize = 1; // enforcement to do not use texture array
 
     // create GPU textures
     HRESULT err = S_OK;
