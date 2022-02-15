@@ -293,12 +293,23 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         desc.BindFlags = 0;
     }
 
+    /* NB:
+     * From one hand current OpenVINO API doesn't support texture array and
+     * D3D11 API doesn't allow to address specific texture element in array.
+     * From the other hand using textures array should be more performant case
+     * in applications (according to community experience)
+     * So, to be compliant with OV let's turn off textures array feature, but keep
+     * this code in commented section to consider such "optimization" in future
+     */
+    /*
     size_t main_textures_count = 1;
     if (D3D11_BIND_RENDER_TARGET & desc.BindFlags) {
         GAPI_LOG_DEBUG(nullptr, "Use array of testures instead of texture array");
         desc.ArraySize = 1;
         main_textures_count = request->NumFrameSuggested;
     }
+    */
+    size_t main_textures_count = request->NumFrameSuggested; // enforcement do not use texture array
 
     // create GPU textures
     HRESULT err = S_OK;
