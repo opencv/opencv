@@ -1730,7 +1730,7 @@ public:
      * @param[in] network Net object.
      */
     CV_WRAP
-    FaceDetectionModel_SSD( const Net& network );
+    FaceDetectionModel_SSD(const Net& network);
 
     /**
      * @brief Create face detection model from network represented in one of the supported formats.
@@ -1739,8 +1739,8 @@ public:
      * @param[in] config Text file contains network configuration.
      */
     CV_WRAP inline
-    FaceDetectionModel_SSD( const std::string& model, const std::string& config = "" )
-        : FaceDetectionModel_SSD( readNet( model, config ) )
+    FaceDetectionModel_SSD(const std::string& model, const std::string& config = "")
+        : FaceDetectionModel_SSD(readNet(model, config))
     {
         /* nothing */
     }
@@ -1751,42 +1751,42 @@ public:
      * @note If shape of the new blob less than 0, then frame size not change.
     */
     CV_WRAP
-    FaceDetectionModel_SSD& setInputSize( const Size& size );
+    FaceDetectionModel_SSD& setInputSize(const Size& size);
 
     /**
      * @param[in] width New input width.
      * @param[in] height New input height.
      */
     CV_WRAP inline
-    FaceDetectionModel_SSD& setInputSize( int width, int height ) { return setInputSize( Size( width, height ) ); }
+    FaceDetectionModel_SSD& setInputSize(int width, int height) { return setInputSize(Size(width, height)); }
 
     /**
      * @brief Set mean value for frame.
      * @param[in] mean Scalar with mean values which are subtracted from channels.
      */
     CV_WRAP
-    FaceDetectionModel_SSD& setInputMean( const Scalar& mean );
+    FaceDetectionModel_SSD& setInputMean(const Scalar& mean);
 
     /**
      * @brief Set scalefactor value for frame.
      * @param[in] scale Multiplier for frame values.
      */
     CV_WRAP
-    FaceDetectionModel_SSD& setInputScale( double scale );
+    FaceDetectionModel_SSD& setInputScale(double scale);
 
     /**
      * @brief Set flag crop for frame.
      * @param[in] crop Flag which indicates whether image will be cropped after resize or not.
      */
     CV_WRAP
-    FaceDetectionModel_SSD& setInputCrop( bool crop );
+    FaceDetectionModel_SSD& setInputCrop(bool crop);
 
     /**
      * @brief Set flag swapRB for frame.
      * @param[in] swapRB Flag which indicates that swap first and last channels.
      */
     CV_WRAP
-    FaceDetectionModel_SSD& setInputSwapRB( bool swapRB );
+    FaceDetectionModel_SSD& setInputSwapRB(bool swapRB);
 
     /**
      * @brief Set preprocessing parameters for frame.
@@ -1798,8 +1798,8 @@ public:
      * blob(n, c, y, x) = scale * resize( frame(y, x, c) ) - mean(c) )
      */
     CV_WRAP
-    void setInputParams( double scale = 1.0, const Size& size = Size(),
-                         const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false );
+    void setInputParams(double scale = 1.0, const Size& size = Size(),
+                        const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false);
 };
 
 /** @brief This class represents high-level API for face detection networks compatible with YuNet model.
@@ -1821,7 +1821,7 @@ public:
      * @param[in] network Net object.
      */
     CV_WRAP
-    FaceDetectionModel_YN( const Net& network );
+    FaceDetectionModel_YN(const Net& network);
 
     /**
      * @brief Create face detection model from network represented in one of the supported formats.
@@ -1830,8 +1830,8 @@ public:
      * @param[in] config Text file contains network configuration.
      */
     CV_WRAP inline
-    FaceDetectionModel_YN( const std::string& model, const std::string& config = "" )
-        : FaceDetectionModel_YN( readNet( model, config ) )
+    FaceDetectionModel_YN(const std::string& model, const std::string& config = "")
+        : FaceDetectionModel_YN(readNet(model, config))
     {
         /* nothing */
     }
@@ -1842,7 +1842,7 @@ public:
      * @note If you want to get face landmarks, you need call FaceDetectionModel_YN::detect() beforehand.
      */
     CV_WRAP
-    void getLandmarks( std::vector<std::vector<Point>>& landmarks ) const;
+    void getLandmarks(std::vector<std::vector<Point>>& landmarks) const;
 
     /** @overload */
     CV_WRAP
@@ -1929,7 +1929,7 @@ public:
      * @param[in] network Net object.
      */
     CV_WRAP
-    FaceRecognitionModel_SF( const Net& network );
+    FaceRecognitionModel_SF(const Net& network);
 
     /**
      * @brief Create face recognition model from network represented in one of the supported formats.
@@ -1938,8 +1938,8 @@ public:
      * @param[in] config Text file contains network configuration.
      */
     CV_WRAP inline
-    FaceRecognitionModel_SF( const std::string& model, const std::string& config = "" )
-        : FaceRecognitionModel_SF( readNet( model, config ) )
+    FaceRecognitionModel_SF(const std::string& model, const std::string& config = "")
+        : FaceRecognitionModel_SF(readNet(model, config))
     {
         /* nothing */
     }

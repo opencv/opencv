@@ -1505,10 +1505,10 @@ struct FaceDetectionModel_Impl : public Model::Impl
 {
     FaceDetectionModel_Impl() {}
 
-    FaceDetectionModel_Impl( const Net& network )
+    FaceDetectionModel_Impl(const Net& network)
     {
         CV_TRACE_FUNCTION();
-        initNet( network );
+        initNet(network);
     }
 
     virtual
@@ -1520,14 +1520,14 @@ struct FaceDetectionModel_Impl : public Model::Impl
         float nmsThreshold
     )
     {
-        CV_Error( Error::StsNotImplemented, "" );
+        CV_Error(Error::StsNotImplemented, "");
     }
 
     static inline
-    FaceDetectionModel_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
+    FaceDetectionModel_Impl& from(const std::shared_ptr<Model::Impl>& ptr)
     {
-        CV_Assert( ptr );
-        return *( (FaceDetectionModel_Impl*)ptr.get() );
+        CV_Assert(ptr);
+        return *((FaceDetectionModel_Impl*)ptr.get());
     }
 };
 
@@ -1546,7 +1546,7 @@ void FaceDetectionModel::detect(
     float nmsThreshold
 ) const
 {
-    FaceDetectionModel_Impl::from( impl ).detect(
+    FaceDetectionModel_Impl::from(impl).detect(
         frame,
         confidences,
         boxes,
@@ -1554,89 +1554,6 @@ void FaceDetectionModel::detect(
         nmsThreshold
     );
 }
-
-/*
-struct FaceDetectionModel_SSD_Impl : public FaceDetectionModel_Impl
-{
-private:
-    DetectionModel model;
-
-public:
-    FaceDetectionModel_SSD_Impl()
-    {
-        CV_TRACE_FUNCTION();
-    }
-
-    FaceDetectionModel_SSD_Impl( const Net& network )
-        : FaceDetectionModel_SSD_Impl()
-    {
-        CV_TRACE_FUNCTION();
-        initNet( network );
-        model = DetectionModel( network );
-    }
-
-    virtual
-    void detect(
-        InputArray frame,
-        CV_OUT std::vector<float>& confidences,
-        CV_OUT std::vector<Rect>& boxes,
-        float confThreshold = 0.9f,
-        float nmsThreshold = 0.3f
-    ) CV_OVERRIDE
-    {
-        CV_TRACE_FUNCTION();
-
-        // Detect face using detection model.
-        std::vector<int> classIds;
-        model.detect(
-            frame,
-            classIds,
-            confidences,
-            boxes,
-            confThreshold,
-            nmsThreshold
-        );
-    }
-
-    void setInputSize( const Size& size )
-    {
-        model.setInputSize( size );
-    }
-
-    void setInputMean( const Scalar& mean )
-    {
-        model.setInputMean( mean );
-    }
-
-    void setInputScale( double scale )
-    {
-        model.setInputScale( scale );
-    }
-
-    void setInputCrop( bool crop )
-    {
-        model.setInputCrop( crop );
-    }
-
-    void setInputSwapRB( bool swapRB )
-    {
-        model.setInputSwapRB( swapRB );
-    }
-
-    void setInputParams( double scale = 1.0, const Size& size = Size(),
-                         const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false )
-    {
-        model.setInputParams( scale, size, mean, swapRB, crop );
-    }
-
-    static inline
-    FaceDetectionModel_SSD_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
-    {
-        CV_Assert( ptr );
-        return *( (FaceDetectionModel_SSD_Impl*)ptr.get() );
-    }
-};
-*/
 
 struct FaceDetectionModel_SSD_Impl : public FaceDetectionModel_Impl, public DetectionModel
 {
@@ -1646,8 +1563,8 @@ public:
         CV_TRACE_FUNCTION();
     }
 
-    FaceDetectionModel_SSD_Impl( const Net& network )
-        : DetectionModel( network )
+    FaceDetectionModel_SSD_Impl(const Net& network)
+        : DetectionModel(network)
     {
         CV_TRACE_FUNCTION();
     }
@@ -1675,90 +1592,90 @@ public:
         );
     }
 
-    void setInputSize( const Size& size )
+    void setInputSize(const Size& size)
     {
-        DetectionModel::setInputSize( size );
+        DetectionModel::setInputSize(size);
     }
 
-    void setInputMean( const Scalar& mean )
+    void setInputMean(const Scalar& mean)
     {
-        DetectionModel::setInputMean( mean );
+        DetectionModel::setInputMean(mean);
     }
 
-    void setInputScale( double scale )
+    void setInputScale(double scale)
     {
-        DetectionModel::setInputScale( scale );
+        DetectionModel::setInputScale(scale);
     }
 
-    void setInputCrop( bool crop )
+    void setInputCrop(bool crop)
     {
-        DetectionModel::setInputCrop( crop );
+        DetectionModel::setInputCrop(crop);
     }
 
-    void setInputSwapRB( bool swapRB )
+    void setInputSwapRB(bool swapRB)
     {
-        DetectionModel::setInputSwapRB( swapRB );
+        DetectionModel::setInputSwapRB(swapRB);
     }
 
-    void setInputParams( double scale = 1.0, const Size& size = Size(),
-        const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false )
+    void setInputParams(double scale = 1.0, const Size& size = Size(),
+                        const Scalar& mean = Scalar(), bool swapRB = false, bool crop = false)
     {
-        DetectionModel::setInputParams( scale, size, mean, swapRB, crop );
+        DetectionModel::setInputParams(scale, size, mean, swapRB, crop);
     }
 
     static inline
-    FaceDetectionModel_SSD_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
+    FaceDetectionModel_SSD_Impl& from(const std::shared_ptr<Model::Impl>& ptr)
     {
-        CV_Assert( ptr );
-        return *( (FaceDetectionModel_SSD_Impl*)ptr.get() );
+        CV_Assert(ptr);
+        return *((FaceDetectionModel_SSD_Impl*)ptr.get());
     }
 };
 
 FaceDetectionModel_SSD::FaceDetectionModel_SSD()
     : FaceDetectionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceDetectionModel_SSD_Impl>() );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceDetectionModel_SSD_Impl>());
 }
 
-FaceDetectionModel_SSD::FaceDetectionModel_SSD( const Net& network )
+FaceDetectionModel_SSD::FaceDetectionModel_SSD(const Net& network)
     : FaceDetectionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceDetectionModel_SSD_Impl>( network ) );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceDetectionModel_SSD_Impl>(network));
 }
 
-FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputSize( const Size& size )
+FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputSize(const Size& size)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputSize( size );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputSize(size);
     return *this;
 }
 
-FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputMean( const Scalar& mean )
+FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputMean(const Scalar& mean)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputMean( mean );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputMean(mean);
     return *this;
 }
 
-FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputScale( double scale )
+FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputScale(double scale)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputScale( scale );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputScale(scale);
     return *this;
 }
 
-FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputCrop( bool crop )
+FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputCrop(bool crop)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputCrop( crop );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputCrop(crop);
     return *this;
 }
 
-FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputSwapRB( bool swapRB )
+FaceDetectionModel_SSD& FaceDetectionModel_SSD::setInputSwapRB(bool swapRB)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputSwapRB( swapRB );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputSwapRB(swapRB);
     return *this;
 }
 
-void FaceDetectionModel_SSD::setInputParams( double scale, const Size& size, const Scalar& mean, bool swapRB, bool crop )
+void FaceDetectionModel_SSD::setInputParams(double scale, const Size& size, const Scalar& mean, bool swapRB, bool crop)
 {
-    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>( impl )->setInputParams( scale, size, mean, swapRB, crop );
+    std::static_pointer_cast<FaceDetectionModel_SSD_Impl>(impl)->setInputParams(scale, size, mean, swapRB, crop);
 }
 
 struct FaceDetectionModel_YN_Impl : public FaceDetectionModel_Impl
@@ -1772,18 +1689,18 @@ private:
 
 public:
     FaceDetectionModel_YN_Impl()
-        : confThreshold( 0.9f ),
-          nmsThreshold( 0.3f ),
-          inputSize( Size( -1, -1 ) )
+        : confThreshold(0.9f),
+          nmsThreshold(0.3f),
+          inputSize(Size(-1, -1))
     {
         CV_TRACE_FUNCTION();
     }
 
-    FaceDetectionModel_YN_Impl( const Net& network )
+    FaceDetectionModel_YN_Impl(const Net& network)
         : FaceDetectionModel_YN_Impl()
     {
         CV_TRACE_FUNCTION();
-        initNet( network );
+        initNet(network);
     }
 
     virtual
@@ -1798,43 +1715,46 @@ public:
         CV_TRACE_FUNCTION();
 
         // Re-Generate priors when input different size image.
-        if( inputSize != frame.getMat().size() ){
+        if (inputSize != frame.getMat().size())
+        {
             inputSize = frame.getMat().size();
-            setInputSize( inputSize );
+            setInputSize(inputSize);
             generatePriors();
         }
 
         // Run inference process and post process.
         std::vector<Mat> output_blobs;
-        processFrame( frame, output_blobs );
+        processFrame(frame, output_blobs);
 
-        Mat outputs = postProcess( output_blobs );
-        outputs.convertTo( outputs, CV_32FC1 );
+        Mat outputs = postProcess(output_blobs);
+        outputs.convertTo(outputs, CV_32FC1);
 
         // Format for outputs.
         boxes.clear();
         confidences.clear();
         landmarks.clear();
 
-        for( int i = 0; i < outputs.rows; i++ ){
-            Mat output = outputs.row( i );
+        for (int i = 0; i < outputs.rows; i++)
+        {
+            Mat output = outputs.row(i);
 
-            const int x = static_cast<int>( output.at<float>( 0 ) );
-            const int y = static_cast<int>( output.at<float>( 1 ) );
-            const int width = static_cast<int>( output.at<float>( 2 ) );
-            const int height = static_cast<int>( output.at<float>( 3 ) );
-            boxes.push_back( Rect( x, y, width, height ) );
+            const int x = static_cast<int>(output.at<float>(0));
+            const int y = static_cast<int>(output.at<float>(1));
+            const int width = static_cast<int>(output.at<float>(2));
+            const int height = static_cast<int>(output.at<float>(3));
+            boxes.push_back(Rect(x, y, width, height));
 
             std::vector<Point> landmark;
-            for( int j = 4; j < 14; j+=2 ){
-                const int x = static_cast<int>( output.at<float>( j ) );
-                const int y = static_cast<int>( output.at<float>( j + 1 ) );
-                landmark.push_back( Point( x, y ) );
+            for (int j = 4; j < 14; j+=2)
+            {
+                const int x = static_cast<int>(output.at<float>(j));
+                const int y = static_cast<int>(output.at<float>(j + 1));
+                landmark.push_back(Point(x, y));
             }
-            landmarks.push_back( landmark );
+            landmarks.push_back(landmark);
 
-            const float conficence = output.at<float>( 14 );
-            confidences.push_back( conficence );
+            const float conficence = output.at<float>(14);
+            confidences.push_back(conficence);
         }
     }
 
@@ -1844,10 +1764,10 @@ public:
     }
 
     static inline
-    FaceDetectionModel_YN_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
+    FaceDetectionModel_YN_Impl& from(const std::shared_ptr<Model::Impl>& ptr)
     {
-        CV_Assert( ptr );
-        return *( (FaceDetectionModel_YN_Impl*)ptr.get() );
+        CV_Assert(ptr);
+        return *((FaceDetectionModel_YN_Impl*)ptr.get());
     }
 
 private:
@@ -1855,65 +1775,65 @@ private:
     {
         // Calculate shapes of different scales according to the shape of input image
         Size feature_map_2nd = {
-            int( int( ( size.width + 1 ) / 2 ) / 2 ), int( int( ( size.height + 1 ) / 2 ) / 2 )
+            int(int((size.width + 1) / 2) / 2), int(int((size.height + 1 ) / 2) / 2)
         };
         Size feature_map_3rd = {
-            int( feature_map_2nd.width / 2 ), int( feature_map_2nd.height / 2 )
+            int(feature_map_2nd.width / 2), int(feature_map_2nd.height / 2)
         };
         Size feature_map_4th = {
-            int( feature_map_3rd.width / 2 ), int( feature_map_3rd.height / 2 )
+            int(feature_map_3rd.width / 2), int(feature_map_3rd.height / 2)
         };
         Size feature_map_5th = {
-            int( feature_map_4th.width / 2 ), int( feature_map_4th.height / 2 )
+            int(feature_map_4th.width / 2), int(feature_map_4th.height / 2)
         };
         Size feature_map_6th = {
-            int( feature_map_5th.width / 2 ), int( feature_map_5th.height / 2 )
+            int(feature_map_5th.width / 2), int(feature_map_5th.height / 2)
         };
 
         std::vector<Size> feature_map_sizes;
-        feature_map_sizes.push_back( feature_map_3rd );
-        feature_map_sizes.push_back( feature_map_4th );
-        feature_map_sizes.push_back( feature_map_5th );
-        feature_map_sizes.push_back( feature_map_6th );
+        feature_map_sizes.push_back(feature_map_3rd);
+        feature_map_sizes.push_back(feature_map_4th);
+        feature_map_sizes.push_back(feature_map_5th);
+        feature_map_sizes.push_back(feature_map_6th);
 
         // Fixed params for generating priors
         const std::vector<std::vector<float>> min_sizes = {
-            { 10.0f, 16.0f, 24.0f },
-            { 32.0f, 48.0f },
-            { 64.0f, 96.0f },
-            { 128.0f, 192.0f, 256.0f }
+            {10.0f, 16.0f, 24.0f},
+            {32.0f, 48.0f},
+            {64.0f, 96.0f},
+            {128.0f, 192.0f, 256.0f}
         };
-        CV_Assert( min_sizes.size() == feature_map_sizes.size() ); // just to keep vectors in sync
-        const std::vector<int> steps = { 8, 16, 32, 64 };
+        CV_Assert(min_sizes.size() == feature_map_sizes.size()); // just to keep vectors in sync
+        const std::vector<int> steps = {8, 16, 32, 64};
 
         // Generate priors
         priors.clear();
-        for( size_t i = 0; i < feature_map_sizes.size(); ++i )
+        for (size_t i = 0; i < feature_map_sizes.size(); ++i)
         {
             Size feature_map_size = feature_map_sizes[i];
             std::vector<float> min_size = min_sizes[i];
 
-            for( int _h = 0; _h < feature_map_size.height; ++_h )
+            for (int _h = 0; _h < feature_map_size.height; ++_h)
             {
-                for( int _w = 0; _w < feature_map_size.width; ++_w )
+                for (int _w = 0; _w < feature_map_size.width; ++_w)
                 {
-                    for( size_t j = 0; j < min_size.size(); ++j )
+                    for (size_t j = 0; j < min_size.size(); ++j)
                     {
                         float s_kx = min_size[j] / size.width;
                         float s_ky = min_size[j] / size.height;
 
-                        float cx = ( _w + 0.5f ) * steps[i] / size.width;
-                        float cy = ( _h + 0.5f ) * steps[i] / size.height;
+                        float cx = (_w + 0.5f) * steps[i] / size.width;
+                        float cy = (_h + 0.5f) * steps[i] / size.height;
 
-                        Rect2f prior = { cx, cy, s_kx, s_ky };
-                        priors.push_back( prior );
+                        Rect2f prior = {cx, cy, s_kx, s_ky};
+                        priors.push_back(prior);
                     }
                 }
             }
         }
     }
 
-    Mat postProcess( const std::vector<Mat>& output_blobs )
+    Mat postProcess(const std::vector<Mat>& output_blobs)
     {
         // Extract from output_blobs
         Mat loc = output_blobs[0];
@@ -1921,83 +1841,87 @@ private:
         Mat iou = output_blobs[2];
 
         // Decode from deltas and priors
-        const std::vector<float> variance = { 0.1f, 0.2f };
-        float* loc_v = (float*)( loc.data );
-        float* conf_v = (float*)( conf.data );
-        float* iou_v = (float*)( iou.data );
+        const std::vector<float> variance = {0.1f, 0.2f};
+        float* loc_v = (float*)(loc.data);
+        float* conf_v = (float*)(conf.data);
+        float* iou_v = (float*)(iou.data);
         Mat faces;
         // (tl_x, tl_y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rcm_x, rcm_y, lcm_x, lcm_y, score)
         // 'tl': top left point of the bounding box
         // 're': right eye, 'le': left eye
         // 'nt':  nose tip
         // 'rcm': right corner of mouth, 'lcm': left corner of mouth
-        Mat face( 1, 15, CV_32FC1 );
-        for( size_t i = 0; i < priors.size(); ++i )
+        Mat face(1, 15, CV_32FC1);
+        for (size_t i = 0; i < priors.size(); ++i)
         {
             // Get score
             float clsScore = conf_v[i * 2 + 1];
             float iouScore = iou_v[i];
             // Clamp
-            if( iouScore < 0.f )
+            if (iouScore < 0.f)
             {
                 iouScore = 0.f;
             }
-            else if( iouScore > 1.f )
+            else if (iouScore > 1.f)
             {
                 iouScore = 1.f;
             }
-            float score = std::sqrt( clsScore * iouScore );
-            face.at<float>( 0, 14 ) = score;
+            float score = std::sqrt(clsScore * iouScore);
+            face.at<float>(0, 14) = score;
 
             // Get bounding box
-            float cx = ( priors[i].x + loc_v[i * 14 + 0] * variance[0] * priors[i].width ) * size.width;
-            float cy = ( priors[i].y + loc_v[i * 14 + 1] * variance[0] * priors[i].height ) * size.height;
-            float w = priors[i].width * exp( loc_v[i * 14 + 2] * variance[0] ) * size.width;
-            float h = priors[i].height * exp( loc_v[i * 14 + 3] * variance[1] ) * size.height;
+            float cx = (priors[i].x + loc_v[i * 14 + 0] * variance[0] * priors[i].width) * size.width;
+            float cy = (priors[i].y + loc_v[i * 14 + 1] * variance[0] * priors[i].height) * size.height;
+            float w = priors[i].width * exp(loc_v[i * 14 + 2] * variance[0]) * size.width;
+            float h = priors[i].height * exp(loc_v[i * 14 + 3] * variance[1]) * size.height;
             float x1 = cx - w / 2;
             float y1 = cy - h / 2;
-            face.at<float>( 0, 0 ) = x1;
-            face.at<float>( 0, 1 ) = y1;
-            face.at<float>( 0, 2 ) = w;
-            face.at<float>( 0, 3 ) = h;
+            face.at<float>(0, 0) = x1;
+            face.at<float>(0, 1) = y1;
+            face.at<float>(0, 2) = w;
+            face.at<float>(0, 3) = h;
 
             // Get landmarks
-            face.at<float>( 0, 4 ) = ( priors[i].x + loc_v[i * 14 + 4] * variance[0] * priors[i].width ) * size.width;  // right eye, x
-            face.at<float>( 0, 5 ) = ( priors[i].y + loc_v[i * 14 + 5] * variance[0] * priors[i].height ) * size.height;  // right eye, y
-            face.at<float>( 0, 6 ) = ( priors[i].x + loc_v[i * 14 + 6] * variance[0] * priors[i].width ) * size.width;  // left eye, x
-            face.at<float>( 0, 7 ) = ( priors[i].y + loc_v[i * 14 + 7] * variance[0] * priors[i].height ) * size.height;  // left eye, y
-            face.at<float>( 0, 8 ) = ( priors[i].x + loc_v[i * 14 + 8] * variance[0] * priors[i].width ) * size.width;  // nose tip, x
-            face.at<float>( 0, 9 ) = ( priors[i].y + loc_v[i * 14 + 9] * variance[0] * priors[i].height ) * size.height;  // nose tip, y
-            face.at<float>( 0, 10 ) = ( priors[i].x + loc_v[i * 14 + 10] * variance[0] * priors[i].width ) * size.width; // right corner of mouth, x
-            face.at<float>( 0, 11 ) = ( priors[i].y + loc_v[i * 14 + 11] * variance[0] * priors[i].height ) * size.height; // right corner of mouth, y
-            face.at<float>( 0, 12 ) = ( priors[i].x + loc_v[i * 14 + 12] * variance[0] * priors[i].width ) * size.width; // left corner of mouth, x
-            face.at<float>( 0, 13 ) = ( priors[i].y + loc_v[i * 14 + 13] * variance[0] * priors[i].height ) * size.height; // left corner of mouth, y
+            face.at<float>(0, 4) = (priors[i].x + loc_v[i * 14 + 4] * variance[0] * priors[i].width) * size.width;  // right eye, x
+            face.at<float>(0, 5) = (priors[i].y + loc_v[i * 14 + 5] * variance[0] * priors[i].height) * size.height;  // right eye, y
+            face.at<float>(0, 6) = (priors[i].x + loc_v[i * 14 + 6] * variance[0] * priors[i].width) * size.width;  // left eye, x
+            face.at<float>(0, 7) = (priors[i].y + loc_v[i * 14 + 7] * variance[0] * priors[i].height) * size.height;  // left eye, y
+            face.at<float>(0, 8) = (priors[i].x + loc_v[i * 14 + 8] * variance[0] * priors[i].width)  * size.width;  // nose tip, x
+            face.at<float>(0, 9) = (priors[i].y + loc_v[i * 14 + 9] * variance[0] * priors[i].height) * size.height;  // nose tip, y
+            face.at<float>(0, 10) = (priors[i].x + loc_v[i * 14 + 10] * variance[0] * priors[i].width) * size.width; // right corner of mouth, x
+            face.at<float>(0, 11) = (priors[i].y + loc_v[i * 14 + 11] * variance[0] * priors[i].height) * size.height; // right corner of mouth, y
+            face.at<float>(0, 12) = (priors[i].x + loc_v[i * 14 + 12] * variance[0] * priors[i].width) * size.width; // left corner of mouth, x
+            face.at<float>(0, 13) = (priors[i].y + loc_v[i * 14 + 13] * variance[0] * priors[i].height) * size.height; // left corner of mouth, y
 
-            faces.push_back( face );
+            faces.push_back(face);
         }
 
-        if( faces.rows > 1 )
+        if (faces.rows > 1)
         {
             // Retrieve boxes and scores
             std::vector<Rect2i> faceBoxes;
             std::vector<float> faceScores;
-            for( int rIdx = 0; rIdx < faces.rows; rIdx++ )
+            for (int rIdx = 0; rIdx < faces.rows; rIdx++)
             {
-                faceBoxes.push_back( Rect2i( int( faces.at<float>( rIdx, 0 ) ),
-                    int( faces.at<float>( rIdx, 1 ) ),
-                    int( faces.at<float>( rIdx, 2 ) ),
-                    int( faces.at<float>( rIdx, 3 ) ) ) );
-                faceScores.push_back( faces.at<float>( rIdx, 14 ) );
+                faceBoxes.push_back(
+                    Rect2i(
+                        int(faces.at<float>(rIdx, 0)),
+                        int(faces.at<float>(rIdx, 1)),
+                        int(faces.at<float>(rIdx, 2)),
+                        int(faces.at<float>(rIdx, 3))
+                    )
+                );
+                faceScores.push_back(faces.at<float>(rIdx, 14));
             }
 
             std::vector<int> keepIdx;
-            dnn::NMSBoxes( faceBoxes, faceScores, confThreshold, nmsThreshold, keepIdx, 1.f );
+            dnn::NMSBoxes(faceBoxes, faceScores, confThreshold, nmsThreshold, keepIdx, 1.f);
 
             // Get NMS results
             Mat nms_faces;
-            for( int idx : keepIdx )
+            for (int idx : keepIdx)
             {
-                nms_faces.push_back( faces.row( idx ) );
+                nms_faces.push_back(faces.row(idx));
             }
             return nms_faces;
         }
@@ -2011,23 +1935,23 @@ private:
 FaceDetectionModel_YN::FaceDetectionModel_YN()
     : FaceDetectionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceDetectionModel_YN_Impl>() );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceDetectionModel_YN_Impl>());
 }
 
-FaceDetectionModel_YN::FaceDetectionModel_YN( const Net& network )
+FaceDetectionModel_YN::FaceDetectionModel_YN(const Net& network)
     : FaceDetectionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceDetectionModel_YN_Impl>( network ) );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceDetectionModel_YN_Impl>(network));
 }
 
-void FaceDetectionModel_YN::getLandmarks( std::vector<std::vector<Point>>& landmarks ) const
+void FaceDetectionModel_YN::getLandmarks(std::vector<std::vector<Point>>& landmarks) const
 {
-    landmarks = std::static_pointer_cast<FaceDetectionModel_YN_Impl>( impl )->getLandmarks();
+    landmarks = std::static_pointer_cast<FaceDetectionModel_YN_Impl>(impl)->getLandmarks();
 }
 
 std::vector<std::vector<Point>> FaceDetectionModel_YN::getLandmarks() const
 {
-    return std::static_pointer_cast<FaceDetectionModel_YN_Impl>( impl )->getLandmarks();
+    return std::static_pointer_cast<FaceDetectionModel_YN_Impl>(impl)->getLandmarks();
 }
 
 ///////////////////////////////////////// Face Recognition /////////////////////////////////////////
@@ -2036,10 +1960,10 @@ struct FaceRecognitionModel_Impl : public Model::Impl
 {
     FaceRecognitionModel_Impl() {}
 
-    FaceRecognitionModel_Impl( const Net& network )
+    FaceRecognitionModel_Impl(const Net& network)
     {
         CV_TRACE_FUNCTION();
-        initNet( network );
+        initNet(network);
     }
 
     virtual
@@ -2049,7 +1973,7 @@ struct FaceRecognitionModel_Impl : public Model::Impl
         std::vector<Point> face_landmarks
     )
     {
-        CV_Error( Error::StsNotImplemented, "" );
+        CV_Error(Error::StsNotImplemented, "");
     }
 
     virtual
@@ -2058,7 +1982,7 @@ struct FaceRecognitionModel_Impl : public Model::Impl
         CV_OUT OutputArray face_feature
     )
     {
-        CV_Error( Error::StsNotImplemented, "" );
+        CV_Error(Error::StsNotImplemented, "");
     }
 
     double match(
@@ -2072,30 +1996,33 @@ struct FaceRecognitionModel_Impl : public Model::Impl
         // Get face features.
         Mat feature1 = face_feature1.getMat();
         Mat feature2 = face_feature2.getMat();
-        CV_Assert( feature1.size() == feature2.size() );
-        CV_Assert( feature1.type() == feature2.type() );
+        CV_Assert(feature1.size() == feature2.size());
+        CV_Assert(feature1.type() == feature2.type());
 
         // Normarize face features.
-        normalize( feature1, feature1 );
-        normalize( feature2, feature2 );
+        normalize(feature1, feature1);
+        normalize(feature2, feature2);
 
         // Calc distance.
-        if( dis_type == FaceRecognitionModel::DisType::FR_COSINE ){
-            return sum( feature1.mul( feature2 ) )[0];
+        if (dis_type == FaceRecognitionModel::DisType::FR_COSINE)
+        {
+            return sum(feature1.mul(feature2))[0];
         }
-        else if( dis_type == FaceRecognitionModel::DisType::FR_NORM_L2 ){
-            return norm( feature1, feature2 );
+        else if (dis_type == FaceRecognitionModel::DisType::FR_NORM_L2)
+        {
+            return norm(feature1, feature2);
         }
-        else{
-            throw std::invalid_argument( "invalid distance type parameter " + std::to_string( dis_type ) );
+        else
+        {
+            throw std::invalid_argument("invalid distance type parameter " + std::to_string(dis_type));
         }
     }
 
     static inline
-    FaceRecognitionModel_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
+    FaceRecognitionModel_Impl& from(const std::shared_ptr<Model::Impl>& ptr)
     {
-        CV_Assert( ptr );
-        return *( (FaceRecognitionModel_Impl*)ptr.get() );
+        CV_Assert(ptr);
+        return *((FaceRecognitionModel_Impl*)ptr.get());
     }
 };
 
@@ -2112,7 +2039,7 @@ void FaceRecognitionModel::alignCrop(
     std::vector<Point> face_landmarks
 ) const
 {
-    FaceRecognitionModel_Impl::from( impl ).alignCrop(
+    FaceRecognitionModel_Impl::from(impl).alignCrop(
         frame,
         align_image,
         face_landmarks
@@ -2124,7 +2051,7 @@ void FaceRecognitionModel::feature(
     CV_OUT OutputArray face_feature
 ) const
 {
-    FaceRecognitionModel_Impl::from( impl ).feature(
+    FaceRecognitionModel_Impl::from(impl).feature(
         align_image,
         face_feature
     );
@@ -2136,7 +2063,7 @@ double FaceRecognitionModel::match(
     int dis_type
 ) const
 {
-    return FaceRecognitionModel_Impl::from( impl ).match(
+    return FaceRecognitionModel_Impl::from(impl).match(
         face_feature1,
         face_feature2,
         dis_type
@@ -2153,13 +2080,13 @@ public:
         CV_TRACE_FUNCTION();
     }
 
-    FaceRecognitionModel_SF_Impl( const Net& network )
+    FaceRecognitionModel_SF_Impl(const Net& network)
         : FaceRecognitionModel_SF_Impl()
     {
         CV_TRACE_FUNCTION();
-        initNet( network );
-        setInputSize( Size( 112, 112 ) );
-        setInputSwapRB( true );
+        initNet(network);
+        setInputSize(Size(112, 112));
+        setInputSwapRB(true);
     }
 
     virtual
@@ -2174,19 +2101,20 @@ public:
         // Prerequisites for getSimilarityTransformMatrix():
         // Source point order is Right Eye, Left Eye, Nose, Right Corner of Mouth, and Left Corner of Mouth.
         float src_point[5][2];
-        for( int i = 0; i < 5; i++ ){
+        for (int i = 0; i < 5; i++)
+        {
             src_point[i][0] = face_landmarks[i].x;
             src_point[i][1] = face_landmarks[i].y;
         }
 
         // Get similarity transform matrix.
-        Mat warp_mat = getSimilarityTransformMatrix( src_point );
+        Mat warp_mat = getSimilarityTransformMatrix(src_point);
 
         // Get aligned face image using affine transform.
         Mat aligned_face;
-        warpAffine( frame.getMat(), aligned_face, warp_mat, Size( 112, 112 ), INTER_LINEAR );
+        warpAffine(frame.getMat(), aligned_face, warp_mat, Size(112, 112), INTER_LINEAR);
 
-        aligned_face.copyTo( align_image );
+        aligned_face.copyTo(align_image);
     }
 
     virtual
@@ -2198,119 +2126,119 @@ public:
         CV_TRACE_FUNCTION();
 
         std::vector<Mat> output_blobs;
-        processFrame( align_image, output_blobs );
+        processFrame(align_image, output_blobs);
 
-        output_blobs[0].copyTo( face_feature );
+        output_blobs[0].copyTo(face_feature);
     }
 
     static inline
-    FaceRecognitionModel_SF_Impl& from( const std::shared_ptr<Model::Impl>& ptr )
+    FaceRecognitionModel_SF_Impl& from(const std::shared_ptr<Model::Impl>& ptr)
     {
-        CV_Assert( ptr );
-        return *( (FaceRecognitionModel_SF_Impl*)ptr.get() );
+        CV_Assert(ptr);
+        return *((FaceRecognitionModel_SF_Impl*)ptr.get());
     }
 
 private:
-    Mat getSimilarityTransformMatrix( float src[5][2] ) const
+    Mat getSimilarityTransformMatrix(float src[5][2]) const
     {
-        float dst[5][2] = { { 38.2946f, 51.6963f }, { 73.5318f, 51.5014f }, { 56.0252f, 71.7366f }, { 41.5493f, 92.3655f }, { 70.7299f, 92.2041f } };
-        float avg0 = ( src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0] ) / 5;
-        float avg1 = ( src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1] ) / 5;
+        float dst[5][2] = {{38.2946f, 51.6963f}, {73.5318f, 51.5014f}, {56.0252f, 71.7366f}, {41.5493f, 92.3655f}, {70.7299f, 92.2041f}};
+        float avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
+        float avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
         //Compute mean of src and dst.
-        float src_mean[2] = { avg0, avg1 };
-        float dst_mean[2] = { 56.0262f, 71.9008f };
+        float src_mean[2] = {avg0, avg1};
+        float dst_mean[2] = {56.0262f, 71.9008f};
         //Subtract mean from src and dst.
         float src_demean[5][2];
-        for( int i = 0; i < 2; i++ )
+        for (int i = 0; i < 2; i++)
         {
-            for( int j = 0; j < 5; j++ )
+            for (int j = 0; j < 5; j++)
             {
                 src_demean[j][i] = src[j][i] - src_mean[i];
             }
         }
         float dst_demean[5][2];
-        for( int i = 0; i < 2; i++ )
+        for (int i = 0; i < 2; i++)
         {
-            for( int j = 0; j < 5; j++ )
+            for (int j = 0; j < 5; j++)
             {
                 dst_demean[j][i] = dst[j][i] - dst_mean[i];
             }
         }
         double A00 = 0.0, A01 = 0.0, A10 = 0.0, A11 = 0.0;
-        for( int i = 0; i < 5; i++ )
+        for (int i = 0; i < 5; i++)
             A00 += dst_demean[i][0] * src_demean[i][0];
         A00 = A00 / 5;
-        for( int i = 0; i < 5; i++ )
+        for (int i = 0; i < 5; i++)
             A01 += dst_demean[i][0] * src_demean[i][1];
         A01 = A01 / 5;
-        for( int i = 0; i < 5; i++ )
+        for(int i = 0; i < 5; i++)
             A10 += dst_demean[i][1] * src_demean[i][0];
         A10 = A10 / 5;
-        for( int i = 0; i < 5; i++ )
+        for(int i = 0; i < 5; i++)
             A11 += dst_demean[i][1] * src_demean[i][1];
         A11 = A11 / 5;
-        Mat A = ( Mat_<double>( 2, 2 ) << A00, A01, A10, A11 );
-        double d[2] = { 1.0, 1.0 };
+        Mat A = (Mat_<double>(2, 2) << A00, A01, A10, A11);
+        double d[2] = {1.0, 1.0};
         double detA = A00 * A11 - A01 * A10;
-        if( detA < 0 )
+        if (detA < 0)
             d[1] = -1;
-        double T[3][3] = { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } };
+        double T[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
         Mat s, u, vt, v;
-        SVD::compute( A, s, u, vt );
-        double smax = s.ptr<double>( 0 )[0] > s.ptr<double>( 1 )[0] ? s.ptr<double>( 0 )[0] : s.ptr<double>( 1 )[0];
+        SVD::compute(A, s, u, vt);
+        double smax = s.ptr<double>(0)[0] > s.ptr<double>(1)[0] ? s.ptr<double>(0)[0] : s.ptr<double>(1)[0];
         double tol = smax * 2 * FLT_MIN;
         int rank = 0;
-        if( s.ptr<double>( 0 )[0] > tol )
+        if (s.ptr<double>(0)[0] > tol)
             rank += 1;
-        if( s.ptr<double>( 1 )[0] > tol )
+        if (s.ptr<double>(1)[0] > tol)
             rank += 1;
-        double arr_u[2][2] = { { u.ptr<double>( 0 )[0], u.ptr<double>( 0 )[1] }, { u.ptr<double>( 1 )[0], u.ptr<double>( 1 )[1] } };
-        double arr_vt[2][2] = { { vt.ptr<double>( 0 )[0], vt.ptr<double>( 0 )[1] }, { vt.ptr<double>( 1 )[0], vt.ptr<double>( 1 )[1] } };
+        double arr_u[2][2] = {{u.ptr<double>(0)[0], u.ptr<double>(0)[1]}, {u.ptr<double>(1)[0], u.ptr<double>(1)[1]}};
+        double arr_vt[2][2] = {{vt.ptr<double>(0)[0], vt.ptr<double>(0)[1]}, {vt.ptr<double>(1)[0], vt.ptr<double>(1)[1]}};
         double det_u = arr_u[0][0] * arr_u[1][1] - arr_u[0][1] * arr_u[1][0];
         double det_vt = arr_vt[0][0] * arr_vt[1][1] - arr_vt[0][1] * arr_vt[1][0];
-        if( rank == 1 )
+        if (rank == 1)
         {
-            if( ( det_u * det_vt ) > 0 )
+            if ((det_u * det_vt) > 0)
             {
                 Mat uvt = u * vt;
-                T[0][0] = uvt.ptr<double>( 0 )[0];
-                T[0][1] = uvt.ptr<double>( 0 )[1];
-                T[1][0] = uvt.ptr<double>( 1 )[0];
-                T[1][1] = uvt.ptr<double>( 1 )[1];
+                T[0][0] = uvt.ptr<double>(0)[0];
+                T[0][1] = uvt.ptr<double>(0)[1];
+                T[1][0] = uvt.ptr<double>(1)[0];
+                T[1][1] = uvt.ptr<double>(1)[1];
             }
             else
             {
                 double temp = d[1];
                 d[1] = -1;
-                Mat D = ( Mat_<double>( 2, 2 ) << d[0], 0.0, 0.0, d[1] );
+                Mat D = (Mat_<double>(2, 2) << d[0], 0.0, 0.0, d[1]);
                 Mat Dvt = D * vt;
                 Mat uDvt = u * Dvt;
-                T[0][0] = uDvt.ptr<double>( 0 )[0];
-                T[0][1] = uDvt.ptr<double>( 0 )[1];
-                T[1][0] = uDvt.ptr<double>( 1 )[0];
-                T[1][1] = uDvt.ptr<double>( 1 )[1];
+                T[0][0] = uDvt.ptr<double>(0)[0];
+                T[0][1] = uDvt.ptr<double>(0)[1];
+                T[1][0] = uDvt.ptr<double>(1)[0];
+                T[1][1] = uDvt.ptr<double>(1)[1];
                 d[1] = temp;
             }
         }
         else
         {
-            Mat D = ( Mat_<double>( 2, 2 ) << d[0], 0.0, 0.0, d[1] );
+            Mat D = (Mat_<double>(2, 2) << d[0], 0.0, 0.0, d[1]);
             Mat Dvt = D * vt;
             Mat uDvt = u * Dvt;
-            T[0][0] = uDvt.ptr<double>( 0 )[0];
-            T[0][1] = uDvt.ptr<double>( 0 )[1];
-            T[1][0] = uDvt.ptr<double>( 1 )[0];
-            T[1][1] = uDvt.ptr<double>( 1 )[1];
+            T[0][0] = uDvt.ptr<double>(0)[0];
+            T[0][1] = uDvt.ptr<double>(0)[1];
+            T[1][0] = uDvt.ptr<double>(1)[0];
+            T[1][1] = uDvt.ptr<double>(1)[1];
         }
         double var1 = 0.0;
-        for( int i = 0; i < 5; i++ )
+        for (int i = 0; i < 5; i++)
             var1 += src_demean[i][0] * src_demean[i][0];
         var1 = var1 / 5;
         double var2 = 0.0;
-        for( int i = 0; i < 5; i++ )
+        for (int i = 0; i < 5; i++)
             var2 += src_demean[i][1] * src_demean[i][1];
         var2 = var2 / 5;
-        double scale = 1.0 / ( var1 + var2 ) * ( s.ptr<double>( 0 )[0] * d[0] + s.ptr<double>( 1 )[0] * d[1] );
+        double scale = 1.0 / (var1 + var2) * (s.ptr<double>(0)[0] * d[0] + s.ptr<double>(1)[0] * d[1]);
         double TS[2];
         TS[0] = T[0][0] * src_mean[0] + T[0][1] * src_mean[1];
         TS[1] = T[1][0] * src_mean[0] + T[1][1] * src_mean[1];
@@ -2320,7 +2248,7 @@ private:
         T[0][1] *= scale;
         T[1][0] *= scale;
         T[1][1] *= scale;
-        Mat transform_mat = ( Mat_<double>( 2, 3 ) << T[0][0], T[0][1], T[0][2], T[1][0], T[1][1], T[1][2] );
+        Mat transform_mat = (Mat_<double>(2, 3) << T[0][0], T[0][1], T[0][2], T[1][0], T[1][1], T[1][2]);
         return transform_mat;
     }
 };
@@ -2328,13 +2256,13 @@ private:
 FaceRecognitionModel_SF::FaceRecognitionModel_SF()
     : FaceRecognitionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceRecognitionModel_SF_Impl>() );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceRecognitionModel_SF_Impl>());
 }
 
-FaceRecognitionModel_SF::FaceRecognitionModel_SF( const Net& network )
+FaceRecognitionModel_SF::FaceRecognitionModel_SF(const Net& network)
     : FaceRecognitionModel()
 {
-    impl = std::static_pointer_cast<Model::Impl>( makePtr<FaceRecognitionModel_SF_Impl>( network ) );
+    impl = std::static_pointer_cast<Model::Impl>(makePtr<FaceRecognitionModel_SF_Impl>(network));
 }
 
 }} // namespace
