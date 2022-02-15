@@ -45,7 +45,7 @@ private:
     std::shared_ptr<IDataProvider::mfx_bitstream> stream;
 
 protected:
-    std::weak_ptr<Surface> procesing_surface_ptr;
+    std::weak_ptr<Surface> processing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_queue;
 

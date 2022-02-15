@@ -597,7 +597,7 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
                                         out_keep_alive_frame);
                 *out_keep_alive_frame = frame;
             }
-        } // oherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
+        } // otherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
     }
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX

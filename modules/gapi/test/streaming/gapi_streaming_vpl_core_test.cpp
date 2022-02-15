@@ -758,7 +758,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -774,7 +774,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, Init)
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -970,7 +970,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -986,7 +986,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 

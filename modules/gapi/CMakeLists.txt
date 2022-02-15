@@ -361,6 +361,7 @@ endif()
 # perf test dependencies postprocessing
 if(HAVE_GAPI_ONEVPL)
   # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
+  # src/ is specified to include dirs for INTERNAL tests only.
   if(TARGET opencv_perf_gapi)
     target_include_directories(opencv_perf_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
     ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_ONEVPL)

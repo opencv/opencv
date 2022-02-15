@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2022 Intel Corporation
 
 #ifdef HAVE_ONEVPL
 #ifdef HAVE_INF_ENGINE
@@ -23,7 +23,7 @@ namespace onevpl {
 vpp_pp_session::vpp_pp_session(mfxSession sess, const mfxVideoParam& vpp_out_param) :
     EngineSession(sess),
     mfx_vpp_out_param(vpp_out_param),
-    procesing_surface_ptr(),
+    processing_surface_ptr(),
     sync_in_queue(),
     vpp_out_queue(),
     preprocessed_frames_count()
@@ -50,7 +50,7 @@ void vpp_pp_session::swap_surface(VPPPreprocEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
     request_free_surface(session, vpp_pool_id, *acceleration_policy,
-                         procesing_surface_ptr, true);
+                         processing_surface_ptr, true);
 }
 
 void vpp_pp_session::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {

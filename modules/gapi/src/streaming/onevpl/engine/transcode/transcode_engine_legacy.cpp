@@ -105,7 +105,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -113,7 +113,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                     ", sync id:  " <<
                                     sync_pair.first <<
                                     ", dec in surface:  " <<
-                                    my_sess.procesing_surface_ptr.lock()->get_handle() <<
+                                    my_sess.processing_surface_ptr.lock()->get_handle() <<
                                     ", dec out surface: " << sync_pair.second <<
                                     ", status: " <<
                                     mfxstatus_to_string(my_sess.last_status));
@@ -130,7 +130,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.get_mfx_bitstream_ptr(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 

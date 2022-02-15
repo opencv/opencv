@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2022 Intel Corporation
 
 #ifndef GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP
 #define GAPI_STREAMING_ONVPL_PREPROC_SESSION_HPP
@@ -38,7 +38,7 @@ public:
 private:
     mfxVideoParam mfx_vpp_out_param;
     VPLAccelerationPolicy::pool_key_t vpp_pool_id;
-    std::weak_ptr<Surface> procesing_surface_ptr;
+    std::weak_ptr<Surface> processing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_in_queue;
     std::queue<op_handle_t> vpp_out_queue;

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2022 Intel Corporation
 
 #ifdef HAVE_ONEVPL
 
@@ -44,7 +44,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             session_type &my_sess = static_cast<session_type&>(sess);
             while (!my_sess.sync_in_queue.empty()) {
                 do {
-                    if (!my_sess.procesing_surface_ptr.expired()) {
+                    if (!my_sess.processing_surface_ptr.expired()) {
                         session_type::op_handle_t pending_op = my_sess.sync_in_queue.front();
                         GAPI_LOG_DEBUG(nullptr, "pending IN operations count: " <<
                                                 my_sess.sync_in_queue.size() <<
@@ -55,7 +55,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
 
                         my_sess.sync_in_queue.pop();
                         auto *dec_surface = pending_op.second;
-                        auto *vpp_suface = my_sess.procesing_surface_ptr.lock()->get_handle();
+                        auto *vpp_suface = my_sess.processing_surface_ptr.lock()->get_handle();
 
                        /* TODO: consider CROP/ROI here
                         static int x_offset = 0;
@@ -107,12 +107,12 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
                                                     "] has no VPP surface, reason: " <<
                                                   ex.what());
-                        my_sess.procesing_surface_ptr.reset();
+                        my_sess.processing_surface_ptr.reset();
                         break;
                     }
                 } while(my_sess.last_status == MFX_ERR_MORE_SURFACE);
 
-                if (my_sess.procesing_surface_ptr.expired()) {
+                if (my_sess.processing_surface_ptr.expired()) {
                     // TODO break main loop
                     break;
                 }
@@ -453,13 +453,8 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
         case MFX_WRN_IN_EXECUTION:
-            /*try {
-                sess.swap_surface(*this);
-                return ExecutionStatus::Continue;
-            } catch (const std::runtime_error& ex) {
-                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
-                return ExecutionStatus::Continue;
-            }*/return ExecutionStatus::Continue;
+            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_IN_EXECUTION");
+            return ExecutionStatus::Continue;
         default:
             GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status) <<
                                       ", decoded frames: " << sess.preprocessed_frames_count);

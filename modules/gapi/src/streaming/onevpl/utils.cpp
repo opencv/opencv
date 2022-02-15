@@ -375,7 +375,6 @@ std::string mfx_frame_info_to_string(const mfxFrameInfo &info) {
     DUMP_MEMBER(ss, info, BitDepthLuma)
     DUMP_MEMBER(ss, info, BitDepthChroma)
     DUMP_MEMBER(ss, info, Shift)
-//    DUMP_MEMBER(ss, info, FrameId)
     DUMP_MEMBER(ss, info, FourCC)
     DUMP_MEMBER(ss, info, Width)
     DUMP_MEMBER(ss, info, Height)
