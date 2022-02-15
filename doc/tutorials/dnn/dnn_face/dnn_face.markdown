@@ -12,7 +12,7 @@
 
 ## Introduction
 
-In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#Models). The usage of `FaceDetectionModel_YN` and `FaceRecognitionModel_SF` are presented in [Usage](#Usage).
+In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#models). The usage of `FaceDetectionModel_YN` and `FaceRecognitionModel_SF` are presented in [Usage](#face-detection).
 
 ## Models
 
