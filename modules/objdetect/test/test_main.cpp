@@ -7,19 +7,4 @@
     #include <hpx/hpx_main.hpp>
 #endif
 
-static
-void initTests()
-{
-#ifdef HAVE_OPENCV_DNN
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
-#endif  // HAVE_OPENCV_DNN
-}
-
-CV_TEST_MAIN("cv", initTests())
+CV_TEST_MAIN("cv")
