@@ -149,8 +149,8 @@ bool TiffDecoder::checkSignature( const String& signature ) const
 
 int TiffDecoder::normalizeChannelsNumber(int channels) const
 {
-    CV_Assert(channels <= 4);
-    return channels > 4 ? 4 : channels;
+    CV_Check(channels, channels >= 1 && channels <= 4, "Unsupported number of channels");
+    return channels;
 }
 
 ImageDecoder TiffDecoder::newDecoder() const
