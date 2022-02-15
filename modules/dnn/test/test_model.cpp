@@ -870,6 +870,9 @@ TEST_P(Test_Model, TextDetectionByEAST)
 
 TEST_P(Test_Model, FaceDetectionByYN)
 {
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     // Weight
     std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
 
@@ -954,6 +957,9 @@ TEST_P(Test_Model, FaceDetectionByYN)
 
 TEST_P(Test_Model, FaceRecognitionBySF)
 {
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     // Weight
     std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
     std::string face_recognition_weight_path = _tf("onnx/models/face_recognizer_fast.onnx", false);
