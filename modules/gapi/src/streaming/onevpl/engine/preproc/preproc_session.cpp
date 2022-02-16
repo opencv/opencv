@@ -5,7 +5,6 @@
 // Copyright (C) 2022 Intel Corporation
 
 #ifdef HAVE_ONEVPL
-#ifdef HAVE_INF_ENGINE
 
 #include <chrono>
 #include <exception>
@@ -65,5 +64,4 @@ const mfxFrameInfo& vpp_pp_session::get_video_param() const {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_INF_ENGINE
 #endif // HAVE_ONEVPL
