@@ -921,7 +921,7 @@ TEST_P(Test_Model, FaceDetectionBySSD)
 
     // Weight
     std::string face_detection_weight_path = _tf("opencv_face_detector.caffemodel", false);
-    std::string face_detection_config_path = _tf("opencv_face_detector.prototxt", false);
+    std::string face_detection_config_path = _tf("opencv_face_detector.prototxt");
 
     // Ground Truth
     std::string image_path = findDataFile("gpu/lbpcascade/er.png");
