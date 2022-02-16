@@ -785,6 +785,13 @@ TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
     testONNXModels("hidden_lstm_bi", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, LSTM_cell)
+{
+    testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
+    testONNXModels("lstm_cell_bidirectional", npy, 0, 0, false, false);
+    testONNXModels("lstm_cell_with_peepholes", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");

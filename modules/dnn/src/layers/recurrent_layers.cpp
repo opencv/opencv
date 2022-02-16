@@ -338,11 +338,34 @@ public:
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
         {
-            const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
-            const Mat &Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
-            const Mat &bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
-            const Mat &h_0 = blobs[3].rowRange(i * blobs[3].rows / numDirs, (i + 1) * blobs[3].rows / numDirs);
-            const Mat &c_0 = blobs[4].rowRange(i * blobs[4].rows / numDirs, (i + 1) * blobs[4].rows / numDirs);
+            Mat Wh = blobs[0];
+            Mat Wx = blobs[1];
+            Mat bias = blobs[2];
+            Mat h_0 = blobs[3];
+            Mat c_0 = blobs[4];
+            Mat pi, pf, po;
+
+            Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
+            Wx = Wx.rowRange(i * Wx.rows / numDirs, (i + 1) * Wx.rows / numDirs);
+            bias = bias.colRange(i * bias.cols / numDirs, (i + 1) * bias.cols / numDirs);
+            h_0 = h_0.rowRange(i * h_0.rows / numDirs, (i + 1) * h_0.rows / numDirs);
+            c_0 = c_0.rowRange(i * c_0.rows / numDirs, (i + 1) * c_0.rows / numDirs);
+
+            if (usePeephole)
+            {
+                pi = blobs[5];
+                pf = blobs[6];
+                po = blobs[7];
+
+                pi = pi.rowRange(i * pi.rows / numDirs, (i + 1) * pi.rows / numDirs);
+                pi = pi.colRange(i * pi.cols / numDirs, (i + 1) * pi.cols / numDirs);
+
+                pf = pf.rowRange(i * pf.rows / numDirs, (i + 1) * pf.rows / numDirs);
+                pf = pf.colRange(i * pf.cols / numDirs, (i + 1) * pf.cols / numDirs);
+
+                po = po.rowRange(i * po.rows / numDirs, (i + 1) * po.rows / numDirs);
+                po = po.colRange(i * po.cols / numDirs, (i + 1) * po.cols / numDirs);
+            }
 
             int numOut = Wh.size[1];
             Mat hInternal = internals[0], cInternal = internals[1],
@@ -356,7 +379,12 @@ public:
 
             Mat hOutTs = output[0].reshape(1, numSamplesTotal);
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
-            Mat cOutTs = produceCellOutput ? output[1].reshape(1, numSamplesTotal) : Mat();
+            Mat cOutTs;
+            if (produceCellOutput)
+            {
+                cOutTs = output[1].reshape(1, numSamplesTotal);
+                cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
+            }
 
 #if CV_TRY_AVX2 || CV_TRY_AVX
             bool canUseAvx = gates.isContinuous() && bias.isContinuous()
@@ -471,8 +499,8 @@ public:
                 if (usePeephole)
                 {
                     Mat gatesIF = gates.colRange(0, 2*numOut);
-                    gemm(cInternal, blobs[5], 1, gateI, 1, gateI);
-                    gemm(cInternal, blobs[6], 1, gateF, 1, gateF);
+                    gemm(cInternal, pi, 1, gateI, 1, gateI);
+                    gemm(cInternal, pf, 1, gateF, 1, gateF);
                     f_activation(gatesIF, gatesIF);
                 }
                 else
@@ -495,7 +523,7 @@ public:
                 }
                 if (usePeephole)
                 {
-                    gemm(cInternal, blobs[7], 1, gateO, 1, gateO);
+                    gemm(cInternal, po, 1, gateO, 1, gateO);
                     f_activation(gateO, gateO);
                 }
 
