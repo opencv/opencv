@@ -927,20 +927,20 @@ TEST_P(Test_Model, FaceDetectionBySSD)
     std::string image_path = findDataFile("gpu/lbpcascade/er.png");
 
     std::vector<Rect> gt_boxes;
-    gt_boxes.push_back(Rect(406, 85, 34, 48));
-    gt_boxes.push_back(Rect(142, 255, 33, 44));
-    gt_boxes.push_back(Rect(117, 46, 35, 45));
-    gt_boxes.push_back(Rect(340, 33, 29, 43));
-    gt_boxes.push_back(Rect(259, 228, 32, 42));
+    gt_boxes.push_back(Rect(408, 84, 34, 49));
+    gt_boxes.push_back(Rect(142, 256, 32, 43));
+    gt_boxes.push_back(Rect(118, 46, 34, 45));
+    gt_boxes.push_back(Rect(340, 34, 29, 42));
     gt_boxes.push_back(Rect(65, 123, 37, 43));
+    gt_boxes.push_back(Rect(259, 228, 32, 43));
 
     std::vector<float> gt_confidences;
-    gt_confidences.push_back(0.821813f);
-    gt_confidences.push_back(0.806619f);
-    gt_confidences.push_back(0.688687f);
-    gt_confidences.push_back(0.321229f);
-    gt_confidences.push_back(0.319798f);
-    gt_confidences.push_back(0.315404f);
+    gt_confidences.push_back(0.672344f);
+    gt_confidences.push_back(0.665494f);
+    gt_confidences.push_back(0.646890f);
+    gt_confidences.push_back(0.388749f);
+    gt_confidences.push_back(0.283762f);
+    gt_confidences.push_back(0.256311f);
 
     // Threshold
     const double iouDiff = 0.9;
