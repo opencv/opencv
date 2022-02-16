@@ -214,6 +214,9 @@ int split3_simd(const uchar in[], uchar out1[], uchar out2[],
 int split4_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], uchar out4[], const int width);
 
+int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
+                uchar out[], const int width);
+
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 struct scale_tag {};
@@ -2028,6 +2031,40 @@ int split4_simd(const uchar in[], uchar out1[], uchar out2[],
             vx_store(&out2[x], b);
             vx_store(&out3[x], c);
             vx_store(&out4[x], d);
+        }
+        if (x < width)
+        {
+            x = width - nlanes;
+            continue;
+        }
+        break;
+    }
+    return x;
+}
+
+//-------------------------
+//
+// Fluid kernels: Merge3
+//
+//-------------------------
+
+int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
+                uchar out[], const int width)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+    if (width < nlanes)
+        return 0;
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= width - nlanes; x += nlanes)
+        {
+            v_uint8 a, b, c;
+            a = vx_load(&in1[x]);
+            b = vx_load(&in2[x]);
+            c = vx_load(&in3[x]);
+            v_store_interleave(&out[3 * x], a, b, c);
         }
         if (x < width)
         {
