@@ -235,7 +235,7 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 
             for (int w = 0; w < inSz.width * chanNum; ) {
                 for (; w <= inSz.width * chanNum - half_nlanes && w >= 0; w += half_nlanes) {
-#ifdef __i386__
+#if defined(__i386__) || defined(_M_IX86)
                     __m128i val0lo = _mm_castpd_si128(_mm_loadh_pd(
                                                       _mm_load_sd(reinterpret_cast<const double*>(&src0[0][w])),
                                                                   reinterpret_cast<const double*>(&src0[1][w])));
@@ -311,7 +311,12 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 #endif
                     __m128i pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x])]));
                     __m128i pix2 = _mm_setzero_si128();
+#if defined(__i386__) || defined(_M_IX86)
+                    pix2 = _mm_castpd_si128(_mm_load_sd(reinterpret_cast<const double*>(&tmp[4 * (chanNum * (mapsx[x] + 1))])));
+#else
                     pix2 = _mm_insert_epi64(pix2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x] + 1))]), 0);
+#endif
+
                     pix2 = _mm_insert_epi32(pix2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x] + 1)) + 8]), 2);
 
                     // expand 8-bit data to 16-bit
@@ -338,7 +343,11 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 #endif
 
                     pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 1])]));
+#if defined(__i386__) || defined(_M_IX86)
+                    pix2 = _mm_castpd_si128(_mm_load_sd(reinterpret_cast<const double*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1))])));
+#else
                     pix2 = _mm_insert_epi64(pix2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1))]), 0);
+#endif
                     pix2 = _mm_insert_epi32(pix2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1)) + 8]), 2);
 
                     // expand 8-bit data to 16-bit
@@ -365,7 +374,11 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 #endif
 
                     pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 2])]));
+#if defined(__i386__) || defined(_M_IX86)
+                    pix2 = _mm_castpd_si128(_mm_load_sd(reinterpret_cast<const double*>(&tmp[4 * (chanNum * (mapsx[x + 2] + 1))])));
+#else
                     pix2 = _mm_insert_epi64(pix2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 2] + 1))]), 0);
+#endif
                     pix2 = _mm_insert_epi32(pix2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 2] + 1)) + 8]), 2);
 
                     // expand 8-bit data to 16-bit
@@ -392,7 +405,11 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 #endif
 
                     pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 3])]));
+#if defined(__i386__) || defined(_M_IX86)
+                    pix2 = _mm_castpd_si128(_mm_load_sd(reinterpret_cast<const double*>(&tmp[4 * (chanNum * (mapsx[x + 3] + 1))])));
+#else
                     pix2 = _mm_insert_epi64(pix2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 3] + 1))]), 0);
+#endif
                     pix2 = _mm_insert_epi32(pix2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 3] + 1)) + 8]), 2);
 
                     // expand 8-bit data to 16-bit
@@ -419,7 +436,11 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
 #endif
 
                     pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 4])]));
+#if defined(__i386__) || defined(_M_IX86)
+                    pix2 = _mm_castpd_si128(_mm_load_sd(reinterpret_cast<const double*>(&tmp[4 * (chanNum * (mapsx[x + 4] + 1))])));
+#else
                     pix2 = _mm_insert_epi64(pix2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 4] + 1))]), 0);
+#endif
                     pix2 = _mm_insert_epi32(pix2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 4] + 1)) + 8]), 2);
 
                     // expand 8-bit data to 16-bit
