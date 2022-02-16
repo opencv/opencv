@@ -264,6 +264,52 @@ public:
         }
     }
 
+    void testFaceDetectionModelBySSD(
+        const std::string& weights,
+        const std::string& cfg,
+        const std::string& imgage_path,
+        const std::vector<Rect>& ref_boxes,
+        const std::vector<float>& ref_confidences,
+        const double iou_diff,
+        const double score_diff,
+        const double conf_threshold = 0.2,
+        const double nms_threshold = 0.4
+    )
+    {
+        checkBackend();
+
+        const Mat image = imread(imgage_path);
+
+        FaceDetectionModel_SSD face_detector(weights, cfg);
+        face_detector.setPreferableBackend(backend);
+        face_detector.setPreferableTarget(target);
+
+        std::vector<float> confidences;
+        std::vector<Rect> boxes;
+        face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
+
+        std::vector<Rect2d> boxes_double(boxes.size());
+        for (int i = 0; i < boxes.size(); i++)
+        {
+            boxes_double[i] = boxes[i];
+        }
+        std::vector<Rect2d> ref_boxes_double(ref_boxes.size());
+        for (int i = 0; i < ref_boxes.size(); i++)
+        {
+            ref_boxes_double[i] = ref_boxes[i];
+        }
+
+        // In the case of face detection, class id don't exist.
+        // Therefor, all give 1 to class id and reference.
+        std::vector<int> class_ids(boxes.size(), 1);
+        std::vector<int> ref_class_ids(ref_boxes.size(), 1);
+
+        normAssertDetections(
+            ref_class_ids, ref_confidences, ref_boxes_double,
+            class_ids, confidences, boxes_double,
+            "", conf_threshold, score_diff, iou_diff);
+    }
+
     void testFaceDetectionModelByYN(
         const std::string& weights,
         const std::string& cfg,
@@ -865,6 +911,50 @@ TEST_P(Test_Model, TextDetectionByEAST)
 
     testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB, false/*crop*/,
         eps_center, eps_size, eps_angle
+    );
+}
+
+TEST_P(Test_Model, FaceDetectionBySSD)
+{
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    // Weight
+    std::string face_detection_weight_path = _tf("opencv_face_detector.caffemodel", false);
+    std::string face_detection_config_path = _tf("opencv_face_detector.prototxt", false);
+
+    // Ground Truth
+    std::string image_path = findDataFile("gpu/lbpcascade/er.png");
+
+    std::vector<Rect> gt_boxes;
+    gt_boxes.push_back(Rect(406, 85, 34, 48));
+    gt_boxes.push_back(Rect(142, 255, 33, 44));
+    gt_boxes.push_back(Rect(117, 46, 35, 45));
+    gt_boxes.push_back(Rect(340, 33, 29, 43));
+    gt_boxes.push_back(Rect(259, 228, 32, 42));
+    gt_boxes.push_back(Rect(65, 123, 37, 43));
+
+    std::vector<float> gt_confidences;
+    gt_confidences.push_back(0.821813f);
+    gt_confidences.push_back(0.806619f);
+    gt_confidences.push_back(0.688687f);
+    gt_confidences.push_back(0.321229f);
+    gt_confidences.push_back(0.319798f);
+    gt_confidences.push_back(0.315404f);
+
+    // Threshold
+    const double iouDiff = 1e-5;
+    const double scoreDiff = 2e-4;
+
+    // Run Test
+    testFaceDetectionModelBySSD(
+        face_detection_weight_path,
+        face_detection_config_path,
+        image_path,
+        gt_boxes,
+        gt_confidences,
+        iouDiff,
+        scoreDiff
     );
 }
 

@@ -1574,8 +1574,8 @@ public:
         InputArray frame,
         CV_OUT std::vector<float>& confidences,
         CV_OUT std::vector<Rect>& boxes,
-        float confThreshold = 0.9f,
-        float nmsThreshold = 0.3f
+        float confThreshold = 0.3f,
+        float nmsThreshold = 0.4f
     ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
