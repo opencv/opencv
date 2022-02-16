@@ -360,7 +360,7 @@ void allocateVolumeUnits(
 
                 if (ghm.last)
                 {
-                    std::lock_guard<std::recursive_mutex> al(mutex);
+                    cv::AutoLock al(mutex);
 
                     for (int i = 0; i < ghm.last; i++)
                     {
