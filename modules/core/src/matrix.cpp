@@ -176,27 +176,23 @@ public:
     }
 };
 
-namespace
+static
+MatAllocator*& getDefaultAllocatorMatRef()
 {
-    MatAllocator* volatile g_matAllocator = NULL;
+    static MatAllocator* g_matAllocator = Mat::getStdAllocator();
+    return g_matAllocator;
 }
 
 MatAllocator* Mat::getDefaultAllocator()
 {
-    if (g_matAllocator == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (g_matAllocator == NULL)
-        {
-            g_matAllocator = getStdAllocator();
-        }
-    }
-    return g_matAllocator;
+    return getDefaultAllocatorMatRef();
 }
+
 void Mat::setDefaultAllocator(MatAllocator* allocator)
 {
-    g_matAllocator = allocator;
+    getDefaultAllocatorMatRef() = allocator;
 }
+
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
