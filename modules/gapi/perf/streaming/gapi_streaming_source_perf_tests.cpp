@@ -198,8 +198,10 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
-    } else {
+    } else if (mode.empty()){
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
+    } else {
+        ASSERT_TRUE(false, "Unsupported acceleration policy type");
     }
     VPPPreprocEngine preproc_engine(std::move(policy));
     cv::gapi::wip::Data out;

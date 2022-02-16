@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) 2022 Intel Corporation
 
 #include "streaming/onevpl/accelerators/surface/base_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"

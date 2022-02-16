@@ -576,9 +576,10 @@ static void setROIBlob(InferenceEngine::InferRequest& req,
                        const IECallContext&           ctx) {
     if (ctx.uu.params.device_id.find("GPU") != std::string::npos &&
         ctx.uu.rctx) {
-        GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
-                       ctx.uu.params.device_id << ", layer: " << layer_name);
-        setBlob(req, layer_name, blob, ctx);
+        GAPI_LOG_WARNING(nullptr, "ROI blob creation for device_id: " <<
+                         ctx.uu.params.device_id << ", layer: " << layer_name <<
+                         "is not supported yet");
+        GAPI_Assert(false && "Unsupported ROI blob creation for GPU remote context");
     } else {
         setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
     }
@@ -1135,7 +1136,6 @@ struct InferROI: public cv::detail::KernelTag {
 
                         // NB: This blob will be used to make roi from its, so
                         // it should be treated as image
-
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
                         setROIBlob(req,

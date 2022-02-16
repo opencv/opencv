@@ -358,7 +358,7 @@ int main(int argc, char *argv[]) {
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
     auto roi = custom::LocateROI::on(size, std::cref(device_id));
-    auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
+    auto blob = cv::gapi::infer<custom::FaceDetector>(in);
     cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
     auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
     auto out = cv::gapi::streaming::BGR(out_frame);
