@@ -366,6 +366,7 @@ void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, 
 
 Image2D::Image2D() CV_NOEXCEPT : p(NULL) { }
 Image2D::Image2D(const UMat &src, bool norm, bool alias) { OCL_NOT_AVAILABLE(); }
+Image2D::Image2D(void* memory_obj) { OCL_NOT_AVAILABLE(); }
 Image2D::Image2D(const Image2D & i) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Image2D::~Image2D() { }
 Image2D& Image2D::operator=(const Image2D & i) { return *this; }

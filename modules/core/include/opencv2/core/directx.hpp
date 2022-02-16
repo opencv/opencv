@@ -134,10 +134,8 @@ CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, Outp
 //! @note Note: Function creates an OpenCL 2D image object from a subresource of a Direct3D 11 2D texture
 //
 //! @param pD3D11Texture2D - source D3D11 texture
-//! @param pointer to OpenCL Memory object
-//! @param pointer to OpenCL Context
-//! @param pointer to OpenCL Device
-CV_EXPORTS void convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, void* clMem, void* clContext, void* clDeviceID);
+//! @return tuple of Image2D Context Device objects
+CV_EXPORTS std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D);
 
 //! @brief Converts InputArray to ID3D10Texture2D
 //

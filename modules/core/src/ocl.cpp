@@ -7316,6 +7316,13 @@ struct Image2D::Impl
         init(src, norm, alias);
     }
 
+    Impl(cl_mem mem)
+    {
+        handle = 0;
+        refcount = 1;
+        init(mem);
+    }
+
     ~Impl()
     {
         if (handle)
@@ -7458,6 +7465,21 @@ struct Image2D::Impl
         }
     }
 
+    void init(cl_mem mem) {
+        if (!haveOpenCL())
+            CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
+        CV_Assert(mem != nullptr);
+        CV_Assert(ocl::Device::getDefault().imageSupport());
+
+        cl_mem_object_type mem_type = 0;
+        CV_OCL_CHECK(clGetMemObjectInfo(mem, CL_MEM_TYPE, sizeof(cl_mem_object_type), &mem_type, 0));
+        CV_Assert(mem_type == CL_MEM_OBJECT_IMAGE2D);
+        // TODO: One more check?
+
+        // always alias
+        handle = mem;
+    }
+
     IMPLEMENT_REFCOUNTABLE();
 
     cl_mem handle;
@@ -7471,6 +7493,11 @@ Image2D::Image2D() CV_NOEXCEPT
 Image2D::Image2D(const UMat &src, bool norm, bool alias)
 {
     p = new Impl(src, norm, alias);
+}
+
+Image2D::Image2D(void* mem)
+{
+    p = new Impl((cl_mem)mem);
 }
 
 bool Image2D::canCreateAlias(const UMat &m)

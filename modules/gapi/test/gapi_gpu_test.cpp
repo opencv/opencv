@@ -15,6 +15,7 @@
 
 #ifdef HAVE_DIRECTX
 #include <d3d11.h>
+#pragma comment(lib, "dxgi")
 #include "opencv2/core/directx.hpp"
 #endif // HAVE_DIRECTX
 #ifdef HAVE_OPENCL
@@ -219,20 +220,31 @@ void prepareD3D11Texture2D(const UINT width, const UINT height, std::vector<uint
                                         sizeof(uint8_t) * width,
                                         height };
 
-    // Create texture description
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = width;
-    desc.Height = height;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_A8_UNORM; // CV_8U
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-    desc.CPUAccessFlags = 0; // 0 if CPU access is not required
+    IDXGIFactory* adapter_factory = nullptr;
+    HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory),
+                                    reinterpret_cast<void**>(&adapter_factory));
+    if (FAILED(hr)) {
+        CV_Error(cv::Error::BadCallBack, "Cannot create CreateDXGIFactory, error: " +
+                    std::to_string(HRESULT_CODE(hr)));
+    }
+    IDXGIAdapter* intel_adapter = nullptr;
+    UINT adapter_index = 0;
+    const unsigned int refIntelVendorID = 0x8086;
+    IDXGIAdapter* out_adapter = nullptr;
 
-    HRESULT hr;
+    while (adapter_factory->EnumAdapters(adapter_index, &out_adapter) != DXGI_ERROR_NOT_FOUND) {
+        DXGI_ADAPTER_DESC adapter_desc{};
+        out_adapter->GetDesc(&adapter_desc);
+        if (adapter_desc.VendorId == refIntelVendorID) {
+            intel_adapter = out_adapter;
+            break;
+        }
+        ++adapter_index;
+    }
+    if (!intel_adapter) {
+        throw SkipTestException("No Intel GPU adapter on aboard.");
+    }
+
     // Create device
     ID3D11Device* mDevice = nullptr;
     hr = D3D11CreateDevice(nullptr,
@@ -246,21 +258,38 @@ void prepareD3D11Texture2D(const UINT width, const UINT height, std::vector<uint
                            nullptr,
                            nullptr);
 
-    if(!SUCCEEDED(hr)) {
-        CV_Error(cv::Error::BadCallBack, "D3D11CreateDevice was failed: " +
-                    std::to_string(HRESULT_CODE(hr)));
+    if(FAILED(hr)) {
+        CV_LOG_DEBUG(NULL, "D3D11CreateDevice was failed: " << std::to_string(HRESULT_CODE(hr)));
+        throw SkipTestException("D3D11CreateDevice was failed");
     }
+    if (mDevice == nullptr) {
+        CV_LOG_DEBUG(NULL, "OpenCL: D3D11CreateDevice returns empty ID3D11Device\n");
+        throw SkipTestException("D3D11CreateDevice was failed");
+    }
+
+    // Create texture description
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_A8_UNORM; // CV_8U
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+    desc.CPUAccessFlags = 0; // 0 if CPU access is not required
 
     // Create texture2D by test data
     hr = mDevice->CreateTexture2D(&desc, &initData, &(*texture));
 
-    if(!SUCCEEDED(hr)) {
-        CV_Error(cv::Error::BadCallBack, "CreateTexture2D was failed: " +
-                    std::to_string(HRESULT_CODE(hr)));
+    if(FAILED(hr)) {
+        CV_LOG_DEBUG(NULL, "CreateTexture2D was failed: " << std::to_string(HRESULT_CODE(hr)));
+        throw SkipTestException("CreateTexture2D was failed");
     }
 
     if(texture == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "CreateTexture2D was failed: texture is NULL");
+        throw SkipTestException("CreateTexture2D was failed: texture ptr is NULL");
     }
 }
 
@@ -275,20 +304,19 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
     prepareD3D11Texture2D(width, height, test_data, &texture);
 
     // Convert texture2D to cl_mem_image //////////////////////////////////////
-    cl_mem       image_mem = nullptr;
-    cl_context   context = nullptr;
-    cl_device_id device = nullptr;
+    cv::ocl::Image2D img;
+    cv::ocl::Context ctx;
+    cv::ocl::Device dev;
+    EXPECT_NO_THROW(std::tie(img, ctx, dev) = cv::directx::convertFromD3D11Texture2DtoCLMem(texture));
 
-    cv::directx::convertFromD3D11Texture2DtoCLMem(texture, &image_mem, &context, &device);
-
-    if (context == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
+    if (ctx.ptr() == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
     }
-    if (image_mem == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
+    if (img.ptr() == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_context\n");
     }
-    if (device == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_device_id\n");
+    if (dev.ptr() == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_device_id\n");
     }
 
     // Move data to host
@@ -297,18 +325,17 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
     const size_t sz0[3] = {0, 0, 0};
     const size_t sz1[3] = {width, height, 1};
 
-    cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
-    cl_int status = clEnqueueReadImage(q, image_mem, CL_FALSE, sz0, sz1,
+    // cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
+    cv::ocl::Queue queue(ctx, dev);
+    cl_command_queue q = (cl_command_queue)queue.ptr();
+    cl_int status = clEnqueueReadImage(q, (cl_mem)img.ptr(), CL_FALSE, sz0, sz1,
                                        width * sizeof(uint8_t),
                                        height * sizeof(uint8_t),
-                                       &out_test_data.front(), 0, NULL, NULL);
+                                       out_test_data.data(), 0, NULL, NULL);
     if (status != CL_SUCCESS) {
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReadImage failed");
     }
     clFinish(q);
-    clReleaseMemObject(image_mem);
-    clReleaseContext(context);
-    clReleaseDevice(device);
     // Comparison /////////////////////////////////////////////////////////////
     EXPECT_EQ(out_test_data, test_data);
 }
@@ -324,35 +351,34 @@ TEST(GPU_D3D11, ConvTexture2DtoUMat)
     prepareD3D11Texture2D(width, height, test_data, &texture);
 
     // Convert texture2D to cl_mem_image //////////////////////////////////////
-    cl_mem       image_mem = nullptr;
-    cl_context   context = nullptr;
-    cl_device_id device = nullptr;
-    cv::directx::convertFromD3D11Texture2DtoCLMem(texture, &image_mem, &context, &device);
+    cv::ocl::Image2D img;
+    cv::ocl::Context ctx;
+    cv::ocl::Device dev;
+    EXPECT_NO_THROW(std::tie(img, ctx, dev) = cv::directx::convertFromD3D11Texture2DtoCLMem(texture));
 
-    if (context == nullptr) {
+    if (ctx.ptr() == nullptr) {
         CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
     }
-    if (image_mem == nullptr) {
+    if (img.ptr() == nullptr) {
         CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_context\n");
     }
-    if (device == nullptr) {
+    if (dev.ptr() == nullptr) {
         CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_device_id\n");
     }
 
     // Convert to UMat function ///////////////////////////////////////////////
     // Create cv::Umat
     cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
+
     // Copy data from cl_mem_image to cv::Umat buffer
-    cv::ocl::convertFromImage(image_mem, umt_test);
-    clReleaseMemObject(image_mem);
-    clReleaseContext(context);
-    clReleaseDevice(device);
+    cv::ocl::convertFromImage(img.ptr(), umt_test);
 
     // Comparison /////////////////////////////////////////////////////////////
     EXPECT_EQ(umt_test.total(), test_data.size());
     EXPECT_EQ(umt_test.size(), cv::Size(width, height));
     EXPECT_EQ(umt_test.type(), CV_8U);
 
+    // Copy to host
     uint8_t* umt_data = umt_test.getMat(ACCESS_READ).ptr<uint8_t>();
     for (int i = 0; i < umt_test.total(); ++i) {
         EXPECT_EQ(umt_data[i], test_data[i]);

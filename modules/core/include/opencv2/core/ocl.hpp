@@ -748,6 +748,12 @@ public:
         image or src will be reflected in both objects.
     */
     explicit Image2D(const UMat &src, bool norm = false, bool alias = false);
+
+    /**
+    @param memory_obj is cl_mem image2d object
+    @note On success, creates an Image2D that wraps the memory_obj alias.
+    */
+    explicit Image2D(void* memory_obj);
     Image2D(const Image2D & i);
     ~Image2D();
 
