@@ -943,7 +943,7 @@ TEST_P(Test_Model, FaceDetectionBySSD)
     gt_confidences.push_back(0.315404f);
 
     // Threshold
-    const double iouDiff = 1e-5;
+    const double iouDiff = 0.9;
     const double scoreDiff = 2e-4;
 
     // Run Test
