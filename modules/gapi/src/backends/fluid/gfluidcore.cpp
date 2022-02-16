@@ -955,7 +955,9 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
         w = subrc_simd(scalar, in, out, length, chan);
 #endif
         for (; w < length; ++w)
+        {
             out[w] = subr<DST>(in[w], scalar[w % chan]);
+        }
         break;
     }
     case ARITHM_DIVIDE:
@@ -965,7 +967,9 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
         w = divrc_simd(scalar, in, out, length, chan, scale);
 #endif
         for (; w < length; ++w)
+        {
             out[w] = div<DST>(scalar[w % chan], in[w], scale);
+        }
         break;
     }
     default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
@@ -974,10 +978,7 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
 
 CV_ALWAYS_INLINE void setScratchSize(Buffer& scratch, const int buflen)
 {
-    cv::Size bufsize(buflen, 1);
-    GMatDesc bufdesc = { CV_32F, 1, bufsize };
-    Buffer buffer(bufdesc);
-    scratch = std::move(buffer);
+    scratch = std::move(Buffer(GMatDesc(CV_32F, 1, cv::Size(buflen, 1))));
 }
 
 CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)
@@ -1323,7 +1324,9 @@ CV_ALWAYS_INLINE void run_divc(Buffer& dst, const View& src, Buffer& scratch,
 #endif
 
     for (; w < length; ++w)
+    {
         out[w] = div<DST>(in[w], scalar[w % chan], scale);
+    }
 }
 
 GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
