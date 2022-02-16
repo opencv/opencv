@@ -436,8 +436,8 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
-    //This condition need to workaround bug in OpenCV.
-    //It reinitializes divider matrix without zero values.
+    //This condition need to workaround issue in the OpenCV.
+    //It reinitializes divider matrix without zero values for CV_16S DST type.
     if (dtype == CV_16S && dtype != type)
         cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
 
@@ -481,6 +481,11 @@ PERF_TEST_P_(DivCPerfTest, TestPerformance)
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
+
+    //This condition need as workaround the issue in the OpenCV.
+    //It reinitializes divider scalar without zero values for CV_16S DST type.
+    if (dtype == CV_16S || (type == CV_16S && dtype == -1))
+        cv::randu(sc, cv::Scalar::all(1), cv::Scalar::all(SHRT_MAX));
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(in_mat1, sc, out_mat_ocv, scale, dtype);
