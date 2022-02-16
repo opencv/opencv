@@ -786,7 +786,7 @@ Point3f getNormalVoxel(
     }
 #else
 
-# if CV_SIMD >= 32
+# if CV_SIMD_WIDTH >= 32
     v_float32x8 cxp = v_lut(vals, idxxp);
     v_float32x8 cxn = v_lut(vals, idxxn);
 
@@ -929,7 +929,7 @@ Point3f ocl_getNormalVoxel(
     }
 #else
 
-# if CV_SIMD >= 32
+# if CV_SIMD_WIDTH >= 32
     v_float32x8 cxp = v_lut(vals, idxxp);
     v_float32x8 cxn = v_lut(vals, idxxn);
 

@@ -394,8 +394,6 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
 }
 // ----------------------------
 
-static const bool display = false;
-
 void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
 {
     Mat image;
@@ -541,7 +539,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
         volume.fetchPointsNormals(points, normals);
     }
 
-    if (testFunction == VolumeTestFunction::RAYCAST && display)
+    if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
@@ -620,7 +618,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
         volume.fetchPointsNormals(points, normals);
     }
 
-    if (testFunction == VolumeTestFunction::RAYCAST && display)
+    if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
@@ -685,7 +683,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     anfas = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
@@ -715,7 +713,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     profile = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
@@ -785,7 +783,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     anfas = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
@@ -815,7 +813,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     profile = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
