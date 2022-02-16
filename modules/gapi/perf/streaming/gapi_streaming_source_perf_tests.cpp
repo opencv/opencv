@@ -102,9 +102,9 @@ INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerf_Test,
                                files[1],
                                files[2]));
 
-using resize_t = std::pair<uint16_t, uint16_t>;
+using pp_out_param_t = cv::GFrameDesc;
 using source_description_preproc_t = decltype(std::tuple_cat(std::declval<source_description_t>(),
-                                                             std::declval<std::tuple<resize_t>>()));
+                                                             std::declval<std::tuple<pp_out_param_t>>()));
 class OneVPLSourcePerf_PP_Test : public TestPerfParams<source_description_preproc_t> {};
 
 PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
@@ -115,7 +115,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
     source_t src = findDataFile(get<0>(params));
     codec_t type = get<1>(params);
     accel_mode_t mode = get<2>(params);
-    resize_t res = get<3>(params);
+    pp_out_param_t res = get<3>(params);
 
     std::vector<CfgParam> cfg_params {
         CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
@@ -129,12 +129,12 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
         cfg_params.push_back(CfgParam::create_acceleration_mode(mode.c_str()));
     }
 
-    cfg_params.push_back(CfgParam::create_vpp_out_width(res.first));
-    cfg_params.push_back(CfgParam::create_vpp_out_height(res.second));
+    cfg_params.push_back(CfgParam::create_vpp_out_width(static_cast<uint16_t>(res.size.width)));
+    cfg_params.push_back(CfgParam::create_vpp_out_height(static_cast<uint16_t>(res.size.height)));
     cfg_params.push_back(CfgParam::create_vpp_out_crop_x(0));
     cfg_params.push_back(CfgParam::create_vpp_out_crop_y(0));
-    cfg_params.push_back(CfgParam::create_vpp_out_crop_w(res.first));
-    cfg_params.push_back(CfgParam::create_vpp_out_crop_h(res.second));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_w(static_cast<uint16_t>(res.size.width)));
+    cfg_params.push_back(CfgParam::create_vpp_out_crop_h(static_cast<uint16_t>(res.size.height)));
 
     auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
 
@@ -146,11 +146,11 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Test, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 }
-static resize_t full_hd = resize_t{static_cast<uint16_t>(1920),
-                                   static_cast<uint16_t>(1080)};
+static pp_out_param_t full_hd = pp_out_param_t {cv::MediaFormat::NV12,
+                                                {1920, 1080}};
 
-static resize_t cif = resize_t{static_cast<uint16_t>(352),
-                               static_cast<uint16_t>(288)};
+static pp_out_param_t cif = pp_out_param_t {cv::MediaFormat::NV12,
+                                            {352, 288}};
 
 INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
                         Values(source_description_preproc_t(files[0], codec[0], "", full_hd),
@@ -167,11 +167,6 @@ INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", cif)));
 
 class OneVPLSourcePerf_PP_Engine_Test : public TestPerfParams<source_description_preproc_t> {};
-cv::GFrameDesc mock_network_info(int width, int height) {
-    cv::GFrameDesc ret {cv::MediaFormat::NV12,
-                        {width, height}};
-    return ret;
-}
 
 PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
 {
@@ -182,7 +177,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     source_t src = findDataFile(get<0>(params));
     codec_t type = get<1>(params);
     accel_mode_t mode = get<2>(params);
-    resize_t res = get<3>(params);
+    const pp_out_param_t &required_frame_param = get<3>(params);
 
     std::vector<CfgParam> cfg_params {
         CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
@@ -200,7 +195,6 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params, device_selector);
 
     // create VPP preproc engine
-    auto required_frame_param = mock_network_info(res.first, res.second);
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
@@ -247,7 +241,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     source_t src = findDataFile(get<0>(params));
     codec_t type = get<1>(params);
     accel_mode_t mode = get<2>(params);
-    resize_t res = get<3>(params);
+    const pp_out_param_t &required_frame_param = get<3>(params);
 
     std::vector<CfgParam> cfg_params {
         CfgParam::create_implementation("MFX_IMPL_TYPE_HARDWARE"),
@@ -265,7 +259,6 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params, device_selector);
 
     // create VPP preproc engine
-    auto required_frame_param = mock_network_info(res.first, res.second);
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
@@ -287,11 +280,10 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
-static resize_t res_672x384 = resize_t{static_cast<uint16_t>(672),
-                                       static_cast<uint16_t>(384)};
-static resize_t res_336x256 = resize_t{static_cast<uint16_t>(336),
-                                       static_cast<uint16_t>(256)};
-
+static pp_out_param_t res_672x384 = pp_out_param_t {cv::MediaFormat::NV12,
+                                                    {672, 384}};
+static pp_out_param_t res_336x256 = pp_out_param_t {cv::MediaFormat::NV12,
+                                                    {336, 256}};
 INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_Bypass_Test,
                         Values(source_description_preproc_t(files[0], codec[0], "", res_672x384),
                                source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", res_672x384),

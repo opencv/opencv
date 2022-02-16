@@ -62,12 +62,6 @@ namespace opencv_test
 {
 namespace
 {
-cv::GFrameDesc mock_network_info(int width, int height) {
-    cv::GFrameDesc ret {cv::MediaFormat::NV12,
-                        {width, height}};
-    return ret;
-}
-
 template<class ProcessingEngine>
 cv::MediaFrame extract_decoded_frame(mfxSession sessId, ProcessingEngine& engine) {
     using namespace cv::gapi::wip::onevpl;
@@ -184,18 +178,18 @@ struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 using source_t          = std::string;
 using decoder_t         = int;
 using acceleration_t    = int;
-using out_resolution_t  = std::pair<uint16_t, uint16_t>;
-using preproc_args_t    = std::tuple<source_t, decoder_t, acceleration_t, out_resolution_t>;
+using out_frame_info_t  = cv::GFrameDesc;
+using preproc_args_t    = std::tuple<source_t, decoder_t, acceleration_t, out_frame_info_t>;
 
 class VPPPreprocParams : public ::testing::TestWithParam<preproc_args_t> {};
 
 preproc_args_t files[] = {
     preproc_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
-                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1080)}},
+                    cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
     preproc_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
-                    out_resolution_t{static_cast<uint16_t>(1920), static_cast<uint16_t>(1280)}}
+                    cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}}
 };
 
 #ifdef HAVE_DIRECTX
@@ -238,7 +232,8 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     */
 
     // put mock net info
-    auto required_frame_param = mock_network_info(1920, 1080);
+    cv::GFrameDesc required_frame_param {cv::MediaFormat::NV12,
+                                         {1920, 1080}};
 
     // create VPP preproc engine
     VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
@@ -301,8 +296,8 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     source_t file_path;
     decoder_t decoder_id;
     acceleration_t accel;
-    out_resolution_t resolution;
-    std::tie(file_path, decoder_id, accel, resolution) = GetParam();
+    out_frame_info_t required_frame_param;
+    std::tie(file_path, decoder_id, accel, required_frame_param) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -330,10 +325,6 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     auto sess_ptr = decode_engine.initialize_session(mfx_decode_session,
                                                      cfg_params_w_dx11,
                                                      data_provider);
-
-    // put mock net info
-    auto required_frame_param = mock_network_info(resolution.first,
-                                                  resolution.second);
 
     // create VPP preproc engine
     VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
@@ -427,8 +418,8 @@ TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
     source_t file_path;
     decoder_t decoder_id;
     acceleration_t accel;
-    out_resolution_t resolution;
-    std::tie(file_path, decoder_id, accel, resolution) = GetParam();
+    out_frame_info_t required_frame_param;
+    std::tie(file_path, decoder_id, accel, required_frame_param) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -453,8 +444,10 @@ TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
     EXPECT_EQ(MFX_ERR_NONE, sts);
 
     // fill vpp params beforehand: resolution
-    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_width(resolution.first));
-    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_height(resolution.second));
+    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_width(
+                                        static_cast<uint16_t>(required_frame_param.size.width)));
+    cfg_params_w_dx11_vpp.push_back(CfgParam::create_vpp_out_height(
+                                        static_cast<uint16_t>(required_frame_param.size.height)));
 
     // create transcode engine
     auto device_selector = accel_policy->get_device_selector();
@@ -469,9 +462,11 @@ TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
         while(true) {
             cv::MediaFrame decoded_frame = extract_decoded_frame(sess_ptr->session, engine);
             in_progress = true;
-            ASSERT_EQ(decoded_frame.desc().size.width, ALIGN16(resolution.first));
-            ASSERT_EQ(decoded_frame.desc().size.height, ALIGN16(resolution.second));
-            ASSERT_EQ(decoded_frame.desc().fmt, MediaFormat::NV12);
+            ASSERT_EQ(decoded_frame.desc().size.width,
+                      ALIGN16(required_frame_param.size.width));
+            ASSERT_EQ(decoded_frame.desc().size.height,
+                      ALIGN16(required_frame_param.size.height));
+            ASSERT_EQ(decoded_frame.desc().fmt, required_frame_param.fmt);
             frames_processed_count++;
             in_progress = false;
         }
