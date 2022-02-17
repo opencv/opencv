@@ -555,7 +555,7 @@ int main(int argc, char** argv)
     {
         cout << "Warning: For predictable network performance duration of audio must exceed 6 sec."
                 " Audio will be extended with zero samples" << endl;
-        for(size_t i = inputAudio.size(); i < samplingRate * 6; ++i)
+        for(int i = static_cast<int>(inputAudio.size()) - 1; i < samplingRate * 6; ++i)
         {
             inputAudio.push_back(0);
         }
