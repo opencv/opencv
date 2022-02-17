@@ -1397,47 +1397,6 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-int findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR_fn func,
-                                     ID3D11Device *pD3D11Device,
-                                     int cl_d3d11_device_set,
-                                     cl_platform_id& platform,
-                                     cl_device_id& device,
-                                     cl_context& context,
-                                     cl_uint& numDevices,
-                                     bool& found) {
-    device = NULL;
-    numDevices = 0;
-
-    cl_int status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
-                         cl_d3d11_device_set, 1, &device, &numDevices);
-
-    if (status != CL_SUCCESS) {
-        CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
-        return status;
-    }
-    if (numDevices > 0)
-    {
-        cl_context_properties properties[] = {
-                CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-                CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
-                CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
-                NULL, NULL
-        };
-        context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
-        if (status != CL_SUCCESS && device != nullptr)
-        {
-            CV_LOG_DEBUG(NULL, "clCreateContext failed with status " << int(status));
-            clReleaseDevice(device);
-        }
-        else
-        {
-            found = true;
-            return status;
-        }
-    }
-    return CL_DEVICE_NOT_FOUND;
-}
-
 std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D)
 {
     CV_UNUSED(pD3D11Texture2D);
@@ -1446,6 +1405,47 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
+    const auto findKHRDeviceAndCreateContext = 
+        [](const clGetDeviceIDsFromD3D11KHR_fn& func,
+                 ID3D11Device *pD3D11Device,
+           const int cl_d3d11_device_set,
+           const cl_platform_id& platform,
+           cl_device_id& device,
+           cl_context& context,
+           cl_uint& numDevices,
+           bool& found) -> cl_int {
+            device = NULL;
+            numDevices = 0;
+
+            cl_int status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
+                               cl_d3d11_device_set, 1, &device, &numDevices);
+
+            if (status != CL_SUCCESS) {
+                CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
+                return status;
+            }
+            if (numDevices > 0)
+            {
+                cl_context_properties properties[] = {
+                        CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+                        CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+                        CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+                        NULL, NULL
+                };
+                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+                if (status != CL_SUCCESS && device != nullptr)
+                {
+                    CV_LOG_DEBUG(NULL, "clCreateContext failed with status " << int(status));
+                    clReleaseDevice(device);
+                }
+                else
+                {
+                    found = true;
+                    return status;
+                }
+            }
+            return CL_DEVICE_NOT_FOUND; };
+
     ID3D11Device *pD3D11Device = nullptr;
     pD3D11Texture2D->GetDevice(&pD3D11Device);
     cl_uint numPlatforms;
@@ -1521,7 +1521,7 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11
                         vendor.resize(out_size, '\0');
                         clGetDeviceInfo(device, CL_DEVICE_VENDOR, out_size, &vendor.front(), nullptr);
                         if (vendor.find("Intel(R) Corporation") == std::string::npos) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device isn't Intel device");
+                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device isn't Intel's device");
                         }
                     }
                     clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
