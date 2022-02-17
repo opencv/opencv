@@ -229,19 +229,19 @@ void normAssertTextDetections(
 void normAssertLandmarkDetections(
     const std::vector<Point>& referencePoints,
     const std::vector<Point>& testPoints,
-    const char*comment /*= ""*/, double l2dis_diff /*= 1e-4 */)
+    const char*comment /*= ""*/, const double l2dis_diff /*= 1e-4 */)
 {
     // Check unmatched size with reference points and test points.
     ASSERT_EQ(referencePoints.size(), testPoints.size());
 
     // Check unmatched groundtruth.
-    const int numPoints = testPoints.size();
+    const uint numPoints = static_cast<uint>(testPoints.size());
     std::vector<bool> matchedRefPoints(numPoints, false);
     for (uint i = 0; i < numPoints; ++i)
     {
         const Point referencePoint = referencePoints[i];
         const Point testPoint = testPoints[i];
-        const float l2dis = cv::norm(referencePoint - testPoint);
+        const double l2dis = cv::norm(referencePoint - testPoint);
         if(l2dis <= l2dis_diff) matchedRefPoints[i] = true;
     }
     const bool all_matched = std::all_of(matchedRefPoints.begin(), matchedRefPoints.end(), [](bool matched){return matched;});

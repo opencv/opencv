@@ -289,12 +289,12 @@ public:
         face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
 
         std::vector<Rect2d> boxes_double(boxes.size());
-        for (int i = 0; i < boxes.size(); i++)
+        for (uint i = 0; i < boxes.size(); i++)
         {
             boxes_double[i] = boxes[i];
         }
         std::vector<Rect2d> ref_boxes_double(ref_boxes.size());
-        for (int i = 0; i < ref_boxes.size(); i++)
+        for (uint i = 0; i < ref_boxes.size(); i++)
         {
             ref_boxes_double[i] = ref_boxes[i];
         }
@@ -337,7 +337,7 @@ public:
         face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
 
         std::vector<Rect2d> boxes_double(boxes.size());
-        for (int i = 0; i < boxes.size(); i++)
+        for (uint i = 0; i < boxes.size(); i++)
         {
             boxes_double[i] = boxes[i];
         }
@@ -366,7 +366,7 @@ public:
         std::vector<std::vector<Point>> landmarks;
         face_detector.getLandmarks(landmarks);
 
-        for (int i = 0; i < landmarks.size(); i++)
+        for (uint i = 0; i < landmarks.size(); i++)
         {
             normAssertLandmarkDetections(
                 ref_landmarks[i], landmarks[i], "", l2d_diff);
@@ -399,8 +399,8 @@ public:
         const double conf_threshold = 0.9;
         const double nms_threshold = 0.3;
 
-        const int numPairs = image_pairs.size();
-        for (int i = 0; i < numPairs; i++)
+        const uint numPairs = static_cast<uint>(image_pairs.size());
+        for (uint i = 0; i < numPairs; i++)
         {
             const std::string image_path1 = image_pairs[i].first;
             const std::string image_path2 = image_pairs[i].second;
@@ -920,11 +920,11 @@ TEST_P(Test_Model, FaceDetectionBySSD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Weight
-    std::string face_detection_weight_path = _tf("opencv_face_detector.caffemodel", false);
-    std::string face_detection_config_path = _tf("opencv_face_detector.prototxt");
+    const std::string face_detection_weight_path = _tf("opencv_face_detector.caffemodel", false);
+    const std::string face_detection_config_path = _tf("opencv_face_detector.prototxt", false);
 
     // Ground Truth
-    std::string image_path = findDataFile("gpu/lbpcascade/er.png");
+    const std::string image_path = findDataFile("gpu/lbpcascade/er.png");
 
     std::vector<Rect> gt_boxes;
     gt_boxes.push_back(Rect(408, 84, 34, 49));
@@ -964,10 +964,10 @@ TEST_P(Test_Model, FaceDetectionByYN)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Weight
-    std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
 
     // Ground Truth
-    std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
+    const std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
     std::ifstream ifs(test_labels.c_str());
     CV_Assert(ifs.is_open());
 
@@ -981,7 +981,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
     CV_Assert(!image_path.empty());
     image_path = findDataFile("cv/cascadeandhog/images/" + image_path);
 
-    int num_faces = -1;
+    uint num_faces = -1;
     {
         std::string line;
         getline(ifs, line);
@@ -993,7 +993,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
     std::vector<Rect> gt_boxes;
     std::vector<std::vector<Point>> gt_landmarks;
     {
-        for (int i = 0; i < num_faces; i++)
+        for (uint i = 0; i < num_faces; i++)
         {
             std::string line, part;
             getline(ifs, line);
@@ -1009,7 +1009,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
             gt_boxes.push_back(Rect(box[0], box[1], box[2], box[3]));
 
             std::vector<Point> points;
-            for(int j = 4; j < 14; j+=2)
+            for(uint j = 4; j < 14; j+=2)
             {
                 int x, y;
                 getline(ss, part, ' ');
@@ -1051,11 +1051,11 @@ TEST_P(Test_Model, FaceRecognitionBySF)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Weight
-    std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
-    std::string face_recognition_weight_path = _tf("onnx/models/face_recognizer_fast.onnx", false);
+    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    const std::string face_recognition_weight_path = _tf("onnx/models/face_recognizer_fast.onnx", false);
 
     // Ground Truth
-    std::string test_labels = findDataFile("cv/dnn_face/recognition/cascades_label.txt");
+    const std::string test_labels = findDataFile("cv/dnn_face/recognition/cascades_label.txt");
     std::ifstream ifs(test_labels.c_str());
     CV_Assert(ifs.is_open());
 

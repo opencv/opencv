@@ -132,7 +132,7 @@ void normAssertTextDetections(
 void normAssertLandmarkDetections(
         const std::vector<Point>& referencePoints,
         const std::vector<Point>& testPoints,
-        const char* comment = "", double l2dis_diff = 1e-2);
+        const char* comment = "", const double l2dis_diff = 1e-2);
 
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
