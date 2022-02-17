@@ -1993,8 +1993,7 @@ TEST(Imgproc_Hist_Calc, badarg)
     EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, NULL, 1, true));
 }
 
-#ifdef HAVE_IPP
-TEST(Imgproc_Hist_Calc_IPP, ranges_with_equal_exponent)
+TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
 {
     const std::vector<int> channels{ 0 };
     const auto noMask = cv::noArray();
@@ -2010,7 +2009,7 @@ TEST(Imgproc_Hist_Calc_IPP, ranges_with_equal_exponent)
     ASSERT_EQ(histogram_u.at<float>(1), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
 }
 
-TEST(Imgproc_Hist_Calc_IPP, ranges_with_nonequal_exponent)
+TEST(Imgproc_Hist_Calc_IPP, IPP_ranges_with_nonequal_exponent_21595)
 {
     const std::vector<int> channels{ 0 };
     const auto noMask = cv::noArray();
@@ -2026,7 +2025,6 @@ TEST(Imgproc_Hist_Calc_IPP, ranges_with_nonequal_exponent)
     ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
-#endif // HAVE_IPP
 
 
 }} // namespace
