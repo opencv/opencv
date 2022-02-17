@@ -1511,6 +1511,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     CV_Assert(shapeIt != outShapes.end());
     const MatShape x_shape = shapeIt->second;
 
+    const int seq_length = x_shape[0];
     const int batch_size = x_shape[1];
     const int input_size = x_shape[2];
     const int hidden_size = layerParams.get<int>("hidden_size");
@@ -1524,6 +1525,16 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     int b_size[] = {num_directions, 8*hidden_size};
     extractConsts(layerParams, lstm_proto, 3, b_size, sizeof(b_size)/sizeof(b_size[0])); // B
+
+    if (4 < lstm_proto.input_size() && !lstm_proto.input(4).empty())
+    {
+        Mat blob = getBlob(lstm_proto, 4);
+        CV_Assert(blob.total() == batch_size);
+        for (MatIterator_<int32_t> it = blob.begin<int32_t>(); it != blob.end<int32_t>(); ++it)
+        {
+            CV_Assert(*it == seq_length);
+        }
+    }
 
     int h_size[] = {num_directions, batch_size, hidden_size};
     extractConsts(layerParams, lstm_proto, 5, h_size, sizeof(h_size)/sizeof(h_size[0])); // initial_h
