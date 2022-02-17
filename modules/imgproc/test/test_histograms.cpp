@@ -2009,7 +2009,7 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(1), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
 }
 
-TEST(Imgproc_Hist_Calc_IPP, IPP_ranges_with_nonequal_exponent_21595)
+TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
 {
     const std::vector<int> channels{ 0 };
     const auto noMask = cv::noArray();
