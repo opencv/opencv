@@ -17,10 +17,10 @@ In this section, we introduce the DNN-based module for face detection and face r
 ## Models
 
 There are two models (ONNX format) pre-trained and required for this module:
-- [Face Detection Model (YuNet)](https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx):
+- [Face Detection Model (YuNet)](https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet):
     - Size: 337KB
-    - Results on WIDER Face Val set: 0.830(easy), 0.824(medium), 0.708(hard)
-- [Face Recognition Model (SFace)](https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view?usp=sharing)
+    - Results on WIDER Face Val set: 0.856(easy), 0.842(medium), 0.727(hard)
+- [Face Recognition Model (SFace)](https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface)
     - Size: 36.9MB
     - Results:
 
