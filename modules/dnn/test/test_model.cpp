@@ -981,14 +981,14 @@ TEST_P(Test_Model, FaceDetectionByYN)
     CV_Assert(!image_path.empty());
     image_path = findDataFile("cv/cascadeandhog/images/" + image_path);
 
-    uint num_faces = -1;
+    uint num_faces = 0;
     {
         std::string line;
         getline(ifs, line);
         std::istringstream iss(line);
         iss >> num_faces;
     }
-    CV_Assert(0 < num_faces);
+    CV_Assert(num_faces != 0);
 
     std::vector<Rect> gt_boxes;
     std::vector<std::vector<Point>> gt_landmarks;
