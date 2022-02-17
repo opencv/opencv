@@ -749,11 +749,6 @@ public:
     */
     explicit Image2D(const UMat &src, bool norm = false, bool alias = false);
 
-    /**
-    @param memory_obj is cl_mem image2d object
-    @note On success, creates an Image2D that wraps the memory_obj alias.
-    */
-    explicit Image2D(void* memory_obj);
     Image2D(const Image2D & i);
     ~Image2D();
 
@@ -765,6 +760,14 @@ public:
     Depends on the underlying platform and the dimensions of the UMat.
     */
     static bool canCreateAlias(const UMat &u);
+
+    /**
+    @param memory_obj is cl_mem image2d object
+    @note On success, creates an Image2D that wraps the memory_obj alias.
+     * The caller should additionally call `clRetainMemObject` on it if it intends
+     * to continue using the device.
+    */
+    static Image2D fromHandle(void* image);
 
     /** Indicates if the image format is supported.
     */

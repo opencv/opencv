@@ -307,16 +307,16 @@ TEST(GPU_D3D11, ConvTexture2DtoCLmem)
     cv::ocl::Image2D img;
     cv::ocl::Context ctx;
     cv::ocl::Device dev;
-    EXPECT_NO_THROW(std::tie(img, ctx, dev) = cv::directx::convertFromD3D11Texture2DtoCLMem(texture));
+    std::tie(img, ctx, dev) = cv::directx::convertFromD3D11Texture2DtoCLMem(texture);
 
     if (ctx.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
     }
     if (img.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_context\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
     }
     if (dev.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_device_id\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_device_id\n");
     }
 
     // Move data to host
@@ -357,13 +357,13 @@ TEST(GPU_D3D11, ConvTexture2DtoUMat)
     EXPECT_NO_THROW(std::tie(img, ctx, dev) = cv::directx::convertFromD3D11Texture2DtoCLMem(texture));
 
     if (ctx.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_mem\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
     }
     if (img.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_context\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
     }
     if (dev.ptr() == nullptr) {
-        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLImage returns empty cl_device_id\n");
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_device_id\n");
     }
 
     // Convert to UMat function ///////////////////////////////////////////////

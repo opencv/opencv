@@ -7321,6 +7321,9 @@ struct Image2D::Impl
         handle = 0;
         refcount = 1;
         init(mem);
+        if (handle == nullptr) {
+            CV_OCL_CHECK(clReleaseMemObject(mem));
+        }
     }
 
     ~Impl()
@@ -7495,11 +7498,6 @@ Image2D::Image2D(const UMat &src, bool norm, bool alias)
     p = new Impl(src, norm, alias);
 }
 
-Image2D::Image2D(void* mem)
-{
-    p = new Impl((cl_mem)mem);
-}
-
 bool Image2D::canCreateAlias(const UMat &m)
 {
     bool ret = false;
@@ -7519,6 +7517,14 @@ bool Image2D::canCreateAlias(const UMat &m)
         }
     }
     return ret;
+}
+
+/* static */
+Image2D Image2D::fromHandle(void* mem)
+{
+    Image2D image;
+    image.p = new Impl((cl_mem)mem);
+    return image;
 }
 
 bool Image2D::isFormatSupported(int depth, int cn, bool norm)

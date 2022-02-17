@@ -45,10 +45,11 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/directx.hpp"
 #include "opencl_kernels_core.hpp"
-#include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/utils/logger.hpp"
 
 #ifdef HAVE_DIRECTX
 #include <vector>
+#include <map>
 #include "directx.inc.hpp"
 #else // HAVE_DIRECTX
 #define NO_DIRECTX_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without DirectX support")
@@ -1397,20 +1398,24 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-cl_int findKHRDevice(clGetDeviceIDsFromD3D11KHR_fn func,
-                     ID3D11Device *pD3D11Device,
-                     int cl_d3d11_device_set,
-                     cl_platform_id& platform,
-                     cl_device_id& device,
-                     cl_context& context,
-                     cl_uint& numDevices,
-                     bool& found) {
-    device = NULL;
+cl_int findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR_fn func,
+                                     ID3D11Device *pD3D11Device,
+                                     int cl_d3d11_device_set,
+                                     cl_platform_id& platform,
+                                     cl_device_id& device,
+                                     cl_context& context,
+                                     cl_uint& numDevices,
+                                     bool& found) {
     numDevices = 0;
-
-    cl_int status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
-        cl_d3d11_device_set, 1, &device, &numDevices);
-
+    std::cout << "HERE0031" << std::endl;
+    cl_int status = 0;
+    try {
+         status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
+                       cl_d3d11_device_set, 1, &device, &numDevices);
+    } catch(Exception& ex) {
+        std::cout << ex.what() << std::endl;
+    }
+    std::cout << "HERE0032" << std::endl;
     if (status != CL_SUCCESS) {
         CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
         return status;
@@ -1424,6 +1429,7 @@ cl_int findKHRDevice(clGetDeviceIDsFromD3D11KHR_fn func,
                 NULL, NULL
         };
         context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
+        std::cout << "HERE0033" << std::endl;
         if (status != CL_SUCCESS && device != nullptr)
         {
             CV_LOG_DEBUG(NULL, "clCreateContext failed with status " << int(status));
@@ -1437,16 +1443,9 @@ cl_int findKHRDevice(clGetDeviceIDsFromD3D11KHR_fn func,
     return status;
 }
 
-std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D)
-{
-    CV_UNUSED(pD3D11Texture2D); // CV_UNUSED(clMem);
-#if !defined(HAVE_DIRECTX)
-    NO_DIRECTX_SUPPORT_ERROR;
-#elif !defined(HAVE_OPENCL)
-    NO_OPENCL_SUPPORT_ERROR;
-#else
-    ID3D11Device *pD3D11Device = nullptr;
-    pD3D11Texture2D->GetDevice(&pD3D11Device);
+void getDeviceIDsAndContexts(ID3D11Device *pD3D11Device,
+                             std::map<cl_platform_id, std::vector<cl_device_id>>& devicesForPlatform,
+                             std::map<cl_platform_id, std::vector<cl_context>>& contextsForPlatform) {
     cl_uint numPlatforms;
     cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
     if (status != CL_SUCCESS)
@@ -1459,86 +1458,151 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
 
-    Context ctx;
-    Image2D image;
-    cl_device_id device = NULL;
-
-    for (int i = 0; i < (int)numPlatforms; i++)
+    for (int i = 0; i < (int)numPlatforms; ++i)
     {
         cl_platform_id platform = platforms[i];
-        auto&& platformName = PlatformInfo(&platform).name();
+        std::cout << "HERE001" << std::endl;
+        devicesForPlatform.emplace(platforms[i], std::vector<cl_device_id>());
+        contextsForPlatform.emplace(platforms[i], std::vector<cl_context>());
+        std::cout << "HERE002" << std::endl;
 
         bool found = false;
         cl_uint numDevices = 0;
         cl_context context = NULL;
-
+        cl_device_id device = NULL;
         // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
         clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+            clGetExtensionFunctionAddressForPlatform(platform, "clGetDeviceIDsFromD3D11KHR");
+        std::cout << "HERE003" << std::endl;
         if (clGetDeviceIDsFromD3D11KHR)
         {
             // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
             do {
-                status = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
+                device = NULL;
+                numDevices = 0;
+                status = findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR,
                                        pD3D11Device,
                                        CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
-                                       platforms[i],
+                                       platform,
                                        device, context, numDevices, found);
+                std::cout << "HERE003.5" << std::endl;
                 if (status != CL_SUCCESS) break;
+                std::cout << "HERE004" << std::endl;
+                devicesForPlatform[platform].push_back(device);
+                std::cout << "HERE005" << std::endl;
+                contextsForPlatform[platform].push_back(context);
+                std::cout << "HERE006" << std::endl;
             } while (0);
 
             // try with CL_ALL_DEVICES_FOR_D3D11_KHR
             if (!found) do {
-                status = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
+                status = findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR,
                                        pD3D11Device,
                                        CL_ALL_DEVICES_FOR_D3D11_KHR,
-                                       platforms[i],
+                                       platform,
                                        device, context, numDevices, found);
                 if (status != CL_SUCCESS) break;
+                devicesForPlatform[platform].push_back(device);
+                contextsForPlatform[platform].push_back(context);
             } while (0);
 
-            if (found) {
-                OpenCLExecutionContext clExecCtx;
-                try
-                {
-                    if (device != nullptr) {
-                        size_t out_size = 0;
-                        clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, nullptr, &out_size);
-                        if (out_size <= 0) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clGetDeviceInfo doesn't find any extensions");
-                        }
-                        std::string ext;
-                        ext.resize(out_size, '\0');
-                        clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, out_size, &ext.front(), nullptr);
-                        if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't contain cl_khr_d3d11_sharing extension");
-                        }
-                    }
-                    clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                    clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
-                }
-                catch (...)
-                {
-                    if (device != nullptr) clReleaseDevice(device);
-                    if (context != nullptr) clReleaseContext(context);
-                    throw;
-                }
-                clExecCtx.bind();
-                ctx = const_cast<Context&>(clExecCtx.getContext());
-                break;
-            }
         }
     }
+}
 
+std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D)
+{
+    CV_UNUSED(pD3D11Texture2D);
+#if !defined(HAVE_DIRECTX)
+    NO_DIRECTX_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    bool found = true;
+
+    ID3D11Device *pD3D11Device = nullptr;
+    pD3D11Texture2D->GetDevice(&pD3D11Device);
+
+    if (pD3D11Device == nullptr) {
+        CV_Error(cv::Error::BadDataPtr, "OpenCL: GetDevice returns empty ID3D11Device\n");
+    }
+    std::map<cl_platform_id, std::vector<cl_device_id>> devicesForPlatform;
+    std::map<cl_platform_id, std::vector<cl_context>> contextsForPlatform;
+    std::cout << "HERE00" << std::endl;
+    getDeviceIDsAndContexts(pD3D11Device, devicesForPlatform, contextsForPlatform);
+    std::cout << "HERE01" << std::endl;
+    Context ctx;
+    Image2D image;
+    Device dev;
+
+    cl_device_id device = devicesForPlatform.begin()->second.front();
+    cl_context context = contextsForPlatform.begin()->second.front();
+    cl_platform_id platform = devicesForPlatform.begin()->first;
+    auto&& platformName = PlatformInfo(&platform).name();
+
+    if (device == nullptr) {
+        std::cout << "device============================" << std::endl;
+    }
+
+    if (context == nullptr) {
+        std::cout << "context============================" << std::endl;
+    }
+
+    if (platform == nullptr) {
+        std::cout << "platform============================" << std::endl;
+    }
+
+    std::cout << "HERE1" << std::endl;
+
+    if (found) {
+        OpenCLExecutionContext clExecCtx;
+        try
+        {
+            if (device != nullptr) {
+                size_t out_size = 0;
+                clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, nullptr, &out_size);
+                if (out_size <= 0) {
+                    CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clGetDeviceInfo doesn't find any extensions");
+                }
+                std::string ext;
+                ext.resize(out_size, '\0');
+                clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, out_size, &ext.front(), nullptr);
+                if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+                    CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't contain cl_khr_d3d11_sharing extension");
+                }
+            }
+            clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+            clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
+        }
+        catch (...)
+        {
+            if (device != nullptr) clReleaseDevice(device);
+            if (context != nullptr) clReleaseContext(context);
+            throw;
+        }
+        clExecCtx.bind();
+        ctx = const_cast<Context&>(clExecCtx.getContext());
+        dev = const_cast<Device&>(clExecCtx.getDevice());
+    }
+    std::cout << "HERE2" << std::endl;
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
-    if (nullptr == impl)
+    if (nullptr == impl) {
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
-
-    image = Image2D(impl->clCreateFromD3D11Texture2DKHR((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, pD3D11Texture2D, 0, &status));
+    }
+    cl_int status = 0;
+    std::cout << "HERE3" << std::endl;
+    cl_mem image2d = impl->clCreateFromD3D11Texture2DKHR((cl_context)ctx.ptr(),
+                                                         CL_MEM_READ_WRITE,
+                                                         pD3D11Texture2D,
+                                                         0,
+                                                         &status);
+    std::cout << "HERE4" << std::endl;
+    image = Image2D::fromHandle(image2d);
+    clRetainMemObject(image2d);
     if (status != CL_SUCCESS) {
         CV_Error(status, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
-    return std::make_tuple(image, ctx, Device::fromHandle(device));
+    return std::make_tuple(image, ctx, dev);
 #endif
 }
 
