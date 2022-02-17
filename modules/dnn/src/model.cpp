@@ -1567,6 +1567,7 @@ public:
         : DetectionModel(network)
     {
         CV_TRACE_FUNCTION();
+        DetectionModel::setNmsAcrossClasses(true);
     }
 
     virtual
@@ -1714,6 +1715,11 @@ public:
     {
         CV_TRACE_FUNCTION();
 
+        // Clear outputs
+        boxes.clear();
+        confidences.clear();
+        landmarks.clear();
+
         // Re-Generate priors when input different size image.
         if (inputSize != frame.getMat().size())
         {
@@ -1725,37 +1731,7 @@ public:
         // Run inference process and post process.
         std::vector<Mat> output_blobs;
         processFrame(frame, output_blobs);
-
-        Mat outputs = postProcess(output_blobs);
-        outputs.convertTo(outputs, CV_32FC1);
-
-        // Format for outputs.
-        boxes.clear();
-        confidences.clear();
-        landmarks.clear();
-
-        for (int i = 0; i < outputs.rows; i++)
-        {
-            Mat output = outputs.row(i);
-
-            const int x = static_cast<int>(output.at<float>(0));
-            const int y = static_cast<int>(output.at<float>(1));
-            const int width = static_cast<int>(output.at<float>(2));
-            const int height = static_cast<int>(output.at<float>(3));
-            boxes.push_back(Rect(x, y, width, height));
-
-            std::vector<Point> landmark;
-            for (int j = 4; j < 14; j+=2)
-            {
-                const int x = static_cast<int>(output.at<float>(j));
-                const int y = static_cast<int>(output.at<float>(j + 1));
-                landmark.push_back(Point(x, y));
-            }
-            landmarks.push_back(landmark);
-
-            const float conficence = output.at<float>(14);
-            confidences.push_back(conficence);
-        }
+        postProcess(output_blobs, confidences, boxes, landmarks);
     }
 
     std::vector<std::vector<Point>> getLandmarks() const
@@ -1833,8 +1809,18 @@ private:
         }
     }
 
-    Mat postProcess(const std::vector<Mat>& output_blobs)
+    void postProcess(
+        const std::vector<Mat>& output_blobs,
+        std::vector<float>& confidences,
+        std::vector<Rect>& boxes,
+        std::vector<std::vector<Point>>& landmarks
+    )
     {
+        // Raw outputs
+        std::vector<float> raw_confidences;
+        std::vector<Rect> raw_boxes;
+        std::vector<std::vector<Point>> raw_landmarks;
+
         // Extract from output_blobs
         Mat loc = output_blobs[0];
         Mat conf = output_blobs[1];
@@ -1845,19 +1831,12 @@ private:
         float* loc_v = (float*)(loc.data);
         float* conf_v = (float*)(conf.data);
         float* iou_v = (float*)(iou.data);
-        Mat faces;
-        // (tl_x, tl_y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rcm_x, rcm_y, lcm_x, lcm_y, score)
-        // 'tl': top left point of the bounding box
-        // 're': right eye, 'le': left eye
-        // 'nt':  nose tip
-        // 'rcm': right corner of mouth, 'lcm': left corner of mouth
-        Mat face(1, 15, CV_32FC1);
+
         for (size_t i = 0; i < priors.size(); ++i)
         {
             // Get score
-            float clsScore = conf_v[i * 2 + 1];
+            const float clsScore = conf_v[i * 2 + 1];
             float iouScore = iou_v[i];
-            // Clamp
             if (iouScore < 0.f)
             {
                 iouScore = 0.f;
@@ -1866,68 +1845,67 @@ private:
             {
                 iouScore = 1.f;
             }
-            float score = std::sqrt(clsScore * iouScore);
-            face.at<float>(0, 14) = score;
+            const float confidence = std::sqrt(clsScore * iouScore);
+            raw_confidences.push_back(confidence);
 
             // Get bounding box
-            float cx = (priors[i].x + loc_v[i * 14 + 0] * variance[0] * priors[i].width) * size.width;
-            float cy = (priors[i].y + loc_v[i * 14 + 1] * variance[0] * priors[i].height) * size.height;
-            float w = priors[i].width * exp(loc_v[i * 14 + 2] * variance[0]) * size.width;
-            float h = priors[i].height * exp(loc_v[i * 14 + 3] * variance[1]) * size.height;
-            float x1 = cx - w / 2;
-            float y1 = cy - h / 2;
-            face.at<float>(0, 0) = x1;
-            face.at<float>(0, 1) = y1;
-            face.at<float>(0, 2) = w;
-            face.at<float>(0, 3) = h;
+            const int loc_index = i * 14;
+            const float cx = (priors[i].x + loc_v[loc_index + 0] * variance[0] * priors[i].width) * size.width;
+            const float cy = (priors[i].y + loc_v[loc_index + 1] * variance[0] * priors[i].height) * size.height;
+            const float w = priors[i].width * exp(loc_v[loc_index + 2] * variance[0]) * size.width;
+            const float h = priors[i].height * exp(loc_v[loc_index + 3] * variance[1]) * size.height;
+            const float x = cx - w / 2.0f;
+            const float y = cy - h / 2.0f;
+            const Rect box = Rect(
+                static_cast<int>(x),
+                static_cast<int>(y),
+                static_cast<int>(w),
+                static_cast<int>(h)
+            );
+            raw_boxes.push_back(box);
 
             // Get landmarks
-            face.at<float>(0, 4) = (priors[i].x + loc_v[i * 14 + 4] * variance[0] * priors[i].width) * size.width;  // right eye, x
-            face.at<float>(0, 5) = (priors[i].y + loc_v[i * 14 + 5] * variance[0] * priors[i].height) * size.height;  // right eye, y
-            face.at<float>(0, 6) = (priors[i].x + loc_v[i * 14 + 6] * variance[0] * priors[i].width) * size.width;  // left eye, x
-            face.at<float>(0, 7) = (priors[i].y + loc_v[i * 14 + 7] * variance[0] * priors[i].height) * size.height;  // left eye, y
-            face.at<float>(0, 8) = (priors[i].x + loc_v[i * 14 + 8] * variance[0] * priors[i].width)  * size.width;  // nose tip, x
-            face.at<float>(0, 9) = (priors[i].y + loc_v[i * 14 + 9] * variance[0] * priors[i].height) * size.height;  // nose tip, y
-            face.at<float>(0, 10) = (priors[i].x + loc_v[i * 14 + 10] * variance[0] * priors[i].width) * size.width; // right corner of mouth, x
-            face.at<float>(0, 11) = (priors[i].y + loc_v[i * 14 + 11] * variance[0] * priors[i].height) * size.height; // right corner of mouth, y
-            face.at<float>(0, 12) = (priors[i].x + loc_v[i * 14 + 12] * variance[0] * priors[i].width) * size.width; // left corner of mouth, x
-            face.at<float>(0, 13) = (priors[i].y + loc_v[i * 14 + 13] * variance[0] * priors[i].height) * size.height; // left corner of mouth, y
-
-            faces.push_back(face);
+            Point rignt_eye = Point(
+                static_cast<int>((priors[i].x + loc_v[loc_index + 4] * variance[0] * priors[i].width) * size.width),
+                static_cast<int>((priors[i].y + loc_v[loc_index + 5] * variance[0] * priors[i].height) * size.height)
+            );
+            Point left_eye = Point(
+                static_cast<int>((priors[i].x + loc_v[loc_index + 6] * variance[0] * priors[i].width) * size.width),
+                static_cast<int>((priors[i].y + loc_v[loc_index + 7] * variance[0] * priors[i].height) * size.height)
+            );
+            Point nose_tip = Point(
+                static_cast<int>((priors[i].x + loc_v[loc_index + 8] * variance[0] * priors[i].width) * size.width),
+                static_cast<int>((priors[i].y + loc_v[loc_index + 9] * variance[0] * priors[i].height) * size.height)
+            );
+            Point right_mouth_corner = Point(
+                static_cast<int>((priors[i].x + loc_v[loc_index + 10] * variance[0] * priors[i].width) * size.width),
+                static_cast<int>((priors[i].y + loc_v[loc_index + 11] * variance[0] * priors[i].height) * size.height)
+            );
+            Point left_mouth_corner = Point(
+                static_cast<int>((priors[i].x + loc_v[loc_index + 12] * variance[0] * priors[i].width) * size.width),
+                static_cast<int>((priors[i].y + loc_v[loc_index + 13] * variance[0] * priors[i].height) * size.height)
+            );
+            std::vector<Point> landmark = {rignt_eye, left_eye, nose_tip, right_mouth_corner, left_mouth_corner};
+            raw_landmarks.push_back(landmark);
         }
 
-        if (faces.rows > 1)
+        // Non maximum suppression
+        if (1 < raw_boxes.size())
         {
-            // Retrieve boxes and scores
-            std::vector<Rect2i> faceBoxes;
-            std::vector<float> faceScores;
-            for (int rIdx = 0; rIdx < faces.rows; rIdx++)
+            std::vector<int> keep_indices;
+            dnn::NMSBoxes(raw_boxes, raw_confidences, confThreshold, nmsThreshold, keep_indices);
+            for (const int keep_index : keep_indices)
             {
-                faceBoxes.push_back(
-                    Rect2i(
-                        int(faces.at<float>(rIdx, 0)),
-                        int(faces.at<float>(rIdx, 1)),
-                        int(faces.at<float>(rIdx, 2)),
-                        int(faces.at<float>(rIdx, 3))
-                    )
-                );
-                faceScores.push_back(faces.at<float>(rIdx, 14));
+                confidences.push_back(raw_confidences[keep_index]);
+                boxes.push_back(raw_boxes[keep_index]);
+                landmarks.push_back(raw_landmarks[keep_index]);
             }
-
-            std::vector<int> keepIdx;
-            dnn::NMSBoxes(faceBoxes, faceScores, confThreshold, nmsThreshold, keepIdx, 1.f);
-
-            // Get NMS results
-            Mat nms_faces;
-            for (int idx : keepIdx)
-            {
-                nms_faces.push_back(faces.row(idx));
-            }
-            return nms_faces;
         }
         else
         {
-            return faces;
+            confidences = raw_confidences;
+            boxes = raw_boxes;
+            landmarks = raw_landmarks;
         }
     }
 };
