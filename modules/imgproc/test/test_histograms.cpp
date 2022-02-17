@@ -1993,6 +1993,41 @@ TEST(Imgproc_Hist_Calc, badarg)
     EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, NULL, 1, true));
 }
 
+#ifdef HAVE_IPP
+TEST(Imgproc_Hist_Calc_IPP, ranges_with_equal_exponent)
+{
+    const std::vector<int> channels{ 0 };
+    const auto noMask = cv::noArray();
+    const std::vector<int> histSize{ 2 };
+    const std::vector<float> ranges{ -0.5, 1.5 };
+
+    const std::vector<uint8_t> vector_u{ 0, 1, 0, 1 , 1, 1 };
+    const std::vector<cv::Mat> images_u = { cv::Mat(vector_u) };
+    cv::Mat histogram_u;
+    cv::calcHist(images_u, channels, noMask, histogram_u, histSize, ranges);
+
+    ASSERT_EQ(histogram_u.at<float>(0), 2) << "0 not counts correctly, res: " << histogram_u.at<float>(0);
+    ASSERT_EQ(histogram_u.at<float>(1), 4) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
+}
+
+TEST(Imgproc_Hist_Calc_IPP, ranges_with_nonequal_exponent)
+{
+    const std::vector<int> channels{ 0 };
+    const auto noMask = cv::noArray();
+    const std::vector<int> histSize{ 3 };
+    const std::vector<float> ranges{ -1.3, 1.5 };
+
+    const std::vector<uint8_t> vector_u{ 0, 1, 0, 1 , 1, 1 };
+    const std::vector<cv::Mat> images_u = { cv::Mat(vector_u) };
+    cv::Mat histogram_u;
+    cv::calcHist(images_u, channels, noMask, histogram_u, histSize, ranges);
+
+    ASSERT_EQ(histogram_u.at<float>(0), 0) << "not equal to zero, res: " << histogram_u.at<float>(0);
+    ASSERT_EQ(histogram_u.at<float>(1), 2) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
+    ASSERT_EQ(histogram_u.at<float>(2), 4) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
+}
+#endif // HAVE_IPP
+
 
 }} // namespace
 /* End Of File */
