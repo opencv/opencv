@@ -65,6 +65,14 @@ class ONNXImporter
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
     void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
+    void extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, const MatShape& blobShape);
+    void add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
+    std::string add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
+    std::string fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
+                         int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
+                         const int index);
+    void add_transform(int num_directions, int batch_size, int hidden_size,
+                                     int index, const std::string& input_name, const std::string& output_name);
 public:
 
     ONNXImporter(Net& net, const char *onnxFile)
@@ -1366,6 +1374,125 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[7] = Mat::diag(blobs[7]);
 }
 
+void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, const MatShape& blobShape)
+{
+        Mat blob;
+        if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
+        {
+            blob = getBlob(lstm_proto, idx);
+            CV_Assert(shape(blob) == blobShape);
+        }
+        else
+        {
+            blob = Mat(blobShape, CV_32FC1, 0.);
+        }
+        layerParams.blobs.push_back(blob);
+};
+
+void ONNXImporter::add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n)
+{
+    LayerParams reshapeLp;
+    reshapeLp.name = cv::format("%s/reshape", input_name.c_str());
+    reshapeLp.type = "Reshape";
+    CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
+
+    reshapeLp.set("dim", DictValue::arrayInt(layerShape, n));
+
+    opencv_onnx::NodeProto reshape_proto;
+    reshape_proto.add_input(input_name);
+    reshape_proto.add_output(output_name);
+    addLayer(reshapeLp, reshape_proto);
+};
+
+std::string ONNXImporter::add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n)
+{
+    LayerParams sliceLP;
+    sliceLP.name = cv::format("%s/slice_%d", input_name.c_str(), index);
+    sliceLP.type = "Slice";
+    CV_Assert(layer_id.find(sliceLP.name) == layer_id.end());
+
+    sliceLP.set("begin", DictValue::arrayInt(begin, n));
+    sliceLP.set("end", DictValue::arrayInt(end, n));
+    sliceLP.set("axis", 0);
+
+    opencv_onnx::NodeProto slice_proto;
+    slice_proto.add_input(input_name);
+    slice_proto.add_output(sliceLP.name);
+    addLayer(sliceLP, slice_proto);
+
+    return slice_proto.output(0);
+};
+
+std::string ONNXImporter::fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
+                                   int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
+                                   const int index)
+{
+    std::string reshape_output = cv::format("%s/reshape_%d", layerParams.name.c_str(), index);
+
+    // reshape from Seq, Batch, Dirs*Hidden to Seq, Batch, Dirs, Hidden
+    // to not confuse reshape with dynamic first dimension, zero means 'leave unchanged'
+    int layerShape[] = {0, batch_size, num_directions, hidden_size};
+    add_reshape(lstm_proto.output(index), reshape_output, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
+
+    // permute from Seq, Batch, Dirs, Hidden to Seq, Dirs, Batch, Hidden
+    LayerParams permuteLP;
+    permuteLP.name = reshape_output + "/permute";
+    permuteLP.type = "Permute";
+    CV_Assert(layer_id.find(permuteLP.name) == layer_id.end());
+
+    int order[] = {0, 2, 1, 3};
+    permuteLP.set("order", DictValue::arrayInt(order, 4));
+
+    opencv_onnx::NodeProto permute_proto;
+    permute_proto.add_input(reshape_output);
+    permute_proto.add_output((need_y && index == 0) ? y_name : static_cast<std::string>(permuteLP.name));
+    addLayer(permuteLP, permute_proto);
+
+    return permute_proto.output(0);
+};
+
+void ONNXImporter::add_transform(int num_directions, int batch_size, int hidden_size,
+                                 int index, const std::string& input_name, const std::string& output_name)
+{
+    if (num_directions == 1)
+    {
+        // Slice: Yh = Y[-1, :, :, :]
+        int begin[] = {-1}, end[] = {-1};
+        std::string slice_output = add_slice(index, input_name, begin, end, sizeof(begin) / sizeof(begin[0]));
+
+        // Reshape: 1x1xBxH -> 1xBxH
+        int layerShape[] = {1, batch_size, hidden_size};
+        add_reshape(slice_output, output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
+    }
+    else
+    {
+        // Slice: SxDxBxH -> last sequence, first direction
+        int begin0[] = {-1, 0}, end0[] = {-1, 1};
+        std::string slice_0 = add_slice(0, input_name, begin0, end0, sizeof(begin0) / sizeof(begin0[0]));
+
+        // Slice: SxDxBxH -> first sequence, last direction
+        int begin1[] = {0, -1}, end1[] = {1, -1};
+        std::string slice_1 = add_slice(1, input_name, begin1, end1, sizeof(begin1) / sizeof(begin1[0]));
+
+        LayerParams concatLP;
+        concatLP.name = cv::format("%s/concat", input_name.c_str());
+        concatLP.type = "Concat";
+        CV_Assert(layer_id.find(concatLP.name) == layer_id.end());
+
+        concatLP.set("axis", 1); // 1x1xBxH -> 1x2xBxH
+
+        opencv_onnx::NodeProto concat_proto;
+        concat_proto.add_input(slice_0);
+        concat_proto.add_input(slice_1);
+        concat_proto.add_output(concatLP.name);
+        addLayer(concatLP, concat_proto);
+
+        // Reshape: 1x2xBxH -> 2xBxH
+        int layerShape[] = {2, batch_size, hidden_size};
+        add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
+    }
+};
+
 void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto lstm_proto = node_proto_;
@@ -1388,30 +1515,15 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const int hidden_size = layerParams.get<int>("hidden_size");
     const int num_directions = constBlobs[lstm_proto.input(1)].size[0];
 
-    auto extractConsts = [&](size_t idx, const MatShape& blobShape)
-    {
-        Mat blob;
-        if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
-        {
-            blob = getBlob(lstm_proto, idx);
-            CV_Assert(shape(blob) == blobShape);
-        }
-        else
-        {
-            blob = Mat(blobShape, CV_32FC1, 0.);
-        }
-        layerParams.blobs.push_back(blob);
-    };
-
-    extractConsts(1, {num_directions, 4*hidden_size, input_size}); // W
-    extractConsts(2, {num_directions, 4*hidden_size, hidden_size}); // R
-    extractConsts(3, {num_directions, 8*hidden_size}); // B
-    extractConsts(5, {num_directions, batch_size, hidden_size}); // initial_h
-    extractConsts(6, {num_directions, batch_size, hidden_size}); // initial_c
+    extractConsts(layerParams, lstm_proto, 1, {num_directions, 4*hidden_size, input_size}); // W
+    extractConsts(layerParams, lstm_proto, 2, {num_directions, 4*hidden_size, hidden_size}); // R
+    extractConsts(layerParams, lstm_proto, 3, {num_directions, 8*hidden_size}); // B
+    extractConsts(layerParams, lstm_proto, 5, {num_directions, batch_size, hidden_size}); // initial_h
+    extractConsts(layerParams, lstm_proto, 6, {num_directions, batch_size, hidden_size}); // initial_c
     if (lstm_proto.input_size() > 7 && !lstm_proto.input(7).empty())
     {
         layerParams.set("use_peephole", true);
-        extractConsts(7, {num_directions, 3 * hidden_size}); // P
+        extractConsts(layerParams, lstm_proto, 7, {num_directions, 3 * hidden_size}); // P
     }
 
     transformBlobs(layerParams.blobs);
@@ -1439,116 +1551,15 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     addLayer(layerParams, lstm_proto);
 
-    auto add_reshape = [this] (const std::string& input_name, const std::string& output_name, int* layerShape, size_t n)
-    {
-        LayerParams reshapeLp;
-        reshapeLp.name = cv::format("%s/reshape", input_name.c_str());
-        reshapeLp.type = "Reshape";
-        CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-
-        reshapeLp.set("dim", DictValue::arrayInt(layerShape, n));
-
-        opencv_onnx::NodeProto reshape_proto;
-        reshape_proto.add_input(input_name);
-        reshape_proto.add_output(output_name);
-        addLayer(reshapeLp, reshape_proto);
-    };
-
-    auto add_slice = [this] (int index, const std::string& input_name, int* begin, int* end, size_t n) -> std::string
-    {
-        LayerParams sliceLP;
-        sliceLP.name = cv::format("%s/slice_%d", input_name.c_str(), index);
-        sliceLP.type = "Slice";
-        CV_Assert(layer_id.find(sliceLP.name) == layer_id.end());
-
-        sliceLP.set("begin", DictValue::arrayInt(begin, n));
-        sliceLP.set("end", DictValue::arrayInt(end, n));
-        sliceLP.set("axis", 0);
-
-        opencv_onnx::NodeProto slice_proto;
-        slice_proto.add_input(input_name);
-        slice_proto.add_output(sliceLP.name);
-        addLayer(sliceLP, slice_proto);
-
-        return slice_proto.output(0);
-    };
-
-    auto fix_dims = [&] (const int index) -> std::string
-    {
-        std::string reshape_output = cv::format("%s/reshape_%d", layerParams.name.c_str(), index);
-
-        // reshape from Seq, Batch, Dirs*Hidden to Seq, Batch, Dirs, Hidden
-        // to not confuse reshape with dynamic first dimension, zero means 'leave unchanged'
-        int layerShape[] = {0, batch_size, num_directions, hidden_size};
-        add_reshape(lstm_proto.output(index), reshape_output, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
-
-        // permute from Seq, Batch, Dirs, Hidden to Seq, Dirs, Batch, Hidden
-        LayerParams permuteLP;
-        permuteLP.name = reshape_output + "/permute";
-        permuteLP.type = "Permute";
-        CV_Assert(layer_id.find(permuteLP.name) == layer_id.end());
-
-        int order[] = {0, 2, 1, 3};
-        permuteLP.set("order", DictValue::arrayInt(order, 4));
-
-        opencv_onnx::NodeProto permute_proto;
-        permute_proto.add_input(reshape_output);
-        permute_proto.add_output((need_y && index == 0) ? y_name : static_cast<std::string>(permuteLP.name));
-        addLayer(permuteLP, permute_proto);
-
-        return permute_proto.output(0);
-    };
-
-    auto add_transform = [&] (int index, const std::string& input_name, const std::string& output_name)
-    {
-        if (num_directions == 1)
-        {
-            // Slice: Yh = Y[-1, :, :, :]
-            int begin[] = {-1}, end[] = {-1};
-            std::string slice_output = add_slice(index, input_name, begin, end, sizeof(begin) / sizeof(begin[0]));
-
-            // Reshape: 1x1xBxH -> 1xBxH
-            int layerShape[] = {1, batch_size, hidden_size};
-            add_reshape(slice_output, output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
-        }
-        else
-        {
-            // Slice: SxDxBxH -> last sequence, first direction
-            int begin0[] = {-1, 0}, end0[] = {-1, 1};
-            std::string slice_0 = add_slice(0, input_name, begin0, end0, sizeof(begin0) / sizeof(begin0[0]));
-
-            // Slice: SxDxBxH -> first sequence, last direction
-            int begin1[] = {0, -1}, end1[] = {1, -1};
-            std::string slice_1 = add_slice(1, input_name, begin1, end1, sizeof(begin1) / sizeof(begin1[0]));
-
-            LayerParams concatLP;
-            concatLP.name = cv::format("%s/concat", input_name.c_str());
-            concatLP.type = "Concat";
-            CV_Assert(layer_id.find(concatLP.name) == layer_id.end());
-
-            concatLP.set("axis", 1); // 1x1xBxH -> 1x2xBxH
-
-            opencv_onnx::NodeProto concat_proto;
-            concat_proto.add_input(slice_0);
-            concat_proto.add_input(slice_1);
-            concat_proto.add_output(concatLP.name);
-            addLayer(concatLP, concat_proto);
-
-            // Reshape: 1x2xBxH -> 2xBxH
-            int layerShape[] = {2, batch_size, hidden_size};
-            add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
-        }
-    };
-
-    std::string y_output = fix_dims(0);
+    std::string y_output = fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y, y_name, 0);
     if (need_yh)
     {
-        add_transform(0, y_output, yh_name);
+        add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
     }
     if (need_yc)
     {
-        std::string yc_output = fix_dims(1);
-        add_transform(1, yc_output, yc_name);
+        std::string yc_output = fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y, y_name, 1);
+        add_transform(num_directions, batch_size, hidden_size, 1, yc_output, yc_name);
     }
 }
 
