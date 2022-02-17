@@ -1458,7 +1458,7 @@ void ONNXImporter::add_transform(int num_directions, int batch_size, int hidden_
     if (num_directions == 1)
     {
         // Slice: Yh = Y[-1, :, :, :]
-        int begin[] = {-1}, end[] = {-1};
+        int begin[] = {-1}, end[] = {INT_MAX};
         std::string slice_output = add_slice(index, input_name, begin, end, sizeof(begin) / sizeof(begin[0]));
 
         // Reshape: 1x1xBxH -> 1xBxH
@@ -1468,11 +1468,11 @@ void ONNXImporter::add_transform(int num_directions, int batch_size, int hidden_
     else
     {
         // Slice: SxDxBxH -> last sequence, first direction
-        int begin0[] = {-1, 0}, end0[] = {-1, 1};
+        int begin0[] = {-1, 0}, end0[] = {INT_MAX, 1};
         std::string slice_0 = add_slice(0, input_name, begin0, end0, sizeof(begin0) / sizeof(begin0[0]));
 
         // Slice: SxDxBxH -> first sequence, last direction
-        int begin1[] = {0, -1}, end1[] = {1, -1};
+        int begin1[] = {0, -1}, end1[] = {1, INT_MAX};
         std::string slice_1 = add_slice(1, input_name, begin1, end1, sizeof(begin1) / sizeof(begin1[0]));
 
         LayerParams concatLP;
