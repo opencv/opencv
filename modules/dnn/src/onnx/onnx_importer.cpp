@@ -65,7 +65,7 @@ class ONNXImporter
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
     void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
-    void extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, const MatShape& blobShape);
+    void extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int blobShape[], int size);
     void add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
     std::string add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
     std::string fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
@@ -1374,8 +1374,9 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[7] = Mat::diag(blobs[7]);
 }
 
-void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, const MatShape& blobShape)
+void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int blobShape_[], int size)
 {
+        MatShape blobShape(blobShape_, blobShape_ + size);
         Mat blob;
         if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
         {
@@ -1515,15 +1516,26 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const int hidden_size = layerParams.get<int>("hidden_size");
     const int num_directions = constBlobs[lstm_proto.input(1)].size[0];
 
-    extractConsts(layerParams, lstm_proto, 1, {num_directions, 4*hidden_size, input_size}); // W
-    extractConsts(layerParams, lstm_proto, 2, {num_directions, 4*hidden_size, hidden_size}); // R
-    extractConsts(layerParams, lstm_proto, 3, {num_directions, 8*hidden_size}); // B
-    extractConsts(layerParams, lstm_proto, 5, {num_directions, batch_size, hidden_size}); // initial_h
-    extractConsts(layerParams, lstm_proto, 6, {num_directions, batch_size, hidden_size}); // initial_c
+    int w_size[] = {num_directions, 4*hidden_size, input_size};
+    extractConsts(layerParams, lstm_proto, 1, w_size, sizeof(w_size)/sizeof(w_size[0])); // W
+
+    int r_size[] =  {num_directions, 4*hidden_size, hidden_size};
+    extractConsts(layerParams, lstm_proto, 2, r_size, sizeof(r_size)/sizeof(r_size[0])); // R
+
+    int b_size[] = {num_directions, 8*hidden_size};
+    extractConsts(layerParams, lstm_proto, 3, b_size, sizeof(b_size)/sizeof(b_size[0])); // B
+
+    int h_size[] = {num_directions, batch_size, hidden_size};
+    extractConsts(layerParams, lstm_proto, 5, h_size, sizeof(h_size)/sizeof(h_size[0])); // initial_h
+
+    int c_size[] = {num_directions, batch_size, hidden_size};
+    extractConsts(layerParams, lstm_proto, 6, c_size, sizeof(c_size)/sizeof(c_size[0])); // initial_c
+
     if (lstm_proto.input_size() > 7 && !lstm_proto.input(7).empty())
     {
         layerParams.set("use_peephole", true);
-        extractConsts(layerParams, lstm_proto, 7, {num_directions, 3 * hidden_size}); // P
+        int p_size[] = {num_directions, 3 * hidden_size};
+        extractConsts(layerParams, lstm_proto, 7, p_size, sizeof(p_size)/sizeof(p_size[0])); // P
     }
 
     transformBlobs(layerParams.blobs);
