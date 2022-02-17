@@ -767,7 +767,7 @@ public:
      * The caller should additionally call `clRetainMemObject` on it if it intends
      * to continue using the device.
     */
-    static Image2D fromHandle(void* image);
+    static Image2D fromHandle(void* memory_obj);
 
     /** Indicates if the image format is supported.
     */

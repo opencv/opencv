@@ -1397,7 +1397,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-cl_int findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR_fn func,
+int findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR_fn func,
                                      ID3D11Device *pD3D11Device,
                                      int cl_d3d11_device_set,
                                      cl_platform_id& platform,
