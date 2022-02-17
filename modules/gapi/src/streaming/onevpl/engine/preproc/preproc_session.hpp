@@ -22,11 +22,11 @@ namespace wip {
 namespace onevpl {
 class VPPPreprocEngine;
 
-class vpp_pp_session : public EngineSession {
+class VPPPreprocSession : public EngineSession {
 public:
     friend class VPPPreprocEngine;
-    vpp_pp_session(mfxSession sess, const mfxVideoParam &vpp_out_param);
-    ~vpp_pp_session();
+    VPPPreprocSession(mfxSession sess, const mfxVideoParam &vpp_out_param);
+    ~VPPPreprocSession();
     using EngineSession::EngineSession;
 
     Data::Meta generate_frame_meta();

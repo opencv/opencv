@@ -19,7 +19,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-vpp_pp_session::vpp_pp_session(mfxSession sess, const mfxVideoParam& vpp_out_param) :
+VPPPreprocSession::VPPPreprocSession(mfxSession sess, const mfxVideoParam& vpp_out_param) :
     EngineSession(sess),
     mfx_vpp_out_param(vpp_out_param),
     processing_surface_ptr(),
@@ -29,12 +29,12 @@ vpp_pp_session::vpp_pp_session(mfxSession sess, const mfxVideoParam& vpp_out_par
 {
 }
 
-vpp_pp_session::~vpp_pp_session() {
+VPPPreprocSession::~VPPPreprocSession() {
     GAPI_LOG_INFO(nullptr, "Close VPP for session: " << session);
     MFXVideoVPP_Close(session);
 }
 
-Data::Meta vpp_pp_session::generate_frame_meta() {
+Data::Meta VPPPreprocSession::generate_frame_meta() {
     const auto now = std::chrono::system_clock::now();
     const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
                 (now.time_since_epoch());
@@ -45,19 +45,19 @@ Data::Meta vpp_pp_session::generate_frame_meta() {
     return meta;
 }
 
-void vpp_pp_session::swap_surface(VPPPreprocEngine& engine) {
+void VPPPreprocSession::swap_surface(VPPPreprocEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
     request_free_surface(session, vpp_pool_id, *acceleration_policy,
                          processing_surface_ptr, true);
 }
 
-void vpp_pp_session::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {
+void VPPPreprocSession::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {
     GAPI_Assert(key && "Init preproc pull with empty key");
     vpp_pool_id = key;
 }
 
-const mfxFrameInfo& vpp_pp_session::get_video_param() const {
+const mfxFrameInfo& VPPPreprocSession::get_video_param() const {
     return mfx_vpp_out_param.vpp.Out;
 }
 } // namespace onevpl

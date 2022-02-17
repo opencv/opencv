@@ -25,14 +25,14 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-class vpp_pp_session;
+class VPPPreprocSession;
 struct IDataProvider;
 struct VPLAccelerationPolicy;
 
 class GAPI_EXPORTS VPPPreprocEngine final : public ProcessingEngineBase,
                                             public cv::gapi::wip::IPreprocEngine {
 public:
-    using session_type     = vpp_pp_session;
+    using session_type     = VPPPreprocSession;
     using session_ptr_type = std::shared_ptr<session_type>;
 
     VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);

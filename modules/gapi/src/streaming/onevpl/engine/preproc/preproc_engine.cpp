@@ -85,8 +85,6 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         // on native mfxSurface pointer
                         abandon_decode_frame(dec_surface);
 
-                        GAPI_Assert(dec_surface != pending_op.second &&
-                                    "Unexpected out VPP surface");
                         // NB: process status
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
@@ -211,7 +209,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
                             "}\nTo:\n{\n" << mfx_frame_info_to_string(mfxVPPParams.vpp.Out) << "}");
 
     // find existing session
-    GAPI_LOG_DEBUG(nullptr, "Find existing vpp_pp_session for requested frame params"
+    GAPI_LOG_DEBUG(nullptr, "Find existing VPPPreprocSession for requested frame params"
                             ", total sessions: " << preproc_session_map.size());
     auto it = preproc_session_map.find(mfxVPPParams.vpp.In);
     if (it != preproc_session_map.end()) {
@@ -254,7 +252,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     GAPI_LOG_INFO(nullptr, "[" << mfx_vpp_session << "] starting pool allocation");
     VPLAccelerationPolicy::pool_key_t vpp_out_pool_key {};
     try {
-        // assing HW acceleration processor
+        // assign HW acceleration processor
         acceleration_policy->init(mfx_vpp_session);
         try {
             // ask to allocate external memory pool
@@ -305,7 +303,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
 
     bool inserted = preproc_session_map.emplace(mfxVPPParams.vpp.In, sess_ptr).second;
     GAPI_Assert(inserted && "preproc session is exist");
-    GAPI_LOG_INFO(nullptr, "vpp_pp_session created, total sessions: " << preproc_session_map.size());
+    GAPI_LOG_INFO(nullptr, "VPPPreprocSession created, total sessions: " << preproc_session_map.size());
     return pp_session::create(std::static_pointer_cast<EngineSession>(sess_ptr));
 }
 
@@ -352,7 +350,7 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
 
     // schedule decoded surface into preproc queue
     session_type::op_handle_t in_preproc_request {nullptr,
-                                                    vpl_adapter->get_surface()->get_handle()};
+                                                  vpl_adapter->get_surface()->get_handle()};
     s->sync_in_queue.emplace(in_preproc_request);
     remember_decode_frame(vpl_adapter->get_surface()->get_handle(), in_frame);
 
@@ -415,29 +413,27 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
         case MFX_ERR_DEVICE_LOST:
             // For non-CPU implementations,
             // Cleanup if device is lost
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            GAPI_DbgAssert(false && "VPPPreprocEngine::process_error - "
                                     "MFX_ERR_DEVICE_LOST is not processed");
             break;
         case MFX_WRN_DEVICE_BUSY:
             // For non-CPU implementations,
             // Wait a few milliseconds then try again
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            GAPI_DbgAssert(false && "VPPPreprocEngine::process_error - "
                                     "MFX_WRN_DEVICE_BUSY is not processed");
             break;
         case MFX_WRN_VIDEO_PARAM_CHANGED:
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
-                                    "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
-            */
+            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_VIDEO_PARAM_CHANGED");
             return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
             // The function detected that video parameters provided by the application
             // are incompatible with initialization parameters.
             // The application should close the component and then reinitialize it
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            GAPI_DbgAssert(false && "VPPPreprocEngine::process_error - "
                                     "MFX_ERR_INCOMPATIBLE_VIDEO_PARAM is not processed");
             break;
         case MFX_ERR_REALLOC_SURFACE:
@@ -445,7 +441,7 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
             // mfxInfoMFX::EnableReallocRequest was set to ON during initialization.
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            GAPI_DbgAssert(false && "VPPPreprocEngine::process_error - "
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
         case MFX_WRN_IN_EXECUTION:

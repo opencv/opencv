@@ -201,7 +201,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     } else if (mode.empty()){
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
     } else {
-        ASSERT_TRUE(false, "Unsupported acceleration policy type");
+        ASSERT_TRUE(false && "Unsupported acceleration policy type");
     }
     VPPPreprocEngine preproc_engine(std::move(policy));
     cv::gapi::wip::Data out;
