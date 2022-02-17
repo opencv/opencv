@@ -13,8 +13,6 @@
 using namespace cv;
 using namespace std;
 
-// You can download the converted onnx model from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing
-
 class FilterbankFeatures {
 
 //     Initializes pre-processing class. Default values are the values used by the Jasper
@@ -101,7 +99,7 @@ public:
         return res;
     }
 
-    std::vector<std::vector<double>> mel(int n_mels, double fmin, double fmax)
+    vector<vector<double>> mel(int n_mels, double fmin, double fmax)
     {
         //  Generates mel filterbank matrix
 
@@ -152,12 +150,12 @@ public:
     }
 
     // STFT preperation
-    std::vector<double> pad_window_center(std::vector<double>&data, int size)
+    vector<double> pad_window_center(vector<double>&data, int size)
     {
         // Pad the window out to n_fft size
         int n = static_cast<int>(data.size());
         int lpad = static_cast<int>((size - n) / 2);
-        std::vector<double> pad_array;
+        vector<double> pad_array;
 
         for(int i = 0; i < lpad; ++i)
         {
@@ -176,11 +174,11 @@ public:
         return pad_array;
     }
 
-    std::vector<std::vector<double>> frame(std::vector<double>& x)
+    vector<vector<double>> frame(vector<double>& x)
     {
         // Slices a data array into overlapping frames.
         int n_frames = static_cast<int>(1 + (x.size() - n_fft) / hop_length);
-        std::vector<std::vector<double>> new_x(n_fft, std::vector<double>(n_frames));
+        vector<vector<double>> new_x(n_fft, vector<double>(n_frames));
 
         for (int i = 0; i < n_fft; ++i)
         {
@@ -192,10 +190,10 @@ public:
         return new_x;
     }
 
-    std::vector<double> hanning()
+    vector<double> hanning()
     {
         // https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
-        std::vector<double> window_tensor;
+        vector<double> window_tensor;
         for (int j = 1 - win_length; j < win_length; j+=2)
         {
             window_tensor.push_back(1 - (0.5 * (1 - cos(CV_PI * j / (win_length - 1)))));
@@ -203,14 +201,14 @@ public:
         return window_tensor;
     }
 
-    std::vector<std::vector<double>> stft_power(std::vector<double>& y)
+    vector<vector<double>> stft_power(vector<double>& y)
     {
         // Short Time Fourier Transform. The STFT represents a signal in the time-frequency
         // domain by computing discrete Fourier transforms (DFT) over short overlapping windows.
         // https://en.wikipedia.org/wiki/Short-time_Fourier_transform
 
         // Pad the time series so that frames are centered
-        std::vector<double> new_y;
+        vector<double> new_y;
         int num = int(n_fft / 2);
 
         for (int i = 0; i < num; ++i)
@@ -227,13 +225,13 @@ public:
         }
 
         // Compute a window function
-        std::vector<double> window_tensor = hanning();
+        vector<double> window_tensor = hanning();
 
         // Pad the window out to n_fft size
-        std::vector<double> fft_window = pad_window_center(window_tensor, n_fft);
+        vector<double> fft_window = pad_window_center(window_tensor, n_fft);
 
         // Window the time series
-        std::vector<std::vector<double>> y_frames = frame(new_y);
+        vector<vector<double>> y_frames = frame(new_y);
 
         // Multiply on fft_window
         for (size_t i = 0; i < y_frames.size(); ++i)
@@ -245,7 +243,7 @@ public:
         }
 
         // Transpose frames for computing stft
-        std::vector<std::vector<double>> y_frames_transpose(y_frames[0].size(), std::vector<double>(y_frames.size()));
+        vector<vector<double>> y_frames_transpose(y_frames[0].size(), vector<double>(y_frames.size()));
         for (size_t i = 0; i < y_frames[0].size(); ++i)
         {
             for (size_t j = 0; j < y_frames.size(); ++j)
@@ -256,7 +254,7 @@ public:
 
         // Short Time Fourier Transform
         // and get power of spectrum
-        std::vector<std::vector<double>> spectrum_power(y_frames_transpose[0].size() / 2 + 1 );
+        vector<vector<double>> spectrum_power(y_frames_transpose[0].size() / 2 + 1 );
         for (size_t i = 0; i < y_frames_transpose.size(); ++i)
         {
             Mat dstMat;
@@ -273,7 +271,8 @@ public:
         return spectrum_power;
     }
 
-    std::vector<std::vector<double>> calculate_features(std::vector<double>& x) {
+    Mat calculate_features(vector<double>& x)
+    {
         // Calculates filterbank features matrix.
 
         // Do preemphasis
@@ -289,13 +288,14 @@ public:
         {
             x[i] -= preemph * x[i-1];
         }
+
         // Calculate Short Time Fourier Transform and get power of spectrum
         auto spectrum_power = stft_power(x);
 
-        std::vector<std::vector<double>> filterbanks = mel(n_filt, lowfreq, highfreq);
+        vector<vector<double>> filterbanks = mel(n_filt, lowfreq, highfreq);
 
         // Calculate log of multiplication of filterbanks matrix on spectrum_power matrix
-        std::vector<std::vector<double>> x_stft(filterbanks.size(),std::vector<double>(spectrum_power[0].size(), 0));
+        vector<vector<double>> x_stft(filterbanks.size(), vector<double>(spectrum_power[0].size(), 0));
 
         for (size_t i = 0; i < filterbanks.size(); ++i)
         {
@@ -331,7 +331,16 @@ public:
                 x_stft[i][j] = (x_stft[i][j] - x_mean) / x_std; // standard score
             }
         }
-        return x_stft;
+
+        Mat calculate_features(static_cast<int>(x_stft.size()), static_cast<int>(x_stft[0].size()), CV_32F);
+        for(int i = 0; i < calculate_features.size[0]; ++i)
+        {
+            for(int j = 0; j < calculate_features.size[1]; ++j)
+            {
+                calculate_features.at<float>(i, j) = static_cast<float>(x_stft[i][j]);
+            }
+        }
+        return calculate_features;
     }
 };
 
@@ -399,24 +408,17 @@ public:
 
 };
 
-static string predict(std::vector<std::vector<double>>& features, dnn::Net net, Decoder decoder)
+static string predict(Mat& features, dnn::Net net, Decoder decoder)
 {
     // Passes the features through the Jasper model and decodes the output to english transcripts.
 
-    // expand 2d features matrix to 3d Mat
-    std::vector<int> sizes = {1, static_cast<int>(features.size()),
-                              static_cast<int>(features[0].size())};
-    Mat featuresMat(sizes, CV_64F);
-    for(int i = 0; i < featuresMat.size[1]; ++i)
-    {
-        for(int j = 0; j < featuresMat.size[2]; ++j)
-        {
-            featuresMat.at<double>(0, i, j) = features[i][j];
-        }
-    }
+    // expand 2d features matrix to 3d
+    vector<int> sizes = {1, static_cast<int>(features.size[0]),
+                              static_cast<int>(features.size[1])};
+    features = features.reshape(0, sizes);
 
     // make prediction
-    net.setInput(featuresMat);
+    net.setInput(features);
     Mat output = net.forward();
 
     // decode output to transcript
@@ -502,13 +504,13 @@ static int readAudioMicrophone(vector<double>& inputAudio, int microTime)
 int main(int argc, char** argv)
 {
     const String keys =
-        "{help h usage ?     |                          | This script runs Jasper Speech recognition model}"
-        "{input_type i       |                          | file or microphone              }"
-        "{micro_time t       | 15                       | Duration of microphone work in seconds. Must be more than 6 sec }"
-        "{input_audio a      |                          | Path to input audio file        }"
-        "{audio_stream       | 0                        | CAP_PROP_AUDIO_STREAM value     }"
-        "{show_spectrogram s | off                      | Show a spectrogram of the input audio: on or off }"
-        "{model m            | jasper.onnx              | Path to the onnx file of Jasper }"
+        "{help h usage ?     |                          | This script runs Jasper Speech recognition model }"
+        "{input_file i       |                          | Path to input audio file. If not specified, microphone input will be used }"
+        "{audio_duration t   | 15                       | Duration duration of audio chunk to be captured from microphone }"
+        "{audio_stream a     | 0                        | CAP_PROP_AUDIO_STREAM value     }"
+        "{show_spectrogram s | false                    | Show a spectrogram of the input audio: on or off }"
+        "{model m            | jasper.onnx              | Path to the onnx file of Jasper. You can download the converted onnx model "
+                                                          "from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing}"
         "{backend b          | dnn::DNN_BACKEND_DEFAULT | Select a computation backend: "
                                                           "dnn::DNN_BACKEND_DEFAULT, "
                                                           "dnn::DNN_BACKEND_INFERENCE_ENGINE, "
@@ -525,16 +527,22 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    // Load Network
+    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"));
+    net.setPreferableBackend(parser.get<int>("backend"));
+    net.setPreferableTarget(parser.get<int>("target"));
+
+    // Get audio
     vector<double>inputAudio = {};
     int samplingRate = 0;
-    if (parser.get<std::string>("input_type") == "file")
+    if (parser.has("input_file"))
     {
-        string audio = samples::findFile(parser.get<std::string>("input_audio"));
+        string audio = samples::findFile(parser.get<std::string>("input_file"));
         samplingRate = readAudioFile(inputAudio, audio, parser.get<int>("audio_stream"));
     }
-    else if (parser.get<std::string>("input_type") == "microphone")
+    else
     {
-        samplingRate = readAudioMicrophone(inputAudio, parser.get<int>("micro_time"));
+        samplingRate = readAudioMicrophone(inputAudio, parser.get<int>("audio_duration"));
     }
 
     if ((inputAudio.size() == 0) || samplingRate <= 0)
@@ -543,32 +551,29 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    if (inputAudio.size() / samplingRate < 6)
+    {
+        cout << "Warning: For predictable network performance duration of audio must exceed 6 sec."
+                " Audio will be extended with zero samples" << endl;
+        for(size_t i = inputAudio.size(); i < samplingRate * 6; ++i)
+        {
+            inputAudio.push_back(0);
+        }
+    }
 
+    // Calculate features
     FilterbankFeatures filter;
     auto calculated_features = filter.calculate_features(inputAudio);
 
     // Show spectogram if required
-    if (parser.get<std::string>("show_spectrogram") == "on")
+    if (parser.get<bool>("show_spectrogram") == true)
     {
         Mat spectogram;
-        Mat featuresMat(static_cast<int>(calculated_features.size()), static_cast<int>(calculated_features[0].size()), CV_64F);
-        for(int i = 0; i < featuresMat.size[0]; ++i)
-        {
-            for(int j = 0; j < featuresMat.size[1]; ++j)
-            {
-                featuresMat.at<double>(i, j) = calculated_features[i][j];
-            }
-        }
-        normalize(featuresMat, spectogram, 0, 255, NORM_MINMAX, CV_8U);
+        normalize(calculated_features, spectogram, 0, 255, NORM_MINMAX, CV_8U);
         applyColorMap(spectogram, spectogram, COLORMAP_INFERNO);
         imshow("spectogram", spectogram);
         waitKey(0);
     }
-
-    // Load Network
-    dnn::Net net = dnn::readNetFromONNX(parser.get<std::string>("model"));
-    net.setPreferableBackend(parser.get<int>("backend"));
-    net.setPreferableTarget(parser.get<int>("target"));
 
     Decoder decoder;
     string prediction = predict(calculated_features, net, decoder);
