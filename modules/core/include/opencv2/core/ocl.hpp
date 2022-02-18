@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2013-2022, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -765,7 +765,7 @@ public:
     @param memory_obj is cl_mem image2d object
     @note On success, creates an Image2D that wraps the memory_obj alias.
      * The caller should additionally call `clRetainMemObject` on it if it intends
-     * to continue using the device.
+     * to continue using the memory_obj.
     */
     static Image2D fromHandle(void* memory_obj);
 

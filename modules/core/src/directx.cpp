@@ -57,6 +57,7 @@
 #ifndef HAVE_OPENCL
 #define NO_OPENCL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenCL support")
 #endif // HAVE_OPENCL
+
 using namespace cv::ocl;
 
 namespace cv { namespace directx {
@@ -1404,13 +1405,13 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    const auto findKHRDeviceAndCreateContext =
+    const auto findKHRDevice =
         [](const clGetDeviceIDsFromD3D11KHR_fn& func,
                  ID3D11Device *pD3D11Device,
            const int cl_d3d11_device_set,
            const cl_platform_id& platform,
-           std::vector<std::pair<bool, Device>>& devices,
-           bool& found_preffered) -> cl_int {
+                 std::vector<std::pair<bool, Device>>& devices,
+                 bool& found_preffered) -> cl_int {
             cl_uint numDevices = 0;
 
             size_t out_size = 0;
@@ -1419,7 +1420,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             ext.resize(out_size, '\0');
             clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, out_size, &ext.front(), nullptr);
             if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
-                CV_LOG_DEBUG(NULL, "findKHRDeviceAndCreateContext can't find cl_khr_d3d11_sharing extenson for platform");
+                CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
                 return CL_DEVICE_NOT_FOUND;
             }
             found_preffered = cl_d3d11_device_set == CL_PREFERRED_DEVICES_FOR_D3D11_KHR;
@@ -1466,23 +1467,23 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
         {
             // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
             do {
-                status = findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR,
-                                                       pD3D11Device,
-                                                       CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
-                                                       platforms[i],
-                                                       devices,
-                                                       found_preffered);
+                status = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
+                                       pD3D11Device,
+                                       CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
+                                       platforms[i],
+                                       devices,
+                                       found_preffered);
                 if (status != CL_SUCCESS) break;
             } while (0);
 
             // try with CL_ALL_DEVICES_FOR_D3D11_KHR
             if (!found_preffered) do {
-                status = findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR,
-                                                       pD3D11Device,
-                                                       CL_ALL_DEVICES_FOR_D3D11_KHR,
-                                                       platforms[i],
-                                                       devices,
-                                                       found_preffered);
+                status = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
+                                       pD3D11Device,
+                                       CL_ALL_DEVICES_FOR_D3D11_KHR,
+                                       platforms[i],
+                                       devices,
+                                       found_preffered);
                 if (status != CL_SUCCESS) break;
             } while (0);
         }
