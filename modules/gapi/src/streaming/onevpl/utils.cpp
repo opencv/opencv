@@ -389,13 +389,11 @@ int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
     return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo));
 }
 
-bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs)
-{
+bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
     return (compare(lhs, rhs) < 0);
 }
 
-bool operator== (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs)
-{
+bool operator== (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
     return (compare(lhs, rhs) == 0);
 }
 
