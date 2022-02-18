@@ -1397,84 +1397,68 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D)
-{
-    CV_UNUSED(pD3D11Texture2D);
+void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair<bool, Device>>& devices) {
+    CV_UNUSED(pD3D11Device); CV_UNUSED(devices);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
-    const auto findKHRDeviceAndCreateContext = 
+    const auto findKHRDeviceAndCreateContext =
         [](const clGetDeviceIDsFromD3D11KHR_fn& func,
                  ID3D11Device *pD3D11Device,
            const int cl_d3d11_device_set,
            const cl_platform_id& platform,
-           cl_device_id& device,
-           cl_context& context,
-           cl_uint& numDevices,
-           bool& found) -> cl_int {
-            device = NULL;
-            numDevices = 0;
+           std::vector<std::pair<bool, Device>>& devices,
+           bool& found_preffered) -> cl_int {
+            cl_uint numDevices = 0;
+
+            size_t out_size = 0;
+            clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &out_size);
+            std::string ext;
+            ext.resize(out_size, '\0');
+            clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, out_size, &ext.front(), nullptr);
+            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+                CV_LOG_DEBUG(NULL, "findKHRDeviceAndCreateContext can't find cl_khr_d3d11_sharing extenson for platform");
+                return CL_DEVICE_NOT_FOUND;
+            }
+            found_preffered = cl_d3d11_device_set == CL_PREFERRED_DEVICES_FOR_D3D11_KHR;
 
             cl_int status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
-                               cl_d3d11_device_set, 1, &device, &numDevices);
+                                 cl_d3d11_device_set, 0, NULL, &numDevices);
+
+            std::vector<cl_device_id> cl_devs(numDevices, nullptr);
+            status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
+                          cl_d3d11_device_set, numDevices, &cl_devs.front(), NULL);
+
+            for (auto&& device : cl_devs) {
+                devices.emplace_back(found_preffered, device);
+            }
 
             if (status != CL_SUCCESS) {
                 CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
                 return status;
             }
-            if (numDevices > 0)
-            {
-                cl_context_properties properties[] = {
-                        CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-                        CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
-                        CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
-                        NULL, NULL
-                };
-                context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
-                if (status != CL_SUCCESS && device != nullptr)
-                {
-                    CV_LOG_DEBUG(NULL, "clCreateContext failed with status " << int(status));
-                    clReleaseDevice(device);
-                }
-                else
-                {
-                    found = true;
-                    return status;
-                }
-            }
             return CL_DEVICE_NOT_FOUND; };
 
-    ID3D11Device *pD3D11Device = nullptr;
-    pD3D11Texture2D->GetDevice(&pD3D11Device);
-    cl_uint numPlatforms;
+    cl_uint numPlatforms = 0;
     cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
-    if (status != CL_SUCCESS)
+    if (status != CL_SUCCESS) {
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get number of platforms");
-    if (numPlatforms == 0)
+    }
+    if (numPlatforms == 0) {
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
+    }
 
     std::vector<cl_platform_id> platforms(numPlatforms);
     status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
-    if (status != CL_SUCCESS)
+    if (status != CL_SUCCESS) {
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
+    }
 
-    Context ctx;
-    Image2D image;
-    Device dev;
-
-    cl_device_id device = NULL;
-
-    for (int i = 0; i < (int)numPlatforms; i++)
+    for (int i = 0; i < (int)numPlatforms; ++i)
     {
-        cl_platform_id platform = platforms[i];
-        auto&& platformName = PlatformInfo(&platform).name();
-
-        bool found = false;
-        cl_uint numDevices = 0;
-        cl_context context = NULL;
-
+        bool found_preffered = false;
         // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
         clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
             clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
@@ -1486,76 +1470,120 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11
                                                        pD3D11Device,
                                                        CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
                                                        platforms[i],
-                                                       device, context, numDevices, found);
+                                                       devices,
+                                                       found_preffered);
                 if (status != CL_SUCCESS) break;
             } while (0);
 
             // try with CL_ALL_DEVICES_FOR_D3D11_KHR
-            if (!found) do {
+            if (!found_preffered) do {
                 status = findKHRDeviceAndCreateContext(clGetDeviceIDsFromD3D11KHR,
                                                        pD3D11Device,
                                                        CL_ALL_DEVICES_FOR_D3D11_KHR,
                                                        platforms[i],
-                                                       device, context, numDevices, found);
+                                                       devices,
+                                                       found_preffered);
                 if (status != CL_SUCCESS) break;
             } while (0);
-
-            if (found) {
-                OpenCLExecutionContext clExecCtx;
-                try
-                {
-                    if (device != nullptr) {
-                        size_t out_size = 0;
-                        clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, nullptr, &out_size);
-                        if (out_size <= 0) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clGetDeviceInfo doesn't find any extensions");
-                        }
-                        std::string ext;
-                        ext.resize(out_size, '\0');
-                        clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, out_size, &ext.front(), nullptr);
-                        if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't contain cl_khr_d3d11_sharing extension");
-                        }
-                        std::string vendor;
-                        clGetDeviceInfo(device, CL_DEVICE_VENDOR, 0, nullptr, &out_size);
-                        vendor.resize(out_size, '\0');
-                        clGetDeviceInfo(device, CL_DEVICE_VENDOR, out_size, &vendor.front(), nullptr);
-                        if (vendor.find("Intel(R) Corporation") == std::string::npos) {
-                            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device isn't Intel's device");
-                        }
-                    }
-                    clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                    clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
-                }
-                catch (...)
-                {
-                    if (device != nullptr) clReleaseDevice(device);
-                    if (context != nullptr) clReleaseContext(context);
-                    throw;
-                }
-                clExecCtx.bind();
-                ctx = const_cast<Context&>(clExecCtx.getContext());
-                dev = const_cast<Device&>(clExecCtx.getDevice());
-                break;
-            }
         }
     }
+#endif
+}
+
+std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, Device& device)
+{
+    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(device);
+#if !defined(HAVE_DIRECTX)
+    NO_DIRECTX_SUPPORT_ERROR;
+#elif !defined(HAVE_OPENCL)
+    NO_OPENCL_SUPPORT_ERROR;
+#else
+    if (device.ptr() == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem got empty Device object");
+    }
+
+    cl_device_id cl_device = (cl_device_id)device.ptr();
+    cl_platform_id platform = nullptr;
+
+    size_t out_size = 0;
+    cl_int status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, 0, nullptr, &out_size);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clGetDeviceInfo failed");
+    }
+    status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, out_size, &platform, nullptr);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clGetDeviceInfo failed");
+    }
+    if (platform == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: clGetDeviceInfo returns empty platform");
+    }
+    auto&& platformName = PlatformInfo(&platform).name();
+
+    ID3D11Device *pD3D11Device = nullptr;
+    pD3D11Texture2D->GetDevice(&pD3D11Device);
+
+    if (pD3D11Device == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: GetDevice returns empty pD3D11Device in convertFromD3D11Texture2DtoCLMem");
+    }
+
+    cl_context context = NULL;
+    cl_context_properties properties[] = {
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+            NULL, NULL
+    };
+    context = clCreateContext(properties, 1, &cl_device, NULL, NULL, &status);
+    if (status != CL_SUCCESS && cl_device != nullptr)
+    {
+        CV_LOG_DEBUG(NULL, "clCreateContext failed with status " << int(status));
+        clReleaseDevice(cl_device);
+    }
+
+    OpenCLExecutionContext clExecCtx;
+    try
+    {
+        if (cl_device != nullptr) {
+            out_size = 0;
+            clGetDeviceInfo(cl_device, CL_DEVICE_EXTENSIONS, 0, nullptr, &out_size);
+            if (out_size <= 0) {
+                CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clGetDeviceInfo doesn't find any extensions");
+            }
+            std::string ext;
+            ext.resize(out_size, '\0');
+            clGetDeviceInfo(cl_device, CL_DEVICE_EXTENSIONS, out_size, &ext.front(), nullptr);
+            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+                CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't contain cl_khr_d3d11_sharing extension");
+            }
+        }
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, cl_device);
+        clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
+    }
+    catch (...)
+    {
+        if (cl_device != nullptr) clReleaseDevice(cl_device);
+        if (context != nullptr) clReleaseContext(context);
+        throw;
+    }
+    clExecCtx.bind();
+    auto ctx = const_cast<Context&>(clExecCtx.getContext());
 
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
-    if (nullptr == impl)
+    if (nullptr == impl) {
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
+    }
 
     cl_mem image2d = impl->clCreateFromD3D11Texture2DKHR((cl_context)ctx.ptr(),
                                                          CL_MEM_READ_WRITE,
                                                          pD3D11Texture2D,
                                                          0,
                                                          &status);
-    image = Image2D::fromHandle(image2d);
+    auto image = Image2D::fromHandle(image2d);
     clRetainMemObject(image2d);
     if (status != CL_SUCCESS) {
         CV_Error(status, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
-    return std::make_tuple(image, ctx, dev);
+    return std::make_tuple(image, ctx);
 #endif
 }
 

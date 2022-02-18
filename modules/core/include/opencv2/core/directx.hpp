@@ -129,13 +129,25 @@ CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11T
 //! @param dst             - destination OutputArray
 CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst);
 
+//! @brief Gets devices from all platforms which can be assoiated with D3D11Device.
+//
+//! @note Note: Function creates a vector of pairs that contain preferred conditions and cv::ocl::Device objects
+//!             from a Direct3D 11 device
+//
+//! @param pD3D11Device - source D3D11 device
+//! @param devices - vector of pairs: bool condition show is preferred the device or not and device
+//!        that associated with accessible platform on your device
+CV_EXPORTS void getDeviceIDsByD3D11Device(ID3D11Device *pD3D11Device, std::vector<std::pair<bool, cv::ocl::Device>>& devices);
+
 //! @brief Converts ID3D11Texture2D to cl_mem (OpenCL image2d_t).
 //
 //! @note Note: Function creates an OpenCL 2D image object from a subresource of a Direct3D 11 2D texture
 //
 //! @param pD3D11Texture2D - source D3D11 texture
+//! @param device - cv::ocl::Device that will be used for context creation
+
 //! @return tuple of Image2D Context Device objects
-CV_EXPORTS std::tuple<cv::ocl::Image2D, cv::ocl::Context, cv::ocl::Device> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D);
+CV_EXPORTS std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, cv::ocl::Device& device);
 
 //! @brief Converts InputArray to ID3D10Texture2D
 //

@@ -266,7 +266,7 @@ if(TARGET opencv_test_gapi)
       ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_NGRAPH)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
-      ocv_target_include_directories(opencv_test_gapi PRIVATE ${OPENCL_INCLUDE_DIRS})
+      ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
 endif()
 
