@@ -1995,15 +1995,15 @@ TEST(Imgproc_Hist_Calc, badarg)
 
 TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
 {
-    const std::vector<int> channels{ 0 };
-    const auto noMask = cv::noArray();
-    const std::vector<int> histSize{ 2 };
-    const std::vector<float> ranges{ -0.5f, 1.5f };
+    const int channels[] = { 0 };
+    float range1[] = { -0.5f, 1.5f };
+    const float* ranges[] = { range1 };
+    const int hist_size[] = { 2 };
 
-    const std::vector<uint8_t> vector_u{ 0, 1, 0, 1 , 1, 1 };
-    const std::vector<cv::Mat> images_u = { cv::Mat(vector_u) };
+    uint8_t m[1][6] = { { 0, 1, 0, 1 , 1, 1 } };
+    cv::Mat images_u = Mat(1, 6, CV_8UC1, m);
     cv::Mat histogram_u;
-    cv::calcHist(images_u, channels, noMask, histogram_u, histSize, ranges);
+    cv::calcHist(&images_u, 1, channels, noArray(), histogram_u, 1, hist_size, ranges);
 
     ASSERT_EQ(histogram_u.at<float>(0), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(0);
     ASSERT_EQ(histogram_u.at<float>(1), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
@@ -2011,15 +2011,15 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
 
 TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
 {
-    const std::vector<int> channels{ 0 };
-    const auto noMask = cv::noArray();
-    const std::vector<int> histSize{ 3 };
-    const std::vector<float> ranges{ -1.3f, 1.5f };
+    const int channels[] = { 0 };
+    float range1[] = { -1.3f, 1.5f };
+    const float* ranges[] = { range1 };
+    const int hist_size[] = { 3 };
 
-    const std::vector<uint8_t> vector_u{ 0, 1, 0, 1 , 1, 1 };
-    const std::vector<cv::Mat> images_u = { cv::Mat(vector_u) };
+    uint8_t m[1][6] = { { 0, 1, 0, 1 , 1, 1 } };
+    cv::Mat images_u = Mat(1, 6, CV_8UC1, m);
     cv::Mat histogram_u;
-    cv::calcHist(images_u, channels, noMask, histogram_u, histSize, ranges);
+    cv::calcHist(&images_u, 1, channels, noArray(), histogram_u, 1, hist_size, ranges);
 
     ASSERT_EQ(histogram_u.at<float>(0), 0.f) << "not equal to zero, res: " << histogram_u.at<float>(0);
     ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
