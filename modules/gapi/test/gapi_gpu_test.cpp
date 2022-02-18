@@ -335,6 +335,60 @@ TEST(GPU_D3D11, getDeviceIDs)
     EXPECT_GE(device_is, 0);
 }
 
+TEST(GPU_D3D11, ConvTexture2DtoUMat)
+{
+        // Create test data ///////////////////////////////////////////////////////
+    const UINT width = 100;
+    const UINT height = 150;
+    std::vector<uint8_t> test_data(width * height, 0);
+    ID3D11Texture2D* pD3D11Texture2D = nullptr;
+    ID3D11Device* pD3D11Device = nullptr;
+    prepareD3D11Texture2D(width, height, test_data,&pD3D11Texture2D, &pD3D11Device);
+
+    std::vector<std::pair<bool, cv::ocl::Device>> devices;
+    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+    if (devices.empty()) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: getDeviceIDsByD3D11Device returns empty vector of devices\n");
+    }
+
+    int device_is = -1;
+    device_is = findPlaceOfDevice(devices);
+    if (device_is < 0) findPlaceOfDevice(devices, false);
+    if (device_is < 0) {
+        CV_Error(cv::Error::StsAssert, "OpenCL: findPlaceOfDevice doesn't find device\n");
+    }
+
+    // Convert texture2D to cl_mem_image //////////////////////////////////////
+    cv::ocl::Image2D img;
+    cv::ocl::Context ctx;
+    EXPECT_NO_THROW(std::tie(img, ctx) = cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices[device_is].second));
+
+    if (ctx.ptr() == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
+    }
+    if (img.ptr() == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
+    }
+
+    // Convert to UMat function ///////////////////////////////////////////////
+    // Create cv::Umat
+    cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
+
+    // Copy data from cl_mem_image to cv::Umat buffer
+    cv::ocl::convertFromImage(img.ptr(), umt_test);
+
+    // Comparison /////////////////////////////////////////////////////////////
+    EXPECT_EQ(umt_test.total(), test_data.size());
+    EXPECT_EQ(umt_test.size(), cv::Size(width, height));
+    EXPECT_EQ(umt_test.type(), CV_8U);
+
+    // Copy to host
+    uint8_t* umt_data = umt_test.getMat(ACCESS_READ).ptr<uint8_t>();
+    for (int i = 0; i < umt_test.total(); ++i) {
+        EXPECT_EQ(umt_data[i], test_data[i]);
+    }
+}
+
 // NOTE: This test works with #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 /*TEST(GPU_D3D11, ConvTexture2DtoCLmem)
 {
@@ -390,60 +444,6 @@ TEST(GPU_D3D11, getDeviceIDs)
     // Comparison /////////////////////////////////////////////////////////////
     EXPECT_EQ(out_test_data, test_data);
 }*/
-
-TEST(GPU_D3D11, ConvTexture2DtoUMat)
-{
-        // Create test data ///////////////////////////////////////////////////////
-    const UINT width = 100;
-    const UINT height = 150;
-    std::vector<uint8_t> test_data(width * height, 0);
-    ID3D11Texture2D* pD3D11Texture2D = nullptr;
-    ID3D11Device* pD3D11Device = nullptr;
-    prepareD3D11Texture2D(width, height, test_data,&pD3D11Texture2D, &pD3D11Device);
-
-    std::vector<std::pair<bool, cv::ocl::Device>> devices;
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
-    if (devices.empty()) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: getDeviceIDsByD3D11Device returns empty vector of devices\n");
-    }
-
-    int device_is = -1;
-    device_is = findPlaceOfDevice(devices);
-    if (device_is < 0) findPlaceOfDevice(devices, false);
-    if (device_is < 0) {
-        CV_Error(cv::Error::StsAssert, "OpenCL: findPlaceOfDevice doesn't find device\n");
-    }
-
-    // Convert texture2D to cl_mem_image //////////////////////////////////////
-    cv::ocl::Image2D img;
-    cv::ocl::Context ctx;
-    EXPECT_NO_THROW(std::tie(img, ctx) = cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices[device_is].second));
-
-    if (ctx.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
-    }
-    if (img.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
-    }
-
-    // Convert to UMat function ///////////////////////////////////////////////
-    // Create cv::Umat
-    cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
-
-    // Copy data from cl_mem_image to cv::Umat buffer
-    cv::ocl::convertFromImage(img.ptr(), umt_test);
-
-    // Comparison /////////////////////////////////////////////////////////////
-    EXPECT_EQ(umt_test.total(), test_data.size());
-    EXPECT_EQ(umt_test.size(), cv::Size(width, height));
-    EXPECT_EQ(umt_test.type(), CV_8U);
-
-    // Copy to host
-    uint8_t* umt_data = umt_test.getMat(ACCESS_READ).ptr<uint8_t>();
-    for (int i = 0; i < umt_test.total(); ++i) {
-        EXPECT_EQ(umt_data[i], test_data[i]);
-    }
-}
 
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX

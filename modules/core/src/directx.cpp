@@ -1489,7 +1489,11 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                                          platforms[i]);
         }
 
-        if (!temp_devices.empty()) {
+        if (devices.empty()) {
+            devices = std::move(temp_devices);
+        }
+
+        if (!temp_devices.empty() && !devices.empty()) {
             devices.reserve(devices.size() + temp_devices.size());
             std::move(temp_devices.begin(), temp_devices.end(),
             std::inserter(devices, devices.end()));
