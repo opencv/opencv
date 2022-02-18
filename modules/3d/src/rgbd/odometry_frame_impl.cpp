@@ -21,6 +21,7 @@ public:
     virtual void getGrayImage(OutputArray image) const = 0;
     virtual void setDepth(InputArray  depth) = 0;
     virtual void getDepth(OutputArray depth) const = 0;
+    virtual void getScaledDepth(OutputArray depth) const = 0;
     virtual void setMask(InputArray  mask) = 0;
     virtual void getMask(OutputArray mask) const = 0;
     virtual void setNormals(InputArray  normals) = 0;
@@ -46,6 +47,7 @@ public:
     virtual void getGrayImage(OutputArray image) const override;
     virtual void setDepth(InputArray  depth) override;
     virtual void getDepth(OutputArray depth) const override;
+    virtual void getScaledDepth(OutputArray depth) const override;
     virtual void setMask(InputArray  mask) override;
     virtual void getMask(OutputArray mask) const override;
     virtual void setNormals(InputArray  normals) override;
@@ -64,6 +66,7 @@ private:
     TMat image;
     TMat imageGray;
     TMat depth;
+    TMat scaledDepth;
     TMat mask;
     TMat normals;
     std::vector< std::vector<TMat> > pyramids;
@@ -87,6 +90,7 @@ void OdometryFrame::getImage(OutputArray image) const { this->impl->getImage(ima
 void OdometryFrame::getGrayImage(OutputArray image) const { this->impl->getGrayImage(image); }
 void OdometryFrame::setDepth(InputArray  depth) { this->impl->setDepth(depth); }
 void OdometryFrame::getDepth(OutputArray depth) const { this->impl->getDepth(depth); }
+void OdometryFrame::getScaledDepth(OutputArray depth) const { this->impl->getScaledDepth(depth); }
 void OdometryFrame::setMask(InputArray  mask) { this->impl->setMask(mask); }
 void OdometryFrame::getMask(OutputArray mask) const { this->impl->getMask(mask); }
 void OdometryFrame::setNormals(InputArray  normals) { this->impl->setNormals(normals); }
@@ -140,7 +144,9 @@ void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image) const
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
-    TMat depth_tmp, depth_flt;
+    TMat depth_tmp;
+    Mat depth_flt;
+
     depth_tmp = getTMat<TMat>(_depth);
     // Odometry works well with depth values in range [0, 10)
     // If it's bigger, let's scale it down by 5000, a typical depth factor
@@ -149,12 +155,14 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
     if (max > 10)
     {
         depth_tmp.convertTo(depth_flt, CV_32FC1, 1.f / 5000.f);
-        TMat depthMask;
-        cv::compare(depth_flt, Scalar(FLT_EPSILON), depthMask, cv::CMP_LT);
-        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depthMask);
-        depth_tmp = depth_flt;
+        // getTMat<Mat>(depth_flt) < FLT_EPSILON dont work with UMat
+        // depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), getTMat<Mat>(depth_flt) < FLT_EPSILON);
+        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth_flt < FLT_EPSILON);
+        depth_tmp = getTMat<TMat>(depth_flt);
+
     }
-    this->depth = depth_tmp;
+    this->depth = getTMat<TMat>(_depth);
+    this->scaledDepth = depth_tmp;
     this->findMask(_depth);
 }
 
@@ -162,6 +170,12 @@ template<typename TMat>
 void OdometryFrameImplTMat<TMat>::getDepth(OutputArray _depth) const
 {
     _depth.assign(this->depth);
+}
+
+template<typename TMat>
+void OdometryFrameImplTMat<TMat>::getScaledDepth(OutputArray _depth) const
+{
+    _depth.assign(this->scaledDepth);
 }
 
 template<typename TMat>

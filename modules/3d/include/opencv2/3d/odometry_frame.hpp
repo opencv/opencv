@@ -52,6 +52,7 @@ public:
     void getGrayImage(OutputArray image) const;
     void setDepth(InputArray  depth);
     void getDepth(OutputArray depth) const;
+    void getScaledDepth(OutputArray depth) const;
     void setMask(InputArray  mask);
     void getMask(OutputArray mask) const;
     void setNormals(InputArray  normals);
