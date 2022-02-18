@@ -184,9 +184,8 @@ public:
 
     void addInfer(const std::string& name, const InferParams& params);
 
-    void setSource(const std::string& name,
-                   double latency,
-                   const OutputDescr& output);
+    void setSource(const std::string&           name,
+                   std::shared_ptr<DummySource> src);
 
     void addEdge(const Edge& edge);
     void setMode(PLMode mode);
@@ -315,11 +314,10 @@ void PipelineBuilder::addEdge(const Edge& edge) {
     out_data->out_nodes.push_back(dst_node);
 }
 
-void PipelineBuilder::setSource(const std::string& name,
-                                double latency,
-                                const OutputDescr& output) {
-    GAPI_Assert(!m_state->src);
-    m_state->src = std::make_shared<DummySource>(latency, output);
+void PipelineBuilder::setSource(const std::string&           name,
+                                std::shared_ptr<DummySource> src) {
+    GAPI_Assert(!m_state->src && "Only single source pipelines are supported!");
+    m_state->src = src;
     addCall(name, SourceCall{});
 }
 

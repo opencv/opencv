@@ -14,21 +14,24 @@ class DummySource final: public cv::gapi::wip::IStreamSource {
 public:
     using Ptr = std::shared_ptr<DummySource>;
     DummySource(const double       latency,
-                const OutputDescr& output);
+                const OutputDescr& output,
+                const bool         drop_frames);
     bool pull(cv::gapi::wip::Data& data) override;
     cv::GMetaArg descr_of() const override;
 
 private:
     double  m_latency;
     cv::Mat m_mat;
+    bool    m_drop_frames;
     using TimePoint =
         std::chrono::time_point<std::chrono::high_resolution_clock>;
     cv::optional<TimePoint> m_prev_pull_tp;
 };
 
 DummySource::DummySource(const double       latency,
-                         const OutputDescr& output)
-    : m_latency(latency) {
+                         const OutputDescr& output,
+                         const bool         drop_frames)
+    : m_latency(latency), m_drop_frames(drop_frames) {
     utils::createNDMat(m_mat, output.dims, output.precision);
     utils::generateRandom(m_mat);
 }
@@ -46,7 +49,9 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
     auto end = high_resolution_clock::now();
     auto elapsed =
         duration_cast<duration<double, std::milli>>(end - *m_prev_pull_tp).count();
-    auto delta = m_latency - elapsed;
+
+    auto delta =
+        (m_drop_frames ? (static_cast<int>(elapsed / m_latency) + 1) * m_latency : m_latency) - elapsed;
     if (delta > 0) {
         utils::sleep(delta);
     }
