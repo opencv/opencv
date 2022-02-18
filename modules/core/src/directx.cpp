@@ -1414,18 +1414,17 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             size_t out_size = 0;
             cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &out_size);
             if (status != CL_SUCCESS) {
-                CV_LOG_DEBUG(NULL, "clGetPlatformInfo can't find number of extenson for platform. status " << int(status));
-                return devices;
+                throw(status, "clGetPlatformInfo can't find number of extenson for platform");
             }
             std::string ext;
             ext.resize(out_size, '\0'); // char[] CL_PLATFORM_EXTENSIONS
             status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, out_size, &ext.front(), nullptr);
             if (status != CL_SUCCESS) {
-                CV_LOG_DEBUG(NULL, "clGetPlatformInfo can't get extenson for platform. status " << int(status));
-                return devices;
+                throw(status, "clGetPlatformInfo can't get extenson for platform");
             }
+            // If platform doesn't support extension then returns empty vector
             if (ext.find(" cl_khr_d3d11_sharing ") == std::string::npos) {
-                CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform ");
+                CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
                 return devices;
             }
 
@@ -1433,8 +1432,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
                           cl_d3d11_device_set, 0, NULL, &numDevices);
             if (status != CL_SUCCESS) {
-                CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
-                return devices;
+                throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             if (numDevices < 1) {
                 return devices;
@@ -1443,8 +1441,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
                           cl_d3d11_device_set, numDevices, &cl_devs.front(), NULL);
             if (status != CL_SUCCESS) {
-                CV_LOG_DEBUG(NULL, "clGetDeviceIDsFromD3D11KHR failed with status " << int(status));
-                return devices;
+                throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             for (auto&& device : cl_devs) {
                 devices.emplace_back(cl_d3d11_device_set == CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
