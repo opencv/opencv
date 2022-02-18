@@ -18,17 +18,21 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 
-bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs);
-
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+// GAPI_EXPORTS for tests
+struct GAPI_EXPORTS FrameInfoComparator {
+    bool operator()(const mfxFrameInfo& lhs, const mfxFrameInfo& rhs) const;
+    static bool equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& rhs);
+};
 
 class VPPPreprocSession;
 struct IDataProvider;
 struct VPLAccelerationPolicy;
 
+// GAPI_EXPORTS for tests
 class GAPI_EXPORTS VPPPreprocEngine final : public ProcessingEngineBase,
                                             public cv::gapi::wip::IPreprocEngine {
 public:
@@ -46,7 +50,7 @@ public:
                             const cv::MediaFrame& in_frame) override;
 
 private:
-    std::map<mfxFrameInfo, session_ptr_type> preproc_session_map;
+    std::map<mfxFrameInfo, session_ptr_type, FrameInfoComparator> preproc_session_map;
     void on_frame_ready(session_type& sess,
                         mfxFrameSurface1* ready_surface);
     ExecutionStatus process_error(mfxStatus status, session_type& sess);

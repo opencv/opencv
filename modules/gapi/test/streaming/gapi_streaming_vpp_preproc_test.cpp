@@ -259,6 +259,8 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     // make test in loop
     bool in_progress = false;
     size_t frames_processed_count = 1;
+    const auto &first_pp_param_value_impl =
+        cv::util::get<cv::gapi::wip::onevpl::vpp_pp_params>(first_pp_params.value().value);
     try {
         while(true) {
             decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine);
@@ -267,7 +269,11 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
 
             cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
             ASSERT_TRUE(params.has_value());
-            ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params::value_type)));
+            const auto &cur_pp_param_value_impl =
+                cv::util::get<cv::gapi::wip::onevpl::vpp_pp_params>(params.value().value);
+
+            ASSERT_EQ(first_pp_param_value_impl.handle, cur_pp_param_value_impl.handle);
+            ASSERT_TRUE(FrameInfoComparator::equal_to(first_pp_param_value_impl.info, cur_pp_param_value_impl.info));
 
             pp_session pp_sess = preproc_engine.initialize_preproc(params.value(),
                                                                    required_frame_param);

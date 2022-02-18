@@ -382,7 +382,21 @@ std::string mfx_frame_info_to_string(const mfxFrameInfo &info) {
     DUMP_MEMBER(ss, info, PicStruct)
     DUMP_MEMBER(ss, info, ChromaFormat);
     return ss.str();
+}
 
+int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+    //NB: mfxFrameInfo is a `packed` struct declared in VPL
+    return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo));
+}
+
+bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs)
+{
+    return (compare(lhs, rhs) < 0);
+}
+
+bool operator== (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs)
+{
+    return (compare(lhs, rhs) == 0);
 }
 
 std::string ext_mem_frame_type_to_cstr(int type) {

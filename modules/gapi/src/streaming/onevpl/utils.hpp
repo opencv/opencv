@@ -77,6 +77,8 @@ std::string GAPI_EXPORTS mfxstatus_to_string(int64_t err);
 std::string GAPI_EXPORTS mfxstatus_to_string(mfxStatus err);
 
 std::string mfx_frame_info_to_string(const mfxFrameInfo &info);
+bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs);
+bool operator== (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs);
 
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
 

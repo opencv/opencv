@@ -21,14 +21,18 @@
 
 #define ALIGN16(value)           (((value + 15) >> 4) << 4)
 
-bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
-    return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo)) < 0;
-}
-
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+
+bool FrameInfoComparator::operator()(const mfxFrameInfo& lhs, const mfxFrameInfo& rhs) const {
+    return lhs < rhs;
+}
+
+bool FrameInfoComparator::equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& rhs) {
+    return lhs == rhs;
+}
 
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
     ProcessingEngineBase(std::move(accel)) {
@@ -194,7 +198,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     mfxVPPParams.vpp.Out.CropH         = mfxVPPParams.vpp.Out.Height;
 
     // check In & Out equally to bypass preproc
-    if (!memcmp(&mfxVPPParams.vpp.Out, &mfxVPPParams.vpp.In, sizeof(mfxVPPParams.vpp.Out)) ) {
+    if (mfxVPPParams.vpp.Out == mfxVPPParams.vpp.In) {
         GAPI_LOG_DEBUG(nullptr, "no preproc required");
         return pp_session::create<EngineSession>(nullptr);
     }
