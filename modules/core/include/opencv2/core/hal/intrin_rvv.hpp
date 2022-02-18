@@ -564,8 +564,8 @@ struct v_uint8x16
     inline v_uint8x16(const v_uint8x16& vec) {
         *pval = *(vec.pval);
     }
-    vuint8m1_t* pval = (vuint8m1_t*)malloc(nlanes*8);
-    ~v_uint8x16() {free(pval); pval = nullptr;}
+    uchar val[16];
+    vuint8m1_t* pval = (vuint8m1_t*)val;
 };
 
 struct v_int8x16
@@ -599,8 +599,8 @@ struct v_int8x16
     inline v_int8x16(const v_int8x16& vec) {
         *pval = *(vec.pval);
     }
-    vint8m1_t* pval = (vint8m1_t*)malloc(nlanes*8);
-    ~v_int8x16() {free(pval);}
+    schar val[16];
+    vint8m1_t* pval = (vint8m1_t*)val;
 };
 
 struct v_uint16x8
@@ -634,8 +634,8 @@ struct v_uint16x8
     inline v_uint16x8(const v_uint16x8& vec) {
         *pval = *(vec.pval);
     }
-    vuint16m1_t* pval = (vuint16m1_t*)malloc(nlanes*16);
-    ~v_uint16x8() {free(pval);}
+    ushort val[8];
+    vuint16m1_t* pval = (vuint16m1_t*)val;
 };
 
 struct v_int16x8
@@ -669,8 +669,8 @@ struct v_int16x8
     inline v_int16x8(const v_int16x8& vec) {
         *pval = *(vec.pval);
     }
-    vint16m1_t* pval = (vint16m1_t*)malloc(nlanes*16);
-    ~v_int16x8() {free(pval);}
+    short val[8];
+    vint16m1_t* pval = (vint16m1_t*)val;
 };
 
 struct v_uint32x4
@@ -704,8 +704,8 @@ struct v_uint32x4
     inline v_uint32x4(const v_uint32x4& vec) {
         *pval = *(vec.pval);
     }
-    vuint32m1_t* pval = (vuint32m1_t*)malloc(nlanes*32);
-    ~v_uint32x4() {free(pval);}
+    unsigned val[4];
+    vuint32m1_t* pval = (vuint32m1_t*)val;
 };
 
 struct v_int32x4
@@ -739,8 +739,8 @@ struct v_int32x4
     inline v_int32x4(const v_int32x4& vec) {
         *pval = *(vec.pval);
     }
-    vint32m1_t* pval = (vint32m1_t*)malloc(nlanes*32);
-    ~v_int32x4() {free(pval);}
+    int val[4];
+    vint32m1_t* pval = (vint32m1_t*)val;
 };
 
 struct v_float32x4
@@ -773,8 +773,8 @@ struct v_float32x4
     inline v_float32x4(const v_float32x4& vec) {
         *pval = *(vec.pval);
     }
-    vfloat32m1_t* pval = (vfloat32m1_t*)malloc(nlanes*32);
-    ~v_float32x4() {free(pval);}
+    float val[4];
+    vfloat32m1_t* pval = (vfloat32m1_t*)val;
 };
 
 struct v_uint64x2
@@ -808,8 +808,8 @@ struct v_uint64x2
     inline v_uint64x2(const v_uint64x2& vec) {
         *pval = *(vec.pval);
     }
-    vuint64m1_t* pval = (vuint64m1_t*)malloc(nlanes*64);
-    ~v_uint64x2() {free(pval);}
+    uint64 val[2];
+    vuint64m1_t* pval = (vuint64m1_t*)val;
 };
 
 struct v_int64x2
@@ -843,8 +843,8 @@ struct v_int64x2
     inline v_int64x2(const v_int64x2& vec) {
         *pval = *(vec.pval);
     }
-    vint64m1_t* pval = (vint64m1_t*)malloc(nlanes*64);
-    ~v_int64x2() {free(pval);}
+    int64 val[2];
+    vint64m1_t* pval = (vint64m1_t*)val;
 };
 
 #if CV_SIMD128_64F
@@ -879,8 +879,8 @@ struct v_float64x2
     inline v_float64x2(const v_float64x2& vec) {
         *pval = *(vec.pval);
     }
-    vfloat64m1_t* pval = (vfloat64m1_t*)malloc(nlanes*64);
-    ~v_float64x2() {free(pval);}
+    double val[2];
+    vfloat64m1_t* pval = (vfloat64m1_t*)val;
 };
 #endif // CV_SIMD128_64F
 #endif // __clang__
