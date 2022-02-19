@@ -297,36 +297,16 @@ It is possible to alternate error processing by using redirectError().
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#if defined(__clang__) && defined(_MSC_VER)  // MSVC-Clang
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Winvalid-noreturn"
-#elif defined(__GNUC__)
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
-# endif
-#endif
-
 /** same as cv::error, but does not return */
 CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
 {
     error(_code, _err, _func, _file, _line);
-#ifdef __GNUC__
-# if !defined __clang__ && !defined __APPLE__
+#if defined(__GNUC__) || defined(__clang__)
     // this suppresses this warning: "noreturn" function does return [enabled by default]
     __builtin_trap();
     // or use infinite loop: for (;;) {}
-# endif
 #endif
 }
-
-#if defined(__clang__) && defined(_MSC_VER)  // MSVC-Clang
-# pragma clang diagnostic pop
-#elif defined(__GNUC__)
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic pop
-# endif
-#endif
 
 #ifdef CV_STATIC_ANALYSIS
 
