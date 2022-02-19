@@ -909,7 +909,8 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 #endif
 
     // IPP_DISABLE_HISTOGRAM - https://github.com/opencv/opencv/issues/11544
-    if (uniform && (ranges[0][1] - ranges[0][0]) != histSize)
+    // and https://github.com/opencv/opencv/issues/21595
+    if ((uniform && (ranges[0][1] - ranges[0][0]) != histSize) || abs(ranges[0][0]) != cvFloor(ranges[0][0]))
         return false;
 
     Mat ihist = hist;
