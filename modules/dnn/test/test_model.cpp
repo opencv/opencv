@@ -1022,11 +1022,6 @@ TEST_P(Test_Model, FaceDetectionByYN)
             }
             gt_landmarks.push_back(points);
         }
-
-        // There are 7 faces in the addams-family.png, but yunet-202109.onnx can't detect the last one.
-        // Therefore, it is removed from ground truth data.
-        gt_boxes.pop_back();
-        gt_landmarks.pop_back();
     }
 
     // Threshold
