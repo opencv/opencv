@@ -797,14 +797,19 @@ namespace colormap
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
-        if (src.isMat() && userColor.isMat() && (src.type() == CV_8UC1))
+        if (src.isMat() && userColor.isMat() && ((src.type() == CV_8UC1) || (src.type() == CV_8UC3)))
         {
             const cv::Mat srcMat = src.getMat();
+            cv::Mat srcGray;
+            if (srcMat.channels() == 1)
+              srcGray = srcMat;
+            else
+              cv::cvtColor(srcMat, srcGray, cv::COLOR_BGR2GRAY);
             cv::Mat userColorMat = userColor.getMat();
             dst.create(src.size(), userColor.type());
             cv::Mat dstMat = dst.getMat();
             const size_t elemSize = userColorMat.elemSize();
-            srcMat.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
+            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
                 const int row = position[0];
                 const int col = position[1];
                 memcpy(dstMat.data+row*dstMat.step+col*elemSize, userColorMat.data+pixel*userColorMat.step, elemSize);
