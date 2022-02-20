@@ -318,7 +318,7 @@ public:
         const std::vector<std::vector<Point>>& ref_landmarks,
         const double iou_diff,
         const double l2d_diff,
-        const double conf_threshold = 0.9,
+        const double conf_threshold = 0.7,
         const double nms_threshold = 0.3
     )
     {
@@ -990,8 +990,11 @@ TEST_P(Test_Model, FaceDetectionByYN)
     }
     CV_Assert(num_faces != 0);
 
-    std::vector<Rect> gt_boxes;
-    std::vector<std::vector<Point>> gt_landmarks;
+    const std::vector<int> gt_order = { 0, 1, 2, 4, 3, 5, 6 };
+    CV_Assert(num_faces != gt_order.size());
+
+    std::vector<Rect> gt_boxes( num_faces );
+    std::vector<std::vector<Point>> gt_landmarks( num_faces );
     {
         for (uint i = 0; i < num_faces; i++)
         {
@@ -1006,7 +1009,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
                 std::istringstream iss(part);
                 iss >> box[j];
             }
-            gt_boxes.push_back(Rect(box[0], box[1], box[2], box[3]));
+            gt_boxes[gt_order[i]] = Rect(box[0], box[1], box[2], box[3]);
 
             std::vector<Point> points;
             for(uint j = 4; j < 14; j+=2)
@@ -1020,7 +1023,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
                 iss_y >> y;
                 points.push_back(Point(x, y));
             }
-            gt_landmarks.push_back(points);
+            gt_landmarks[gt_order[i]] = points;
         }
     }
 
