@@ -1682,17 +1682,13 @@ void FaceDetectionModel_SSD::setInputParams(double scale, const Size& size, cons
 struct FaceDetectionModel_YN_Impl : public FaceDetectionModel_Impl
 {
 private:
-    float confThreshold;
-    float nmsThreshold;
     Size inputSize;
     std::vector<Rect2f> priors;
     std::vector<std::vector<Point>> landmarks;
 
 public:
     FaceDetectionModel_YN_Impl()
-        : confThreshold(0.9f),
-          nmsThreshold(0.3f),
-          inputSize(Size(-1, -1))
+        : inputSize(Size(-1, -1))
     {
         CV_TRACE_FUNCTION();
     }
@@ -1709,8 +1705,8 @@ public:
         InputArray frame,
         CV_OUT std::vector<float>& confidences,
         CV_OUT std::vector<Rect>& boxes,
-        float confThreshold = 0.9f,
-        float nmsThreshold = 0.3f
+        float confThreshold = 0.7f,
+        float nmsThreshold = 0.4f
     ) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -1731,7 +1727,7 @@ public:
         // Run inference process and post process.
         std::vector<Mat> output_blobs;
         processFrame(frame, output_blobs);
-        postProcess(output_blobs, confidences, boxes, landmarks);
+        postProcess(output_blobs, confidences, boxes, landmarks, confThreshold, nmsThreshold);
     }
 
     std::vector<std::vector<Point>> getLandmarks() const
@@ -1813,7 +1809,9 @@ private:
         const std::vector<Mat>& output_blobs,
         std::vector<float>& confidences,
         std::vector<Rect>& boxes,
-        std::vector<std::vector<Point>>& landmarks
+        std::vector<std::vector<Point>>& landmarks,
+        const float conf_threshold,
+        const float nms_threshold
     )
     {
         // Raw outputs
@@ -1893,7 +1891,7 @@ private:
         if (1 < raw_boxes.size())
         {
             std::vector<int> keep_indices;
-            dnn::NMSBoxes(raw_boxes, raw_confidences, confThreshold, nmsThreshold, keep_indices);
+            dnn::NMSBoxes(raw_boxes, raw_confidences, conf_threshold, nms_threshold, keep_indices);
             for (const int keep_index : keep_indices)
             {
                 confidences.push_back(raw_confidences[keep_index]);
