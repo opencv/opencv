@@ -369,11 +369,11 @@ public:
         for (uint i = 0; i < landmarks.size(); i++)
         {
             std::cout << "---" << i << "---" << std::endl;
-            std::cout << ref_landmarks[i][0] << " - " << landmarks[i][0] << " = " << cv:norm(ref_landmarks[i][0] - landmarks[i][0]) << std::endl;
-            std::cout << ref_landmarks[i][1] << " - " << landmarks[i][1] << " = " << cv:norm(ref_landmarks[i][1] - landmarks[i][1]) << std::endl;
-            std::cout << ref_landmarks[i][2] << " - " << landmarks[i][2] << " = " << cv:norm(ref_landmarks[i][2] - landmarks[i][2]) << std::endl;
-            std::cout << ref_landmarks[i][3] << " - " << landmarks[i][3] << " = " << cv:norm(ref_landmarks[i][3] - landmarks[i][3]) << std::endl;
-            std::cout << ref_landmarks[i][4] << " - " << landmarks[i][4] << " = " << cv:norm(ref_landmarks[i][4] - landmarks[i][4]) << std::endl;
+            std::cout << ref_landmarks[i][0] << " - " << landmarks[i][0] << " = " << cv::norm(ref_landmarks[i][0] - landmarks[i][0]) << std::endl;
+            std::cout << ref_landmarks[i][1] << " - " << landmarks[i][1] << " = " << cv::norm(ref_landmarks[i][1] - landmarks[i][1]) << std::endl;
+            std::cout << ref_landmarks[i][2] << " - " << landmarks[i][2] << " = " << cv::norm(ref_landmarks[i][2] - landmarks[i][2]) << std::endl;
+            std::cout << ref_landmarks[i][3] << " - " << landmarks[i][3] << " = " << cv::norm(ref_landmarks[i][3] - landmarks[i][3]) << std::endl;
+            std::cout << ref_landmarks[i][4] << " - " << landmarks[i][4] << " = " << cv::norm(ref_landmarks[i][4] - landmarks[i][4]) << std::endl;
             normAssertLandmarkDetections(
                 ref_landmarks[i], landmarks[i], "", l2d_diff);
         }
