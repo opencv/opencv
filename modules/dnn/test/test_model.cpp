@@ -1003,7 +1003,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
             std::stringstream ss{ line };
 
             int box[4];
-            for (int j = 0; j < 4; j++)
+            for (uint j = 0; j < 4; j++)
             {
                 getline(ss, part, ' ');
                 std::istringstream iss(part);
@@ -1012,7 +1012,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
             gt_boxes[gt_order[i]] = Rect(box[0], box[1], box[2], box[3]);
 
             std::vector<Point> points;
-            for(uint j = 4; j < 14; j+=2)
+            for(uint j = 0; j < 5; j++)
             {
                 int x, y;
                 getline(ss, part, ' ');
@@ -1023,7 +1023,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
                 iss_y >> y;
                 points.push_back(Point(x, y));
             }
-            gt_landmarks[gt_order[i]] = points;
+            gt_landmarks[i] = points;
         }
     }
 
