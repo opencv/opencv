@@ -991,7 +991,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
     CV_Assert(num_faces != 0);
 
     const std::vector<int> gt_order = { 0, 1, 2, 4, 3, 5, 6 };
-    CV_Assert(num_faces != gt_order.size());
+    CV_Assert(num_faces == gt_order.size());
 
     std::vector<Rect> gt_boxes( num_faces );
     std::vector<std::vector<Point>> gt_landmarks( num_faces );
