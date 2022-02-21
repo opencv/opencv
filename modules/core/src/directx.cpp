@@ -1423,7 +1423,8 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                 throw(status, "clGetPlatformInfo can't get extenson for platform");
             }
             // If platform doesn't support extension then returns empty vector
-            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos
+                && ext.find(" cl_khr_d3d11_sharing ") == std::string::npos) {
                 CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
                 return devices;
             }
