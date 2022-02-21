@@ -196,6 +196,9 @@ int split4_simd(const uchar in[], uchar out1[], uchar out2[],
 int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                uchar out[], const int width);
 
+int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
+                const uchar in4[], uchar out[], const int width);
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
