@@ -138,7 +138,7 @@ CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, Outp
 //!             Second of pair is cv::ocl::Device that wraps cl_device_id.
 //
 //! @param pD3D11Device - pointer to Direct3Device11 device.
-//! @param devices - destination vector of pairs that conatins devices which may interoperate with the specified Direct3D object.
+//! @param dst - destination vector of pairs that conatins devices which may interoperate with the specified Direct3D object.
 CV_EXPORTS void getDeviceIDsByD3D11Device(ID3D11Device *pD3D11Device, std::vector<std::pair<int, cv::ocl::Device>>& dst);
 
 //! @brief Converts ID3D11Texture2D to cl_mem (OpenCL image2d_t).
