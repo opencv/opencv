@@ -1496,7 +1496,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
 #endif
 }
 
-std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, Device& device)
+std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, Device& device)
 {
     CV_UNUSED(pD3D11Texture2D); CV_UNUSED(device);
 #if !defined(HAVE_DIRECTX)
@@ -1575,7 +1575,7 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(
     }
     auto image = Image2D::fromHandle(image2d);
     clRetainMemObject(image2d);
-    return std::make_tuple(image, ctx);
+    return std::make_tuple(image, clExecCtx);
 #endif
 }
 

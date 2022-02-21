@@ -148,8 +148,9 @@ CV_EXPORTS void getDeviceIDsByD3D11Device(ID3D11Device *pD3D11Device, std::vecto
 //! @param pD3D11Texture2D - source D3D11 texture
 //! @param device - cv::ocl::Device that will be used for context creation
 
-//! @return tuple of Image2D Context Device objects
-CV_EXPORTS std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, cv::ocl::Device& device);
+//! @return tuple of Image2D object and OpenCLExecutionContext object that is bonded with thread
+CV_EXPORTS std::tuple<cv::ocl::Image2D, cv::ocl::OpenCLExecutionContext>
+    convertFromD3D11Texture2DtoCLMem(ID3D11Texture2D* pD3D11Texture2D, cv::ocl::Device& device);
 
 //! @brief Converts InputArray to ID3D10Texture2D
 //

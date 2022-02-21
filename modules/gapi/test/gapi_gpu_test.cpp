@@ -341,9 +341,10 @@ TEST(GPU_D3D11, ConvTexture2DtoCLMem)
 
     // Convert texture2D to cl_mem_image //////////////////////////////////////
     cv::ocl::Image2D img;
-    cv::ocl::Context ctx;
-    EXPECT_NO_THROW(std::tie(img, ctx) =
+    cv::ocl::OpenCLExecutionContext clExecCtx;
+    EXPECT_NO_THROW(std::tie(img, clExecCtx) =
         cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices.front().second)); // first device
+    auto ctx = const_cast<cv::ocl::Context&>(clExecCtx.getContext());
 
     // Check  //////////////////////////////////////
     EXPECT_TRUE(ctx.ptr() != nullptr);
@@ -370,8 +371,8 @@ TEST(GPU_D3D11, ConvTexture2DtoUMat)
 
     // Convert texture2D to cl_mem_image //////////////////////////////////////
     cv::ocl::Image2D img;
-    cv::ocl::Context ctx;
-    EXPECT_NO_THROW(std::tie(img, ctx) =
+    cv::ocl::OpenCLExecutionContext clExecCtx;
+    EXPECT_NO_THROW(std::tie(img, clExecCtx) =
         cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices.front().second)); // first device
 
     // Convert to UMat function ///////////////////////////////////////////////
