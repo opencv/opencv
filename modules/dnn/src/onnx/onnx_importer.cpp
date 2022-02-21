@@ -2614,9 +2614,7 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     if (isDynamicShape)
     {
         CV_LOG_ERROR(NULL, "DNN/ONNX(Shape): dynamic 'zero' shapes are not supported, input " << toString(inpShape, node_proto.input(0)));
-        // FIXIT repair assertion
-        // Disabled to pass face detector tests from #20422
-        // CV_Assert(!isDynamicShape);  // not supported
+        CV_Assert(!isDynamicShape);  // not supported
     }
     addConstant(node_proto.output(0), shapeMat);
 }
