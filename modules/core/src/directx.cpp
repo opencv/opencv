@@ -1398,8 +1398,9 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair<bool, Device>>& devices) {
-    CV_UNUSED(pD3D11Device); CV_UNUSED(devices);
+void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair<int, Device>>& dst)
+{
+    CV_UNUSED(pD3D11Device); CV_UNUSED(dst);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1409,8 +1410,8 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
         [](const clGetDeviceIDsFromD3D11KHR_fn& func,
                  ID3D11Device *pD3D11Device,
            const int cl_d3d11_device_set,
-           const cl_platform_id& platform) -> std::vector<std::pair<bool, Device>> {
-            std::vector<std::pair<bool, Device>> devices;
+           const cl_platform_id& platform) -> std::vector<std::pair<int, Device>> {
+            std::vector<std::pair<int, Device>> devices;
             size_t out_size = 0;
             cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &out_size);
             if (status != CL_SUCCESS) {
@@ -1423,8 +1424,8 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             }
             // If platform doesn't support extension then returns empty vector
             if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
-                std::cout << "HERE" << std::endl;
                 CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
+                return devices;
             }
 
             cl_uint numDevices = 0;
@@ -1443,7 +1444,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                 throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             for (auto&& device : cl_devs) {
-                devices.emplace_back(cl_d3d11_device_set == CL_PREFERRED_DEVICES_FOR_D3D11_KHR,
+                devices.emplace_back(cl_d3d11_device_set,
                                      device);
             }
             return devices;
@@ -1464,15 +1465,14 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
     }
 
-    for (int i = 0; i < int(numPlatforms); ++i)
-    {
+    for (cl_uint i =0; i < numPlatforms; ++i) {
         // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
         clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
             clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
         if (!clGetDeviceIDsFromD3D11KHR) {
             continue;
         }
-        std::vector<std::pair<bool, Device>> temp_devices;
+        std::vector<std::pair<int, Device>> temp_devices;
         // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
         temp_devices = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
                                      pD3D11Device,
@@ -1489,9 +1489,8 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
         }
 
         if (!temp_devices.empty()) {
-            devices.reserve(devices.size() + temp_devices.size());
-            std::move(temp_devices.begin(), temp_devices.end(),
-                      std::inserter(devices, devices.end()));
+            dst.insert(dst.end(), std::make_move_iterator(temp_devices.begin()),
+                                  std::make_move_iterator(temp_devices.end()));
         }
     }
 #endif
@@ -1555,12 +1554,13 @@ std::tuple<cv::ocl::Image2D, cv::ocl::Context> convertFromD3D11Texture2DtoCLMem(
     }
     catch (...) {
         if (context != nullptr) clReleaseContext(context);
+        pD3D11Device->Release();
         throw;
     }
     clExecCtx.bind();
     auto ctx = const_cast<Context&>(clExecCtx.getContext());
-
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+    pD3D11Device->Release();
     if (nullptr == impl) {
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
     }

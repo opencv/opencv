@@ -214,7 +214,9 @@ TEST(GPU, Symm7x7_test)
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
 
-void createD3D11Device(ID3D11Device** device) {
+namespace d3d11_test {
+// TODO: This functions must be a part of FIXTURE
+void createD3D11Device(ID3D11Device** device, size_t vendorId) {
     IDXGIFactory* adapter_factory = nullptr;
     HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory),
                                     reinterpret_cast<void**>(&adapter_factory));
@@ -224,13 +226,12 @@ void createD3D11Device(ID3D11Device** device) {
     }
     IDXGIAdapter* intel_adapter = nullptr;
     UINT adapter_index = 0;
-    const unsigned int refIntelVendorID = 0x8086; // Intel
     IDXGIAdapter* out_adapter = nullptr;
 
     while (adapter_factory->EnumAdapters(adapter_index, &out_adapter) != DXGI_ERROR_NOT_FOUND) {
         DXGI_ADAPTER_DESC adapter_desc{};
         out_adapter->GetDesc(&adapter_desc);
-        if (adapter_desc.VendorId == refIntelVendorID) {
+        if (adapter_desc.VendorId == vendorId) {
             intel_adapter = out_adapter;
             break;
         }
@@ -240,17 +241,16 @@ void createD3D11Device(ID3D11Device** device) {
     if (!intel_adapter) {
         throw SkipTestException("No Intel GPU adapter on aboard.");
     }
-    intel_adapter->Release();
 
     *device = nullptr;
-    hr = D3D11CreateDevice(nullptr,
-                           D3D_DRIVER_TYPE_HARDWARE,
+    hr = D3D11CreateDevice(intel_adapter,
+                           D3D_DRIVER_TYPE_UNKNOWN,
                            nullptr,
                            0,
                            nullptr,
                            0,
                            D3D11_SDK_VERSION,
-                           &(*device),
+                           device,
                            nullptr,
                            nullptr);
 
@@ -269,7 +269,8 @@ void prepareD3D11Texture2D(const UINT width, const UINT height, std::vector<uint
                            ID3D11Device** device) {
     // Create device
     *device = nullptr;
-    createD3D11Device(device);
+    const unsigned int IntelVendorID = 0x8086; // Intel
+    createD3D11Device(device, IntelVendorID);
 
     // Create texture description
     D3D11_TEXTURE2D_DESC desc = {};
@@ -302,76 +303,78 @@ void prepareD3D11Texture2D(const UINT width, const UINT height, std::vector<uint
         throw SkipTestException("CreateTexture2D was failed: texture ptr is NULL");
     }
 }
-
-int findPlaceOfDevice(const std::vector<std::pair<bool, cv::ocl::Device>>& devices,
-                      bool preffered = true) {
-    auto plc = std::find_if(devices.begin(), devices.end(),
-                            [&preffered](std::pair<bool, cv::ocl::Device> cl_device) {
-                                if (!cl_device.first && !preffered) return false;
-                                if (cl_device.second.isIntel()) return true;
-                                else return false;
-                            });
-    if(plc != devices.end()) return int(std::distance(devices.begin(), plc));
-    else return -1;
-}
+} // d3d11_test
 
 TEST(GPU_D3D11, getDeviceIDs)
 {
-    // Create test data ///////////////////////////////////////////////////////
+    // Create device ///////////////////////////////////////////////////////
     ID3D11Device* pD3D11Device = nullptr;
-    createD3D11Device(&pD3D11Device);
-    std::vector<std::pair<bool, cv::ocl::Device>> devices;
+    const unsigned int IntelVendorID = 0x8086; // Intel
+    d3d11_test:: createD3D11Device(&pD3D11Device, IntelVendorID);
+    std::vector<std::pair<int, cv::ocl::Device>> devices;
 
     // Get Device IDs for all platforms //////////////////////////////////////
     EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
 
     // Check  //////////////////////////////////////
     EXPECT_FALSE(devices.empty());
-
-    int device_is = -1;
-    const bool prefered = true;
-    device_is = findPlaceOfDevice(devices, prefered);
-    if (device_is < 0) findPlaceOfDevice(devices, !prefered);
-    EXPECT_GE(device_is, 0);
+    EXPECT_TRUE((devices.front().second.ptr() != nullptr));
 }
 
-TEST(GPU_D3D11, ConvTexture2DtoUMat)
+TEST(GPU_D3D11, ConvTexture2DtoCLMem)
 {
-        // Create test data ///////////////////////////////////////////////////////
+    // Create device ///////////////////////////////////////////////////////
+    ID3D11Device* pD3D11Device = nullptr;
+    const unsigned int IntelVendorID = 0x8086; // Intel
+    d3d11_test::createD3D11Device(&pD3D11Device, IntelVendorID);
+
+    // Get Device IDs for all platforms //////////////////////////////////////
+    std::vector<std::pair<int, cv::ocl::Device>> devices;
+    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+
+    // Create test texture ///////////////////////////////////////////////////////
     const UINT width = 100;
     const UINT height = 150;
     std::vector<uint8_t> test_data(width * height, 0);
     ID3D11Texture2D* pD3D11Texture2D = nullptr;
-    ID3D11Device* pD3D11Device = nullptr;
-    prepareD3D11Texture2D(width, height, test_data,&pD3D11Texture2D, &pD3D11Device);
-
-    std::vector<std::pair<bool, cv::ocl::Device>> devices;
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
-    if (devices.empty()) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: getDeviceIDsByD3D11Device returns empty vector of devices\n");
-    }
-
-    int device_is = -1;
-    device_is = findPlaceOfDevice(devices);
-    if (device_is < 0) findPlaceOfDevice(devices, false);
-    if (device_is < 0) {
-        CV_Error(cv::Error::StsAssert, "OpenCL: findPlaceOfDevice doesn't find device\n");
-    }
+    d3d11_test::prepareD3D11Texture2D(width, height, test_data, &pD3D11Texture2D, &pD3D11Device);
 
     // Convert texture2D to cl_mem_image //////////////////////////////////////
     cv::ocl::Image2D img;
     cv::ocl::Context ctx;
-    EXPECT_NO_THROW(std::tie(img, ctx) = cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices[device_is].second));
+    EXPECT_NO_THROW(std::tie(img, ctx) =
+        cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices.front().second)); // first device
 
-    if (ctx.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
-    }
-    if (img.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
-    }
+    // Check  //////////////////////////////////////
+    EXPECT_TRUE(ctx.ptr() != nullptr);
+    EXPECT_TRUE(img.ptr() != nullptr);
+}
+
+TEST(GPU_D3D11, ConvTexture2DtoUMat)
+{
+    // Create device ///////////////////////////////////////////////////////
+    ID3D11Device* pD3D11Device = nullptr;
+    const unsigned int IntelVendorID = 0x8086; // Intel
+    d3d11_test::createD3D11Device(&pD3D11Device, IntelVendorID);
+
+    // Get Device IDs for all platforms //////////////////////////////////////
+    std::vector<std::pair<int, cv::ocl::Device>> devices;
+    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+
+    // Create test texture ///////////////////////////////////////////////////////
+    const UINT width = 100;
+    const UINT height = 150;
+    std::vector<uint8_t> test_data(width * height, 0);
+    ID3D11Texture2D* pD3D11Texture2D = nullptr;
+    d3d11_test::prepareD3D11Texture2D(width, height, test_data, &pD3D11Texture2D, &pD3D11Device);
+
+    // Convert texture2D to cl_mem_image //////////////////////////////////////
+    cv::ocl::Image2D img;
+    cv::ocl::Context ctx;
+    EXPECT_NO_THROW(std::tie(img, ctx) =
+        cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices.front().second)); // first device
 
     // Convert to UMat function ///////////////////////////////////////////////
-    // Create cv::Umat
     cv::UMat umt_test(USAGE_ALLOCATE_DEVICE_MEMORY);
 
     // Copy data from cl_mem_image to cv::Umat buffer
@@ -382,68 +385,12 @@ TEST(GPU_D3D11, ConvTexture2DtoUMat)
     EXPECT_EQ(umt_test.size(), cv::Size(width, height));
     EXPECT_EQ(umt_test.type(), CV_8U);
 
-    // Copy to host
+    // Copy to host and check data
     uint8_t* umt_data = umt_test.getMat(ACCESS_READ).ptr<uint8_t>();
     for (int i = 0; i < umt_test.total(); ++i) {
         EXPECT_EQ(umt_data[i], test_data[i]);
     }
 }
-
-// NOTE: This test works with #include "opencv2/core/opencl/runtime/opencl_core.hpp"
-/*TEST(GPU_D3D11, ConvTexture2DtoCLmem)
-{
-    // Create test data ///////////////////////////////////////////////////////
-    const UINT width = 100;
-    const UINT height = 150;
-    std::vector<uint8_t> test_data(width * height, 0);
-    ID3D11Texture2D* pD3D11Texture2D = nullptr;
-    ID3D11Device* pD3D11Device = nullptr;
-    prepareD3D11Texture2D(width, height, test_data,&pD3D11Texture2D, &pD3D11Device);
-
-    std::vector<std::pair<bool, cv::ocl::Device>> devices;
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
-    if (devices.empty()) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: getDeviceIDsByD3D11Device returns empty vector of devices\n");
-    }
-
-    int device_is = -1;
-    device_is = findPlaceOfDevice(devices);
-    if (device_is < 0) findPlaceOfDevice(devices, false);
-    if (device_is < 0) {
-        CV_Error(cv::Error::StsAssert, "OpenCL: findPlaceOfDevice doesn't find device\n");
-    }
-
-    // Convert texture2D to cl_mem_image //////////////////////////////////////
-    cv::ocl::Image2D img;
-    cv::ocl::Context ctx;
-    EXPECT_NO_THROW(std::tie(img, ctx) = cv::directx::convertFromD3D11Texture2DtoCLMem(pD3D11Texture2D, devices[device_is].second));
-
-    if (ctx.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_mem\n");
-    }
-    if (img.ptr() == nullptr) {
-        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem returns empty cl_context\n");
-    }
-
-    // Move data to host
-    std::vector<uint8_t> out_test_data(width * height, 0);
-    // Target data
-    const size_t sz0[3] = {0, 0, 0};
-    const size_t sz1[3] = {width, height, 1};
-
-    cv::ocl::Queue queue(ctx, devices[device_is].second);
-    cl_command_queue q = static_cast<cl_command_queue>(queue.ptr());
-    cl_int status = clEnqueueReadImage(q, static_cast<cl_mem>(img.ptr()), CL_FALSE, sz0, sz1,
-                                       width * sizeof(uint8_t),
-                                       height * sizeof(uint8_t),
-                                       out_test_data.data(), 0, NULL, NULL);
-    if (status != CL_SUCCESS) {
-        CV_Error(status, "OpenCL: clEnqueueReadImage failed");
-    }
-    clFinish(q);
-    // Comparison /////////////////////////////////////////////////////////////
-    EXPECT_EQ(out_test_data, test_data);
-}*/
 
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX

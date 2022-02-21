@@ -131,13 +131,15 @@ CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, Outp
 
 //! @brief Gets devices from all platforms which can be assoiated with D3D11Device.
 //
-//! @note Note: Function creates a vector of pairs that contain preferred conditions and cv::ocl::Device objects
-//!             from a Direct3D 11 device
+//! @note Note: Function fills destinatiion vector of pairs - devices. First of pair contains characteristic of device association:
+//!             0x401B - CL_PREFERRED_DEVICES_FOR_D3D11_KHR - OpenCL devices associated with the specified Direct3Device11 device;
+//!             0x401C - CL_ALL_DEVICES_FOR_D3D11_KHR - OpenCL devices which may interoperate with the specified Direct3Device11 device but
+//!             performance of sharing data on these devices may be considerably less.
+//!             Second of pair is cv::ocl::Device that wraps cl_device_id.
 //
-//! @param pD3D11Device - source D3D11 device
-//! @param devices - vector of pairs: bool condition show is preferred the device or not and device
-//!        that associated with accessible platform on your device
-CV_EXPORTS void getDeviceIDsByD3D11Device(ID3D11Device *pD3D11Device, std::vector<std::pair<bool, cv::ocl::Device>>& devices);
+//! @param pD3D11Device - pointer to Direct3Device11 device.
+//! @param devices - destination vector of pairs that conatins devices which may interoperate with the specified Direct3D object.
+CV_EXPORTS void getDeviceIDsByD3D11Device(ID3D11Device *pD3D11Device, std::vector<std::pair<int, cv::ocl::Device>>& dst);
 
 //! @brief Converts ID3D11Texture2D to cl_mem (OpenCL image2d_t).
 //
