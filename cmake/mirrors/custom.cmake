@@ -5,14 +5,19 @@
 ocv_update(OPENCV_DOWNLOAD_MIRROR_URL "")
 # Tengine
 ocv_update(TENGINE_CUSTOM_PKG_MD5 "")
+ocv_update(TENGINE_GITHUB_PKG_MD5 23f61ebb1dd419f1207d8876496289c5) # same as tengine_md5sum for TENGINE commit of e89cf8870de2ff0a80cfe626c0b52b2a16fb302e
+
 # TBB
 ocv_update(TBB_CUSTOM_RELEASE "")
 ocv_update(TBB_CUSTOM_PKG_NAME "")
 ocv_update(TBB_CUSTOM_PKG_MD5 "")
+ocv_update(TBB_GITHUB_PKG_MD5 5af6f6c2a24c2043e62e47205e273b1f) # same as OPENCV_TBB_RELEASE_MD5 for TBB release of v2020.2
+
 # ADE
 ocv_update(ADE_CUSTOM_RELEASE "")
 ocv_update(ADE_CUSTOM_PKG_NAME "")
 ocv_update(ADE_CUSTOM_PKG_MD5 "")
+ocv_update(ADE_GITHUB_PKG_MD5 b624b995ec9c439cbc2e9e6ee940d3a2) # same as ade_md5 for ADE release of v0.1.1f
 
 macro(ocv_download_url_custom_usercontent)
   string(REPLACE "/" ";" DL_URL_split ${DL_URL})
@@ -23,12 +28,14 @@ endmacro()
 macro(ocv_download_url_custom_archive_commit_id)
   if("m${${DL_ID}_CUSTOM_PKG_MD5}" STREQUAL "m")
     message("ocv_download: set ${DL_ID}_CUSTOM_PKG_MD5 to download ${DL_ID} from custom source.")
-  else()
-    string(REPLACE "/" ";" DL_URL_split ${DL_URL})`
+  elseif(${DL_ID}_GITHUB_PKG_MD5 STREQUAL "${DL_HASH}")
+    string(REPLACE "/" ";" DL_URL_split ${DL_URL})
     list(GET DL_URL_split 3 __OWNER)
     list(GET DL_URL_split 4 __REPO_NAME)
     set(DL_URL "https://${OPENCV_DOWNLOAD_MIRROR_URL}/${__OWNER}/${__REPO_NAME}/-/archive/")
     set(DL_HASH "${${DL_ID}_CUSTOM_PKG_MD5}")
+  else()
+    message(WARNING "No information about mirrors for downloading ${DL_FILENAME} from URL='${DL_URL}' and MD5=${DL_HASH}.")
   endif()
 endmacro()
 macro(ocv_download_url_custom_archive_release)
@@ -65,6 +72,6 @@ else()
     ocv_download_url_custom_archive_release()
     set(ade_subdir "${ADE_CUSTOM_PKG_NAME}" PARENT_SCOPE)
   else()
-    message(STATUS "ocv_download: Unknown download ID ${DL_ID} for using mirror ${OPENCV_DOWNLOAD_MIRROR_URL}. Use original source.")
+    message(STATUS "ocv_download: Unknown download ID ${DL_ID} for using mirror ${OPENCV_DOWNLOAD_MIRROR_URL}. Use original source instead.")
   endif()
 endif()
