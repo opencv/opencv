@@ -53,7 +53,7 @@ namespace cv
     class Cloning
     {
         public:
-            void normalClone(const cv::Mat& destination, const cv::Mat &mask, const cv::Mat &wmask, cv::Mat &cloned, int flag);
+            void normalClone(const cv::Mat& destination, const cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, int flag);
             void illuminationChange(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float alpha, float beta);
             void localColorChange(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, cv::Mat &cloned, float red_mul, float green_mul, float blue_mul);
             void textureFlatten(cv::Mat &I, cv::Mat &mask, cv::Mat &wmask, float low_threshold, float high_threhold, int kernel_size, cv::Mat &cloned);
@@ -61,10 +61,10 @@ namespace cv
         protected:
 
             void initVariables(const cv::Mat &destination, const cv::Mat &binaryMask);
-            void computeDerivatives(const cv::Mat &destination, const cv::Mat &patch, const cv::Mat &binaryMask);
+            void computeDerivatives(const cv::Mat &destination, const cv::Mat &patch, cv::Mat &binaryMask);
             void scalarProduct(cv::Mat mat, float r, float g, float b);
             void poisson(const cv::Mat &destination);
-            void evaluate(const cv::Mat &I, const cv::Mat &wmask, const cv::Mat &cloned);
+            void evaluate(const cv::Mat &I, cv::Mat &wmask, const cv::Mat &cloned);
             void dst(const Mat& src, Mat& dest, bool invert = false);
             void solve(const Mat &img, Mat& mod_diff, Mat &result);
 

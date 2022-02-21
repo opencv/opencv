@@ -246,7 +246,7 @@ void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
         filter_Y[j] = 2.0f * (float)std::cos(scale * (j + 1));
 }
 
-void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
+void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, Mat &binaryMask)
 {
     initVariables(destination, binaryMask);
 
@@ -306,7 +306,7 @@ void Cloning::poisson(const Mat &destination)
     }
 }
 
-void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
+void Cloning::evaluate(const Mat &I, Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
@@ -320,7 +320,7 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
     merge(output,cloned);
 }
 
-void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
+void Cloning::normalClone(const Mat &destination, const Mat &patch, Mat &binaryMask, Mat &cloned, int flag)
 {
     const int w = destination.cols;
     const int h = destination.rows;
