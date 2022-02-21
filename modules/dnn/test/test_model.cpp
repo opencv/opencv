@@ -336,11 +336,6 @@ public:
         std::vector<Rect> boxes;
         face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
 
-        for (uint i = 0; i < boxes.size(); i++)
-        {
-            std::cout << i << " : " << boxes[i] << " / " << ref_boxes[i] << std::endl;
-        }
-
         std::vector<Rect2d> boxes_double(boxes.size());
         for (uint i = 0; i < boxes.size(); i++)
         {
@@ -370,16 +365,6 @@ public:
 
         std::vector<std::vector<Point>> landmarks;
         face_detector.getLandmarks(landmarks);
-
-        for (uint i = 0; i < boxes.size(); i++)
-        {
-            std::cout << i << std::endl;
-            std::cout << landmarks[i][0] << " - " << ref_landmarks[i][0] << std::endl;
-            std::cout << landmarks[i][1] << " - " << ref_landmarks[i][1] << std::endl;
-            std::cout << landmarks[i][2] << " - " << ref_landmarks[i][2] << std::endl;
-            std::cout << landmarks[i][3] << " - " << ref_landmarks[i][3] << std::endl;
-            std::cout << landmarks[i][4] << " - " << ref_landmarks[i][4] << std::endl;
-        }
 
         for (uint i = 0; i < landmarks.size(); i++)
         {
@@ -1005,9 +990,6 @@ TEST_P(Test_Model, FaceDetectionByYN)
     }
     CV_Assert(num_faces != 0);
 
-    //const std::vector<int> gt_order = { 0, 1, 2, 4, 3, 5, 6 };
-    //CV_Assert(num_faces == gt_order.size());
-
     std::vector<Rect> gt_boxes( num_faces );
     std::vector<std::vector<Point>> gt_landmarks( num_faces );
     {
@@ -1024,7 +1006,6 @@ TEST_P(Test_Model, FaceDetectionByYN)
                 std::istringstream iss(part);
                 iss >> box[j];
             }
-            //gt_boxes[gt_order[i]] = Rect(box[0], box[1], box[2], box[3]);
             gt_boxes[i] = Rect(box[0], box[1], box[2], box[3]);
 
             std::vector<Point> points;
