@@ -1574,8 +1574,7 @@ std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3
         CV_Error(status, "OpenCL: clCreateFromD3D11Texture2DKHR failed");
     }
     auto image = Image2D::fromHandle(image2d);
-    clRetainMemObject(image2d);
-    return std::make_tuple(image, clExecCtx);
+    return std::make_tuple(image, std::move(clExecCtx));
 #endif
 }
 
