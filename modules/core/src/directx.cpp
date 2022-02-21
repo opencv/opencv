@@ -1416,16 +1416,15 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             if (status != CL_SUCCESS) {
                 throw(status, "clGetPlatformInfo can't find number of extenson for platform");
             }
-            std::string ext;
-            ext.resize(out_size, '\0'); // char[] CL_PLATFORM_EXTENSIONS
+            std::string ext(out_size, '\0'); // char[] CL_PLATFORM_EXTENSIONS
             status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, out_size, &ext.front(), nullptr);
             if (status != CL_SUCCESS) {
                 throw(status, "clGetPlatformInfo can't get extenson for platform");
             }
             // If platform doesn't support extension then returns empty vector
-            if (ext.find(" cl_khr_d3d11_sharing ") == std::string::npos) {
+            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+                std::cout << "HERE" << std::endl;
                 CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
-                return devices;
             }
 
             cl_uint numDevices = 0;
@@ -1489,14 +1488,10 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                                          platforms[i]);
         }
 
-        if (devices.empty()) {
-            devices = std::move(temp_devices);
-        }
-
-        if (!temp_devices.empty() && !devices.empty()) {
+        if (!temp_devices.empty()) {
             devices.reserve(devices.size() + temp_devices.size());
             std::move(temp_devices.begin(), temp_devices.end(),
-            std::inserter(devices, devices.end()));
+                      std::inserter(devices, devices.end()));
         }
     }
 #endif
