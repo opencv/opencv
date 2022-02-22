@@ -77,7 +77,7 @@ function(ocv_init_download)
   endif()
 
   if(__HOST STREQUAL "unknown")
-    message(STATUS "ocv_init_download: Unknown host detected. Using github.com to download 3rdparty components.")
+    message(WARNING "ocv_init_download: Unknown host detected. Using github.com to download 3rdparty components.")
   elseif(NOT __HOST STREQUAL "github")
     message(STATUS "ocv_init_download: Using ${__HOST}-hosted mirror to download 3rdparty components.")
     ocv_cmake_hook_append(OCV_DOWNLOAD_MIRROR_${__HOST} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mirrors/${__HOST}.cmake")
