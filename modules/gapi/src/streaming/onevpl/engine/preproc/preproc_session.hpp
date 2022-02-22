@@ -38,9 +38,20 @@ private:
     mfxVideoParam mfx_vpp_out_param;
     VPLAccelerationPolicy::pool_key_t vpp_pool_id;
     std::weak_ptr<Surface> processing_surface_ptr;
-    using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
-    std::queue<op_handle_t> sync_in_queue;
-    std::queue<op_handle_t> vpp_out_queue;
+
+    struct incoming_task {
+        mfxSyncPoint sync_handle;
+        mfxFrameSurface1* decoded_surface_ptr;
+        cv::MediaFrame decoded_frame_copy;
+    };
+
+    struct outgoing_task {
+        mfxSyncPoint sync_handle;
+        mfxFrameSurface1* vpp_surface_ptr;
+    };
+
+    std::queue<incoming_task> sync_in_queue;
+    std::queue<outgoing_task> vpp_out_queue;
     int64_t preprocessed_frames_count;
 };
 } // namespace onevpl

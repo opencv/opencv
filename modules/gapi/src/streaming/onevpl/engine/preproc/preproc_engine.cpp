@@ -46,16 +46,15 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             while (!my_sess.sync_in_queue.empty()) {
                 do {
                     if (!my_sess.processing_surface_ptr.expired()) {
-                        session_type::op_handle_t pending_op = my_sess.sync_in_queue.front();
+                        session_type::incoming_task pending_op = my_sess.sync_in_queue.front();
                         GAPI_LOG_DEBUG(nullptr, "pending IN operations count: " <<
                                                 my_sess.sync_in_queue.size() <<
                                                 ", sync id:  " <<
-                                                pending_op.first <<
+                                                pending_op.sync_handle <<
                                                 ", surface:  " <<
-                                                pending_op.second);
+                                                pending_op.decoded_surface_ptr);
 
                         my_sess.sync_in_queue.pop();
-                        auto *dec_surface = pending_op.second;
                         auto *vpp_suface = my_sess.processing_surface_ptr.lock()->get_handle();
 
                        /* TODO: consider CROP/ROI here
@@ -66,34 +65,28 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         dec_surface->Info.CropW = 100 + x_offset++;
                         dec_surface->Info.CropH = 100 + y_offset++;
                         */
+                        session_type::outgoing_task vpp_pending_op {pending_op.sync_handle, nullptr};
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
-                                                                           dec_surface,
+                                                                           pending_op.decoded_surface_ptr,
                                                                            vpp_suface,
-                                                                           nullptr, &pending_op.first);
-                        pending_op.second = vpp_suface;
+                                                                           nullptr, &vpp_pending_op.sync_handle);
+                        vpp_pending_op.vpp_surface_ptr = vpp_suface;
 
                         GAPI_LOG_DEBUG(nullptr, "Got VPP async operation" <<
                                                 ", sync id:  " <<
-                                                pending_op.first <<
+                                                vpp_pending_op.sync_handle <<
                                                 ", dec surface:  " <<
-                                                dec_surface <<
+                                                pending_op.decoded_surface_ptr <<
                                                 ", trans surface: " <<
-                                                pending_op.second <<
+                                                vpp_pending_op.vpp_surface_ptr <<
                                                 ", status: " <<
                                                 mfxstatus_to_string(my_sess.last_status));
-
-                        // NB: independently from result code
-                        // we no need in decoding frame anymore: because we had pulled
-                        // decoding frames to this point by onevpl::Surface highlevel locking
-                        // mechanism and after that we adhere existing MFX/VPL inner locking mechanism
-                        // on native mfxSurface pointer
-                        abandon_decode_frame(dec_surface);
 
                         // NB: process status
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
-                            pending_op.second->Data.Locked++; // TODO -S- workaround
-                            my_sess.vpp_out_queue.emplace(pending_op);
+                            vpp_pending_op.vpp_surface_ptr->Data.Locked++; // TODO -S- workaround
+                            my_sess.vpp_out_queue.emplace(vpp_pending_op);
                         }
                     }
 
@@ -124,21 +117,21 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             session_type& my_sess = static_cast<session_type&>(sess);
             do {
                 if (!my_sess.vpp_out_queue.empty()) { // FIFO: check the oldest async operation complete
-                    session_type::op_handle_t& pending_op = my_sess.vpp_out_queue.front();
-                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.first, 0);
+                    session_type::outgoing_task& pending_op = my_sess.vpp_out_queue.front();
+                    sess.last_status = MFXVideoCORE_SyncOperation(sess.session, pending_op.sync_handle, 0);
 
                     GAPI_LOG_DEBUG(nullptr, "pending VPP operations count: " <<
                                             my_sess.vpp_out_queue.size() <<
                                             ", sync id:  " <<
-                                            pending_op.first <<
+                                            pending_op.sync_handle <<
                                             ", surface:  " <<
-                                            pending_op.second <<
+                                            pending_op.vpp_surface_ptr <<
                                             ", status: " <<
                                             mfxstatus_to_string(my_sess.last_status));
 
                     // put frames in ready queue on success
                     if (MFX_ERR_NONE == sess.last_status) {
-                        on_frame_ready(my_sess, pending_op.second);
+                        on_frame_ready(my_sess, pending_op.vpp_surface_ptr);
                     }
                 }
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_out_queue.empty());
@@ -353,10 +346,10 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
     }
 
     // schedule decoded surface into preproc queue
-    session_type::op_handle_t in_preproc_request {nullptr,
-                                                  vpl_adapter->get_surface()->get_handle()};
+    session_type::incoming_task in_preproc_request {nullptr,
+                                                  vpl_adapter->get_surface()->get_handle(),
+                                                  in_frame};
     s->sync_in_queue.emplace(in_preproc_request);
-    remember_decode_frame(vpl_adapter->get_surface()->get_handle(), in_frame);
 
     // invoke pipeline to transform decoded surface into preprocessed surface
     try
@@ -459,31 +452,6 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
 
     return ExecutionStatus::Failed;
 }
-
-void VPPPreprocEngine::abandon_decode_frame(decoded_frame_key_t key) {
-    auto it = pending_decoded_frames_sync.find(key);
-    if (it == pending_decoded_frames_sync.end()) {
-        GAPI_LOG_WARNING(nullptr, "Cannot abandon decoded_frame for key: " <<
-                                  key << " has not found, total frames: " <<
-                                  pending_decoded_frames_sync.size());
-        GAPI_Assert(false && "Frame is missing");
-    }
-
-    pending_decoded_frames_sync.erase(it);
-}
-
-void VPPPreprocEngine::remember_decode_frame(decoded_frame_key_t key,
-                                             const cv::MediaFrame& in_frame) {
-    if (!pending_decoded_frames_sync.emplace(key,
-                                             in_frame).second) {
-        GAPI_LOG_WARNING(nullptr, "Cannot remember decoded_frame for key: " <<
-                                  key <<
-                                  " - it has existed already, total frames: " <<
-                                  pending_decoded_frames_sync.size());
-        GAPI_Assert(false && "Frame is in middle of VPP process already");
-    }
-}
-
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

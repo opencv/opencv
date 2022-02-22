@@ -58,13 +58,6 @@ private:
                                    const std::vector<CfgParam>& cfg_params,
                                    std::shared_ptr<IDataProvider> provider) override;
     size_t preprocessed_frames_count;
-
-    // NB: no need to protect by mutex at now
-    using decoded_frame_key_t = void*;
-    std::unordered_map<decoded_frame_key_t, cv::MediaFrame> pending_decoded_frames_sync;
-
-    void abandon_decode_frame(decoded_frame_key_t key);
-    void remember_decode_frame(decoded_frame_key_t key, const cv::MediaFrame& in_frame);
 };
 } // namespace onevpl
 } // namespace wip
