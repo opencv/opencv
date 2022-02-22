@@ -562,7 +562,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
             if ((flags & IMREAD_ANYDEPTH) == 0)
                 type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-            if ((flags & CV_LOAD_IMAGE_COLOR) != 0 ||
+            if ((flags & IMREAD_COLOR) != 0 ||
                 ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
                 type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
             else

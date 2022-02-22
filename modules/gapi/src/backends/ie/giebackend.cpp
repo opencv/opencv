@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -19,6 +19,8 @@
 #include <functional>
 #include <unordered_set>
 #include <atomic>
+#include <tuple>
+
 
 #include <ade/util/algorithm.hpp>
 
@@ -180,6 +182,10 @@ inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
             auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             return cv::gapi::ie::util::to_ie(y_plane, uv_plane);
         }
+        case cv::MediaFormat::GRAY: {
+            auto gray = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            return wrapIE(gray, cv::gapi::ie::TraitAs::IMAGE);
+        }
         default:
             GAPI_Assert(false && "Unsupported media format for IE backend");
     }
@@ -208,6 +214,39 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         }
     default: GAPI_Assert(false && "IE. Unsupported data type");
     }
+}
+
+template <typename MapT>
+void checkLayerNames(const MapT&                     network_map,
+                     const std::vector<std::string>& layer_names,
+                     const std::string&              layer_type) {
+    for (const auto& layer_name : layer_names) {
+        const auto it = network_map.find(layer_name);
+        if (it == network_map.end()) {
+            std::stringstream ss;
+            ss << "Failed to find " << layer_type << " layer with name: "
+               << "\"" << layer_name << "\"" << std::endl;
+            ss << "Network " << layer_type << " layers: " << std::endl;
+            for (const auto& p : network_map) {
+                const auto& desc = p.second->getTensorDesc();
+                ss << p.first << " : " << desc.getPrecision()
+                   << " / " << desc.getLayout() << std::endl;
+            }
+            throw std::logic_error(ss.str());
+        }
+    }
+}
+
+template <typename MapT>
+void checkInputLayerNames(const MapT&                     network_map,
+                          const std::vector<std::string>& layer_names) {
+    checkLayerNames(network_map, layer_names, "input");
+}
+
+template <typename MapT>
+void checkOutputLayerNames(const MapT&                     network_map,
+                          const std::vector<std::string>& layer_names) {
+    checkLayerNames(network_map, layer_names, "output");
 }
 
 // IE-specific metadata, represents a network with its parameters
@@ -286,6 +325,16 @@ struct IEUnit {
             GAPI_Assert((params.reshape_table.size() + params.layer_names_to_reshape.size()) <=
                          params.num_in &&
                         "Number of layers to reshape must be less than or equal to number of inputs");
+        }
+
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            checkInputLayerNames(net.getInputsInfo(), params.input_names);
+            checkOutputLayerNames(net.getOutputsInfo(), params.output_names);
+        } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
+            checkInputLayerNames(this_network.GetInputsInfo(), params.input_names);
+            checkOutputLayerNames(this_network.GetOutputsInfo(), params.output_names);
+        } else {
+            cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
         }
     }
 
@@ -505,20 +554,27 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
                 "Remote blob is supported for MediaFrame only");
 
     cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
-    auto ie_core = cv::gimpl::ie::wrap::getCore();
 
-    using ParamType = std::pair<InferenceEngine::TensorDesc,
-                                InferenceEngine::ParamMap>;
+    using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
+    using NV12ParamType = std::pair<ParamType, ParamType>;
 
-    ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
+    NV12ParamType* blob_params = cv::util::any_cast<NV12ParamType>(&any_blob_params);
     if (blob_params == nullptr) {
-        GAPI_Assert(false && "Incorrect type of blobParams: "
-                              "expected std::pair<InferenceEngine::TensorDesc,"
-                                                 "InferenceEngine::ParamMap>");
+        GAPI_Assert(false && "Incorrect type of blobParams:"
+                             "expected std::pair<ParamType, ParamType>,"
+                             "with ParamType std::pair<InferenceEngine::TensorDesc,"
+                                                      "InferenceEngine::ParamMap >>");
     }
 
-    return ctx.uu.rctx->CreateBlob(blob_params->first,
-                                   blob_params->second);
+    //The parameters are TensorDesc and ParamMap for both y and uv blobs
+    auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
+    auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
+
+#if INF_ENGINE_RELEASE >= 2021010000
+    return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
+#else
+    return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+#endif
 }
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
@@ -560,6 +616,19 @@ static void setBlob(InferenceEngine::InferRequest& req,
     }
 }
 
+static void setROIBlob(InferenceEngine::InferRequest& req,
+                       const std::string&             layer_name,
+                       const IE::Blob::Ptr&           blob,
+                       const cv::Rect &roi,
+                       const IECallContext&           ctx) {
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
+        GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
+                       ctx.uu.params.device_id << ", layer: " << layer_name);
+        setBlob(req, layer_name, blob, ctx);
+    } else {
+        setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
+    }
+}
 } // anonymous namespace
 
 std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInferRequests() {
@@ -601,7 +670,10 @@ public:
     void waitAll();
 
 private:
-    void callback(Task task, InferenceEngine::InferRequest& request, size_t id);
+    void callback(Task task,
+                  size_t id,
+                  IE::InferRequest request,
+                  IE::StatusCode code);
     void setup();
 
     QueueClass<size_t>                         m_idle_ids;
@@ -626,21 +698,38 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
 
     auto& request = m_requests[id];
 
+    using namespace std::placeholders;
+    using callback_t = std::function<void(IE::InferRequest, IE::StatusCode)>;
     request.SetCompletionCallback(
-            std::bind(&cv::gimpl::ie::RequestPool::callback, this, t, std::ref(request), id));
+            static_cast<callback_t>(
+                std::bind(&cv::gimpl::ie::RequestPool::callback, this,
+                          t, id, _1, _2)));
     t.run(request);
 }
 
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
-                                          InferenceEngine::InferRequest& request,
-                                          size_t id) {
-    task.callback(request);
-    // NB: IE::InferRequest keeps the callback until the new one is set.
-    // Since user's callback might keep resources that should be released,
-    // need to destroy its after execution.
-    // Let's set the empty one to cause the destruction of a callback.
-    request.SetCompletionCallback([](){});
-    m_idle_ids.push(id);
+                                          size_t id,
+                                          IE::InferRequest request,
+                                          IE::StatusCode code) {
+    // FIXME: Any exception which is arrised here must not leave this callback,
+    // because it won't be handled.
+    try {
+        if (code != IE::StatusCode::OK) {
+            throw std::logic_error("IE::InferRequest finished with not OK status");
+        }
+        task.callback(request);
+        // NB: IE::InferRequest keeps the callback until the new one is set.
+        // Since user's callback might keep resources that should be released,
+        // need to destroy its after execution.
+        // Let's set the empty one to cause the destruction of a callback.
+        request.SetCompletionCallback([](){});
+        m_idle_ids.push(id);
+    } catch (const std::exception& e) {
+        GAPI_LOG_FATAL(NULL, "Callback failed with error: " << e.what());
+        //FIXME: Exception CAN't be rethrown here, since this callback works
+        // in separate IE thread and such scenarios aren't handled properly in
+        // G-API so far.
+    }
 }
 
 // NB: Not thread-safe.
@@ -815,6 +904,9 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
                 case cv::MediaFormat::BGR:
                     // NB: Do nothing
                     break;
+                case cv::MediaFormat::GRAY:
+                    // NB: Do nothing
+                    break;
                 default:
                     GAPI_Assert(false && "Unsupported media format for IE backend");
             }
@@ -826,6 +918,13 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
     }
 }
 
+static bool isApplicableForResize(const IE::TensorDesc& desc) {
+    const auto layout = desc.getLayout();
+    const auto prec   = desc.getPrecision();
+    return (layout == IE::Layout::NCHW || layout == IE::Layout::NHWC) &&
+           (prec == IE::Precision::FP32 || prec == IE::Precision::U8);
+}
+
 static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
                                                const cv::GMetaArg&        mm) {
     IE::PreProcessInfo info;
@@ -835,9 +934,7 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
             info.setColorFormat(IE::ColorFormat::NV12);
         }
     }
-    const auto layout = ii->getTensorDesc().getLayout();
-    if (layout == IE::Layout::NCHW ||
-        layout == IE::Layout::NHWC) {
+    if (isApplicableForResize(ii->getTensorDesc())) {
         info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
     }
     return info;
@@ -957,11 +1054,7 @@ struct Infer: public cv::detail::KernelTag {
                         configureInputReshapeByImage(ii, mm, input_reshape_table);
                     }
 
-                    // NB: Configure resize only for NCHW/NHWC layout,
-                    // since it isn't supposed to work with others.
-                    auto layout = ii->getTensorDesc().getLayout();
-                    if (layout == IE::Layout::NCHW ||
-                        layout == IE::Layout::NHWC) {
+                    if (isApplicableForResize(ii->getTensorDesc())) {
                         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
                     }
             }
@@ -1066,7 +1159,9 @@ struct InferROI: public cv::detail::KernelTag {
                 uu.params.layer_names_to_reshape.end()) {
                 configureInputReshapeByImage(ii, mm, input_reshape_table);
             }
-            ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            if (isApplicableForResize(ii->getTensorDesc())) {
+                ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+            }
 
             // FIXME: This isn't the best place to call reshape function.
             // Сorrect solution would be to do this in compile() method of network,
@@ -1114,10 +1209,9 @@ struct InferROI: public cv::detail::KernelTag {
                         // it should be treated as image
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE);
-                        setBlob(req,
-                                *(ctx->uu.params.input_names.begin()),
-                                IE::make_shared_blob(this_blob, toIE(this_roi)),
-                                *ctx);
+                        setROIBlob(req,
+                                   *(ctx->uu.params.input_names.begin()),
+                                   this_blob, this_roi, *ctx);
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         req.StartAsync();
@@ -1165,7 +1259,9 @@ struct InferList: public cv::detail::KernelTag {
                     uu.params.layer_names_to_reshape.end()) {
                     configureInputReshapeByImage(ii, mm, input_reshape_table);
                 }
-                ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                if (isApplicableForResize(ii->getTensorDesc())) {
+                    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                }
             }
 
             // FIXME: This isn't the best place to call reshape function.
@@ -1318,7 +1414,9 @@ struct InferList2: public cv::detail::KernelTag {
                         uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm_0, input_reshape_table);
                     }
-                    ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    if (isApplicableForResize(ii->getTensorDesc())) {
+                        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    }
 
                     // FIXME: This isn't the best place to call reshape function.
                     // Сorrect solution would be to do this in compile() method of network,

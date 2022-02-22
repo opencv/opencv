@@ -5,8 +5,8 @@
 #ifndef __OPENCV_DNN_COMMON_HPP__
 #define __OPENCV_DNN_COMMON_HPP__
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <opencv2/dnn.hpp>
 
@@ -59,7 +59,7 @@ class LayerHandler
 public:
     void addMissing(const std::string& name, const std::string& type);
     bool contains(const std::string& type) const;
-    void printMissing();
+    void printMissing() const;
 
 protected:
     LayerParams getNotImplementedParams(const std::string& name, const std::string& op);
@@ -71,12 +71,12 @@ private:
 struct NetImplBase
 {
     const int networkId;  // network global identifier
-    int networkDumpCounter;  // dump counter
+    mutable int networkDumpCounter;  // dump counter
     int dumpLevel;  // level of information dumps (initialized through OPENCV_DNN_NETWORK_DUMP parameter)
 
     NetImplBase();
 
-    std::string getDumpFileNameBase();
+    std::string getDumpFileNameBase() const;
 };
 
 }  // namespace detail

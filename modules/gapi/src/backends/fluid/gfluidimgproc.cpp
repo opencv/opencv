@@ -1026,8 +1026,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
 
-        Mat kxmat(1, ksize, CV_32FC1, kx);
-        Mat kymat(ksize, 1, CV_32FC1, ky);
+        Mat kxmat(1, ksz, CV_32FC1, kx);
+        Mat kymat(ksz, 1, CV_32FC1, ky);
         getDerivKernels(kxmat, kymat, dx, dy, ksize);
     }
 
@@ -1185,12 +1185,12 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
         auto *kx_dy = buf_helper.kx_dy;
         auto *ky_dy = buf_helper.ky_dy;
 
-        Mat kxmatX(1, ksize, CV_32FC1, kx_dx);
-        Mat kymatX(ksize, 1, CV_32FC1, ky_dx);
+        Mat kxmatX(1, ksz, CV_32FC1, kx_dx);
+        Mat kymatX(ksz, 1, CV_32FC1, ky_dx);
         getDerivKernels(kxmatX, kymatX, order, 0, ksize);
 
-        Mat kxmatY(1, ksize, CV_32FC1, kx_dy);
-        Mat kymatY(ksize, 1, CV_32FC1, ky_dy);
+        Mat kxmatY(1, ksz, CV_32FC1, kx_dy);
+        Mat kymatY(ksz, 1, CV_32FC1, ky_dy);
         getDerivKernels(kxmatY, kymatY, 0, order, ksize);
     }
 
@@ -2017,14 +2017,13 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         dst[l] = out.OutLine<T>(l);
     }
 
-#if 0 // Disabling SSE4.1 path due to Valgrind issues: https://github.com/opencv/opencv/issues/21097
 #if CV_SSE4_1
     const auto* clone = scr.clone;
     auto* tmp = scr.tmp;
 
     if (inSz.width >= 16 && outSz.width >= 16)
     {
-        sse42::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
+        sse41::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
                                                 reinterpret_cast<const uint8_t**>(src0),
                                                 reinterpret_cast<const uint8_t**>(src1),
                                                 reinterpret_cast<const short*>(alpha),
@@ -2037,7 +2036,6 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         return;
     }
 #endif // CV_SSE4_1
-#endif
     int length = out.length();
     for (int l = 0; l < lpi; l++) {
         constexpr static const auto unity = Mapper::unity;
@@ -2080,8 +2078,8 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        int outSz_h;
        if (outSz.width == 0 || outSz.height == 0)
        {
-           outSz_w = static_cast<int>(round(in.size.width * fx));
-           outSz_h = static_cast<int>(round(in.size.height * fy));
+           outSz_w = saturate_cast<int>(in.size.width * fx);
+           outSz_h = saturate_cast<int>(in.size.height * fy);
        }
        else
        {

@@ -64,6 +64,16 @@
 #define HAL_LU_SMALL_MATRIX_THRESH 100
 #define HAL_CHOLESKY_SMALL_MATRIX_THRESH 100
 
+#if defined(__clang__) && defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
+__msan_unpoison(adresse, size)
+#endif
+#endif
+#ifndef CV_ANNOTATE_MEMORY_IS_INITIALIZED
+#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) do { } while(0)
+#endif
+
 //lapack stores matrices in column-major order so transposing is needed everywhere
 template <typename fptype> static inline void
 transpose_square_inplace(fptype *src, size_t src_ld, size_t m)
@@ -248,6 +258,17 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
         OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu,
                 (double*)vt, &ldv, (double*)&buffer[0], &lwork, &iworkBuf[0], info);
 
+    // Make sure MSAN sees the memory as having been written.
+    // MSAN does not think it has been written because a different language was called.
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(a, a_step * n);
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(buffer, sizeof(fptype) * (lwork + 1));
+    if (u)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(u, u_step * m);
+    if (vt)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(vt, v_step * n);
+    if (w)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(w, sizeof(fptype) * std::min(m, n));
+
     if(!(flags & CV_HAL_SVD_NO_UV))
         transpose_square_inplace(vt, ldv, n);
 
@@ -359,6 +380,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
     }
 
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
     if (m == n)
         transpose_square_inplace(a, lda, m);
     else

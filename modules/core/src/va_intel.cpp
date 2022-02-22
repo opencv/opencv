@@ -606,10 +606,36 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         if (status != VA_STATUS_SUCCESS)
             CV_Error(cv::Error::StsError, "VA-API: vaSyncSurface failed");
 
+        bool indirect_buffer = false;
         VAImage image;
         status = vaDeriveImage(display, surface, &image);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaDeriveImage failed");
+        if (status != VA_STATUS_SUCCESS){
+            //try vaCreateImage + vaPutImage
+            //pick a format
+            indirect_buffer = true;
+            int num_formats = vaMaxNumImageFormats(display);
+            if (num_formats <= 0)
+                CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
+            std::vector<VAImageFormat> fmt_list(num_formats);
+
+            status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
+            VAImageFormat *selected_format = nullptr;
+            for (auto &fmt : fmt_list){
+                if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                    selected_format = &fmt;
+                    break;
+                }
+            }
+            if (selected_format == nullptr)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
+
+            status = vaCreateImage(display, selected_format, size.width, size.height, &image);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
+
+        }
 
         unsigned char* buffer = 0;
         status = vaMapBuffer(display, image.buf, (void **)&buffer);
@@ -626,6 +652,14 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         status = vaUnmapBuffer(display, image.buf);
         if (status != VA_STATUS_SUCCESS)
             CV_Error(cv::Error::StsError, "VA-API: vaUnmapBuffer failed");
+
+        if (indirect_buffer){
+            status = vaPutImage(display, surface, image.image_id, 0, 0, size.width, size.height, 0, 0, size.width, size.height);
+            if (status != VA_STATUS_SUCCESS){
+                vaDestroyImage(display, image.image_id);
+                CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+            }
+        }
 
         status = vaDestroyImage(display, image.image_id);
         if (status != VA_STATUS_SUCCESS)
@@ -711,8 +745,37 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
         VAImage image;
         status = vaDeriveImage(display, surface, &image);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaDeriveImage failed");
+        if (status != VA_STATUS_SUCCESS){
+            //try vaCreateImage + vaGetImage
+            //pick a format
+            int num_formats = vaMaxNumImageFormats(display);
+            if (num_formats <= 0)
+                CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
+            std::vector<VAImageFormat> fmt_list(num_formats);
+
+            status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
+            VAImageFormat *selected_format = nullptr;
+            for (auto &fmt : fmt_list){
+                if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                    selected_format = &fmt;
+                    break;
+                }
+            }
+            if (selected_format == nullptr)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
+
+            status = vaCreateImage(display, selected_format, size.width, size.height, &image);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
+
+            status = vaGetImage(display, surface, 0, 0, size.width, size.height, image.image_id);
+            if (status != VA_STATUS_SUCCESS){
+                vaDestroyImage(display, image.image_id);
+                CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+            }
+        }
 
         unsigned char* buffer = 0;
         status = vaMapBuffer(display, image.buf, (void **)&buffer);

@@ -11,7 +11,6 @@
 
 #include "streaming/onevpl/engine/decode/decode_session.hpp"
 #include "streaming/onevpl/engine/decode/decode_engine_legacy.hpp"
-#include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/utils.hpp"
 
@@ -75,8 +74,8 @@ Data::Meta LegacyDecodeSession::generate_frame_meta() {
     return meta;
 }
 
-const mfxVideoParam& LegacyDecodeSession::get_video_param() const {
-    return mfx_decoder_param;
+const mfxFrameInfo& LegacyDecodeSession::get_video_param() const {
+    return mfx_decoder_param.mfx.FrameInfo;
 }
 } // namespace onevpl
 } // namespace wip
