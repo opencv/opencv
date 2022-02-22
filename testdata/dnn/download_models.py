@@ -944,9 +944,9 @@ models = [
         filename='onnx/models/DB_TD500_resnet50.onnx'),
     Model(
         name='YuNet',
-        url='https://github.com/ShiqiYu/libfacedetection.train/raw/7a9738d6ca7bc4a3216578b06a739126435d40ef/tasks/task1/onnx/yunet.onnx',
-        sha='49c52f484b1895e8298dc59e37f262ba7841a601',
-        filename='onnx/models/yunet-202109.onnx'),
+        url='https://github.com/ShiqiYu/libfacedetection.train/raw/1688402dbd9b9fc4a3a6793810f558b7407ff384/tasks/task1/onnx/yunet_120x160.onnx',
+        sha='dfe691ae0c8e38d39d1a437e3f7e5fda7b256bdd',
+        filename='onnx/models/yunet-202202.onnx'),
     Model(
         name='face_recognizer_fast',
         url='https://drive.google.com/uc?export=dowload&id=1ClK9WiB492c5OZFKveF3XiHCejoOxINW',
