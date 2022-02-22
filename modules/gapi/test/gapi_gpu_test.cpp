@@ -311,10 +311,10 @@ TEST(GPU_D3D11, getDeviceIDs)
     ID3D11Device* pD3D11Device = nullptr;
     const unsigned int IntelVendorID = 0x8086; // Intel
     d3d11_test:: createD3D11Device(&pD3D11Device, IntelVendorID);
-    std::vector<std::pair<int, cv::ocl::Device>> devices;
 
     // Get Device IDs for all platforms //////////////////////////////////////
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+    std::vector<std::pair<int, cv::ocl::Device>> devices;
+    EXPECT_NO_THROW(devices = cv::directx::getDeviceIDsByD3D11Device(pD3D11Device));
 
     // Check  //////////////////////////////////////
     EXPECT_FALSE(devices.empty());
@@ -330,7 +330,7 @@ TEST(GPU_D3D11, ConvTexture2DtoCLMem)
 
     // Get Device IDs for all platforms //////////////////////////////////////
     std::vector<std::pair<int, cv::ocl::Device>> devices;
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+    EXPECT_NO_THROW(devices = cv::directx::getDeviceIDsByD3D11Device(pD3D11Device));
 
     // Create test texture ///////////////////////////////////////////////////////
     const UINT width = 100;
@@ -360,7 +360,7 @@ TEST(GPU_D3D11, ConvTexture2DtoUMat)
 
     // Get Device IDs for all platforms //////////////////////////////////////
     std::vector<std::pair<int, cv::ocl::Device>> devices;
-    EXPECT_NO_THROW(cv::directx::getDeviceIDsByD3D11Device(pD3D11Device, devices));
+    EXPECT_NO_THROW(devices = cv::directx::getDeviceIDsByD3D11Device(pD3D11Device));
 
     // Create test texture ///////////////////////////////////////////////////////
     const UINT width = 100;

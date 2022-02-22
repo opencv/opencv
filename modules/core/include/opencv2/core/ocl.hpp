@@ -763,7 +763,7 @@ public:
 
     /**
     @param memory_obj is cl_mem image2d object
-    @note On success, creates an Image2D that wraps the memory_obj alias.
+    @note On success, creates an Image2D that has started to owns the memory_obj alias.
      * The caller should additionally call `clRetainMemObject` on it if it intends
      * to continue using the memory_obj.
     */

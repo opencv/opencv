@@ -1398,9 +1398,9 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 #endif
 }
 
-void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair<int, Device>>& dst)
+std::vector<std::pair<int, cv::ocl::Device>> getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device)
 {
-    CV_UNUSED(pD3D11Device); CV_UNUSED(dst);
+    CV_UNUSED(pD3D11Device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
@@ -1415,19 +1415,19 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
             size_t out_size = 0;
             cl_int status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, 0, nullptr, &out_size);
             if (status != CL_SUCCESS) {
-                throw(status, "clGetPlatformInfo can't find number of extenson for platform");
+                throw(status, "clGetPlatformInfo can't find number of extension for platform");
             }
             std::string ext(out_size, '\0'); // char[] CL_PLATFORM_EXTENSIONS
             status = clGetPlatformInfo(platform, CL_PLATFORM_EXTENSIONS, out_size, &ext.front(), nullptr);
             if (status != CL_SUCCESS) {
-                throw(status, "clGetPlatformInfo can't get extenson for platform");
+                throw(status, "clGetPlatformInfo can't get extension for platform");
             }
             // If platform doesn't support extension then returns empty vector
-            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos
-                && ext.find(" cl_khr_d3d11_sharing ") == std::string::npos) {
-                CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extenson for platform");
+            if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
+                CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extension for platform");
                 return devices;
             }
+            std::cout << "findKHRDevice found cl_khr_d3d11_sharing extension for platform" << std::endl;
 
             cl_uint numDevices = 0;
             status = func(platform, CL_D3D11_DEVICE_KHR, pD3D11Device,
@@ -1436,6 +1436,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                 throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             if (numDevices < 1) {
+                std::cout << "numDevices < 1" << std::endl;
                 return devices;
             }
             std::vector<cl_device_id> cl_devs(numDevices, nullptr);
@@ -1445,8 +1446,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                 throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             for (auto&& device : cl_devs) {
-                devices.emplace_back(cl_d3d11_device_set,
-                                     device);
+                devices.emplace_back(cl_d3d11_device_set, device);
             }
             return devices;
         };
@@ -1466,6 +1466,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get platforms");
     }
 
+    std::vector<std::pair<int, cv::ocl::Device>> dst;
     for (cl_uint i =0; i < numPlatforms; ++i) {
         // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
         clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
@@ -1494,6 +1495,7 @@ void getDeviceIDsByD3D11Device(ID3D11Device* pD3D11Device, std::vector<std::pair
                                   std::make_move_iterator(temp_devices.end()));
         }
     }
+    return std::move(dst);
 #endif
 }
 
