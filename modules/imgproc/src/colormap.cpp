@@ -812,7 +812,7 @@ namespace colormap
             srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
                 const int row = position[0];
                 const int col = position[1];
-                memcpy(dstMat.data+row*dstMat.step+col*elemSize, userColorMat.data+pixel*userColorMat.step, elemSize);
+                memcpy(dstMat.ptr(row, col), userColorMat.ptr(pixel, 0), elemSize);
                 });
         }
         else
