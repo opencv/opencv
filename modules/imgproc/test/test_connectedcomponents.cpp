@@ -789,5 +789,16 @@ TEST(Imgproc_ConnectedComponents, single_column)
 }
 
 
+TEST(Imgproc_ConnectedComponents, 4conn_regression_21366)
+{
+    Mat src = Mat::zeros(Size(10, 10), CV_8UC1);
+    {
+        Mat labels, stats, centroids;
+        EXPECT_NO_THROW(cv::connectedComponentsWithStats(src, labels, stats, centroids, 4));
+    }
+}
+
+
+
 }
 } // namespace

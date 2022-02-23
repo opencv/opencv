@@ -1918,5 +1918,29 @@ TEST(Core_InputOutput, FileStorage_16F_json)
     test_20279(fs);
 }
 
+TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_YAML)
+{
+    FileStorage fs("invalid_path/test.yaml", cv::FileStorage::WRITE);
+    EXPECT_FALSE(fs.isOpened());
+    EXPECT_ANY_THROW(fs.write("K", 1));
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_XML)
+{
+    FileStorage fs("invalid_path/test.xml", cv::FileStorage::WRITE);
+    EXPECT_FALSE(fs.isOpened());
+    EXPECT_ANY_THROW(fs.write("K", 1));
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
+{
+    FileStorage fs("invalid_path/test.json", cv::FileStorage::WRITE);
+    EXPECT_FALSE(fs.isOpened());
+    EXPECT_ANY_THROW(fs.write("K", 1));
+    fs.release();
+}
+
 
 }} // namespace

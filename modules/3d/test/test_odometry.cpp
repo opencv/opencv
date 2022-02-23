@@ -310,7 +310,7 @@ void OdometryTest::run()
         }
 
         // compare rotation
-        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.015f;
+        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.11f : 0.015f;
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));

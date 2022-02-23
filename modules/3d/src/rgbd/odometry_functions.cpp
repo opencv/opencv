@@ -24,14 +24,14 @@ enum
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
-    prepareRGBFrame(srcFrame, dstFrame, settings);
+    prepareRGBFrame(srcFrame, dstFrame, settings, true);
     prepareICPFrame(srcFrame, dstFrame, settings, algtype);
 }
 
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, bool useDepth)
 {
-    prepareRGBFrameBase(srcFrame, settings);
-    prepareRGBFrameBase(dstFrame, settings);
+    prepareRGBFrameBase(srcFrame, settings, useDepth);
+    prepareRGBFrameBase(dstFrame, settings, useDepth);
 
     prepareRGBFrameSrc(srcFrame, settings);
     prepareRGBFrameDst(dstFrame, settings);
@@ -48,7 +48,7 @@ void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     prepareICPFrameDst(dstFrame, settings);
 }
 
-void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
+void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool useDepth)
 {
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -70,29 +70,34 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     checkImage(image);
 
-
     TMat depth;
-    frame.getDepth(depth);
-    if (depth.empty())
+
+    if (useDepth)
     {
-        if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
+        frame.getDepth(depth);
+        if (depth.empty())
         {
-            TMat pyr0;
-            frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
-            frame.setDepth(pyr0);
+            if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
+            {
+                TMat pyr0;
+                frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
+                frame.setDepth(pyr0);
+            }
+            else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
+            {
+                TMat cloud;
+                frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
+                std::vector<TMat> xyz;
+                split(cloud, xyz);
+                frame.setDepth(xyz[2]);
+            }
+            else
+                CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
         }
-        else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
-        {
-            TMat cloud;
-            frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
-            std::vector<TMat> xyz;
-            split(cloud, xyz);
-            frame.setDepth(xyz[2]);
-        }
-        else
-            CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
+        checkDepth(depth, image.size());
     }
-    checkDepth(depth, image.size());
+    else
+        depth = TMat(image.size(), CV_32F, 1);
 
     TMat mask;
     frame.getMask(mask);
@@ -120,8 +125,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
     std::vector<TMat> mpyramids;
     std::vector<TMat> npyramids;
-    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
-        npyramids, mpyramids);
+    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(), npyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
 }
 
@@ -174,7 +178,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     typedef Mat TMat;
 
     TMat depth;
-    frame.getDepth(depth);
+    frame.getScaledDepth(depth);
     if (depth.empty())
     {
         if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
@@ -253,7 +257,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     settings.getCameraMatrix(cameraMatrix);
 
     TMat depth, mask, normals;
-    frame.getDepth(depth);
+    frame.getScaledDepth(depth);
     frame.getMask(mask);
     frame.getNormals(normals);
 
@@ -883,9 +887,9 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
         for (int u1 = 0; u1 < depth1.cols; u1++)
         {
             float d1 = depth1_row[u1];
-            if (mask1_row[u1])
+            if (mask1_row[u1] && !cvIsNaN(d1))
             {
-                CV_DbgAssert(!cvIsNaN(d1));
+                //CV_DbgAssert(!cvIsNaN(d1));
                 float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
                     Kt_ptr[2]);
 

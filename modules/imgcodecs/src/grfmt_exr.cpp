@@ -637,7 +637,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 
     for( size_t i = 0; i < params.size(); i += 2 )
     {
-        if( params[i] == CV_IMWRITE_EXR_TYPE )
+        if( params[i] == IMWRITE_EXR_TYPE )
         {
             switch( params[i+1] )
             {

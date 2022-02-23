@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021, Yechun Ruan <ruanyc@mail.sustech.edu.cn>
 
 
 #ifndef OPENCV_3D_PTCLOUD_HPP
@@ -86,7 +88,8 @@ public:
      * @param[out] labels The label corresponds to the model number, 0 means it
      * does not belong to any model, range [0, Number of final resultant models obtained].
      * @param[out] models_coefficients The resultant models coefficients.
-     * Currently supports passing in cv::Mat. Models coefficients are placed in a matrix of NxK,
+     * Currently supports passing in cv::Mat. Models coefficients are placed in a matrix of NxK
+     * with depth CV_64F (will automatically adjust if the passing one does not look like this),
      * where N is the number of models and K is the number of coefficients of one model.
      * The coefficients for each model refer to the comments inside enumeration type SacModelType.
      * @return Number of final resultant models obtained by segmentation.

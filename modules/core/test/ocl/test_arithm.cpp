@@ -1819,8 +1819,8 @@ OCL_TEST_P(ReduceSum, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_SUM, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_SUM, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_SUM, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_SUM, dtype));
 
         double eps = ddepth <= CV_32S ? 1 : 7e-4;
         OCL_EXPECT_MATS_NEAR(dst, eps);
@@ -1835,8 +1835,8 @@ OCL_TEST_P(ReduceMax, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MAX, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MAX, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_MAX, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_MAX, dtype));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -1850,8 +1850,8 @@ OCL_TEST_P(ReduceMin, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MIN, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MIN, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_MIN, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_MIN, dtype));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -1865,8 +1865,8 @@ OCL_TEST_P(ReduceAvg, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_AVG, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_AVG, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_AVG, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_AVG, dtype));
 
         double eps = ddepth <= CV_32S ? 1 : 6e-6;
         OCL_EXPECT_MATS_NEAR(dst, eps);

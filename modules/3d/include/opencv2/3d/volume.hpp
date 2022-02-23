@@ -5,124 +5,135 @@
 #ifndef OPENCV_3D_VOLUME_HPP
 #define OPENCV_3D_VOLUME_HPP
 
+#include "volume_settings.hpp"
+
 #include "opencv2/core/affine.hpp"
 
 namespace cv
 {
+
 class CV_EXPORTS_W Volume
 {
-   public:
-    Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor) :
-        voxelSize(_voxelSize),
-        voxelSizeInv(1.0f / voxelSize),
-        pose(_pose),
-        raycastStepFactor(_raycastStepFactor)
-    { }
+public:
+    /** @brief Constructor of default volume - TSDF.
+    */
+    Volume();
+    /** @brief Constructor of custom volume.
+    * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
+    * @param settings the custom settings for volume.
+    */
+    Volume(VolumeType vtype, const VolumeSettings& settings);
+    ~Volume();
 
-    virtual ~Volume(){};
+    /** @brief Integrates the input data to the volume.
 
-    CV_WRAP
-    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                           const Matx33f& intrinsics, const int frameId = 0)                   = 0;
-    virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
-                           const Matx44f& cameraPose, const Matx33f& intrinsics,
-                           const Matx33f& rgb_intrinsics, const int frameId = 0)               = 0;
-    CV_WRAP
-    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
-                         const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
-    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
-                         OutputArray points, OutputArray normals, OutputArray colors) const    = 0;
-    CV_WRAP
-    virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
-    CV_WRAP
-    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const             = 0;
-    CV_WRAP
-    virtual void reset()                                                                       = 0;
+    Camera intrinsics are taken from volume settings structure.
 
-    // Works for hash-based volumes only, otherwise returns 1
-    virtual int getVisibleBlocks(int /*currFrameId*/, int /*frameThreshold*/) const { return 1; }
-    virtual size_t getTotalVolumeUnits() const { return 1; }
+    * @param frame the object from which to take depth and image data.
+      For color TSDF a depth data should be registered with color data, i.e. have the same intrinsics & camera pose.
+      This can be done using function registerDepth() from 3d module.
+    * @param pose the pose of camera in global coordinates.
+    */
+    void integrate(const OdometryFrame& frame, InputArray pose);
 
-   public:
-    const float voxelSize;
-    const float voxelSizeInv;
-    const Affine3f pose;
-    const float raycastStepFactor;
+    /** @brief Integrates the input data to the volume.
+
+    Camera intrinsics are taken from volume settings structure.
+
+    * @param depth the depth image.
+    * @param pose the pose of camera in global coordinates.
+    */
+    void integrate(InputArray depth, InputArray pose);
+
+    /** @brief Integrates the input data to the volume.
+
+    Camera intrinsics are taken from volume settings structure.
+
+    * @param depth the depth image.
+    * @param image the color image (only for ColorTSDF).
+      For color TSDF a depth data should be registered with color data, i.e. have the same intrinsics & camera pose.
+      This can be done using function registerDepth() from 3d module.
+    * @param pose the pose of camera in global coordinates.
+    */
+    void integrate(InputArray depth, InputArray image, InputArray pose);
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param outFrame the object where to store rendered points and normals.
+    */
+    void raycast(InputArray cameraPose, OdometryFrame& outFrame) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
+    */
+    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param height the height of result image.
+    * @param width the width of result image.
+    * @param outFrame the object where to store rendered points and normals.
+    */
+    void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param height the height of result image.
+    * @param width the width of result image.
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
+    */
+    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+
+    /** @brief Extract the all data from volume.
+    * @param points the input exist point.
+    * @param normals the storage of normals (corresponding to input points) in the image.
+    */
+    void fetchNormals(InputArray points, OutputArray normals) const;
+    /** @brief Extract the all data from volume.
+    * @param points the storage of all points.
+    * @param normals the storage of all normals, corresponding to points.
+    */
+    void fetchPointsNormals(OutputArray points, OutputArray normals) const;
+    /** @brief Extract the all data from volume.
+    * @param points the storage of all points.
+    * @param normals the storage of all normals, corresponding to points.
+    * @param colors the storage of all colors, corresponding to points (only for ColorTSDF).
+    */
+    void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
+
+    /** @brief clear all data in volume.
+    */
+    void reset();
+
+    /** @brief return visible blocks in volume.
+    */
+    int getVisibleBlocks() const;
+
+    /** @brief return number of vulmeunits in volume.
+    */
+    size_t getTotalVolumeUnits() const;
+
+    class Impl;
+private:
+    Ptr<Impl> impl;
 };
-
-struct CV_EXPORTS_W VolumeParams
-{
-    enum VolumeKind
-    {
-        TSDF        = 0,
-        HASHTSDF    = 1,
-        COLOREDTSDF = 2
-    };
-
-    /** @brief Kind of Volume
-        Values can be TSDF (single volume) or HASHTSDF (hashtable of volume units)
-    */
-    CV_PROP_RW int kind;
-
-    /** @brief Resolution of voxel space
-        Number of voxels in each dimension.
-        Applicable only for TSDF Volume.
-        HashTSDF volume only supports equal resolution in all three dimensions
-    */
-    CV_PROP_RW int resolutionX;
-    CV_PROP_RW int resolutionY;
-    CV_PROP_RW int resolutionZ;
-
-    /** @brief Resolution of volumeUnit in voxel space
-        Number of voxels in each dimension for volumeUnit
-        Applicable only for hashTSDF.
-    */
-    CV_PROP_RW int unitResolution = {0};
-
-    /** @brief Initial pose of the volume in meters, should be 4x4 float or double matrix */
-    CV_PROP_RW Mat pose;
-
-    /** @brief Length of voxels in meters */
-    CV_PROP_RW float voxelSize;
-
-    /** @brief TSDF truncation distance
-        Distances greater than value from surface will be truncated to 1.0
-    */
-    CV_PROP_RW float tsdfTruncDist;
-
-    /** @brief Max number of frames to integrate per voxel
-        Represents the max number of frames over which a running average
-        of the TSDF is calculated for a voxel
-    */
-    CV_PROP_RW int maxWeight;
-
-    /** @brief Threshold for depth truncation in meters
-        Truncates the depth greater than threshold to 0
-    */
-    CV_PROP_RW float depthTruncThreshold;
-
-    /** @brief Length of single raycast step
-        Describes the percentage of voxel length that is skipped per march
-    */
-    CV_PROP_RW float raycastStepFactor;
-
-    /** @brief Default set of parameters that provide higher quality reconstruction
-        at the cost of slow performance.
-    */
-    CV_WRAP static Ptr<VolumeParams> defaultParams(int _volumeType);
-
-    /** @brief Coarse set of parameters that provides relatively higher performance
-        at the cost of reconstrution quality.
-    */
-    CV_WRAP static Ptr<VolumeParams> coarseParams(int _volumeType);
-};
-
-
-CV_EXPORTS_W Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams);
-CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
-                                    float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
-                                    int _resolutionX, int _resolutionY, int _resolutionZ);
 
 }  // namespace cv
-
 #endif // include guard

@@ -1570,7 +1570,7 @@ namespace cv{
 #define CONDITION_S img_row[c - 1] > 0
 #define CONDITION_X img_row[c] > 0
 
-#define ACTION_1 // nothing to do
+#define ACTION_1 img_labels_row[c] = 0;
 #define ACTION_2 img_labels_row[c] = label; \
                     P_[label] = label; \
                     label = label + 1;
@@ -1831,7 +1831,7 @@ namespace cv{
 
             std::vector<LabelT> P_(Plength, 0);
             LabelT* P = P_.data();
-            //P[0] = 0;
+            P[0] = 0;
             LabelT lunique = 1;
 
             // First scan
@@ -1851,7 +1851,7 @@ namespace cv{
 #define CONDITION_S img_row[c - 1] > 0
 #define CONDITION_X img_row[c] > 0
 
-#define ACTION_1 // nothing to do
+#define ACTION_1 img_labels_row[c] = 0;
 #define ACTION_2 img_labels_row[c] = lunique; \
                                      P[lunique] = lunique;        \
                                      lunique = lunique + 1; // new label

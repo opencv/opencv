@@ -330,7 +330,7 @@ public:
         }
 #endif
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmComputePlugin();
             if (isArmTarget && blobs.empty())
@@ -340,7 +340,7 @@ public:
             if (ksize == 3)
                 return preferableTarget != DNN_TARGET_MYRIAD && !isArmTarget;
             bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
-            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || !isMyriad) && blobs.empty())
+            if (!isMyriad && blobs.empty())
                 return false;
             return (!isMyriad || dilation.width == dilation.height);
         }
@@ -421,7 +421,9 @@ public:
         if (!blobs.empty())
         {
             Mat wm = blobs[0].reshape(1, numOutput);
-            if( wm.step1() % VEC_ALIGN != 0 )
+            if ((wm.step1() % VEC_ALIGN != 0) ||
+                !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
+            )
             {
                 int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
                 Mat wm_buffer = Mat(numOutput, newcols, wm.type());
@@ -759,69 +761,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        CV_Assert(!blobs.empty());
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getDims();
-        CV_Assert(dims.size() == 4 || dims.size() == 5);
-        const int inpCn = dims[1];
-        const int outCn = blobs[0].size[0];
-        const int inpGroupCn = blobs[0].size[1];
-        const int group = inpCn / inpGroupCn;
-        InferenceEngine::Layout layout = (dims.size() == 4) ? InferenceEngine::Layout::OIHW :
-                                                              InferenceEngine::Layout::NCDHW;
-
-        auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
-        if (fusedWeights)
-        {
-            if (weightsMat.isContinuous())
-            {
-                Mat cvWeights = weightsMat.reshape(1, blobs[0].dims, blobs[0].size);
-                ieWeights = wrapToInfEngineBlob(cvWeights, layout);
-            }
-            else
-            {
-                ieWeights = InferenceEngine::make_shared_blob<float>({
-                                InferenceEngine::Precision::FP32,
-                                ieWeights->getTensorDesc().getDims(), layout
-                            });
-                ieWeights->allocate();
-
-                Mat newWeights = infEngineBlobToMat(ieWeights).reshape(1, outCn);
-                Mat cvWeights = weightsMat.colRange(0, newWeights.cols);
-                cvWeights.copyTo(newWeights);
-            }
-        }
-        InferenceEngine::Blob::Ptr ieBiases;
-        if (hasBias() || fusedBias)
-        {
-            Mat biasesMat({outCn}, CV_32F, &biasvec[0]);
-            ieBiases = wrapToInfEngineBlob(biasesMat, {(size_t)outCn}, InferenceEngine::Layout::C);
-        }
-
-        InferenceEngine::Builder::ConvolutionLayer ieLayer(name);
-
-        ieLayer.setKernel(kernel_size);
-        ieLayer.setStrides(strides);
-        ieLayer.setDilation(dilations);
-        ieLayer.setPaddingsBegin(pads_begin);
-        ieLayer.setPaddingsEnd(pads_end);
-        ieLayer.setGroup((size_t)group);
-        ieLayer.setOutDepth((size_t)outCn);
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        addConstantData("weights", ieWeights, l);
-        if (ieBiases)
-            addConstantData("biases", ieBiases, l);
-
-        if (!padMode.empty())
-            l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -1660,7 +1599,6 @@ public:
                                 }
                             }
                         }
-
                         // now compute dot product of the weights
                         // and im2row-transformed part of the tensor
                     #if CV_TRY_AVX512_SKX
@@ -1995,13 +1933,6 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-#if CV_SSE3
-        uint32_t ftzMode = _MM_GET_FLUSH_ZERO_MODE();
-        uint32_t dazMode = _MM_GET_DENORMALS_ZERO_MODE();
-        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-        _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-#endif
-
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
@@ -2138,10 +2069,6 @@ public:
             ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                             kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
         }
-#if CV_SSE3
-        _MM_SET_FLUSH_ZERO_MODE(ftzMode);
-        _MM_SET_DENORMALS_ZERO_MODE(dazMode);
-#endif
     }
 
 #ifdef HAVE_CUDA
@@ -2329,52 +2256,6 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
             return group == 1;
         }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        {
-            if (kernel_size.size() == 3 && preferableTarget != DNN_TARGET_CPU) {
-                return false;
-            }
-
-            if (std::accumulate(adjust_pads.begin(), adjust_pads.end(), 0, std::plus<size_t>()) > 0)
-            {
-                if (padMode.empty())
-                {
-                    if (preferableTarget != DNN_TARGET_CPU && group != 1)
-                    {
-                        for (int i = 0; i < adjust_pads.size(); i++) {
-                            if (adjust_pads[i] && pads_begin[i])
-                                return false;
-                        }
-                    }
-                    for (int i = 0; i < adjust_pads.size(); i++) {
-                        if (pads_end[i] < adjust_pads[i])
-                            return false;
-                    }
-                    return true;
-                }
-                else if (padMode == "SAME")
-                {
-                    for (int i = 0; i < adjust_pads.size(); i++) {
-                        if (kernel_size[i] < pads_begin[i] + 1 + adjust_pads[i])
-                            return false;
-                    }
-                    return true;
-                }
-                else if (padMode == "VALID")
-                    return false;
-            }
-
-            if (group != 1)
-            {
-                return preferableTarget == DNN_TARGET_CPU;
-            }
-            if (preferableTarget == DNN_TARGET_OPENCL || preferableTarget == DNN_TARGET_OPENCL_FP16)
-                return std::accumulate(dilations.begin(), dilations.end(), 1, std::multiplies<size_t>()) == 1;
-            return true;
-        }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 #endif  // HAVE_INF_ENGINE
         {
             return backendId == DNN_BACKEND_CUDA ||
@@ -3031,64 +2912,6 @@ public:
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &) CV_OVERRIDE
-    {
-        CV_Assert(!blobs.empty());
-        InferenceEngine::Layout layout = blobs[0].dims == 5? InferenceEngine::Layout::NCDHW :
-                                                             InferenceEngine::Layout::OIHW;
-
-        auto ieWeights = wrapToInfEngineBlob(blobs[0], layout);
-        if (fusedWeights)
-        {
-            ieWeights = InferenceEngine::make_shared_blob<float>({
-                            InferenceEngine::Precision::FP32,
-                            ieWeights->getTensorDesc().getDims(), layout
-                        });
-            ieWeights->allocate();
-
-            int inpCn = blobs[0].size[0];
-            Mat newWeights = infEngineBlobToMat(ieWeights).reshape(1, inpCn);
-            transpose(weightsMat, newWeights);
-        }
-
-        const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or OIDHW layout
-        const int group = numOutput / outGroupCn;
-
-        InferenceEngine::Builder::DeconvolutionLayer ieLayer(name);
-
-        ieLayer.setKernel(kernel_size);
-        ieLayer.setStrides(strides);
-        ieLayer.setDilation(dilations);
-        ieLayer.setPaddingsBegin(pads_begin);
-
-        if (padMode.empty())
-        {
-            std::vector<size_t> paddings_end;
-            for (int i = 0; i < pads_end.size(); i++) {
-                paddings_end.push_back(pads_end[i] - adjust_pads[i]);
-            }
-            ieLayer.setPaddingsEnd(paddings_end);
-        }
-        else if (padMode == "SAME")
-        {
-            std::vector<size_t> paddings_end;
-            for (int i = 0; i < pads_begin.size(); i++) {
-                paddings_end.push_back(kernel_size[i] - pads_begin[i] - 1 - adjust_pads[i]);
-            }
-            ieLayer.setPaddingsEnd(paddings_end);
-        }
-        ieLayer.setGroup((size_t)group);
-        ieLayer.setOutDepth((size_t)numOutput);
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        addConstantData("weights", ieWeights, l);
-        if (hasBias())
-            addConstantData("biases", wrapToInfEngineBlob(biasesMat, {(size_t)numOutput}, InferenceEngine::Layout::C), l);
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

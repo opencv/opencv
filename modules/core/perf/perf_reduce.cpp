@@ -23,7 +23,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
+    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
@@ -51,7 +51,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
+    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);

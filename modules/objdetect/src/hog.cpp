@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 #include "cascadedetect.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencl_kernels_objdetect.hpp"
 
@@ -1887,7 +1886,7 @@ static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locat
 void HOGDescriptor::detectMultiScale(
     InputArray _img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
     double hitThreshold, Size winStride, Size padding,
-    double scale0, double finalThreshold, bool useMeanshiftGrouping) const
+    double scale0, double groupThreshold, bool useMeanshiftGrouping) const
 {
     CV_INSTRUMENT_REGION();
 
@@ -1913,7 +1912,7 @@ void HOGDescriptor::detectMultiScale(
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
         winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
-        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold, oclSvmDetector,
+        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, groupThreshold, oclSvmDetector,
         blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef, signedGradient));
 
     std::vector<Rect> allCandidates;
@@ -1934,21 +1933,21 @@ void HOGDescriptor::detectMultiScale(
     std::copy(tempWeights.begin(), tempWeights.end(), back_inserter(foundWeights));
 
     if ( useMeanshiftGrouping )
-        groupRectangles_meanshift(foundLocations, foundWeights, foundScales, finalThreshold, winSize);
+        groupRectangles_meanshift(foundLocations, foundWeights, foundScales, groupThreshold, winSize);
     else
-        groupRectangles(foundLocations, foundWeights, (int)finalThreshold, 0.2);
+        groupRectangles(foundLocations, foundWeights, (int)groupThreshold, 0.2);
     clipObjects(imgSize, foundLocations, 0, &foundWeights);
 }
 
 void HOGDescriptor::detectMultiScale(InputArray img, std::vector<Rect>& foundLocations,
     double hitThreshold, Size winStride, Size padding,
-    double scale0, double finalThreshold, bool useMeanshiftGrouping) const
+    double scale0, double groupThreshold, bool useMeanshiftGrouping) const
 {
     CV_INSTRUMENT_REGION();
 
     std::vector<double> foundWeights;
     detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride,
-                padding, scale0, finalThreshold, useMeanshiftGrouping);
+                padding, scale0, groupThreshold, useMeanshiftGrouping);
 }
 
 std::vector<float> HOGDescriptor::getDefaultPeopleDetector()

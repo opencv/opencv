@@ -139,7 +139,7 @@ public:
     {
     public:
         Base64Decoder();
-        void init(Ptr<FileStorageParser>& _parser, char* _ptr, int _indent);
+        void init(const Ptr<FileStorageParser>& _parser, char* _ptr, int _indent);
 
         bool readMore(int needed);
 
@@ -155,7 +155,13 @@ public:
         char* getPtr() const;
     protected:
 
-        Ptr<FileStorageParser> parser;
+        Ptr<FileStorageParser> parser_do_not_use_direct_dereference;
+        FileStorageParser& getParser() const
+        {
+            if (!parser_do_not_use_direct_dereference)
+                CV_Error(Error::StsNullPtr, "Parser is not available");
+            return *parser_do_not_use_direct_dereference;
+        }
         char* ptr;
         int indent;
         std::vector<char> encoded;
@@ -205,8 +211,20 @@ public:
 
     std::deque<char> outbuf;
 
-    Ptr<FileStorageEmitter> emitter;
-    Ptr<FileStorageParser> parser;
+    Ptr<FileStorageEmitter> emitter_do_not_use_direct_dereference;
+    FileStorageEmitter& getEmitter()
+    {
+        if (!emitter_do_not_use_direct_dereference)
+            CV_Error(Error::StsNullPtr, "Emitter is not available");
+        return *emitter_do_not_use_direct_dereference;
+    }
+    Ptr<FileStorageParser> parser_do_not_use_direct_dereference;
+    FileStorageParser& getParser() const
+    {
+        if (!parser_do_not_use_direct_dereference)
+            CV_Error(Error::StsNullPtr, "Parser is not available");
+        return *parser_do_not_use_direct_dereference;
+    }
     Base64Decoder base64decoder;
     base64::Base64Writer* base64_writer;
 

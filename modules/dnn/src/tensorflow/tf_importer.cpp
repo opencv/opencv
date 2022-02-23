@@ -11,6 +11,8 @@ Implementation of Tensorflow models parser
 
 #include "../precomp.hpp"
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <opencv2/core/utils/logger.defines.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -513,6 +515,7 @@ class TFLayerHandler;
 
 class TFImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 public:
     TFImporter(Net& net, const char *model, const char *config = NULL);
     TFImporter(Net& net, const char *dataModel, size_t lenModel,
@@ -3090,10 +3093,8 @@ void TFImporter::populateNet()
     {
         const tensorflow::NodeDef& layer = net.node(li);
 
-        const std::string name = layer.name();
-        const std::string type = layer.op();
-        const int ninputs = layer.input_size();
-        CV_LOG_DEBUG(NULL, "DNN/TF: (" << li << "/" << layersSize << ") Parse layer " << name << " @ " << type << " with " << ninputs << " inputs");
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing node (" << li << "/" << layersSize << ") with " << layer.input_size() << " inputs: "
+                                                           << cv::format("[%s]:(%s)", layer.op().c_str(), layer.name().c_str()));
 
         parseNode(layer);
     }

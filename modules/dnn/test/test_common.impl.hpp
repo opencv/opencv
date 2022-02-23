@@ -362,16 +362,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     std::vector< Target > available;
 
     {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
-        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
-        {
-            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
-                continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
-        }
-    }
-
-    {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {

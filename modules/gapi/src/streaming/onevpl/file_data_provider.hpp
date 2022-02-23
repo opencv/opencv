@@ -18,7 +18,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-struct FileDataProvider : public IDataProvider {
+struct GAPI_EXPORTS FileDataProvider : public IDataProvider {
 
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
     FileDataProvider(const std::string& file_path,
