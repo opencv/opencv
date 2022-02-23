@@ -964,7 +964,7 @@ TEST_P(Test_Model, FaceDetectionByYN)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Weight
-    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202202.onnx", false);
 
     // Ground Truth
     const std::string test_labels = findDataFile("cv/dnn_face/detection/cascades_labels.txt");
@@ -1046,7 +1046,7 @@ TEST_P(Test_Model, FaceRecognitionBySF)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Weight
-    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202109.onnx", false);
+    const std::string face_detection_weight_path = _tf("onnx/models/yunet-202202.onnx", false);
     const std::string face_recognition_weight_path = _tf("onnx/models/face_recognizer_fast.onnx", false);
 
     // Ground Truth
