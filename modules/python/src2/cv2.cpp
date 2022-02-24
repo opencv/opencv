@@ -79,9 +79,9 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_enums.h"
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE_DYNAMIC(WNAME, NAME, STORAGE, SNAME)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE_DYNAMIC(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE)
 #else
-#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE(WNAME, NAME, STORAGE, SNAME)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, _1, _2, SCOPE) CVPY_TYPE_DECLARE(EXPORT_NAME, CLASS_ID, STORAGE, SNAME, SCOPE)
 #endif
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
@@ -281,6 +281,189 @@ static bool init_submodule(PyObject * root, const char * name, PyMethodDef * met
     return true;
 }
 
+static inline
+bool registerTypeInModuleScope(PyObject* module, const char* type_name, PyObject* type_obj)
+{
+    if (PyModule_AddObject(module, type_name, type_obj) < 0)
+    {
+        PyErr_Format(PyExc_ImportError,
+            "Failed to register type '%s' in module scope '%s'",
+            type_name, PyModule_GetName(module)
+        );
+        Py_DECREF(type_obj);
+        return false;
+    }
+    return true;
+}
+
+static inline
+bool registerTypeInClassScope(PyObject* cls, const char* type_name, PyObject* type_obj)
+{
+    if (!PyType_CheckExact(cls)) {
+        PyErr_Format(PyExc_ImportError,
+            "Failed to register type '%s' in class scope. "
+            "Scope class object has a wrong type", type_name
+        );
+        return false;
+    }
+    if (PyObject_SetAttrString(cls, type_name, type_obj) < 0)
+    {
+        #ifndef Py_LIMITED_API
+            PyObject* cls_dict = reinterpret_cast<PyTypeObject*>(cls)->tp_dict;
+            if (PyDict_SetItemString(cls_dict, type_name, type_obj) >= 0) {
+                /// Clearing the error set by PyObject_SetAttrString:
+                /// TypeError: can't set attributes of built-in/extension type NAME
+                PyErr_Clear();
+                return true;
+            }
+        #endif
+        const std::string cls_name = getPyObjectNameAttr(cls);
+        PyErr_Format(PyExc_ImportError,
+            "Failed to register type '%s' in '%s' class scope. Can't update scope dictionary",
+            type_name, cls_name.c_str()
+        );
+        return false;
+    }
+    return true;
+}
+
+static inline
+PyObject* getScopeFromTypeObject(PyObject* obj, const std::string& scope_name)
+{
+    if (!PyType_CheckExact(obj)) {
+        const std::string type_name = getPyObjectNameAttr(obj);
+        return PyErr_Format(PyExc_ImportError,
+            "Failed to get scope from type '%s' "
+            "Scope class object has a wrong type", type_name.c_str()
+        );
+    }
+    /// When using LIMITED API all classes are registered in the heap
+#if defined(Py_LIMITED_API)
+    return PyObject_GetAttrString(obj, scope_name.c_str());
+#else
+    /// Otherwise classes may be registed on the stack or heap
+    PyObject* type_dict = reinterpret_cast<PyTypeObject*>(obj)->tp_dict;
+    if (!type_dict) {
+        const std::string type_name = getPyObjectNameAttr(obj);
+        return PyErr_Format(PyExc_ImportError,
+            "Failed to get scope from type '%s' "
+            "Type dictionary is not available", type_name.c_str()
+        );
+    }
+    return PyDict_GetItemString(type_dict, scope_name.c_str());
+#endif // Py_LIMITED_API
+}
+
+static inline
+PyObject* findTypeScope(PyObject* root_module, const std::string& scope_name)
+{
+    PyObject* scope = root_module;
+    if (scope_name.empty())
+    {
+        return scope;
+    }
+    /// Starting with 1 to omit leading dot in the scope name
+    size_t name_end = scope_name.find('.', 1);
+    if (name_end == std::string::npos)
+    {
+        name_end = scope_name.size();
+    }
+    for (size_t name_start = 1; name_start < scope_name.size() && scope; )
+    {
+        const std::string current_scope_name = scope_name.substr(name_start,
+                                                                 name_end - name_start);
+
+        if (PyModule_CheckExact(scope))
+        {
+            PyObject* scope_dict = PyModule_GetDict(scope);
+            if (!scope_dict)
+            {
+                return PyErr_Format(PyExc_ImportError,
+                    "Scope '%s' dictionary is not available during the search for "
+                    " the '%s' scope object", current_scope_name.c_str(),
+                    scope_name.c_str()
+                );
+            }
+
+            scope = PyDict_GetItemString(scope_dict, current_scope_name.c_str());
+        }
+        else if (PyType_CheckExact(scope))
+        {
+            scope = getScopeFromTypeObject(scope, current_scope_name);
+        }
+        else
+        {
+            return PyErr_Format(PyExc_ImportError,
+                "Can't find scope '%s'. '%s' doesn't reference a module or a class",
+                 scope_name.c_str(), current_scope_name.c_str()
+            );
+        }
+
+
+        name_start = name_end + 1;
+        name_end = scope_name.find('.', name_start);
+        if (name_end == std::string::npos)
+        {
+            name_end = scope_name.size();
+        }
+    }
+    if (!scope)
+    {
+        return PyErr_Format(PyExc_ImportError,
+            "Module or class with name '%s' can't be found in '%s' module",
+            scope_name.c_str(), PyModule_GetName(root_module)
+        );
+    }
+    return scope;
+}
+
+static bool registerNewType(PyObject* root_module, const char* type_name,
+                            PyObject* type_obj, const std::string& scope_name)
+{
+    PyObject* scope = findTypeScope(root_module, scope_name);
+
+    /// If scope can't be found it means that there is an error during
+    /// bindings generation
+    if (!scope) {
+        return false;
+    }
+
+    if (PyModule_CheckExact(scope))
+    {
+        if (!registerTypeInModuleScope(scope, type_name, type_obj))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        /// In Python 2 it is disallowed to register an inner classes
+        /// via modifing dictionary of the built-in type.
+        if (!registerTypeInClassScope(scope, type_name, type_obj))
+        {
+            return false;
+        }
+    }
+
+    /// Expose all classes that are defined in the submodules as aliases in the
+    /// root module for backward compatibility
+    /// If submodule and root module are same than no aliases registration are
+    /// required
+    if (scope != root_module)
+    {
+        std::string type_name_str(type_name);
+
+        std::string alias_name;
+        alias_name.reserve(scope_name.size() + type_name_str.size());
+        std::replace_copy(scope_name.begin() + 1, scope_name.end(), std::back_inserter(alias_name), '.', '_');
+        alias_name += '_';
+        alias_name += type_name_str;
+
+        return registerTypeInModuleScope(root_module, alias_name.c_str(), type_obj);
+    }
+    return true;
+}
+
 #include "pyopencv_generated_modules_content.h"
 
 static bool init_body(PyObject * m)
@@ -294,10 +477,10 @@ static bool init_body(PyObject * m)
 #undef CVPY_MODULE
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_DYNAMIC(WNAME, NAME, return false, BASE, CONSTRUCTOR)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_DYNAMIC(EXPORT_NAME, CLASS_ID, return false, BASE, CONSTRUCTOR, SCOPE)
     PyObject * pyopencv_NoBase_TypePtr = NULL;
 #else
-#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_STATIC(WNAME, NAME, return false, BASE, CONSTRUCTOR)
+#define CVPY_TYPE(EXPORT_NAME, CLASS_ID, _1, _2, BASE, CONSTRUCTOR, SCOPE) CVPY_TYPE_INIT_STATIC(EXPORT_NAME, CLASS_ID, return false, BASE, CONSTRUCTOR, SCOPE)
     PyTypeObject * pyopencv_NoBase_TypePtr = NULL;
 #endif
     #include "pyopencv_generated_types.h"
