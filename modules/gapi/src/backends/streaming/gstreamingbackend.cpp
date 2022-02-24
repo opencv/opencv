@@ -15,6 +15,7 @@
 
 #include "logger.hpp"
 #include "api/gbackend_priv.hpp"
+#include "api/gproto_priv.hpp"   // ptr(GRunArgP)
 #include "backends/common/gbackend.hpp"
 
 #include "gstreamingbackend.hpp"
@@ -165,13 +166,21 @@ struct Copy: public cv::detail::KernelTag
 void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                       cv::gimpl::GIslandExecutable::IOutput &out)
 {
-    const auto in_msg = in.get();
+    auto in_msg = in.get();
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
 
+    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
+    {
+        auto e = cv::util::get<cv::gimpl::Exception>(in_msg);
+        out.post(std::move(e));
+        return;
+    }
+
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
 
@@ -209,6 +218,12 @@ public:
         if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
         {
             out.post(cv::gimpl::EndOfStream{});
+            return;
+        }
+        if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
+        {
+            auto e = cv::util::get<cv::gimpl::Exception>(in_msg);
+            out.post(std::move(e));
             return;
         }
 

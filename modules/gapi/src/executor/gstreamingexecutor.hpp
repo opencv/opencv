@@ -50,11 +50,12 @@ struct Result {
 
 using Cmd = cv::util::variant
     < cv::util::monostate
-    , Start        // Tells emitters to start working. Not broadcasted to workers.
-    , Stop         // Tells emitters to stop working. Broadcasted to workers.
-    , cv::GRunArg  // Workers data payload to process.
-    , Result       // Pipeline's data for gout()
-    >;
+    , Start                // Tells emitters to start working. Not broadcasted to workers.
+    , Stop                 // Tells emitters to stop working. Broadcasted to workers.
+    , cv::GRunArg          // Workers data payload to process.
+    , Result               // Pipeline's data for gout()
+    , cv::gimpl::Exception // Exception which is thrown while execution.
+   >;
 
 // Interface over a queue. The underlying queue implementation may be
 // different. This class is mainly introduced to bring some

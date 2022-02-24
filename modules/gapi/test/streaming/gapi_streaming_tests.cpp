@@ -304,6 +304,39 @@ void checkPullOverload(const cv::Mat& ref,
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
 }
 
+struct InvalidSource : public cv::gapi::wip::IStreamSource {
+    static std::string exception_msg()
+    {
+        return "InvalidSource sucessfuly failed!";
+    }
+
+    bool pull(cv::gapi::wip::Data&) {
+        throw std::logic_error(InvalidSource::exception_msg());
+    }
+
+    cv::GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::GMatDesc{}};
+    }
+};
+
+G_TYPED_KERNEL(GThrowExceptionOp, <GMat(GMat)>, "org.opencv.test.throw_error_op")
+{
+     static GMatDesc outMeta(GMatDesc in) { return in; }
+};
+
+GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
+{
+    static std::string exception_msg()
+    {
+        return "GThrowErrorOp sucessfuly failed!";
+    }
+
+    static void run(const cv::Mat&, cv::Mat&)
+    {
+        throw std::logic_error(GThrowExceptionKernel::exception_msg());
+    }
+};
+
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
@@ -2512,5 +2545,62 @@ TEST(GAPI_Streaming, TestDesyncMediaFrameGray) {
     }
 }
 
+TEST(GAPI_Streaming_Exception, SingleKernelThrow) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in, GThrowExceptionOp::on(in)).compileStreaming(
+            cv::compile_args(cv::gapi::kernels<GThrowExceptionKernel>()));
+
+    cv::Mat in_mat(cv::Size(300, 300), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(GThrowExceptionKernel::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, ExceptionInTheMiddle) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(
+            in, cv::gapi::copy(GThrowExceptionOp::on(in))).compileStreaming(
+                cv::compile_args(cv::gapi::kernels<GThrowExceptionKernel>()));
+
+    cv::Mat in_mat(cv::Size(300, 300), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(GThrowExceptionKernel::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, SourceThrow) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in, cv::gapi::copy(in)).compileStreaming();
+
+    pipeline.setSource(std::make_shared<InvalidSource>());
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(InvalidSource::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
 
 } // namespace opencv_test

@@ -278,8 +278,9 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
         out_idx[cv::gimpl::proto::ptr(r)] = idx;
         return r;
     }
-    void post(GRunArgP&&) override { } // Do nothing here
+    void post(GRunArgP&&, const std::exception_ptr&) override { } // Do nothing here
     void post(EndOfStream&&) override {} // Do nothing here too
+    void post(Exception&&) override {} // Do nothing here too
     void meta(const GRunArgP &out, const GRunArg::Meta &m) override
     {
         const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
