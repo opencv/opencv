@@ -27,7 +27,6 @@ public:
     friend class VPPPreprocEngine;
     VPPPreprocSession(mfxSession sess, const mfxVideoParam &vpp_out_param);
     ~VPPPreprocSession();
-    using EngineSession::EngineSession;
 
     Data::Meta generate_frame_meta();
     void swap_surface(VPPPreprocEngine& engine);

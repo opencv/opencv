@@ -11,7 +11,7 @@
 #include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/util/optional.hpp>
 
-#include "streaming\onevpl\engine\preproc_defines.hpp"
+#include "streaming/onevpl/engine/preproc_defines.hpp"
 
 namespace cv {
 namespace gapi {

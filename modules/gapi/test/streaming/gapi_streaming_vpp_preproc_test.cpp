@@ -225,13 +225,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
                                                      cfg_params_w_dx11,
                                                      data_provider);
 
-    /*
-    mfxSession mfx_vpp_session {nullptr};
-    sts = MFXCloneSession(mfx_decode_session, &mfx_vpp_session);
-    ASSERT_EQ(MFX_ERR_NONE, sts);
-    */
-
-    // put mock net info
+    // simulate net info
     cv::GFrameDesc required_frame_param {cv::MediaFormat::NV12,
                                          {1920, 1080}};
 
@@ -241,20 +235,24 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
 
     // launch pipeline
     // 1) decode frame
-    cv::MediaFrame decoded_frame;
-    ASSERT_NO_THROW(decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
-    cv::GFrameDesc first_frame_decoded_desc = decoded_frame.desc();
+    cv::MediaFrame first_decoded_frame;
+    ASSERT_NO_THROW(first_decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
+    cv::GFrameDesc first_frame_decoded_desc = first_decoded_frame.desc();
 
     // 1.5) create preproc session based on frame description & network info
-    cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
+    cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(first_decoded_frame);
     ASSERT_TRUE(first_pp_params.has_value());
     pp_session first_pp_sess = preproc_engine.initialize_preproc(first_pp_params.value(),
                                                                  required_frame_param);
 
     // 2) make preproc using incoming decoded frame & preproc session
-    cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
-    cv::GFrameDesc first_outcome_pp_desc = pp_frame.desc();
+    cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess, first_decoded_frame);
+    cv::GFrameDesc first_outcome_pp_desc = first_pp_frame.desc();
     ASSERT_FALSE(first_frame_decoded_desc == first_outcome_pp_desc);
+
+    // do not hold media frames because they share limited DX11 surface pool resources
+    first_decoded_frame = cv::MediaFrame();
+    first_pp_frame = cv::MediaFrame();
 
     // make test in loop
     bool in_progress = false;
@@ -263,7 +261,7 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
         cv::util::get<cv::gapi::wip::onevpl::vpp_pp_params>(first_pp_params.value().value);
     try {
         while(true) {
-            decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine);
+            cv::MediaFrame decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine);
             in_progress = true;
             ASSERT_EQ(decoded_frame.desc(), first_frame_decoded_desc);
 
@@ -280,11 +278,10 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                       first_pp_sess.get<EngineSession>().get());
 
-            pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
+            cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
             cv::GFrameDesc pp_desc = pp_frame.desc();
             ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
             in_progress = false;
-            decoded_frame = cv::MediaFrame();
             frames_processed_count++;
         }
     } catch (...) {}
@@ -364,22 +361,30 @@ TEST_P(VPPPreprocParams, functional_different_threads)
 
     std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, required_frame_param] () {
         // create preproc session based on frame description & network info
-        cv::MediaFrame decoded_frame = queue.pop();
-        cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(decoded_frame);
+        cv::MediaFrame first_decoded_frame = queue.pop();
+        cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(first_decoded_frame);
         ASSERT_TRUE(first_pp_params.has_value());
         pp_session first_pp_sess =
                     preproc_engine.initialize_preproc(first_pp_params.value(), required_frame_param);
 
         // make preproc using incoming decoded frame & preproc session
-        cv::MediaFrame pp_frame = preproc_engine.run_sync(first_pp_sess, decoded_frame);
-        cv::GFrameDesc first_outcome_pp_desc = pp_frame.desc();
+        cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess, first_decoded_frame);
+        cv::GFrameDesc first_outcome_pp_desc = first_pp_frame.desc();
+
+        // do not hold media frames because they share limited DX11 surface pool resources
+        first_decoded_frame = cv::MediaFrame();
+        first_pp_frame = cv::MediaFrame();
 
         // launch pipeline
         bool in_progress = false;
+        // let's allow counting of preprocessed frames to check this value later:
+        // Currently, it looks redundant to implement any kind of gracefull shutdown logic
+        // in this test - so let's apply agreement that media source is processed
+        // succesfully when preproc_number != 1 in result
         preproc_number = 1;
         try {
             while(true) {
-                decoded_frame = queue.pop();
+                cv::MediaFrame decoded_frame = queue.pop();
                 if (SafeQueue::is_stop(decoded_frame)) {
                     break;
                 }
@@ -394,11 +399,10 @@ TEST_P(VPPPreprocParams, functional_different_threads)
                 ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                           first_pp_sess.get<EngineSession>().get());
 
-                pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
+                cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
                 cv::GFrameDesc pp_desc = pp_frame.desc();
                 ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
                 in_progress = false;
-                decoded_frame = cv::MediaFrame();
                 preproc_number++;
             }
         } catch (...) {}
