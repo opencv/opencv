@@ -72,12 +72,6 @@ def main():
 
     volume = cv.Volume(volume_type)
 
-    size = (480, 640, 4)
-    x = np.zeros((size[0], size[1]), np.float32)
-    y = np.zeros((size[0], size[1]), np.float32)
-    z = np.zeros((size[0], size[1]), np.float32)
-    zeros = np.zeros((size[0], size[1]), np.float32)
-
     for key in list(depth_info.keys())[:]:
         Rt = np.array(
             [[1, 0, 0, 0],
@@ -104,6 +98,8 @@ def main():
         else:
             volume.integrate(depth, rgb, Rt)
 
+        size = (480, 640, 4)
+
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
         colors = np.zeros(size, np.float32)
@@ -113,11 +109,11 @@ def main():
         else:
             volume.raycast(Rt, size[0], size[1], points, normals, colors)
 
-        x, y, z, zeros = cv.split(points)
+        channels = list(cv.split(points))
 
-        cv.imshow("X", np.absolute(x))
-        cv.imshow("Y", np.absolute(y))
-        cv.imshow("Z", z)
+        cv.imshow("X", np.absolute(channels[0]))
+        cv.imshow("Y", np.absolute(channels[1]))
+        cv.imshow("Z", channels[2])
 
         if volume_type == cv.ColorTSDF:
             cv.imshow("Color", colors.astype(np.uint8))
@@ -125,4 +121,4 @@ def main():
         cv.waitKey(10)
 
 if __name__ == '__main__':
-  main()
+    main()
