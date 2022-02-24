@@ -787,14 +787,14 @@ Point3f getNormalVoxel(
 #else
 
 # if CV_SIMD_WIDTH >= 32
-    v_float32x8 cxp = v_lut(vals, idxxp);
-    v_float32x8 cxn = v_lut(vals, idxxn);
+    v_float32x8 cxp = v_lut(vals, v256_load(idxxp));
+    v_float32x8 cxn = v_lut(vals, v256_load(idxxn));
 
-    v_float32x8 cyp = v_lut(vals, idxyp);
-    v_float32x8 cyn = v_lut(vals, idxyn);
+    v_float32x8 cyp = v_lut(vals, v256_load(idxyp));
+    v_float32x8 cyn = v_lut(vals, v256_load(idxyn));
 
-    v_float32x8 czp = v_lut(vals, idxzp);
-    v_float32x8 czn = v_lut(vals, idxzn);
+    v_float32x8 czp = v_lut(vals, v256_load(idxzp));
+    v_float32x8 czn = v_lut(vals, v256_load(idxzn));
 
     v_float32x8 vcxv = cxn - cxp;
     v_float32x8 vcyv = cyn - cyp;
@@ -930,14 +930,14 @@ Point3f ocl_getNormalVoxel(
 #else
 
 # if CV_SIMD_WIDTH >= 32
-    v_float32x8 cxp = v_lut(vals, idxxp);
-    v_float32x8 cxn = v_lut(vals, idxxn);
+    v_float32x8 cxp = v_lut(vals, v256_load(idxxp));
+    v_float32x8 cxn = v_lut(vals, v256_load(idxxn));
 
-    v_float32x8 cyp = v_lut(vals, idxyp);
-    v_float32x8 cyn = v_lut(vals, idxyn);
+    v_float32x8 cyp = v_lut(vals, v256_load(idxyp));
+    v_float32x8 cyn = v_lut(vals, v256_load(idxyn));
 
-    v_float32x8 czp = v_lut(vals, idxzp);
-    v_float32x8 czn = v_lut(vals, idxzn);
+    v_float32x8 czp = v_lut(vals, v256_load(idxzp));
+    v_float32x8 czn = v_lut(vals, v256_load(idxzn));
 
     v_float32x8 vcxv = cxn - cxp;
     v_float32x8 vcyv = cyn - cyp;
