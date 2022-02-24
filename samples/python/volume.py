@@ -72,6 +72,12 @@ def main():
 
     volume = cv.Volume(volume_type)
 
+    size = (480, 640, 4)
+    x = np.zeros((size[0], size[1]), np.float32)
+    y = np.zeros((size[0], size[1]), np.float32)
+    z = np.zeros((size[0], size[1]), np.float32)
+    zeros = np.zeros((size[0], size[1]), np.float32)
+
     for key in list(depth_info.keys())[:]:
         Rt = np.array(
             [[1, 0, 0, 0],
@@ -97,8 +103,6 @@ def main():
             volume.integrate(depth, Rt)
         else:
             volume.integrate(depth, rgb, Rt)
-
-        size = (480, 640, 4)
 
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
