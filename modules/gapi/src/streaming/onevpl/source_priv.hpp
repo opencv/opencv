@@ -44,7 +44,8 @@ private:
     Priv();
     std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel(std::shared_ptr<IDeviceSelector> selector);
 
-    mfxLoader mfx_handle;
+    // TODO not it is global variable. Waiting for FIX issue with CloneSession
+    // mfxLoader mfx_handle;
     mfxImplDescription *mfx_impl_description;
     std::vector<mfxConfig> mfx_handle_configs;
     std::vector<CfgParam> cfg_params;

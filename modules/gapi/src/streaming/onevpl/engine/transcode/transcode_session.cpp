@@ -42,22 +42,7 @@ void LegacyTranscodeSession::init_transcode_surface_pool(VPLAccelerationPolicy::
 void LegacyTranscodeSession::swap_transcode_surface(VPLLegacyTranscodeEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
-    try {
-        auto cand = acceleration_policy->get_free_surface(vpp_out_pool_id).lock();
-
-        GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
-                                ", old: " << (!vpp_surface_ptr.expired()
-                                              ? vpp_surface_ptr.lock()->get_handle()
-                                              : nullptr) <<
-                                ", new: "<< cand->get_handle());
-
-        vpp_surface_ptr = cand;
-    } catch (const std::runtime_error& ex) {
-        GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what());
-
-        // Delegate exception processing on caller
-        throw;
-    }
+    request_free_surface(session, vpp_out_pool_id, *acceleration_policy, vpp_surface_ptr);
 }
 
 const mfxFrameInfo& LegacyTranscodeSession::get_video_param() const {

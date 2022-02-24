@@ -186,6 +186,7 @@ set(gapi_srcs
     src/streaming/onevpl/cfg_params_parser.cpp
     src/streaming/onevpl/utils.cpp
     src/streaming/onevpl/data_provider_interface_exception.cpp
+    src/streaming/onevpl/accelerators/surface/base_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/dx11_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/surface.cpp
@@ -200,6 +201,8 @@ set(gapi_srcs
     src/streaming/onevpl/engine/decode/decode_session.cpp
     src/streaming/onevpl/engine/transcode/transcode_engine_legacy.cpp
     src/streaming/onevpl/engine/transcode/transcode_session.cpp
+    src/streaming/onevpl/engine/preproc/preproc_engine.cpp
+    src/streaming/onevpl/engine/preproc/preproc_session.cpp
     src/streaming/onevpl/demux/async_mfp_demux_data_provider.cpp
     src/streaming/onevpl/data_provider_dispatcher.cpp
 
@@ -360,7 +363,9 @@ endif()
 # perf test dependencies postprocessing
 if(HAVE_GAPI_ONEVPL)
   # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
+  # src/ is specified to include dirs for INTERNAL tests only.
   if(TARGET opencv_perf_gapi)
+    target_include_directories(opencv_perf_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
     ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_ONEVPL)
     ocv_target_link_libraries(opencv_perf_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
     if(HAVE_D3D11 AND HAVE_OPENCL)
