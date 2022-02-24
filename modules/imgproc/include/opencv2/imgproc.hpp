@@ -405,10 +405,10 @@ enum ConnectedComponentsTypes {
 
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
-    CCL_DEFAULT   = -1, //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
+    CCL_DEFAULT   = -1, //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity.
     CCL_WU        = 0,  //!< SAUF @cite Wu2009 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for SAUF.
     CCL_GRANA     = 1,  //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
-    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity.
+    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both Spaghetti and Spaghetti4C.
     CCL_SAUF      = 3,  //!< Same as CCL_WU. It is preferable to use the flag with the name of the algorithm (CCL_SAUF) rather than the one with the name of the first author (CCL_WU).
     CCL_BBDT      = 4,  //!< Same as CCL_GRANA. It is preferable to use the flag with the name of the algorithm (CCL_BBDT) rather than the one with the name of the first author (CCL_GRANA).
     CCL_SPAGHETTI = 5,  //!< Same as CCL_BOLELLI. It is preferable to use the flag with the name of the algorithm (CCL_SPAGHETTI) rather than the one with the name of the first author (CCL_BOLELLI).
@@ -744,54 +744,99 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YV12 = 133,
     COLOR_BGRA2YUV_YV12 = 134,
 
-    //! Demosaicing
-    COLOR_BayerBG2BGR = 46,
-    COLOR_BayerGB2BGR = 47,
-    COLOR_BayerRG2BGR = 48,
-    COLOR_BayerGR2BGR = 49,
+    //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
+    COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR = 47, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR = 48, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR = 49, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR,
-    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR,
-    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR,
-    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR,
+    COLOR_BayerRGGB2BGR = COLOR_BayerBG2BGR,
+    COLOR_BayerGRBG2BGR = COLOR_BayerGB2BGR,
+    COLOR_BayerBGGR2BGR = COLOR_BayerRG2BGR,
+    COLOR_BayerGBRG2BGR = COLOR_BayerGR2BGR,
 
-    COLOR_BayerBG2GRAY = 86,
-    COLOR_BayerGB2GRAY = 87,
-    COLOR_BayerRG2GRAY = 88,
-    COLOR_BayerGR2GRAY = 89,
+    COLOR_BayerRGGB2RGB = COLOR_BayerBGGR2BGR,
+    COLOR_BayerGRBG2RGB = COLOR_BayerGBRG2BGR,
+    COLOR_BayerBGGR2RGB = COLOR_BayerRGGB2BGR,
+    COLOR_BayerGBRG2RGB = COLOR_BayerGRBG2BGR,
+
+    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerBG2GRAY = 86, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2GRAY = 87, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2GRAY = 88, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2GRAY = 89, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerRGGB2GRAY = COLOR_BayerBG2GRAY,
+    COLOR_BayerGRBG2GRAY = COLOR_BayerGB2GRAY,
+    COLOR_BayerBGGR2GRAY = COLOR_BayerRG2GRAY,
+    COLOR_BayerGBRG2GRAY = COLOR_BayerGR2GRAY,
 
     //! Demosaicing using Variable Number of Gradients
-    COLOR_BayerBG2BGR_VNG = 62,
-    COLOR_BayerGB2BGR_VNG = 63,
-    COLOR_BayerRG2BGR_VNG = 64,
-    COLOR_BayerGR2BGR_VNG = 65,
+    COLOR_BayerBG2BGR_VNG = 62, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_VNG = 63, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_VNG = 64, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_VNG = 65, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG,
-    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG,
-    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG,
-    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerRGGB2BGR_VNG = COLOR_BayerBG2BGR_VNG,
+    COLOR_BayerGRBG2BGR_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerBGGR2BGR_VNG = COLOR_BayerRG2BGR_VNG,
+    COLOR_BayerGBRG2BGR_VNG = COLOR_BayerGR2BGR_VNG,
+
+    COLOR_BayerRGGB2RGB_VNG = COLOR_BayerBGGR2BGR_VNG,
+    COLOR_BayerGRBG2RGB_VNG = COLOR_BayerGBRG2BGR_VNG,
+    COLOR_BayerBGGR2RGB_VNG = COLOR_BayerRGGB2BGR_VNG,
+    COLOR_BayerGBRG2RGB_VNG = COLOR_BayerGRBG2BGR_VNG,
+
+    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG, //!< equivalent to GBRG Bayer pattern
 
     //! Edge-Aware Demosaicing
-    COLOR_BayerBG2BGR_EA  = 135,
-    COLOR_BayerGB2BGR_EA  = 136,
-    COLOR_BayerRG2BGR_EA  = 137,
-    COLOR_BayerGR2BGR_EA  = 138,
+    COLOR_BayerBG2BGR_EA  = 135, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_EA  = 136, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_EA  = 137, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_EA  = 138, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA,
-    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA,
-    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
-    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerRGGB2BGR_EA  = COLOR_BayerBG2BGR_EA,
+    COLOR_BayerGRBG2BGR_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerBGGR2BGR_EA  = COLOR_BayerRG2BGR_EA,
+    COLOR_BayerGBRG2BGR_EA  = COLOR_BayerGR2BGR_EA,
+
+    COLOR_BayerRGGB2RGB_EA  = COLOR_BayerBGGR2BGR_EA,
+    COLOR_BayerGRBG2RGB_EA  = COLOR_BayerGBRG2BGR_EA,
+    COLOR_BayerBGGR2RGB_EA  = COLOR_BayerRGGB2BGR_EA,
+    COLOR_BayerGBRG2RGB_EA  = COLOR_BayerGRBG2BGR_EA,
+
+    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA, //!< equivalent to GBRG Bayer pattern
 
     //! Demosaicing with alpha channel
-    COLOR_BayerBG2BGRA = 139,
-    COLOR_BayerGB2BGRA = 140,
-    COLOR_BayerRG2BGRA = 141,
-    COLOR_BayerGR2BGRA = 142,
+    COLOR_BayerBG2BGRA = 139, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGRA = 140, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGRA = 141, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGRA = 142, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
-    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
-    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
-    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+    COLOR_BayerRGGB2BGRA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGRBG2BGRA = COLOR_BayerGB2BGRA,
+    COLOR_BayerBGGR2BGRA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGBRG2BGRA = COLOR_BayerGR2BGRA,
+
+    COLOR_BayerRGGB2RGBA = COLOR_BayerBGGR2BGRA,
+    COLOR_BayerGRBG2RGBA = COLOR_BayerGBRG2BGRA,
+    COLOR_BayerBGGR2RGBA = COLOR_BayerRGGB2BGRA,
+    COLOR_BayerGBRG2RGBA = COLOR_BayerGRBG2BGRA,
+
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
     COLOR_COLORCVT_MAX  = 143
 };
@@ -2129,12 +2174,12 @@ The function finds lines in a set of points using a modification of the Hough tr
 @param point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
-@param lines_max Max count of hough lines.
+@param lines_max Max count of Hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
-votes ( \f$>\texttt{threshold}\f$ )
-@param min_rho Minimum Distance value of the accumulator in pixels.
-@param max_rho Maximum Distance value of the accumulator in pixels.
-@param rho_step Distance resolution of the accumulator in pixels.
+votes ( \f$>\texttt{threshold}\f$ ).
+@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
+@param max_rho Maximum value for \f$\rho\f$ for the accumulator.
+@param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.
@@ -3531,10 +3576,11 @@ a mask and then extract the contour, or copy the region to another image, and so
 function unless the #FLOODFILL_MASK_ONLY flag is set in the second variant of the function. See
 the details below.
 @param mask Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels
-taller than image. Since this is both an input and output parameter, you must take responsibility
-of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
+taller than image. If an empty Mat is passed it will be created automatically. Since this is both an
+input and output parameter, you must take responsibility of initializing it.
+Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
-mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
+mask corresponding to filled pixels in the image are set to 1 or to the specified value in flags
 as described below. Additionally, the function fills the border of the mask with ones to simplify
 internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
@@ -3830,9 +3876,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
@@ -3862,9 +3909,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana's (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms (statistics included) if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
@@ -4909,13 +4957,13 @@ CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
                                FontFace& fface, int size, int weight=0,
                                PutTextFlags flags=PUT_TEXT_ALIGN_LEFT, Range wrap=Range() );
 
-/** @brief Line iterator
 
-The class is used to iterate over all the pixels on the raster line
-segment connecting two specified points.
 
-The class LineIterator is used to get each pixel of a raster line. It
-can be treated as versatile implementation of the Bresenham algorithm
+/** @brief Class for iterating over all pixels on a raster line segment.
+
+The class LineIterator is used to get each pixel of a raster line connecting
+two specified points.
+It can be treated as a versatile implementation of the Bresenham algorithm
 where you can stop at each pixel and do some extra processing, for
 example, grab pixel values along the line or draw a line with an effect
 (for example, with XOR operation).
@@ -4944,14 +4992,19 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief initializes the iterator
+    /** @brief Initializes iterator object for the given line and image.
 
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters;
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped on the image boundaries.
+
+    @param img Underlying image.
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
@@ -4984,16 +5037,23 @@ public:
     }
     void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
 
-    /** @brief returns pointer to the current pixel
+    /** @brief Returns pointer to the current pixel.
     */
     uchar* operator *();
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the prefix version (++it).
     */
     LineIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the postfix version (it++).
     */
     LineIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
+
+    /** @brief Returns coordinates of the current pixel.
     */
     Point pos() const;
 

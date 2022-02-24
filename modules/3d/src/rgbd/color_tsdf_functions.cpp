@@ -66,6 +66,7 @@ void integrateColorTsdfVolumeUnit(
 
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
         v_float32x4 vfxy(projDepth.fx, projDepth.fy, 0.f, 0.f), vcxy(projDepth.cx, projDepth.cy, 0.f, 0.f);
+
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols - 1, depth.rows - 1, 0, 0));
 
         for (int x = range.start; x < range.end; x++)
@@ -181,6 +182,7 @@ void integrateColorTsdfVolumeUnit(
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
                     Vec3f colorRGB = color.at<Vec3f>(_v, _u);
+
                     //float pixNorm = sqrt(v_reduce_sum(camPixVec*camPixVec));
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - zCamSpace);
@@ -279,6 +281,7 @@ void integrateColorTsdfVolumeUnit(
                     int _v = projected.y;
 
                     if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
+
                         continue;
 
                     float pixNorm = pixNorms.at<float>(_v, _u);

@@ -169,7 +169,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
 
         /*switch( depth )
@@ -187,7 +187,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
                 ((float*)ptr)[j] = (float)buffer[j];
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }*/
         cv::Mat src(1, cols*cn, CV_32F, &buffer[0]);
         cv::Mat dst(1, cols*cn, depth, ptr);
@@ -482,7 +482,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
             }
         }
     }

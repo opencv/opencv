@@ -25,8 +25,7 @@ namespace cv {
 
 dls::dls(const Mat& opoints, const Mat& ipoints)
 {
-
-    N =  std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
+    N = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     p = Mat(3, N, CV_64F);
     z = Mat(3, N, CV_64F);
     mn = Mat::zeros(3, 1, CV_64F);
@@ -274,7 +273,7 @@ void dls::build_coeff_matrix(const Mat& pp, Mat& Mtilde, Mat& D)
 }
 
 void dls::compute_eigenvec(const Mat& Mtilde, Mat& eigenval_real, Mat& eigenval_imag,
-                                                  Mat& eigenvec_real, Mat& eigenvec_imag)
+                                              Mat& eigenvec_real, Mat& eigenvec_imag)
 {
 #ifdef HAVE_EIGEN
     Eigen::MatrixXd Mtilde_eig, zeros_eig;
@@ -606,8 +605,8 @@ Mat dls::skewsymm(const Mat * X1)
 {
     MatConstIterator_<double> it = X1->begin<double>();
     return (Mat_<double>(3,3) <<        0, -*(it+2),  *(it+1),
-                                      *(it+2),        0, -*(it+0),
-                                     -*(it+1),  *(it+0),       0);
+                                  *(it+2),        0, -*(it+0),
+                                 -*(it+1),  *(it+0),       0);
 }
 
 Mat dls::rotx(const double t)
@@ -658,4 +657,4 @@ bool dls::positive_eigenvalues(const Mat * eigenvalues)
     return *(it) > 0 && *(it+1) > 0 && *(it+2) > 0;
 }
 
-}
+} // namespace cv

@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -114,12 +115,16 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && preferableTarget == DNN_TARGET_CPU)
-            return _order.size() <= 4 || !isArmComputePlugin();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            if (preferableTarget == DNN_TARGET_CPU)
+                return _order.size() <= 4 || !isArmComputePlugin();
+            return true;
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
+               backendId == DNN_BACKEND_WEBNN ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
@@ -416,16 +421,6 @@ public:
     }
 
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::PermuteLayer ieLayer(name);
-        ieLayer.setOrder(_order);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -439,6 +434,20 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<int32_t> permutation(_order.begin(), _order.end());
+        ml::TransposeOptions options;
+        options.permutation = permutation.data();
+        options.permutationCount = permutation.size();
+        auto operand = webnnGraphBuilder.Transpose(webnnInpOperand, &options);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(

@@ -10,7 +10,6 @@
 
 #include <unordered_set>
 
-#include "../precomp.hpp"
 #include "utils.hpp"
 #include "tsdf_functions.hpp"
 

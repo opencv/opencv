@@ -45,6 +45,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -201,9 +202,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine());
+               backendId == DNN_BACKEND_WEBNN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -304,17 +309,6 @@ public:
     }
 
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::ReshapeLayer ieLayer(name);
-        CV_Assert(outShapes.size() == 1);
-        ieLayer.setDims(outShapes[0]);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -330,6 +324,17 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        const std::vector<int32_t> out(outShapes[0].begin(), outShapes[0].end());
+        auto operand = webnnGraphBuilder.Reshape(webnnInpOperand, out.data(), out.size());
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(

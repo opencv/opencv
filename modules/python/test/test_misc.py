@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
 import ctypes
 from functools import partial
 from collections import namedtuple
@@ -186,6 +187,10 @@ class Arguments(NewOpenCVTests):
         #a = np.zeros((2,3,4,5), dtype='f')
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
+
+    def test_20968(self):
+        pixel = np.uint8([[[40, 50, 200]]])
+        _ = cv.cvtColor(pixel, cv.COLOR_RGB2BGR)  # should not raise exception
 
     def test_parse_to_bool_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpBool)
@@ -589,6 +594,44 @@ class Arguments(NewOpenCVTests):
                         "Vector of integers should be returned as numpy array. Got: {}".format(type(ints)))
         self.assertEqual(ints.dtype, np.int32, "Vector of integers has wrong elements type")
         self.assertEqual(ints.shape, expected_shape, "Vector of integers has wrong shape.")
+
+    def test_result_rotated_rect_issue_20930(self):
+        rr = cv.utils.testRotatedRect(10, 20, 100, 200, 45)
+        self.assertTrue(isinstance(rr, tuple), msg=type(rr))
+        self.assertEqual(len(rr), 3)
+
+        rrv = cv.utils.testRotatedRectVector(10, 20, 100, 200, 45)
+        self.assertTrue(isinstance(rrv, tuple), msg=type(rrv))
+        self.assertEqual(len(rrv), 10)
+
+        rr = rrv[0]
+        self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
+        self.assertEqual(len(rr), 3)
+
+    def test_nested_function_availability(self):
+        self.assertTrue(hasattr(cv.utils, "nested"),
+                        msg="Module is not generated for nested namespace")
+        self.assertTrue(hasattr(cv.utils.nested, "testEchoBooleanFunction"),
+                        msg="Function in nested module is not available")
+
+        if sys.version_info[0] < 3:
+            # Nested submodule is managed only by the global submodules dictionary
+            # and parent native module
+            expected_ref_count = 2
+        else:
+            # Nested submodule is managed by the global submodules dictionary,
+            # parent native module and Python part of the submodule
+            expected_ref_count = 3
+
+        # `getrefcount` temporary increases reference counter by 1
+        actual_ref_count = sys.getrefcount(cv.utils.nested) - 1
+
+        self.assertEqual(actual_ref_count, expected_ref_count,
+                         msg="Nested submodule reference counter has wrong value\n"
+                         "Expected: {}. Actual: {}".format(expected_ref_count, actual_ref_count))
+        for flag in (True, False):
+            self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
+                             msg="Function in nested module returns wrong result")
 
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):

@@ -36,7 +36,7 @@ TEST_P(MathOperatorMatScalarTest, OperatorAccuracyTest )
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        ASSERT_EQ(out_mat_gapi.size(), sz);
+        ASSERT_EQ(sz, out_mat_gapi.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 }
@@ -63,7 +63,7 @@ TEST_P(MathOperatorMatMatTest, OperatorAccuracyTest )
 
     // Comparison //////////////////////////////////////////////////////////////
     {
-        ASSERT_EQ(out_mat_gapi.size(), sz);
+        ASSERT_EQ(sz, out_mat_gapi.size());
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 }
@@ -83,7 +83,7 @@ TEST_P(NotOperatorTest, OperatorAccuracyTest)
     }
     // Comparison //////////////////////////////////////////////////////////////
     {
-        ASSERT_EQ(out_mat_gapi.size(), sz);
+        ASSERT_EQ(sz, out_mat_gapi.size());
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
     }
 }

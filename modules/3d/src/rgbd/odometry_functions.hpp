@@ -130,10 +130,10 @@ typedef
 void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings);
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 
-void prepareRGBFrameBase(OdometryFrame& frame, const OdometrySettings settings);
+void prepareRGBFrameBase(OdometryFrame& frame, const OdometrySettings settings, bool useDepth);
 void prepareRGBFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
 void prepareRGBFrameDst (OdometryFrame& frame, const OdometrySettings settings);
 

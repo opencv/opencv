@@ -32,27 +32,26 @@ Select the backend at runtime
 
 OpenCV automatically selects and uses first available backend (`apiPreference=cv::CAP_ANY`).
 
-As advanced usage you can select the backend to use at runtime. Currently this option is
-available only with %VideoCapture.
+As advanced usage you can select the backend to use at runtime.
 
-For example to grab from default camera using Direct Show as backend
+For example to grab from default camera using Microsoft Media Foundation (MSMF) as backend
 
 ```cpp
 //declare a capture object
-cv::VideoCapture cap(0, cv::CAP_DSHOW);
+cv::VideoCapture cap(0, cv::CAP_MSMF);
 
 //or specify the apiPreference with open
-cap.open(0, cv::CAP_DSHOW);
+cap.open(0, cv::CAP_MSMF);
 ```
 
-If you want to grab from a file using the Direct Show as backend:
+If you want to grab from a file using the Microsoft Media Foundation (MSMF) as backend:
 
 ```cpp
 //declare a capture object
-cv::VideoCapture cap(filename, cv::CAP_DSHOW);
+cv::VideoCapture cap(filename, cv::CAP_MSMF);
 
 //or specify the apiPreference with open
-cap.open(filename, cv::CAP_DSHOW);
+cap.open(filename, cv::CAP_MSMF);
 ```
 
 @sa cv::VideoCapture::open() , cv::VideoCapture::VideoCapture()

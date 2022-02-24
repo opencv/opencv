@@ -55,6 +55,9 @@
 
 #include <opencv2/core/utils/filesystem.private.hpp>
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
+
 #ifndef OPENCV_WITH_THREAD_SANITIZER
   #if defined(__clang__) && defined(__has_feature)
   #if __has_feature(thread_sanitizer)
@@ -131,7 +134,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
-#if defined __QNXNTO__
+#if defined __QNX__
 #  include <sys/elf.h>
 #else
 #  include <elf.h>
@@ -156,6 +159,9 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 # endif
 # ifndef PPC_FEATURE2_ARCH_3_00
 #   define PPC_FEATURE2_ARCH_3_00 0x00800000
+# endif
+# ifndef PPC_FEATURE_HAS_VSX
+#   define PPC_FEATURE_HAS_VSX 0x00000080
 # endif
 #endif
 
@@ -551,7 +557,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
@@ -616,7 +622,7 @@ struct HWFeatures
         have[CV_CPU_MSA] = true;
     #endif
 
-    #if (defined __ppc64__ || defined __PPC64__) && defined __unix__
+    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
         unsigned int hwcap = getauxval(AT_HWCAP);
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             hwcap = getauxval(AT_HWCAP2);
@@ -626,8 +632,19 @@ struct HWFeatures
                 have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
+    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+        unsigned long hwcap = 0;
+        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        // TODO: AIX, FreeBSD
+        // TODO: AIX, OpenBSD
         #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
             have[CV_CPU_VSX] = true;
         #endif
@@ -929,6 +946,51 @@ int64 getCPUTickCount(void)
 //#endif
 
 #endif
+
+
+namespace internal {
+
+class Timestamp
+{
+public:
+    const int64 zeroTickCount;
+    const double ns_in_ticks;
+
+    Timestamp()
+        : zeroTickCount(getTickCount())
+        , ns_in_ticks(1e9 / getTickFrequency())
+    {
+        // nothing
+    }
+
+    int64 getTimestamp()
+    {
+        int64 t = getTickCount();
+        return (int64)((t - zeroTickCount) * ns_in_ticks);
+    }
+
+    static Timestamp& getInstance()
+    {
+        static Timestamp g_timestamp;
+        return g_timestamp;
+    }
+};
+
+class InitTimestamp {
+public:
+    InitTimestamp() {
+        Timestamp::getInstance();
+    }
+};
+static InitTimestamp g_initialize_timestamp;  // force zero timestamp initialization
+
+}  // namespace
+
+int64 getTimestampNS()
+{
+    return internal::Timestamp::getInstance().getTimestamp();
+}
+
 
 const String& getBuildInformation()
 {
@@ -2660,6 +2722,82 @@ void setUseIPP_NotExact(bool flag)
 }
 
 } // namespace ipp
+
+
+namespace details {
+
+#if OPENCV_IMPL_FP_HINTS_X86
+#ifndef _MM_DENORMALS_ZERO_ON  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_ON 0x0040
+#endif
+#ifndef _MM_DENORMALS_ZERO_MASK  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_MASK 0x0040
+#endif
+#endif
+
+void setFPDenormalsIgnoreHint(bool ignore, CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    unsigned value = ignore ? _MM_FLUSH_ZERO_ON : 0;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+        value |= ignore ? _MM_DENORMALS_ZERO_ON : 0;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: update FP mxcsr flags = " << cv::format("0x%08x", flags));
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    _mm_setcsr(flags);
+#else
+    CV_UNUSED(ignore); CV_UNUSED(state);
+#endif
+}
+
+int saveFPDenormalsState(CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    return 2;
+#else
+    CV_UNUSED(state);
+    return 0;
+#endif
+}
+
+bool restoreFPDenormalsState(const FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    const unsigned mask = (unsigned)state.reserved[0];
+    CV_DbgAssert(mask != 0); // invalid state (ensure that state is properly saved earlier)
+    const unsigned value = (unsigned)state.reserved[1];
+    CV_DbgCheck((int)value, value == (value & mask), "invalid SSE FP state");
+    const unsigned old_flags = _mm_getcsr();
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: restore FP mxcsr flags = " << cv::format("0x%08x", flags));
+    _mm_setcsr(flags);
+    return true;
+#else
+    CV_UNUSED(state);
+    return false;
+#endif
+}
+
+}  // namespace details
+
 
 } // namespace cv
 

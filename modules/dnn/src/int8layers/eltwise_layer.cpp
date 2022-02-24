@@ -238,7 +238,7 @@ public:
 
         EltwiseInvoker(EltwiseLayerInt8Impl& self_)
             : self(self_)
-            , nsrcs(0), dst(0), buf(0), nstripes(0), activ(0), channels(0)
+            , nsrcs(0), dst(0), buf(0), nstripes(0), activLUT(0), activ(0), channels(0)
             , planeSize(0), offset(0)
         {}
 
@@ -345,7 +345,8 @@ public:
             int8_t* dstptr0 = dst->ptr<int8_t>();
             float* bufptr0 = buf->ptr<float>();
             int blockSize0 = 1 << 12;
-
+            CV_Assert(op != PROD || zeropointsptr);
+            CV_Assert((op != PROD && op != SUM) || coeffsptr);
             for (size_t ofs = stripeStart; ofs < stripeEnd; )
             {
                 int sampleIdx = (int)(ofs / planeSize);

@@ -1844,14 +1844,18 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #define cv_hal_cvtBGRtoGray TEGRA_CVTBGRTOGRAY
 #undef cv_hal_cvtGraytoBGR
 #define cv_hal_cvtGraytoBGR TEGRA_CVTGRAYTOBGR
+#if 0  // bit-exact tests are failed
 #undef cv_hal_cvtBGRtoYUV
 #define cv_hal_cvtBGRtoYUV TEGRA_CVTBGRTOYUV
+#endif
 #undef cv_hal_cvtBGRtoHSV
 #define cv_hal_cvtBGRtoHSV TEGRA_CVTBGRTOHSV
+#if 0  // bit-exact tests are failed
 #undef cv_hal_cvtTwoPlaneYUVtoBGR
 #define cv_hal_cvtTwoPlaneYUVtoBGR TEGRA_CVT2PYUVTOBGR
 #undef cv_hal_cvtTwoPlaneYUVtoBGREx
 #define cv_hal_cvtTwoPlaneYUVtoBGREx TEGRA_CVT2PYUVTOBGR_EX
+#endif
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 

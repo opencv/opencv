@@ -5,8 +5,8 @@
 #ifndef __OPENCV_DNN_COMMON_HPP__
 #define __OPENCV_DNN_COMMON_HPP__
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <opencv2/dnn.hpp>
 
@@ -59,7 +59,7 @@ class LayerHandler
 public:
     void addMissing(const std::string& name, const std::string& type);
     bool contains(const std::string& type) const;
-    void printMissing();
+    void printMissing() const;
 
 protected:
     LayerParams getNotImplementedParams(const std::string& name, const std::string& op);
@@ -71,15 +71,53 @@ private:
 struct NetImplBase
 {
     const int networkId;  // network global identifier
-    int networkDumpCounter;  // dump counter
+    mutable int networkDumpCounter;  // dump counter
     int dumpLevel;  // level of information dumps (initialized through OPENCV_DNN_NETWORK_DUMP parameter)
 
     NetImplBase();
 
-    std::string getDumpFileNameBase();
+    std::string getDumpFileNameBase() const;
 };
 
 }  // namespace detail
+
+
+typedef std::vector<MatShape> ShapesVec;
+
+static inline std::string toString(const ShapesVec& shapes, const std::string& name = std::string())
+{
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    ss << '[';
+    for(size_t i = 0, n = shapes.size(); i < n; ++i)
+        ss << ' ' << toString(shapes[i]);
+    ss << " ]";
+    return ss.str();
+}
+
+static inline std::string toString(const Mat& blob, const std::string& name = std::string())
+{
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    if (blob.empty())
+    {
+        ss << "<empty>";
+    }
+    else if (blob.dims == 1)
+    {
+        Mat blob_ = blob;
+        blob_.dims = 2;  // hack
+        ss << blob_.t();
+    }
+    else
+    {
+        ss << blob.reshape(1, 1);
+    }
+    return ss.str();
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace

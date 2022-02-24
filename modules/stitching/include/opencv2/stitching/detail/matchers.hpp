@@ -59,7 +59,7 @@ struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
     CV_PROP_RW int img_idx;
     CV_PROP_RW Size img_size;
-    std::vector<KeyPoint> keypoints;
+    CV_PROP_RW std::vector<KeyPoint> keypoints;
     CV_PROP_RW UMat descriptors;
     CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; };
 };

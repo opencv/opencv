@@ -152,7 +152,7 @@ struct GExecutorReshapeTest: public ::testing::Test
     GMockExecutable                   island2;
     std::shared_ptr<GMockBackendImpl> backend_impl2;
     cv::gapi::GBackend                backend2;
-    cv::gapi::GKernelPackage          pkg;
+    cv::GKernelPackage                pkg;
     cv::Mat                           in_mat1, in_mat2, out_mat;;
 };
 

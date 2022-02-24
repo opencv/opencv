@@ -379,7 +379,7 @@ void BaseTest::run( int start_from )
 
 void BaseTest::run_func(void)
 {
-    assert(0);
+    CV_Assert(0);
 }
 
 

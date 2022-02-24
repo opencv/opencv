@@ -119,6 +119,111 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ __half round(__half value) { return hrint(value); }
 #endif
 
+    template <class T> __device__ T floor(T value);
+    template <> inline __device__ double floor(double value) { return ::floor(value); }
+    template <> inline __device__ float floor(float value) { return floorf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half floor(__half value) { return hfloor(value); }
+#endif
+
+    template <class T> __device__ T log(T value);
+    template <> inline __device__ double log(double value) { return ::log(value); }
+    template <> inline __device__ float log(float value) { return logf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half log(__half value) { return hlog(value); }
+#endif
+
+    template <class T> __device__ T rint(T value);
+    template <> inline __device__ double rint(double value) { return ::rint(value); }
+    template <> inline __device__ float rint(float value) { return rintf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half rint(__half value) { return hrint(value); }
+#endif
+
+    template <class T> __device__ T acos(T value);
+    template <> inline __device__ double acos(double value) { return ::acos(value); }
+    template <> inline __device__ float acos(float value) { return acosf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half acos(__half value) { return acosf(value); }
+#endif
+
+    template <class T> __device__ T acosh(T value);
+    template <> inline __device__ double acosh(double value) { return ::acosh(value); }
+    template <> inline __device__ float acosh(float value) { return acoshf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half acosh(__half value) { return acoshf(value); }
+#endif
+
+    template <class T> __device__ T asin(T value);
+    template <> inline __device__ double asin(double value) { return ::asin(value); }
+    template <> inline __device__ float asin(float value) { return asinf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half asin(__half value) { return asinf(value); }
+#endif
+
+    template <class T> __device__ T asinh(T value);
+    template <> inline __device__ double asinh(double value) { return ::asinh(value); }
+    template <> inline __device__ float asinh(float value) { return asinhf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half asinh(__half value) { return asinhf(value); }
+#endif
+
+    template <class T> __device__ T atan(T value);
+    template <> inline __device__ double atan(double value) { return ::atan(value); }
+    template <> inline __device__ float atan(float value) { return atanf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half atan(__half value) { return atanf(value); }
+#endif
+
+    template <class T> __device__ T atanh(T value);
+    template <> inline __device__ double atanh(double value) { return ::atanh(value); }
+    template <> inline __device__ float atanh(float value) { return atanhf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half atanh(__half value) { return atanhf(value); }
+#endif
+
+    template <class T> __device__ T cos(T value);
+    template <> inline __device__ double cos(double value) { return ::cos(value); }
+    template <> inline __device__ float cos(float value) { return cosf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half cos(__half value) { return hcos(value); }
+#endif
+
+    template <class T> __device__ T cosh(T value);
+    template <> inline __device__ double cosh(double value) { return ::cosh(value); }
+    template <> inline __device__ float cosh(float value) { return coshf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half cosh(__half value) { return coshf(value); }
+#endif
+
+    template <class T> __device__ T erf(T value);
+    template <> inline __device__ double erf(double value) { return ::erf(value); }
+    template <> inline __device__ float erf(float value) { return erff(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half erf(__half value) { return erff(value); }
+#endif
+
+    template <class T> __device__ T sin(T value);
+    template <> inline __device__ double sin(double value) { return ::sin(value); }
+    template <> inline __device__ float sin(float value) { return sinf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half sin(__half value) { return hsin(value); }
+#endif
+
+    template <class T> __device__ T sinh(T value);
+    template <> inline __device__ double sinh(double value) { return ::sinh(value); }
+    template <> inline __device__ float sinh(float value) { return sinhf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half sinh(__half value) { return sinhf(value); }
+#endif
+
+    template <class T> __device__ T tan(T value);
+    template <> inline __device__ double tan(double value) { return ::tan(value); }
+    template <> inline __device__ float tan(float value) { return tanf(value); }
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template <> inline __device__ __half tan(__half value) { return tanf(value); }
+#endif
+
     template <class T> __device__ T ceil(T value);
     template <> inline __device__ double ceil(double value) { return ::ceil(value); }
     template <> inline __device__ float ceil(float value) { return ceilf(value); }

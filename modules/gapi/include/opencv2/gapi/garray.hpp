@@ -236,7 +236,7 @@ namespace detail
     class VectorRef
     {
         std::shared_ptr<BasicVectorRef> m_ref;
-        cv::detail::OpaqueKind m_kind;
+        cv::detail::OpaqueKind m_kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
         template<typename T> inline void check() const
         {

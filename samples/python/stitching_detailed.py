@@ -36,7 +36,7 @@ except (AttributeError, cv.error) as e:
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
 try:
-    FEATURES_FIND_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
+    FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
 except AttributeError:
     print("SIFT not available")
 try:
@@ -246,9 +246,9 @@ def get_matcher(args):
     if matcher_type == "affine":
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
     elif range_width == -1:
-        matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestMatcher(try_cuda, match_conf)
     else:
-        matcher = cv.detail.BestOf2NearestRangeMatcher_create(range_width, try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestRangeMatcher(range_width, try_cuda, match_conf)
     return matcher
 
 
@@ -436,7 +436,7 @@ def main():
     sizes = []
     blender = None
     timelapser = None
-    # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
+    # https://github.com/opencv/opencv/blob/5.x/samples/cpp/stitching_detailed.cpp#L725 ?
     for idx, name in enumerate(img_names):
         full_img = cv.imread(name)
         if not is_compose_scale_set:

@@ -276,8 +276,6 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 }
 // ----------------------------
 
-static const bool display = false;
-
 void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
 {
     Mat image;
@@ -402,7 +400,8 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     normals = unormals.getMat(af);
     points = upoints.getMat(af);
 
-    if (testFunction == VolumeTestFunction::RAYCAST && display)
+
+    if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     normalsCheck(normals);
@@ -458,6 +457,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
             volume.raycast(poses[0].matrix, upoints, utmpnormals);
             //volume.fetchPointsNormals(upoints, utmpnormals);
             volume.fetchNormals(upoints, unormals);
+
         }
     }
     else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
@@ -471,7 +471,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     normals = unormals.getMat(af);
     points = upoints.getMat(af);
 
-    if (testFunction == VolumeTestFunction::RAYCAST && display)
+    if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     normalsCheck(normals);
@@ -525,7 +525,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     anfas = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
@@ -544,7 +544,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     profile = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     // TODO: why profile == 2*anfas ?
@@ -603,7 +603,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     anfas = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
@@ -622,7 +622,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     patchNaNs(points);
     profile = counterOfValid(points);
 
-    if (display)
+    if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
     // TODO: why profile == 2*anfas ?

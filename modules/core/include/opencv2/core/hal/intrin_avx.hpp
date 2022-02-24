@@ -1390,11 +1390,21 @@ OPENCV_HAL_IMPL_AVX_CHECK_SHORT(v_int16x16)
 ////////// Other math /////////
 
 /** Some frequent operations **/
+#if CV_FMA3
 #define OPENCV_HAL_IMPL_AVX_MULADD(_Tpvec, suffix)                            \
     inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)    \
     { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c) \
-    { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }            \
+    { return _Tpvec(_mm256_fmadd_##suffix(a.val, b.val, c.val)); }
+#else
+#define OPENCV_HAL_IMPL_AVX_MULADD(_Tpvec, suffix)                                    \
+    inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)            \
+    { return _Tpvec(_mm256_add_##suffix(_mm256_mul_##suffix(a.val, b.val), c.val)); } \
+    inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)         \
+    { return _Tpvec(_mm256_add_##suffix(_mm256_mul_##suffix(a.val, b.val), c.val)); }
+#endif
+
+#define OPENCV_HAL_IMPL_AVX_MISC(_Tpvec, suffix)                              \
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
     { return _Tpvec(_mm256_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
@@ -1404,6 +1414,8 @@ OPENCV_HAL_IMPL_AVX_CHECK_SHORT(v_int16x16)
 
 OPENCV_HAL_IMPL_AVX_MULADD(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_MULADD(v_float64x4, pd)
+OPENCV_HAL_IMPL_AVX_MISC(v_float32x8, ps)
+OPENCV_HAL_IMPL_AVX_MISC(v_float64x4, pd)
 
 inline v_int32x8 v_fma(const v_int32x8& a, const v_int32x8& b, const v_int32x8& c)
 {
@@ -2379,7 +2391,7 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x8& a, v_uint32x8&
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 8));
 
-    const int sh = 0+2*4+1*16+3*64;
+    enum { sh = 0+2*4+1*16+3*64 };
     __m256i p0 = _mm256_shuffle_epi32(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi32(ab1, sh);
     __m256i pl = _mm256_permute2x128_si256(p0, p1, 0 + 2*16);

@@ -8,8 +8,6 @@
 #ifndef __OPENCV_DNN_TF_SIMPLIFIER_HPP__
 #define __OPENCV_DNN_TF_SIMPLIFIER_HPP__
 
-#include "../precomp.hpp"
-
 #ifdef HAVE_PROTOBUF
 
 #include "tf_io.hpp"

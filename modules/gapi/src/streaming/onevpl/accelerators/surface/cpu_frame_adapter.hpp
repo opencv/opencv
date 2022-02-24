@@ -33,6 +33,7 @@ public:
     void deserialize(cv::gapi::s11n::IIStream&) override;
 private:
     std::shared_ptr<Surface> parent_surface_ptr;
+    GFrameDesc frame_desc;
 };
 } // namespace onevpl
 } // namespace wip

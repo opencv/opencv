@@ -6,7 +6,8 @@
 #ifndef OPENCV_3D_VOLUME_SETTINGS_HPP
 #define OPENCV_3D_VOLUME_SETTINGS_HPP
 
-#include <opencv2/core/cvstd.hpp>
+
+#include <opencv2/core.hpp>
 #include <opencv2/3d/volume.hpp>
 
 namespace cv
@@ -27,6 +28,7 @@ public:
     * @param volumeType volume type.
     */
     VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
+
     ~VolumeSettings();
 
     /** @brief Sets the width of the image for integration.

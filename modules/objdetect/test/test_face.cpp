@@ -78,7 +78,7 @@ TEST(Objdetect_face_detection, regression)
     // }
 
     // Initialize detector
-    std::string model = findDataFile("dnn/onnx/models/yunet-202109.onnx", false);
+    std::string model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
@@ -178,7 +178,7 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202109.onnx", false);
+    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
     std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);

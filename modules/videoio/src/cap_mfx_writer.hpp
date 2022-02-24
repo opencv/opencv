@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 
-class MFXVideoSession;
+class MFXVideoSession_WRAP;
 class Plugin;
 class DeviceHandler;
 class WriteBitstream;
@@ -33,7 +33,7 @@ private:
     VideoWriter_IntelMFX & operator=(const VideoWriter_IntelMFX &);
 
 private:
-    MFXVideoSession *session;
+    MFXVideoSession_WRAP *session;
     Plugin *plugin;
     DeviceHandler *deviceHandler;
     WriteBitstream *bs;

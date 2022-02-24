@@ -143,6 +143,7 @@ inline std::ostream& operator<<(std::ostream& o, const Size& s)
     return o;
 }
 
+struct VoidType {};
 } // namespace own
 } // namespace gapi
 } // namespace cv

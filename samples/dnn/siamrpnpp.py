@@ -300,7 +300,7 @@ class SiamRPNTracker:
         # clip boundary
         cx, cy, width, height = self._bbox_clip(cx, cy, width, height, img.shape[:2])
 
-        # udpate state
+        # update state
         self.center_pos = np.array([cx, cy])
         self.w = width
         self.h = height

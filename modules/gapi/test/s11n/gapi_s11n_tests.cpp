@@ -127,7 +127,7 @@ template<> struct CompileArgTag<MyCustomTypeNoS11N> {
 } // namespace cv
 
 namespace {
-class MyRMatAdapter : public cv::RMat::Adapter {
+class MyRMatAdapter : public cv::RMat::IAdapter {
     cv::Mat m_mat;
     int m_value;
     std::string m_str;

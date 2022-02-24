@@ -411,7 +411,7 @@ static void* opencl_gl_check_fn(int ID);
 static void* opencl_gl_check_fn(int ID)
 {
     const struct DynamicFnEntry* e = NULL;
-    assert(ID >= 0 && ID < (int)(sizeof(opencl_gl_fn_list)/sizeof(opencl_gl_fn_list[0])));
+    CV_Assert(ID >= 0 && ID < (int)(sizeof(opencl_gl_fn_list)/sizeof(opencl_gl_fn_list[0])));
     e = opencl_gl_fn_list[ID];
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);
     if (!func)

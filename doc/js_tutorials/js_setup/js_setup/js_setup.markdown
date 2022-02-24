@@ -145,6 +145,12 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
     @endcode
 
+-#  [optional] To enable WebNN backend, append `--webnn` option.
+
+    For example:
+    @code{.bash}
+    emcmake python ./opencv/platforms/js/build_js.py build_js --webnn
+    @endcode
 
 Running OpenCV.js Tests
 ---------------------------------------

@@ -4,13 +4,17 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/core.hpp"
+#ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
+#endif
 
 #include <algorithm>
 
 namespace cv
 {
 
+#ifdef HAVE_OPENCV_DNN
 class FaceRecognizerSFImpl : public FaceRecognizerSF
 {
 public:
@@ -45,8 +49,8 @@ public:
     double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
-        face_feature1 /= norm(face_feature1);
-        face_feature2 /= norm(face_feature2);
+        normalize(face_feature1, face_feature1);
+        normalize(face_feature2, face_feature2);
 
         if(dis_type == DisType::FR_COSINE){
             return sum(face_feature1.mul(face_feature2))[0];
@@ -173,10 +177,16 @@ private:
 private:
     dnn::Net net;
 };
+#endif
 
 Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config, int backend_id, int target_id)
 {
+#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
+#else
+    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
+#endif
 }
 
 } // namespace cv

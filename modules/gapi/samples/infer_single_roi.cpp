@@ -13,6 +13,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 
 const std::string keys =
     "{ h help |                              | Print this help message }"
@@ -69,33 +70,15 @@ using GRect       = cv::GOpaque<cv::Rect>;
 using GSize       = cv::GOpaque<cv::Size>;
 using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(GetSize, <GSize(cv::GMat)>, "sample.custom.get-size") {
-    static cv::GOpaqueDesc outMeta(const cv::GMatDesc &) {
-        return cv::empty_gopaque_desc();
-    }
-};
-
 G_API_OP(LocateROI, <GRect(cv::GMat)>, "sample.custom.locate-roi") {
     static cv::GOpaqueDesc outMeta(const cv::GMatDesc &) {
         return cv::empty_gopaque_desc();
     }
 };
 
-G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-ssd") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &, const cv::GOpaqueDesc &) {
-        return cv::empty_array_desc();
-    }
-};
-
 G_API_OP(BBoxes, <GPrims(GDetections, GRect)>, "sample.custom.b-boxes") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GOpaqueDesc &) {
         return cv::empty_array_desc();
-    }
-};
-
-GAPI_OCV_KERNEL(OCVGetSize, GetSize) {
-    static void run(const cv::Mat &in, cv::Size &out) {
-        out = {in.cols, in.rows};
     }
 };
 
@@ -121,55 +104,6 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
                            , sqside
                            , sqside
                            };
-    }
-};
-
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Rect &in_roi,
-                    const cv::Size &in_parent_size,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Size up_roi = in_roi.size();
-        const cv::Rect surface({0,0}, in_parent_size);
-
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-            (void) label; // unused
-
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-
-            // map relative coordinates to the original image scale
-            // taking the ROI into account
-            cv::Rect rc;
-            rc.x      = static_cast<int>(rc_left   * up_roi.width);
-            rc.y      = static_cast<int>(rc_top    * up_roi.height);
-            rc.width  = static_cast<int>(rc_right  * up_roi.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * up_roi.height) - rc.y;
-            rc.x += in_roi.x;
-            rc.y += in_roi.y;
-            out_objects.emplace_back(rc & surface);
-        }
     }
 };
 
@@ -211,9 +145,7 @@ int main(int argc, char *argv[])
         cmd.get<std::string>("faced"),   // device specifier
     };
     auto kernels = cv::gapi::kernels
-        < custom::OCVGetSize
-        , custom::OCVLocateROI
-        , custom::OCVParseSSD
+        <custom::OCVLocateROI
         , custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(face_net);
 
@@ -222,16 +154,17 @@ int main(int argc, char *argv[])
     cv::GStreamingCompiled pipeline;
     auto inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
 
+    cv::GMat in;
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
     if (opt_roi.has_value()) {
         // Use the value provided by user
         std::cout << "Will run inference for static region "
                   << opt_roi.value()
                   << " only"
                   << std::endl;
-        cv::GMat in;
         cv::GOpaque<cv::Rect> in_roi;
         auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
-        auto  rcs = custom::ParseSSD::on(blob, in_roi, custom::GetSize::on(in));
+        cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, in_roi));
         pipeline  = cv::GComputation(cv::GIn(in, in_roi), cv::GOut(out))
             .compileStreaming(cv::compile_args(kernels, networks));
@@ -242,10 +175,9 @@ int main(int argc, char *argv[])
         // Automatically detect ROI to infer. Make it output parameter
         std::cout << "ROI is not set or invalid. Locating it automatically"
                   << std::endl;
-        cv::GMat in;
         cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(in);
         auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-        auto  rcs = custom::ParseSSD::on(blob, roi, custom::GetSize::on(in));
+        cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, sz, 0.5f, true, true);
         auto  out = cv::gapi::wip::draw::render3ch(in, custom::BBoxes::on(rcs, roi));
         pipeline  = cv::GComputation(cv::GIn(in), cv::GOut(out))
             .compileStreaming(cv::compile_args(kernels, networks));
@@ -256,9 +188,15 @@ int main(int argc, char *argv[])
     pipeline.start();
 
     cv::Mat out;
+    size_t frames = 0u;
+    cv::TickMeter tm;
+    tm.start();
     while (pipeline.pull(cv::gout(out))) {
         cv::imshow("Out", out);
         cv::waitKey(1);
+        ++frames;
     }
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
     return 0;
 }

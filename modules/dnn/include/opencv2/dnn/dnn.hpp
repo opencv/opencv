@@ -74,6 +74,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,
+        DNN_BACKEND_WEBNN,
 #ifdef __OPENCV_BUILD
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -133,7 +134,7 @@ CV__DNN_INLINE_NS_BEGIN
     class BackendNode
     {
     public:
-        BackendNode(int backendId);
+        explicit BackendNode(int backendId);
 
         virtual ~BackendNode(); //!< Virtual destructor to make polymorphism.
 
@@ -276,18 +277,18 @@ CV__DNN_INLINE_NS_BEGIN
          * Each layer input and output can be labeled to easily identify them using "%<layer_name%>[.output_name]" notation.
          * This method maps label of input blob to its index into input vector.
          */
-        virtual int inputNameToIndex(String inputName);
+        virtual int inputNameToIndex(String inputName);  // FIXIT const
         /** @brief Returns index of output blob in output array.
          *  @see inputNameToIndex()
          */
-        CV_WRAP virtual int outputNameToIndex(const String& outputName);
+        CV_WRAP virtual int outputNameToIndex(const String& outputName);  // FIXIT const
 
         /**
          * @brief Ask layer if it support specific backend for doing computations.
          * @param[in] backendId computation backend identifier.
          * @see Backend
          */
-        virtual bool supportBackend(int backendId);
+        virtual bool supportBackend(int backendId);  // FIXIT const
 
         /**
          * @brief Returns Halide backend node.
@@ -301,11 +302,11 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
 
-        virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs);
-
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+
+        virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
         /**
          * @brief Returns a CUDA backend node
@@ -492,18 +493,29 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Converts string name of the layer to the integer identifier.
          *  @returns id of the layer, or -1 if the layer wasn't found.
          */
-        CV_WRAP int getLayerId(const String &layer);
+        CV_WRAP int getLayerId(const String &layer) const;
 
         CV_WRAP std::vector<String> getLayerNames() const;
 
-        /** @brief Container for strings and integers. */
+        /** @brief Container for strings and integers.
+         *
+         * @deprecated Use getLayerId() with int result.
+         */
         typedef DictValue LayerId;
 
         /** @brief Returns pointer to layer with specified id or name which the network use. */
-        CV_WRAP Ptr<Layer> getLayer(LayerId layerId);
+        CV_WRAP Ptr<Layer> getLayer(int layerId) const;
+        /** @overload
+         *  @deprecated Use int getLayerId(const String &layer)
+         */
+        CV_WRAP inline Ptr<Layer> getLayer(const String& layerName) const { return getLayer(getLayerId(layerName)); }
+        /** @overload
+         *  @deprecated to be removed
+         */
+        CV_WRAP Ptr<Layer> getLayer(const LayerId& layerId) const;
 
         /** @brief Returns pointers to input layers of specific layer. */
-        std::vector<Ptr<Layer> > getLayerInputs(LayerId layerId); // FIXIT: CV_WRAP
+        std::vector<Ptr<Layer> > getLayerInputs(int layerId) const; // FIXIT: CV_WRAP
 
         /** @brief Connects output of the first layer to input of the second layer.
          *  @param outPin descriptor of the first layer output.
@@ -527,6 +539,18 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param inpNum number of the second layer input
          */
         void connect(int outLayerId, int outNum, int inpLayerId, int inpNum);
+
+        /** @brief Registers network output with name
+         *
+         *  Function may create additional 'Identity' layer.
+         *
+         *  @param outputName identifier of the output
+         *  @param layerId identifier of the second layer
+         *  @param outputPort number of the second layer input
+         *
+         *  @returns index of bound layer (the same as layerId or newly created)
+         */
+        int registerOutput(const std::string& outputName, int layerId, int outputPort);
 
         /** @brief Sets outputs names of the network input pseudo layer.
          *
@@ -659,20 +683,26 @@ CV__DNN_INLINE_NS_BEGIN
          *  @note If shape of the new blob differs from the previous shape,
          *  then the following forward pass may fail.
         */
-        CV_WRAP void setParam(LayerId layer, int numParam, const Mat &blob);
+        CV_WRAP void setParam(int layer, int numParam, const Mat &blob);
+        CV_WRAP inline void setParam(const String& layerName, int numParam, const Mat &blob) { return setParam(getLayerId(layerName), numParam, blob); }
 
         /** @brief Returns parameter blob of the layer.
          *  @param layer name or id of the layer.
          *  @param numParam index of the layer parameter in the Layer::blobs array.
          *  @see Layer::blobs
          */
-        CV_WRAP Mat getParam(LayerId layer, int numParam = 0);
+        CV_WRAP Mat getParam(int layer, int numParam = 0) const;
+        CV_WRAP inline Mat getParam(const String& layerName, int numParam = 0) const { return getParam(getLayerId(layerName), numParam); }
 
         /** @brief Returns indexes of layers with unconnected outputs.
+         *
+         * FIXIT: Rework API to registerOutput() approach, deprecate this call
          */
         CV_WRAP std::vector<int> getUnconnectedOutLayers() const;
 
         /** @brief Returns names of layers with unconnected outputs.
+         *
+         * FIXIT: Rework API to registerOutput() approach, deprecate this call
          */
         CV_WRAP std::vector<String> getUnconnectedOutLayersNames() const;
 
