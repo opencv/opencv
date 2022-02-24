@@ -619,12 +619,14 @@ static void setBlob(InferenceEngine::InferRequest& req,
 static void setROIBlob(InferenceEngine::InferRequest& req,
                        const std::string&             layer_name,
                        const IE::Blob::Ptr&           blob,
-                       const cv::Rect &roi,
+                       const cv::Rect                 &roi,
                        const IECallContext&           ctx) {
-    if (ctx.uu.params.device_id.find("GPU") != std::string::npos) {
-        GAPI_LOG_DEBUG(nullptr, "Skip ROI blob creation for device_id: " <<
-                       ctx.uu.params.device_id << ", layer: " << layer_name);
-        setBlob(req, layer_name, blob, ctx);
+    if (ctx.uu.params.device_id.find("GPU") != std::string::npos &&
+        ctx.uu.rctx) {
+        GAPI_LOG_WARNING(nullptr, "ROI blob creation for device_id: " <<
+                         ctx.uu.params.device_id << ", layer: " << layer_name <<
+                         "is not supported yet");
+        GAPI_Assert(false && "Unsupported ROI blob creation for GPU remote context");
     } else {
         setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
     }
@@ -1330,8 +1332,7 @@ struct InferList: public cv::detail::KernelTag {
             reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
-                        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        setBlob(req, ctx->uu.params.input_names[0u], roi_blob, *ctx);
+                        setROIBlob(req, ctx->uu.params.input_names[0u], this_blob, rc, *ctx);
                         req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, pos)
@@ -1488,19 +1489,20 @@ struct InferList2: public cv::detail::KernelTag {
                         for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
                             GAPI_Assert(this_vec.size() == list_size);
-                            IE::Blob::Ptr this_blob;
                             if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
                                 const auto &vec = this_vec.rref<cv::Rect>();
-                                this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
+                                setROIBlob(req, ctx->uu.params.input_names[in_idx],
+                                           blob_0, vec[list_idx], *ctx);
                             } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                                 const auto &vec = this_vec.rref<cv::Mat>();
                                 const auto &mat = vec[list_idx];
-                                this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
+                                setBlob(req, ctx->uu.params.input_names[in_idx],
+                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR),
+                                        *ctx);
                             } else {
                                 GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
-                            setBlob(req, ctx->uu.params.input_names[in_idx], this_blob, *ctx);
                         }
                         req.StartAsync();
                     },

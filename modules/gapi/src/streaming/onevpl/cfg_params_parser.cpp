@@ -94,75 +94,22 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
-        } else if (name == CfgParam::frames_pool_size_name()) {
+        } else if ((name == CfgParam::frames_pool_size_name()) || (name == CfgParam::vpp_frames_pool_size_name())) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
-        } else if (name == CfgParam::vpp_frames_pool_size_name()) {
-            ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
-        } else if (name == CfgParam::vpp_in_width_name()) {
+        } else if ((name == CfgParam::vpp_in_width_name()) || (name == CfgParam::vpp_in_height_name()) ||
+                   (name == CfgParam::vpp_in_crop_w_name()) || (name == CfgParam::vpp_in_crop_h_name()) ||
+                   (name == CfgParam::vpp_in_crop_x_name()) || (name == CfgParam::vpp_in_crop_y_name()) ||
+                   (name == CfgParam::vpp_out_chroma_format_name()) ||
+                   (name == CfgParam::vpp_out_width_name()) || (name == CfgParam::vpp_out_height_name()) ||
+                   (name == CfgParam::vpp_out_crop_w_name()) || (name == CfgParam::vpp_out_crop_h_name()) ||
+                   (name == CfgParam::vpp_out_crop_x_name()) || (name == CfgParam::vpp_out_crop_y_name()) ||
+                   (name == CfgParam::vpp_out_pic_struct_name())) {
             ret.push_back(creator.create(name,
                                          static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
                                          false));
-        } else if (name == CfgParam::vpp_in_height_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_in_crop_w_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_in_crop_h_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_in_crop_x_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_in_crop_y_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_fourcc_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_chroma_format_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_width_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_height_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_crop_w_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_crop_h_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_crop_x_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_crop_y_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_pic_struct_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint16_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_framerate_n_name()) {
-            ret.push_back(creator.create(name,
-                                         static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
-                                         false));
-        } else if (name == CfgParam::vpp_out_framerate_d_name()) {
+        } else if ((name == CfgParam::vpp_out_fourcc_name()) ||
+                   (name == CfgParam::vpp_out_framerate_n_name()) ||
+                   (name == CfgParam::vpp_out_framerate_d_name())) {
             ret.push_back(creator.create(name,
                                          static_cast<uint32_t>(strtoul_or_throw(value.c_str())),
                                          false));

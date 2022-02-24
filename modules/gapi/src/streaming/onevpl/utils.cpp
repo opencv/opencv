@@ -25,6 +25,8 @@
 #define APPEND_STRINGIFY_MASK_N_ERASE(value, pref, mask)                       \
     if (value & mask) { ss << pref << #mask; value ^= mask; }
 
+#define DUMP_MEMBER(stream, object, member)                                    \
+    stream << #member << ": " << object.member << "\n";
 
 namespace cv {
 namespace gapi {
@@ -357,6 +359,42 @@ std::string mfxstatus_to_string(mfxStatus err) {
     std::string ret("<unknown ");
     ret += std::to_string(err) + ">";
     return ret;
+}
+
+std::string mfx_frame_info_to_string(const mfxFrameInfo &info) {
+    std::stringstream ss;
+    DUMP_MEMBER(ss, info, FrameRateExtN)
+    DUMP_MEMBER(ss, info, FrameRateExtD)
+    DUMP_MEMBER(ss, info, AspectRatioW)
+    DUMP_MEMBER(ss, info, AspectRatioH)
+    DUMP_MEMBER(ss, info, CropX)
+    DUMP_MEMBER(ss, info, CropY)
+    DUMP_MEMBER(ss, info, CropW)
+    DUMP_MEMBER(ss, info, CropH)
+    DUMP_MEMBER(ss, info, ChannelId)
+    DUMP_MEMBER(ss, info, BitDepthLuma)
+    DUMP_MEMBER(ss, info, BitDepthChroma)
+    DUMP_MEMBER(ss, info, Shift)
+    DUMP_MEMBER(ss, info, FourCC)
+    DUMP_MEMBER(ss, info, Width)
+    DUMP_MEMBER(ss, info, Height)
+    DUMP_MEMBER(ss, info, BufferSize)
+    DUMP_MEMBER(ss, info, PicStruct)
+    DUMP_MEMBER(ss, info, ChromaFormat);
+    return ss.str();
+}
+
+int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+    //NB: mfxFrameInfo is a `packed` struct declared in VPL
+    return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo));
+}
+
+bool operator< (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+    return (compare(lhs, rhs) < 0);
+}
+
+bool operator== (const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+    return (compare(lhs, rhs) == 0);
 }
 
 std::string ext_mem_frame_type_to_cstr(int type) {

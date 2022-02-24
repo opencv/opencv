@@ -273,7 +273,7 @@ size_t VPLCPUAccelerationPolicy::get_surface_count(pool_key_t key) const {
 }
 
 cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_key_t key,
-                                                                          mfxFrameSurface1* surface) {
+                                                                          const FrameConstructorArgs &params) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -284,7 +284,8 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
     }
 
     pool_t& requested_pool = pool_it->second;
-    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameCPUAdapter(requested_pool.find_by_handle(surface))};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameCPUAdapter(requested_pool.find_by_handle(params.assoc_surface),
+                                                                  params.assoc_handle)};
 }
 } // namespace onevpl
 } // namespace wip

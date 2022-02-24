@@ -13,7 +13,6 @@
 #include <opencv2/gapi/streaming/meta.hpp>
 
 #include "streaming/onevpl/engine/engine_session.hpp"
-#include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 
@@ -21,11 +20,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-
-struct IDataProvider;
 class Surface;
-struct VPLAccelerationPolicy;
-
 class GAPI_EXPORTS LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;
@@ -35,19 +30,22 @@ public:
     ~LegacyDecodeSession();
     using EngineSession::EngineSession;
 
-    void swap_surface(VPLLegacyDecodeEngine& engine);
+    void swap_decode_surface(VPLLegacyDecodeEngine& engine);
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
 
     Data::Meta generate_frame_meta();
     virtual const mfxFrameInfo& get_video_param() const override;
+
+    IDataProvider::mfx_bitstream *get_mfx_bitstream_ptr();
 private:
     mfxVideoParam mfx_decoder_param;
-    std::shared_ptr<IDataProvider> data_provider;
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
-    mfxFrameAllocRequest request;
+
+    std::shared_ptr<IDataProvider> data_provider;
+    std::shared_ptr<IDataProvider::mfx_bitstream> stream;
 
 protected:
-    std::weak_ptr<Surface> procesing_surface_ptr;
+    std::weak_ptr<Surface> processing_surface_ptr;
     using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
     std::queue<op_handle_t> sync_queue;
 

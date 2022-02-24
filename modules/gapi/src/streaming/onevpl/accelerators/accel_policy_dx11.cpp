@@ -157,12 +157,21 @@ size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
     GAPI_Assert(false && "get_free_surface_count() is not implemented");
 }
 
-size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy::get_surface_count() is not implemented");
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
+    auto pool_it = pool_table.find(key);
+    if (pool_it == pool_table.end()) {
+        std::stringstream ss;
+        ss << "key is not found: " << key << ", table size: " << pool_table.size();
+        const std::string& str = ss.str();
+        GAPI_LOG_WARNING(nullptr, str);
+        throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
+    }
+    return pool_it->second.total_size();
 }
 
-cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
-                                                                           mfxFrameSurface1* surface) {
+cv::MediaFrame::AdapterPtr
+VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
+                                                const FrameConstructorArgs &params) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -173,7 +182,8 @@ cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_
     }
 
     pool_t& requested_pool = pool_it->second;
-    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(surface))};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(params.assoc_surface),
+                                                                   params.assoc_handle)};
 }
 
 mfxStatus VPLDX11AccelerationPolicy::alloc_cb(mfxHDL pthis, mfxFrameAllocRequest *request,
@@ -283,12 +293,28 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
         desc.BindFlags = 0;
     }
 
+    /* NB:
+     * On the one hand current OpenVINO API doesn't support texture array and
+     * D3D11 API doesn't allow to address specific texture element in array.
+     * On the other hand using textures array should be more performant case
+     * in applications (according to community experience)
+     * So, to be compliant with OV let's turn off textures array feature, but keep
+     * this code in commented section to consider such "optimization" in future
+     */
+#if 0
     size_t main_textures_count = 1;
     if (D3D11_BIND_RENDER_TARGET & desc.BindFlags) {
         GAPI_LOG_DEBUG(nullptr, "Use array of testures instead of texture array");
         desc.ArraySize = 1;
         main_textures_count = request->NumFrameSuggested;
     }
+#else
+    // enforcement to use array of textures
+    size_t main_textures_count = request->NumFrameSuggested;
+
+    // enforcement to do not use texture array as subresources as part of a single texture
+    desc.ArraySize = 1;
+#endif
 
     // create GPU textures
     HRESULT err = S_OK;
@@ -407,6 +433,8 @@ mfxStatus VPLDX11AccelerationPolicy::on_free(mfxFrameAllocResponse *response) {
     }
 
     allocation_table.erase(table_it);
+    GAPI_LOG_DEBUG(nullptr, "Allocation by requested id: " << response->AllocId <<
+                            " has been erased");
     return MFX_ERR_NONE;
 }
 } // namespace onevpl

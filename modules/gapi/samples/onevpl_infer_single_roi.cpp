@@ -46,8 +46,7 @@ const std::string keys =
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
-    "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
-    "{ source_preproc_enable        | 0                                         | Turn on OneVPL source frame preprocessing using network input description instead of IE plugin preprocessing}";
+    "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}";
 
 namespace {
 bool is_gpu(const std::string &device_name) {
@@ -217,7 +216,6 @@ int main(int argc, char *argv[]) {
     const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
     const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
     const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
-    const auto vpl_source_preproc_enable = cmd.get<uint32_t>("source_preproc_enable");
     const auto device_id = cmd.get<std::string>("faced");
 
     // check ouput file extension
@@ -235,12 +233,6 @@ int main(int argc, char *argv[]) {
     try {
         std::string line;
         while (std::getline(params_list, line, ';')) {
-            if (vpl_source_preproc_enable == 0) {
-                if (line.find("vpp.") != std::string::npos) {
-                    // skip VPP preprocessing primitives if not requested
-                    continue;
-                }
-            }
             source_cfgs.push_back(cfg::create_from_string(line));
         }
     } catch (const std::exception& ex) {
@@ -325,23 +317,11 @@ int main(int argc, char *argv[]) {
     // set ctx_config for GPU device only - no need in case of CPU device type
     if (is_gpu(device_id)) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                            {"VA_DEVICE", accel_device_ptr} });
-
+                                              {"VA_DEVICE", accel_device_ptr} });
         face_net.cfgContextParams(ctx_config);
-        face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
 
-        std::cout <<"/*******************************************************/\n"
-                    "ATTENTION: GPU Inference Engine preprocessing is not vital as expected!"
-                     " Please consider param \"source_preproc_enable=1\" and specify "
-                     " appropriated media frame transformation using oneVPL::VPP primitives"
-                     " which force onevpl::GSource to produce tranformed media frames."
-                     " For exploring list of supported transformations please find out "
-                     " vpp_* related stuff in"
-                     " gapi/include/opencv2/gapi/streaming/onevpl/cfg_params.hpp"
-                     " Pay attention that to obtain expected result In this case VPP "
-                     " transformation must match network input params."
-                     " Please vote/create issue about exporting network params using GAPI\n"
-                     "/******************************************************/" << std::endl;
+        // NB: consider NV12 surface because it's one of native GPU image format
+        face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
     }
 #endif // HAVE_INF_ENGINE
 
@@ -378,7 +358,7 @@ int main(int argc, char *argv[]) {
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
     auto roi = custom::LocateROI::on(size, std::cref(device_id));
-    auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
+    auto blob = cv::gapi::infer<custom::FaceDetector>(in);
     cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
     auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
     auto out = cv::gapi::streaming::BGR(out_frame);
