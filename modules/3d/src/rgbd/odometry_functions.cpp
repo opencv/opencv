@@ -71,10 +71,9 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
     checkImage(image);
 
     TMat depth;
-    frame.getScaledDepth(depth);
-    if (depth.empty())
+    if (useDepth)
     {
-        frame.getDepth(depth);
+        frame.getScaledDepth(depth);
         if (depth.empty())
         {
             if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
