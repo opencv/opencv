@@ -31,6 +31,8 @@
 #include <opencv2/gapi/streaming/meta.hpp>
 #include <opencv2/gapi/streaming/sync.hpp>
 
+#include <opencv2/gapi/util/variant.hpp>
+
 namespace
 {
 using namespace cv::gimpl::stream;
@@ -313,10 +315,10 @@ public:
     cv::gimpl::StreamMsg getInputVector  (std::vector<Q*>   &in_queues,
                                           cv::GRunArgs      &in_constants);
 
-    cv::optional<Cmd> getResultsVector(std::vector<Q*>         &in_queues,
-                                       const std::vector<int>  &in_mapping,
-                                       const std::size_t        out_size,
-                                       cv::GRunArgs            &out_results);
+    using V = cv::util::variant<cv::GRunArgs, Stop, cv::gimpl::Exception>;
+    V getResultsVector(std::vector<Q*>         &in_queues,
+                       const std::vector<int>  &in_mapping,
+                       const std::size_t        out_size);
 };
 
 void rewindToStop(std::vector<Q*> &in_queues,
@@ -498,11 +500,12 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
 // (_may be_ partially filled) to the same final output queue.
 // The receiver part at the GStreamingExecutor level won't change
 // because of that.
-cv::optional<Cmd> QueueReader::getResultsVector(std::vector<Q*>   &in_queues,
-                                                const std::vector<int>  &in_mapping,
-                                                const std::size_t  out_size,
-                                                cv::GRunArgs      &out_results)
+
+QueueReader::V QueueReader::getResultsVector(std::vector<Q*>        &in_queues,
+                                             const std::vector<int> &in_mapping,
+                                             const std::size_t      out_size)
 {
+    cv::GRunArgs out_results(out_size);
     m_cmd.resize(out_size);
     for (auto &&it : ade::util::indexed(in_queues))
     {
@@ -521,12 +524,15 @@ cv::optional<Cmd> QueueReader::getResultsVector(std::vector<Q*>   &in_queues,
                 // (collector's input queues are always produced by
                 // islands in the graph).
                 rewindToStop(in_queues, ii);
-                return cv::util::make_optional(m_cmd[oi]);
+                return QueueReader::V(Stop{});
+            case Cmd::index_of<cv::gimpl::Exception>():
+                return QueueReader::V(cv::util::get<cv::gimpl::Exception>(m_cmd[oi]));
             default:
-                return cv::util::make_optional(m_cmd[oi]);
+                cv::util::throw_error(
+                        std::logic_error("Unexpected cmd kind in getResultsVector"));
         } // switch
     } // for(in_queues)
-    return cv::optional<Cmd>{};
+    return QueueReader::V(out_results);
 }
 
 
@@ -886,7 +892,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                     m_stops_sent++;
                     break;
                 default:
-                    GAPI_Assert(false);
+                    GAPI_Assert(false && "Unreachable code");
             }
 
             for (auto &&q : m_out_queues[out_idx])
@@ -978,7 +984,7 @@ public:
         std::lock_guard<std::mutex> lock{m_mutex};
         // The streaming actor work is considered DONE for this stream
         // when it posted/resent all STOP messages to all its outputs.
-        return (m_stops_sent == desc().size());
+        return m_stops_sent == desc().size();
     }
 };
 
@@ -1045,36 +1051,33 @@ void collectorThread(std::vector<Q*>   in_queues,
     while (true)
     {
         GAPI_ITT_AUTO_TRACE_GUARD(collector_hndl);
-        cv::GRunArgs this_result(out_size);
 
-        const auto opt_cmd = [&](){
+        const auto result = [&](){
             GAPI_ITT_AUTO_TRACE_GUARD(collector_get_results_hndl);
-            return qr.getResultsVector(in_queues, in_mapping, out_size, this_result);
+            return qr.getResultsVector(in_queues, in_mapping, out_size);
         }();
 
-        if (opt_cmd.has_value())
+        switch (result.index())
         {
-            const auto cmd = opt_cmd.value();
-            switch (cmd.index()) {
-                case Cmd::index_of<Stop>():
-                    if (handle_stop)
-                    {
-                        out_queue.push(Cmd{Stop{}});
-                    }
-                    // Terminate the thread anyway
-                    return;
-                case Cmd::index_of<cv::gimpl::Exception>():
-                    out_queue.push(cmd);
-                    break;
-                // FIXME: Handle other cases as well.
-                default:
-                    cv::util::throw_error(std::logic_error("Unsupported error cmd"));
+            case QueueReader::V::index_of<cv::GRunArgs>():
+            {
+                GAPI_ITT_AUTO_TRACE_GUARD(collector_push_hndl);
+                auto this_result = cv::util::get<cv::GRunArgs>(result);
+                out_queue.push(Cmd{Result{std::move(this_result), flags}});
+                break;
             }
-        }
-        else
-        {
-            GAPI_ITT_AUTO_TRACE_GUARD(collector_push_hndl);
-            out_queue.push(Cmd{Result{std::move(this_result), flags}});
+            case QueueReader::V::index_of<Stop>():
+                if (handle_stop)
+                {
+                    out_queue.push(Cmd{Stop{}});
+                }
+                // Terminate the thread anyway
+                return;
+            case QueueReader::V::index_of<cv::gimpl::Exception>():
+                out_queue.push(Cmd{cv::util::get<cv::gimpl::Exception>(result)});
+                break;
+            default:
+                GAPI_Assert(false && "Unreachable code");
         }
     }
 }
@@ -1482,9 +1485,8 @@ cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
     // FIXME: this is a temporary try-catch exception hadling.
     // Need to eliminate throwings from stop()
     try {
-        if (state == State::READY || state == State::RUNNING) {
+        if (state == State::READY || state == State::RUNNING)
             stop();
-        }
     } catch (const std::exception& e) {
         std::stringstream message;
         message << "~GStreamingExecutor() threw exception with message '" << e.what() << "'\n";
@@ -1791,9 +1793,10 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
         }
         case Cmd::index_of<Exception>(): {
             std::rethrow_exception(cv::util::get<Exception>(cmd).eptr);
+            return true;
         }
     }
-    GAPI_Assert(false && "Unsupported cmd");
+    GAPI_Assert(false && "Unreachable code");
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
@@ -1811,15 +1814,22 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
 
     Cmd cmd;
     m_out_queue.pop(cmd);
-    if (cv::util::holds_alternative<Stop>(cmd))
-    {
-        wait_shutdown();
-        return false;
+    switch (cmd.index()) {
+        case Cmd::index_of<Stop>():
+            wait_shutdown();
+            return false;
+        case Cmd::index_of<Result>(): {
+            GAPI_Assert(cv::util::holds_alternative<Result>(cmd));
+            cv::GRunArgs &this_result = cv::util::get<Result>(cmd).args;
+            sync_data(this_result, outs);
+            return true;
+        }
+        case Cmd::index_of<Exception>(): {
+            std::rethrow_exception(cv::util::get<Exception>(cmd).eptr);
+            return true;
+        }
     }
-
-    GAPI_Assert(cv::util::holds_alternative<Result>(cmd));
-    sync_data(cv::util::get<Result>(cmd), outs);
-    return true;
+    GAPI_Assert(false && "Unreachable code");
 }
 
 std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::gimpl::GStreamingExecutor::pull()

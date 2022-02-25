@@ -17,7 +17,6 @@
 #include <ade/util/zip_range.hpp> // zip_range, indexed
 
 #include "api/gbackend_priv.hpp" // GBackend::Priv().compile()
-#include "api/gproto_priv.hpp"   // ptr(GRunArgP)
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/gmodel.hpp"

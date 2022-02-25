@@ -280,6 +280,7 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
     }
     void post(GRunArgP&&, const std::exception_ptr& eptr) override
     {
+        // NB: Rethrow immediately
         if (eptr) {
             std::rethrow_exception(eptr);
         }
@@ -287,6 +288,7 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
     void post(EndOfStream&&) override {} // Do nothing here too
     void post(Exception&& ex) override
     {
+        // NB: Rethrow immediately
         std::rethrow_exception(ex.eptr);
     }
     void meta(const GRunArgP &out, const GRunArg::Meta &m) override
