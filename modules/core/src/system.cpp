@@ -615,6 +615,9 @@ struct HWFeatures
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
     #endif
+    #if defined _M_ARM64
+        have[CV_CPU_NEON] = true;
+    #endif
     #ifdef __riscv_vector
         have[CV_CPU_RISCVV] = true;
     #endif
