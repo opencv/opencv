@@ -472,25 +472,26 @@ static int readAudioMicrophone(vector<double>& inputAudio, int microTime)
     cap.open(0, CAP_ANY, params);
     if (!cap.isOpened())
     {
-        cerr << "Error : Can't open microphone" << endl;
+        cerr << "Error: Can't open microphone" << endl;
         return -1;
     }
-
-    const double cvTickFreq = getTickFrequency();
-    int64 sysTimeCurr = getTickCount();
-    int64 sysTimePrev = sysTimeCurr;
 
     const int audioBaseIndex = (int)cap.get(CAP_PROP_AUDIO_BASE_INDEX);
     vector<double> frameVec;
     Mat frame;
-    while ((sysTimeCurr - sysTimePrev) / cvTickFreq < microTime)
+    if (microTime <= 0)
+    {
+        cerr << "Error: Duration of audio chunk must be > 0" << endl;
+        return -1;
+    }
+    size_t sizeOfData = static_cast<size_t>(microTime * samplingRate);
+    while (inputAudio.size() < sizeOfData)
     {
         if (cap.grab())
         {
             cap.retrieve(frame, audioBaseIndex);
             frameVec = frame;
             inputAudio.insert(inputAudio.end(), frameVec.begin(), frameVec.end());
-            sysTimeCurr = getTickCount();
         }
         else
         {
@@ -506,9 +507,9 @@ int main(int argc, char** argv)
     const String keys =
         "{help h usage ?     |                          | This script runs Jasper Speech recognition model }"
         "{input_file i       |                          | Path to input audio file. If not specified, microphone input will be used }"
-        "{audio_duration t   | 15                       | Duration duration of audio chunk to be captured from microphone }"
+        "{audio_duration t   | 15                       | Duration of audio chunk to be captured from microphone }"
         "{audio_stream a     | 0                        | CAP_PROP_AUDIO_STREAM value     }"
-        "{show_spectrogram s | false                    | Show a spectrogram of the input audio: on or off }"
+        "{show_spectrogram s | false                    | Show a spectrogram of the input audio: true / false / 1 / 0 }"
         "{model m            | jasper.onnx              | Path to the onnx file of Jasper. You can download the converted onnx model "
                                                           "from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing}"
         "{backend b          | dnn::DNN_BACKEND_DEFAULT | Select a computation backend: "
