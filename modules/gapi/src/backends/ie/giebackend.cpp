@@ -784,24 +784,32 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     //     1. Collect island inputs/outputs.
     //     2. Create kernel context. (Every kernel has his own context).
     //     3. If the EndOfStream message is recieved, wait until all passed task are done.
-    //     4.
+    //     4. If the Exception message is revieved, propagate it further.
+    //     5.
     //        5.1 Run the kernel.
     //        5.2 Kernel wait for all nececcary infer requests and start asynchronous execution.
     //        5.3 After the kernel is finished continue processing next frame.
     //
-    //     5. If graph is compiled in non-streaming mode, wait until all tasks are done.
+    //     6. If graph is compiled in non-streaming mode, wait until all tasks are done.
 
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 
     const auto &in_desc  = in.desc();
-    const auto  in_msg   = in.get();
+    auto         in_msg   = in.get();
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         // (3) Wait until all passed task are done.
         m_reqPool->waitAll();
         out.post(cv::gimpl::EndOfStream{});
+        return;
+    }
+
+    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
+    {
+        // (4) If the Exception message is revieved, propagate it further.
+        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
         return;
     }
 
@@ -833,10 +841,10 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
-    // (4) Run the kernel.
+    // (5) Run the kernel.
     kk.run(ctx, *m_reqPool);
 
-    // (5) In non-streaming mode need to wait until the all tasks are done
+    // (6) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
         m_reqPool->waitAll();

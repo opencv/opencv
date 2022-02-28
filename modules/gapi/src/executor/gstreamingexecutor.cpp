@@ -593,6 +593,8 @@ void emitterActorThread(std::shared_ptr<cv::gimpl::GIslandEmitter> emitter,
            {
                oq->push(Cmd{cv::gimpl::Exception{eptr}});
            }
+           // NB: Go to the next iteration.
+           continue;
        }
 
         if (result)
@@ -1819,9 +1821,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
             wait_shutdown();
             return false;
         case Cmd::index_of<Result>(): {
-            GAPI_Assert(cv::util::holds_alternative<Result>(cmd));
-            cv::GRunArgs &this_result = cv::util::get<Result>(cmd).args;
-            sync_data(this_result, outs);
+            sync_data(cv::util::get<Result>(cmd), outs);
             return true;
         }
         case Cmd::index_of<Exception>(): {

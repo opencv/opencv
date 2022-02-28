@@ -174,8 +174,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
 
     if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
     {
-        auto e = cv::util::get<cv::gimpl::Exception>(in_msg);
-        out.post(std::move(e));
+        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
         return;
     }
 
@@ -213,7 +212,7 @@ public:
     explicit GAccessorActorBase(const cv::GCompileArgs&) {}
     virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
                      cv::gimpl::GIslandExecutable::IOutput &out) override {
-        const auto in_msg = in.get();
+        auto in_msg = in.get();
         if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
         {
             out.post(cv::gimpl::EndOfStream{});
@@ -222,8 +221,7 @@ public:
 
         if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
         {
-            auto e = cv::util::get<cv::gimpl::Exception>(in_msg);
-            out.post(std::move(e));
+            out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
             return;
         }
 

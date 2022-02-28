@@ -495,10 +495,15 @@ void cv::gimpl::GOAKExecutable::handleStopStream() {
 
 void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                                     GIslandExecutable::IOutput &out) {
-    const auto in_msg = in.get();
+    auto in_msg = in.get();
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg)) {
         out.post(cv::gimpl::EndOfStream{});
+        return;
+    }
+
+    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg)) {
+        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
         return;
     }
 
