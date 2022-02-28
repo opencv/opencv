@@ -1040,13 +1040,12 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
 
         if (axis > 0) {
             begin.resize(axis, 0);
-            end.resize(axis, -1);
+            end.resize(axis, INT_MAX);
         }
         for (int i = 0; i < starts.size(); ++i)
         {
             begin.push_back(starts.get<int>(i));
-            int finish = ends.get<int>(i);
-            end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
+            end.push_back(ends.get<int>(i));
         }
     } else { // inp_size > 1
         CV_Assert(inp_size >= 3);
@@ -1070,14 +1069,10 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
         const int* ends   = end_blob.ptr<int>();
         if (axis > 0) {
             begin.resize(axis, 0);
-            end.resize(axis, -1);
+            end.resize(axis, INT_MAX);
         }
         std::copy(starts, starts + start_blob.total(), std::back_inserter(begin));
-        for (int i = 0; i < end_blob.total(); ++i)
-        {
-            int finish = ends[i];
-            end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
-        }
+        std::copy(ends, ends + end_blob.total(), std::back_inserter(end));
 
         if (inp_size == 5) {
             CV_Assert(constBlobs.find(node_proto.input(4)) != constBlobs.end());
@@ -2160,8 +2155,14 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
 
     if (!haveVariables)
     {
-        if (broadcast_axes.size() != 1)
+        if (broadcast_axes.size() > 1)
             CV_Error(Error::StsNotImplemented, "Expand op doesn't support multiple axes for constant input");
+
+        if (broadcast_axes.empty())
+        {
+            addConstant(output_name, getBlob(node_proto, 0));
+            return;
+        }
 
         Mat input = getBlob(node_proto, 0);
         input = input.reshape(0, total(inpShape, 0, broadcast_axes[0]));
@@ -2381,7 +2382,7 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
         sliceLp.type = "Slice";
         sliceLp.name = inpShape.size() > 1 ? layerParams.name + "/slice" : layerParams.name;
         std::vector<int> begin(inpShape.size(), 0);
-        std::vector<int> end(inpShape.size(), -1);
+        std::vector<int> end(inpShape.size(), INT_MAX);
         begin[axis] = index;
         end[axis] = index + 1;
 
