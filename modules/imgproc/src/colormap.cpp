@@ -734,12 +734,34 @@ namespace colormap
         Mat src = _src.getMat();
         if(src.type() != CV_8UC1  &&  src.type() != CV_8UC3)
             CV_Error(Error::StsBadArg, "cv::ColorMap only supports source images of type CV_8UC1 or CV_8UC3");
-        // Turn into a BGR matrix into its grayscale representation.
-        if(src.type() == CV_8UC3)
-            cvtColor(src.clone(), src, COLOR_BGR2GRAY);
-        cvtColor(src.clone(), src, COLOR_GRAY2BGR);
-        // Apply the ColorMap.
-        LUT(src, _lut, _dst);
+
+        const Mat lut = this->_lut.reshape(0, 256);//just in case LUT was in row format rather than col
+        const int lut_type = lut.type(), lut_depth = CV_MAT_DEPTH(lut_type), lut_cn = CV_MAT_CN(lut_type);
+        CV_CheckType(lut_type, (lut_depth == CV_8U) && (lut_cn == 1 || lut_cn == 3),
+            "Only CV_8UC1 and CV_8UC3 LUT are supported");
+
+        Mat srcGray;
+        if (src.channels() == 1)
+            srcGray = src;
+        else
+            cv::cvtColor(src, srcGray, cv::COLOR_BGR2GRAY);//BGR because of historical LUT usage
+
+        _dst.create(src.size(), lut_type);
+
+        //we do not use cv::LUT() which requires src.channels() == dst.channels()
+        Mat dstMat = _dst.getMat();
+        if (lut_type == CV_8UC1)
+            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
+                const int row = position[0];
+                const int col = position[1];
+                dstMat.at<unsigned char>(row, col) = lut.at<unsigned char>(pixel, 0);
+            });
+        else if (lut_type == CV_8UC3)
+            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
+                const int row = position[0];
+                const int col = position[1];
+                dstMat.at<cv::Vec3b>(row, col) = lut.at<cv::Vec3b>(pixel, 0);
+            });
     }
 
     Mat ColorMap::linear_colormap(InputArray X,
@@ -797,29 +819,8 @@ namespace colormap
             CV_Error(Error::StsAssert, "cv::LUT only supports tables of size 256.");
         if (userColor.type() != CV_8UC1 && userColor.type() != CV_8UC3)
             CV_Error(Error::StsAssert, "cv::LUT only supports tables CV_8UC1 or CV_8UC3.");
-        if (src.isMat() && userColor.isMat() && ((src.type() == CV_8UC1) || (src.type() == CV_8UC3)))
-        {
-            const cv::Mat srcMat = src.getMat();
-            cv::Mat srcGray;
-            if (srcMat.channels() == 1)
-              srcGray = srcMat;
-            else
-              cv::cvtColor(srcMat, srcGray, cv::COLOR_BGR2GRAY);
-            cv::Mat userColorMat = userColor.getMat();
-            dst.create(src.size(), userColor.type());
-            cv::Mat dstMat = dst.getMat();
-            const size_t elemSize = userColorMat.elemSize();
-            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
-                const int row = position[0];
-                const int col = position[1];
-                memcpy(dstMat.ptr(row, col), userColorMat.ptr(pixel, 0), elemSize);
-                });
-        }
-        else
-        {
-            colormap::UserColorMap cm(userColor.getMat());
-            cm(src, dst);
-        }
+        colormap::UserColorMap cm(userColor.getMat());
+        cm(src, dst);
     }
 
 }
