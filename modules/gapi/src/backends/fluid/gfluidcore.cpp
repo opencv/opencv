@@ -978,7 +978,10 @@ CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float sc
 
 CV_ALWAYS_INLINE void setScratchSize(Buffer& scratch, const int buflen)
 {
-    scratch = std::move(Buffer(GMatDesc(CV_32F, 1, cv::Size(buflen, 1))));
+    cv::Size bufsize(buflen, 1);
+    GMatDesc bufdesc = { CV_32F, 1, bufsize };
+    Buffer buffer(bufdesc);
+    scratch = std::move(buffer);
 }
 
 CV_ALWAYS_INLINE void initScratchBuffer(Buffer& scratch)

@@ -2130,48 +2130,32 @@ CV_ALWAYS_INLINE int divrc_simd_c3_impl(scale_tag_t s_tag, const SRC in[], uchar
 template<typename scale_tag_t, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, int>::type
-divrc_simd_c3_impl(scale_tag_t s_tag, const uchar in[], DST out[], const v_float32& s1,
-                   const v_float32& s2, const v_float32& s3,
-                   const v_float32& v_scale, const int length,
-                   const int nlanes, const int lanes)
+                        std::is_same<DST, ushort>::value, void>::type
+divrc_simd_c3_calc(scale_tag_t s_tag, const uchar* inx, DST* outx,
+                   const v_float32& s1, const v_float32& s2,
+                   const v_float32& s3, const v_float32& v_scale,
+                   const v_int16& v_zero)
 {
-    v_int16 v_zero = vx_setzero_s16();
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+    v_uint8 div = vx_load(inx);
 
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - lanes; x += lanes)
-        {
-            v_uint8 div = vx_load(&in[x]);
+    v_int16 div1 = v_reinterpret_as_s16(v_expand_low(div));
+    v_int16 div2 = v_reinterpret_as_s16(v_expand_high(div));
+    v_int16 div3 = v_reinterpret_as_s16(vx_load_expand(&inx[2 * nlanes]));
 
-            v_int16 div1 = v_reinterpret_as_s16(v_expand_low(div));
-            v_int16 div2 = v_reinterpret_as_s16(v_expand_high(div));
-            v_int16 div3 = v_reinterpret_as_s16(vx_load_expand(&in[x + 2 * nlanes]));
+    v_float32 fdiv1 = v_cvt_f32(v_expand_low(div1));
+    v_float32 fdiv2 = v_cvt_f32(v_expand_high(div1));
+    v_float32 fdiv3 = v_cvt_f32(v_expand_low(div2));
+    v_float32 fdiv4 = v_cvt_f32(v_expand_high(div2));
+    v_float32 fdiv5 = v_cvt_f32(v_expand_low(div3));
+    v_float32 fdiv6 = v_cvt_f32(v_expand_high(div3));
 
-            v_float32 fdiv1 = v_cvt_f32(v_expand_low(div1));
-            v_float32 fdiv2 = v_cvt_f32(v_expand_high(div1));
-            v_float32 fdiv3 = v_cvt_f32(v_expand_low(div2));
-            v_float32 fdiv4 = v_cvt_f32(v_expand_high(div2));
-            v_float32 fdiv5 = v_cvt_f32(v_expand_low(div3));
-            v_float32 fdiv6 = v_cvt_f32(v_expand_high(div3));
-
-            v_store_select(&out[x], div1, v_zero, v_round(div_op(s_tag, s1, fdiv1, v_scale)),
-                                                  v_round(div_op(s_tag, s2, fdiv2, v_scale)));
-            v_store_select(&out[x + nlanes], div2, v_zero, v_round(div_op(s_tag, s3, fdiv3, v_scale)),
-                                                           v_round(div_op(s_tag, s1, fdiv4, v_scale)));
-            v_store_select(&out[x + 2*nlanes], div3, v_zero, v_round(div_op(s_tag, s2, fdiv5, v_scale)),
-                                                             v_round(div_op(s_tag, s3, fdiv6, v_scale)));
-        }
-
-        if (x < length)
-        {
-            x = length - lanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    v_store_select(outx, div1, v_zero, v_round(div_op(s_tag, s1, fdiv1, v_scale)),
+                                       v_round(div_op(s_tag, s2, fdiv2, v_scale)));
+    v_store_select(&outx[nlanes], div2, v_zero, v_round(div_op(s_tag, s3, fdiv3, v_scale)),
+                                                v_round(div_op(s_tag, s1, fdiv4, v_scale)));
+    v_store_select(&outx[2*nlanes], div3, v_zero, v_round(div_op(s_tag, s2, fdiv5, v_scale)),
+                                                  v_round(div_op(s_tag, s3, fdiv6, v_scale)));
 }
 
 template<typename scale_tag_t, typename SRC, typename DST>
@@ -2179,77 +2163,77 @@ CV_ALWAYS_INLINE
 typename std::enable_if<(std::is_same<SRC, short>::value  && std::is_same<DST, ushort>::value) ||
                         (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value) ||
                         (std::is_same<SRC, short>::value  && std::is_same<DST, short>::value)  ||
-                        (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value), int>::type
-divrc_simd_c3_impl(scale_tag_t s_tag, const SRC in[], DST out[], const v_float32& s1,
-                   const v_float32& s2, const v_float32& s3,
-                   const v_float32& v_scale, const int length,
-                   const int nlanes, const int lanes)
+                        (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value), void>::type
+divrc_simd_c3_calc(scale_tag_t s_tag, const SRC* inx, DST* outx,
+                   const v_float32& s1, const v_float32& s2,
+                   const v_float32& s3, const v_float32& v_scale,
+                   const v_int16& v_zero)
 {
-    v_int16 v_zero = vx_setzero_s16();
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
 
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - lanes; x += lanes)
-        {
-            v_int16 div1 = v_reinterpret_as_s16(vx_load(&in[x]));
-            v_int16 div2 = v_reinterpret_as_s16(vx_load(&in[x + nlanes]));
-            v_int16 div3 = v_reinterpret_as_s16(vx_load(&in[x + 2*nlanes]));
+    v_int16 div1 = v_reinterpret_as_s16(vx_load(inx));
+    v_int16 div2 = v_reinterpret_as_s16(vx_load(&inx[nlanes]));
+    v_int16 div3 = v_reinterpret_as_s16(vx_load(&inx[2*nlanes]));
 
-            v_float32 fdiv1 = v_cvt_f32(v_expand_low(div1));
-            v_float32 fdiv2 = v_cvt_f32(v_expand_high(div1));
-            v_float32 fdiv3 = v_cvt_f32(v_expand_low(div2));
-            v_float32 fdiv4 = v_cvt_f32(v_expand_high(div2));
-            v_float32 fdiv5 = v_cvt_f32(v_expand_low(div3));
-            v_float32 fdiv6 = v_cvt_f32(v_expand_high(div3));
+    v_float32 fdiv1 = v_cvt_f32(v_expand_low(div1));
+    v_float32 fdiv2 = v_cvt_f32(v_expand_high(div1));
+    v_float32 fdiv3 = v_cvt_f32(v_expand_low(div2));
+    v_float32 fdiv4 = v_cvt_f32(v_expand_high(div2));
+    v_float32 fdiv5 = v_cvt_f32(v_expand_low(div3));
+    v_float32 fdiv6 = v_cvt_f32(v_expand_high(div3));
 
-            v_store_select(&out[x], div1, v_zero, v_round(div_op(s_tag, s1, fdiv1, v_scale)),
-                                                  v_round(div_op(s_tag, s2, fdiv2, v_scale)));
-            v_store_select(&out[x + nlanes], div2, v_zero, v_round(div_op(s_tag, s3, fdiv3, v_scale)),
-                                                           v_round(div_op(s_tag, s1, fdiv4, v_scale)));
-            v_store_select(&out[x + 2*nlanes], div3, v_zero, v_round(div_op(s_tag, s2, fdiv5, v_scale)),
-                                                             v_round(div_op(s_tag, s3, fdiv6, v_scale)));
-        }
-
-        if (x < length)
-        {
-            x = length - lanes;
-            continue;  // process unaligned tail
-        }
-        break;
-    }
-    return x;
+    v_store_select(outx, div1, v_zero, v_round(div_op(s_tag, s1, fdiv1, v_scale)),
+                                       v_round(div_op(s_tag, s2, fdiv2, v_scale)));
+    v_store_select(&outx[nlanes], div2, v_zero, v_round(div_op(s_tag, s3, fdiv3, v_scale)),
+                                                v_round(div_op(s_tag, s1, fdiv4, v_scale)));
+    v_store_select(&outx[2*nlanes], div3, v_zero, v_round(div_op(s_tag, s2, fdiv5, v_scale)),
+                                                  v_round(div_op(s_tag, s3, fdiv6, v_scale)));
 }
 
 template<typename scale_tag_t, typename DST>
 CV_ALWAYS_INLINE
 typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, void>::type
+divrc_simd_c3_calc(scale_tag_t s_tag, const float* inx, DST* outx,
+                   const v_float32& s1, const v_float32& s2,
+                   const v_float32& s3, const v_float32& v_scale,
+                   const v_float32& v_zero)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    v_float32 fdiv1 = vg_load_f32(inx);
+    v_float32 fdiv2 = vg_load_f32(&inx[nlanes/2]);
+    v_float32 fdiv3 = vg_load_f32(&inx[nlanes]);
+    v_float32 fdiv4 = vg_load_f32(&inx[3*nlanes/2]);
+    v_float32 fdiv5 = vg_load_f32(&inx[2*nlanes]);
+    v_float32 fdiv6 = vg_load_f32(&inx[5*nlanes/2]);
+
+    v_store_i16(outx, v_round(v_select(fdiv1 == v_zero, v_zero, div_op(s_tag, s1, fdiv1, v_scale))),
+                      v_round(v_select(fdiv2 == v_zero, v_zero, div_op(s_tag, s2, fdiv2, v_scale))));
+    v_store_i16(&outx[nlanes], v_round(v_select(fdiv3 == v_zero, v_zero, div_op(s_tag, s3, fdiv3, v_scale))),
+                               v_round(v_select(fdiv4 == v_zero, v_zero, div_op(s_tag, s1, fdiv4, v_scale))));
+    v_store_i16(&outx[2*nlanes], v_round(v_select(fdiv5 == v_zero, v_zero, div_op(s_tag, s2, fdiv5, v_scale))),
+                                 v_round(v_select(fdiv6 == v_zero, v_zero, div_op(s_tag, s3, fdiv6, v_scale))));
+}
+
+template<typename scale_tag_t, typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
                         std::is_same<DST, ushort>::value, int>::type
-divrc_simd_c3_impl(scale_tag_t s_tag, const float in[], DST out[], const v_float32& s1,
+divrc_simd_c3_impl(scale_tag_t s_tag, const SRC in[], DST out[], const v_float32& s1,
                    const v_float32& s2, const v_float32& s3,
                    const v_float32& v_scale, const int length,
-                   const int nlanes, const int lanes)
+                   const int, const int lanes)
 {
-    v_float32 v_zero = vx_setzero_f32();
+    zero_vec_type_of_t<SRC> v_zero =
+        vx_setall<typename zero_vec_type_of_t<SRC>::lane_type>(0);
 
     int x = 0;
     for (;;)
     {
         for (; x <= length - lanes; x += lanes)
         {
-            v_float32 fdiv1 = vg_load_f32(&in[x]);
-            v_float32 fdiv2 = vg_load_f32(&in[x + nlanes/2]);
-            v_float32 fdiv3 = vg_load_f32(&in[x + nlanes]);
-            v_float32 fdiv4 = vg_load_f32(&in[x + 3*nlanes/2]);
-            v_float32 fdiv5 = vg_load_f32(&in[x + 2*nlanes]);
-            v_float32 fdiv6 = vg_load_f32(&in[x + 5*nlanes/2]);
-
-            v_store_i16(&out[x], v_round(v_select(fdiv1 == v_zero, v_zero, div_op(s_tag, s1, fdiv1, v_scale))),
-                                 v_round(v_select(fdiv2 == v_zero, v_zero, div_op(s_tag, s2, fdiv2, v_scale))));
-            v_store_i16(&out[x + nlanes], v_round(v_select(fdiv3 == v_zero, v_zero, div_op(s_tag, s3, fdiv3, v_scale))),
-                                          v_round(v_select(fdiv4 == v_zero, v_zero, div_op(s_tag, s1, fdiv4, v_scale))));
-            v_store_i16(&out[x + 2*nlanes], v_round(v_select(fdiv5 == v_zero, v_zero, div_op(s_tag, s2, fdiv5, v_scale))),
-                                            v_round(v_select(fdiv6 == v_zero, v_zero, div_op(s_tag, s3, fdiv6, v_scale))));
+            divrc_simd_c3_calc(s_tag, &in[x], &out[x], s1, s2, s3, v_scale, v_zero);
         }
 
         if (x < length)
