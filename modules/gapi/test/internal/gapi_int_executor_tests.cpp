@@ -2,11 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "../test_precomp.hpp"
 #include "../gapi_mock_kernels.hpp"
+
+#include <opencv2/gapi/core.hpp>
 
 namespace opencv_test
 {
@@ -292,6 +294,28 @@ TEST_F(GExecutorReshapeTest, ReshapeCallAllocate)
     comp.apply(cv::gin(in_mat2), cv::gout(out_mat), cv::compile_args(pkg));
     EXPECT_EQ(2, island1.getAllocateCounter());
     EXPECT_EQ(1, island1.getReshapeCounter());
+}
+
+TEST_F(GExecutorReshapeTest, CPUBackendIsReshapable)
+{
+    comp = cv::GComputation([](){
+        cv::GMat in;
+        cv::GMat foo = I::Foo::on(in);
+        cv::GMat out = cv::gapi::bitwise_not(cv::gapi::bitwise_not(in));
+        return cv::GComputation(cv::GIn(in), cv::GOut(foo, out));
+    });
+    // NB: Initial state
+    EXPECT_EQ(0, island1.getReshapeCounter());
+
+    // NB: First compilation.
+    cv::Mat out_mat2;
+    comp.apply(cv::gin(in_mat1), cv::gout(out_mat, out_mat2), cv::compile_args(pkg));
+    EXPECT_EQ(0, island1.getReshapeCounter());
+
+    // NB: The entire graph is reshapable, so it won't be recompiled, but reshaped.
+    comp.apply(cv::gin(in_mat2), cv::gout(out_mat, out_mat2), cv::compile_args(pkg));
+    EXPECT_EQ(1, island1.getReshapeCounter());
+    EXPECT_EQ(0, cvtest::norm(out_mat2, in_mat2, NORM_INF));
 }
 
 // FIXME: Add explicit tests on GMat/GScalar/GArray<T> being connectors

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -88,7 +88,7 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         {
         case NodeType::OP:
         {
-            m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+            m_opNodes.push_back(nh);
 
             // If kernel is stateful then prepare storage for its state.
             GCPUKernel k = gcm.metadata(nh).get<CPUUnit>().k;
@@ -107,19 +107,12 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);
             }
-            //preallocate internal Mats in advance
-            if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
-            {
-                const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
-                createMat(mat_desc, mat);
-            }
             break;
         }
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));
         }
     }
-
+    makeReshape();
     // For each stateful kernel call 'setup' user callback to initialize state.
     setupKernelStates();
 }
@@ -176,8 +169,38 @@ void cv::gimpl::GCPUExecutable::setupKernelStates()
     }
 }
 
+void cv::gimpl::GCPUExecutable::makeReshape() {
+    // Prepare the execution script
+    m_script.clear();
+    for (auto &nh : m_opNodes) {
+        m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+    }
+
+    // Preallocate internal mats
+    for (auto& nh : m_dataNodes) {
+        const auto& desc = m_gm.metadata(nh).get<Data>();
+        if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT) {
+            const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
+            auto& mat = m_res.slot<cv::Mat>()[desc.rc];
+            createMat(mat_desc, mat);
+        }
+    }
+}
+
+void cv::gimpl::GCPUExecutable::reshape(ade::Graph&, const GCompileArgs& args) {
+    m_compileArgs = args;
+    makeReshape();
+    // Signal to reset stateful kernels` state.
+    // There can be no handleNewStream() call to set this flag
+    // if user didn't call GCompiled`s prepareForNewStream()
+    m_newStreamStarted = true;
+}
+
 void cv::gimpl::GCPUExecutable::handleNewStream()
 {
+    // Signal to reset stateful kernels` state.
+    // No need to call reshape() here since it'll
+    // be called automatically if input meta was changed
     m_newStreamStarted = true;
 }
 
