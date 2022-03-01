@@ -132,9 +132,10 @@ CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, Outp
 //! @brief Gets devices from all platforms which can be assoiated with D3D11Device.
 //
 //! @note Note: Function fills destination vector of pairs - devices. First of pair contains characteristic of device association:
-//!             0x401B - CL_PREFERRED_DEVICES_FOR_D3D11_KHR - OpenCL devices associated with the specified Direct3Device11 device;
-//!             0x401C - CL_ALL_DEVICES_FOR_D3D11_KHR - OpenCL devices which may interoperate with the specified Direct3Device11 device but
-//!             performance of sharing data on these devices may be considerably less.
+//!             0 - OpenCL devices associated with the specified Direct3Device11 device;
+//!             1 - OpenCL devices which may interoperate with the specified Direct3Device11 device but
+//!             performance of sharing data on these devices may be considerably less. Follow
+//!             https://www.khronos.org/registry/OpenCL/sdk/1.2/docs/man/xhtml/clGetDeviceIDsFromD3D11KHR.html for additional information.
 //!             Second of pair is cv::ocl::Device that wraps cl_device_id.
 //
 //! @param pD3D11Device - pointer to Direct3Device11 device.

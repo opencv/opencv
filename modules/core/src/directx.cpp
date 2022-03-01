@@ -1422,8 +1422,6 @@ std::vector<std::pair<int, cv::ocl::Device>> getDeviceIDsByD3D11Device(ID3D11Dev
             if (status != CL_SUCCESS) {
                 throw(status, "clGetPlatformInfo can't get extension for platform");
             }
-            std::cout << ext << std::endl;
-            std::cout << std::endl;
             // If platform doesn't support extension then returns empty vector
             if (ext.find("cl_khr_d3d11_sharing") == std::string::npos) {
                 CV_LOG_DEBUG(NULL, "findKHRDevice can't find cl_khr_d3d11_sharing extension for platform");
@@ -1445,7 +1443,8 @@ std::vector<std::pair<int, cv::ocl::Device>> getDeviceIDsByD3D11Device(ID3D11Dev
                 throw(status, "clGetDeviceIDsFromD3D11KHR failed");
             }
             for (auto&& device : cl_devs) {
-                devices.emplace_back(cl_d3d11_device_set, device);
+                devices.emplace_back(
+                    cl_d3d11_device_set == CL_PREFERRED_DEVICES_FOR_D3D11_KHR ? 0 : 1, device);
             }
             return devices;
         };
