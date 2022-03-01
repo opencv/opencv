@@ -763,7 +763,7 @@ namespace colormap
         else if (lut_type == CV_8UC3) {
             Vec3b localLUT[256];//small performance improvement by bringing the full LUT locally first
             _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
-            srcGray.forEach<unsigned char>([](unsigned char& pixel, const int* position) -> void {
+            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
                 const int row = position[0];
                 const int col = position[1];
                 dstMat.at<Vec3b>(row, col) = localLUT[pixel];
