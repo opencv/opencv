@@ -754,20 +754,40 @@ namespace colormap
         if (lut_type == CV_8UC1) {
             unsigned char localLUT[256];//small performance improvement by bringing the full LUT locally first
             _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
-            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
-                const int row = position[0];
-                const int col = position[1];
-                dstMat.at<unsigned char>(row, col) = localLUT[pixel];
-            });
+            const int minimalPixelsPerPacket = 1<<12;
+            const int rowsPerPacket = std::max(1, minimalPixelsPerPacket/srcGray.cols);
+            const int rowsPacketCount = (srcGray.rows+rowsPerPacket-1)/rowsPerPacket;
+            const int rows = srcGray.rows;
+            const int cols = srcGray.cols;
+            Range all(0, rowsPacketCount);
+            auto body = [&, rows, cols](const Range& range) -> void {
+                for(int row = range.start*rowsPerPacket ; row<std::min(rows, range.end*rowsPerPacket) ; ++row)
+                    for(int col = 0 ; col<cols ; ++col)
+                        dstMat.at<unsigned char>(row, col) = localLUT[srcGray.at<unsigned char>(row, col)];
+            };
+            if (rowsPacketCount <= 1)
+              body(all);
+            else
+              parallel_for_(all, body);
         }
         else if (lut_type == CV_8UC3) {
             Vec3b localLUT[256];//small performance improvement by bringing the full LUT locally first
             _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
-            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
-                const int row = position[0];
-                const int col = position[1];
-                dstMat.at<Vec3b>(row, col) = localLUT[pixel];
-            });
+            const int minimalPixelsPerPacket = 1<<12;
+            const int rowsPerPacket = std::max(1, minimalPixelsPerPacket/srcGray.cols);
+            const int rowsPacketCount = (srcGray.rows+rowsPerPacket-1)/rowsPerPacket;
+            const int rows = srcGray.rows;
+            const int cols = srcGray.cols;
+            Range all(0, rowsPacketCount);
+            auto body = [&, rows, cols](const Range& range) -> void {
+                for(int row = range.start*rowsPerPacket ; row<std::min(rows, range.end*rowsPerPacket) ; ++row)
+                    for(int col = 0 ; col<cols ; ++col)
+                        dstMat.at<Vec3b>(row, col) = localLUT[srcGray.at<unsigned char>(row, col)];
+            };
+            if (rowsPacketCount <= 1)
+                body(all);
+            else
+                parallel_for_(all, body);
         }
     }
 
