@@ -704,7 +704,13 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
             static_cast<callback_t>(
                 std::bind(&cv::gimpl::ie::RequestPool::callback, this,
                           t, id, _1, _2)));
-    t.run(request);
+    try {
+        t.run(request);
+    } catch (...) {
+        request.SetCompletionCallback([](){});
+        m_idle_ids.push(id);
+        throw;
+    }
 }
 
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
@@ -795,8 +801,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 
-    const auto &in_desc  = in.desc();
-    auto         in_msg   = in.get();
+    const auto &in_desc = in.desc();
+          auto  in_msg  = in.get();
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
@@ -842,7 +848,17 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
     // (5) Run the kernel.
-    kk.run(ctx, *m_reqPool);
+    try {
+        kk.run(ctx, *m_reqPool);
+    } catch (const std::exception& e) {
+        auto eptr = std::current_exception();
+        for (auto i : ade::util::iota(ctx->uu.params.num_out))
+        {
+            auto output = ctx->output(i);
+            ctx->out.post(std::move(output), eptr);
+        }
+        return;
+    }
 
     // (6) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
@@ -1300,7 +1316,6 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
-
         const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         // NB: In case there is no input data need to post output anyway
         if (in_roi_vec.empty()) {

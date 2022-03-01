@@ -383,7 +383,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
    m_cmd.resize(in_queues.size());
    cv::GRunArgs isl_inputs(in_queues.size());
 
-   cv::optional<cv::gimpl::Exception> error;
+   cv::optional<cv::gimpl::Exception> exception;
    for (auto &&it : ade::util::indexed(in_queues))
    {
        auto id = ade::util::index(it);
@@ -441,7 +441,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
            }
            case Cmd::index_of<cv::gimpl::Exception>():
            {
-               error =
+               exception =
                    cv::util::make_optional(cv::util::get<cv::gimpl::Exception>(m_cmd[id]));
                break;
            }
@@ -450,8 +450,8 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
         }
     } // for(in_queues)
 
-    if (error.has_value()) {
-        return cv::gimpl::StreamMsg{error.value()};
+    if (exception.has_value()) {
+        return cv::gimpl::StreamMsg{exception.value()};
     }
 
     if (m_finishing)
@@ -507,6 +507,7 @@ QueueReader::V QueueReader::getResultsVector(std::vector<Q*>        &in_queues,
 {
     cv::GRunArgs out_results(out_size);
     m_cmd.resize(out_size);
+    cv::optional<cv::gimpl::Exception> exception;
     for (auto &&it : ade::util::indexed(in_queues))
     {
         auto ii = ade::util::index(it);
@@ -526,12 +527,19 @@ QueueReader::V QueueReader::getResultsVector(std::vector<Q*>        &in_queues,
                 rewindToStop(in_queues, ii);
                 return QueueReader::V(Stop{});
             case Cmd::index_of<cv::gimpl::Exception>():
-                return QueueReader::V(cv::util::get<cv::gimpl::Exception>(m_cmd[oi]));
+                exception =
+                    cv::util::make_optional(cv::util::get<cv::gimpl::Exception>(m_cmd[oi]));
+                break;
             default:
                 cv::util::throw_error(
                         std::logic_error("Unexpected cmd kind in getResultsVector"));
         } // switch
     } // for(in_queues)
+
+    if (exception.has_value()) {
+        return QueueReader::V(exception.value());
+    }
+
     return QueueReader::V(out_results);
 }
 
