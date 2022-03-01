@@ -335,7 +335,6 @@ public:
         std::vector<float> confidences;
         std::vector<Rect> boxes;
         face_detector.detect(image, confidences, boxes, conf_threshold, nms_threshold);
-        std::cout << boxes.size() << std::endl;
 
         std::vector<Rect2d> boxes_double(boxes.size());
         for (uint i = 0; i < boxes.size(); i++)
