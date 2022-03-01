@@ -735,33 +735,40 @@ namespace colormap
         if(src.type() != CV_8UC1  &&  src.type() != CV_8UC3)
             CV_Error(Error::StsBadArg, "cv::ColorMap only supports source images of type CV_8UC1 or CV_8UC3");
 
-        const Mat lut = this->_lut.reshape(0, 256);//just in case LUT was in row format rather than col
-        const int lut_type = lut.type(), lut_depth = CV_MAT_DEPTH(lut_type), lut_cn = CV_MAT_CN(lut_type);
-        CV_CheckType(lut_type, (lut_depth == CV_8U) && (lut_cn == 1 || lut_cn == 3),
+        CV_CheckEQ(src.dims, 2, "Not supported");
+
+        const int lut_type = _lut.type();
+        CV_CheckType(lut_type, (lut_type == CV_8UC1) || (lut_type == CV_8UC3),
             "Only CV_8UC1 and CV_8UC3 LUT are supported");
 
         Mat srcGray;
         if (src.channels() == 1)
             srcGray = src;
         else
-            cv::cvtColor(src, srcGray, cv::COLOR_BGR2GRAY);//BGR because of historical LUT usage
+            cv::cvtColor(src, srcGray, cv::COLOR_BGR2GRAY);//BGR because of historical cv::LUT() usage
 
         _dst.create(src.size(), lut_type);
 
         //we do not use cv::LUT() which requires src.channels() == dst.channels()
         Mat dstMat = _dst.getMat();
-        if (lut_type == CV_8UC1)
+        if (lut_type == CV_8UC1) {
+            unsigned char localLUT[256];//small performance improvement by bringing the full LUT locally first
+            _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
             srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
                 const int row = position[0];
                 const int col = position[1];
-                dstMat.at<unsigned char>(row, col) = lut.at<unsigned char>(pixel, 0);
+                dstMat.at<unsigned char>(row, col) = localLUT[pixel];
             });
-        else if (lut_type == CV_8UC3)
-            srcGray.forEach<unsigned char>([&](unsigned char& pixel, const int* position) -> void {
+        }
+        else if (lut_type == CV_8UC3) {
+            Vec3b localLUT[256];//small performance improvement by bringing the full LUT locally first
+            _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
+            srcGray.forEach<unsigned char>([](unsigned char& pixel, const int* position) -> void {
                 const int row = position[0];
                 const int col = position[1];
-                dstMat.at<cv::Vec3b>(row, col) = lut.at<cv::Vec3b>(pixel, 0);
+                dstMat.at<Vec3b>(row, col) = localLUT[pixel];
             });
+        }
     }
 
     Mat ColorMap::linear_colormap(InputArray X,
