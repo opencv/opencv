@@ -1743,6 +1743,17 @@ public:
     }
 
 private:
+    void processFrame(InputArray frame, OutputArrayOfArrays outputs)
+    {
+        // Create input blob
+        Mat input = dnn::blobFromImage(frame);
+        net.setInput(input);
+
+        // Run inference and get outputs (loc, conf, iou)
+        const std::vector<String> output_names = {"loc", "conf", "iou"};
+        net.forward(outputs, output_names);
+    }
+
     void generatePriors()
     {
         // Calculate shapes of different scales according to the shape of input image
