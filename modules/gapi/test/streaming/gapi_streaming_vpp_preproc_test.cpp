@@ -628,8 +628,8 @@ TEST_P(VPPPreprocDispatcherROIParams, functional_roi_different_threads)
     decoder_t decoder_id;
     acceleration_t accel = MFX_ACCEL_MODE_VIA_D3D11;
     out_frame_info_t required_frame_param;
-    cv::Rect roi;
-    std::tie(file_path, decoder_id, std::ignore, required_frame_param, roi) = GetParam();
+    roi_t opt_roi;
+    std::tie(file_path, decoder_id, std::ignore, required_frame_param, opt_roi) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -684,7 +684,6 @@ TEST_P(VPPPreprocDispatcherROIParams, functional_roi_different_threads)
     size_t cpu_decoded_number = 1;
     size_t preproc_number = 0;
 
-    cv::util::optional<cv::Rect> opt_roi = cv::util::make_optional(roi);
     std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
                               std::ref(queue), std::ref(decoded_number));
     std::thread cpu_decode_thread(decode_function, std::ref(cpu_decode_engine), cpu_sess_ptr,
