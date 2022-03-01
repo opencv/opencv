@@ -2024,7 +2024,8 @@ struct Mapper {
 template<typename T, class Mapper, int numChan>
 CV_ALWAYS_INLINE void calcRowLinearC(const cv::gapi::fluid::View  & in,
                                      cv::gapi::fluid::Buffer& out,
-                                     cv::gapi::fluid::Buffer& scratch) {
+                                     cv::gapi::fluid::Buffer& scratch)
+{
     using alpha_type = typename Mapper::alpha_type;
 
     auto  inSz =  in.meta().size;
@@ -2057,10 +2058,26 @@ CV_ALWAYS_INLINE void calcRowLinearC(const cv::gapi::fluid::View  & in,
         dst[l] = out.OutLine<T>(l);
     }
 
-#if CV_SSE4_1
+#if CV_SIMD
     const auto* clone = scr.clone;
     auto* tmp = scr.tmp;
+#if CV_AVX2
+    if (inSz.width >= 32 && outSz.width >= 32)
+    {
+        avx2::calcRowLinear_8UC_Impl_(reinterpret_cast<uint8_t**>(dst),
+                                      reinterpret_cast<const uint8_t**>(src0),
+                                      reinterpret_cast<const uint8_t**>(src1),
+                                      reinterpret_cast<const short*>(alpha),
+                                      reinterpret_cast<const short*>(clone),
+                                      reinterpret_cast<const short*>(mapsx),
+                                      reinterpret_cast<const short*>(beta),
+                                      reinterpret_cast<uint8_t*>(tmp),
+                                      inSz, outSz, lpi);
 
+        return;
+    }
+#endif // CV_AVX2
+#if CV_SSE4_1
     if (inSz.width >= 16 && outSz.width >= 16)
     {
         sse41::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
@@ -2076,20 +2093,21 @@ CV_ALWAYS_INLINE void calcRowLinearC(const cv::gapi::fluid::View  & in,
         return;
     }
 #endif // CV_SSE4_1
+#endif // CV_SIMD
     int length = out.length();
-    for (int l = 0; l < lpi; l++) {
+    for (int l = 0; l < lpi; ++l) {
         constexpr static const auto unity = Mapper::unity;
 
         auto beta0 =                                   beta[l];
         auto beta1 = saturate_cast<alpha_type>(unity - beta[l]);
 
-        for (int x = 0; x < length; x++) {
+        for (int x = 0; x < length; ++x) {
             auto alpha0 =                                   alpha[x];
             auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
             auto sx0 = mapsx[x];
             auto sx1 = sx0 + 1;
 
-            for (int c = 0; c < numChan; c++) {
+            for (int c = 0; c < numChan; ++c) {
                 auto idx0 = numChan*sx0 + c;
                 auto idx1 = numChan*sx1 + c;
                 T tmp0 = resize_calc_revert_fixedpoint(beta0, src0[l][idx0], beta1, src1[l][idx0]);
