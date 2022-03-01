@@ -737,6 +737,7 @@ namespace colormap
 
         CV_CheckEQ(src.dims, 2, "Not supported");
 
+        CV_Assert(_lut.isContinuous());
         const int lut_type = _lut.type();
         CV_CheckType(lut_type, (lut_type == CV_8UC1) || (lut_type == CV_8UC3),
             "Only CV_8UC1 and CV_8UC3 LUT are supported");
@@ -748,46 +749,41 @@ namespace colormap
             cv::cvtColor(src, srcGray, cv::COLOR_BGR2GRAY);//BGR because of historical cv::LUT() usage
 
         _dst.create(src.size(), lut_type);
+        Mat dstMat = _dst.getMat();
 
         //we do not use cv::LUT() which requires src.channels() == dst.channels()
-        Mat dstMat = _dst.getMat();
+        const int rows = srcGray.rows;
+        const int cols = srcGray.cols;
+        const int minimalPixelsPerPacket = 1<<12;
+        const int rowsPerPacket = std::max(1, minimalPixelsPerPacket/cols);
+        const int rowsPacketsCount = (rows+rowsPerPacket-1)/rowsPerPacket;
+        const Range all(0, rows);
+
         if (lut_type == CV_8UC1) {
-            unsigned char localLUT[256];//small performance improvement by bringing the full LUT locally first
-            _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
-            const int minimalPixelsPerPacket = 1<<12;
-            const int rowsPerPacket = std::max(1, minimalPixelsPerPacket/srcGray.cols);
-            const int rowsPacketCount = (srcGray.rows+rowsPerPacket-1)/rowsPerPacket;
-            const int rows = srcGray.rows;
-            const int cols = srcGray.cols;
-            Range all(0, rowsPacketCount);
-            auto body = [&, rows, cols](const Range& range) -> void {
-                for(int row = range.start*rowsPerPacket ; row<std::min(rows, range.end*rowsPerPacket) ; ++row)
+            typedef unsigned char lut_pixel_t;
+            const lut_pixel_t* srcLUT = _lut.ptr<lut_pixel_t>(0);
+            auto body = [&, cols](const Range& range) -> void {
+                for(int row = range.start ; row<range.end ; ++row)  {
+                    const unsigned char* srcRow = srcGray.ptr<unsigned char>(row);
+                    lut_pixel_t* dstRow = dstMat.ptr<lut_pixel_t>(row);
                     for(int col = 0 ; col<cols ; ++col)
-                        dstMat.at<unsigned char>(row, col) = localLUT[srcGray.at<unsigned char>(row, col)];
+                        *dstRow++ = srcLUT[*srcRow++];
+                }
             };
-            if (rowsPacketCount <= 1)
-              body(all);
-            else
-              parallel_for_(all, body);
+            parallel_for_(all, body, rowsPacketsCount);
         }
         else if (lut_type == CV_8UC3) {
-            Vec3b localLUT[256];//small performance improvement by bringing the full LUT locally first
-            _lut.copyTo(cv::Mat(256, 1, lut_type, localLUT));
-            const int minimalPixelsPerPacket = 1<<12;
-            const int rowsPerPacket = std::max(1, minimalPixelsPerPacket/srcGray.cols);
-            const int rowsPacketCount = (srcGray.rows+rowsPerPacket-1)/rowsPerPacket;
-            const int rows = srcGray.rows;
-            const int cols = srcGray.cols;
-            Range all(0, rowsPacketCount);
-            auto body = [&, rows, cols](const Range& range) -> void {
-                for(int row = range.start*rowsPerPacket ; row<std::min(rows, range.end*rowsPerPacket) ; ++row)
+            typedef Vec3b lut_pixel_t;
+            const lut_pixel_t* srcLUT = _lut.ptr<lut_pixel_t>(0);
+            auto body = [&, cols](const Range& range) -> void {
+                for(int row = range.start ; row<range.end ; ++row)  {
+                    const unsigned char* srcRow = srcGray.ptr<unsigned char>(row);
+                    lut_pixel_t* dstRow = dstMat.ptr<lut_pixel_t>(row);
                     for(int col = 0 ; col<cols ; ++col)
-                        dstMat.at<Vec3b>(row, col) = localLUT[srcGray.at<unsigned char>(row, col)];
+                        *dstRow++ = srcLUT[*srcRow++];
+                }
             };
-            if (rowsPacketCount <= 1)
-                body(all);
-            else
-                parallel_for_(all, body);
+            parallel_for_(all, body, rowsPacketsCount);
         }
     }
 
