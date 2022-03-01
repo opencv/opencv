@@ -1311,6 +1311,10 @@ void transformBlobs(std::vector<Mat>& blobs)
     Mat Wx = blobs[0];
     Mat Wh = blobs[1];
     Mat b = blobs[2];
+    std::vector<Mat> cudaWorkaround;
+    cudaWorkaround.push_back(Wx.clone());
+    cudaWorkaround.push_back(Wh.clone());
+    cudaWorkaround.push_back(b.clone());
 
     const int numHidden = Wh.size[2];
     const int numDirs = Wx.size[0];  // Is 1 for forward only and 2 for bidirectional LSTM.
@@ -1357,6 +1361,8 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[4] = c0;
 
     if (blobs.size() == 5) {
+        // so that future patch removing copies can leave all indexing as is
+        blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
         return;
     }
 
@@ -1372,6 +1378,9 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));
     blobs[7] = blobs[7].clone().reshape(1, blobs[7].total());  // Single column.
     blobs[7] = Mat::diag(blobs[7]);
+
+    // so that future patch removing copies can leave all indexing as is
+    blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
 }
 
 void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int blobShape_[], int size)
@@ -1551,6 +1560,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     transformBlobs(layerParams.blobs);
 
+    layerParams.set("is_onnx", true);
     layerParams.set("reverse", layerParams.get<String>("direction", "") == "reverse");
     layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
 
@@ -1565,11 +1575,14 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     layerParams.set("produce_cell_output", need_yc);
 
     lstm_proto.clear_output();
-    int outputs = static_cast<size_t>(need_y || need_yh) + static_cast<size_t>(need_yc);
-    for (size_t i = 0; i < outputs; ++i)
+    if (need_y || need_yh)
     {
         // give random names to LSTMLayer's outputs because every output needs postprocessing
-        lstm_proto.add_output(cv::format("%s_%ld", layerParams.name.c_str(), i));
+        lstm_proto.add_output(cv::format("%s_y", layerParams.name.c_str()));
+    }
+    if (need_yc)
+    {
+        lstm_proto.add_output(yc_name);
     }
 
     addLayer(layerParams, lstm_proto);
@@ -1578,11 +1591,6 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     if (need_yh)
     {
         add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
-    }
-    if (need_yc)
-    {
-        std::string yc_output = fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y, y_name, 1);
-        add_transform(num_directions, batch_size, hidden_size, 1, yc_output, yc_name);
     }
 }
 

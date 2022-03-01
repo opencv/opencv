@@ -103,7 +103,7 @@ static ActivationFunction get_activation_function(const String& activation) {
 
 class LSTMLayerImpl CV_FINAL : public LSTMLayer
 {
-    int numTimeStamps, numSamples;
+    int numTimeStamps, numSamples, numHidden;
     bool allocated;
 
     MatShape outTailShape;  //shape of single output sample
@@ -127,6 +127,8 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useAVX2;
 #endif
 
+    std::vector<Mat> cudaWorkaround;
+
 public:
 
     LSTMLayerImpl(const LayerParams& params)
@@ -139,6 +141,12 @@ public:
 #endif
     {
         setParamsFrom(params);
+
+        if (params.get<bool>("is_onnx", false))
+        {
+            cudaWorkaround.insert(cudaWorkaround.begin(), blobs.begin(), blobs.begin() + 3);
+            blobs.erase(blobs.begin(), blobs.begin() + 3);
+        }
 
         bidirectional = params.get<bool>("bidirectional", false);
         if (!blobs.empty())
@@ -181,6 +189,7 @@ public:
         useCellClip = params.get<bool>("use_cell_clip", false);
         usePeephole = params.get<bool>("use_peephole", false);
         reverse = params.get<bool>("reverse", false);
+        numHidden = params.get<int>("hidden_size", 1);
         CV_Assert(!reverse || !bidirectional);
 
         // read activations
@@ -269,8 +278,20 @@ public:
         outResShape.insert(outResShape.end(), outTailShape_.begin(), outTailShape_.end());
         outResShape.back() *= (1 + static_cast<int>(bidirectional));
 
-        size_t noutputs = produceCellOutput ? 2 : 1;
-        outputs.assign(noutputs, outResShape);
+        outputs.assign(1, outResShape);
+        if (produceCellOutput)
+        {
+            if (!cudaWorkaround.empty())
+            {
+                int shp[] = {(1 + static_cast<int>(bidirectional)), _numSamples, numHidden};
+                MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
+                outputs.push_back(newShape);
+            }
+            else
+            {
+                outputs.push_back(outResShape);
+            }
+        }
 
         internals.assign(1, shape(_numSamples, _numOut)); // hInternal
         internals.push_back(shape(_numSamples, _numOut)); // cInternal
@@ -335,6 +356,8 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
+        Mat cOut = produceCellOutput ? output[0].clone() : Mat();
+        const bool needYcTransform = !cudaWorkaround.empty(); // if the producer is onnx
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
         {
@@ -382,7 +405,7 @@ public:
             Mat cOutTs;
             if (produceCellOutput)
             {
-                cOutTs = output[1].reshape(1, numSamplesTotal);
+                cOutTs = cOut.reshape(1, numSamplesTotal);
                 cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
             }
 
@@ -536,6 +559,79 @@ public:
                 if (produceCellOutput)
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
             }
+        }
+
+        if (needYcTransform && produceCellOutput)
+        {
+            fixCellState(cOut, numDirs);
+        }
+        if (produceCellOutput)
+        {
+            cOut.copyTo(output[1]);
+        }
+    }
+
+    void fixCellState(Mat& cOut, int numDirs)
+    {
+        // seq, batch, dirs, hidden
+        int shp[] = {0, numSamples, numDirs, numHidden};
+        cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+
+        // permute to {0, 2, 1, 3};
+        std::vector<int> newShape = shape(cOut);
+        std::swap(newShape[1], newShape[2]);
+        cv::Mat newCellState(newShape, CV_32FC1);
+        const float* src = cOut.ptr<const float>();
+        float* dst = newCellState.ptr<float>();
+        size_t sj = newCellState.size[3];
+        size_t sk = newCellState.size[2] * sj;
+        size_t si = newCellState.size[1] * sk;
+        for (size_t i = 0; i < newCellState.size[0]; ++i)
+        {
+            for (size_t j = 0; j < newCellState.size[2]; ++j)
+            {
+                for (size_t k = 0; k < newCellState.size[1]; ++k)
+                {
+                    std::memcpy(dst, src, sizeof(float) * newCellState.size[3]);
+                    src += cOut.size[3];
+                    dst += sk;
+                }
+                dst = dst + sj - si;
+            }
+            dst = dst + si - sk;
+        }
+
+        cOut = newCellState;
+
+        if (numDirs == 1)
+        {
+            // Slice: Yh = Y[-1, :, :, :]
+            Range ranges[] = {cv::Range(cOut.size[0] - 1, cOut.size[0]), cv::Range::all(), cv::Range::all(), cv::Range::all()};
+            cOut = cOut(ranges);
+            // Reshape: 1x1xBxH -> 1xBxH
+            int shp[] = {1, numSamples, numHidden};
+            cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+        }
+        else
+        {
+            // Slice: SxDxBxH -> last sequence, first direction
+            Range ranges1[] = {cv::Range(cOut.size[0] - 1, cOut.size[0]), cv::Range(0, 1), cv::Range::all(), cv::Range::all()};
+            Mat part1 = cOut(ranges1);
+
+            // Slice: SxDxBxH -> first sequence, last direction
+            Range ranges2[] = {cv::Range(0, 1), cv::Range(cOut.size[1] - 1, cOut.size[1]), cv::Range::all(), cv::Range::all()};
+            Mat part2 = cOut(ranges2);
+
+            int shp[] = {1, part1.size[2] * part1.size[3]};
+            part1 = part1.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+            part2 = part2.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+
+
+            vconcat(part1, part2, cOut);
+
+            // Reshape: 1x2xBxH -> 2xBxH
+            int finalShape[] = {2, numSamples, numHidden};
+            cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
         }
     }
 };
