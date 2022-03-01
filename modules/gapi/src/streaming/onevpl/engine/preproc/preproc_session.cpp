@@ -72,8 +72,11 @@ VPPPreprocSession::outgoing_task::outgoing_task(mfxSyncPoint acquired_sync_handl
 }
 
 void VPPPreprocSession::outgoing_task::release_frame() {
+    // restore initial surface params
     memcpy(&(original_surface_ptr->Info),
            &original_frame_info, sizeof(Surface::info_t));
+    // release references on frame adapter
+    original_frame = cv::MediaFrame();
 }
 } // namespace onevpl
 } // namespace wip

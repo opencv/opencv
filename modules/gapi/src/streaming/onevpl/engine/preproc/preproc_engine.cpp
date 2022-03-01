@@ -34,34 +34,19 @@ bool FrameInfoComparator::equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& 
     return lhs == rhs;
 }
 
-cv::util::optional<cv::Rect> apply_roi(mfxFrameSurface1* surface_handle,
-                                       cv::util::optional<cv::Rect> &&opt_roi,
-                                       const char *preamb = "apply ROI: ") {
+void apply_roi(mfxFrameSurface1* surface_handle,
+               const cv::util::optional<cv::Rect> &opt_roi) {
     if (opt_roi.has_value()) {
-        cv::Rect &roi = opt_roi.value();
-
-        mfxU16 tmp = surface_handle->Info.CropX;
+        const cv::Rect &roi = opt_roi.value();
         surface_handle->Info.CropX = static_cast<mfxU16>(roi.x);
-        roi.x = tmp;
-
-        tmp = surface_handle->Info.CropY;
         surface_handle->Info.CropY = static_cast<mfxU16>(roi.y);
-        roi.y = tmp;
-
-        tmp = surface_handle->Info.CropW;
         surface_handle->Info.CropW = static_cast<mfxU16>(roi.width);
-        roi.width = tmp;
-
-        tmp = surface_handle->Info.CropH;
         surface_handle->Info.CropH = static_cast<mfxU16>(roi.height);
-        roi.height = tmp;
-
-        GAPI_LOG_DEBUG(nullptr, preamb << " {" << surface_handle->Info.CropX <<
+        GAPI_LOG_DEBUG(nullptr, "applied ROI {" << surface_handle->Info.CropX <<
                                 ", " << surface_handle->Info.CropY << "}, "
                                 "{ " << surface_handle->Info.CropX + surface_handle->Info.CropW <<
                                 ", " << surface_handle->Info.CropY + surface_handle->Info.CropH << "}");
     }
-    return std::move(opt_roi);
 }
 
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
@@ -87,8 +72,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         my_sess.sync_in_queue.pop();
                         auto *vpp_suface = my_sess.processing_surface_ptr.lock()->get_handle();
 
-                        cv::util::optional<cv::Rect> old_roi =
-                                apply_roi(pending_op.decoded_surface_ptr, std::move(pending_op.roi));
+                        apply_roi(pending_op.decoded_surface_ptr, pending_op.roi);
 
                         mfxSyncPoint vpp_sync_handle{};
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,

@@ -344,6 +344,12 @@ void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, S
 
     // launch pipeline
     bool in_progress = false;
+    // let's allow counting of preprocessed frames to check this value later:
+    // Currently, it looks redundant to implement any kind of gracefull shutdown logic
+    // in this test - so let's apply agreement that media source is processed
+    // succesfully when preproc_number != 1 in result.
+    // Specific validation logic which adhere to explicit counter value may be implemented
+    // in particular test scope
     preproc_number = 1;
     try {
         while(true) {
@@ -366,7 +372,6 @@ void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, S
             cv::GFrameDesc pp_desc = pp_frame.desc();
             ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
             in_progress = false;
-            decoded_frame = cv::MediaFrame();
             preproc_number++;
         }
     } catch (...) {}
@@ -376,68 +381,7 @@ void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, S
     ASSERT_NE(preproc_number, 1);
 }
 
-TEST_P(VPPPreprocParams, functional_different_threads)
-{
-    using namespace cv::gapi::wip;
-    using namespace cv::gapi::wip::onevpl;
-    source_t file_path;
-    decoder_t decoder_id;
-    acceleration_t accel;
-    out_frame_info_t required_frame_param;
-    std::tie(file_path, decoder_id, accel, required_frame_param) = GetParam();
-
-    file_path = findDataFile(file_path);
-
-    std::vector<CfgParam> cfg_params_w_dx11;
-    cfg_params_w_dx11.push_back(CfgParam::create_acceleration_mode(accel));
-    std::unique_ptr<VPLAccelerationPolicy> decode_accel_policy (
-                    new VPLDX11AccelerationPolicy(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_dx11)));
-
-    // create file data provider
-    std::shared_ptr<IDataProvider> data_provider(new FileDataProvider(file_path,
-                                                    {CfgParam::create_decoder_id(decoder_id)}));
-
-    mfxLoader mfx{};
-    mfxConfig mfx_cfg{};
-    std::tie(mfx, mfx_cfg) = prepare_mfx(decoder_id, accel);
-
-    // create decode session
-    mfxSession mfx_decode_session{};
-    mfxStatus sts = MFXCreateSession(mfx, 0, &mfx_decode_session);
-    EXPECT_EQ(MFX_ERR_NONE, sts);
-
-    // create decode engine
-    auto device_selector = decode_accel_policy->get_device_selector();
-    VPLLegacyDecodeEngine decode_engine(std::move(decode_accel_policy));
-    auto sess_ptr = decode_engine.initialize_session(mfx_decode_session,
-                                                     cfg_params_w_dx11,
-                                                     data_provider);
-
-    // create VPP preproc engine
-    VPPPreprocEngine preproc_engine(std::unique_ptr<VPLAccelerationPolicy>{
-                                                new VPLDX11AccelerationPolicy(device_selector)});
-
-    // launch threads
-    SafeQueue queue;
-    size_t decoded_number = 1;
-    size_t preproc_number = 0;
-
-    std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
-                              std::ref(queue), std::ref(decoded_number));
-    std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
-                               std::ref(queue), std::ref(preproc_number),
-                               std::cref(required_frame_param),
-                               std::cref(empty_roi));
-
-    decode_thread.join();
-    preproc_thread.join();
-    ASSERT_EQ(preproc_number, decoded_number);
-}
-
-INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngine, VPPPreprocParams,
-                        testing::ValuesIn(files));
-
-using roi_t = cv::Rect;
+using roi_t = cv::util::optional<cv::Rect>;
 using preproc_roi_args_t = decltype(std::tuple_cat(std::declval<preproc_args_t>(),
                                                    std::declval<std::tuple<roi_t>>()));
 class VPPPreprocROIParams : public ::testing::TestWithParam<preproc_roi_args_t> {};
@@ -449,8 +393,8 @@ TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
     decoder_t decoder_id;
     acceleration_t accel;
     out_frame_info_t required_frame_param;
-    cv::Rect roi;
-    std::tie(file_path, decoder_id, accel, required_frame_param, roi) = GetParam();
+    roi_t opt_roi;
+    std::tie(file_path, decoder_id, accel, required_frame_param, opt_roi) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -488,7 +432,6 @@ TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
     size_t decoded_number = 1;
     size_t preproc_number = 0;
 
-    cv::util::optional<cv::Rect> opt_roi = cv::util::make_optional(roi);
     std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
                               std::ref(queue), std::ref(decoded_number));
     std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
@@ -505,23 +448,31 @@ preproc_roi_args_t files_w_roi[] = {
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{0,0,50,50}},
+                    roi_t{cv::Rect{0,0,50,50}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{0,0,100,100}},
+                    roi_t{}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{100,100,200,200}},
+                    roi_t{cv::Rect{0,0,100,100}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{cv::Rect{100,100,200,200}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
-                    roi_t{0,0,100,100}},
+                    roi_t{cv::Rect{0,0,100,100}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
-                    roi_t{100,100,200,200}}
+                    roi_t{}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
+                    roi_t{cv::Rect{100,100,200,200}}}
 };
 
 INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI, VPPPreprocROIParams,
