@@ -560,8 +560,8 @@ TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
     decoder_t decoder_id;
     acceleration_t accel;
     out_frame_info_t required_frame_param;
-    cv::Rect roi;
-    std::tie(file_path, decoder_id, accel, required_frame_param, roi) = GetParam();
+    roi_t opt_roi;
+    std::tie(file_path, decoder_id, accel, required_frame_param, opt_roi) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -599,7 +599,6 @@ TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
     size_t decoded_number = 1;
     size_t preproc_number = 0;
 
-    cv::util::optional<cv::Rect> opt_roi = cv::util::make_optional(roi);
     std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
                               std::ref(queue), std::ref(decoded_number));
     std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
@@ -616,23 +615,31 @@ preproc_roi_args_t files_w_roi[] = {
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{0,0,50,50}},
+                    roi_t{cv::Rect{0,0,50,50}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{0,0,100,100}},
+                    roi_t{}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
                     MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
-                    roi_t{100,100,200,200}},
+                    roi_t{cv::Rect{0,0,100,100}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{cv::Rect{100,100,200,200}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
-                    roi_t{0,0,100,100}},
+                    roi_t{cv::Rect{0,0,100,100}}},
     preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
                     MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
                     out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
-                    roi_t{100,100,200,200}}
+                    roi_t{}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
+                    roi_t{cv::Rect{100,100,200,200}}}
 };
 
 INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI, VPPPreprocROIParams,
