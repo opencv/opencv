@@ -235,6 +235,33 @@ ABSDIFFC_SIMD(float)
 
 #undef ABSDIFFC_SIMD
 
+#define DIVRC_SIMD(SRC, DST)                                              \
+int divrc_simd(const float scalar[], const SRC in[], DST out[],           \
+               const int length, const int chan, const float scale)       \
+{                                                                         \
+    CV_CPU_DISPATCH(divrc_simd, (scalar, in, out, length, chan, scale),   \
+                    CV_CPU_DISPATCH_MODES_ALL);                           \
+}
+
+DIVRC_SIMD(uchar, uchar)
+DIVRC_SIMD(ushort, uchar)
+DIVRC_SIMD(short, uchar)
+DIVRC_SIMD(float, uchar)
+DIVRC_SIMD(short, short)
+DIVRC_SIMD(ushort, short)
+DIVRC_SIMD(uchar, short)
+DIVRC_SIMD(float, short)
+DIVRC_SIMD(ushort, ushort)
+DIVRC_SIMD(uchar, ushort)
+DIVRC_SIMD(short, ushort)
+DIVRC_SIMD(float, ushort)
+DIVRC_SIMD(uchar, float)
+DIVRC_SIMD(ushort, float)
+DIVRC_SIMD(short, float)
+DIVRC_SIMD(float, float)
+
+#undef DIVRC_SIMD
+
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width)
 {
