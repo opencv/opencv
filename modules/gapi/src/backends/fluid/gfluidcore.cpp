@@ -936,8 +936,8 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
 }
 
 template<typename DST, typename SRC>
-static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], Arithm arithm,
-                          float scale=1)
+CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float scalar[],
+                                    Arithm arithm, float scale=1)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -955,15 +955,23 @@ static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], A
         w = subrc_simd(scalar, in, out, length, chan);
 #endif
         for (; w < length; ++w)
+        {
             out[w] = subr<DST>(in[w], scalar[w % chan]);
+        }
         break;
     }
-    // TODO: optimize division
     case ARITHM_DIVIDE:
-        for (int w=0; w < width; w++)
-            for (int c=0; c < chan; c++)
-                out[chan*w + c] = div<DST>(scalar[c], in[chan*w + c], scale);
+    {
+        int w = 0;
+#if CV_SIMD
+        w = divrc_simd(scalar, in, out, length, chan, scale);
+#endif
+        for (; w < length; ++w)
+        {
+            out[w] = div<DST>(scalar[w % chan], in[w], scale);
+        }
         break;
+    }
     default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -1319,7 +1327,9 @@ CV_ALWAYS_INLINE void run_divc(Buffer& dst, const View& src, Buffer& scratch,
 #endif
 
     for (; w < length; ++w)
+    {
         out[w] = div<DST>(in[w], scalar[w % chan], scale);
+    }
 }
 
 GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
@@ -1402,31 +1412,54 @@ GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
     }
 };
 
-GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
+GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, true)
 {
     static const int Window = 1;
 
-    static void run(const cv::Scalar &_scalar, const View &src, double _scale, int /*dtype*/,
-                    Buffer &dst)
+    static void run(const cv::Scalar& _scalar, const View& src, double _scale, int /*dtype*/,
+                    Buffer& dst, Buffer& scratch)
     {
-        const float scalar[4] = {
-            static_cast<float>(_scalar[0]),
-            static_cast<float>(_scalar[1]),
-            static_cast<float>(_scalar[2]),
-            static_cast<float>(_scalar[3])
-        };
+        GAPI_Assert(src.meta().chan <= 4);
+
+        if (dst.y() == 0)
+        {
+            const int chan = src.meta().chan;
+            float* _scratch = scratch.OutLine<float>();
+
+            scalar_to_scratch(_scalar, _scratch, scratch.length(), chan);
+        }
+
+        const float* scalar = scratch.OutLine<float>();
         const float scale = static_cast<float>(_scale);
 
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  float, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( short,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float, uchar , run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  float, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GScalarDesc&, const GMatDesc&, double, int, Buffer& scratch)
+    {
+        initScratchBuffer(scratch);
+    }
+
+    static void resetScratch(Buffer& /*scratch*/)
+    {
     }
 };
 
