@@ -127,7 +127,9 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useAVX2;
 #endif
 
-    std::vector<Mat> cudaWorkaround;
+    // CUDA needs input blobs to be rearranged in a specific way, but some transformations
+    // in ONNXImporter are destructive, so we keep a copy.
+    std::vector<Mat> originalBlobs;
 
 public:
 
@@ -144,7 +146,8 @@ public:
 
         if (params.get<bool>("is_onnx", false))
         {
-            cudaWorkaround.insert(cudaWorkaround.begin(), blobs.begin(), blobs.begin() + 3);
+            // collect copies of onnx blobs
+            originalBlobs.insert(originalBlobs.begin(), blobs.begin(), blobs.begin() + 3);
             blobs.erase(blobs.begin(), blobs.begin() + 3);
         }
 
@@ -281,7 +284,8 @@ public:
         outputs.assign(1, outResShape);
         if (produceCellOutput)
         {
-            if (!cudaWorkaround.empty())
+            // the producer is ONNX, so CellState is different
+            if (!originalBlobs.empty())
             {
                 int shp[] = {(1 + static_cast<int>(bidirectional)), _numSamples, numHidden};
                 MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
@@ -357,7 +361,7 @@ public:
         internals_arr.getMatVector(internals);
 
         Mat cOut = produceCellOutput ? output[0].clone() : Mat();
-        const bool needYcTransform = !cudaWorkaround.empty(); // if the producer is onnx
+        const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
         const int numDirs = 1 + static_cast<int>(bidirectional);
         for (int i = 0; i < numDirs; ++i)
         {
@@ -366,7 +370,7 @@ public:
             Mat bias = blobs[2];
             Mat h_0 = blobs[3];
             Mat c_0 = blobs[4];
-            Mat pi, pf, po;
+            Mat pI, pF, pO;
 
             Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
             Wx = Wx.rowRange(i * Wx.rows / numDirs, (i + 1) * Wx.rows / numDirs);
@@ -376,18 +380,18 @@ public:
 
             if (usePeephole)
             {
-                pi = blobs[5];
-                pf = blobs[6];
-                po = blobs[7];
+                pI = blobs[5];
+                pF = blobs[6];
+                pO = blobs[7];
 
-                pi = pi.rowRange(i * pi.rows / numDirs, (i + 1) * pi.rows / numDirs);
-                pi = pi.colRange(i * pi.cols / numDirs, (i + 1) * pi.cols / numDirs);
+                pI = pI.rowRange(i * pI.rows / numDirs, (i + 1) * pI.rows / numDirs);
+                pI = pI.colRange(i * pI.cols / numDirs, (i + 1) * pI.cols / numDirs);
 
-                pf = pf.rowRange(i * pf.rows / numDirs, (i + 1) * pf.rows / numDirs);
-                pf = pf.colRange(i * pf.cols / numDirs, (i + 1) * pf.cols / numDirs);
+                pF = pF.rowRange(i * pF.rows / numDirs, (i + 1) * pF.rows / numDirs);
+                pF = pF.colRange(i * pF.cols / numDirs, (i + 1) * pF.cols / numDirs);
 
-                po = po.rowRange(i * po.rows / numDirs, (i + 1) * po.rows / numDirs);
-                po = po.colRange(i * po.cols / numDirs, (i + 1) * po.cols / numDirs);
+                pO = pO.rowRange(i * pO.rows / numDirs, (i + 1) * pO.rows / numDirs);
+                pO = pO.colRange(i * pO.cols / numDirs, (i + 1) * pO.cols / numDirs);
             }
 
             int numOut = Wh.size[1];
@@ -522,8 +526,8 @@ public:
                 if (usePeephole)
                 {
                     Mat gatesIF = gates.colRange(0, 2*numOut);
-                    gemm(cInternal, pi, 1, gateI, 1, gateI);
-                    gemm(cInternal, pf, 1, gateF, 1, gateF);
+                    gemm(cInternal, pI, 1, gateI, 1, gateI);
+                    gemm(cInternal, pF, 1, gateF, 1, gateF);
                     f_activation(gatesIF, gatesIF);
                 }
                 else
@@ -546,7 +550,7 @@ public:
                 }
                 if (usePeephole)
                 {
-                    gemm(cInternal, po, 1, gateO, 1, gateO);
+                    gemm(cInternal, pO, 1, gateO, 1, gateO);
                     f_activation(gateO, gateO);
                 }
 
@@ -586,11 +590,11 @@ public:
         size_t sj = newCellState.size[3];
         size_t sk = newCellState.size[2] * sj;
         size_t si = newCellState.size[1] * sk;
-        for (size_t i = 0; i < newCellState.size[0]; ++i)
+        for (size_t i = 0; i < newCellState.size[0]; i++)
         {
-            for (size_t j = 0; j < newCellState.size[2]; ++j)
+            for (size_t j = 0; j < newCellState.size[2]; j++)
             {
-                for (size_t k = 0; k < newCellState.size[1]; ++k)
+                for (size_t k = 0; k < newCellState.size[1]; k++)
                 {
                     std::memcpy(dst, src, sizeof(float) * newCellState.size[3]);
                     src += cOut.size[3];
@@ -625,7 +629,6 @@ public:
             int shp[] = {1, part1.size[2] * part1.size[3]};
             part1 = part1.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
             part2 = part2.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
 
             vconcat(part1, part2, cOut);
 

@@ -65,14 +65,14 @@ class ONNXImporter
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
     void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
-    void extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int blobShape[], int size);
-    void add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
-    std::string add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
-    std::string fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
-                         int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
-                         const int index);
-    void add_transform(int num_directions, int batch_size, int hidden_size,
-                                     int index, const std::string& input_name, const std::string& output_name);
+    void lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size);
+    void lstm_add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
+    std::string lstm_add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
+    std::string lstm_fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
+                              int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
+                              const int index);
+    void lstm_add_transform(int num_directions, int batch_size, int hidden_size,
+                            int index, const std::string& input_name, const std::string& output_name);
 public:
 
     ONNXImporter(Net& net, const char *onnxFile)
@@ -1383,7 +1383,7 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
 }
 
-void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int blobShape_[], int size)
+void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size)
 {
         MatShape blobShape(blobShape_, blobShape_ + size);
         Mat blob;
@@ -1399,7 +1399,7 @@ void ONNXImporter::extractConsts(LayerParams& layerParams, const opencv_onnx::No
         layerParams.blobs.push_back(blob);
 };
 
-void ONNXImporter::add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n)
+void ONNXImporter::lstm_add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n)
 {
     LayerParams reshapeLp;
     reshapeLp.name = cv::format("%s/reshape", input_name.c_str());
@@ -1414,7 +1414,7 @@ void ONNXImporter::add_reshape(const std::string& input_name, const std::string&
     addLayer(reshapeLp, reshape_proto);
 };
 
-std::string ONNXImporter::add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n)
+std::string ONNXImporter::lstm_add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n)
 {
     LayerParams sliceLP;
     sliceLP.name = cv::format("%s/slice_%d", input_name.c_str(), index);
@@ -1433,16 +1433,16 @@ std::string ONNXImporter::add_slice(int index, const std::string& input_name, in
     return slice_proto.output(0);
 };
 
-std::string ONNXImporter::fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
-                                   int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
-                                   const int index)
+std::string ONNXImporter::lstm_fix_dims(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto,
+                                        int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
+                                        const int index)
 {
     std::string reshape_output = cv::format("%s/reshape_%d", layerParams.name.c_str(), index);
 
     // reshape from Seq, Batch, Dirs*Hidden to Seq, Batch, Dirs, Hidden
     // to not confuse reshape with dynamic first dimension, zero means 'leave unchanged'
     int layerShape[] = {0, batch_size, num_directions, hidden_size};
-    add_reshape(lstm_proto.output(index), reshape_output, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
+    lstm_add_reshape(lstm_proto.output(index), reshape_output, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
 
     // permute from Seq, Batch, Dirs, Hidden to Seq, Dirs, Batch, Hidden
     LayerParams permuteLP;
@@ -1461,28 +1461,28 @@ std::string ONNXImporter::fix_dims(LayerParams& layerParams, const opencv_onnx::
     return permute_proto.output(0);
 };
 
-void ONNXImporter::add_transform(int num_directions, int batch_size, int hidden_size,
-                                 int index, const std::string& input_name, const std::string& output_name)
+void ONNXImporter::lstm_add_transform(int num_directions, int batch_size, int hidden_size,
+                                      int index, const std::string& input_name, const std::string& output_name)
 {
     if (num_directions == 1)
     {
         // Slice: Yh = Y[-1, :, :, :]
         int begin[] = {-1}, end[] = {INT_MAX};
-        std::string slice_output = add_slice(index, input_name, begin, end, sizeof(begin) / sizeof(begin[0]));
+        std::string slice_output = lstm_add_slice(index, input_name, begin, end, sizeof(begin) / sizeof(begin[0]));
 
         // Reshape: 1x1xBxH -> 1xBxH
         int layerShape[] = {1, batch_size, hidden_size};
-        add_reshape(slice_output, output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
+        lstm_add_reshape(slice_output, output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
     }
     else
     {
         // Slice: SxDxBxH -> last sequence, first direction
         int begin0[] = {-1, 0}, end0[] = {INT_MAX, 1};
-        std::string slice_0 = add_slice(0, input_name, begin0, end0, sizeof(begin0) / sizeof(begin0[0]));
+        std::string slice_0 = lstm_add_slice(0, input_name, begin0, end0, sizeof(begin0) / sizeof(begin0[0]));
 
         // Slice: SxDxBxH -> first sequence, last direction
         int begin1[] = {0, -1}, end1[] = {1, INT_MAX};
-        std::string slice_1 = add_slice(1, input_name, begin1, end1, sizeof(begin1) / sizeof(begin1[0]));
+        std::string slice_1 = lstm_add_slice(1, input_name, begin1, end1, sizeof(begin1) / sizeof(begin1[0]));
 
         LayerParams concatLP;
         concatLP.name = cv::format("%s/concat", input_name.c_str());
@@ -1499,7 +1499,7 @@ void ONNXImporter::add_transform(int num_directions, int batch_size, int hidden_
 
         // Reshape: 1x2xBxH -> 2xBxH
         int layerShape[] = {2, batch_size, hidden_size};
-        add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape)/sizeof(layerShape[0]));
+        lstm_add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
     }
 };
 
@@ -1527,13 +1527,13 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const int num_directions = constBlobs[lstm_proto.input(1)].size[0];
 
     int w_size[] = {num_directions, 4*hidden_size, input_size};
-    extractConsts(layerParams, lstm_proto, 1, w_size, sizeof(w_size)/sizeof(w_size[0])); // W
+    lstm_extractConsts(layerParams, lstm_proto, 1, w_size, sizeof(w_size) / sizeof(w_size[0])); // W
 
     int r_size[] =  {num_directions, 4*hidden_size, hidden_size};
-    extractConsts(layerParams, lstm_proto, 2, r_size, sizeof(r_size)/sizeof(r_size[0])); // R
+    lstm_extractConsts(layerParams, lstm_proto, 2, r_size, sizeof(r_size) / sizeof(r_size[0])); // R
 
     int b_size[] = {num_directions, 8*hidden_size};
-    extractConsts(layerParams, lstm_proto, 3, b_size, sizeof(b_size)/sizeof(b_size[0])); // B
+    lstm_extractConsts(layerParams, lstm_proto, 3, b_size, sizeof(b_size) / sizeof(b_size[0])); // B
 
     if (4 < lstm_proto.input_size() && !lstm_proto.input(4).empty())
     {
@@ -1546,16 +1546,16 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     }
 
     int h_size[] = {num_directions, batch_size, hidden_size};
-    extractConsts(layerParams, lstm_proto, 5, h_size, sizeof(h_size)/sizeof(h_size[0])); // initial_h
+    lstm_extractConsts(layerParams, lstm_proto, 5, h_size, sizeof(h_size) / sizeof(h_size[0])); // initial_h
 
     int c_size[] = {num_directions, batch_size, hidden_size};
-    extractConsts(layerParams, lstm_proto, 6, c_size, sizeof(c_size)/sizeof(c_size[0])); // initial_c
+    lstm_extractConsts(layerParams, lstm_proto, 6, c_size, sizeof(c_size) / sizeof(c_size[0])); // initial_c
 
     if (lstm_proto.input_size() > 7 && !lstm_proto.input(7).empty())
     {
         layerParams.set("use_peephole", true);
         int p_size[] = {num_directions, 3 * hidden_size};
-        extractConsts(layerParams, lstm_proto, 7, p_size, sizeof(p_size)/sizeof(p_size[0])); // P
+        lstm_extractConsts(layerParams, lstm_proto, 7, p_size, sizeof(p_size) / sizeof(p_size[0])); // P
     }
 
     transformBlobs(layerParams.blobs);
@@ -1587,10 +1587,11 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     addLayer(layerParams, lstm_proto);
 
-    std::string y_output = fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y, y_name, 0);
+    std::string y_output = lstm_fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y,
+                                         y_name, 0);
     if (need_yh)
     {
-        add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
+        lstm_add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
     }
 }
 
