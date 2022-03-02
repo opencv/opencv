@@ -393,6 +393,8 @@ public:
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
 
+    std::exception_ptr eptr;
+
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
@@ -654,7 +656,7 @@ std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInfe
 class cv::gimpl::ie::RequestPool {
 public:
     using RunF      = std::function<void(InferenceEngine::InferRequest&)>;
-    using CallbackF = std::function<void(InferenceEngine::InferRequest&)>;
+    using CallbackF = std::function<void(InferenceEngine::InferRequest&, InferenceEngine::StatusCode)>;
 
     // NB: The task is represented by:
     // RunF      - function which is set blobs and run async inference.
@@ -673,7 +675,7 @@ private:
     void callback(Task task,
                   size_t id,
                   IE::InferRequest request,
-                  IE::StatusCode code);
+                  IE::StatusCode code) noexcept;
     void setup();
 
     QueueClass<size_t>                         m_idle_ids;
@@ -716,26 +718,10 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           size_t id,
                                           IE::InferRequest request,
-                                          IE::StatusCode code) {
-    // FIXME: Any exception which is arrised here must not leave this callback,
-    // because it won't be handled.
-    try {
-        if (code != IE::StatusCode::OK) {
-            throw std::logic_error("IE::InferRequest finished with not OK status");
-        }
-        task.callback(request);
-        // NB: IE::InferRequest keeps the callback until the new one is set.
-        // Since user's callback might keep resources that should be released,
-        // need to destroy its after execution.
-        // Let's set the empty one to cause the destruction of a callback.
-        request.SetCompletionCallback([](){});
-        m_idle_ids.push(id);
-    } catch (const std::exception& e) {
-        GAPI_LOG_FATAL(NULL, "Callback failed with error: " << e.what());
-        //FIXME: Exception CAN't be rethrown here, since this callback works
-        // in separate IE thread and such scenarios aren't handled properly in
-        // G-API so far.
-    }
+                                          IE::StatusCode code) noexcept {
+    task.callback(request, code);
+    request.SetCompletionCallback([](){});
+    m_idle_ids.push(id);
 }
 
 // NB: Not thread-safe.
@@ -966,10 +952,16 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
 
 // NB: This is a callback used by async infer
 // to post outputs blobs (cv::GMat's).
-static void PostOutputs(InferenceEngine::InferRequest   &request,
-                        std::shared_ptr<IECallContext>   ctx) {
+static void PostOutputs(InferenceEngine::InferRequest &request,
+                        InferenceEngine::StatusCode    code,
+                        std::shared_ptr<IECallContext> ctx) {
     GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
     GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
+
+    if (code != IE::StatusCode::OK) {
+        ctx->eptr = std::make_exception_ptr(
+               std::logic_error("IE::InferRequest finished with not OK status"));
+    }
 
     for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
@@ -978,7 +970,7 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
         ctx->out.meta(output, ctx->input(0).meta);
-        ctx->out.post(std::move(output));
+        ctx->out.post(std::move(output), ctx->eptr);
     }
 }
 
@@ -988,7 +980,9 @@ public:
                     std::shared_ptr<IECallContext> ctx,
                     std::vector<std::vector<int>>&& cached_dims);
 
-    void operator()(InferenceEngine::InferRequest &request, size_t pos) const;
+    void operator()(InferenceEngine::InferRequest &request,
+                    InferenceEngine::StatusCode    code,
+                    size_t                         pos) const;
 
 private:
     struct Priv {
@@ -1009,20 +1003,30 @@ PostOutputsList::PostOutputsList(size_t size,
     m_priv->cached_dims = std::move(cached_dims);
 }
 
-void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos) const {
+void PostOutputsList::operator()(InferenceEngine::InferRequest &req,
+                                 InferenceEngine::StatusCode    code,
+                                 size_t                         pos) const {
     auto&& ctx         = m_priv->ctx;
     auto&& cached_dims = m_priv->cached_dims;
     auto&& finished    = m_priv->finished;
     auto&& size        = m_priv->size;
-    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-        std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
-        IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
-        GAPI_Assert(out_blob);
+    if (code != IE::StatusCode::OK) {
+        ctx->eptr = std::make_exception_ptr(
+               std::logic_error("IE::InferRequest finished with not OK status"));
+    }
 
-        // FIXME: Avoid data copy. Not sure if it is possible though
-        out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-        copyFromIE(out_blob, out_vec[pos]);
+    if (!ctx->eptr) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+            IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+            GAPI_Assert(out_blob);
+
+            // FIXME: Avoid data copy. Not sure if it is possible though
+            out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+            copyFromIE(out_blob, out_vec[pos]);
+        }
     }
     ++finished;
 
@@ -1030,7 +1034,7 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos)
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             auto output = ctx->output(i);
             ctx->out.meta(output, ctx->input(0).meta);
-            ctx->out.post(std::move(output));
+            ctx->out.post(std::move(output), ctx->eptr);
         }
     }
 }
@@ -1145,7 +1149,7 @@ struct Infer: public cv::detail::KernelTag {
                         // What about to do that in RequestPool ?
                         req.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, ctx)
+                    std::bind(PostOutputs, _1, _2, ctx)
                 }
         );
     }
@@ -1240,7 +1244,7 @@ struct InferROI: public cv::detail::KernelTag {
                         // What about to do that in RequestPool ?
                         req.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, ctx)
+                    std::bind(PostOutputs, _1, _2, ctx)
                 }
         );
     }
@@ -1357,7 +1361,7 @@ struct InferList: public cv::detail::KernelTag {
                         setBlob(req, ctx->uu.params.input_names[0u], roi_blob, *ctx);
                         req.StartAsync();
                     },
-                    std::bind(callback, std::placeholders::_1, pos)
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
                 }
             );
         }
@@ -1527,7 +1531,7 @@ struct InferList2: public cv::detail::KernelTag {
                         }
                         req.StartAsync();
                     },
-                    std::bind(callback, std::placeholders::_1, list_idx)
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, list_idx)
                 } // task
             );
         } // for
