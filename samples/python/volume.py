@@ -44,15 +44,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--algo',
-        help="""TSDF      - reconstruct data in volume with bounders,
-                HashTSDF  - reconstruct data in volume without bounders (infinit volume),
-                ColorTSDF - like TSDF and reconstruct colors too,
-                defalt - runs TSDF""",
+        help="""TSDF      - reconstruct data in volume with bounds,
+                HashTSDF  - reconstruct data in volume without bounds (infinite volume),
+                ColorTSDF - like TSDF but also keeps color data,
+                default - runs TSDF""",
         default="")
     parser.add_argument(
         '-src',
         '--source_folder',
         default="")
+    # Use source data from this site:
+    # https://vision.in.tum.de/data/datasets/rgbd-dataset/download
 
     args = parser.parse_args()
 
