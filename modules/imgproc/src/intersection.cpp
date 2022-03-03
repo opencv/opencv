@@ -58,7 +58,6 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     rect2.points(pts2);
 
     // L2 metric
-    //we adapt the epsilon to the smallest dimension of the rects
     float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
 
     int ret = INTERSECT_FULL;
@@ -100,6 +99,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         vec2[i].y = pts2[(i+1)%4].y - pts2[i].y;
     }
 
+    //we adapt the epsilon to the smallest dimension of the rects
     for( int i = 0; i < 4; i++ )
     {
         samePointEps = std::min(samePointEps, std::sqrt(vec1[i].x*vec1[i].x+vec1[i].y*vec1[i].y));
