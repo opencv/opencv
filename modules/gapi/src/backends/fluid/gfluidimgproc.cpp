@@ -2118,6 +2118,7 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     LinearScratchDesc<float, Mapper, 1> scr(inSz.width, inSz.height, outSz.width,
                                             outSz.height, scratch.OutLineB());
 
+
     const auto* alpha = scr.alpha;
     const auto* mapsx = scr.mapsx;
     const auto* beta0 = scr.beta;
@@ -2132,6 +2133,7 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     {
         auto index0 = mapsy[outY + l] - inY;
         auto index1 = mapsy[outSz.height + outY + l] - inY;
+
         src0[l] = in.InLine<const float>(index0);
         src1[l] = in.InLine<const float>(index1);
         dst[l] = out.OutLine<float>(l);
@@ -2150,6 +2152,7 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
             auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
             auto sx0 = mapsx[x];
             auto sx1 = sx0 + 1;
+
             float tmp0 = resize_main_calculation(b0, src0[l][sx0], b1, src1[l][sx0]);
             float tmp1 = resize_main_calculation(b0, src0[l][sx1], b1, src1[l][sx1]);
             dst[l][x] = resize_main_calculation(alpha0, tmp0, alpha1, tmp1);
@@ -2174,6 +2177,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        GAPI_Assert((in.depth == CV_8U && in.chan == 3) ||
                    (in.depth == CV_32F && in.chan == 1));
        GAPI_Assert(interp == cv::INTER_LINEAR);
+
        int outSz_w;
        int outSz_h;
        if (outSz.width == 0 || outSz.height == 0)
@@ -2212,6 +2216,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
         GAPI_Assert((in.meta().depth == CV_8U && in.meta().chan == 3) ||
                     (in.meta().depth == CV_32F && in.meta().chan == 1));
         GAPI_Assert(interp == cv::INTER_LINEAR);
+
         const int channels = in.meta().chan;
         const int depth = in.meta().depth;
 

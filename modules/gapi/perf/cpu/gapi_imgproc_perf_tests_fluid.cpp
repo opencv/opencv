@@ -200,7 +200,7 @@ INSTANTIATE_TEST_CASE_P(RGB2LabPerfTestFluid, RGB2LabPerfTest,
             Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestFluid, ResizePerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-2, 1).to_compare_f()),
             Values(CV_8UC3, CV_32FC1),
             Values(cv::INTER_LINEAR),
             Values(szSmall128, szVGA, sz720p, sz1080p),
@@ -216,15 +216,15 @@ INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsConstIn
             Values(cv::compile_args(IMGPROC_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
-            Values(CV_8UC3, CV_32FC1),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-2, 1).to_compare_f()),
+            Values(CV_8UC3),
             Values(szSmall128, szVGA, sz720p, sz1080p),
             Values(0.5),
             Values(0.5),
             Values(cv::compile_args(cv::gapi::combine(IMGPROC_FLUID, CORE_FLUID)))));
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-2, 1).to_compare_f()),
             Values(CV_8UC3, CV_32FC1),
             Values(cv::INTER_LINEAR),
             Values(szSmall128, szVGA, sz720p, sz1080p),
