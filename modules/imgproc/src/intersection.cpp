@@ -134,9 +134,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
             float det = vx2*vy1 - vx1*vy2;
 
-            //avoid dividing by det too early to keep accuracy
-            float t1 = (vx2*y21 - vy2*x21);
-            float t2 = (vx1*y21 - vy1*x21);
+            float t1 = (vx2*y21 - vy2*x21)*numericalScalingFactor/det;
+            float t2 = (vx1*y21 - vy1*x21)*numericalScalingFactor/det;
 
             // This takes care of parallel lines
             if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
@@ -144,10 +143,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
                 continue;
             }
 
-            if( t1 >= 0.0f && t1 <= det && t2 >= 0.0f && t2 <= det )
+            if( t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f )
             {
-                float xi = pts1[i].x + vec1[i].x*t1/det;
-                float yi = pts1[i].y + vec1[i].y*t1/det;
+                float xi = pts1[i].x + vec1[i].x*t1;
+                float yi = pts1[i].y + vec1[i].y*t1;
 
                 intersection.push_back(Point2f(xi,yi));
             }
