@@ -2118,7 +2118,6 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     LinearScratchDesc<float, Mapper, 1> scr(inSz.width, inSz.height, outSz.width,
                                             outSz.height, scratch.OutLineB());
 
-
     const auto* alpha = scr.alpha;
     const auto* mapsx = scr.mapsx;
     const auto* beta0 = scr.beta;

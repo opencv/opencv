@@ -497,9 +497,7 @@ namespace imgproc {
     };
 
     G_TYPED_KERNEL(GResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.imgproc.transform.resize") {
-        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int interp) {
-            GAPI_Assert((in.depth == CV_8U && in.chan == 3) || (in.depth == CV_32F && in.chan == 1));
-            GAPI_Assert(interp == cv::INTER_LINEAR);
+        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int /*interp*/) {
             if (sz.width != 0 && sz.height != 0)
             {
                 return in.withSize(sz);
@@ -509,7 +507,7 @@ namespace imgproc {
                 int outSz_w = saturate_cast<int>(in.size.width  * fx);
                 int outSz_h = saturate_cast<int>(in.size.height * fy);
                 GAPI_Assert(outSz_w > 0 && outSz_h > 0);
-                return in.withType(in.depth, in.chan).withSize(Size(outSz_w, outSz_h));
+                return in.withSize(Size(outSz_w, outSz_h));
             }
         }
     };
