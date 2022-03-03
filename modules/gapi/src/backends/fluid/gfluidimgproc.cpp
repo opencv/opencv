@@ -1866,10 +1866,11 @@ static inline double ratio(int inSz, int outSz) {
 }
 
 template<typename T, typename Mapper, int chanNum = 1>
-static inline void initScratchLinear(const cv::GMatDesc& in,
-                                     const         Size& outSz,
-                                     cv::gapi::fluid::Buffer& scratch,
-                                     int  lpi) {
+CV_ALWAYS_INLINE void initScratchLinear(const cv::GMatDesc& in,
+                                        const         Size& outSz,
+                                        cv::gapi::fluid::Buffer& scratch,
+                                        int  lpi)
+{
     using alpha_type = typename Mapper::alpha_type;
     static const auto unity = Mapper::unity;
 
@@ -1895,7 +1896,8 @@ static inline void initScratchLinear(const cv::GMatDesc& in,
     auto *clone = scr.clone;
     auto *index = scr.mapsx;
 
-    for (int x = 0; x < outSz.width; x++) {
+    for (int x = 0; x < outSz.width; ++x)
+    {
         auto map = Mapper::map(hRatio, 0, in.size.width, x);
         auto alpha0 = map.alpha0;
         auto index0 = map.index0;
@@ -1930,7 +1932,7 @@ static inline void initScratchLinear(const cv::GMatDesc& in,
         alpha[x] = alpha0;
         index[x] = index0;
 
-        for (int l = 0; l < 4; l++) {
+        for (int l = 0; l < 4; ++l) {
             clone[4*x + l] = alpha0;
         }
     }
@@ -1982,9 +1984,9 @@ struct Mapper {
 };
 
 template<typename T, class Mapper, int numChan>
-static void calcRowLinearC(const cv::gapi::fluid::View  & in,
-                           cv::gapi::fluid::Buffer& out,
-                           cv::gapi::fluid::Buffer& scratch) {
+CV_ALWAYS_INLINE void calcRowLinearC(const cv::gapi::fluid::View  & in,
+                                     cv::gapi::fluid::Buffer& out,
+                                     cv::gapi::fluid::Buffer& scratch) {
     using alpha_type = typename Mapper::alpha_type;
 
     auto  inSz =  in.meta().size;
@@ -2060,6 +2062,66 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
     }
 }
 
+template<typename T, class Mapper>
+CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
+                                    cv::gapi::fluid::Buffer& out,
+                                    cv::gapi::fluid::Buffer& scratch)
+{
+    GAPI_DbgAssert((out.meta().depth == CV_32F) && (out.meta().chan == 1));
+
+    auto  inSz = in.meta().size;
+    auto outSz = out.meta().size;
+
+    auto inY = in.y();
+    int length = out.length();
+    int outY = out.y();
+    int lpi = out.lpi();
+    GAPI_DbgAssert(outY + lpi <= outSz.height);
+
+    GAPI_DbgAssert(lpi <= 4);
+
+    LinearScratchDesc<T, Mapper, 1> scr(inSz.width, inSz.height, outSz.width,
+                                        outSz.height, scratch.OutLineB());
+
+    const auto* alpha = scr.alpha;
+    const auto* mapsx = scr.mapsx;
+    const auto* beta0 = scr.beta;
+    const auto* mapsy = scr.mapsy;
+
+    const auto* beta = beta0 + outY;
+    const T* src0[4];
+    const T* src1[4];
+    T* dst[4];
+
+    for (int l = 0; l < lpi; ++l)
+    {
+        auto index0 = mapsy[outY + l] - inY;
+        auto index1 = mapsy[outSz.height + outY + l] - inY;
+        src0[l] = in.InLine<const T>(index0);
+        src1[l] = in.InLine<const T>(index1);
+        dst[l] = out.OutLine<T>(l);
+    }
+
+    using alpha_type = typename Mapper::alpha_type;
+    for (int l = 0; l < lpi; ++l)
+    {
+        constexpr static const auto unity = Mapper::unity;
+
+        auto b0 = beta[l];
+        auto b1 = saturate_cast<alpha_type>(unity - beta[l]);
+
+        for (int x = 0; x < length; ++x) {
+            auto alpha0 = alpha[x];
+            auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
+            auto sx0 = mapsx[x];
+            auto sx1 = sx0 + 1;
+            T tmp0 = calc(b0, src0[l][sx0], b1, src1[l][sx0]);
+            T tmp1 = calc(b0, src0[l][sx1], b1, src1[l][sx1]);
+            dst[l][x] = calc(alpha0, tmp0, alpha1, tmp1);
+        }
+    }
+}
+
 GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
 {
     static const int Window = 1;
@@ -2073,7 +2135,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
    static void initScratch(const cv::GMatDesc& in,
                            cv::Size outSz, double fx, double fy, int /*interp*/,
                            cv::gapi::fluid::Buffer &scratch)
-    {
+   {
        int outSz_w;
        int outSz_h;
        if (outSz.width == 0 || outSz.height == 0)
@@ -2096,24 +2158,37 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        {
            initScratchLinear<uchar, Mapper, 4>(in, outSize, scratch, LPI);
        }
-    }
+       else if (in.chan == 1)
+       {
+           initScratchLinear<float, Mapper, 1>(in, outSize, scratch, LPI);
+       }
+   }
 
     static void resetScratch(cv::gapi::fluid::Buffer& /*scratch*/)
     {}
 
-    static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/, double /*fy*/, int interp,
-                    cv::gapi::fluid::Buffer& out,
-                    cv::gapi::fluid::Buffer& scratch) {
+    static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/,
+                    double /*fy*/, int /*interp*/, cv::gapi::fluid::Buffer& out,
+                    cv::gapi::fluid::Buffer& scratch)
+    {
         const int channels = in.meta().chan;
-        GAPI_Assert((channels == 3 || channels == 4) && (interp == cv::INTER_LINEAR));
+        const int depth = in.meta().depth;
 
-        if (channels == 3)
+        if (depth == CV_8U && channels == 3)
         {
             calcRowLinearC<uint8_t, Mapper, 3>(in, out, scratch);
         }
-        else if (channels == 4)
+        else if (depth == CV_8U && channels == 4)
         {
             calcRowLinearC<uint8_t, Mapper, 4>(in, out, scratch);
+        }
+        else if (depth == CV_32F && channels == 1)
+        {
+            calcRowLinear<float, Mapper>(in, out, scratch);
+        }
+        else
+        {
+            CV_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
         }
     }
 };
