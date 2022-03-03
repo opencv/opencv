@@ -2116,7 +2116,7 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     GAPI_DbgAssert(lpi <= 4);
 
     LinearScratchDesc<float, Mapper, 1> scr(inSz.width, inSz.height, outSz.width,
-                                        outSz.height, scratch.OutLineB());
+                                            outSz.height, scratch.OutLineB());
 
     const auto* alpha = scr.alpha;
     const auto* mapsx = scr.mapsx;
@@ -2136,6 +2136,26 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
         src1[l] = in.InLine<const float>(index1);
         dst[l] = out.OutLine<float>(l);
     }
+
+#if CV_SIMD
+    const auto* clone = scr.clone;
+    auto* tmp = scr.tmp;
+
+    if (inSz.width >= 16 && outSz.width >= 16)
+    {
+        simd_resize<numChan>(reinterpret_cast<uint8_t**>(dst),
+                             reinterpret_cast<const uint8_t**>(src0),
+                             reinterpret_cast<const uint8_t**>(src1),
+                             reinterpret_cast<const short*>(alpha),
+                             reinterpret_cast<const short*>(clone),
+                             reinterpret_cast<const short*>(mapsx),
+                             reinterpret_cast<const short*>(beta),
+                             reinterpret_cast<uint8_t*>(tmp),
+                             inSz, outSz, lpi);
+
+        return;
+    }
+#endif // CV_SIMD
 
     using alpha_type = typename Mapper::alpha_type;
     for (int l = 0; l < lpi; ++l)
