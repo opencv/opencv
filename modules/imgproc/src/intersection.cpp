@@ -121,7 +121,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
-            float numericalScalingFactor = std::min({std::abs(vx1), std::abs(vy1), std::abs(vx2), std::abs(vy2)});
+            float numericalScalingFactor = std::min(std::abs(vx1*vx1+vy1*vy1), std::abs(vx2*vx2+vy2*vy2));
             numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/(numericalScalingFactor);
             if (std::isinf(numericalScalingFactor))
                 numericalScalingFactor = 1.f;
@@ -172,7 +172,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         for( int j = 0; j < 4; j++ )
         {
-            float numericalScalingFactor = std::min(std::abs(vec2[j].x), std::abs(vec2[j].y));
+            float numericalScalingFactor = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
             numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
             if (std::isinf(numericalScalingFactor))
                 numericalScalingFactor = 1.f;
@@ -216,7 +216,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float numericalScalingFactor = std::min(std::abs(vec2[j].x), std::abs(vec2[j].y));
+            float numericalScalingFactor = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
             numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
             if (std::isinf(numericalScalingFactor))
                 numericalScalingFactor = 1.f;
