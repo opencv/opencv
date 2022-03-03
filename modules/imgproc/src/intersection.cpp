@@ -51,14 +51,21 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 {
     CV_INSTRUMENT_REGION();
 
-    // L2 metric
-    const float samePointEps = std::max(1e-16f, 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area()));
-
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];
 
     rect1.points(pts1);
     rect2.points(pts2);
+
+    // L2 metric
+    //we adapt the epsilon to the smallest dimension of the rects
+    float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
+    for( int i = 0; i < 4; i++ )
+    {
+        samePointEps = std::min(samePointEps, std::max(std::abs(pts1[(i+1)%4].x-pts1[(i)%4].x), std::abs(pts1[(i+1)%4].y-pts1[(i)%4].y)));
+        samePointEps = std::min(samePointEps, std::max(std::abs(pts2[(i+1)%4].x-pts2[(i)%4].x), std::abs(pts2[(i+1)%4].y-pts2[(i)%4].y)));
+    }
+    samePointEps = std::max(1e-16f, samePointEps);
 
     int ret = INTERSECT_FULL;
 
@@ -114,10 +121,21 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
+            float numericalScalingFactor = std::min({std::abs(vx1), std::abs(vy1), std::abs(vx2), std::abs(vy2)});
+            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/(numericalScalingFactor);
+            if (std::isinf(numericalScalingFactor))
+                numericalScalingFactor = 1.f;
+
+            vx1 *= numericalScalingFactor;
+            vy1 *= numericalScalingFactor;
+            vx2 *= numericalScalingFactor;
+            vy2 *= numericalScalingFactor;
+
             float det = vx2*vy1 - vx1*vy2;
 
-            float t1 = (vx2*y21 - vy2*x21) / det;
-            float t2 = (vx1*y21 - vy1*x21) / det;
+            //avoid dividing by det too early to keep accuracy
+            float t1 = (vx2*y21 - vy2*x21);
+            float t2 = (vx1*y21 - vy1*x21);
 
             // This takes care of parallel lines
             if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
@@ -125,10 +143,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
                 continue;
             }
 
-            if( t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f )
+            if( t1 >= 0.0f && t1 <= det && t2 >= 0.0f && t2 <= det )
             {
-                float xi = pts1[i].x + vec1[i].x*t1;
-                float yi = pts1[i].y + vec1[i].y*t1;
+                float xi = pts1[i].x + vec1[i].x*t1/det;
+                float yi = pts1[i].y + vec1[i].y*t1/det;
 
                 intersection.push_back(Point2f(xi,yi));
             }
@@ -154,13 +172,17 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         for( int j = 0; j < 4; j++ )
         {
+            float numericalScalingFactor = std::min(std::abs(vec2[j].x), std::abs(vec2[j].y));
+            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
+            if (std::isinf(numericalScalingFactor))
+                numericalScalingFactor = 1.f;
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float A = -vec2[j].y;
-            float B = vec2[j].x;
+            float A = -vec2[j].y*numericalScalingFactor;
+            float B = vec2[j].x*numericalScalingFactor;
             float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            float s = A*x+ B*y+ C;
+            float s = A*x + B*y + C;
 
             if( s >= 0 )
             {
@@ -194,8 +216,12 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float A = -vec1[j].y;
-            float B = vec1[j].x;
+            float numericalScalingFactor = std::min(std::abs(vec2[j].x), std::abs(vec2[j].y));
+            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
+            if (std::isinf(numericalScalingFactor))
+                numericalScalingFactor = 1.f;
+            float A = -vec1[j].y*numericalScalingFactor;
+            float B = vec1[j].x*numericalScalingFactor;
             float C = -(A*pts1[j].x + B*pts1[j].y);
 
             float s = A*x + B*y + C;
