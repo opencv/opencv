@@ -60,12 +60,6 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     // L2 metric
     //we adapt the epsilon to the smallest dimension of the rects
     float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
-    for( int i = 0; i < 4; i++ )
-    {
-        samePointEps = std::min(samePointEps, std::max(std::abs(pts1[(i+1)%4].x-pts1[(i)%4].x), std::abs(pts1[(i+1)%4].y-pts1[(i)%4].y)));
-        samePointEps = std::min(samePointEps, std::max(std::abs(pts2[(i+1)%4].x-pts2[(i)%4].x), std::abs(pts2[(i+1)%4].y-pts2[(i)%4].y)));
-    }
-    samePointEps = std::max(1e-16f, samePointEps);
 
     int ret = INTERSECT_FULL;
 
@@ -105,6 +99,13 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         vec2[i].x = pts2[(i+1)%4].x - pts2[i].x;
         vec2[i].y = pts2[(i+1)%4].y - pts2[i].y;
     }
+
+    for( int i = 0; i < 4; i++ )
+    {
+        samePointEps = std::min(samePointEps, std::sqrt(vec1[i].x*vec1[i].x+vec1[i].y*vec1[i].y));
+        samePointEps = std::min(samePointEps, std::sqrt(vec2[i].x*vec2[i].x+vec2[i].y*vec2[i].y));
+    }
+    samePointEps = std::max(1e-16f, samePointEps);
 
     // Line test - test all line combos for intersection
     for( int i = 0; i < 4; i++ )
