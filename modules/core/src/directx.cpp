@@ -1385,6 +1385,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     OpenCL_D3D11_NV* impl_nv = ctx.getUserContext<OpenCL_D3D11_NV>().get();
     if (impl_nv) {
         __convertFromD3D11Texture2DNV(pD3D11Texture2D,dst);
+        return;
     }
 #endif
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
