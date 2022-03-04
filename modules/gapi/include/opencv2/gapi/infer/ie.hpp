@@ -84,6 +84,9 @@ struct ParamDesc {
     // have 2D (Layout::NC) input and if the first dimension not equal to 1
     // net.setBatchSize(1) will overwrite it.
     cv::optional<size_t> batch_size;
+
+    cv::optional<void *> device_ptr;
+    cv::optional<void *> context_ptr;
 };
 } // namespace detail
 
@@ -126,6 +129,8 @@ public:
               , {}
               , 1u
               , {}
+              , {}
+              , {}
               , {}} {
     };
 
@@ -147,6 +152,8 @@ public:
               , {}
               , {}
               , 1u
+              , {}
+              , {}
               , {}
               , {}} {
     };
@@ -333,6 +340,12 @@ public:
     */
     Params<Net>& cfgBatchSize(const size_t size) {
         desc.batch_size = cv::util::make_optional(size);
+        return *this;
+    }
+
+    Params<Net>& cfgPreprocessingDeviceContext(void *device_ptr, void *context_ptr) {
+        desc.device_ptr = cv::util::make_optional(device_ptr);
+        desc.context_ptr = cv::util::make_optional(context_ptr);
         return *this;
     }
 
