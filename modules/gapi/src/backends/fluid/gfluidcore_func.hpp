@@ -222,6 +222,28 @@ int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
 int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width);
 
+#define ADD_SIMD(SRC, DST)                                                     \
+int add_simd(const SRC in1[], const SRC in2[], DST out[], const int length);
+
+ADD_SIMD(uchar, uchar)
+ADD_SIMD(ushort, uchar)
+ADD_SIMD(short, uchar)
+ADD_SIMD(float, uchar)
+ADD_SIMD(short, short)
+ADD_SIMD(ushort, short)
+ADD_SIMD(uchar, short)
+ADD_SIMD(float, short)
+ADD_SIMD(ushort, ushort)
+ADD_SIMD(uchar, ushort)
+ADD_SIMD(short, ushort)
+ADD_SIMD(float, ushort)
+ADD_SIMD(uchar, float)
+ADD_SIMD(ushort, float)
+ADD_SIMD(short, float)
+ADD_SIMD(float, float)
+
+#undef ADD_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv

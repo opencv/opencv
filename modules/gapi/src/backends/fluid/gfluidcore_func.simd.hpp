@@ -231,6 +231,28 @@ DIVRC_SIMD(float, float)
 
 #undef DIVRC_SIMD
 
+#define ADD_SIMD(SRC, DST)                                                      \
+int add_simd(const SRC in1[], const SRC in2[], DST out[], const int length);
+
+ADD_SIMD(uchar, uchar)
+ADD_SIMD(ushort, uchar)
+ADD_SIMD(short, uchar)
+ADD_SIMD(float, uchar)
+ADD_SIMD(short, short)
+ADD_SIMD(ushort, short)
+ADD_SIMD(uchar, short)
+ADD_SIMD(float, short)
+ADD_SIMD(ushort, ushort)
+ADD_SIMD(uchar, ushort)
+ADD_SIMD(short, ushort)
+ADD_SIMD(float, ushort)
+ADD_SIMD(uchar, float)
+ADD_SIMD(ushort, float)
+ADD_SIMD(short, float)
+ADD_SIMD(float, float)
+
+#undef ADD_SIMD
+
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width);
 
@@ -2502,6 +2524,178 @@ int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
     }
     return x;
 }
+
+//-------------------------
+//
+// Fluid kernels: Add
+//
+//-------------------------
+
+CV_ALWAYS_INLINE void add_uchar_store(uchar* outx, const v_uint16& c1, const v_uint16& c2)
+{
+    vx_store(outx, v_pack(c1, c2));
+}
+
+CV_ALWAYS_INLINE void add_uchar_store(uchar* outx, const v_int16& c1, const v_int16& c2)
+{
+    vx_store(outx, v_pack_u(c1, c2));
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<SRC, DST>::value, void>::type
+add_simd_impl(const SRC* in1x, const SRC* in2x, DST* outx)
+{
+    vector_type_of_t<SRC> a = vx_load(in1x);
+    vector_type_of_t<SRC> b = vx_load(in2x);
+    vx_store(outx, a + b);
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<SRC, short>::value ||
+                        std::is_same<SRC, ushort>::value, void>::type
+add_simd_impl(const SRC* in1x, const SRC* in2x, uchar* outx)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    vector_type_of_t<SRC> a1 = vx_load(in1x);
+    vector_type_of_t<SRC> a2 = vx_load(&in1x[nlanes / 2]);
+    vector_type_of_t<SRC> b1 = vx_load(in2x);
+    vector_type_of_t<SRC> b2 = vx_load(&in2x[nlanes / 2]);
+
+    add_uchar_store(outx, a1 + b1, a2 + b2);
+}
+
+CV_ALWAYS_INLINE void add_simd_impl(const float* in1x, const float* in2x, uchar* outx)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    v_float32 a1 = vx_load(in1x);
+    v_float32 a2 = vx_load(&in1x[nlanes / 4]);
+    v_float32 a3 = vx_load(&in1x[2 * nlanes / 4]);
+    v_float32 a4 = vx_load(&in1x[3 * nlanes / 4]);
+
+    v_float32 b1 = vx_load(in2x);
+    v_float32 b2 = vx_load(&in2x[nlanes / 4]);
+    v_float32 b3 = vx_load(&in2x[2 * nlanes / 4]);
+    v_float32 b4 = vx_load(&in2x[3 * nlanes / 4]);
+
+    vx_store(outx, v_pack_u(v_pack(v_round(a1 + b1), v_round(a2 + b2)),
+                            v_pack(v_round(a3 + b3), v_round(a4 + b4))));
+}
+
+CV_ALWAYS_INLINE void add_simd_impl(const uchar* in1x, const uchar* in2x, short* outx)
+{
+    v_int16 a = v_reinterpret_as_s16(vx_load_expand(in1x));
+    v_int16 b = v_reinterpret_as_s16(vx_load_expand(in2x));
+
+    vx_store(outx, a + b);
+}
+
+CV_ALWAYS_INLINE void add_simd_impl(const uchar* in1x, const uchar* in2x, ushort* outx)
+{
+    v_uint16 a = vx_load_expand(in1x);
+    v_uint16 b = vx_load_expand(in2x);
+
+    vx_store(outx, a + b);
+}
+
+template<typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<std::is_same<DST, short>::value ||
+                        std::is_same<DST, ushort>::value, void>::type
+add_simd_impl(const float* in1x, const float* in2x, DST* outx)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+    v_float32 a1 = vx_load(in1x);
+    v_float32 a2 = vx_load(&in1x[nlanes/2]);
+    v_float32 b1 = vx_load(in2x);
+    v_float32 b2 = vx_load(&in2x[nlanes/2]);
+
+    v_store_i16(outx, v_round(a1 + b1), v_round(a2 + b2));
+}
+
+CV_ALWAYS_INLINE void add_simd_impl(const short* in1x, const short* in2x, ushort* outx)
+{
+    v_int16 a = vx_load(in1x);
+    v_int32 a1 = v_expand_low(a);
+    v_int32 a2 = v_expand_high(a);
+
+    v_int16 b = vx_load(in2x);
+    v_int32 b1 = v_expand_low(b);
+    v_int32 b2 = v_expand_high(b);
+
+    vx_store(outx, v_pack_u(a1 + b1, a2 + b2));
+}
+
+CV_ALWAYS_INLINE void add_simd_impl(const ushort* in1x, const ushort* in2x, short* outx)
+{
+    v_uint16 a = vx_load(in1x);
+    v_uint32 a1 = v_expand_low(a);
+    v_uint32 a2 = v_expand_high(a);
+
+    v_uint16 b = vx_load(in2x);
+    v_uint32 b1 = v_expand_low(b);
+    v_uint32 b2 = v_expand_high(b);
+
+    vx_store(outx, v_reinterpret_as_s16(v_pack(a1 + b1, a2 + b2)));
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE void add_simd_impl(const SRC* in1x, const SRC* in2x, float* outx)
+{
+    v_float32 a = vg_load_f32(in1x);
+    v_float32 b = vg_load_f32(in2x);
+
+    vx_store(outx, a + b);
+}
+
+#define ADD_SIMD(SRC, DST)                                                      \
+int add_simd(const SRC in1[], const SRC in2[], DST out[], const int length)     \
+{                                                                               \
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;                       \
+                                                                                \
+    if (length < nlanes)                                                        \
+        return 0;                                                               \
+                                                                                \
+    int x = 0;                                                                  \
+    for (;;)                                                                    \
+    {                                                                           \
+        for (; x <= length - nlanes; x += nlanes)                               \
+        {                                                                       \
+            add_simd_impl(&in1[x], &in2[x], &out[x]);                           \
+        }                                                                       \
+                                                                                \
+        if (x < length)                                                         \
+        {                                                                       \
+            x = length - nlanes;                                                \
+            continue;                                                           \
+        }                                                                       \
+        break;                                                                  \
+    }                                                                           \
+                                                                                \
+    return x;                                                                   \
+}
+
+ADD_SIMD(uchar, uchar)
+ADD_SIMD(ushort, uchar)
+ADD_SIMD(short, uchar)
+ADD_SIMD(float, uchar)
+ADD_SIMD(short, short)
+ADD_SIMD(ushort, short)
+ADD_SIMD(uchar, short)
+ADD_SIMD(float, short)
+ADD_SIMD(ushort, ushort)
+ADD_SIMD(uchar, ushort)
+ADD_SIMD(short, ushort)
+ADD_SIMD(float, ushort)
+ADD_SIMD(uchar, float)
+ADD_SIMD(ushort, float)
+ADD_SIMD(short, float)
+ADD_SIMD(float, float)
+
+#undef ADD_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
