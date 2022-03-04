@@ -1509,6 +1509,10 @@ std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3
         CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem got empty Device object");
     }
 
+    if (!device.isExtensionSupported("cl_khr_d3d11_sharing")) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't support cl_khr_d3d11_sharing extension");
+    }
+
     cl_device_id cl_device = static_cast<cl_device_id>(device.ptr());
     size_t out_size = 0; // size in bytes
     cl_int status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, 0, nullptr, &out_size);
@@ -1532,10 +1536,6 @@ std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3
         CV_Error(cv::Error::StsNullPtr, "OpenCL: GetDevice returns empty pD3D11Device in convertFromD3D11Texture2DtoCLMem");
     }
 
-    if (!device.isExtensionSupported("cl_khr_d3d11_sharing")) {
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't support cl_khr_d3d11_sharing extension");
-    }
-
     cl_context context = NULL;
     cl_context_properties properties[] = {
             CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
@@ -1545,6 +1545,7 @@ std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3
     };
     context = clCreateContext(properties, 1, &cl_device, NULL, NULL, &status);
     if (status != CL_SUCCESS) {
+        pD3D11Device->Release();
         CV_Error(status, "OpenCL: clCreateContext failed");
     }
 
@@ -1554,7 +1555,6 @@ std::tuple<Image2D, OpenCLExecutionContext> convertFromD3D11Texture2DtoCLMem(ID3
         clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
     }
     catch (...) {
-        if (context != nullptr) clReleaseContext(context);
         pD3D11Device->Release();
         throw;
     }

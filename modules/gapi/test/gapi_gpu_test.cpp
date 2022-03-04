@@ -13,15 +13,6 @@
 #include <opencv2/gapi/gpu/ggpukernel.hpp>
 #include "opencl_kernels_test_gapi.hpp"
 
-#ifdef HAVE_DIRECTX
-#include <d3d11.h>
-#pragma comment(lib, "dxgi")
-#include "opencv2/core/directx.hpp"
-#endif // HAVE_DIRECTX
-#ifdef HAVE_OPENCL
-#include "opencv2/core/ocl.hpp"
-#endif // HAVE_OPENCL
-
 namespace cv
 {
 
