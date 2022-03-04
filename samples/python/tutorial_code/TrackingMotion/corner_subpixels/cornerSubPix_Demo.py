@@ -30,7 +30,7 @@ def goodFeaturesToTrack_Demo(val):
     print('** Number of corners detected:', corners.shape[0])
     radius = 4
     for i in range(corners.shape[0]):
-        cv.circle(copy, (corners[i,0,0], corners[i,0,1]), radius, (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)), cv.FILLED)
+        cv.circle(copy, (int(corners[i,0,0]), int(corners[i,0,1])), radius, (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)), cv.FILLED)
 
     # Show what you got
     cv.namedWindow(source_window)

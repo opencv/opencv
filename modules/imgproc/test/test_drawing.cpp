@@ -54,6 +54,7 @@ protected:
     void run( int );
     virtual void draw( Mat& img ) = 0;
     virtual int checkLineIterator( Mat& img) = 0;
+    virtual int checkLineVirtualIterator() = 0;
 };
 
 void CV_DrawingTest::run( int )
@@ -93,6 +94,7 @@ void CV_DrawingTest::run( int )
             ts->set_failed_test_info(checkLineIterator( testImg ));
         }
     }
+    ts->set_failed_test_info(checkLineVirtualIterator());
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
@@ -103,6 +105,7 @@ public:
 protected:
     virtual void draw( Mat& img );
     virtual int checkLineIterator( Mat& img);
+    virtual int checkLineVirtualIterator();
 };
 
 void CV_DrawingTest_CPP::draw( Mat& img )
@@ -239,6 +242,51 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
         {
             ts->printf( ts->LOG, "LineIterator works incorrect" );
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        }
+    }
+    ts->set_failed_test_info(cvtest::TS::OK);
+    return 0;
+}
+
+int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
+{
+    RNG randomGenerator(1);
+    for (size_t test = 0; test < 10000; ++test)
+    {
+        int width = randomGenerator.uniform(0, 512+1);
+        int height = randomGenerator.uniform(0, 512+1);
+        int x1 = randomGenerator.uniform(-512, 1024+1);
+        int y1 = randomGenerator.uniform(-512, 1024+1);
+        int x2 = randomGenerator.uniform(-512, 1024+1);
+        int y2 = randomGenerator.uniform(-512, 1024+1);
+        int x3 = randomGenerator.uniform(-512, 1024+1);
+        int y3 = randomGenerator.uniform(-512, 1024+1);
+        int channels = randomGenerator.uniform(1, 3+1);
+        Mat m(cv::Size(width, height), CV_MAKETYPE(8U, channels));
+        Point p1(x1, y1);
+        Point p2(x2, y2);
+        Point offset(x3, y3);
+        LineIterator it( m, p1, p2 );
+        LineIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
+        if (it.count != vit.count)
+        {
+           ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+           ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+           break;
+        }
+        else
+        {
+            for(int i = 0; i < it.count; ++it, ++vit, i++ )
+            {
+                Point pIt = it.pos();
+                Point pVit = vit.pos() - offset;
+                if (pIt != pVit)
+                {
+                    ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                    break;
+                }
+            }
         }
     }
     ts->set_failed_test_info(cvtest::TS::OK);
@@ -487,7 +535,8 @@ protected:
             img->copyTo(sub);
             shift += img->size().height + 1;
         }
-        //imwrite("/tmp/all_fonts.png", result);
+        if (cvtest::debugLevel > 0)
+            imwrite("all_fonts.png", result);
     }
 };
 
@@ -581,6 +630,54 @@ TEST(Drawing, line)
     Mat mat = Mat::zeros(Size(100,100), CV_8UC1);
 
     ASSERT_THROW(line(mat, Point(1,1),Point(99,99),Scalar(255),0), cv::Exception);
+}
+
+TEST(Drawing, regression_16308)
+{
+    Mat_<uchar> img(Size(100, 100), (uchar)0);
+    circle(img, Point(50, 50), 50, 255, 1, LINE_AA);
+    EXPECT_NE(0, (int)img.at<uchar>(0, 50));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 0));
+    EXPECT_NE(0, (int)img.at<uchar>(50, 99));
+    EXPECT_NE(0, (int)img.at<uchar>(99, 50));
+}
+
+TEST(Drawing, fillpoly_circle)
+{
+    Mat img_c(640, 480, CV_8UC3, Scalar::all(0));
+    Mat img_fp = img_c.clone(), img_fcp = img_c.clone(), img_fp3 = img_c.clone();
+
+    Point center1(img_c.cols/2, img_c.rows/2);
+    Point center2(img_c.cols/10, img_c.rows*3/4);
+    Point center3 = Point(img_c.cols, img_c.rows) - center2;
+    int radius = img_c.rows/4;
+    int radius_small = img_c.cols/15;
+    Scalar color(0, 0, 255);
+
+    circle(img_c, center1, radius, color, -1);
+
+    // check that circle, fillConvexPoly and fillPoly
+    // give almost the same result then asked to draw a single circle
+    vector<Point> vtx;
+    ellipse2Poly(center1, Size(radius, radius), 0, 0, 360, 1, vtx);
+    fillConvexPoly(img_fcp, vtx, color);
+    fillPoly(img_fp, vtx, color);
+    double diff_fp = cv::norm(img_c, img_fp, NORM_L1)/(255*radius*2*CV_PI);
+    double diff_fcp = cv::norm(img_c, img_fcp, NORM_L1)/(255*radius*2*CV_PI);
+    EXPECT_LT(diff_fp, 1.);
+    EXPECT_LT(diff_fcp, 1.);
+
+    // check that fillPoly can draw 3 disjoint circles at once
+    circle(img_c, center2, radius_small, color, -1);
+    circle(img_c, center3, radius_small, color, -1);
+
+    vector<vector<Point> > vtx3(3);
+    vtx3[0] = vtx;
+    ellipse2Poly(center2, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[1]);
+    ellipse2Poly(center3, Size(radius_small, radius_small), 0, 0, 360, 1, vtx3[2]);
+    fillPoly(img_fp3, vtx3, color);
+    double diff_fp3 = cv::norm(img_c, img_fp3, NORM_L1)/(255*(radius+radius_small*2)*2*CV_PI);
+    EXPECT_LT(diff_fp3, 1.);
 }
 
 }} // namespace

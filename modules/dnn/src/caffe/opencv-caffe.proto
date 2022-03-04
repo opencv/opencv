@@ -116,9 +116,9 @@ message PriorBoxParameter {
     CENTER_SIZE = 2;
   }
   // Minimum box size (in pixels). Required!
-  optional float min_size = 1;
+  repeated float min_size = 1;
   // Maximum box size (in pixels). Required!
-  optional float max_size = 2;
+  repeated float max_size = 2;
   // Various of aspect ratios. Duplicate ratios will be ignored.
   // If none is provided, we use default ratio 1.
   repeated float aspect_ratio = 3;
@@ -181,6 +181,8 @@ message DetectionOutputParameter {
   optional float confidence_threshold = 9;
   // If prior boxes are normalized to [0, 1] or not.
   optional bool normalized_bbox = 10 [default = true];
+  // OpenCV custom parameter
+  optional bool clip = 1000 [default = false];
 }
 
 message Datum {

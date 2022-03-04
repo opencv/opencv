@@ -25,8 +25,8 @@ void thresh_callback(int, void* );
 int main( int argc, char** argv )
 {
     /// Load source image
-    CommandLineParser parser( argc, argv, "{@input | ../data/HappyFish.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | HappyFish.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if( src.empty() )
     {
       cout << "Could not open or find the image!\n" << endl;

@@ -177,4 +177,11 @@ TEST(Features2d_Detector_Keypoints_AKAZE, validation)
     test_mldb.safe_run();
 }
 
+TEST(Features2d_Detector_Keypoints_SIFT, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(SIFT::create());
+    test.safe_run();
+}
+
+
 }} // namespace

@@ -9,12 +9,11 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(const char ** argv)
 {
     printf("\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
            "The dft of an image is taken and it's power spectrum is displayed.\n"
-           "Usage:\n"
-            "./dft [image_name -- default lena.jpg]\n");
+           "Usage:\n %s [image_name -- default lena.jpg]\n",argv[0]);
 }
 
 const char* keys =
@@ -24,18 +23,18 @@ const char* keys =
 
 int main(int argc, const char ** argv)
 {
-    help();
+    help(argv);
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     string filename = parser.get<string>(0);
     Mat img = imread(samples::findFile(filename), IMREAD_GRAYSCALE);
     if( img.empty() )
     {
-        help();
+        help(argv);
         printf("Cannot read image file: %s\n", filename.c_str());
         return -1;
     }

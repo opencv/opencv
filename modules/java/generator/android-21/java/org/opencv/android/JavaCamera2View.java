@@ -2,6 +2,7 @@ package org.opencv.android;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -24,6 +25,7 @@ import android.view.ViewGroup.LayoutParams;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -41,17 +43,17 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     private static final String LOGTAG = "JavaCamera2View";
 
-    private ImageReader mImageReader;
-    private int mPreviewFormat = ImageFormat.YUV_420_888;
+    protected ImageReader mImageReader;
+    protected int mPreviewFormat = ImageFormat.YUV_420_888;
 
-    private CameraDevice mCameraDevice;
-    private CameraCaptureSession mCaptureSession;
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-    private String mCameraID;
-    private android.util.Size mPreviewSize = new android.util.Size(-1, -1);
+    protected CameraDevice mCameraDevice;
+    protected CameraCaptureSession mCaptureSession;
+    protected CaptureRequest.Builder mPreviewRequestBuilder;
+    protected String mCameraID;
+    protected android.util.Size mPreviewSize = new android.util.Size(-1, -1);
 
     private HandlerThread mBackgroundThread;
-    private Handler mBackgroundHandler;
+    protected Handler mBackgroundHandler;
 
     public JavaCamera2View(Context context, int cameraId) {
         super(context, cameraId);
@@ -228,7 +230,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     @Override
     protected void disconnectCamera() {
-        Log.i(LOGTAG, "closeCamera");
+        Log.i(LOGTAG, "close camera");
         try {
             CameraDevice c = mCameraDevice;
             mCameraDevice = null;
@@ -239,12 +241,27 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             if (null != c) {
                 c.close();
             }
+        } finally {
+            stopBackgroundThread();
             if (null != mImageReader) {
                 mImageReader.close();
                 mImageReader = null;
             }
-        } finally {
-            stopBackgroundThread();
+        }
+        Log.i(LOGTAG, "camera closed!");
+    }
+
+    public static class JavaCameraSizeAccessor implements ListItemAccessor {
+        @Override
+        public int getWidth(Object obj) {
+            android.util.Size size = (android.util.Size)obj;
+            return size.getWidth();
+        }
+
+        @Override
+        public int getHeight(Object obj) {
+            android.util.Size size = (android.util.Size)obj;
+            return size.getHeight();
         }
     }
 
@@ -258,26 +275,15 @@ public class JavaCamera2View extends CameraBridgeViewBase {
         try {
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(mCameraID);
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            int bestWidth = 0, bestHeight = 0;
-            float aspect = (float) width / height;
             android.util.Size[] sizes = map.getOutputSizes(ImageReader.class);
-            bestWidth = sizes[0].getWidth();
-            bestHeight = sizes[0].getHeight();
-            for (android.util.Size sz : sizes) {
-                int w = sz.getWidth(), h = sz.getHeight();
-                Log.d(LOGTAG, "trying size: " + w + "x" + h);
-                if (width >= w && height >= h && bestWidth <= w && bestHeight <= h
-                        && Math.abs(aspect - (float) w / h) < 0.2) {
-                    bestWidth = w;
-                    bestHeight = h;
-                }
-            }
-            Log.i(LOGTAG, "best size: " + bestWidth + "x" + bestHeight);
-            assert(!(bestWidth == 0 || bestHeight == 0));
-            if (mPreviewSize.getWidth() == bestWidth && mPreviewSize.getHeight() == bestHeight)
+            List<android.util.Size> sizes_list = Arrays.asList(sizes);
+            Size frameSize = calculateCameraFrameSize(sizes_list, new JavaCameraSizeAccessor(), width, height);
+            Log.i(LOGTAG, "Selected preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
+            assert(!(frameSize.width == 0 || frameSize.height == 0));
+            if (mPreviewSize.getWidth() == frameSize.width && mPreviewSize.getHeight() == frameSize.height)
                 return false;
             else {
-                mPreviewSize = new android.util.Size(bestWidth, bestHeight);
+                mPreviewSize = new android.util.Size((int)frameSize.width, (int)frameSize.height);
                 return true;
             }
         } catch (CameraAccessException e) {
@@ -327,8 +333,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             Image.Plane[] planes = mImage.getPlanes();
             int w = mImage.getWidth();
             int h = mImage.getHeight();
+            assert(planes[0].getPixelStride() == 1);
             ByteBuffer y_plane = planes[0].getBuffer();
-            mGray = new Mat(h, w, CvType.CV_8UC1, y_plane);
+            int y_plane_step = planes[0].getRowStride();
+            mGray = new Mat(h, w, CvType.CV_8UC1, y_plane, y_plane_step);
             return mGray;
         }
 
@@ -344,11 +352,14 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 assert(planes[0].getPixelStride() == 1);
                 assert(planes[2].getPixelStride() == 2);
                 ByteBuffer y_plane = planes[0].getBuffer();
+                int y_plane_step = planes[0].getRowStride();
                 ByteBuffer uv_plane1 = planes[1].getBuffer();
+                int uv_plane1_step = planes[1].getRowStride();
                 ByteBuffer uv_plane2 = planes[2].getBuffer();
-                Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane);
-                Mat uv_mat1 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane1);
-                Mat uv_mat2 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane2);
+                int uv_plane2_step = planes[2].getRowStride();
+                Mat y_mat = new Mat(h, w, CvType.CV_8UC1, y_plane, y_plane_step);
+                Mat uv_mat1 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane1, uv_plane1_step);
+                Mat uv_mat2 = new Mat(h / 2, w / 2, CvType.CV_8UC2, uv_plane2, uv_plane2_step);
                 long addr_diff = uv_mat2.dataAddr() - uv_mat1.dataAddr();
                 if (addr_diff > 0) {
                     assert(addr_diff == 1);
@@ -364,30 +375,45 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 ByteBuffer u_plane = planes[1].getBuffer();
                 ByteBuffer v_plane = planes[2].getBuffer();
 
-                y_plane.get(yuv_bytes, 0, w*h);
+                int yuv_bytes_offset = 0;
+
+                int y_plane_step = planes[0].getRowStride();
+                if (y_plane_step == w) {
+                    y_plane.get(yuv_bytes, 0, w*h);
+                    yuv_bytes_offset = w*h;
+                } else {
+                    int padding = y_plane_step - w;
+                    for (int i = 0; i < h; i++){
+                        y_plane.get(yuv_bytes, yuv_bytes_offset, w);
+                        yuv_bytes_offset += w;
+                        if (i < h - 1) {
+                            y_plane.position(y_plane.position() + padding);
+                        }
+                    }
+                    assert(yuv_bytes_offset == w * h);
+                }
 
                 int chromaRowStride = planes[1].getRowStride();
                 int chromaRowPadding = chromaRowStride - w/2;
 
-                int offset = w*h;
                 if (chromaRowPadding == 0){
                     // When the row stride of the chroma channels equals their width, we can copy
                     // the entire channels in one go
-                    u_plane.get(yuv_bytes, offset, w*h/4);
-                    offset += w*h/4;
-                    v_plane.get(yuv_bytes, offset, w*h/4);
+                    u_plane.get(yuv_bytes, yuv_bytes_offset, w*h/4);
+                    yuv_bytes_offset += w*h/4;
+                    v_plane.get(yuv_bytes, yuv_bytes_offset, w*h/4);
                 } else {
                     // When not equal, we need to copy the channels row by row
                     for (int i = 0; i < h/2; i++){
-                        u_plane.get(yuv_bytes, offset, w/2);
-                        offset += w/2;
+                        u_plane.get(yuv_bytes, yuv_bytes_offset, w/2);
+                        yuv_bytes_offset += w/2;
                         if (i < h/2-1){
                             u_plane.position(u_plane.position() + chromaRowPadding);
                         }
                     }
                     for (int i = 0; i < h/2; i++){
-                        v_plane.get(yuv_bytes, offset, w/2);
-                        offset += w/2;
+                        v_plane.get(yuv_bytes, yuv_bytes_offset, w/2);
+                        yuv_bytes_offset += w/2;
                         if (i < h/2-1){
                             v_plane.position(v_plane.position() + chromaRowPadding);
                         }

@@ -19,8 +19,8 @@ Scalar randomColor( RNG& rng )
 
 void perspectiveCorrection(const string &img1Path, const string &img2Path, const Size &patternSize, RNG &rng)
 {
-    Mat img1 = imread(img1Path);
-    Mat img2 = imread(img2Path);
+    Mat img1 = imread( samples::findFile(img1Path) );
+    Mat img2 = imread( samples::findFile(img2Path) );
 
     //! [find-corners]
     vector<Point2f> corners1, corners2;
@@ -68,8 +68,8 @@ void perspectiveCorrection(const string &img1Path, const string &img2Path, const
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image1         | ../data/left02.jpg | path to the source chessboard image }"
-      "{ image2         | ../data/left01.jpg | path to the desired chessboard image }"
+      "{ image1         | left02.jpg | path to the source chessboard image }"
+      "{ image2         | left01.jpg | path to the desired chessboard image }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }";
 }

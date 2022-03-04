@@ -327,6 +327,20 @@ OCL_TEST_P(Resize, Mat)
     }
 }
 
+OCL_TEST(Resize, overflow_21198)
+{
+    Mat src(Size(600, 600), CV_16UC3, Scalar::all(32768));
+    UMat src_u;
+    src.copyTo(src_u);
+
+    Mat dst;
+    cv::resize(src, dst, Size(1024, 1024), 0, 0, INTER_LINEAR);
+    UMat dst_u;
+    cv::resize(src_u, dst_u, Size(1024, 1024), 0, 0, INTER_LINEAR);
+    EXPECT_LE(cv::norm(dst_u, dst, NORM_INF), 1.0f);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 

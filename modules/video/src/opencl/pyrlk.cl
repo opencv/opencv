@@ -48,7 +48,7 @@
 #define GRIDSIZE    3
 #define LSx 8
 #define LSy 8
-// defeine local memory sizes
+// define local memory sizes
 #define LM_W (LSx*GRIDSIZE+2)
 #define LM_H (LSy*GRIDSIZE+2)
 #define BUFFER  (LSx*LSy)

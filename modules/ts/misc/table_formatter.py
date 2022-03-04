@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys, re, os.path, cgi, stat, math
+import sys, re, os.path, stat, math
+try:
+    from html import escape
+except ImportError:
+    from cgi import escape  # Python 2.7
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
 
@@ -23,7 +27,7 @@ class tblRow(object):
         self.props = props
 
 def htmlEncode(str):
-    return '<br/>'.join([cgi.escape(s) for s in str])
+    return '<br/>'.join([escape(s) for s in str])
 
 class table(object):
     def_align = "left"
@@ -38,6 +42,7 @@ class table(object):
     def __init__(self, caption = None, format=None):
         self.format = format
         self.is_markdown = self.format == 'markdown'
+        self.is_tabs = self.format == 'tabs'
         self.columns = {}
         self.rows = []
         self.ridx = -1;
@@ -253,7 +258,7 @@ class table(object):
 
     def consolePrintTable(self, out):
         columns = self.layoutTable()
-        colrizer = getColorizer(out) if not self.is_markdown else dummyColorizer(out)
+        colrizer = getColorizer(out) if not (self.is_markdown or self.is_tabs) else dummyColorizer(out)
 
         if self.caption:
             out.write("%s%s%s" % ( os.linesep,  os.linesep.join(self.reformatTextValue(self.caption)), os.linesep * 2))
@@ -298,6 +303,10 @@ class table(object):
             for c in row.cells:
                 text = ' '.join(self.getValue('text', c) or [])
                 out.write(text + "|")
+            out.write(os.linesep)
+        elif self.is_tabs:
+            cols_to_join=[' '.join(self.getValue('text', c) or []) for c in row.cells]
+            out.write('\t'.join(cols_to_join))
             out.write(os.linesep)
         else:
             for ln in range(row.minheight):
@@ -585,7 +594,7 @@ $(function(){
                $(tbl_row).remove()
          })
          if($("tbody tr", tbl).length == 0) {
-           $("<tr><td colspan='"+$("thead tr:first th", tbl).length+"'>No results mathing your search criteria</td></tr>")
+           $("<tr><td colspan='"+$("thead tr:first th", tbl).length+"'>No results matching your search criteria</td></tr>")
              .appendTo($("tbody", tbl))
          }
       }

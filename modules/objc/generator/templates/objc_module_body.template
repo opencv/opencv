@@ -1,0 +1,14 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+
+#import "$module.h"
+#import "CVObjcUtil.h"
+
+$imports
+
+@implementation $module
+
+$methodImplementations
+
+@end

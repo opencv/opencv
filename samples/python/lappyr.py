@@ -60,7 +60,7 @@ def main():
         cv.createTrackbar('%d'%i, 'level control', 5, 50, nothing)
 
     while True:
-        ret, frame = cap.read()
+        _ret, frame = cap.read()
 
         pyr = build_lappyr(frame, leveln)
         for i in xrange(leveln):

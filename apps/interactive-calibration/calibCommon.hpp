@@ -80,7 +80,7 @@ namespace calib
         cv::Size boardSize;
         int charucoDictName;
         int calibrationStep;
-        float charucoSquareLenght, charucoMarkerSize;
+        float charucoSquareLength, charucoMarkerSize;
         float captureDelay;
         float squareSize;
         float templDst;

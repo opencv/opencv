@@ -30,7 +30,7 @@ def draw_flow(img, flow, step=16):
     lines = np.int32(lines + 0.5)
     vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
     cv.polylines(vis, lines, 0, (0, 255, 0))
-    for (x1, y1), (x2, y2) in lines:
+    for (x1, y1), (_x2, _y2) in lines:
         cv.circle(vis, (x1, y1), 1, (0, 255, 0), -1)
     return vis
 
@@ -66,7 +66,7 @@ def main():
         fn = 0
 
     cam = video.create_capture(fn)
-    ret, prev = cam.read()
+    _ret, prev = cam.read()
     prevgray = cv.cvtColor(prev, cv.COLOR_BGR2GRAY)
     show_hsv = False
     show_glitch = False
@@ -78,7 +78,7 @@ def main():
 
     flow = None
     while True:
-        ret, img = cam.read()
+        _ret, img = cam.read()
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         if flow is not None and use_temporal_propagation:
             #warp previous flow to get an initial approximation for the current flow:

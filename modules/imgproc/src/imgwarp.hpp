@@ -50,6 +50,7 @@
 #ifndef OPENCV_IMGPROC_IMGWARP_HPP
 #define OPENCV_IMGPROC_IMGWARP_HPP
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -78,6 +79,12 @@ public:
 };
 #endif
 }
+
+#if CV_SIMD128_64F
+void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0, double Y0, double W0, int bw);
+void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw);
+#endif
+
 }
 #endif
 /* End of file. */

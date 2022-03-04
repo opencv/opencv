@@ -5,7 +5,11 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#ifdef CV_CXX11
+#if defined(CV_CXX11) && defined(HAVE_THREADS)
+#define USE_THREADS 1
+#endif
+
+#ifdef USE_THREADS
 #include <mutex>
 #include <thread>
 #include <queue>
@@ -27,12 +31,17 @@ std::string keys =
                          "0: automatically (by default), "
                          "1: Halide language (http://halide-lang.org/), "
                          "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "3: OpenCV implementation }"
+                         "3: OpenCV implementation, "
+                         "4: VKCOM, "
+                         "5: CUDA }"
     "{ target      | 0 | Choose one of target computation devices: "
                          "0: CPU target (by default), "
                          "1: OpenCL, "
                          "2: OpenCL fp16 (half-float precision), "
-                         "3: VPU }"
+                         "3: VPU, "
+                         "4: Vulkan, "
+                         "6: CUDA, "
+                         "7: CUDA fp16 (half-float preprocess) }"
     "{ async       | 0 | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }";
 
@@ -45,13 +54,13 @@ std::vector<std::string> classes;
 inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
                        const Scalar& mean, bool swapRB);
 
-void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net);
+void postprocess(Mat& frame, const std::vector<Mat>& out, Net& net, int backend);
 
 void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
 
 void callback(int pos, void* userdata);
 
-#ifdef CV_CXX11
+#ifdef USE_THREADS
 template <typename T>
 class QueueFPS : public std::queue<T>
 {
@@ -101,7 +110,7 @@ private:
     TickMeter tm;
     std::mutex mutex;
 };
-#endif  // CV_CXX11
+#endif  // USE_THREADS
 
 int main(int argc, char** argv)
 {
@@ -127,7 +136,7 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    size_t async = parser.get<int>("async");
+    size_t asyncNumReq = parser.get<int>("async");
     CV_Assert(parser.has("model"));
     std::string modelPath = findFile(parser.get<String>("model"));
     std::string configPath = findFile(parser.get<String>("config"));
@@ -148,7 +157,8 @@ int main(int argc, char** argv)
 
     // Load a model.
     Net net = readNet(modelPath, configPath, parser.get<String>("framework"));
-    net.setPreferableBackend(parser.get<int>("backend"));
+    int backend = parser.get<int>("backend");
+    net.setPreferableBackend(backend);
     net.setPreferableTarget(parser.get<int>("target"));
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
 
@@ -165,7 +175,7 @@ int main(int argc, char** argv)
     else
         cap.open(parser.get<int>("device"));
 
-#ifdef CV_CXX11
+#ifdef USE_THREADS
     bool process = true;
 
     // Frames capturing thread
@@ -196,9 +206,9 @@ int main(int argc, char** argv)
                 if (!framesQueue.empty())
                 {
                     frame = framesQueue.get();
-                    if (async)
+                    if (asyncNumReq)
                     {
-                        if (futureOutputs.size() == async)
+                        if (futureOutputs.size() == asyncNumReq)
                             frame = Mat();
                     }
                     else
@@ -212,7 +222,7 @@ int main(int argc, char** argv)
                 preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
                 processedFramesQueue.push(frame);
 
-                if (async)
+                if (asyncNumReq)
                 {
                     futureOutputs.push(net.forwardAsync());
                 }
@@ -245,7 +255,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs = predictionsQueue.get();
         Mat frame = processedFramesQueue.get();
 
-        postprocess(frame, outs, net);
+        postprocess(frame, outs, net, backend);
 
         if (predictionsQueue.counter > 1)
         {
@@ -265,8 +275,8 @@ int main(int argc, char** argv)
     framesThread.join();
     processingThread.join();
 
-#else  // CV_CXX11
-    if (async)
+#else  // USE_THREADS
+    if (asyncNumReq)
         CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
 
     // Process frames.
@@ -285,7 +295,7 @@ int main(int argc, char** argv)
         std::vector<Mat> outs;
         net.forward(outs, outNames);
 
-        postprocess(frame, outs, net);
+        postprocess(frame, outs, net, backend);
 
         // Put efficiency information.
         std::vector<double> layersTimes;
@@ -296,7 +306,7 @@ int main(int argc, char** argv)
 
         imshow(kWinName, frame);
     }
-#endif  // CV_CXX11
+#endif  // USE_THREADS
     return 0;
 }
 
@@ -319,7 +329,7 @@ inline void preprocess(const Mat& frame, Net& net, Size inpSize, float scale,
     }
 }
 
-void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
+void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net, int backend)
 {
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
@@ -347,7 +357,7 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
                     int bottom = (int)data[i + 6];
                     int width  = right - left + 1;
                     int height = bottom - top + 1;
-                    if (width * height <= 1)
+                    if (width <= 2 || height <= 2)
                     {
                         left   = (int)(data[i + 3] * frame.cols);
                         top    = (int)(data[i + 4] * frame.rows);
@@ -396,11 +406,48 @@ void postprocess(Mat& frame, const std::vector<Mat>& outs, Net& net)
     else
         CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
 
-    std::vector<int> indices;
-    NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
-    for (size_t i = 0; i < indices.size(); ++i)
+    // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
+    // or NMS is required if number of outputs > 1
+    if (outLayers.size() > 1 || (outLayerType == "Region" && backend != DNN_BACKEND_OPENCV))
     {
-        int idx = indices[i];
+        std::map<int, std::vector<size_t> > class2indices;
+        for (size_t i = 0; i < classIds.size(); i++)
+        {
+            if (confidences[i] >= confThreshold)
+            {
+                class2indices[classIds[i]].push_back(i);
+            }
+        }
+        std::vector<Rect> nmsBoxes;
+        std::vector<float> nmsConfidences;
+        std::vector<int> nmsClassIds;
+        for (std::map<int, std::vector<size_t> >::iterator it = class2indices.begin(); it != class2indices.end(); ++it)
+        {
+            std::vector<Rect> localBoxes;
+            std::vector<float> localConfidences;
+            std::vector<size_t> classIndices = it->second;
+            for (size_t i = 0; i < classIndices.size(); i++)
+            {
+                localBoxes.push_back(boxes[classIndices[i]]);
+                localConfidences.push_back(confidences[classIndices[i]]);
+            }
+            std::vector<int> nmsIndices;
+            NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, nmsIndices);
+            for (size_t i = 0; i < nmsIndices.size(); i++)
+            {
+                size_t idx = nmsIndices[i];
+                nmsBoxes.push_back(localBoxes[idx]);
+                nmsConfidences.push_back(localConfidences[idx]);
+                nmsClassIds.push_back(it->first);
+            }
+        }
+        boxes = nmsBoxes;
+        classIds = nmsClassIds;
+        confidences = nmsConfidences;
+    }
+
+    for (size_t idx = 0; idx < boxes.size(); ++idx)
+    {
         Rect box = boxes[idx];
         drawPred(classIds[idx], confidences[idx], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);

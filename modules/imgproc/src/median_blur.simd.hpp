@@ -463,7 +463,7 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
             }
             else
             {
-                assert( cn == 4 );
+                CV_Assert( cn == 4 );
                 for( k = 0; k < m*4; k += 4 )
                 {
                     UPDATE_ACC01( src_top[k], 0, -- );

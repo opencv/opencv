@@ -126,30 +126,30 @@ endif()
 if(SIZEOF_UNSIGNED_INT EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned int")
   set(TIFF_SIZE_FORMAT "%u")
+  set(TIFF_SSIZE_T "signed int")
+  set(TIFF_SSIZE_FORMAT "%d")
 elseif(SIZEOF_UNSIGNED_LONG EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned long")
   set(TIFF_SIZE_FORMAT "%lu")
+  set(TIFF_SSIZE_T "signed long")
+  set(TIFF_SSIZE_FORMAT "%ld")
 elseif(SIZEOF_UNSIGNED_LONG_LONG EQUAL SIZEOF_SIZE_T)
   set(TIFF_SIZE_T "unsigned long")
   if(MINGW)
     set(TIFF_SIZE_FORMAT "%I64u")
+    set(TIFF_SSIZE_FORMAT "%I64d")
   else()
     set(TIFF_SIZE_FORMAT "%llu")
+    set(TIFF_SSIZE_FORMAT "%lld")
   endif()
 endif()
 
 if(SIZEOF_SIGNED_INT EQUAL SIZEOF_UNSIGNED_CHAR_P)
-  set(TIFF_SSIZE_T "signed int")
-  set(TIFF_SSIZE_FORMAT "%d")
 elseif(SIZEOF_SIGNED_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
-  set(TIFF_SSIZE_T "signed long")
-  set(TIFF_SSIZE_FORMAT "%ld")
 elseif(SIZEOF_SIGNED_LONG_LONG EQUAL SIZEOF_UNSIGNED_CHAR_P)
   set(TIFF_SSIZE_T "signed long long")
   if(MINGW)
-    set(TIFF_SSIZE_FORMAT "%I64d")
   else()
-    set(TIFF_SSIZE_FORMAT "%lld")
   endif()
 endif()
 
@@ -216,6 +216,8 @@ endif()
 set(fillorder FILLORDER_MSB2LSB)
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "i.*86.*" OR
    CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "amd64.*" OR
+   # AMD64 on Windows
+   CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64" OR
    CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64.*")
   set(fillorder FILLORDER_LSB2MSB)
 endif()
@@ -236,6 +238,9 @@ if(HOST_BIG_ENDIAN)
   set(HOST_BIG_ENDIAN 1)
 else()
   set(HOST_BIG_ENDIAN 0)
+endif()
+if(HOST_BIG_ENDIAN)
+  add_definitions(-DWORDS_BIGENDIAN)
 endif()
 
 # IEEE floating point
@@ -460,7 +465,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456 /wd4457 /wd4312) # vs2015
 
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018 /wd4311 /wd4312)
 
-add_library(${TIFF_LIBRARY} STATIC ${lib_srcs})
+add_library(${TIFF_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
 
 set_target_properties(${TIFF_LIBRARY}
@@ -477,7 +482,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(libtiff COPYRIGHT)

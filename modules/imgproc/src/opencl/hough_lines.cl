@@ -94,6 +94,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 {
     int theta_idx = get_group_id(1);
     int count_idx = get_local_id(0);
+    __local int l_accum[BUFFER_SIZE];
 
     if (theta_idx > 0 && theta_idx < numangle + 1)
     {
@@ -102,7 +103,6 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
         sinVal *= irho;
         cosVal *= irho;
 
-        __local int l_accum[BUFFER_SIZE];
         for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
             l_accum[i] = 0;
 

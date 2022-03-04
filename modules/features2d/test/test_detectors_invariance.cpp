@@ -17,6 +17,9 @@ const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_
  * Detector's rotation invariance check
  */
 
+INSTANTIATE_TEST_CASE_P(SIFT, DetectorRotationInvariance,
+                        Value(IMAGE_TSUKUBA, SIFT::create(), 0.45f, 0.70f));
+
 INSTANTIATE_TEST_CASE_P(BRISK, DetectorRotationInvariance,
                         Value(IMAGE_TSUKUBA, BRISK::create(), 0.45f, 0.76f));
 
@@ -32,6 +35,9 @@ INSTANTIATE_TEST_CASE_P(AKAZE_DESCRIPTOR_KAZE, DetectorRotationInvariance,
 /*
  * Detector's scale invariance check
  */
+
+INSTANTIATE_TEST_CASE_P(SIFT, DetectorScaleInvariance,
+                        Value(IMAGE_BIKES, SIFT::create(0, 3, 0.09), 0.65f, 0.98f));
 
 INSTANTIATE_TEST_CASE_P(BRISK, DetectorScaleInvariance,
                         Value(IMAGE_BIKES, BRISK::create(), 0.08f, 0.49f));

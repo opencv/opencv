@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include <atomic>
 #include <limits>
 #include <iostream>
 #include "mathfuncs.hpp"
@@ -1637,6 +1638,9 @@ void patchNaNs( InputOutputArray _a, double _val )
 
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL float cvCbrt(float value) { return cv::cubeRoot(value); }
 CV_IMPL float cvFastArctan(float y, float x) { return cv::fastAtan2(y, x); }
 
@@ -1720,6 +1724,7 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
     return cv::checkRange(cv::cvarrToMat(arr), (flags & CV_CHECK_QUIET) != 0, 0, minVal, maxVal );
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 
 /*
   Finds real roots of cubic, quadratic or linear equation.
@@ -2015,6 +2020,8 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 }
 
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL int
 cvSolveCubic( const CvMat* coeffs, CvMat* roots )
 {
@@ -2034,6 +2041,7 @@ void cvSolvePoly(const CvMat* a, CvMat *r, int maxiter, int)
     CV_Assert( _r.data == _r0.data ); // check that the array of roots was not reallocated
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 
 
 // Common constants for dispatched code
@@ -2119,8 +2127,8 @@ const double* getExpTab64f()
 const float* getExpTab32f()
 {
     static float CV_DECL_ALIGNED(64) expTab_f[EXPTAB_MASK+1];
-    static volatile bool expTab_f_initialized = false;
-    if (!expTab_f_initialized)
+    static std::atomic<bool> expTab_f_initialized(false);
+    if (!expTab_f_initialized.load())
     {
         for( int j = 0; j <= EXPTAB_MASK; j++ )
             expTab_f[j] = (float)expTab[j];
@@ -2401,8 +2409,8 @@ const double* getLogTab64f()
 const float* getLogTab32f()
 {
     static float CV_DECL_ALIGNED(64) logTab_f[(LOGTAB_MASK+1)*2];
-    static volatile bool logTab_f_initialized = false;
-    if (!logTab_f_initialized)
+    static std::atomic<bool> logTab_f_initialized(false);
+    if (!logTab_f_initialized.load())
     {
         for (int j = 0; j < (LOGTAB_MASK+1)*2; j++)
             logTab_f[j] = (float)logTab[j];

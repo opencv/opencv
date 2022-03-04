@@ -5,13 +5,8 @@
   @date Jun 24, 2018
 */
 
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
-#include <vector>
-
-const char* keys =
-    "{ help h      | | Print help message. }"
-    "{ input i     | | Input image to calc ELA algorithm. }";
 
 using namespace cv;
 
@@ -48,20 +43,13 @@ static void processImage(int , void*)
 
 int main (int argc, char* argv[])
 {
+    CommandLineParser parser(argc, argv, "{ input i | ela_modified.jpg | Input image to calculate ELA algorithm. }");
+    parser.about("\nJpeg Recompression Example:\n");
+    parser.printMessage();
 
-    CommandLineParser parser(argc, argv, keys);
-    if(argc == 1 || parser.has("help"))
-    {
-        parser.printMessage();
-        std::cout << "\nJpeg Recompression Example:\n\t" << argv[0] << " --input=../../data/ela_modified.jpg\n";
-        return 0;
-    }
+    // Read the new image
+    image = imread(samples::findFile(parser.get<String>("input")));
 
-    if(parser.has("input"))
-    {
-        // Read the new image
-        image = imread(parser.get<String>("input"));
-    }
     // Check image
     if (!image.empty())
     {

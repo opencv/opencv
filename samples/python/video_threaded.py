@@ -70,7 +70,7 @@ def main():
             draw_str(res, (20, 60), "frame interval :  %.1f ms" % (frame_interval.value*1000))
             cv.imshow('threaded video', res)
         if len(pending) < threadn:
-            ret, frame = cap.read()
+            _ret, frame = cap.read()
             t = clock()
             frame_interval.update(t - last_frame_time)
             last_frame_time = t

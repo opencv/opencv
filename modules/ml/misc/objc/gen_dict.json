@@ -1,0 +1,9 @@
+{
+    "enum_fix" : {
+        "EM" : { "Types": "EMTypes" },
+        "SVM" : { "Types": "SVMTypes" },
+        "KNearest" : { "Types": "KNearestTypes" },
+        "DTrees" : { "Flags": "DTreeFlags" },
+        "StatModel" : { "Flags": "StatModelFlags" }
+    }
+}

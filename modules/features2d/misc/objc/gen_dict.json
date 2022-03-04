@@ -1,0 +1,23 @@
+{
+    "enum_fix" : {
+        "FastFeatureDetector" : { "DetectorType": "FastDetectorType" },
+        "AgastFeatureDetector" : { "DetectorType": "AgastDetectorType" }
+    },
+    "func_arg_fix" : {
+        "Feature2D": {
+            "(void)compute:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints descriptors:(NSMutableArray<Mat*>*)descriptors" : { "compute" : {"name" : "compute2"} },
+            "(void)detect:(NSArray<Mat*>*)images keypoints:(NSMutableArray<NSMutableArray<KeyPoint*>*>*)keypoints masks:(NSArray<Mat*>*)masks" : { "detect" : {"name" : "detect2"} }
+        },
+        "DescriptorMatcher": {
+            "(DescriptorMatcher*)create:(NSString*)descriptorMatcherType" : { "create" : {"name" : "create2"} }
+        },
+        "FlannBasedMatcher": {
+            "FlannBasedMatcher": { "indexParams" : {"defval" : "cv::makePtr<cv::flann::KDTreeIndexParams>()"}, "searchParams" : {"defval" : "cv::makePtr<cv::flann::SearchParams>()"} }
+        },
+        "BFMatcher": {
+            "BFMatcher" : { "normType" : {"ctype" : "NormTypes"} },
+            "(BFMatcher*)create:(int)normType crossCheck:(BOOL)crossCheck" : { "create" : {"name" : "createBFMatcher"},
+                                                                               "normType" : {"ctype" : "NormTypes"} }
+        }
+    }
+}

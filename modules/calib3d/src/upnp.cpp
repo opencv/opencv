@@ -49,6 +49,8 @@
 #include "upnp.h"
 #include <limits>
 
+#if 0  // fix buffer overflow first (FIXIT mark in .cpp file)
+
 using namespace std;
 using namespace cv;
 
@@ -313,7 +315,9 @@ void upnp::compute_ccs(const double * betas, const double * ut)
       const double * v = ut + 12 * (9 + i);
       for(int j = 0; j < 4; ++j)
         for(int k = 0; k < 3; ++k)
-          ccs[j][k] += betas[i] * v[3 * j + k];
+          ccs[j][k] += betas[i] * v[3 * j + k];  // FIXIT: array subscript 144 is outside array bounds of 'double [144]' [-Warray-bounds]
+                                                 //        line 109: double ut[12 * 12]
+                                                 //        line 359: double u[12*12]
     }
 
     for (int i = 0; i < 4; ++i) ccs[i][2] *= fu;
@@ -821,3 +825,5 @@ void upnp::qr_solve(Mat * A, Mat * b, Mat * X)
     pX[i] = (pb[i] - sum) / A2[i];
   }
 }
+
+#endif

@@ -1297,7 +1297,7 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
                 cv::randu(a, -128, 128);
             else if (depth == CV_16U)
                 cv::randu(a, 0, 1024);
-            else if (depth == CV_32F || depth == CV_64F)
+            else if (depth == CV_32F || depth == CV_64F || depth == CV_16F)
                 cv::randu(a, -1.0, 1.0);
             else if (depth == CV_16S || depth == CV_32S)
                 cv::randu(a, -4096, 4096);
@@ -1366,7 +1366,7 @@ bool TestBase::next()
     bool has_next = false;
 
     do {
-        assert(currentIter == times.size());
+        CV_Assert(currentIter == times.size());
         if (currentIter == 0)
         {
             has_next = true;
@@ -1379,7 +1379,7 @@ bool TestBase::next()
         }
         else
         {
-            assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
+            CV_Assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
                 std::cout << '.' << std::endl;
@@ -1638,7 +1638,7 @@ performance_metrics& TestBase::calcMetrics()
     }
     else
     {
-        assert(false);
+        CV_Assert(false);
     }
 
     int offset = static_cast<int>(start - times.begin());
@@ -1714,7 +1714,7 @@ void TestBase::validateMetrics()
     }
     else
     {
-        assert(false);
+        CV_Assert(false);
     }
 }
 
@@ -2003,15 +2003,15 @@ void TestBase::RunPerfTestBody()
             implConf.GetImpl();
 #endif
     }
-    catch(const SkipTestException&)
-    {
-        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
-        throw;
-    }
     catch(const PerfSkipTestException&)
     {
         metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
         return;
+    }
+    catch(const cvtest::details::SkipTestExceptionBase&)
+    {
+        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
+        throw;
     }
     catch(const PerfEarlyExitException&)
     {
@@ -2168,7 +2168,7 @@ struct KeypointComparator
         return cmp(pts_[idx1], pts_[idx2]);
     }
 private:
-    const KeypointComparator& operator=(const KeypointComparator&); // quiet MSVC
+    KeypointComparator& operator=(const KeypointComparator&) = delete;
 };
 }//namespace
 

@@ -66,6 +66,7 @@ It provides easy interface to:
 -   Add trackbars to the windows, handle simple mouse events as well as keyboard commands.
 
 @{
+    @defgroup highgui_window_flags Flags related creating and manipulating HighGUI windows and mouse events
     @defgroup highgui_opengl OpenGL support
     @defgroup highgui_qt Qt New Functions
 
@@ -93,7 +94,7 @@ It provides easy interface to:
 
 
             namedWindow("main1",WINDOW_NORMAL);
-            namedWindow("main2",WINDOW_AUTOSIZE | CV_GUI_NORMAL);
+            namedWindow("main2",WINDOW_AUTOSIZE | WINDOW_GUI_NORMAL);
             createTrackbar( "track1", "main1", &value, 255,  NULL);
 
             String nameb1 = "button1";
@@ -178,6 +179,9 @@ namespace cv
 //! @addtogroup highgui
 //! @{
 
+//! @addtogroup highgui_window_flags
+//! @{
+
 //! Flags for cv::namedWindow
 enum WindowFlags {
        WINDOW_NORMAL     = 0x00000000, //!< the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size.
@@ -197,7 +201,9 @@ enum WindowPropertyFlags {
        WND_PROP_AUTOSIZE     = 1, //!< autosize property      (can be WINDOW_NORMAL or WINDOW_AUTOSIZE).
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
        WND_PROP_OPENGL       = 3, //!< opengl support.
-       WND_PROP_VISIBLE      = 4  //!< checks whether the window exists and is visible
+       WND_PROP_VISIBLE      = 4, //!< checks whether the window exists and is visible
+       WND_PROP_TOPMOST      = 5, //!< property to toggle normal window being topmost or not
+       WND_PROP_VSYNC        = 6  //!< enable or disable VSYNC (in OpenGL mode)
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -226,6 +232,11 @@ enum MouseEventFlags {
        EVENT_FLAG_ALTKEY    = 32 //!< indicates that ALT Key is pressed.
      };
 
+//! @} highgui_window_flags
+
+//! @addtogroup highgui_qt
+//! @{
+
 //! Qt font weight
 enum QtFontWeights {
         QT_FONT_LIGHT           = 25, //!< Weight of 25
@@ -249,6 +260,8 @@ enum QtButtonTypes {
        QT_RADIOBOX      = 2,    //!< Radiobox button.
        QT_NEW_BUTTONBAR = 1024  //!< Button should create a new buttonbar
      };
+
+//! @} highgui_qt
 
 /** @brief Callback function for mouse events. see cv::setMouseCallback
 @param event one of the cv::MouseEventTypes constants.
@@ -335,22 +348,33 @@ The function waitKey waits for a key event infinitely (when \f$\texttt{delay}\le
 milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the
 function will not wait exactly delay ms, it will wait at least delay ms, depending on what else is
 running on your computer at that time. It returns the code of the pressed key or -1 if no key was
-pressed before the specified time had elapsed.
+pressed before the specified time had elapsed. To check for a key press but not wait for it, use
+#pollKey.
 
-@note
+@note The functions #waitKey and #pollKey are the only methods in HighGUI that can fetch and handle
+GUI events, so one of them needs to be called periodically for normal event processing unless
+HighGUI is used within an environment that takes care of event processing.
 
-This function is the only method in HighGUI that can fetch and handle events, so it needs to be
-called periodically for normal event processing unless HighGUI is used within an environment that
-takes care of event processing.
-
-@note
-
-The function only works if there is at least one HighGUI window created and the window is active.
-If there are several HighGUI windows, any of them can be active.
+@note The function only works if there is at least one HighGUI window created and the window is
+active. If there are several HighGUI windows, any of them can be active.
 
 @param delay Delay in milliseconds. 0 is the special value that means "forever".
  */
 CV_EXPORTS_W int waitKey(int delay = 0);
+
+/** @brief Polls for a pressed key.
+
+The function pollKey polls for a key event without waiting. It returns the code of the pressed key
+or -1 if no key was pressed since the last invocation. To wait until a key was pressed, use #waitKey.
+
+@note The functions #waitKey and #pollKey are the only methods in HighGUI that can fetch and handle
+GUI events, so one of them needs to be called periodically for normal event processing unless
+HighGUI is used within an environment that takes care of event processing.
+
+@note The function only works if there is at least one HighGUI window created and the window is
+active. If there are several HighGUI windows, any of them can be active.
+ */
+CV_EXPORTS_W int pollKey();
 
 /** @brief Displays an image in the specified window.
 
@@ -359,10 +383,12 @@ cv::WINDOW_AUTOSIZE flag, the image is shown with its original size, however it 
 Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
--   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
+-   If the image is 16-bit unsigned, the pixels are divided by 256. That is, the
     value range [0,255\*256] is mapped to [0,255].
 -   If the image is 32-bit or 64-bit floating-point, the pixel values are multiplied by 255. That is, the
     value range [0,1] is mapped to [0,255].
+-   32-bit integer images are not processed anymore due to ambiguouty of required transform.
+    Convert to 8-bit unsigned matrix using a custom preprocessing specific to image's context.
 
 If window was created with OpenGL support, cv::imshow also support ogl::Buffer , ogl::Texture2D and
 cuda::GpuMat as input.
@@ -371,11 +397,12 @@ If the window was not created before this function, it is assumed creating a win
 
 If you need to show an image that is bigger than the screen resolution, you will need to call namedWindow("", WINDOW_NORMAL) before the imshow.
 
-@note This function should be followed by cv::waitKey function which displays the image for specified
-milliseconds. Otherwise, it won't display the image. For example, **waitKey(0)** will display the window
-infinitely until any keypress (it is suitable for image display). **waitKey(25)** will display a frame
-for 25 ms, after which display will be automatically closed. (If you put it in a loop to read
-videos, it will display the video frame-by-frame)
+@note This function should be followed by a call to cv::waitKey or cv::pollKey to perform GUI
+housekeeping tasks that are necessary to actually show the given image and make the window respond
+to mouse and keyboard events. Otherwise, it won't display the image and the window might lock up.
+For example, **waitKey(0)** will display the window infinitely until any keypress (it is suitable
+for image display). **waitKey(25)** will display a frame and wait approximately 25 ms for a key
+press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
 @note
 
@@ -388,7 +415,7 @@ videos, it will display the video frame-by-frame)
  */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
-/** @brief Resizes window to the specified size
+/** @brief Resizes the window to the specified size
 
 @note
 
@@ -407,7 +434,7 @@ CV_EXPORTS_W void resizeWindow(const String& winname, int width, int height);
 */
 CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
 
-/** @brief Moves window to the specified position
+/** @brief Moves the window to the specified position
 
 @param winname Name of the window.
 @param x The new x-coordinate of the window.
@@ -475,8 +502,6 @@ For cv::EVENT_MOUSEWHEEL positive and negative values mean forward and backward 
 respectively. For cv::EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and
 left scrolling, respectively.
 
-With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
-
 @note
 
 Mouse-wheel events are currently supported only on Windows.
@@ -485,8 +510,9 @@ Mouse-wheel events are currently supported only on Windows.
  */
 CV_EXPORTS int getMouseWheelDelta(int flags);
 
-/** @brief Selects ROI on the given image.
-Function creates a window and allows user to select a ROI using mouse.
+/** @brief Allows users to select a ROI on the given image.
+
+The function creates a window and allows users to select a ROI using the mouse.
 Controls: use `space` or `enter` to finish selection, use key `c` to cancel selection (function will return the zero cv::Rect).
 
 @param windowName name of the window where selection process will be shown.
@@ -505,8 +531,9 @@ CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showC
  */
 CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false);
 
-/** @brief Selects ROIs on the given image.
-Function creates a window and allows user to select a ROIs using mouse.
+/** @brief Allows users to select multiple ROIs on the given image.
+
+The function creates a window and allows users to select multiple ROIs using the mouse.
 Controls: use `space` or `enter` to finish current selection and start a new one,
 use `esc` to terminate multiple ROI selection process.
 

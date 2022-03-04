@@ -4,21 +4,20 @@ Arithmetic Operations on Images {#tutorial_py_image_arithmetics}
 Goal
 ----
 
--   Learn several arithmetic operations on images like addition, subtraction, bitwise operations
-    etc.
--   You will learn these functions : **cv.add()**, **cv.addWeighted()** etc.
+-   Learn several arithmetic operations on images, like addition, subtraction, bitwise operations, and etc.
+-   Learn these functions: **cv.add()**, **cv.addWeighted()**, etc.
 
 Image Addition
 --------------
 
-You can add two images by OpenCV function, cv.add() or simply by numpy operation,
-res = img1 + img2. Both images should be of same depth and type, or second image can just be a
+You can add two images with the OpenCV function, cv.add(), or simply by the numpy operation
+res = img1 + img2. Both images should be of same depth and type, or the second image can just be a
 scalar value.
 
 @note There is a difference between OpenCV addition and Numpy addition. OpenCV addition is a
 saturated operation while Numpy addition is a modulo operation.
 
-For example, consider below sample:
+For example, consider the below sample:
 @code{.py}
 >>> x = np.uint8([250])
 >>> y = np.uint8([10])
@@ -29,13 +28,12 @@ For example, consider below sample:
 >>> print( x+y )          # 250+10 = 260 % 256 = 4
 [4]
 @endcode
-It will be more visible when you add two images. OpenCV function will provide a better result. So
-always better stick to OpenCV functions.
+This will be more visible when you add two images. Stick with OpenCV functions, because they will provide a better result.
 
 Image Blending
 --------------
 
-This is also image addition, but different weights are given to images so that it gives a feeling of
+This is also image addition, but different weights are given to images in order to give a feeling of
 blending or transparency. Images are added as per the equation below:
 
 \f[g(x) = (1 - \alpha)f_{0}(x) + \alpha f_{1}(x)\f]
@@ -43,8 +41,8 @@ blending or transparency. Images are added as per the equation below:
 By varying \f$\alpha\f$ from \f$0 \rightarrow 1\f$, you can perform a cool transition between one image to
 another.
 
-Here I took two images to blend them together. First image is given a weight of 0.7 and second image
-is given 0.3. cv.addWeighted() applies following equation on the image.
+Here I took two images to blend together. The first image is given a weight of 0.7 and the second image
+is given 0.3. cv.addWeighted() applies the following equation to the image:
 
 \f[dst = \alpha \cdot img1 + \beta \cdot img2 + \gamma\f]
 
@@ -66,14 +64,14 @@ Check the result below:
 Bitwise Operations
 ------------------
 
-This includes bitwise AND, OR, NOT and XOR operations. They will be highly useful while extracting
+This includes the bitwise AND, OR, NOT, and XOR operations. They will be highly useful while extracting
 any part of the image (as we will see in coming chapters), defining and working with non-rectangular
-ROI etc. Below we will see an example on how to change a particular region of an image.
+ROI's, and etc. Below we will see an example of how to change a particular region of an image.
 
-I want to put OpenCV logo above an image. If I add two images, it will change color. If I blend it,
-I get an transparent effect. But I want it to be opaque. If it was a rectangular region, I could use
-ROI as we did in last chapter. But OpenCV logo is a not a rectangular shape. So you can do it with
-bitwise operations as below:
+I want to put the OpenCV logo above an image. If I add two images, it will change the color. If I blend them,
+I get a transparent effect. But I want it to be opaque. If it was a rectangular region, I could use
+ROI as we did in the last chapter. But the OpenCV logo is a not a rectangular shape. So you can do it with
+bitwise operations as shown below:
 @code{.py}
 # Load two images
 img1 = cv.imread('messi5.jpg')
@@ -81,7 +79,7 @@ img2 = cv.imread('opencv-logo-white.png')
 
 # I want to put logo on top-left corner, So I create a ROI
 rows,cols,channels = img2.shape
-roi = img1[0:rows, 0:cols ]
+roi = img1[0:rows, 0:cols]
 
 # Now create a mask of logo and create its inverse mask also
 img2gray = cv.cvtColor(img2,cv.COLOR_BGR2GRAY)

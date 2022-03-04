@@ -4,8 +4,10 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2014-2016, 2018, D. R. Commander.
+ * Copyright (C) 2009-2011, 2014-2016, 2018-2021, D. R. Commander.
  * Copyright (C) 2015, Matthieu Darbois.
+ * Copyright (C) 2018, Matthias Räncker.
+ * Copyright (C) 2020, Arm Limited.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -34,23 +36,28 @@
  * memory footprint by 64k, which is important for some mobile applications
  * that create many isolated instances of libjpeg-turbo (web browsers, for
  * instance.)  This may improve performance on some mobile platforms as well.
- * This feature is enabled by default only on ARM processors, because some x86
+ * This feature is enabled by default only on Arm processors, because some x86
  * chips have a slow implementation of bsr, and the use of clz/bsr cannot be
  * shown to have a significant performance impact even on the x86 chips that
- * have a fast implementation of it.  When building for ARMv6, you can
+ * have a fast implementation of it.  When building for Armv6, you can
  * explicitly disable the use of clz/bsr by adding -mthumb to the compiler
  * flags (this defines __thumb__).
  */
 
 /* NOTE: Both GCC and Clang define __GNUC__ */
-#if defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-#if !defined __thumb__ || defined __thumb2__
+#if (defined(__GNUC__) && (defined(__arm__) || defined(__aarch64__))) || \
+    defined(_M_ARM) || defined(_M_ARM64)
+#if !defined(__thumb__) || defined(__thumb2__)
 #define USE_CLZ_INTRINSIC
 #endif
 #endif
 
 #ifdef USE_CLZ_INTRINSIC
+#if defined(_MSC_VER) && !defined(__clang__)
+#define JPEG_NBITS_NONZERO(x)  (32 - _CountLeadingZeros(x))
+#else
 #define JPEG_NBITS_NONZERO(x)  (32 - __builtin_clz(x))
+#endif
 #define JPEG_NBITS(x)          (x ? JPEG_NBITS_NONZERO(x) : 0)
 #else
 #include "jpeg_nbits_table.h"
@@ -65,31 +72,42 @@
  * but must not be updated permanently until we complete the MCU.
  */
 
+#if defined(__x86_64__) && defined(__ILP32__)
+typedef unsigned long long bit_buf_type;
+#else
+typedef size_t bit_buf_type;
+#endif
+
+/* NOTE: The more optimal Huffman encoding algorithm is only used by the
+ * intrinsics implementation of the Arm Neon SIMD extensions, which is why we
+ * retain the old Huffman encoder behavior when using the GAS implementation.
+ */
+#if defined(WITH_SIMD) && !(defined(__arm__) || defined(__aarch64__) || \
+                            defined(_M_ARM) || defined(_M_ARM64))
+typedef unsigned long long simd_bit_buf_type;
+#else
+typedef bit_buf_type simd_bit_buf_type;
+#endif
+
+#if (defined(SIZEOF_SIZE_T) && SIZEOF_SIZE_T == 8) || defined(_WIN64) || \
+    (defined(__x86_64__) && defined(__ILP32__))
+#define BIT_BUF_SIZE  64
+#elif (defined(SIZEOF_SIZE_T) && SIZEOF_SIZE_T == 4) || defined(_WIN32)
+#define BIT_BUF_SIZE  32
+#else
+#error Cannot determine word size
+#endif
+#define SIMD_BIT_BUF_SIZE  (sizeof(simd_bit_buf_type) * 8)
+
 typedef struct {
-  size_t put_buffer;                    /* current bit-accumulation buffer */
-  int put_bits;                         /* # of bits now in it */
+  union {
+    bit_buf_type c;
+    simd_bit_buf_type simd;
+  } put_buffer;                         /* current bit accumulation buffer */
+  int free_bits;                        /* # of bits available in it */
+                                        /* (Neon GAS: # of bits now in it) */
   int last_dc_val[MAX_COMPS_IN_SCAN];   /* last DC coef for each component */
 } savable_state;
-
-/* This macro is to work around compilers with missing or broken
- * structure assignment.  You'll need to fix this code if you have
- * such a compiler and you change MAX_COMPS_IN_SCAN.
- */
-
-#ifndef NO_STRUCT_ASSIGN
-#define ASSIGN_STATE(dest, src)  ((dest) = (src))
-#else
-#if MAX_COMPS_IN_SCAN == 4
-#define ASSIGN_STATE(dest, src) \
-  ((dest).put_buffer = (src).put_buffer, \
-   (dest).put_bits = (src).put_bits, \
-   (dest).last_dc_val[0] = (src).last_dc_val[0], \
-   (dest).last_dc_val[1] = (src).last_dc_val[1], \
-   (dest).last_dc_val[2] = (src).last_dc_val[2], \
-   (dest).last_dc_val[3] = (src).last_dc_val[3])
-#endif
-#endif
-
 
 typedef struct {
   struct jpeg_entropy_encoder pub; /* public fields */
@@ -123,6 +141,7 @@ typedef struct {
   size_t free_in_buffer;        /* # of byte spaces remaining in buffer */
   savable_state cur;            /* Current bit buffer & DC state */
   j_compress_ptr cinfo;         /* dump_buffer needs access to this */
+  int simd;
 } working_state;
 
 
@@ -201,8 +220,17 @@ start_pass_huff(j_compress_ptr cinfo, boolean gather_statistics)
   }
 
   /* Initialize bit buffer to empty */
-  entropy->saved.put_buffer = 0;
-  entropy->saved.put_bits = 0;
+  if (entropy->simd) {
+    entropy->saved.put_buffer.simd = 0;
+#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
+    entropy->saved.free_bits = 0;
+#else
+    entropy->saved.free_bits = SIMD_BIT_BUF_SIZE;
+#endif
+  } else {
+    entropy->saved.put_buffer.c = 0;
+    entropy->saved.free_bits = BIT_BUF_SIZE;
+  }
 
   /* Initialize restart stuff */
   entropy->restarts_to_go = cinfo->restart_interval;
@@ -287,6 +315,7 @@ jpeg_make_c_derived_tbl(j_compress_ptr cinfo, boolean isDC, int tblno,
    * this lets us detect duplicate VAL entries here, and later
    * allows emit_bits to detect any attempt to emit such symbols.
    */
+  MEMZERO(dtbl->ehufco, sizeof(dtbl->ehufco));
   MEMZERO(dtbl->ehufsi, sizeof(dtbl->ehufsi));
 
   /* This is also a convenient place to check for out-of-range
@@ -334,89 +363,93 @@ dump_buffer(working_state *state)
 
 /* Outputting bits to the file */
 
-/* These macros perform the same task as the emit_bits() function in the
- * original libjpeg code.  In addition to reducing overhead by explicitly
- * inlining the code, additional performance is achieved by taking into
- * account the size of the bit buffer and waiting until it is almost full
- * before emptying it.  This mostly benefits 64-bit platforms, since 6
- * bytes can be stored in a 64-bit bit buffer before it has to be emptied.
+/* Output byte b and, speculatively, an additional 0 byte.  0xFF must be
+ * encoded as 0xFF 0x00, so the output buffer pointer is advanced by 2 if the
+ * byte is 0xFF.  Otherwise, the output buffer pointer is advanced by 1, and
+ * the speculative 0 byte will be overwritten by the next byte.
  */
-
-#define EMIT_BYTE() { \
-  JOCTET c; \
-  put_bits -= 8; \
-  c = (JOCTET)GETJOCTET(put_buffer >> put_bits); \
-  *buffer++ = c; \
-  if (c == 0xFF)  /* need to stuff a zero byte? */ \
-    *buffer++ = 0; \
+#define EMIT_BYTE(b) { \
+  buffer[0] = (JOCTET)(b); \
+  buffer[1] = 0; \
+  buffer -= -2 + ((JOCTET)(b) < 0xFF); \
 }
 
-#define PUT_BITS(code, size) { \
-  put_bits += size; \
-  put_buffer = (put_buffer << size) | code; \
-}
+/* Output the entire bit buffer.  If there are no 0xFF bytes in it, then write
+ * directly to the output buffer.  Otherwise, use the EMIT_BYTE() macro to
+ * encode 0xFF as 0xFF 0x00.
+ */
+#if BIT_BUF_SIZE == 64
 
-#define CHECKBUF15() { \
-  if (put_bits > 15) { \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
+#define FLUSH() { \
+  if (put_buffer & 0x8080808080808080 & ~(put_buffer + 0x0101010101010101)) { \
+    EMIT_BYTE(put_buffer >> 56) \
+    EMIT_BYTE(put_buffer >> 48) \
+    EMIT_BYTE(put_buffer >> 40) \
+    EMIT_BYTE(put_buffer >> 32) \
+    EMIT_BYTE(put_buffer >> 24) \
+    EMIT_BYTE(put_buffer >> 16) \
+    EMIT_BYTE(put_buffer >>  8) \
+    EMIT_BYTE(put_buffer      ) \
+  } else { \
+    buffer[0] = (JOCTET)(put_buffer >> 56); \
+    buffer[1] = (JOCTET)(put_buffer >> 48); \
+    buffer[2] = (JOCTET)(put_buffer >> 40); \
+    buffer[3] = (JOCTET)(put_buffer >> 32); \
+    buffer[4] = (JOCTET)(put_buffer >> 24); \
+    buffer[5] = (JOCTET)(put_buffer >> 16); \
+    buffer[6] = (JOCTET)(put_buffer >> 8); \
+    buffer[7] = (JOCTET)(put_buffer); \
+    buffer += 8; \
   } \
-}
-
-#define CHECKBUF31() { \
-  if (put_bits > 31) { \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-  } \
-}
-
-#define CHECKBUF47() { \
-  if (put_bits > 47) { \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-    EMIT_BYTE() \
-  } \
-}
-
-#if !defined(_WIN32) && !defined(SIZEOF_SIZE_T)
-#error Cannot determine word size
-#endif
-
-#if SIZEOF_SIZE_T == 8 || defined(_WIN64)
-
-#define EMIT_BITS(code, size) { \
-  CHECKBUF47() \
-  PUT_BITS(code, size) \
-}
-
-#define EMIT_CODE(code, size) { \
-  temp2 &= (((JLONG)1) << nbits) - 1; \
-  CHECKBUF31() \
-  PUT_BITS(code, size) \
-  PUT_BITS(temp2, nbits) \
 }
 
 #else
 
-#define EMIT_BITS(code, size) { \
-  PUT_BITS(code, size) \
-  CHECKBUF15() \
-}
-
-#define EMIT_CODE(code, size) { \
-  temp2 &= (((JLONG)1) << nbits) - 1; \
-  PUT_BITS(code, size) \
-  CHECKBUF15() \
-  PUT_BITS(temp2, nbits) \
-  CHECKBUF15() \
+#define FLUSH() { \
+  if (put_buffer & 0x80808080 & ~(put_buffer + 0x01010101)) { \
+    EMIT_BYTE(put_buffer >> 24) \
+    EMIT_BYTE(put_buffer >> 16) \
+    EMIT_BYTE(put_buffer >>  8) \
+    EMIT_BYTE(put_buffer      ) \
+  } else { \
+    buffer[0] = (JOCTET)(put_buffer >> 24); \
+    buffer[1] = (JOCTET)(put_buffer >> 16); \
+    buffer[2] = (JOCTET)(put_buffer >> 8); \
+    buffer[3] = (JOCTET)(put_buffer); \
+    buffer += 4; \
+  } \
 }
 
 #endif
+
+/* Fill the bit buffer to capacity with the leading bits from code, then output
+ * the bit buffer and put the remaining bits from code into the bit buffer.
+ */
+#define PUT_AND_FLUSH(code, size) { \
+  put_buffer = (put_buffer << (size + free_bits)) | (code >> -free_bits); \
+  FLUSH() \
+  free_bits += BIT_BUF_SIZE; \
+  put_buffer = code; \
+}
+
+/* Insert code into the bit buffer and output the bit buffer if needed.
+ * NOTE: We can't flush with free_bits == 0, since the left shift in
+ * PUT_AND_FLUSH() would have undefined behavior.
+ */
+#define PUT_BITS(code, size) { \
+  free_bits -= size; \
+  if (free_bits < 0) \
+    PUT_AND_FLUSH(code, size) \
+  else \
+    put_buffer = (put_buffer << size) | code; \
+}
+
+#define PUT_CODE(code, size) { \
+  temp &= (((JLONG)1) << nbits) - 1; \
+  temp |= code << nbits; \
+  nbits += size; \
+  PUT_BITS(temp, nbits) \
+}
 
 
 /* Although it is exceedingly rare, it is possible for a Huffman-encoded
@@ -428,7 +461,7 @@ dump_buffer(working_state *state)
  * scanning order-- 1, 8, 16, etc.), then this will produce an encoded block
  * larger than 200 bytes.
  */
-#define BUFSIZE  (DCTSIZE2 * 4)
+#define BUFSIZE  (DCTSIZE2 * 8)
 
 #define LOAD_BUFFER() { \
   if (state->free_in_buffer < BUFSIZE) { \
@@ -440,6 +473,7 @@ dump_buffer(working_state *state)
 
 #define STORE_BUFFER() { \
   if (localbuf) { \
+    size_t bytes, bytestocopy; \
     bytes = buffer - _buffer; \
     buffer = _buffer; \
     while (bytes > 0) { \
@@ -462,20 +496,46 @@ dump_buffer(working_state *state)
 LOCAL(boolean)
 flush_bits(working_state *state)
 {
-  JOCTET _buffer[BUFSIZE], *buffer;
-  size_t put_buffer;  int put_bits;
-  size_t bytes, bytestocopy;  int localbuf = 0;
+  JOCTET _buffer[BUFSIZE], *buffer, temp;
+  simd_bit_buf_type put_buffer;  int put_bits;
+  int localbuf = 0;
 
-  put_buffer = state->cur.put_buffer;
-  put_bits = state->cur.put_bits;
+  if (state->simd) {
+#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
+    put_bits = state->cur.free_bits;
+#else
+    put_bits = SIMD_BIT_BUF_SIZE - state->cur.free_bits;
+#endif
+    put_buffer = state->cur.put_buffer.simd;
+  } else {
+    put_bits = BIT_BUF_SIZE - state->cur.free_bits;
+    put_buffer = state->cur.put_buffer.c;
+  }
+
   LOAD_BUFFER()
 
-  /* fill any partial byte with ones */
-  PUT_BITS(0x7F, 7)
-  while (put_bits >= 8) EMIT_BYTE()
+  while (put_bits >= 8) {
+    put_bits -= 8;
+    temp = (JOCTET)(put_buffer >> put_bits);
+    EMIT_BYTE(temp)
+  }
+  if (put_bits) {
+    /* fill partial byte with ones */
+    temp = (JOCTET)((put_buffer << (8 - put_bits)) | (0xFF >> put_bits));
+    EMIT_BYTE(temp)
+  }
 
-  state->cur.put_buffer = 0;    /* and reset bit-buffer to empty */
-  state->cur.put_bits = 0;
+  if (state->simd) {                    /* and reset bit buffer to empty */
+    state->cur.put_buffer.simd = 0;
+#if defined(__aarch64__) && !defined(NEON_INTRINSICS)
+    state->cur.free_bits = 0;
+#else
+    state->cur.free_bits = SIMD_BIT_BUF_SIZE;
+#endif
+  } else {
+    state->cur.put_buffer.c = 0;
+    state->cur.free_bits = BIT_BUF_SIZE;
+  }
   STORE_BUFFER()
 
   return TRUE;
@@ -489,7 +549,7 @@ encode_one_block_simd(working_state *state, JCOEFPTR block, int last_dc_val,
                       c_derived_tbl *dctbl, c_derived_tbl *actbl)
 {
   JOCTET _buffer[BUFSIZE], *buffer;
-  size_t bytes, bytestocopy;  int localbuf = 0;
+  int localbuf = 0;
 
   LOAD_BUFFER()
 
@@ -505,53 +565,41 @@ LOCAL(boolean)
 encode_one_block(working_state *state, JCOEFPTR block, int last_dc_val,
                  c_derived_tbl *dctbl, c_derived_tbl *actbl)
 {
-  int temp, temp2, temp3;
-  int nbits;
-  int r, code, size;
+  int temp, nbits, free_bits;
+  bit_buf_type put_buffer;
   JOCTET _buffer[BUFSIZE], *buffer;
-  size_t put_buffer;  int put_bits;
-  int code_0xf0 = actbl->ehufco[0xf0], size_0xf0 = actbl->ehufsi[0xf0];
-  size_t bytes, bytestocopy;  int localbuf = 0;
+  int localbuf = 0;
 
-  put_buffer = state->cur.put_buffer;
-  put_bits = state->cur.put_bits;
+  free_bits = state->cur.free_bits;
+  put_buffer = state->cur.put_buffer.c;
   LOAD_BUFFER()
 
   /* Encode the DC coefficient difference per section F.1.2.1 */
 
-  temp = temp2 = block[0] - last_dc_val;
+  temp = block[0] - last_dc_val;
 
   /* This is a well-known technique for obtaining the absolute value without a
    * branch.  It is derived from an assembly language technique presented in
    * "How to Optimize for the Pentium Processors", Copyright (c) 1996, 1997 by
-   * Agner Fog.
+   * Agner Fog.  This code assumes we are on a two's complement machine.
    */
-  temp3 = temp >> (CHAR_BIT * sizeof(int) - 1);
-  temp ^= temp3;
-  temp -= temp3;
-
-  /* For a negative input, want temp2 = bitwise complement of abs(input) */
-  /* This code assumes we are on a two's complement machine */
-  temp2 += temp3;
+  nbits = temp >> (CHAR_BIT * sizeof(int) - 1);
+  temp += nbits;
+  nbits ^= temp;
 
   /* Find the number of bits needed for the magnitude of the coefficient */
-  nbits = JPEG_NBITS(temp);
+  nbits = JPEG_NBITS(nbits);
 
-  /* Emit the Huffman-coded symbol for the number of bits */
-  code = dctbl->ehufco[nbits];
-  size = dctbl->ehufsi[nbits];
-  EMIT_BITS(code, size)
-
-  /* Mask off any extra bits in code */
-  temp2 &= (((JLONG)1) << nbits) - 1;
-
-  /* Emit that number of bits of the value, if positive, */
-  /* or the complement of its magnitude, if negative. */
-  EMIT_BITS(temp2, nbits)
+  /* Emit the Huffman-coded symbol for the number of bits.
+   * Emit that number of bits of the value, if positive,
+   * or the complement of its magnitude, if negative.
+   */
+  PUT_CODE(dctbl->ehufco[nbits], dctbl->ehufsi[nbits])
 
   /* Encode the AC coefficients per section F.1.2.2 */
 
-  r = 0;                        /* r = run length of zeros */
+  {
+    int r = 0;                  /* r = run length of zeros */
 
 /* Manually unroll the k loop to eliminate the counter variable.  This
  * improves performance greatly on systems with a limited number of
@@ -559,51 +607,46 @@ encode_one_block(working_state *state, JCOEFPTR block, int last_dc_val,
  */
 #define kloop(jpeg_natural_order_of_k) { \
   if ((temp = block[jpeg_natural_order_of_k]) == 0) { \
-    r++; \
+    r += 16; \
   } else { \
-    temp2 = temp; \
     /* Branch-less absolute value, bitwise complement, etc., same as above */ \
-    temp3 = temp >> (CHAR_BIT * sizeof(int) - 1); \
-    temp ^= temp3; \
-    temp -= temp3; \
-    temp2 += temp3; \
-    nbits = JPEG_NBITS_NONZERO(temp); \
+    nbits = temp >> (CHAR_BIT * sizeof(int) - 1); \
+    temp += nbits; \
+    nbits ^= temp; \
+    nbits = JPEG_NBITS_NONZERO(nbits); \
     /* if run length > 15, must emit special run-length-16 codes (0xF0) */ \
-    while (r > 15) { \
-      EMIT_BITS(code_0xf0, size_0xf0) \
-      r -= 16; \
+    while (r >= 16 * 16) { \
+      r -= 16 * 16; \
+      PUT_BITS(actbl->ehufco[0xf0], actbl->ehufsi[0xf0]) \
     } \
     /* Emit Huffman symbol for run length / number of bits */ \
-    temp3 = (r << 4) + nbits; \
-    code = actbl->ehufco[temp3]; \
-    size = actbl->ehufsi[temp3]; \
-    EMIT_CODE(code, size) \
+    r += nbits; \
+    PUT_CODE(actbl->ehufco[r], actbl->ehufsi[r]) \
     r = 0; \
   } \
 }
 
-  /* One iteration for each value in jpeg_natural_order[] */
-  kloop(1);   kloop(8);   kloop(16);  kloop(9);   kloop(2);   kloop(3);
-  kloop(10);  kloop(17);  kloop(24);  kloop(32);  kloop(25);  kloop(18);
-  kloop(11);  kloop(4);   kloop(5);   kloop(12);  kloop(19);  kloop(26);
-  kloop(33);  kloop(40);  kloop(48);  kloop(41);  kloop(34);  kloop(27);
-  kloop(20);  kloop(13);  kloop(6);   kloop(7);   kloop(14);  kloop(21);
-  kloop(28);  kloop(35);  kloop(42);  kloop(49);  kloop(56);  kloop(57);
-  kloop(50);  kloop(43);  kloop(36);  kloop(29);  kloop(22);  kloop(15);
-  kloop(23);  kloop(30);  kloop(37);  kloop(44);  kloop(51);  kloop(58);
-  kloop(59);  kloop(52);  kloop(45);  kloop(38);  kloop(31);  kloop(39);
-  kloop(46);  kloop(53);  kloop(60);  kloop(61);  kloop(54);  kloop(47);
-  kloop(55);  kloop(62);  kloop(63);
+    /* One iteration for each value in jpeg_natural_order[] */
+    kloop(1);   kloop(8);   kloop(16);  kloop(9);   kloop(2);   kloop(3);
+    kloop(10);  kloop(17);  kloop(24);  kloop(32);  kloop(25);  kloop(18);
+    kloop(11);  kloop(4);   kloop(5);   kloop(12);  kloop(19);  kloop(26);
+    kloop(33);  kloop(40);  kloop(48);  kloop(41);  kloop(34);  kloop(27);
+    kloop(20);  kloop(13);  kloop(6);   kloop(7);   kloop(14);  kloop(21);
+    kloop(28);  kloop(35);  kloop(42);  kloop(49);  kloop(56);  kloop(57);
+    kloop(50);  kloop(43);  kloop(36);  kloop(29);  kloop(22);  kloop(15);
+    kloop(23);  kloop(30);  kloop(37);  kloop(44);  kloop(51);  kloop(58);
+    kloop(59);  kloop(52);  kloop(45);  kloop(38);  kloop(31);  kloop(39);
+    kloop(46);  kloop(53);  kloop(60);  kloop(61);  kloop(54);  kloop(47);
+    kloop(55);  kloop(62);  kloop(63);
 
-  /* If the last coef(s) were zero, emit an end-of-block code */
-  if (r > 0) {
-    code = actbl->ehufco[0];
-    size = actbl->ehufsi[0];
-    EMIT_BITS(code, size)
+    /* If the last coef(s) were zero, emit an end-of-block code */
+    if (r > 0) {
+      PUT_BITS(actbl->ehufco[0], actbl->ehufsi[0])
+    }
   }
 
-  state->cur.put_buffer = put_buffer;
-  state->cur.put_bits = put_bits;
+  state->cur.put_buffer.c = put_buffer;
+  state->cur.free_bits = free_bits;
   STORE_BUFFER()
 
   return TRUE;
@@ -650,8 +693,9 @@ encode_mcu_huff(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
   /* Load up working state */
   state.next_output_byte = cinfo->dest->next_output_byte;
   state.free_in_buffer = cinfo->dest->free_in_buffer;
-  ASSIGN_STATE(state.cur, entropy->saved);
+  state.cur = entropy->saved;
   state.cinfo = cinfo;
+  state.simd = entropy->simd;
 
   /* Emit restart marker if needed */
   if (cinfo->restart_interval) {
@@ -690,7 +734,7 @@ encode_mcu_huff(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
   /* Completed MCU, so update state */
   cinfo->dest->next_output_byte = state.next_output_byte;
   cinfo->dest->free_in_buffer = state.free_in_buffer;
-  ASSIGN_STATE(entropy->saved, state.cur);
+  entropy->saved = state.cur;
 
   /* Update restart-interval state too */
   if (cinfo->restart_interval) {
@@ -719,8 +763,9 @@ finish_pass_huff(j_compress_ptr cinfo)
   /* Load up working state ... flush_bits needs it */
   state.next_output_byte = cinfo->dest->next_output_byte;
   state.free_in_buffer = cinfo->dest->free_in_buffer;
-  ASSIGN_STATE(state.cur, entropy->saved);
+  state.cur = entropy->saved;
   state.cinfo = cinfo;
+  state.simd = entropy->simd;
 
   /* Flush out the last data */
   if (!flush_bits(&state))
@@ -729,7 +774,7 @@ finish_pass_huff(j_compress_ptr cinfo)
   /* Update state */
   cinfo->dest->next_output_byte = state.next_output_byte;
   cinfo->dest->free_in_buffer = state.free_in_buffer;
-  ASSIGN_STATE(entropy->saved, state.cur);
+  entropy->saved = state.cur;
 }
 
 

@@ -51,18 +51,20 @@ template<typename Dtype>
 OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
 {
     int dims = config.in_shape.size();
-    int spatial_dims = 2;
+    int spatial_dims = config.in_shape.size()-2;
 
     channels_ = config.channels;
     pool_method_ = config.pool_method;
     avePoolPaddedArea = config.avePoolPaddedArea;
     computeMaxIdx = config.computeMaxIdx;
     use_half = config.use_half;
+    kernel_shape_.push_back(config.kernel.height);
+    kernel_shape_.push_back(config.kernel.width);
+    stride_.push_back(config.stride.height);
+    stride_.push_back(config.stride.width);
 
     for (int i = 0; i < spatial_dims; ++i)
     {
-        kernel_shape_.push_back(i == 0 ? config.kernel.height : config.kernel.width);
-        stride_.push_back(i == 0 ? config.stride.height : config.stride.width);
         im_in_shape_.push_back(config.in_shape[dims - spatial_dims + i]);
         im_out_shape_.push_back(config.out_shape[dims - spatial_dims + i]);
     }
@@ -75,10 +77,10 @@ OCL4DNNPool<Dtype>::OCL4DNNPool(OCL4DNNPoolConfig config)
     pad_l_ = config.pad_l;
     pad_r_ = config.pad_r;
     pad_b_ = config.pad_b;
-    height_ = im_in_shape_[0];
-    width_ = im_in_shape_[1];
-    pooled_height_ = im_out_shape_[0];
-    pooled_width_ = im_out_shape_[1];
+    height_ = spatial_dims == 1? 1 : im_in_shape_[0];
+    width_ = im_in_shape_.back();
+    pooled_height_ = spatial_dims == 1? 1 : im_out_shape_[0];
+    pooled_width_ = im_out_shape_.back();
 
     count_ = 1;
     for (int i = 0; i < config.out_shape.size(); ++i)

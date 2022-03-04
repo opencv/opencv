@@ -13,15 +13,15 @@ using std::cout;
 using std::endl;
 
 const char* keys =
-        "{ help h |                          | Print help message. }"
-        "{ input1 | ../data/box.png          | Path to input image 1. }"
-        "{ input2 | ../data/box_in_scene.png | Path to input image 2. }";
+        "{ help h |                  | Print help message. }"
+        "{ input1 | box.png          | Path to input image 1. }"
+        "{ input2 | box_in_scene.png | Path to input image 2. }";
 
 int main( int argc, char* argv[] )
 {
     CommandLineParser parser( argc, argv, keys );
-    Mat img_object = imread( parser.get<String>("input1"), IMREAD_GRAYSCALE );
-    Mat img_scene = imread( parser.get<String>("input2"), IMREAD_GRAYSCALE );
+    Mat img_object = imread( samples::findFile( parser.get<String>("input1") ), IMREAD_GRAYSCALE );
+    Mat img_scene = imread( samples::findFile( parser.get<String>("input2") ), IMREAD_GRAYSCALE );
     if ( img_object.empty() || img_scene.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;

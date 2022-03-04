@@ -183,7 +183,8 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
 }
 
 static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1, InputOutputArray outImg2 ,
-                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, DrawMatchesFlags flags )
+                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, DrawMatchesFlags flags,
+                          const int matchesThickness )
 {
     RNG& rng = theRNG();
     bool isRandMatchColor = matchColor == Scalar::all(-1);
@@ -199,7 +200,7 @@ static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1
     line( outImg,
           Point(cvRound(pt1.x*draw_multiplier), cvRound(pt1.y*draw_multiplier)),
           Point(cvRound(dpt2.x*draw_multiplier), cvRound(dpt2.y*draw_multiplier)),
-          color, 1, LINE_AA, draw_shift_bits );
+          color, matchesThickness, LINE_AA, draw_shift_bits );
 }
 
 void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
@@ -207,6 +208,21 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
                   const std::vector<char>& matchesMask, DrawMatchesFlags flags )
+{
+    drawMatches( img1, keypoints1,
+                 img2, keypoints2,
+                 matches1to2, outImg,
+                 1, matchColor,
+                 singlePointColor, matchesMask,
+                 flags);
+}
+
+void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                  InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                  const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
+                  const int matchesThickness, const Scalar& matchColor,
+                  const Scalar& singlePointColor, const std::vector<char>& matchesMask,
+                  DrawMatchesFlags flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( Error::StsBadSize, "matchesMask must have the same size as matches1to2" );
@@ -226,10 +242,11 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
             CV_Assert(i2 >= 0 && i2 < static_cast<int>(keypoints2.size()));
 
             const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
-            _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
+            _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags, matchesThickness );
         }
     }
 }
+
 
 void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   InputArray img2, const std::vector<KeyPoint>& keypoints2,
@@ -254,7 +271,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
             if( matchesMask.empty() || matchesMask[i][j] )
             {
                 const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
-                _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags );
+                _drawMatch( outImg, outImg1, outImg2, kp1, kp2, matchColor, flags, 1 );
             }
         }
     }

@@ -22,7 +22,7 @@ function(ocv_create_builtin_videoio_plugin name target)
 
   foreach(mod opencv_videoio opencv_core opencv_imgproc opencv_imgcodecs)
     ocv_target_link_libraries(${name} LINK_PRIVATE ${mod})
-    ocv_target_include_directories(${name} PRIVATE "${OPENCV_MODULE_${mod}_LOCATION}/include")
+    ocv_target_include_directories(${name} "${OPENCV_MODULE_${mod}_LOCATION}/include")
   endforeach()
 
   if(WIN32)
@@ -40,10 +40,12 @@ function(ocv_create_builtin_videoio_plugin name target)
   set_target_properties(${name} PROPERTIES
     CXX_STANDARD 11
     CXX_VISIBILITY_PRESET hidden
+    DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
     OUTPUT_NAME "${name}${OPENCV_PLUGIN_VERSION}${OPENCV_PLUGIN_ARCH}"
   )
 
   if(WIN32)
+    set_target_properties(${name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
     install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT plugins)
   else()
     install(TARGETS ${name} OPTIONAL LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT plugins)

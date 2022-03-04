@@ -37,42 +37,44 @@
 namespace google {
 namespace protobuf {
 namespace util {
-namespace error {
-inline string CodeEnumToString(error::Code code) {
+namespace status_internal {
+namespace {
+
+inline std::string StatusCodeToString(StatusCode code) {
   switch (code) {
-    case OK:
+    case StatusCode::kOk:
       return "OK";
-    case CANCELLED:
+    case StatusCode::kCancelled:
       return "CANCELLED";
-    case UNKNOWN:
+    case StatusCode::kUnknown:
       return "UNKNOWN";
-    case INVALID_ARGUMENT:
+    case StatusCode::kInvalidArgument:
       return "INVALID_ARGUMENT";
-    case DEADLINE_EXCEEDED:
+    case StatusCode::kDeadlineExceeded:
       return "DEADLINE_EXCEEDED";
-    case NOT_FOUND:
+    case StatusCode::kNotFound:
       return "NOT_FOUND";
-    case ALREADY_EXISTS:
+    case StatusCode::kAlreadyExists:
       return "ALREADY_EXISTS";
-    case PERMISSION_DENIED:
+    case StatusCode::kPermissionDenied:
       return "PERMISSION_DENIED";
-    case UNAUTHENTICATED:
+    case StatusCode::kUnauthenticated:
       return "UNAUTHENTICATED";
-    case RESOURCE_EXHAUSTED:
+    case StatusCode::kResourceExhausted:
       return "RESOURCE_EXHAUSTED";
-    case FAILED_PRECONDITION:
+    case StatusCode::kFailedPrecondition:
       return "FAILED_PRECONDITION";
-    case ABORTED:
+    case StatusCode::kAborted:
       return "ABORTED";
-    case OUT_OF_RANGE:
+    case StatusCode::kOutOfRange:
       return "OUT_OF_RANGE";
-    case UNIMPLEMENTED:
+    case StatusCode::kUnimplemented:
       return "UNIMPLEMENTED";
-    case INTERNAL:
+    case StatusCode::kInternal:
       return "INTERNAL";
-    case UNAVAILABLE:
+    case StatusCode::kUnavailable:
       return "UNAVAILABLE";
-    case DATA_LOSS:
+    case StatusCode::kDataLoss:
       return "DATA_LOSS";
   }
 
@@ -80,18 +82,14 @@ inline string CodeEnumToString(error::Code code) {
   // above switch.
   return "UNKNOWN";
 }
-}  // namespace error.
 
-const Status Status::OK = Status();
-const Status Status::CANCELLED = Status(error::CANCELLED, "");
-const Status Status::UNKNOWN = Status(error::UNKNOWN, "");
+}  // namespace
 
-Status::Status() : error_code_(error::OK) {
-}
+Status::Status() : error_code_(StatusCode::kOk) {}
 
-Status::Status(error::Code error_code, StringPiece error_message)
+Status::Status(StatusCode error_code, StringPiece error_message)
     : error_code_(error_code) {
-  if (error_code != error::OK) {
+  if (error_code != StatusCode::kOk) {
     error_message_ = error_message.ToString();
   }
 }
@@ -111,24 +109,154 @@ bool Status::operator==(const Status& x) const {
       error_message_ == x.error_message_;
 }
 
-string Status::ToString() const {
-  if (error_code_ == error::OK) {
+std::string Status::ToString() const {
+  if (error_code_ == StatusCode::kOk) {
     return "OK";
   } else {
     if (error_message_.empty()) {
-      return error::CodeEnumToString(error_code_);
+      return StatusCodeToString(error_code_);
     } else {
-      return error::CodeEnumToString(error_code_) + ":" +
-          error_message_;
+      return StatusCodeToString(error_code_) + ":" + error_message_;
     }
   }
 }
 
-ostream& operator<<(ostream& os, const Status& x) {
+Status OkStatus() { return Status(); }
+
+std::ostream& operator<<(std::ostream& os, const Status& x) {
   os << x.ToString();
   return os;
 }
 
+bool IsAborted(const Status& status) {
+  return status.code() == StatusCode::kAborted;
+}
+
+bool IsAlreadyExists(const Status& status) {
+  return status.code() == StatusCode::kAlreadyExists;
+}
+
+bool IsCancelled(const Status& status) {
+  return status.code() == StatusCode::kCancelled;
+}
+
+bool IsDataLoss(const Status& status) {
+  return status.code() == StatusCode::kDataLoss;
+}
+
+bool IsDeadlineExceeded(const Status& status) {
+  return status.code() == StatusCode::kDeadlineExceeded;
+}
+
+bool IsFailedPrecondition(const Status& status) {
+  return status.code() == StatusCode::kFailedPrecondition;
+}
+
+bool IsInternal(const Status& status) {
+  return status.code() == StatusCode::kInternal;
+}
+
+bool IsInvalidArgument(const Status& status) {
+  return status.code() == StatusCode::kInvalidArgument;
+}
+
+bool IsNotFound(const Status& status) {
+  return status.code() == StatusCode::kNotFound;
+}
+
+bool IsOutOfRange(const Status& status) {
+  return status.code() == StatusCode::kOutOfRange;
+}
+
+bool IsPermissionDenied(const Status& status) {
+  return status.code() == StatusCode::kPermissionDenied;
+}
+
+bool IsResourceExhausted(const Status& status) {
+  return status.code() == StatusCode::kResourceExhausted;
+}
+
+bool IsUnauthenticated(const Status& status) {
+  return status.code() == StatusCode::kUnauthenticated;
+}
+
+bool IsUnavailable(const Status& status) {
+  return status.code() == StatusCode::kUnavailable;
+}
+
+bool IsUnimplemented(const Status& status) {
+  return status.code() == StatusCode::kUnimplemented;
+}
+
+bool IsUnknown(const Status& status) {
+  return status.code() == StatusCode::kUnknown;
+}
+
+Status AbortedError(StringPiece message) {
+  return Status(StatusCode::kAborted, message);
+}
+
+Status AlreadyExistsError(StringPiece message) {
+  return Status(StatusCode::kAlreadyExists, message);
+}
+
+Status CancelledError(StringPiece message) {
+  return Status(StatusCode::kCancelled, message);
+}
+
+Status DataLossError(StringPiece message) {
+  return Status(StatusCode::kDataLoss, message);
+}
+
+Status DeadlineExceededError(StringPiece message) {
+  return Status(StatusCode::kDeadlineExceeded, message);
+}
+
+Status FailedPreconditionError(StringPiece message) {
+  return Status(StatusCode::kFailedPrecondition, message);
+}
+
+Status InternalError(StringPiece message) {
+  return Status(StatusCode::kInternal, message);
+}
+
+Status InvalidArgumentError(StringPiece message) {
+  return Status(StatusCode::kInvalidArgument, message);
+}
+
+Status NotFoundError(StringPiece message) {
+  return Status(StatusCode::kNotFound, message);
+}
+
+Status OutOfRangeError(StringPiece message) {
+  return Status(StatusCode::kOutOfRange, message);
+}
+
+Status PermissionDeniedError(StringPiece message) {
+  return Status(StatusCode::kPermissionDenied, message);
+}
+
+Status ResourceExhaustedError(StringPiece message) {
+  return Status(StatusCode::kResourceExhausted, message);
+}
+
+Status UnauthenticatedError(StringPiece message) {
+  return Status(StatusCode::kUnauthenticated, message);
+}
+
+Status UnavailableError(StringPiece message) {
+  return Status(StatusCode::kUnavailable, message);
+}
+
+Status UnimplementedError(StringPiece message) {
+  return Status(StatusCode::kUnimplemented, message);
+}
+
+Status UnknownError(StringPiece message) {
+  return Status(StatusCode::kUnknown, message);
+}
+
+}  // namespace status_internal
 }  // namespace util
 }  // namespace protobuf
 }  // namespace google

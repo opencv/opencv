@@ -1,10 +1,6 @@
 # cmake needs this line
 cmake_minimum_required(VERSION 3.1)
 
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
 # Define project name
 project(opencv_example_project)
 
@@ -27,4 +23,4 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 add_executable(opencv_example example.cpp)
 
 # Link your application with OpenCV libraries
-target_link_libraries(opencv_example LINK_PRIVATE ${OpenCV_LIBS})
+target_link_libraries(opencv_example PRIVATE ${OpenCV_LIBS})

@@ -33,7 +33,7 @@ public:
 
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
 
         if (type_name && memcmp(type_name, "binary", 6) == 0)
@@ -98,7 +98,7 @@ public:
         /*
         if( !FileNode::isFlow(parent_flags) )
             fs->struct_indent -= CV_YML_INDENT + FileNode::isFlow(struct_flags);
-        assert( fs->struct_indent >= 0 );*/
+        CV_Assert( fs->struct_indent >= 0 );*/
     }
 
     void write(const char* key, int value)
@@ -120,11 +120,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
         {
@@ -174,6 +174,16 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
         int i, keylen = 0;
         int datalen = 0;
         char* ptr;
@@ -188,7 +198,7 @@ public:
         if( FileNode::isCollection(struct_flags) )
         {
             if( (FileNode::isMap(struct_flags) ^ (key != 0)) )
-                CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                          "or add element with key to sequence" );
         }
         else
@@ -201,10 +211,10 @@ public:
         {
             keylen = (int)strlen(key);
             if( keylen == 0 )
-                CV_Error( CV_StsBadArg, "The key is an empty" );
+                CV_Error( cv::Error::StsBadArg, "The key is an empty" );
 
             if( keylen > CV_FS_MAX_LEN )
-                CV_Error( CV_StsBadArg, "The key is too long" );
+                CV_Error( cv::Error::StsBadArg, "The key is too long" );
         }
 
         if( data )
@@ -238,7 +248,7 @@ public:
         if( key )
         {
             if( !cv_isalpha(key[0]) && key[0] != '_' )
-                CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
+                CV_Error( cv::Error::StsBadArg, "Key must start with a letter or _" );
 
             ptr = fs->resizeWriteBuffer( ptr, keylen );
 
@@ -248,7 +258,7 @@ public:
 
                 ptr[i] = c;
                 if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
-                    CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+                    CV_Error( cv::Error::StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
             }
 
             ptr += keylen;
@@ -271,7 +281,7 @@ public:
     void writeComment(const char* comment, bool eol_comment)
     {
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         int len = (int)strlen(comment);
         const char* eol = strchr(comment, '\n');
@@ -330,6 +340,9 @@ public:
 
     char* skipSpaces( char* ptr, int min_indent, int max_comment_indent )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         for(;;)
         {
             while( *ptr == ' ' )
@@ -374,6 +387,9 @@ public:
 
     bool getBase64Row(char* ptr, int indent, char* &beg, char* &end)
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         beg = end = ptr = skipSpaces(ptr, 0, INT_MAX);
         if (!ptr || !*ptr)
             return false; // end of file
@@ -394,6 +410,9 @@ public:
 
     char* parseKey( char* ptr, FileNode& map_node, FileNode& value_placeholder )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         char c;
         char *endptr = ptr - 1, *saveptr;
 
@@ -422,6 +441,9 @@ public:
 
     char* parseValue( char* ptr, FileNode& node, int min_indent, bool is_parent_flow )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         char* endptr = 0;
         char c = ptr[0], d = ptr[1];
         int value_type = FileNode::NONE;
@@ -440,19 +462,19 @@ public:
             if ( d == '<') //support of full type heading from YAML 1.2
             {
                 const char* yamlTypeHeading = "<tag:yaml.org,2002:";
-                const size_t headingLenght = strlen(yamlTypeHeading);
+                const size_t headingLength = strlen(yamlTypeHeading);
 
                 char* typeEndPtr = ++ptr;
 
                 do d = *++typeEndPtr;
                 while( cv_isprint(d) && d != ' ' && d != '>' );
 
-                if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLenght )
+                if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLength )
                 {
-                    if ( memcmp(ptr, yamlTypeHeading, headingLenght) == 0 )
+                    if ( memcmp(ptr, yamlTypeHeading, headingLength) == 0 )
                     {
                         *typeEndPtr = ' ';
-                        ptr += headingLenght - 1;
+                        ptr += headingLength - 1;
                         is_user = true;
                         //value_type |= FileNode::USER;
                     }
@@ -508,6 +530,8 @@ public:
 
             *endptr = d;
             ptr = skipSpaces( endptr, min_indent, INT_MAX );
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
 
             c = *ptr;
 
@@ -634,6 +658,8 @@ public:
                 FileNode elem;
 
                 ptr = skipSpaces( ptr, new_min_indent, INT_MAX );
+                if (!ptr)
+                    CV_PARSE_ERROR_CPP("Invalid input");
                 if( *ptr == '}' || *ptr == ']' )
                 {
                     if( *ptr != d )
@@ -647,6 +673,8 @@ public:
                     if( *ptr != ',' )
                         CV_PARSE_ERROR_CPP( "Missing , between the elements" );
                     ptr = skipSpaces( ptr + 1, new_min_indent, INT_MAX );
+                    if (!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid input");
                 }
 
                 if( struct_type == FileNode::MAP )
@@ -746,6 +774,9 @@ public:
 
     bool parse( char* ptr )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         bool first = true;
         bool ok = true;
         FileNode root_collection(fs->getFS(), 0, 0);

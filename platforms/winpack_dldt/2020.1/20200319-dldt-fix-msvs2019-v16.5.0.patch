@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7900b382..b5c53d09 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,6 +24,8 @@ include(features)
+ # include developer package
+ include(developer_package)
+ 
++disable_deprecated_warnings()
++
+ # These options are shared with 3rdparty plugins
+ # by means of developer package
+ include(check_features)

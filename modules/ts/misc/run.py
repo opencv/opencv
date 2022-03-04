@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument("--android_propagate_opencv_env", action="store_true", default=False, help="Android: propagate OPENCV* environment variables")
     parser.add_argument("--serial", metavar="serial number", default="", help="Android: directs command to the USB device or emulator with the given serial number")
     parser.add_argument("--package", metavar="package", default="", help="Java: run JUnit tests for specified module or Android package")
+    parser.add_argument("--java_test_exclude", metavar="java_test_exclude", default="", help="Java: Filter out specific JUnit tests")
 
     parser.add_argument("--trace", action="store_true", default=False, help="Trace: enable OpenCV tracing")
     parser.add_argument("--trace_dump", metavar="trace_dump", default=-1, help="Trace: dump highlight calls (specify max entries count, 0 - dump all)")
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     path = args.build_path
     try:
         if not os.path.isdir(path):
-            raise Err("Not a directory (should contain CMakeCache.txt ot test executables)")
+            raise Err("Not a directory (should contain CMakeCache.txt to test executables)")
         cache = CMakeCache(args.configuration)
         fname = os.path.join(path, "CMakeCache.txt")
 

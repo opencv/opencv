@@ -466,7 +466,8 @@ std_empty_output_buffer(j_compress_ptr cinfo)
        }
 #endif
 
-	TIFFFlushData1(tif);
+	if( !TIFFFlushData1(tif) )
+            return FALSE;
 	sp->dest.next_output_byte = (JOCTET*) tif->tif_rawdata;
 	sp->dest.free_in_buffer = (size_t) tif->tif_rawdatasize;
 
@@ -780,12 +781,9 @@ JPEGFixupTagsSubsampling(TIFF* tif)
 	 */
 	static const char module[] = "JPEGFixupTagsSubsampling";
 	struct JPEGFixupTagsSubsamplingData m;
+        uint64 fileoffset = TIFFGetStrileOffset(tif, 0);
 
-        _TIFFFillStriles( tif );
-        
-        if( tif->tif_dir.td_stripbytecount == NULL
-            || tif->tif_dir.td_stripoffset == NULL
-            || tif->tif_dir.td_stripbytecount[0] == 0 )
+        if( fileoffset == 0 )
         {
             /* Do not even try to check if the first strip/tile does not
                yet exist, as occurs when GDAL has created a new NULL file
@@ -804,9 +802,9 @@ JPEGFixupTagsSubsampling(TIFF* tif)
 	}
 	m.buffercurrentbyte=NULL;
 	m.bufferbytesleft=0;
-	m.fileoffset=tif->tif_dir.td_stripoffset[0];
+	m.fileoffset=fileoffset;
 	m.filepositioned=0;
-	m.filebytesleft=tif->tif_dir.td_stripbytecount[0];
+	m.filebytesleft=TIFFGetStrileByteCount(tif, 0);
 	if (!JPEGFixupTagsSubsamplingSec(&m))
 		TIFFWarningExt(tif->tif_clientdata,module,
 		    "Unable to auto-correct subsampling values, likely corrupt JPEG compressed data in first strip/tile; auto-correcting skipped");
@@ -940,7 +938,10 @@ JPEGFixupTagsSubsamplingReadByte(struct JPEGFixupTagsSubsamplingData* data, uint
 			return(0);
 		if (!data->filepositioned)
 		{
-			TIFFSeekFile(data->tif,data->fileoffset,SEEK_SET);
+			if (TIFFSeekFile(data->tif,data->fileoffset,SEEK_SET) == (toff_t)-1)
+			{
+			    return 0;
+			}
 			data->filepositioned=1;
 		}
 		m=data->buffersize;
@@ -1209,35 +1210,37 @@ JPEGPreDecode(TIFF* tif, uint16 s)
             /* store for all coefficients */
             /* See call to jinit_d_coef_controller() from master_selection() */
             /* in libjpeg */
-            toff_t nRequiredMemory = (toff_t)sp->cinfo.d.image_width *
-                                     sp->cinfo.d.image_height *
-                                     sp->cinfo.d.num_components *
-                                     ((td->td_bitspersample+7)/8);
-            /* BLOCK_SMOOTHING_SUPPORTED is generally defined, so we need */
-            /* to replicate the logic of jinit_d_coef_controller() */
-            if( sp->cinfo.d.progressive_mode )
-                nRequiredMemory *= 3;
 
-#ifndef TIFF_LIBJPEG_LARGEST_MEM_ALLOC
-#define TIFF_LIBJPEG_LARGEST_MEM_ALLOC (100 * 1024 * 1024)
-#endif
+            /* 1 MB for regular libjpeg usage */
+            toff_t nRequiredMemory = 1024 * 1024;
 
-            if( nRequiredMemory > TIFF_LIBJPEG_LARGEST_MEM_ALLOC &&
+            for (ci = 0; ci < sp->cinfo.d.num_components; ci++) {
+                const jpeg_component_info *compptr = &(sp->cinfo.d.comp_info[ci]);
+                if( compptr->h_samp_factor > 0 && compptr->v_samp_factor > 0 )
+                {
+                    nRequiredMemory += (toff_t)(
+                        ((compptr->width_in_blocks + compptr->h_samp_factor - 1) / compptr->h_samp_factor)) *
+                        ((compptr->height_in_blocks + compptr->v_samp_factor - 1) / compptr->v_samp_factor) *
+                        sizeof(JBLOCK);
+                }
+            }
+
+            if( sp->cinfo.d.mem->max_memory_to_use > 0 &&
+                nRequiredMemory > (toff_t)(sp->cinfo.d.mem->max_memory_to_use) &&
                 getenv("LIBTIFF_ALLOW_LARGE_LIBJPEG_MEM_ALLOC") == NULL )
             {
-                    TIFFErrorExt(tif->tif_clientdata, module,
-                        "Reading this strip would require libjpeg to allocate "
-                        "at least %u bytes. "
-                        "This is disabled since above the %u threshold. "
-                        "You may override this restriction by defining the "
-                        "LIBTIFF_ALLOW_LARGE_LIBJPEG_MEM_ALLOC environment variable, "
-                        "or recompile libtiff by defining the "
-                        "TIFF_LIBJPEG_LARGEST_MEM_ALLOC macro to a value greater "
-                        "than %u",
-                        (unsigned)nRequiredMemory,
-                        (unsigned)TIFF_LIBJPEG_LARGEST_MEM_ALLOC,
-                        (unsigned)TIFF_LIBJPEG_LARGEST_MEM_ALLOC);
-                    return (0);
+                TIFFErrorExt(tif->tif_clientdata, module,
+                    "Reading this image would require libjpeg to allocate "
+                    "at least %u bytes. "
+                    "This is disabled since above the %u threshold. "
+                    "You may override this restriction by defining the "
+                    "LIBTIFF_ALLOW_LARGE_LIBJPEG_MEM_ALLOC environment variable, "
+                    "or setting the JPEGMEM environment variable to a value greater "
+                    "or equal to '%uM'",
+                    (unsigned)(nRequiredMemory),
+                    (unsigned)(sp->cinfo.d.mem->max_memory_to_use),
+                    (unsigned)((nRequiredMemory + 1000000 - 1) / 1000000));
+                return 0;
             }
         }
 
@@ -1566,7 +1569,7 @@ JPEGDecodeRaw(TIFF* tif, uint8* buf, tmsize_t cc, uint16 s)
 					JSAMPLE *outptr = (JSAMPLE*)tmpbuf + clumpoffset;
 #else
 					JSAMPLE *outptr = (JSAMPLE*)buf + clumpoffset;
-					if (cc < (tmsize_t) (clumpoffset + samples_per_clump*(clumps_per_line-1) + hsamp)) {
+					if (cc < (tmsize_t)(clumpoffset + (tmsize_t)samples_per_clump*(clumps_per_line-1) + hsamp)) {
 						TIFFErrorExt(tif->tif_clientdata, "JPEGDecodeRaw",
 							     "application buffer not large enough for all data, possible subsampling issue");
 						return 0;
@@ -2126,8 +2129,8 @@ JPEGEncodeRaw(TIFF* tif, uint8* buf, tmsize_t cc, uint16 s)
 	/* data is expected to be supplied in multiples of a clumpline */
 	/* a clumpline is equivalent to v_sampling desubsampled scanlines */
 	/* TODO: the following calculation of bytesperclumpline, should substitute calculation of sp->bytesperline, except that it is per v_sampling lines */
-	bytesperclumpline = (((sp->cinfo.c.image_width+sp->h_sampling-1)/sp->h_sampling)
-			     *(sp->h_sampling*sp->v_sampling+2)*sp->cinfo.c.data_precision+7)
+	bytesperclumpline = ((((tmsize_t)sp->cinfo.c.image_width+sp->h_sampling-1)/sp->h_sampling)
+			     *((tmsize_t)sp->h_sampling*sp->v_sampling+2)*sp->cinfo.c.data_precision+7)
 			    /8;
 
 	nrows = ( cc / bytesperclumpline ) * sp->v_sampling;
@@ -2347,7 +2350,7 @@ JPEGVGetField(TIFF* tif, uint32 tag, va_list ap)
 	switch (tag) {
 		case TIFFTAG_JPEGTABLES:
 			*va_arg(ap, uint32*) = sp->jpegtables_length;
-			*va_arg(ap, void**) = sp->jpegtables;
+			*va_arg(ap, const void**) = sp->jpegtables;
 			break;
 		case TIFFTAG_JPEGQUALITY:
 			*va_arg(ap, int*) = sp->jpegquality;
@@ -2482,6 +2485,7 @@ TIFFInitJPEG(TIFF* tif, int scheme)
 {
 	JPEGState* sp;
 
+        (void)scheme;
 	assert(scheme == COMPRESSION_JPEG);
 
 	/*

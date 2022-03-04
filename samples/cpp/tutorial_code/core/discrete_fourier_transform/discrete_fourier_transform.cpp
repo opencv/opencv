@@ -8,25 +8,25 @@
 using namespace cv;
 using namespace std;
 
-static void help(void)
+static void help(char ** argv)
 {
     cout << endl
         <<  "This program demonstrated the use of the discrete Fourier transform (DFT). " << endl
-        <<  "The dft of an image is taken and it's power spectrum is displayed."          << endl
+        <<  "The dft of an image is taken and it's power spectrum is displayed."  << endl << endl
         <<  "Usage:"                                                                      << endl
-        <<  "./discrete_fourier_transform [image_name -- default ../data/lena.jpg]"       << endl;
+        << argv[0] << " [image_name -- default lena.jpg]" << endl << endl;
 }
 
 int main(int argc, char ** argv)
 {
-    help();
+    help(argv);
 
-    const char* filename = argc >=2 ? argv[1] : "../data/lena.jpg";
+    const char* filename = argc >=2 ? argv[1] : "lena.jpg";
 
-    Mat I = imread(filename, IMREAD_GRAYSCALE);
+    Mat I = imread( samples::findFile( filename ), IMREAD_GRAYSCALE);
     if( I.empty()){
         cout << "Error opening image" << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
 
 //! [expand]
@@ -91,5 +91,5 @@ int main(int argc, char ** argv)
     imshow("spectrum magnitude", magI);
     waitKey();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

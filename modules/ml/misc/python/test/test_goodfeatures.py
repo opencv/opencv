@@ -11,7 +11,7 @@ from tests_common import NewOpenCVTests
 class TestGoodFeaturesToTrack_test(NewOpenCVTests):
     def test_goodFeaturesToTrack(self):
         arr = self.get_sample('samples/data/lena.jpg', 0)
-        original = arr.copy(True)
+        original = arr.copy()
         threshes = [ x / 100. for x in range(1,10) ]
         numPoints = 20000
 

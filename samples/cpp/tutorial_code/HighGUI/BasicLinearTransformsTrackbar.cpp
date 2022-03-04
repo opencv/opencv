@@ -1,5 +1,5 @@
 /**
- * @file LinearTransforms.cpp
+ * @file BasicLinearTransformsTrackbar.cpp
  * @brief Simple program to change contrast and brightness
  * @date Mon, June 6, 2011
  * @author OpenCV team
@@ -44,12 +44,12 @@ static void on_trackbar( int, void* )
 int main( int argc, char** argv )
 {
    /// Read image given by user
-   String imageName("../data/lena.jpg"); // by default
+   String imageName("lena.jpg"); // by default
    if (argc > 1)
    {
       imageName = argv[1];
    }
-   image = imread( imageName );
+   image = imread( samples::findFile( imageName ) );
 
    /// Initialize values
    alpha = 1;

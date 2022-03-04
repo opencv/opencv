@@ -181,7 +181,7 @@ public:
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
 
-    //! re-initiaization method
+    //! re-initialization method
     void initialize(Size _frameSize, int _frameType)
     {
         frameSize = _frameSize;

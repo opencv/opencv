@@ -47,13 +47,18 @@ namespace opencv_test { namespace {
 inline void verify_size(const std::string &nm, const cv::Mat &img)
 {
     EXPECT_NO_THROW(imshow(nm, img));
-    EXPECT_EQ(-1, waitKey(500));
+    EXPECT_EQ(-1, waitKey(200));
     Rect rc;
     EXPECT_NO_THROW(rc = getWindowImageRect(nm));
     EXPECT_EQ(rc.size(), img.size());
 }
 
-#if !defined HAVE_GTK && !defined HAVE_QT && !defined HAVE_WIN32UI && !defined HAVE_COCOA
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+        && !defined HAVE_COCOA \
+    )
 TEST(Highgui_GUI, DISABLED_regression)
 #else
 TEST(Highgui_GUI, regression)
@@ -126,11 +131,15 @@ static void Foo(int, void* counter)
     }
 }
 
-#if !defined HAVE_GTK && !defined HAVE_QT && !defined HAVE_WIN32UI
-// && !defined HAVE_COCOA - TODO: fails on Mac?
-TEST(Highgui_GUI, DISABLED_trackbar)
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+    ) \
+    || defined(__APPLE__)  // test fails on Mac (cocoa)
+TEST(Highgui_GUI, DISABLED_trackbar_unsafe)
 #else
-TEST(Highgui_GUI, trackbar)
+TEST(Highgui_GUI, trackbar_unsafe)
 #endif
 {
     int value = 50;
@@ -142,9 +151,52 @@ TEST(Highgui_GUI, trackbar)
     ASSERT_NO_THROW(namedWindow(window_name));
     EXPECT_EQ((int)1, createTrackbar(trackbar_name, window_name, &value, 100, Foo, &callback_count));
     EXPECT_EQ(value, getTrackbarPos(trackbar_name, window_name));
-    EXPECT_EQ(0, callback_count);
+    EXPECT_GE(callback_count, 0);
+    EXPECT_LE(callback_count, 1);
+    int callback_count_base = callback_count;
     EXPECT_NO_THROW(setTrackbarPos(trackbar_name, window_name, 90));
-    EXPECT_EQ(1, callback_count);
+    EXPECT_EQ(callback_count_base + 1, callback_count);
+    EXPECT_EQ(90, value);
+    EXPECT_EQ(90, getTrackbarPos(trackbar_name, window_name));
+    EXPECT_NO_THROW(destroyAllWindows());
+}
+
+static
+void testTrackbarCallback(int pos, void* param)
+{
+    CV_Assert(param);
+    int* status = (int*)param;
+    status[0] = pos;
+    status[1]++;
+}
+
+#if (!defined(ENABLE_PLUGINS) \
+        && !defined HAVE_GTK \
+        && !defined HAVE_QT \
+        && !defined HAVE_WIN32UI \
+    ) \
+    || defined(__APPLE__)  // test fails on Mac (cocoa)
+TEST(Highgui_GUI, DISABLED_trackbar)
+#else
+TEST(Highgui_GUI, trackbar)
+#endif
+{
+    int status[2] = {-1, 0};  // pos, counter
+    const std::string window_name("trackbar_test_window");
+    const std::string trackbar_name("trackbar");
+
+    EXPECT_NO_THROW(destroyAllWindows());
+    ASSERT_NO_THROW(namedWindow(window_name));
+    EXPECT_EQ((int)1, createTrackbar(trackbar_name, window_name, NULL, 100, testTrackbarCallback, status));
+    EXPECT_EQ(0, getTrackbarPos(trackbar_name, window_name));
+    int callback_count = status[1];
+    EXPECT_GE(callback_count, 0);
+    EXPECT_LE(callback_count, 1);
+    int callback_count_base = callback_count;
+    EXPECT_NO_THROW(setTrackbarPos(trackbar_name, window_name, 90));
+    callback_count = status[1];
+    EXPECT_EQ(callback_count_base + 1, callback_count);
+    int value = status[0];
     EXPECT_EQ(90, value);
     EXPECT_EQ(90, getTrackbarPos(trackbar_name, window_name));
     EXPECT_NO_THROW(destroyAllWindows());

@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_DEFINES_H_
 #define OPENCV_FLANN_DEFINES_H_
 
+//! @cond IGNORED
+
 #include "config.h"
 
 #ifdef FLANN_EXPORT
@@ -126,6 +128,7 @@ enum flann_distance_t
     FLANN_DIST_KULLBACK_LEIBLER  = 8,
     FLANN_DIST_KL                = 8,
     FLANN_DIST_HAMMING          = 9,
+    FLANN_DIST_DNAMMING          = 10,
 
     // deprecated constants, should use the FLANN_DIST_* ones instead
     EUCLIDEAN = 1,
@@ -160,5 +163,7 @@ enum
 };
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_DEFINES_H_ */

@@ -268,7 +268,7 @@ fft_filters = [np.fft.fft2(x) for x in filters]
 fft_shift = [np.fft.fftshift(y) for y in fft_filters]
 mag_spectrum = [np.log(np.abs(z)+1) for z in fft_shift]
 
-for i in xrange(6):
+for i in range(6):
     plt.subplot(2,3,i+1),plt.imshow(mag_spectrum[i],cmap = 'gray')
     plt.title(filter_name[i]), plt.xticks([]), plt.yticks([])
 

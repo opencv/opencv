@@ -268,7 +268,7 @@ class AsyncServiceHelper
                                         }
                                         else
                                         {
-                                            Log.d(TAG, "Wating for package installation");
+                                            Log.d(TAG, "Waiting for package installation");
                                         }
 
                                         Log.d(TAG, "Unbind from service");

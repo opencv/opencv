@@ -25,6 +25,16 @@ if(WITH_IPP)
     elseif(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_2)
       set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
     endif()
+
+    if(OPENCV_FORCE_IPP_EXCLUDE_LIBS
+        OR (HAVE_IPP_ICV
+            AND UNIX AND NOT ANDROID AND NOT APPLE
+            AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel"
+        )
+        AND NOT OPENCV_SKIP_IPP_EXCLUDE_LIBS
+    )
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippicv.a -Wl,--exclude-libs,libippiw.a ${CMAKE_SHARED_LINKER_FLAGS}")
+    endif()
   endif()
 endif()
 
@@ -41,7 +51,15 @@ endif(WITH_CUDA)
 
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
-  find_package(Eigen3 QUIET)
+  if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG
+      OR NOT (CMAKE_VERSION VERSION_LESS "3.0.0")  # Eigen3Targets.cmake required CMake 3.0.0+
+      ) AND NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG
+  )
+    find_package(Eigen3 CONFIG QUIET)  # Ceres 2.0.0 CMake scripts doesn't work with CMake's FindEigen3.cmake module (due to missing EIGEN3_VERSION_STRING)
+  endif()
+  if(NOT Eigen3_FOUND)
+    find_package(Eigen3 QUIET)
+  endif()
 
   if(Eigen3_FOUND)
     if(TARGET Eigen3::Eigen)

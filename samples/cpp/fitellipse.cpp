@@ -164,14 +164,13 @@ public:
 
 };
 
-static void help()
+static void help(char** argv)
 {
-    cout <<
-    "\nThis program is demonstration for ellipse fitting. The program finds\n"
-    "contours and approximate it by ellipses. Three methods are used to find the \n"
-    "elliptical fits: fitEllipse, fitEllipseAMS and fitEllipseDirect.\n"
-    "Call:\n"
-    "./fitellipse [image_name -- Default ellipses.jpg]\n" << endl;
+    cout << "\nThis program is demonstration for ellipse fitting. The program finds\n"
+            "contours and approximate it by ellipses. Three methods are used to find the \n"
+            "elliptical fits: fitEllipse, fitEllipseAMS and fitEllipseDirect.\n"
+            "Call:\n"
+        << argv[0] << " [image_name -- Default ellipses.jpg]\n" << endl;
 }
 
 int sliderPos = 70;
@@ -195,7 +194,7 @@ int main( int argc, char** argv )
     cv::CommandLineParser parser(argc, argv,"{help h||}{@image|ellipses.jpg|}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     string filename = parser.get<string>("@image");

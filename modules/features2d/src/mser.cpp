@@ -35,7 +35,7 @@
  *    it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
  * 3. the color image algorithm is taken from: Maximally Stable Colour Regions for Recognition and Match;
  *    it should be much slower than gray image method ( 3~4 times );
- *    the chi_table.h file is taken directly from paper's source code which is distributed under GPL.
+ *    the chi_table.h file is taken directly from paper's source code which is distributed under permissive BSD-like license: http://users.isy.liu.se/cvl/perfo/software/chi_table.h
  * 4. though the name is *contours*, the result actually is a list of point set.
  */
 
@@ -983,7 +983,7 @@ extractMSER_8uC3( const Mat& src,
                     double s = (double)(lr->size-lr->sizei)/(lr->dt-lr->di);
                     if ( s < lr->s )
                     {
-                        // skip the first one and check stablity
+                        // skip the first one and check stability
                         if ( i > lr->reinit+1 && MSCRStableCheck( lr, params ) )
                         {
                             if ( lr->tmsr == NULL )

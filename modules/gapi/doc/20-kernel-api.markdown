@@ -18,7 +18,25 @@ compilation).
 
 Kernel-implementation hierarchy may look like:
 
-![Kernel API/implementation hierarchy example](pics/kernel_hierarchy.png)
+@dot Kernel API/implementation hierarchy example
+digraph {
+  rankdir=BT;
+  node [shape=record];
+
+  ki_a [label="{<f0> interface\nA}"];
+  ki_b [label="{<f0> interface\nB}"];
+
+  {rank=same; ki_a ki_b};
+
+  "CPU::A"     -> ki_a [dir="forward"];
+  "OpenCL::A"  -> ki_a [dir="forward"];
+  "Halide::A"  -> ki_a [dir="forward"];
+
+  "CPU::B"     -> ki_b [dir="forward"];
+  "OpenCL::B"  -> ki_b [dir="forward"];
+  "Halide::B"  -> ki_b [dir="forward"];
+}
+@enddot
 
 A pipeline itself then can be expressed only in terms of `A`, `B`, and
 so on, and choosing which implementation to use in execution becomes
@@ -29,7 +47,7 @@ an external parameter.
 G-API provides a macro to define a new kernel interface --
 G_TYPED_KERNEL():
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_api
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_api
 
 This macro is a shortcut to a new type definition. It takes three
 arguments to register a new type, and requires type body to be present
@@ -54,27 +72,27 @@ handled in a special way. All other types are opaque to G-API and
 passed to kernel in `outMeta()` or in execution callbacks as-is.
 
 Kernel's return value can _only_ be of G-API dynamic type -- cv::GMat,
-cv::GScalar, or cv::GArray<T>. If an operation has more than one output,
-it should be wrapped into an `std::tuple<>` (which can contain only
-mentioned G-API types). Arbitrary-output-number operations are not
-supported.
+cv::GScalar, or `cv::GArray<T>`. If an operation has more than one
+output, it should be wrapped into an `std::tuple<>` (which can contain
+only mentioned G-API types). Arbitrary-output-number operations are
+not supported.
 
 Once a kernel is defined, it can be used in pipelines with special,
 G-API-supplied method "::on()". This method has the same signature as
 defined in kernel, so this code:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_on
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_on
 
 is a perfectly legal construction. This example has some verbosity,
 though, so usually a kernel declaration comes with a C++ function
 wrapper ("factory method") which enables optional parameters, more
 compact syntax, Doxygen comments, etc:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_wrap
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_wrap
 
 so now it can be used like:
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_wrap_call
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_wrap_call
 
 # Extra information {#gapi_kernel_supp_info}
 
@@ -125,7 +143,7 @@ For example, the aforementioned `Filter2D` is implemented in
 "reference" CPU (OpenCV) plugin this way (*NOTE* -- this is a
 simplified form with improper border handling):
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp filter2d_ocv
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp filter2d_ocv
 
 Note how CPU (OpenCV) plugin has transformed the original kernel
 signature:
@@ -141,7 +159,7 @@ just follow the signature conventions defined by the plugin. G-API
 will call this method during execution and supply all the necessary
 information (and forward the original opaque data as-is).
 
-# Compound kernels
+# Compound kernels {#gapi_kernel_compound}
 
 Sometimes kernel is a single thing only on API level. It is convenient
 for users, but on a particular  implementation side it would be better to
@@ -156,7 +174,7 @@ point extraction to an STL vector:
 A compound kernel _implementation_ can be defined using a generic
 macro GAPI_COMPOUND_KERNEL():
 
-@snippet modules/gapi/samples/kernel_api_snippets.cpp compound
+@snippet samples/cpp/tutorial_code/gapi/doc_snippets/kernel_api_snippets.cpp compound
 
 <!-- TODO: ADD on how Compound kernels may simplify dispatching -->
 <!-- TODO: Add details on when expand() is called! -->

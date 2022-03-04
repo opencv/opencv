@@ -52,11 +52,11 @@ public:
 template<>
 class BorderHandlerT<cv::BORDER_CONSTANT> : public BorderHandler
 {
-    cv::gapi::own::Scalar m_border_value;
-    cv::gapi::own::Mat m_const_border;
+    cv::Scalar m_border_value;
+    cv::Mat m_const_border;
 
 public:
-    BorderHandlerT(int border_size, cv::gapi::own::Scalar border_value);
+    BorderHandlerT(int border_size, cv::Scalar border_value);
     virtual const uint8_t* inLineB(int log_idx, const BufferStorageWithBorder &data, int desc_height) const override;
     virtual void fillCompileTimeBorder(BufferStorageWithBorder &) override;
     virtual std::size_t size() const override;
@@ -65,7 +65,7 @@ public:
 class BufferStorage
 {
 protected:
-    cv::gapi::own::Mat m_data;
+    cv::Mat m_data;
 
 public:
     void updateInCache(View::Cache& cache, int start_log_idx, int nLines) const;
@@ -80,8 +80,8 @@ public:
 
     inline bool empty() const { return m_data.empty(); }
 
-    inline const cv::gapi::own::Mat& data() const { return m_data; }
-    inline       cv::gapi::own::Mat& data()       { return m_data; }
+    inline const cv::Mat& data() const { return m_data; }
+    inline       cv::Mat& data()       { return m_data; }
 
     inline int rows() const { return m_data.rows; }
     inline int cols() const { return m_data.cols; }
@@ -101,23 +101,23 @@ public:
 class BufferStorageWithoutBorder final : public BufferStorage
 {
     bool m_is_virtual = true;
-    cv::gapi::own::Rect m_roi;
+    cv::Rect m_roi;
 
 public:
     virtual void copyTo(BufferStorageWithBorder &dst, int startLine, int nLines) const override;
 
     inline virtual const uint8_t* ptr(int idx) const override
     {
-        GAPI_DbgAssert((m_is_virtual && m_roi == cv::gapi::own::Rect{}) || (!m_is_virtual && m_roi != cv::gapi::own::Rect{}));
+        GAPI_DbgAssert((m_is_virtual && m_roi == cv::Rect{}) || (!m_is_virtual && m_roi != cv::Rect{}));
         return m_data.ptr(physIdx(idx), 0);
     }
     inline virtual uint8_t* ptr(int idx) override
     {
-        GAPI_DbgAssert((m_is_virtual && m_roi == cv::gapi::own::Rect{}) || (!m_is_virtual && m_roi != cv::gapi::own::Rect{}));
+        GAPI_DbgAssert((m_is_virtual && m_roi == cv::Rect{}) || (!m_is_virtual && m_roi != cv::Rect{}));
         return m_data.ptr(physIdx(idx), 0);
     }
 
-    inline void attach(const cv::gapi::own::Mat& _data, cv::gapi::own::Rect _roi)
+    inline void attach(const cv::Mat& _data, cv::Rect _roi)
     {
         m_data = _data(_roi);
         m_roi = _roi;
@@ -239,20 +239,20 @@ class GAPI_EXPORTS Buffer::Priv
 
     int m_write_caret      = -1;
 
-    std::vector<View> m_views;
+    std::vector<const View*> m_views;
 
     std::unique_ptr<BufferStorage> m_storage;
 
     // Coordinate starting from which this buffer is assumed
     // to be read (with border not being taken into account)
-    int m_readStart;
-    cv::gapi::own::Rect m_roi;
+    int m_readStart = 0;
+    cv::Rect m_roi;
 
     friend void debugBufferPriv(const Buffer& p, std::ostream &os);
 
 public:
     Priv() = default;
-    Priv(int read_start, cv::gapi::own::Rect roi);
+    Priv(int read_start, cv::Rect roi);
 
     inline const BufferStorage& storage() const { return *m_storage.get(); }
 
@@ -260,12 +260,12 @@ public:
     void init(const cv::GMatDesc &desc,
               int writer_lpi,
               int readStart,
-              cv::gapi::own::Rect roi);
+              cv::Rect roi);
 
     void allocate(BorderOpt border, int border_size, int line_consumption, int skew);
-    void bindTo(const cv::gapi::own::Mat &data, bool is_input);
+    void bindTo(const cv::Mat &data, bool is_input);
 
-    inline void addView(const View& view) { m_views.push_back(view); }
+    inline void addView(const View* view) { m_views.emplace_back(view); }
 
     inline const GMatDesc& meta() const { return m_desc; }
 

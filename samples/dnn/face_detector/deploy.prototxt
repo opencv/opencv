@@ -892,7 +892,7 @@ layer {
   }
   convolution_param {
     num_output: 128
-    pad: 1
+    pad: 0
     kernel_size: 3
     stride: 1
     weight_filler {
@@ -958,7 +958,7 @@ layer {
   }
   convolution_param {
     num_output: 128
-    pad: 1
+    pad: 0
     kernel_size: 3
     stride: 1
     weight_filler {
@@ -1785,5 +1785,6 @@ layer {
     code_type: CENTER_SIZE
     keep_top_k: 200
     confidence_threshold: 0.01
+    clip: 1
   }
 }

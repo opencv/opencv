@@ -33,13 +33,13 @@ void Morphology_Operations( int, void* );
 int main( int argc, char** argv )
 {
   //![load]
-  CommandLineParser parser( argc, argv, "{@input | ../data/baboon.jpg | input image}" );
-  src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+  CommandLineParser parser( argc, argv, "{@input | baboon.jpg | input image}" );
+  src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR );
   if (src.empty())
   {
     std::cout << "Could not open or find the image!\n" << std::endl;
     std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
-    return -1;
+    return EXIT_FAILURE;
   }
   //![load]
 

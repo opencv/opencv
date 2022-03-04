@@ -8,11 +8,12 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis program demonstrated the floodFill() function\n"
             "Call:\n"
-            "./ffilldemo [image_name -- Default: fruits.jpg]\n" << endl;
+        <<  argv[0]
+        <<  " [image_name -- Default: fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
             "\tESC - quit the program\n"
@@ -90,7 +91,7 @@ int main( int argc, char** argv )
         parser.printMessage();
         return 0;
     }
-    help();
+    help(argv);
     image0.copyTo(image);
     cvtColor(image0, gray, COLOR_BGR2GRAY);
     mask.create(image0.rows+2, image0.cols+2, CV_8UC1);

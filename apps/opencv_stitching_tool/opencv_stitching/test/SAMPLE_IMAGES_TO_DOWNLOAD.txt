@@ -1,0 +1,5 @@
+https://github.com/opencv/opencv_extra/tree/4.x/testdata/stitching
+
+s1.jpg s2.jpg
+boat1.jpg boat2.jpg boat3.jpg boat4.jpg boat5.jpg boat6.jpg
+budapest1.jpg budapest2.jpg budapest3.jpg budapest4.jpg budapest5.jpg budapest6.jpg
