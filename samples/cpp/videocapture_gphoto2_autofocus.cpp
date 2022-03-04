@@ -41,7 +41,7 @@ const int MAX_FOCUS_STEP = 32767;
 const int FOCUS_DIRECTION_INFTY = 1;
 const int DEFAULT_BREAK_LIMIT = 5;
 const int DEFAULT_OUTPUT_FPS = 20;
-const double epsylon = 0.0005; // compression, noice, etc.
+const double epsylon = 0.0005; // compression, noise, etc.
 
 struct Args_t
 {

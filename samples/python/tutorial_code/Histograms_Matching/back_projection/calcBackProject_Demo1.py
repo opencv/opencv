@@ -31,17 +31,17 @@ def Hist_and_Backproj(val):
     histImg = np.zeros((h, w, 3), dtype=np.uint8)
 
     for i in range(bins):
-        cv.rectangle(histImg, (i*bin_w, h), ( (i+1)*bin_w, h - int(round( hist[i]*h/255.0 )) ), (0, 0, 255), cv.FILLED)
+        cv.rectangle(histImg, (i*bin_w, h), ( (i+1)*bin_w, h - int(np.round( hist[i]*h/255.0 )) ), (0, 0, 255), cv.FILLED)
 
     cv.imshow('Histogram', histImg)
     ## [Draw the histogram]
 
 ## [Read the image]
 parser = argparse.ArgumentParser(description='Code for Back Projection tutorial.')
-parser.add_argument('--input', help='Path to input image.')
+parser.add_argument('--input', help='Path to input image.', default='home.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

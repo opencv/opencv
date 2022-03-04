@@ -17,16 +17,7 @@
 #include <quirc_internal.h>
 
 const struct quirc_version_info quirc_version_db[QUIRC_MAX_VERSION + 1] = {
-			{ /* 0 */
-				.data_bytes = 0,
-				.apat = {0},
-				.ecc = {
-					{.bs = 0, .dw = 0, .ns = 0},
-					{.bs = 0, .dw = 0, .ns = 0},
-					{.bs = 0, .dw = 0, .ns = 0},
-					{.bs = 0, .dw = 0, .ns = 0}
-				}
-			},
+	    {0},
 	    { /* Version 1 */
 		    .data_bytes = 26,
 		    .apat = {0},

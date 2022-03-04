@@ -64,7 +64,7 @@ included explicitly. The first four lines of `main()` create and
 initialize OpenCV's standard video capture object, which fetches
 video frames from either an attached camera or a specified file.
 
-G-API pipelie is constructed next. In fact, it is a series of G-API
+G-API pipeline is constructed next. In fact, it is a series of G-API
 operation calls on cv::GMat data. The important aspect of G-API is
 that this code block is just a declaration of actions, but not the
 actions themselves. No processing happens at this point, G-API only
@@ -95,7 +95,7 @@ Internally, cv::GComputation::apply() compiles the captured graph for
 the given input parameters and executes the compiled graph on data
 immediately.
 
-There is a number important concepts can be outlines with this examle:
+There is a number important concepts can be outlines with this example:
 * Graph declaration and graph execution are distinct steps;
 * Graph is built implicitly from a sequence of G-API expressions;
 * G-API supports function-like calls -- e.g. cv::gapi::resize(), and

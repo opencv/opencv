@@ -1,7 +1,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-
+#include "opencv2/videoio.hpp"
 #include <iostream>
 
 using namespace std;
@@ -19,16 +19,16 @@ int main( int argc, const char** argv )
 {
     CommandLineParser parser(argc, argv,
                              "{help h||}"
-                             "{face_cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|Path to face cascade.}"
-                             "{eyes_cascade|../../data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|Path to eyes cascade.}"
+                             "{face_cascade|data/haarcascades/haarcascade_frontalface_alt.xml|Path to face cascade.}"
+                             "{eyes_cascade|data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|Path to eyes cascade.}"
                              "{camera|0|Camera device number.}");
 
     parser.about( "\nThis program demonstrates using the cv::CascadeClassifier class to detect objects (Face + eyes) in a video stream.\n"
                   "You can use Haar or LBP features.\n\n" );
     parser.printMessage();
 
-    String face_cascade_name = parser.get<String>("face_cascade");
-    String eyes_cascade_name = parser.get<String>("eyes_cascade");
+    String face_cascade_name = samples::findFile( parser.get<String>("face_cascade") );
+    String eyes_cascade_name = samples::findFile( parser.get<String>("eyes_cascade") );
 
     //-- 1. Load the cascades
     if( !face_cascade.load( face_cascade_name ) )

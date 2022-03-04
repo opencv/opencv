@@ -2,7 +2,7 @@
  * jchuff.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2006-2013 by Guido Vollbeding.
+ * Modified 2006-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -178,13 +178,12 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
   htbl =
     isDC ? cinfo->dc_huff_tbl_ptrs[tblno] : cinfo->ac_huff_tbl_ptrs[tblno];
   if (htbl == NULL)
-    ERREXIT1(cinfo, JERR_NO_HUFF_TABLE, tblno);
+    htbl = jpeg_std_huff_table((j_common_ptr) cinfo, isDC, tblno);
 
   /* Allocate a workspace if we haven't already done so. */
   if (*pdtbl == NULL)
-    *pdtbl = (c_derived_tbl *)
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  SIZEOF(c_derived_tbl));
+    *pdtbl = (c_derived_tbl *) (*cinfo->mem->alloc_small)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(c_derived_tbl));
   dtbl = *pdtbl;
   
   /* Figure C.1: make table of Huffman code length for each symbol */
@@ -1256,9 +1255,81 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
   UINT8 bits[MAX_CLEN+1];	/* bits[k] = # of symbols with code length k */
   int codesize[257];		/* codesize[k] = code length of symbol k */
   int others[257];		/* next symbol in current branch of tree */
-  int c1, c2;
-  int p, i, j;
+  int c1, c2, i, j;
+  UINT8 *p;
   long v;
+
+  freq[256] = 1;		/* make sure 256 has a nonzero count */
+  /* Including the pseudo-symbol 256 in the Huffman procedure guarantees
+   * that no real symbol is given code-value of all ones, because 256
+   * will be placed last in the largest codeword category.
+   * In the symbol list build procedure this element serves as sentinel
+   * for the zero run loop.
+   */
+
+#ifndef DONT_USE_FANCY_HUFF_OPT
+
+  /* Build list of symbols sorted in order of descending frequency */
+  /* This approach has several benefits (thank to John Korejwa for the idea):
+   *     1.
+   * If a codelength category is split during the length limiting procedure
+   * below, the feature that more frequent symbols are assigned shorter
+   * codewords remains valid for the adjusted code.
+   *     2.
+   * To reduce consecutive ones in a Huffman data stream (thus reducing the
+   * number of stuff bytes in JPEG) it is preferable to follow 0 branches
+   * (and avoid 1 branches) as much as possible.  This is easily done by
+   * assigning symbols to leaves of the Huffman tree in order of decreasing
+   * frequency, with no secondary sort based on codelengths.
+   *     3.
+   * The symbol list can be built independently from the assignment of code
+   * lengths by the Huffman procedure below.
+   * Note: The symbol list build procedure must be performed first, because
+   * the Huffman procedure assigning the codelengths clobbers the frequency
+   * counts!
+   */
+
+  /* Here we use the others array as a linked list of nonzero frequencies
+   * to be sorted.  Already sorted elements are removed from the list.
+   */
+
+  /* Building list */
+
+  /* This item does not correspond to a valid symbol frequency and is used
+   * as starting index.
+   */
+  j = 256;
+
+  for (i = 0;; i++) {
+    if (freq[i] == 0)		/* skip zero frequencies */
+      continue;
+    if (i > 255)
+      break;
+    others[j] = i;		/* this symbol value */
+    j = i;			/* previous symbol value */
+  }
+  others[j] = -1;		/* mark end of list */
+
+  /* Sorting list */
+
+  p = htbl->huffval;
+  while ((c1 = others[256]) >= 0) {
+    v = freq[c1];
+    i = c1;			/* first symbol value */
+    j = 256;			/* pseudo symbol value for starting index */
+    while ((c2 = others[c1]) >= 0) {
+      if (freq[c2] > v) {
+	v = freq[c2];
+	i = c2;			/* this symbol value */
+	j = c1;			/* previous symbol value */
+      }
+      c1 = c2;
+    }
+    others[j] = others[i];	/* remove this symbol i from list */
+    *p++ = (UINT8) i;
+  }
+
+#endif /* DONT_USE_FANCY_HUFF_OPT */
 
   /* This algorithm is explained in section K.2 of the JPEG standard */
 
@@ -1266,12 +1337,6 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
   MEMZERO(codesize, SIZEOF(codesize));
   for (i = 0; i < 257; i++)
     others[i] = -1;		/* init links to empty */
-  
-  freq[256] = 1;		/* make sure 256 has a nonzero count */
-  /* Including the pseudo-symbol 256 in the Huffman procedure guarantees
-   * that no real symbol is given code-value of all ones, because 256
-   * will be placed last in the largest codeword category.
-   */
 
   /* Huffman's basic algorithm to assign optimal code lengths to symbols */
 
@@ -1301,7 +1366,7 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
     /* Done if we've merged everything into one frequency */
     if (c2 < 0)
       break;
-    
+
     /* Else merge the two counts/trees */
     freq[c1] += freq[c2];
     freq[c2] = 0;
@@ -1312,9 +1377,9 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
       c1 = others[c1];
       codesize[c1]++;
     }
-    
+
     others[c1] = c2;		/* chain c2 onto c1's tree branch */
-    
+
     /* Increment the codesize of everything in c2's tree branch */
     codesize[c2]++;
     while (others[c2] >= 0) {
@@ -1329,7 +1394,7 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
       /* The JPEG standard seems to think that this can't happen, */
       /* but I'm paranoid... */
       if (codesize[i] > MAX_CLEN)
-	ERREXIT(cinfo, JERR_HUFF_CLEN_OVERFLOW);
+	ERREXIT(cinfo, JERR_HUFF_CLEN_OUTOFBOUNDS);
 
       bits[codesize[i]]++;
     }
@@ -1345,13 +1410,16 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
    * shortest nonzero BITS entry is converted into a prefix for two code words
    * one bit longer.
    */
-  
+
   for (i = MAX_CLEN; i > 16; i--) {
     while (bits[i] > 0) {
       j = i - 2;		/* find length of new prefix to be used */
-      while (bits[j] == 0)
+      while (bits[j] == 0) {
+	if (j == 0)
+	  ERREXIT(cinfo, JERR_HUFF_CLEN_OUTOFBOUNDS);
 	j--;
-      
+      }
+
       bits[i] -= 2;		/* remove two symbols */
       bits[i-1]++;		/* one goes in this length */
       bits[j+1] += 2;		/* two new symbols in this length */
@@ -1363,23 +1431,26 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
   while (bits[i] == 0)		/* find largest codelength still in use */
     i--;
   bits[i]--;
-  
+
   /* Return final symbol counts (only for lengths 0..16) */
   MEMCOPY(htbl->bits, bits, SIZEOF(htbl->bits));
-  
+
+#ifdef DONT_USE_FANCY_HUFF_OPT
+
   /* Return a list of the symbols sorted by code length */
-  /* It's not real clear to me why we don't need to consider the codelength
-   * changes made above, but the JPEG spec seems to think this works.
+  /* Note: Due to the codelength changes made above, it can happen
+   * that more frequent symbols are assigned longer codewords.
    */
-  p = 0;
+  p = htbl->huffval;
   for (i = 1; i <= MAX_CLEN; i++) {
     for (j = 0; j <= 255; j++) {
       if (codesize[j] == i) {
-	htbl->huffval[p] = (UINT8) j;
-	p++;
+	*p++ = (UINT8) j;
       }
     }
   }
+
+#endif /* DONT_USE_FANCY_HUFF_OPT */
 
   /* Set sent_table FALSE so updated table will be written to JPEG file. */
   htbl->sent_table = FALSE;
@@ -1400,13 +1471,13 @@ finish_pass_gather (j_compress_ptr cinfo)
   boolean did_dc[NUM_HUFF_TBLS];
   boolean did_ac[NUM_HUFF_TBLS];
 
-  /* It's important not to apply jpeg_gen_optimal_table more than once
-   * per table, because it clobbers the input frequency counts!
-   */
   if (cinfo->progressive_mode)
     /* Flush out buffered data (all we care about is counting the EOB symbol) */
     emit_eobrun(entropy);
 
+  /* It's important not to apply jpeg_gen_optimal_table more than once
+   * per table, because it clobbers the input frequency counts!
+   */
   MEMZERO(did_dc, SIZEOF(did_dc));
   MEMZERO(did_ac, SIZEOF(did_ac));
 
@@ -1475,9 +1546,8 @@ start_pass_huff (j_compress_ptr cinfo, boolean gather_statistics)
 	entropy->pub.encode_mcu = encode_mcu_AC_refine;
 	/* AC refinement needs a correction bit buffer */
 	if (entropy->bit_buffer == NULL)
-	  entropy->bit_buffer = (char *)
-	    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-					MAX_CORR_BITS * SIZEOF(char));
+	  entropy->bit_buffer = (char *) (*cinfo->mem->alloc_small)
+	    ((j_common_ptr) cinfo, JPOOL_IMAGE, MAX_CORR_BITS * SIZEOF(char));
       }
     }
 
@@ -1505,9 +1575,8 @@ start_pass_huff (j_compress_ptr cinfo, boolean gather_statistics)
 	/* Allocate and zero the statistics tables */
 	/* Note that jpeg_gen_optimal_table expects 257 entries in each table! */
 	if (entropy->dc_count_ptrs[tbl] == NULL)
-	  entropy->dc_count_ptrs[tbl] = (long *)
-	    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-					257 * SIZEOF(long));
+	  entropy->dc_count_ptrs[tbl] = (long *) (*cinfo->mem->alloc_small)
+	    ((j_common_ptr) cinfo, JPOOL_IMAGE, 257 * SIZEOF(long));
 	MEMZERO(entropy->dc_count_ptrs[tbl], 257 * SIZEOF(long));
       } else {
 	/* Compute derived values for Huffman tables */
@@ -1525,9 +1594,8 @@ start_pass_huff (j_compress_ptr cinfo, boolean gather_statistics)
 	if (tbl < 0 || tbl >= NUM_HUFF_TBLS)
 	  ERREXIT1(cinfo, JERR_NO_HUFF_TABLE, tbl);
 	if (entropy->ac_count_ptrs[tbl] == NULL)
-	  entropy->ac_count_ptrs[tbl] = (long *)
-	    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-					257 * SIZEOF(long));
+	  entropy->ac_count_ptrs[tbl] = (long *) (*cinfo->mem->alloc_small)
+	    ((j_common_ptr) cinfo, JPOOL_IMAGE, 257 * SIZEOF(long));
 	MEMZERO(entropy->ac_count_ptrs[tbl], 257 * SIZEOF(long));
       } else {
 	jpeg_make_c_derived_tbl(cinfo, FALSE, tbl,
@@ -1556,9 +1624,8 @@ jinit_huff_encoder (j_compress_ptr cinfo)
   huff_entropy_ptr entropy;
   int i;
 
-  entropy = (huff_entropy_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(huff_entropy_encoder));
+  entropy = (huff_entropy_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(huff_entropy_encoder));
   cinfo->entropy = &entropy->pub;
   entropy->pub.start_pass = start_pass_huff;
 

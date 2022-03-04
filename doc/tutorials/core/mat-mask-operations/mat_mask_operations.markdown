@@ -1,10 +1,17 @@
 Mask operations on matrices {#tutorial_mat_mask_operations}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_how_to_scan_images}
 @next_tutorial{tutorial_mat_operations}
 
-Mask operations on matrices are quite simple. The idea is that we recalculate each pixels value in
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
+
+Mask operations on matrices are quite simple. The idea is that we recalculate each pixel's value in
 an image according to a mask matrix (also known as kernel). This mask holds values that will adjust
 how much influence neighboring pixels (and the current pixel) have on the new pixel value. From a
 mathematical point of view we make a weighted average, with our specified values.
@@ -12,7 +19,7 @@ mathematical point of view we make a weighted average, with our specified values
 Our test case
 -------------
 
-Let us consider the issue of an image contrast enhancement method. Basically we want to apply for
+Let's consider the issue of an image contrast enhancement method. Basically we want to apply for
 every pixel of the image the following formula:
 
 \f[I(i,j) = 5*I(i,j) - [ I(i-1,j) + I(i+1,j) + I(i,j-1) + I(i,j+1)]\f]\f[\iff I(i,j)*M, \text{where }
@@ -33,7 +40,7 @@ Code
 
 @add_toggle_cpp
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
 OpenCV source code libraries sample directory at
 `samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 @include samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp
@@ -41,7 +48,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_java
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
 OpenCV source code libraries sample directory at
 `samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
 @include samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java
@@ -49,7 +56,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_python
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
 OpenCV source code libraries sample directory at
 `samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
 @include samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py
@@ -144,7 +151,7 @@ Then we apply the sum and put the new value in the Result matrix.
 The filter2D function
 ---------------------
 
-Applying such filters are so common in image processing that in OpenCV there exist a function that
+Applying such filters are so common in image processing that in OpenCV there is a function that
 will take care of applying the mask (also called a kernel in some places). For this you first need
 to define an object that holds the mask:
 

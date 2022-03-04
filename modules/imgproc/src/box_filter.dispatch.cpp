@@ -389,7 +389,7 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
     }
 #endif
 
-#if defined(HAVE_IPP)
+#if 0 //defined(HAVE_IPP)
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
 {
 #ifdef HAVE_IPP_IW
@@ -443,6 +443,8 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+
     CV_OCL_RUN(_dst.isUMat() &&
                (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
                 borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101),
@@ -476,7 +478,7 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
     CV_OVX_RUN(true,
                openvx_boxfilter(src, dst, ddepth, ksize, anchor, normalize, borderType))
 
-    CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
+    //CV_IPP_RUN_FAST(ipp_boxfilter(src, dst, ksize, anchor, normalize, borderType));
 
     borderType = (borderType&~BORDER_ISOLATED);
 
@@ -513,6 +515,8 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
                   bool normalize, int borderType)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
     Size size = _src.size();

@@ -229,7 +229,7 @@ int Subdiv2D::newEdge()
 {
     if( freeQEdge <= 0 )
     {
-        qedges.push_back(QuadEdge());
+        qedges.emplace_back();
         freeQEdge = (int)(qedges.size()-1);
     }
     int edge = freeQEdge*4;
@@ -436,7 +436,7 @@ int Subdiv2D::insert(Point2f pt)
     else
         CV_Error_(CV_StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
 
-    assert( curr_edge != 0 );
+    CV_Assert( curr_edge != 0 );
     validGeometry = false;
 
     curr_point = newPoint(pt, false);
@@ -758,7 +758,6 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
     triangleList.clear();
     int i, total = (int)(qedges.size()*4);
     std::vector<bool> edgemask(total, false);
-    const bool filterPoints = true;
     Rect2f rect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
 
     for( i = 4; i < total; i += 2 )
@@ -768,15 +767,15 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
         Point2f a, b, c;
         int edge_a = i;
         edgeOrg(edge_a, &a);
-        if (filterPoints && !rect.contains(a))
+        if ( !rect.contains(a) )
             continue;
         int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
         edgeOrg(edge_b, &b);
-        if (filterPoints && !rect.contains(b))
+        if ( !rect.contains(b) )
             continue;
         int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
         edgeOrg(edge_c, &c);
-        if (filterPoints && !rect.contains(c))
+        if ( !rect.contains(c) )
             continue;
         edgemask[edge_a] = true;
         edgemask[edge_b] = true;

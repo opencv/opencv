@@ -22,4 +22,6 @@ bin/
 *.log
 *.tlog
 build
-cmake-build-debug/
+node_modules
+CMakeSettings.json
+xcuserdata/

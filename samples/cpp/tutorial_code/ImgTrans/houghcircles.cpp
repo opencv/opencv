@@ -12,16 +12,16 @@ using namespace std;
 int main(int argc, char** argv)
 {
     //![load]
-    const char* filename = argc >=2 ? argv[1] : "../data/smarties.png";
+    const char* filename = argc >=2 ? argv[1] : "smarties.png";
 
     // Loads an image
-    Mat src = imread( filename, IMREAD_COLOR );
+    Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
 
     // Check if image is loaded fine
     if(src.empty()){
         printf(" Error opening image\n");
         printf(" Program Arguments: [image_name -- default %s] \n", filename);
-        return -1;
+        return EXIT_FAILURE;
     }
     //![load]
 
@@ -61,5 +61,5 @@ int main(int argc, char** argv)
     waitKey();
     //![display]
 
-    return 0;
+    return EXIT_SUCCESS;
 }

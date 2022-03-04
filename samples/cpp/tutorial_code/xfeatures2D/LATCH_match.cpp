@@ -24,14 +24,14 @@ const float nn_match_ratio = 0.8f;   // Nearest neighbor matching ratio
 int main(int argc, char* argv[])
 {
     CommandLineParser parser(argc, argv,
-                             "{@img1 | ../data/graf1.png | input image 1}"
-                             "{@img2 | ../data/graf3.png | input image 2}"
-                             "{@homography | ../data/H1to3p.xml | homography matrix}");
-    Mat img1 = imread(parser.get<String>("@img1"), IMREAD_GRAYSCALE);
-    Mat img2 = imread(parser.get<String>("@img2"), IMREAD_GRAYSCALE);
+                             "{@img1 | graf1.png | input image 1}"
+                             "{@img2 | graf3.png | input image 2}"
+                             "{@homography | H1to3p.xml | homography matrix}");
+    Mat img1 = imread( samples::findFile( parser.get<String>("@img1") ), IMREAD_GRAYSCALE);
+    Mat img2 = imread( samples::findFile( parser.get<String>("@img2") ), IMREAD_GRAYSCALE);
 
     Mat homography;
-    FileStorage fs(parser.get<String>("@homography"), FileStorage::READ);
+    FileStorage fs( samples::findFile( parser.get<String>("@homography") ), FileStorage::READ);
     fs.getFirstTopLevelNode() >> homography;
 
     vector<KeyPoint> kpts1, kpts2;

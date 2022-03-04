@@ -47,7 +47,7 @@
 namespace cv
 {
 
-int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
+static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
 
@@ -56,8 +56,6 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
 
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];
-
-    std::vector <Point2f> intersection; intersection.reserve(24);
 
     rect1.points(pts1);
     rect2.points(pts2);
@@ -85,8 +83,6 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
             {
                 intersection[i] = pts1[i];
             }
-
-            Mat(intersection).copyTo(intersectingRegion);
 
             return INTERSECT_FULL;
         }
@@ -294,7 +290,50 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
     }
 
     intersection.resize(N);
-    Mat(intersection).copyTo(intersectingRegion);
+
+    return ret;
+}
+
+int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
+{
+    CV_INSTRUMENT_REGION();
+
+    if (rect1.size.empty() || rect2.size.empty())
+    {
+        intersectingRegion.release();
+        return INTERSECT_NONE;
+    }
+
+    // Shift rectangles closer to origin (0, 0) to improve the calculation of the intesection region
+    // To do that, the average center of the rectangles is moved to the origin
+    const Point2f averageCenter = (rect1.center + rect2.center) / 2.0f;
+
+    RotatedRect shiftedRect1(rect1);
+    RotatedRect shiftedRect2(rect2);
+
+    // Move rectangles closer to origin
+    shiftedRect1.center -= averageCenter;
+    shiftedRect2.center -= averageCenter;
+
+    std::vector <Point2f> intersection; intersection.reserve(24);
+
+    const int ret = _rotatedRectangleIntersection(shiftedRect1, shiftedRect2, intersection);
+
+    // If return is not None, the intersection Points are shifted back to the original position
+    // and copied to the interesectingRegion
+    if (ret != INTERSECT_NONE)
+    {
+        for (size_t i = 0; i < intersection.size(); ++i)
+        {
+            intersection[i] += averageCenter;
+        }
+
+        Mat(intersection).copyTo(intersectingRegion);
+    }
+    else
+    {
+        intersectingRegion.release();
+    }
 
     return ret;
 }

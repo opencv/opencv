@@ -38,7 +38,7 @@ def main():
 
     cap = video.create_capture(fn)
     while True:
-        flag, img = cap.read()
+        _flag, img = cap.read()
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         thrs1 = cv.getTrackbarPos('thrs1', 'edge')
         thrs2 = cv.getTrackbarPos('thrs2', 'edge')

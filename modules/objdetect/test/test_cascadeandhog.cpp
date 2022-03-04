@@ -192,7 +192,7 @@ void CV_DetectorTest::run( int )
 
         // write detectors
         validationFS << DETECTORS << "{";
-        assert( detectorNames.size() == detectorFilenames.size() );
+        CV_Assert( detectorNames.size() == detectorFilenames.size() );
         nit = detectorNames.begin();
         for( int di = 0; nit != detectorNames.end(); ++nit, di++ )
         {
@@ -292,7 +292,7 @@ static bool isZero( uchar i ) {return i == 0;}
 
 int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
 {
-    assert( imageFilenames.size() == objects.size() );
+    CV_Assert( imageFilenames.size() == objects.size() );
     int imageIdx = 0;
     int totalNoPair = 0, totalValRectCount = 0;
 
@@ -489,7 +489,7 @@ int CV_HOGDetectorTest::detectMultiScale( int di, const Mat& img,
     if( detectorFilenames[di].empty() )
         hog.setSVMDetector(HOGDescriptor::getDefaultPeopleDetector());
     else
-        assert(0);
+        CV_Assert(0);
     hog.detectMultiScale(img, objects);
     return cvtest::TS::OK;
 }
@@ -772,7 +772,7 @@ void HOGCacheTester::init(const HOGDescriptorTester* _descriptor,
             data->gradWeight = weights(i,j);
         }
 
-    assert( count1 + count2 + count4 == rawBlockSize );
+    CV_Assert( count1 + count2 + count4 == rawBlockSize );
     // defragment pixData
     for( j = 0; j < count2; j++ )
         pixData[j + count1] = pixData[j + rawBlockSize];
@@ -794,7 +794,7 @@ void HOGCacheTester::init(const HOGDescriptorTester* _descriptor,
 const float* HOGCacheTester::getBlock(Point pt, float* buf)
 {
     float* blockHist = buf;
-    assert(descriptor != 0);
+    CV_Assert(descriptor != 0);
 
     Size blockSize = descriptor->blockSize;
     pt += imgoffset;
@@ -1140,7 +1140,7 @@ void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     actual_hog->compute(img, actual_descriptors, winStride, padding, locations);
 
     double diff_norm = cvtest::norm(actual_descriptors, descriptors, NORM_L2 + NORM_RELATIVE);
-    const double eps = FLT_EPSILON * 100;
+    const double eps = 2.0e-3;
     if (diff_norm > eps)
     {
         ts->printf(cvtest::TS::SUMMARY, "Norm of the difference: %lf\n", diff_norm);
@@ -1275,7 +1275,7 @@ void HOGDescriptorTester::computeGradient(InputArray _img, InputOutputArray _gra
                hidx += _nbins;
            else if( hidx >= _nbins )
                hidx -= _nbins;
-           assert( (unsigned)hidx < (unsigned)_nbins );
+           CV_Assert( (unsigned)hidx < (unsigned)_nbins );
 
            qanglePtr[x*2] = (uchar)hidx;
            hidx++;
@@ -1289,7 +1289,7 @@ void HOGDescriptorTester::computeGradient(InputArray _img, InputOutputArray _gra
     const char* args[] = { "Gradient's", "Qangles's" };
     actual_hog->computeGradient(img, actual_mats[0], actual_mats[1], paddingTL, paddingBR);
 
-    const double eps = FLT_EPSILON * 100;
+    const double eps = 8.0e-3;
     for (i = 0; i < 2; ++i)
     {
        double diff_norm = cvtest::norm(actual_mats[i], reference_mats[i], NORM_L2 + NORM_RELATIVE);

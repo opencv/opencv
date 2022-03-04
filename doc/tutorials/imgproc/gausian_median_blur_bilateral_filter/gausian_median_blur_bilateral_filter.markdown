@@ -1,8 +1,15 @@
 Smoothing Images {#tutorial_gausian_median_blur_bilateral_filter}
 ================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_random_generator_and_text}
 @next_tutorial{tutorial_erosion_dilatation}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -98,7 +105,7 @@ Code
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp
@@ -106,7 +113,7 @@ Code
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/ImgProc/Smoothing/Smoothing.java
@@ -114,7 +121,7 @@ Code
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/Smoothing/smoothing.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/Smoothing/smoothing.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/imgProc/Smoothing/smoothing.py
@@ -157,7 +164,7 @@ already known by now.
     -   *src*: Source image
     -   *dst*: Destination image
     -   *Size(w, h)*: The size of the kernel to be used (the neighbors to be considered). \f$w\f$ and
-        \f$h\f$ have to be odd and positive numbers otherwise thi size will be calculated using the
+        \f$h\f$ have to be odd and positive numbers otherwise the size will be calculated using the
         \f$\sigma_{x}\f$ and \f$\sigma_{y}\f$ arguments.
     -   \f$\sigma_{x}\f$: The standard deviation in x. Writing \f$0\f$ implies that \f$\sigma_{x}\f$ is
         calculated using kernel size.
@@ -221,7 +228,7 @@ already known by now.
 Results
 -------
 
--   The code opens an image (in this case [lena.jpg](https://raw.githubusercontent.com/opencv/opencv/master/samples/data/lena.jpg))
+-   The code opens an image (in this case [lena.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/lena.jpg))
     and display it under the effects of the 4 filters explained.
 -   Here is a snapshot of the image smoothed using *medianBlur*:
 

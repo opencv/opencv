@@ -31,7 +31,7 @@ libpng                Portable Network Graphics library.
 libtiff               Tag Image File Format (TIFF) Software
                       Copyright (c) 1988-1997 Sam Leffler
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
-                      See libtiff home page http://www.remotesensing.org/libtiff/
+                      See libtiff home page http://www.libtiff.org/
                       for details and links to the source code
 
                       WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.
@@ -51,7 +51,9 @@ jasper                JasPer is a collection of software
                       Copyright (c) 1999-2000 The University of British Columbia
                       Copyright (c) 2001-2003 Michael David Adams
 
-                      The JasPer license can be found in libjasper.
+                      See JasPer official GitHub repository
+                      https://github.com/jasper-software/jasper.git
+                      for details and links to source code
 ------------------------------------------------------------------------------------
 openexr               OpenEXR is a high dynamic-range (HDR) image file format developed
                       by Industrial Light & Magic for use in computer imaging applications.

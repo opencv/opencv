@@ -33,7 +33,7 @@ def main():
         points, _ = make_gaussians(cluster_n, img_size)
 
         term_crit = (cv.TERM_CRITERIA_EPS, 30, 0.1)
-        ret, labels, centers = cv.kmeans(points, cluster_n, None, term_crit, 10, 0)
+        _ret, labels, _centers = cv.kmeans(points, cluster_n, None, term_crit, 10, 0)
 
         img = np.zeros((img_size, img_size, 3), np.uint8)
         for (x, y), label in zip(np.int32(points), labels.ravel()):

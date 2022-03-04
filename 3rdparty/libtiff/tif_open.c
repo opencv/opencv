@@ -104,6 +104,7 @@ TIFFClientOpen(
 		} n;
 		n.a8[0]=1;
 		n.a8[1]=0;
+                (void)n;
 		#ifdef WORDS_BIGENDIAN
 		assert(n.a16==256);
 		#else
@@ -131,6 +132,7 @@ TIFFClientOpen(
 	if (!readproc || !writeproc || !seekproc || !closeproc || !sizeproc) {
 		TIFFErrorExt(clientdata, module,
 		    "One of the client procedures is NULL pointer.");
+		_TIFFfree(tif);
 		goto bad2;
 	}
 	tif->tif_readproc = readproc;
@@ -164,7 +166,7 @@ TIFFClientOpen(
 	/*
 	 * Process library-specific flags in the open mode string.
 	 * The following flags may be used to control intrinsic library
-	 * behaviour that may or may not be desirable (usually for
+	 * behavior that may or may not be desirable (usually for
 	 * compatibility with some application that claims to support
 	 * TIFF but only supports some brain dead idea of what the
 	 * vendor thinks TIFF is):
@@ -181,6 +183,8 @@ TIFFClientOpen(
 	 * 'h' read TIFF header only, do not load the first IFD
 	 * '4' ClassicTIFF for creating a file (default)
 	 * '8' BigTIFF for creating a file
+         * 'D' enable use of deferred strip/tile offset/bytecount array loading.
+         * 'O' on-demand loading of values instead of whole array loading (implies D)
 	 *
 	 * The use of the 'l' and 'b' flags is strongly discouraged.
 	 * These flags are provided solely because numerous vendors,
@@ -203,7 +207,7 @@ TIFFClientOpen(
 	 * not do right now.
 	 *
 	 * The 'M' and 'm' flags are provided because some virtual memory
-	 * systems exhibit poor behaviour when large images are mapped.
+	 * systems exhibit poor behavior when large images are mapped.
 	 * These options permit clients to control the use of memory-mapped
 	 * files on a per-file basis.
 	 *
@@ -262,7 +266,22 @@ TIFFClientOpen(
 				if (m&O_CREAT)
 					tif->tif_flags |= TIFF_BIGTIFF;
 				break;
+			case 'D':
+			        tif->tif_flags |= TIFF_DEFERSTRILELOAD;
+				break;
+			case 'O':
+				if( m == O_RDONLY )
+					tif->tif_flags |= (TIFF_LAZYSTRILELOAD | TIFF_DEFERSTRILELOAD);
+				break;
 		}
+
+#ifdef DEFER_STRILE_LOAD
+        /* Compatibility with old DEFER_STRILE_LOAD compilation flag */
+        /* Probably unneeded, since to the best of my knowledge (E. Rouault) */
+        /* GDAL was the only user of this, and will now use the new 'D' flag */
+        tif->tif_flags |= TIFF_DEFERSTRILELOAD;
+#endif
+
 	/*
 	 * Read in TIFF header.
 	 */

@@ -87,7 +87,9 @@ double getMinVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? 0 : depth == CV_8S ? SCHAR_MIN : depth == CV_16U ? 0 :
     depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
-    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX : -1;
+    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX :
+            depth == CV_16F ? -65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -97,7 +99,9 @@ double getMaxVal(int depth)
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? UCHAR_MAX : depth == CV_8S ? SCHAR_MAX : depth == CV_16U ? USHRT_MAX :
     depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
-    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX : -1;
+    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX :
+            depth == CV_16F ? 65504
+            : -1;
     CV_Assert(val != -1);
     return val;
 }
@@ -1383,7 +1387,8 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     int normType0 = normType;
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
-    CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
+    CV_CheckTypeEQ(src1.type(), src2.type(), "");
+    CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (src1.size == mask.size && mask.type() == CV_8U) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
@@ -2117,7 +2122,7 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
             return CMP_EPS_BIG_DIFF;
         }
         if(_realmaxdiff)
@@ -2727,8 +2732,8 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
 
     if( _aperture_size < 0 )
     {
-        static const int scharr[] = { 3, 10, 3, -1, 0, 1 };
-        assert( size == 3 );
+        static const int scharr[8] = { 3, 10, 3, -1, 0, 1, 0, 0 };  // extra elements to eliminate "-Warray-bounds" bogus warning
+        CV_Assert( size == 3 && order < 2 );
         for( i = 0; i < size; i++ )
             kernel[i] = scharr[order*3 + i];
         return;
@@ -3052,7 +3057,7 @@ void threshold( const Mat& _src, Mat& _dst,
         imaxval = cvRound(maxval);
     }
 
-    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
+    CV_Assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
 
     switch( thresh_type )
     {
@@ -3214,7 +3219,7 @@ void threshold( const Mat& _src, Mat& _dst,
         }
         break;
     default:
-        assert(0);
+        CV_Assert(0);
     }
 }
 

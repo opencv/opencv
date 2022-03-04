@@ -182,7 +182,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     ////////////////////////////////
     if( SrcReader == NULL )
     {
-        assert( false );
+        CV_Assert( false );
         return 0;
     }
 
@@ -237,7 +237,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
     int Count;
     int i,j;
 
-    assert( SrcSeq && DstSeq );
+    CV_Assert( SrcSeq && DstSeq );
 
     ////////// init ////////////////////
     Count = SrcSeq->total;
@@ -325,7 +325,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
             if( DstSeq == NULL )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
+                    "cvApproxPoly returned NULL for contour #%d, epsilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
             } // if( DstSeq == NULL )
@@ -354,5 +354,26 @@ _exit_:
 }
 
 TEST(Imgproc_ApproxPoly, accuracy) { CV_ApproxPolyTest test; test.safe_run(); }
+
+//Tests to make sure that unreasonable epsilon (error)
+//values never get passed to the Douglas-Peucker algorithm.
+TEST(Imgproc_ApproxPoly, bad_epsilon)
+{
+    std::vector<Point2f> inputPoints;
+    inputPoints.push_back(Point2f(0.0f, 0.0f));
+    std::vector<Point2f> outputPoints;
+
+    double eps = std::numeric_limits<double>::infinity();
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = 9e99;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = -1e-6;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+
+    eps = NAN;
+    ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
+}
 
 }} // namespace

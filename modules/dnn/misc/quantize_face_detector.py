@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(description="Use this script to create TensorFl
                                              "with weights from OpenCV's face detection network. "
                                              "Only backbone part of SSD model is converted this way. "
                                              "Look for .pbtxt configuration file at "
-                                             "https://github.com/opencv/opencv_extra/tree/master/testdata/dnn/opencv_face_detector.pbtxt")
+                                             "https://github.com/opencv/opencv_extra/tree/4.x/testdata/dnn/opencv_face_detector.pbtxt")
 parser.add_argument('--model', help='Path to .caffemodel weights', required=True)
 parser.add_argument('--proto', help='Path to .prototxt Caffe model definition', required=True)
 parser.add_argument('--pb', help='Path to output .pb TensorFlow model', required=True)
@@ -173,9 +173,9 @@ conv7_2_h = tf.space_to_batch_nd(conv7_1_h, [1, 1], [[1, 1], [1, 1]], name='Pad_
 conv7_2_h = conv(conv7_2_h, stride=2, pad='VALID', name='conv7_2_h', activ=tf.nn.relu)
 
 conv8_1_h = conv(conv7_2_h, pad='SAME', name='conv8_1_h', activ=tf.nn.relu)
-conv8_2_h = conv(conv8_1_h, pad='SAME', name='conv8_2_h', activ=tf.nn.relu)
+conv8_2_h = conv(conv8_1_h, pad='VALID', name='conv8_2_h', activ=tf.nn.relu)
 conv9_1_h = conv(conv8_2_h, 'conv9_1_h', activ=tf.nn.relu)
-conv9_2_h = conv(conv9_1_h, pad='SAME', name='conv9_2_h', activ=tf.nn.relu)
+conv9_2_h = conv(conv9_1_h, pad='VALID', name='conv9_2_h', activ=tf.nn.relu)
 
 conv4_3_norm = l2norm(layer_256_1_relu1, 'conv4_3_norm')
 

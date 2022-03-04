@@ -116,7 +116,73 @@ namespace detail
         using type = std::tuple<Objs...>;
         static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
     };
+
+    template<typename... Ts>
+    struct make_void { typedef void type;};
+
+    template<typename... Ts>
+    using void_t = typename make_void<Ts...>::type;
+
 } // namespace detail
+
+namespace util
+{
+template<typename ...L>
+struct overload_lamba_set;
+
+template<typename L1>
+struct overload_lamba_set<L1> : public L1
+{
+    overload_lamba_set(L1&& lambda) : L1(std::move(lambda)) {}
+    overload_lamba_set(const L1& lambda) : L1(lambda) {}
+
+    using L1::operator();
+};
+
+template<typename L1, typename ...L>
+struct overload_lamba_set<L1, L...> : public L1, public overload_lamba_set<L...>
+{
+    using base_type = overload_lamba_set<L...>;
+    overload_lamba_set(L1 &&lambda1, L&& ...lambdas):
+        L1(std::move(lambda1)),
+        base_type(std::forward<L>(lambdas)...) {}
+
+    overload_lamba_set(const L1 &lambda1, L&& ...lambdas):
+        L1(lambda1),
+        base_type(std::forward<L>(lambdas)...) {}
+
+    using L1::operator();
+    using base_type::operator();
+};
+
+template<typename... L>
+overload_lamba_set<L...> overload_lambdas(L&& ...lambdas)
+{
+    return overload_lamba_set<L...>(std::forward<L>(lambdas)...);
+}
+
+template<typename ...T>
+struct find_adapter_impl;
+
+template<typename AdapterT, typename T>
+struct find_adapter_impl<AdapterT, T>
+{
+    using type = typename std::conditional<std::is_base_of<AdapterT, T>::value,
+                                           T,
+                                           void>::type;
+    static constexpr bool found = std::is_base_of<AdapterT, T>::value;
+};
+
+template<typename AdapterT, typename T, typename... Types>
+struct find_adapter_impl<AdapterT, T, Types...>
+{
+    using type = typename std::conditional<std::is_base_of<AdapterT, T>::value,
+                                           T,
+                                           typename find_adapter_impl<AdapterT, Types...>::type>::type;
+    static constexpr bool found = std::is_base_of<AdapterT, T>::value ||
+                                  find_adapter_impl<AdapterT, Types...>::found;
+};
+} // namespace util
 } // namespace cv
 
 // \endcond

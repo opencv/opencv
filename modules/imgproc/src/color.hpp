@@ -104,6 +104,7 @@ inline int dstChannels(int code)
             return 4;
 
         case COLOR_BGRA2BGR: case COLOR_RGBA2BGR: case COLOR_RGB2BGR:
+        case COLOR_YUV2RGB: case COLOR_YUV2BGR: case COLOR_RGB2YUV: case COLOR_BGR2YUV:
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_GRAY2BGR:
         case COLOR_YUV2BGR_NV21: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV12:
@@ -224,7 +225,10 @@ struct OclHelper
         int scn = src.channels();
         int depth = src.depth();
 
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
+
         switch (sizePolicy)
         {
         case TO_YUV:

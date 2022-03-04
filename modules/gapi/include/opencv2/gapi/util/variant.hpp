@@ -11,8 +11,10 @@
 #include <array>
 #include <type_traits>
 
+#include <opencv2/gapi/util/compiler_hints.hpp>
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/util/util.hpp> // max_of_t
+#include <opencv2/gapi/util/type_traits.hpp>
 
 // A poor man's `variant` implementation, incompletely modeled against C++17 spec.
 namespace cv
@@ -35,18 +37,18 @@ namespace util
             static_assert(std::is_same<Target, First>::value, "Type not found");
             static const constexpr std::size_t value = I;
         };
-
-
-        template<class T, class U, class V> using are_different =
-            std::enable_if<!std::is_same<typename std::decay<T>::type,
-                                         typename std::decay<U>::type>::value,
-                           V>;
     }
 
     template<typename Target, typename... Types>
     struct type_list_index
     {
         static const constexpr std::size_t value = detail::type_list_index_helper<0, Target, Types...>::value;
+    };
+
+    template<std::size_t Index, class... Types >
+    struct type_list_element
+    {
+        using type = typename std::tuple_element<Index, std::tuple<Types...> >::type;
     };
 
     class bad_variant_access: public std::exception
@@ -79,15 +81,17 @@ namespace util
             }
         };
 
-        template<typename T> struct vctr_h {
-            static void help(Memory memory, const void* pval) {
-                new (memory) T(*reinterpret_cast<const T*>(pval));
-            }
-        };
-
         template<typename T> struct mctr_h {
             static void help(Memory memory, void *pval) {
                 new (memory) T(std::move(*reinterpret_cast<T*>(pval)));
+            }
+        };
+
+        //FIXME: unify with cctr_h and mctr_h
+        template<typename T> struct cnvrt_ctor_h {
+            static void help(Memory memory, void* from) {
+                using util::decay_t;
+                new (memory) decay_t<T>(std::forward<T>(*reinterpret_cast<decay_t<T>*>(from)));
             }
         };
 
@@ -98,8 +102,16 @@ namespace util
         };
 
         template<typename T> struct move_h {
-            static void help(Memory to, const Memory from) {
-                *reinterpret_cast<T*>(to) = std::move(*reinterpret_cast<const T*>(from));
+            static void help(Memory to, Memory from) {
+                *reinterpret_cast<T*>(to) = std::move(*reinterpret_cast<T*>(from));
+            }
+        };
+
+        //FIXME: unify with copy_h and move_h
+        template<typename T> struct cnvrt_assign_h {
+            static void help(Memory to, void* from) {
+                using util::decay_t;
+                *reinterpret_cast<decay_t<T>*>(to) = std::forward<T>(*reinterpret_cast<decay_t<T>*>(from));
             }
         };
 
@@ -125,28 +137,50 @@ namespace util
         };
 
         typedef void (*CCtr) (Memory, const Memory);  // Copy c-tor (variant)
-        typedef void (*VCtr) (Memory, const void*);   // Copy c-tor (value)
         typedef void (*MCtr) (Memory, void*);         // Generic move c-tor
         typedef void (*Copy) (Memory, const Memory);  // Copy assignment
-        typedef void (*Move) (Memory, const Memory);  // Move assignment
+        typedef void (*Move) (Memory, Memory);        // Move assignment
+
         typedef void (*Swap) (Memory, Memory);        // Swap
         typedef void (*Dtor) (Memory);                // Destructor
+
+        using  cnvrt_assgn_t   = void (*) (Memory, void*);  // Converting assignment (via std::forward)
+        using  cnvrt_ctor_t    = void (*) (Memory, void*);  // Converting constructor (via std::forward)
 
         typedef bool (*Equal)(const Memory, const Memory); // Equality test (external)
 
         static constexpr std::array<CCtr, sizeof...(Ts)> cctrs(){ return {{(&cctr_h<Ts>::help)...}};}
-        static constexpr std::array<VCtr, sizeof...(Ts)> vctrs(){ return {{(&vctr_h<Ts>::help)...}};}
         static constexpr std::array<MCtr, sizeof...(Ts)> mctrs(){ return {{(&mctr_h<Ts>::help)...}};}
         static constexpr std::array<Copy, sizeof...(Ts)> cpyrs(){ return {{(&copy_h<Ts>::help)...}};}
         static constexpr std::array<Move, sizeof...(Ts)> mvers(){ return {{(&move_h<Ts>::help)...}};}
         static constexpr std::array<Swap, sizeof...(Ts)> swprs(){ return {{(&swap_h<Ts>::help)...}};}
         static constexpr std::array<Dtor, sizeof...(Ts)> dtors(){ return {{(&dtor_h<Ts>::help)...}};}
 
+        template<bool cond, typename T>
+        struct conditional_ref : std::conditional<cond, typename std::remove_reference<T>::type&, typename std::remove_reference<T>::type > {};
+
+        template<bool cond, typename T>
+        using conditional_ref_t = typename conditional_ref<cond, T>::type;
+
+
+        template<bool is_lvalue_arg>
+        static constexpr std::array<cnvrt_assgn_t, sizeof...(Ts)> cnvrt_assgnrs(){
+            return {{(&cnvrt_assign_h<conditional_ref_t<is_lvalue_arg,Ts>>::help)...}};
+        }
+
+        template<bool is_lvalue_arg>
+        static constexpr std::array<cnvrt_ctor_t, sizeof...(Ts)> cnvrt_ctors(){
+            return {{(&cnvrt_ctor_h<conditional_ref_t<is_lvalue_arg,Ts>>::help)...}};
+        }
+
         std::size_t m_index = 0;
 
     protected:
         template<typename T, typename... Us> friend T& get(variant<Us...> &v);
         template<typename T, typename... Us> friend const T& get(const variant<Us...> &v);
+        template<typename T, typename... Us> friend T* get_if(variant<Us...> *v) noexcept;
+        template<typename T, typename... Us> friend const T* get_if(const variant<Us...> *v) noexcept;
+
         template<typename... Us> friend bool operator==(const variant<Us...> &lhs,
                                                         const variant<Us...> &rhs);
         Memory memory;
@@ -156,11 +190,14 @@ namespace util
         variant() noexcept;
         variant(const variant& other);
         variant(variant&& other) noexcept;
-        template<typename T> explicit variant(const T& t);
-        // are_different is a SFINAE trick to avoid variant(T &&t) with T=variant
+        // are_different_t is a SFINAE trick to avoid variant(T &&t) with T=variant
         // for some reason, this version is called instead of variant(variant&& o) when
-        // variant is used in STL containers (examples: vector assignment)
-        template<typename T> explicit variant(T&& t, typename detail::are_different<variant, T, int>::type = 0);
+        // variant is used in STL containers (examples: vector assignment).
+        template<
+            typename T,
+            typename = util::are_different_t<variant, T>
+        >
+        explicit variant(T&& t);
         // template<class T, class... Args> explicit variant(Args&&... args);
         // FIXME: other constructors
 
@@ -172,9 +209,11 @@ namespace util
         variant& operator=(variant &&rhs) noexcept;
 
         // SFINAE trick to avoid operator=(T&&) with T=variant<>, see comment above
-        template<class T>
-        typename detail::are_different<variant, T, variant&>
-        ::type operator=(T&& t) noexcept;
+        template<
+            typename T,
+            typename = util::are_different_t<variant, T>
+        >
+        variant& operator=(T&& t) noexcept;
 
         // Observers
         std::size_t index() const noexcept;
@@ -189,6 +228,11 @@ namespace util
     };
 
     // FIMXE: visit
+    template<typename T, typename... Types>
+    T* get_if(util::variant<Types...>* v) noexcept;
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept;
 
     template<typename T, typename... Types>
     T& get(util::variant<Types...> &v);
@@ -196,9 +240,87 @@ namespace util
     template<typename T, typename... Types>
     const T& get(const util::variant<Types...> &v);
 
+    template<std::size_t Index, typename... Types>
+    typename util::type_list_element<Index, Types...>::type& get(util::variant<Types...> &v);
+
+    template<std::size_t Index, typename... Types>
+    const typename util::type_list_element<Index, Types...>::type& get(const util::variant<Types...> &v);
+
     template<typename T, typename... Types>
     bool holds_alternative(const util::variant<Types...> &v) noexcept;
 
+
+    // Visitor
+    namespace detail
+    {
+        struct visitor_interface {};
+
+        // Class `visitor_return_type_deduction_helper`
+        // introduces solution for deduction `return_type` in `visit` function in common way
+        // for both Lambda and class Visitor and keep one interface invocation point: `visit` only
+        // his helper class is required to unify return_type deduction mechanism because
+        // for Lambda it is possible to take type of `decltype(visitor(get<0>(var)))`
+        // but for class Visitor there is no operator() in base case,
+        // because it provides `operator() (std::size_t index, ...)`
+        // So `visitor_return_type_deduction_helper` expose `operator()`
+        // uses only for class Visitor only for deduction `return type` in visit()
+        template<typename R>
+        struct visitor_return_type_deduction_helper
+        {
+            using return_type = R;
+
+            // to be used in Lambda return type deduction context only
+            template<typename T>
+            return_type operator() (T&&);
+        };
+    }
+
+    // Special purpose `static_visitor` can receive additional arguments
+    template<typename R, typename Impl>
+    struct static_visitor : public detail::visitor_interface,
+                            public detail::visitor_return_type_deduction_helper<R> {
+
+        // assign responsibility for return type deduction to helper class
+        using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
+        using detail::visitor_return_type_deduction_helper<R>::operator();
+        friend Impl;
+
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t index, VariantValue&& value, Args&& ...args)
+        {
+            suppress_unused_warning(index);
+            return static_cast<Impl*>(this)-> visit(
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    // Special purpose `static_indexed_visitor` can receive additional arguments
+    // And make forwarding current variant index as runtime function argument to its `Impl`
+    template<typename R, typename Impl>
+    struct static_indexed_visitor : public detail::visitor_interface,
+                                    public detail::visitor_return_type_deduction_helper<R> {
+
+        // assign responsibility for return type deduction to helper class
+        using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
+        using detail::visitor_return_type_deduction_helper<R>::operator();
+        friend Impl;
+
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t Index, VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> visit(Index,
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    template <class T>
+    struct variant_size;
+
+    template <class... Types>
+    struct variant_size<util::variant<Types...>>
+        : std::integral_constant<std::size_t, sizeof...(Types)> { };
     // FIXME: T&&, const TT&& versions.
 
     // Implementation //////////////////////////////////////////////////////////
@@ -224,19 +346,12 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T>
-    variant<Ts...>::variant(const T& t)
-        : m_index(util::type_list_index<T, Ts...>::value)
+    template<class T, typename>
+    variant<Ts...>::variant(T&& t)
+        : m_index(util::type_list_index<util::decay_t<T>, Ts...>::value)
     {
-        (vctrs()[m_index])(memory, &t);
-    }
-
-    template<typename... Ts>
-    template<class T>
-    variant<Ts...>::variant(T&& t, typename detail::are_different<variant, T, int>::type)
-        : m_index(util::type_list_index<typename std::remove_reference<T>::type, Ts...>::value)
-    {
-        (mctrs()[m_index])(memory, &t);
+        const constexpr bool is_lvalue_arg =  std::is_lvalue_reference<T>::value;
+        (cnvrt_ctors<is_lvalue_arg>()[m_index])(memory, const_cast<util::decay_t<T> *>(&t));
     }
 
     template<typename... Ts>
@@ -278,19 +393,28 @@ namespace util
     }
 
     template<typename... Ts>
-    template<class T> typename detail::are_different<variant<Ts...>, T, variant<Ts...>&>
-    ::type variant<Ts...>::operator=(T&& t) noexcept
+    template<typename T, typename>
+    variant<Ts...>& variant<Ts...>::operator=(T&& t) noexcept
     {
+        using decayed_t = util::decay_t<T>;
         // FIXME: No version with implicit type conversion available!
-        static const constexpr std::size_t t_index =
-            util::type_list_index<T, Ts...>::value;
+        const constexpr std::size_t t_index =
+            util::type_list_index<decayed_t, Ts...>::value;
 
-        if (t_index == m_index)
+        const constexpr bool is_lvalue_arg =  std::is_lvalue_reference<T>::value;
+
+        if (t_index != m_index)
         {
-            util::get<T>(*this) = std::move(t);
-            return *this;
+            (dtors()[m_index])(memory);
+            (cnvrt_ctors<is_lvalue_arg>()[t_index])(memory, &t);
+            m_index = t_index;
         }
-        else return (*this = variant(std::move(t)));
+        else
+        {
+            (cnvrt_assgnrs<is_lvalue_arg>()[m_index])(memory, &t);
+        }
+        return *this;
+
     }
 
     template<typename... Ts>
@@ -322,14 +446,34 @@ namespace util
     }
 
     template<typename T, typename... Types>
-    T& get(util::variant<Types...> &v)
+    T* get_if(util::variant<Types...>* v) noexcept
     {
         const constexpr std::size_t t_index =
             util::type_list_index<T, Types...>::value;
 
-        if (v.index() == t_index)
-            return *(T*)(&v.memory);  // workaround for ICC 2019
+        if (v && v->index() == t_index)
+            return (T*)(&v->memory);  // workaround for ICC 2019
             // original code: return reinterpret_cast<T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    const T* get_if(const util::variant<Types...>* v) noexcept
+    {
+        const constexpr std::size_t t_index =
+            util::type_list_index<T, Types...>::value;
+
+        if (v && v->index() == t_index)
+            return (const T*)(&v->memory);  // workaround for ICC 2019
+            // original code: return reinterpret_cast<const T&>(v.memory);
+        return nullptr;
+    }
+
+    template<typename T, typename... Types>
+    T& get(util::variant<Types...> &v)
+    {
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
     }
@@ -337,14 +481,26 @@ namespace util
     template<typename T, typename... Types>
     const T& get(const util::variant<Types...> &v)
     {
-        const constexpr std::size_t t_index =
-            util::type_list_index<T, Types...>::value;
-
-        if (v.index() == t_index)
-            return *(const T*)(&v.memory);  // workaround for ICC 2019
-            // original code: return reinterpret_cast<const T&>(v.memory);
+        if (auto* p = get_if<T>(&v))
+            return *p;
         else
             throw_error(bad_variant_access());
+    }
+
+    template<std::size_t Index, typename... Types>
+    typename util::type_list_element<Index, Types...>::type& get(util::variant<Types...> &v)
+    {
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return const_cast<ReturnType&>(get<Index, Types...>(static_cast<const util::variant<Types...> &>(v)));
+    }
+
+    template<std::size_t Index, typename... Types>
+    const typename util::type_list_element<Index, Types...>::type& get(const util::variant<Types...> &v)
+    {
+        static_assert(Index < sizeof...(Types),
+                      "`Index` it out of bound of `util::variant` type list");
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return get<ReturnType>(v);
     }
 
     template<typename T, typename... Types>
@@ -373,7 +529,130 @@ namespace util
     {
         return !(lhs == rhs);
     }
-} // namespace cv
+
+namespace detail
+{
+    // terminate recursion implementation for `non-void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    ReturnType apply_visitor_impl(Visitor&&, Variant&,
+                                  std::true_type, std::false_type,
+                                  VisitorArgs&& ...)
+    {
+        return {};
+    }
+
+    // terminate recursion implementation for `void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    void apply_visitor_impl(Visitor&&, Variant&,
+                            std::true_type, std::true_type,
+                            VisitorArgs&& ...)
+    {
+    }
+
+    // Intermediate resursion processor for Lambda Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<!std::is_base_of<visitor_interface, typename std::decay<Visitor>::type>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
+    {
+        static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
+                      "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
+                      " must return the same type");
+        suppress_unused_warning(not_processed);
+        if (v.index() == CurIndex)
+        {
+            return visitor.operator()(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
+
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  should_no_return,
+                                  std::forward<VisitorArgs>(args)...);
+    }
+
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<static_visitor<ReturnType, typename std::decay<Visitor>::type>,
+                                            typename std::decay<Visitor>::type>::value, ReturnType>::type
+    invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return static_cast<static_visitor<ReturnType, typename std::decay<Visitor>::type>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
+    }
+
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<static_indexed_visitor<ReturnType, typename std::decay<Visitor>::type>,
+                                            typename std::decay<Visitor>::type>::value, ReturnType>::type
+    invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return static_cast<static_indexed_visitor<ReturnType, typename std::decay<Visitor>::type>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
+    }
+
+    // Intermediate recursion processor for special case `visitor_interface` derived Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<visitor_interface, typename std::decay<Visitor>::type>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
+    {
+        static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
+                      "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
+                      " must return the same type");
+        suppress_unused_warning(not_processed);
+        if (v.index() == CurIndex)
+        {
+            return invoke_class_visitor<CurIndex, ReturnType>(visitor, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
+
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  should_no_return,
+                                  std::forward<VisitorArgs>(args)...);
+    }
+} // namespace detail
+
+    template<typename Visitor, typename Variant, typename... VisitorArg>
+    auto visit(Visitor &visitor, const Variant& var, VisitorArg &&...args) -> decltype(visitor(get<0>(var)))
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+
+        using ReturnType = decltype(visitor(get<0>(var)));
+        using return_t = std::is_same<ReturnType, void>;
+        return detail::apply_visitor_impl<ReturnType, 0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{},
+                                    return_t{},
+                                    std::forward<VisitorArg>(args)...);
+    }
+
+    template<typename Visitor, typename Variant>
+    auto visit(Visitor&& visitor, const Variant& var) -> decltype(visitor(get<0>(var)))
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+
+        using ReturnType = decltype(visitor(get<0>(var)));
+        using return_t = std::is_same<ReturnType, void>;
+        return detail::apply_visitor_impl<ReturnType, 0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{},
+                                    return_t{});
+    }
 } // namespace util
+} // namespace cv
 
 #endif // OPENCV_GAPI_UTIL_VARIANT_HPP

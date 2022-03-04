@@ -38,6 +38,10 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 
+if (typeof Module.FS === 'undefined' && typeof FS !== 'undefined') {
+    Module.FS = FS;
+}
+
 Module['imread'] = function(imageSource) {
     var img = null;
     if (typeof imageSource === 'string') {

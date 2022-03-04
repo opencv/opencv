@@ -848,6 +848,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         const int MAX_ITER = 1000;
         const double DEFAULT_EPSILON = FLT_EPSILON;
 
@@ -883,6 +884,7 @@ public:
     }
     int train_anneal(const Ptr<TrainData>& trainData)
     {
+        CV_Assert(!trainData.empty());
         SimulatedAnnealingANN_MLP s(*this, trainData);
         trained = true; // Enable call to CalcError
         int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);

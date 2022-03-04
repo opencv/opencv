@@ -13,7 +13,7 @@ Optical Flow
 ------------
 
 Optical flow is the pattern of apparent motion of image objects between two consecutive frames
-caused by the movemement of object or camera. It is 2D vector field where each vector is a
+caused by the movement of object or camera. It is 2D vector field where each vector is a
 displacement vector showing the movement of points from first frame to second. Consider the image
 below (Image Courtesy: [Wikipedia article on Optical
 Flow](http://en.wikipedia.org/wiki/Optical_flow)).
@@ -133,9 +133,9 @@ Dense Optical Flow in OpenCV.js
 
 Lucas-Kanade method computes optical flow for a sparse feature set (in our example, corners detected
 using Shi-Tomasi algorithm). OpenCV.js provides another algorithm to find the dense optical flow. It
-computes the optical flow for all the points in the frame. It is based on Gunner Farneback's
+computes the optical flow for all the points in the frame. It is based on Gunnar Farneback's
 algorithm which is explained in "Two-Frame Motion Estimation Based on Polynomial Expansion" by
-Gunner Farneback in 2003.
+Gunnar Farneback in 2003.
 
 We use the function: **cv.calcOpticalFlowFarneback (prev, next, flow, pyrScale, levels, winsize,
 iterations, polyN, polySigma, flags)**

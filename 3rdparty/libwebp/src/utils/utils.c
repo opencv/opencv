@@ -216,9 +216,14 @@ void WebPSafeFree(void* const ptr) {
   free(ptr);
 }
 
-// Public API function.
+// Public API functions.
+
+void* WebPMalloc(size_t size) {
+  return WebPSafeMalloc(1, size);
+}
+
 void WebPFree(void* ptr) {
-  free(ptr);
+  WebPSafeFree(ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -226,7 +231,7 @@ void WebPFree(void* ptr) {
 void WebPCopyPlane(const uint8_t* src, int src_stride,
                    uint8_t* dst, int dst_stride, int width, int height) {
   assert(src != NULL && dst != NULL);
-  assert(src_stride >= width && dst_stride >= width);
+  assert(abs(src_stride) >= width && abs(dst_stride) >= width);
   while (height-- > 0) {
     memcpy(dst, src, width);
     src += src_stride;

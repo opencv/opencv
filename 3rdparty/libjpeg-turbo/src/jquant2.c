@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009, 2014-2015, D. R. Commander.
+ * Copyright (C) 2009, 2014-2015, 2020, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -215,9 +215,9 @@ prescan_quantize(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
     ptr = input_buf[row];
     for (col = width; col > 0; col--) {
       /* get pixel value and index into the histogram */
-      histp = &histogram[GETJSAMPLE(ptr[0]) >> C0_SHIFT]
-                        [GETJSAMPLE(ptr[1]) >> C1_SHIFT]
-                        [GETJSAMPLE(ptr[2]) >> C2_SHIFT];
+      histp = &histogram[ptr[0] >> C0_SHIFT]
+                        [ptr[1] >> C1_SHIFT]
+                        [ptr[2] >> C2_SHIFT];
       /* increment, check for overflow and undo increment if so. */
       if (++(*histp) <= 0)
         (*histp)--;
@@ -665,7 +665,7 @@ find_nearby_colors(j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 
   for (i = 0; i < numcolors; i++) {
     /* We compute the squared-c0-distance term, then add in the other two. */
-    x = GETJSAMPLE(cinfo->colormap[0][i]);
+    x = cinfo->colormap[0][i];
     if (x < minc0) {
       tdist = (x - minc0) * C0_SCALE;
       min_dist = tdist * tdist;
@@ -688,7 +688,7 @@ find_nearby_colors(j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
       }
     }
 
-    x = GETJSAMPLE(cinfo->colormap[1][i]);
+    x = cinfo->colormap[1][i];
     if (x < minc1) {
       tdist = (x - minc1) * C1_SCALE;
       min_dist += tdist * tdist;
@@ -710,7 +710,7 @@ find_nearby_colors(j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
       }
     }
 
-    x = GETJSAMPLE(cinfo->colormap[2][i]);
+    x = cinfo->colormap[2][i];
     if (x < minc2) {
       tdist = (x - minc2) * C2_SCALE;
       min_dist += tdist * tdist;
@@ -788,13 +788,13 @@ find_best_colors(j_decompress_ptr cinfo, int minc0, int minc1, int minc2,
 #define STEP_C2  ((1 << C2_SHIFT) * C2_SCALE)
 
   for (i = 0; i < numcolors; i++) {
-    icolor = GETJSAMPLE(colorlist[i]);
+    icolor = colorlist[i];
     /* Compute (square of) distance from minc0/c1/c2 to this color */
-    inc0 = (minc0 - GETJSAMPLE(cinfo->colormap[0][icolor])) * C0_SCALE;
+    inc0 = (minc0 - cinfo->colormap[0][icolor]) * C0_SCALE;
     dist0 = inc0 * inc0;
-    inc1 = (minc1 - GETJSAMPLE(cinfo->colormap[1][icolor])) * C1_SCALE;
+    inc1 = (minc1 - cinfo->colormap[1][icolor]) * C1_SCALE;
     dist0 += inc1 * inc1;
-    inc2 = (minc2 - GETJSAMPLE(cinfo->colormap[2][icolor])) * C2_SCALE;
+    inc2 = (minc2 - cinfo->colormap[2][icolor]) * C2_SCALE;
     dist0 += inc2 * inc2;
     /* Form the initial difference increments */
     inc0 = inc0 * (2 * STEP_C0) + STEP_C0 * STEP_C0;
@@ -879,7 +879,7 @@ fill_inverse_cmap(j_decompress_ptr cinfo, int c0, int c1, int c2)
     for (ic1 = 0; ic1 < BOX_C1_ELEMS; ic1++) {
       cachep = &histogram[c0 + ic0][c1 + ic1][c2];
       for (ic2 = 0; ic2 < BOX_C2_ELEMS; ic2++) {
-        *cachep++ = (histcell)(GETJSAMPLE(*cptr++) + 1);
+        *cachep++ = (histcell)((*cptr++) + 1);
       }
     }
   }
@@ -909,9 +909,9 @@ pass2_no_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
     outptr = output_buf[row];
     for (col = width; col > 0; col--) {
       /* get pixel value and index into the cache */
-      c0 = GETJSAMPLE(*inptr++) >> C0_SHIFT;
-      c1 = GETJSAMPLE(*inptr++) >> C1_SHIFT;
-      c2 = GETJSAMPLE(*inptr++) >> C2_SHIFT;
+      c0 = (*inptr++) >> C0_SHIFT;
+      c1 = (*inptr++) >> C1_SHIFT;
+      c2 = (*inptr++) >> C2_SHIFT;
       cachep = &histogram[c0][c1][c2];
       /* If we have not seen this color before, find nearest colormap entry */
       /* and update the cache */
@@ -996,12 +996,12 @@ pass2_fs_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
        * The maximum error is +- MAXJSAMPLE (or less with error limiting);
        * this sets the required size of the range_limit array.
        */
-      cur0 += GETJSAMPLE(inptr[0]);
-      cur1 += GETJSAMPLE(inptr[1]);
-      cur2 += GETJSAMPLE(inptr[2]);
-      cur0 = GETJSAMPLE(range_limit[cur0]);
-      cur1 = GETJSAMPLE(range_limit[cur1]);
-      cur2 = GETJSAMPLE(range_limit[cur2]);
+      cur0 += inptr[0];
+      cur1 += inptr[1];
+      cur2 += inptr[2];
+      cur0 = range_limit[cur0];
+      cur1 = range_limit[cur1];
+      cur2 = range_limit[cur2];
       /* Index into the cache with adjusted pixel value */
       cachep =
         &histogram[cur0 >> C0_SHIFT][cur1 >> C1_SHIFT][cur2 >> C2_SHIFT];
@@ -1015,9 +1015,9 @@ pass2_fs_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
         register int pixcode = *cachep - 1;
         *outptr = (JSAMPLE)pixcode;
         /* Compute representation error for this pixel */
-        cur0 -= GETJSAMPLE(colormap0[pixcode]);
-        cur1 -= GETJSAMPLE(colormap1[pixcode]);
-        cur2 -= GETJSAMPLE(colormap2[pixcode]);
+        cur0 -= colormap0[pixcode];
+        cur1 -= colormap1[pixcode];
+        cur2 -= colormap2[pixcode];
       }
       /* Compute error fractions to be propagated to adjacent pixels.
        * Add these into the running sums, and simultaneously shift the
@@ -1145,7 +1145,7 @@ start_pass_2_quant(j_decompress_ptr cinfo, boolean is_pre_scan)
   int i;
 
   /* Only F-S dithering or no dithering is supported. */
-  /* If user asks for ordered dither, give him F-S. */
+  /* If user asks for ordered dither, give them F-S. */
   if (cinfo->dither_mode != JDITHER_NONE)
     cinfo->dither_mode = JDITHER_FS;
 
@@ -1263,7 +1263,7 @@ jinit_2pass_quantizer(j_decompress_ptr cinfo)
     cquantize->sv_colormap = NULL;
 
   /* Only F-S dithering or no dithering is supported. */
-  /* If user asks for ordered dither, give him F-S. */
+  /* If user asks for ordered dither, give them F-S. */
   if (cinfo->dither_mode != JDITHER_NONE)
     cinfo->dither_mode = JDITHER_FS;
 

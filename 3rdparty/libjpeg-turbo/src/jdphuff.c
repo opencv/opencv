@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1995-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015-2016, 2018, D. R. Commander.
+ * Copyright (C) 2015-2016, 2018-2021, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -40,25 +40,6 @@ typedef struct {
   unsigned int EOBRUN;                  /* remaining EOBs in EOBRUN */
   int last_dc_val[MAX_COMPS_IN_SCAN];   /* last DC coef for each component */
 } savable_state;
-
-/* This macro is to work around compilers with missing or broken
- * structure assignment.  You'll need to fix this code if you have
- * such a compiler and you change MAX_COMPS_IN_SCAN.
- */
-
-#ifndef NO_STRUCT_ASSIGN
-#define ASSIGN_STATE(dest, src)  ((dest) = (src))
-#else
-#if MAX_COMPS_IN_SCAN == 4
-#define ASSIGN_STATE(dest, src) \
-  ((dest).EOBRUN = (src).EOBRUN, \
-   (dest).last_dc_val[0] = (src).last_dc_val[0], \
-   (dest).last_dc_val[1] = (src).last_dc_val[1], \
-   (dest).last_dc_val[2] = (src).last_dc_val[2], \
-   (dest).last_dc_val[3] = (src).last_dc_val[3])
-#endif
-#endif
-
 
 typedef struct {
   struct jpeg_entropy_decoder pub; /* public fields */
@@ -102,7 +83,7 @@ start_pass_phuff_decoder(j_decompress_ptr cinfo)
   boolean is_DC_band, bad;
   int ci, coefi, tbl;
   d_derived_tbl **pdtbl;
-  int *coef_bit_ptr;
+  int *coef_bit_ptr, *prev_coef_bit_ptr;
   jpeg_component_info *compptr;
 
   is_DC_band = (cinfo->Ss == 0);
@@ -143,8 +124,15 @@ start_pass_phuff_decoder(j_decompress_ptr cinfo)
   for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
     int cindex = cinfo->cur_comp_info[ci]->component_index;
     coef_bit_ptr = &cinfo->coef_bits[cindex][0];
+    prev_coef_bit_ptr = &cinfo->coef_bits[cindex + cinfo->num_components][0];
     if (!is_DC_band && coef_bit_ptr[0] < 0) /* AC without prior DC scan */
       WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, 0);
+    for (coefi = MIN(cinfo->Ss, 1); coefi <= MAX(cinfo->Se, 9); coefi++) {
+      if (cinfo->input_scan_number > 1)
+        prev_coef_bit_ptr[coefi] = coef_bit_ptr[coefi];
+      else
+        prev_coef_bit_ptr[coefi] = 0;
+    }
     for (coefi = cinfo->Ss; coefi <= cinfo->Se; coefi++) {
       int expected = (coef_bit_ptr[coefi] < 0) ? 0 : coef_bit_ptr[coefi];
       if (cinfo->Ah != expected)
@@ -323,7 +311,7 @@ decode_mcu_DC_first(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 
     /* Load up working state */
     BITREAD_LOAD_STATE(cinfo, entropy->bitstate);
-    ASSIGN_STATE(state, entropy->saved);
+    state = entropy->saved;
 
     /* Outer loop handles each block in the MCU */
 
@@ -356,11 +344,12 @@ decode_mcu_DC_first(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
 
     /* Completed MCU, so update state */
     BITREAD_SAVE_STATE(cinfo, entropy->bitstate);
-    ASSIGN_STATE(entropy->saved, state);
+    entropy->saved = state;
   }
 
   /* Account for restart interval (no-op if not using restarts) */
-  entropy->restarts_to_go--;
+  if (cinfo->restart_interval)
+    entropy->restarts_to_go--;
 
   return TRUE;
 }
@@ -444,7 +433,8 @@ decode_mcu_AC_first(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
   }
 
   /* Account for restart interval (no-op if not using restarts) */
-  entropy->restarts_to_go--;
+  if (cinfo->restart_interval)
+    entropy->restarts_to_go--;
 
   return TRUE;
 }
@@ -495,7 +485,8 @@ decode_mcu_DC_refine(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
   BITREAD_SAVE_STATE(cinfo, entropy->bitstate);
 
   /* Account for restart interval (no-op if not using restarts) */
-  entropy->restarts_to_go--;
+  if (cinfo->restart_interval)
+    entropy->restarts_to_go--;
 
   return TRUE;
 }
@@ -638,7 +629,8 @@ decode_mcu_AC_refine(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
   }
 
   /* Account for restart interval (no-op if not using restarts) */
-  entropy->restarts_to_go--;
+  if (cinfo->restart_interval)
+    entropy->restarts_to_go--;
 
   return TRUE;
 
@@ -676,7 +668,7 @@ jinit_phuff_decoder(j_decompress_ptr cinfo)
   /* Create progression status table */
   cinfo->coef_bits = (int (*)[DCTSIZE2])
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                cinfo->num_components * DCTSIZE2 *
+                                cinfo->num_components * 2 * DCTSIZE2 *
                                 sizeof(int));
   coef_bit_ptr = &cinfo->coef_bits[0][0];
   for (ci = 0; ci < cinfo->num_components; ci++)

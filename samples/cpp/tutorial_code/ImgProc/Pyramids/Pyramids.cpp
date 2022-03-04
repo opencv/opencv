@@ -27,16 +27,16 @@ int main( int argc, char** argv )
             " * [ESC] -> Close program \n" << endl;
 
     //![load]
-    const char* filename = argc >=2 ? argv[1] : "../data/chicky_512.png";
+    const char* filename = argc >=2 ? argv[1] : "chicky_512.png";
 
     // Loads an image
-    Mat src = imread( filename );
+    Mat src = imread( samples::findFile( filename ) );
 
     // Check if image is loaded fine
     if(src.empty()){
         printf(" Error opening image\n");
-        printf(" Program Arguments: [image_name -- default ../data/chicky_512.png] \n");
-        return -1;
+        printf(" Program Arguments: [image_name -- default chicky_512.png] \n");
+        return EXIT_FAILURE;
     }
     //![load]
 
@@ -65,5 +65,5 @@ int main( int argc, char** argv )
     }
     //![loop]
 
-    return 0;
+    return EXIT_SUCCESS;
 }

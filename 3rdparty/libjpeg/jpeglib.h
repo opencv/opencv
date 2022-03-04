@@ -2,7 +2,7 @@
  * jpeglib.h
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2002-2017 by Guido Vollbeding.
+ * Modified 2002-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -39,7 +39,7 @@ extern "C" {
 
 #define JPEG_LIB_VERSION        90	/* Compatibility version 9.0 */
 #define JPEG_LIB_VERSION_MAJOR  9
-#define JPEG_LIB_VERSION_MINOR  3
+#define JPEG_LIB_VERSION_MINOR  4
 
 
 /* Various constants determining the sizes of things.
@@ -909,6 +909,7 @@ typedef JMETHOD(boolean, jpeg_marker_parser_method, (j_decompress_ptr cinfo));
 #define jpeg_suppress_tables	jSuppressTables
 #define jpeg_alloc_quant_table	jAlcQTable
 #define jpeg_alloc_huff_table	jAlcHTable
+#define jpeg_std_huff_table	jStdHTable
 #define jpeg_start_compress	jStrtCompress
 #define jpeg_write_scanlines	jWrtScanlines
 #define jpeg_finish_compress	jFinCompress
@@ -977,10 +978,10 @@ EXTERN(void) jpeg_stdio_src JPP((j_decompress_ptr cinfo, FILE * infile));
 /* Data source and destination managers: memory buffers. */
 EXTERN(void) jpeg_mem_dest JPP((j_compress_ptr cinfo,
 			       unsigned char ** outbuffer,
-			       unsigned long * outsize));
+			       size_t * outsize));
 EXTERN(void) jpeg_mem_src JPP((j_decompress_ptr cinfo,
 			      const unsigned char * inbuffer,
-			      unsigned long insize));
+			      size_t insize));
 
 /* Default parameter setup for compression */
 EXTERN(void) jpeg_set_defaults JPP((j_compress_ptr cinfo));
@@ -1005,6 +1006,8 @@ EXTERN(void) jpeg_suppress_tables JPP((j_compress_ptr cinfo,
 				       boolean suppress));
 EXTERN(JQUANT_TBL *) jpeg_alloc_quant_table JPP((j_common_ptr cinfo));
 EXTERN(JHUFF_TBL *) jpeg_alloc_huff_table JPP((j_common_ptr cinfo));
+EXTERN(JHUFF_TBL *) jpeg_std_huff_table JPP((j_common_ptr cinfo,
+					     boolean isDC, int tblno));
 
 /* Main entry points for compression */
 EXTERN(void) jpeg_start_compress JPP((j_compress_ptr cinfo,

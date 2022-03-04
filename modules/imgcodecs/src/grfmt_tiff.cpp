@@ -112,6 +112,8 @@ static bool cv_tiffSetErrorHandler()
 
 static const char fmtSignTiffII[] = "II\x2a\x00";
 static const char fmtSignTiffMM[] = "MM\x00\x2a";
+static const char fmtSignBigTiffII[] = "II\x2b\x00";
+static const char fmtSignBigTiffMM[] = "MM\x00\x2b";
 
 TiffDecoder::TiffDecoder()
 {
@@ -140,13 +142,15 @@ bool TiffDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 4 &&
         (memcmp(signature.c_str(), fmtSignTiffII, 4) == 0 ||
-        memcmp(signature.c_str(), fmtSignTiffMM, 4) == 0);
+        memcmp(signature.c_str(), fmtSignTiffMM, 4) == 0 ||
+        memcmp(signature.c_str(), fmtSignBigTiffII, 4) == 0 ||
+        memcmp(signature.c_str(), fmtSignBigTiffMM, 4) == 0);
 }
 
 int TiffDecoder::normalizeChannelsNumber(int channels) const
 {
-    CV_Assert(channels <= 4);
-    return channels > 4 ? 4 : channels;
+    CV_Check(channels, channels >= 1 && channels <= 4, "Unsupported number of channels");
+    return channels;
 }
 
 ImageDecoder TiffDecoder::newDecoder() const
@@ -416,10 +420,13 @@ bool TiffDecoder::readHeader(std::map<String, String> *properties)
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3, sf = SAMPLEFORMAT_UINT;
-            CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+            if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
+            {
+                // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
+                bpp = 1;
+            }
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
-            CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sf));
 
             m_width = wdth;
             m_height = hght;
@@ -436,51 +443,55 @@ bool TiffDecoder::readHeader(std::map<String, String> *properties)
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
+            uint16 sample_format = SAMPLEFORMAT_UINT;
+            TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sample_format);
             int wanted_channels = normalizeChannelsNumber(ncn);
-            switch(bpp)
+            switch (bpp)
             {
-                case 1:
-                    if(sf == SAMPLEFORMAT_UINT) {
-                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
-                        result = true;
-                    } else {
-                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 1 bit! Must be UINT.");
-                    }
-                    break;
-                case 8:
-                    if(sf == SAMPLEFORMAT_UINT) {
-                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
-                        result = true;
-                    } else {
-                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 8 bit! Must be UINT.");
-                    }
-                    break;
-                case 16:
-                    if(sf == SAMPLEFORMAT_UINT) {
-                        m_type = CV_MAKETYPE(CV_16U, !isGrayScale ? wanted_channels : 1);
-                        result = true;
-                    } else {
-                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 16 bit! Must be UINT.");
-                    }
-                    break;
-                case 32:
-                    if(sf == SAMPLEFORMAT_IEEEFP) {
-                        m_type = CV_MAKETYPE(CV_32F, wanted_channels);
-                        result = true;
-                    } else {
-                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 32 bit! Must be IEEEFP.");
-                    }
-                    break;
-                case 64:
-                    if(sf == SAMPLEFORMAT_IEEEFP) {
-                        m_type = CV_MAKETYPE(CV_64F, wanted_channels);
-                        result = true;
-                    } else {
-                        CV_Error(cv::Error::StsError, "Invalid format value read from TIFF header for 64 bit! Must be IEEEFP.");
-                    }
-                    break;
-                default:
-                    CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
+            case 1:
+            {
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_INT ? CV_8S : CV_8U;
+                m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                result = true;
+                break;
+            }
+            case 8:
+            {
+                //Palette color, the value of the component is used as an index into the red,
+                //green and blue curves in the ColorMap field to retrieve an RGB triplet that defines the color.
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_INT ? CV_8S : CV_8U;
+                if (photometric == PHOTOMETRIC_PALETTE)
+                    m_type = CV_MAKETYPE(depth, 3);
+                else
+                    m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                result = true;
+                break;
+            }
+            case 16:
+            {
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_INT ? CV_16S : CV_16U;
+                m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                result = true;
+                break;
+            }
+            case 32:
+            {
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_IEEEFP || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_IEEEFP ? CV_32F : CV_32S;
+                m_type = CV_MAKETYPE(depth, wanted_channels);
+                result = true;
+                break;
+            }
+            case 64:
+                CV_CheckEQ((int)sample_format, SAMPLEFORMAT_IEEEFP, "");
+                m_type = CV_MAKETYPE(CV_64F, wanted_channels);
+                result = true;
+                break;
+            default:
+                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
             }
         }
     }
@@ -601,14 +612,18 @@ bool  TiffDecoder::readData( Mat& img, std::map<String, String> *properties )
 
     bool color = img.channels() > 1;
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
 
     if (m_width && m_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
         uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
-        CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+        if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
+        {
+            // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
+            bpp = 1;
+        }
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16 img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
@@ -813,7 +828,7 @@ bool  TiffDecoder::readData( Mat& img, std::map<String, String> *properties )
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, buffer, buffer_size) >= 0);
                             }
 
-                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? CV_32F : CV_64F, ncn), buffer);
+                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), buffer);
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3)
@@ -862,7 +877,7 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
-    return depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F;
+    return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F;
 }
 
 bool TiffEncoder::setDestination( std::vector<uchar>& buf ) {
@@ -1034,11 +1049,12 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         const Mat& img = img_vec[page];
+        CV_Assert(!img.empty());
         int channels = img.channels();
         int width = img.cols, height = img.rows;
         int type = img.type();
         int depth = CV_MAT_DEPTH(type);
-        CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+        CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
         CV_CheckType(type, channels >= 1 && channels <= 4, "");
 
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width));
@@ -1061,19 +1077,31 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         int page_compression = compression;
 
         int bitsPerChannel = -1;
+        uint16 sample_format = SAMPLEFORMAT_INT;
         switch (depth)
         {
             case CV_8U:
+                sample_format = SAMPLEFORMAT_UINT;
+                /* FALLTHRU */
+            case CV_8S:
             {
                 bitsPerChannel = 8;
                 break;
             }
+
             case CV_16U:
+                sample_format = SAMPLEFORMAT_UINT;
+                /* FALLTHRU */
+            case CV_16S:
             {
                 bitsPerChannel = 16;
                 break;
             }
+
             case CV_32F:
+                sample_format = SAMPLEFORMAT_IEEEFP;
+                /* FALLTHRU */
+            case CV_32S:
             {
                 bitsPerChannel = 32;
                 page_compression = COMPRESSION_NONE;
@@ -1083,6 +1111,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             {
                 bitsPerChannel = 64;
                 page_compression = COMPRESSION_NONE;
+                sample_format = SAMPLEFORMAT_IEEEFP;
                 break;
             }
             default:
@@ -1093,6 +1122,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
         const int bitsPerByte = 8;
         size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
+        CV_Assert(fileStep > 0);
 
         int rowsPerStrip = (int)((1 << 13) / fileStep);
         readParam(params, IMWRITE_TIFF_ROWSPERSTRIP, rowsPerStrip);
@@ -1107,7 +1137,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG));
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, rowsPerStrip));
 
-        CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, depth >= CV_32F ? SAMPLEFORMAT_IEEEFP : SAMPLEFORMAT_UINT));
+        CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, sample_format));
 
         if (page_compression != COMPRESSION_NONE)
         {
@@ -1218,6 +1248,11 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 
 bool TiffEncoder::write( const Mat& img, const std::vector<int>& iparams, const std::map<int, String> &sparams )
 {
+    int type = img.type();
+    int depth = CV_MAT_DEPTH(type);
+
+    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
+
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
     return writemulti(img_vec, iparams, sparams);

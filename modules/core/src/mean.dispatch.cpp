@@ -17,6 +17,12 @@
 #include "mean.simd.hpp"
 #include "mean.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
+#undef HAVE_IPP
+#undef CV_IPP_RUN_FAST
+#define CV_IPP_RUN_FAST(f, ...)
+#undef CV_IPP_RUN
+#define CV_IPP_RUN(c, f, ...)
+
 namespace cv {
 
 #if defined HAVE_IPP

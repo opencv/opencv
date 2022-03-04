@@ -115,6 +115,8 @@ class TestSuite(object):
             cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type]
             if self.options.package:
                 cmd += ["-Dopencv.test.package=%s" % self.options.package]
+            if self.options.java_test_exclude:
+                cmd += ["-Dopencv.test.exclude=%s" % self.options.java_test_exclude]
             cmd += ["buildAndTest"]
             ret = execute(cmd, cwd=self.cache.java_test_dir)
             return None, ret

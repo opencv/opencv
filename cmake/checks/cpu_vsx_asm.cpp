@@ -16,6 +16,6 @@ int main()
 {
     __vector float vf;
     __vector signed int vi;
-    __asm__ __volatile__ ("xvcvsxwsp %x0,%x1" : "=wf" (vf) : "wa" (vi));
+    __asm__ __volatile__ ("xvcvsxwsp %x0,%x1" : "=wa" (vf) : "wa" (vi));
     return 0;
 }

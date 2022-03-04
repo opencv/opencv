@@ -14,9 +14,9 @@ using namespace cv;
 
 const char* keys =
     "{ help  h| | Print help message. }"
-    "{ input1 | | Path to input image 1. }"
-    "{ input2 | | Path to input image 2. }"
-    "{ input3 | | Path to input image 3. }";
+    "{ @input1 | | Path to input image 1. }"
+    "{ @input2 | | Path to input image 2. }"
+    "{ @input3 | | Path to input image 3. }";
 
 /**
  * @function main

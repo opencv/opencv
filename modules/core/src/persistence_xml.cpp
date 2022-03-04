@@ -45,7 +45,7 @@ public:
             if( FileNode::isCollection(struct_flags) )
             {
                 if( FileNode::isMap(struct_flags) ^ (key != 0) )
-                    CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                    CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                              "or add element with key to sequence" );
             }
             else
@@ -61,26 +61,26 @@ public:
         if( !key )
             key = "_";
         else if( key[0] == '_' && key[1] == '\0' )
-            CV_Error( CV_StsBadArg, "A single _ is a reserved tag name" );
+            CV_Error( cv::Error::StsBadArg, "A single _ is a reserved tag name" );
 
         len = (int)strlen( key );
         *ptr++ = '<';
         if( tag_type == CV_XML_CLOSING_TAG )
         {
             if( !attrlist.empty() )
-                CV_Error( CV_StsBadArg, "Closing tag should not include any attributes" );
+                CV_Error( cv::Error::StsBadArg, "Closing tag should not include any attributes" );
             *ptr++ = '/';
         }
 
         if( !cv_isalpha(key[0]) && key[0] != '_' )
-            CV_Error( CV_StsBadArg, "Key should start with a letter or _" );
+            CV_Error( cv::Error::StsBadArg, "Key should start with a letter or _" );
 
         ptr = fs->resizeWriteBuffer( ptr, len );
         for( i = 0; i < len; i++ )
         {
             char c = key[i];
             if( !cv_isalnum(c) && c != '_' && c != '-' )
-                CV_Error( CV_StsBadArg, "Key name may only contain alphanumeric characters [a-zA-Z0-9], '-' and '_'" );
+                CV_Error( cv::Error::StsBadArg, "Key name may only contain alphanumeric characters [a-zA-Z0-9], '-' and '_'" );
             ptr[i] = c;
         }
         ptr += len;
@@ -158,11 +158,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != '\"' || str[0] != str[len-1] )
         {
@@ -233,6 +233,16 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
         int len = (int)strlen(data);
         if( key && *key == '\0' )
             key = 0;
@@ -255,7 +265,7 @@ public:
             int new_offset = (int)(ptr - fs->bufferStart()) + len;
 
             if( key )
-                CV_Error( CV_StsBadArg, "elements with keys can not be written to sequence" );
+                CV_Error( cv::Error::StsBadArg, "elements with keys can not be written to sequence" );
 
             current_struct.flags = FileNode::SEQ;
 
@@ -281,10 +291,10 @@ public:
         char* ptr;
 
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         if( strstr(comment, "--") != 0 )
-            CV_Error( CV_StsBadArg, "Double hyphen \'--\' is not allowed in the comments" );
+            CV_Error( cv::Error::StsBadArg, "Double hyphen \'--\' is not allowed in the comments" );
 
         len = (int)strlen(comment);
         eol = strchr(comment, '\n');
@@ -360,6 +370,9 @@ public:
 
     char* skipSpaces( char* ptr, int mode )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         int level = 0;
 
         for(;;)
@@ -374,7 +387,7 @@ public:
 
                 if( c == '-' )
                 {
-                    assert( ptr[1] == '-' && ptr[2] == '>' );
+                    CV_Assert( ptr[1] == '-' && ptr[2] == '>' );
                     mode = 0;
                     ptr += 3;
                 }
@@ -441,6 +454,9 @@ public:
 
     char* parseValue( char* ptr, FileNode& node )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         FileNode new_elem;
         bool have_space = true;
         int value_type = node.type();
@@ -456,6 +472,8 @@ public:
                 (c == '<' && ptr[1] == '!' && ptr[2] == '-') )
             {
                 ptr = skipSpaces( ptr, 0 );
+                if (!ptr)
+                    CV_PARSE_ERROR_CPP("Invalid input");
                 have_space = true;
                 c = *ptr;
             }
@@ -502,6 +520,8 @@ public:
                 {
                     ptr = fs->parseBase64( ptr, 0, new_elem);
                     ptr = skipSpaces( ptr, 0 );
+                    if (!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid input");
                 }
 
                 ptr = parseTag( ptr, key2, type_name, tag_type );
@@ -617,6 +637,8 @@ public:
                                         c = '\"';
                                     else
                                     {
+                                        if (len + 2 + i >= CV_FS_MAX_LEN)
+                                            CV_PARSE_ERROR_CPP("string is too long");
                                         memcpy( strbuf + i, ptr-1, len + 2 );
                                         i += len + 2;
                                     }
@@ -625,9 +647,9 @@ public:
                                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
                             }
                         }
+                        if (i + 1 >= CV_FS_MAX_LEN)
+                            CV_PARSE_ERROR_CPP("Too long string literal");
                         strbuf[i++] = c;
-                        if( i >= CV_FS_MAX_LEN )
-                            CV_PARSE_ERROR_CPP( "Too long string literal" );
                     }
                     elem->setValue(FileNode::STRING, strbuf, i);
                 }
@@ -645,6 +667,9 @@ public:
     char* parseTag( char* ptr, std::string& tag_name,
                     std::string& type_name, int& tag_type )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid tag input");
+
         if( *ptr == '\0' )
             CV_PARSE_ERROR_CPP( "Unexpected end of the stream" );
 
@@ -669,7 +694,7 @@ public:
         else if( *ptr == '!' )
         {
             tag_type = CV_XML_DIRECTIVE_TAG;
-            assert( ptr[1] != '-' || ptr[2] != '-' );
+            CV_Assert( ptr[1] != '-' || ptr[2] != '-' );
             ptr++;
         }
         else
@@ -702,6 +727,8 @@ public:
                 if( *ptr != '=' )
                 {
                     ptr = skipSpaces( ptr, CV_XML_INSIDE_TAG );
+                    if (!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid attribute");
                     if( *ptr != '=' )
                         CV_PARSE_ERROR_CPP( "Attribute name should be followed by \'=\'" );
                 }
@@ -740,6 +767,8 @@ public:
             if( c != '>' )
             {
                 ptr = skipSpaces( ptr, CV_XML_INSIDE_TAG );
+                if (!ptr)
+                    CV_PARSE_ERROR_CPP("Invalid input");
                 c = *ptr;
             }
 
@@ -781,6 +810,8 @@ public:
 
         // CV_XML_INSIDE_TAG is used to prohibit leading comments
         ptr = skipSpaces( ptr, CV_XML_INSIDE_TAG );
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
 
         if( memcmp( ptr, "<?xml", 5 ) != 0 )  // FIXIT ptr[1..] - out of bounds read without check
             CV_PARSE_ERROR_CPP( "Valid XML should start with \'<?xml ...?>\'" );
@@ -791,6 +822,8 @@ public:
         while( ptr && *ptr != '\0' )
         {
             ptr = skipSpaces( ptr, 0 );
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
 
             if( *ptr != '\0' )
             {

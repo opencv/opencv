@@ -64,14 +64,14 @@ def main():
         fn = 0
 
     cam = video.create_capture(fn)
-    ret, prev = cam.read()
+    _ret, prev = cam.read()
     prevgray = cv.cvtColor(prev, cv.COLOR_BGR2GRAY)
     show_hsv = False
     show_glitch = False
     cur_glitch = prev.copy()
 
     while True:
-        ret, img = cam.read()
+        _ret, img = cam.read()
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         flow = cv.calcOpticalFlowFarneback(prevgray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         prevgray = gray

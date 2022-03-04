@@ -98,7 +98,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('simple.jpg',0)
+img = cv.imread('blox.jpg',0) # `<opencv_root>/samples/data/blox.jpg`
 
 # Initiate FAST object with default values
 fast = cv.FastFeatureDetector_create()
@@ -113,17 +113,17 @@ print( "nonmaxSuppression:{}".format(fast.getNonmaxSuppression()) )
 print( "neighborhood: {}".format(fast.getType()) )
 print( "Total Keypoints with nonmaxSuppression: {}".format(len(kp)) )
 
-cv.imwrite('fast_true.png',img2)
+cv.imwrite('fast_true.png', img2)
 
 # Disable nonmaxSuppression
 fast.setNonmaxSuppression(0)
-kp = fast.detect(img,None)
+kp = fast.detect(img, None)
 
 print( "Total Keypoints without nonmaxSuppression: {}".format(len(kp)) )
 
 img3 = cv.drawKeypoints(img, kp, None, color=(255,0,0))
 
-cv.imwrite('fast_false.png',img3)
+cv.imwrite('fast_false.png', img3)
 @endcode
 See the results. First image shows FAST with nonmaxSuppression and second one without
 nonmaxSuppression:

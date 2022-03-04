@@ -40,7 +40,7 @@
 //M*/
 
 //
-//  Loading and saving IPL images.
+//  Loading and saving images.
 //
 
 #include "precomp.hpp"
@@ -51,6 +51,8 @@
 #undef max
 #include <iostream>
 #include <fstream>
+#include <cerrno>
+#include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/multiload.hpp>
 
@@ -176,6 +178,11 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
     #endif
+    #ifdef HAVE_OPENJPEG
+        decoders.push_back( makePtr<Jpeg2KJP2OpjDecoder>() );
+        decoders.push_back( makePtr<Jpeg2KJ2KOpjDecoder>() );
+        encoders.push_back( makePtr<Jpeg2KOpjEncoder>() );
+    #endif
     #ifdef HAVE_OPENEXR
         decoders.push_back( makePtr<ExrDecoder>() );
         encoders.push_back( makePtr<ExrEncoder>() );
@@ -191,7 +198,19 @@ struct ImageCodecInitializer
     std::vector<ImageEncoder> encoders;
 };
 
-static ImageCodecInitializer codecs;
+static
+ImageCodecInitializer& getCodecs()
+{
+#ifdef CV_CXX11
+    static ImageCodecInitializer g_codecs;
+    return g_codecs;
+#else
+    // C++98 doesn't guarantee correctness of multi-threaded initialization of static global variables
+    // (memory leak here is not critical, use C++11 to avoid that)
+    static ImageCodecInitializer* g_codecs = new ImageCodecInitializer();
+    return *g_codecs;
+#endif
+}
 
 /**
  * Find the decoders
@@ -205,6 +224,7 @@ static ImageDecoder findDecoder( const String& filename ) {
     size_t i, maxlen = 0;
 
     /// iterate through list of registered codecs
+    ImageCodecInitializer& codecs = getCodecs();
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
         size_t len = codecs.decoders[i]->signatureLength();
@@ -215,8 +235,10 @@ static ImageDecoder findDecoder( const String& filename ) {
     FILE* f= fopen( filename.c_str(), "rb" );
 
     /// in the event of a failure, return an empty image decoder
-    if( !f )
+    if( !f ) {
+        CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
+    }
 
     // read the file signature
     String signature(maxlen, ' ');
@@ -242,6 +264,7 @@ static ImageDecoder findDecoder( const Mat& buf )
     if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
         return ImageDecoder();
 
+    ImageCodecInitializer& codecs = getCodecs();
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
         size_t len = codecs.decoders[i]->signatureLength();
@@ -274,6 +297,7 @@ static ImageEncoder findEncoder( const String& _ext )
     for( ext++; len < 128 && isalnum(ext[len]); len++ )
         ;
 
+    ImageCodecInitializer& codecs = getCodecs();
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
         String description = codecs.encoders[i]->getDescription();
@@ -347,37 +371,38 @@ template <class T> static void setProperty(std::map<String, String> &p, ExifRead
 }
 #define setProperty(p, reader, tag, entry) setProperty(p, reader, tag, #tag, entry)
 
+// TODO: implement
 static void applyExif(std::istream &stream, Mat &img, bool rotate, std::map<String, String> *properties)
 {
-    ExifReader reader(stream);
-    if (reader.parse()) {
-        if (rotate) {
-            ExifEntry_t entry = reader.getTag(ORIENTATION);
-            if (entry.tag != INVALID_TAG) {
-                exifTransform(entry.field_u16, img); //orientation is unsigned short, so check field_u16
-            }
-        }
+//     ExifReader reader(stream);
+//     if (reader.parse()) {
+//         if (rotate) {
+//             ExifEntry_t entry = reader.getTag(ORIENTATION);
+//             if (entry.tag != INVALID_TAG) {
+//                 exifTransform(entry.field_u16, img); //orientation is unsigned short, so check field_u16
+//             }
+//         }
 
-        if (properties) {
-            // TIFFTAG-like names
-#define DOCUMENTNAME DOCUMENT_NAME
-#define IMAGEDESCRIPTION IMAGE_DESCRIPTION
-#define DATETIME DATE_TIME
-            std::map<String, String> &p = *properties;
-            setProperty(p, reader, DOCUMENTNAME, &ExifEntry_t::field_str);
-            setProperty(p, reader, IMAGEDESCRIPTION, &ExifEntry_t::field_str);
-            setProperty(p, reader, MAKE, &ExifEntry_t::field_str);
-            setProperty(p, reader, MODEL, &ExifEntry_t::field_str);
-            setProperty(p, reader, ORIENTATION, &ExifEntry_t::field_u16);
-            setProperty(p, reader, SOFTWARE, &ExifEntry_t::field_str);
-            setProperty(p, reader, DATETIME, &ExifEntry_t::field_str);
-            setProperty(p, reader, COPYRIGHT, &ExifEntry_t::field_str);
-            std::map<String, String>::const_iterator doc_name = p.find(BaseImageDecoder::toString((int)DOCUMENTNAME));
-            if(doc_name != p.end()) {
-                p[BaseImageDecoder::document_name] = doc_name->second;
-            }
-        }
-    }
+//         if (properties) {
+//             // TIFFTAG-like names
+// #define DOCUMENTNAME DOCUMENT_NAME
+// #define IMAGEDESCRIPTION IMAGE_DESCRIPTION
+// #define DATETIME DATE_TIME
+//             std::map<String, String> &p = *properties;
+//             setProperty(p, reader, DOCUMENTNAME, &ExifEntry_t::field_str);
+//             setProperty(p, reader, IMAGEDESCRIPTION, &ExifEntry_t::field_str);
+//             setProperty(p, reader, MAKE, &ExifEntry_t::field_str);
+//             setProperty(p, reader, MODEL, &ExifEntry_t::field_str);
+//             setProperty(p, reader, ORIENTATION, &ExifEntry_t::field_u16);
+//             setProperty(p, reader, SOFTWARE, &ExifEntry_t::field_str);
+//             setProperty(p, reader, DATETIME, &ExifEntry_t::field_str);
+//             setProperty(p, reader, COPYRIGHT, &ExifEntry_t::field_str);
+//             std::map<String, String>::const_iterator doc_name = p.find(BaseImageDecoder::toString((int)DOCUMENTNAME));
+//             if(doc_name != p.end()) {
+//                 p[BaseImageDecoder::document_name] = doc_name->second;
+//             }
+//         }
+//     }
 }
 
 static void applyExif(const String &filename, Mat &img, bool rotate, std::map<String, String> *properties)
@@ -412,6 +437,19 @@ Mat imread( const String& filename, int flags )
     return load.read(filename) ? *load : Mat();
 }
 
+// TODO: check
+bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int count, int flags) {
+    CV_TRACE_FUNCTION();
+    MultiLoad load(flags);
+    if(!load.read(filename)) return false;
+    size_t size = load.size();
+    if(count < 0 || start + count > size) count = size - start;
+    for(int i = 0; i < count; ++i, ++start) {
+        mats.push_back(load.at(start));
+    }
+    return !mats.empty();
+}
+
 /**
 * Read a multi-page image
 *
@@ -433,6 +471,70 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return !mats.empty();
 }
 
+static
+size_t imcount_(const String& filename, int flags)
+{
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+
+#ifdef HAVE_GDAL
+    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#else
+        CV_UNUSED(flags);
+#endif
+        decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    /// if no decoder was found, return nothing.
+    if (!decoder) {
+        return 0;
+    }
+
+    /// set the filename in the driver
+    decoder->setSource(filename);
+
+    // read the header to make sure it succeeds
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader(0))
+            return 0;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imcount_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        return 0;
+    }
+    catch (...)
+    {
+        std::cerr << "imcount_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        return 0;
+    }
+
+    size_t result = 1;
+
+
+    while (decoder->nextPage())
+    {
+        ++result;
+    }
+
+    return result;
+}
+
+size_t imcount(const String& filename, int flags)
+{
+    CV_TRACE_FUNCTION();
+
+    return imcount_(filename, flags);
+}
+
+
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& iparams, const std::map<int, String>& sparams,
                       bool flipv )
@@ -447,6 +549,8 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         Mat image = img_vec[page];
+        CV_Assert(!image.empty());
+
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
         Mat temp;
@@ -518,6 +622,9 @@ bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& iparams, const std::map<int, String>& sparams)
 {
     CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
     std::vector<Mat> img_vec;
     if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
@@ -562,6 +669,7 @@ bool imencode( const String& ext, InputArray _image,
     CV_TRACE_FUNCTION();
 
     Mat image = _image.getMat();
+    CV_Assert(!image.empty());
 
     int channels = image.channels();
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
@@ -800,11 +908,11 @@ Mat MultiLoad::current(int flags, std::map<String, String> *properties, Mat *dst
     // grab the decoded type
     int type = m_decoder->type();
     if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED) {
-        if ((flags & CV_LOAD_IMAGE_ANYDEPTH) == 0)
+        if ((flags & IMREAD_ANYDEPTH) == 0)
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-        if ((flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-            ((flags & CV_LOAD_IMAGE_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
+        if ((flags & IMREAD_COLOR) != 0 ||
+            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
         else
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);

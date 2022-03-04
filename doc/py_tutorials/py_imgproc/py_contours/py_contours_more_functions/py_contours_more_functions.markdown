@@ -1,6 +1,10 @@
 Contours : More Functions {#tutorial_py_contours_more_functions}
 =========================
 
+@prev_tutorial{tutorial_py_contour_properties}
+@next_tutorial{tutorial_py_contours_hierarchy}
+
+
 Goal
 ----
 
@@ -113,7 +117,7 @@ I got following results:
 
 See, even image rotation doesn't affect much on this comparison.
 
-@sa [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
+@note [Hu-Moments](http://en.wikipedia.org/wiki/Image_moment#Rotation_invariant_moments) are seven
 moments invariant to translation, rotation and scale. Seventh one is skew-invariant. Those values
 can be found using **cv.HuMoments()** function.
 

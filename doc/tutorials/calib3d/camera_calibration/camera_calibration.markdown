@@ -1,6 +1,17 @@
 Camera calibration With OpenCV {#tutorial_camera_calibration}
 ==============================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_camera_calibration_square_chess}
+@next_tutorial{tutorial_real_time_pose}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 4.0 |
+
+
 Cameras have been around for a long-long time. However, with the introduction of the cheap *pinhole*
 cameras in the late 20th century, they became a common occurrence in our everyday life.
 Unfortunately, this cheapness comes with its price: significant distortion. Luckily, these are
@@ -77,13 +88,13 @@ Source code
 
 You may also find the source code in the `samples/cpp/tutorial_code/calib3d/camera_calibration/`
 folder of the OpenCV source library or [download it from here
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). For the usage of the program, run it with `-h` argument. The program has an
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). For the usage of the program, run it with `-h` argument. The program has an
 essential argument: the name of its configuration file. If none is given then it will try to open the
 one named "default.xml". [Here's a sample configuration file
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
 configuration file you may choose to use camera as an input, a video file or an image list. If you
 opt for the last one, you will need to create a configuration file where you enumerate the images to
-use. Here's [an example of this ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
+use. Here's [an example of this ](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
 The important part to remember is that the images need to be specified using the absolute path or
 the relative one from your application's working directory. You may find all this in the samples
 directory mentioned above.
@@ -132,7 +143,7 @@ Explanation
     form an ill-posed problem, so the calibration will fail. For square images the positions of the
     corners are only approximate. We may improve this by calling the @ref cv::cornerSubPix function.
     (`winSize` is used to control the side length of the search window. Its default value is 11.
-    `winSzie` may be changed by command line parameter `--winSize=<number>`.)
+    `winSize` may be changed by command line parameter `--winSize=<number>`.)
     It will produce better calibration result. After this we add a valid inputs result to the
     *imagePoints* vector to collect all of the equations into a single container. Finally, for
     visualization feedback purposes we will draw the found points on the input image using @ref

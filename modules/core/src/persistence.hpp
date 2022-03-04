@@ -163,6 +163,24 @@ public:
     CV_NORETURN
     virtual void parseError(const char* funcname, const std::string& msg,
                             const char* filename, int lineno) = 0;
+
+private:
+    enum Base64State{
+        Uncertain,
+        NotUse,
+        InUse,
+    };
+
+    friend class cv::FileStorage::Impl;
+    friend class cv::FileStorage;
+    friend class JSONEmitter;
+    friend class XMLEmitter;
+    friend class YAMLEmitter;
+
+    virtual void check_if_write_struct_is_delayed(bool change_type_to_base64 = false) = 0;
+    virtual void switch_to_Base64_state(Base64State state) = 0;
+    virtual Base64State get_state_of_writing_base64() = 0;
+    virtual int get_space() = 0;
 };
 
 class FileStorageEmitter

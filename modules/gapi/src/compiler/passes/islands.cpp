@@ -32,7 +32,7 @@ namespace
         //
         // In this case, Data object is part of Island A if and only if:
         // - Data object's producer is part of Island A,
-        // - AND any of Data obejct's consumers is part of Island A.
+        // - AND any of Data object's consumers is part of Island A.
         //
         //   Op["island0"] --> Data[ ? ] --> Op["island0"]
         //                       :
@@ -147,7 +147,7 @@ void cv::gimpl::passes::checkIslands(ade::passes::PassContext &ctx)
 
         // Run the recursive traversal process as described in 5/a-d.
         // This process is like a flood-fill traversal for island.
-        // If there's to distint successful flood-fills happened for the same island
+        // If there's to distinct successful flood-fills happened for the same island
         // name, there are two islands with this name.
         std::stack<ade::NodeHandle> stack;
         stack.push(tagged_nh);

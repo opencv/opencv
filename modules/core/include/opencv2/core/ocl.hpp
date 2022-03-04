@@ -43,6 +43,8 @@
 #define OPENCV_OPENCL_HPP
 
 #include "opencv2/core.hpp"
+#include <typeinfo>
+#include <typeindex>
 
 namespace cv { namespace ocl {
 
@@ -70,10 +72,12 @@ class CV_EXPORTS Image2D;
 class CV_EXPORTS_W_SIMPLE Device
 {
 public:
-    CV_WRAP Device();
+    CV_WRAP Device() CV_NOEXCEPT;
     explicit Device(void* d);
     Device(const Device& d);
     Device& operator = (const Device& d);
+    Device(Device&& d) CV_NOEXCEPT;
+    Device& operator = (Device&& d) CV_NOEXCEPT;
     CV_WRAP ~Device();
 
     void set(void* d);
@@ -229,8 +233,19 @@ public:
 
     CV_WRAP static const Device& getDefault();
 
-protected:
+    /**
+     * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
+     *
+     * @note Ownership of the passed device is passed to OpenCV on success.
+     * The caller should additionally call `clRetainDevice` on it if it intends
+     * to continue using the device.
+      */
+    static Device fromHandle(void* d);
+
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -238,48 +253,98 @@ protected:
 class CV_EXPORTS Context
 {
 public:
-    Context();
-    explicit Context(int dtype);
+    Context() CV_NOEXCEPT;
+    explicit Context(int dtype);  //!< @deprecated
     ~Context();
     Context(const Context& c);
-    Context& operator = (const Context& c);
+    Context& operator= (const Context& c);
+    Context(Context&& c) CV_NOEXCEPT;
+    Context& operator = (Context&& c) CV_NOEXCEPT;
 
+    /** @deprecated */
     bool create();
+    /** @deprecated */
     bool create(int dtype);
+
     size_t ndevices() const;
-    const Device& device(size_t idx) const;
+    Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
     void unloadProg(Program& prog);
 
+
+    /** Get thread-local OpenCL context (initialize if necessary) */
+#if 0  // OpenCV 5.0
+    static Context& getDefault();
+#else
     static Context& getDefault(bool initialize = true);
+#endif
+
+    /** @returns cl_context value */
     void* ptr() const;
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
+    /**
+     * @brief Get OpenCL context property specified on context creation
+     * @param propertyId Property id (CL_CONTEXT_* as defined in cl_context_properties type)
+     * @returns Property value if property was specified on clCreateContext, or NULL if context created without the property
+     */
+    void* getOpenCLContextProperty(int propertyId) const;
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
 
+    /**
+     * @param context OpenCL handle (cl_context). clRetainContext() is called on success
+     */
+    static Context fromHandle(void* context);
+    static Context fromDevice(const ocl::Device& device);
+    static Context create(const std::string& configuration);
+
+    void release();
+
+    class CV_EXPORTS UserContext {
+    public:
+        virtual ~UserContext();
+    };
+    template <typename T>
+    inline void setUserContext(const std::shared_ptr<T>& userContext) {
+        setUserContext(typeid(T), userContext);
+    }
+    template <typename T>
+    inline std::shared_ptr<T> getUserContext() {
+        return std::dynamic_pointer_cast<T>(getUserContext(typeid(T)));
+    }
+    void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext);
+    std::shared_ptr<UserContext> getUserContext(std::type_index typeId);
+
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+// TODO OpenCV 5.0
 //protected:
     Impl* p;
 };
 
+/** @deprecated */
 class CV_EXPORTS Platform
 {
 public:
-    Platform();
+    Platform() CV_NOEXCEPT;
     ~Platform();
     Platform(const Platform& p);
     Platform& operator = (const Platform& p);
+    Platform(Platform&& p) CV_NOEXCEPT;
+    Platform& operator = (Platform&& p) CV_NOEXCEPT;
 
     void* ptr() const;
+
+    /** @deprecated */
     static Platform& getDefault();
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
-protected:
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -319,16 +384,19 @@ CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, in
 CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
 
 // TODO Move to internal header
+/// @deprecated
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
 public:
-    Queue();
+    Queue() CV_NOEXCEPT;
     explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
+    Queue(Queue&& q) CV_NOEXCEPT;
+    Queue& operator = (Queue&& q) CV_NOEXCEPT;
 
     bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
@@ -340,6 +408,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -350,7 +419,7 @@ class CV_EXPORTS KernelArg
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
     KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
-    KernelArg();
+    KernelArg() CV_NOEXCEPT;
 
     static KernelArg Local(size_t localMemSize)
     { return KernelArg(LOCAL, 0, 1, 1, 0, localMemSize); }
@@ -387,13 +456,15 @@ public:
 class CV_EXPORTS Kernel
 {
 public:
-    Kernel();
+    Kernel() CV_NOEXCEPT;
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource& prog,
            const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
+    Kernel(Kernel&& k) CV_NOEXCEPT;
+    Kernel& operator = (Kernel&& k) CV_NOEXCEPT;
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
@@ -428,8 +499,8 @@ public:
     template<typename... _Tps> inline
     Kernel& args(const _Tps&... kernel_args) { set_args_(0, kernel_args...); return *this; }
 
+    /** @brief Run the OpenCL kernel (globalsize value may be adjusted)
 
-    /** @brief Run the OpenCL kernel.
     @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
     @param globalsize work items for each dimension. It is not the final globalsize passed to
       OpenCL. Each dimension will be adjusted to the nearest integer divisible by the corresponding
@@ -438,12 +509,26 @@ public:
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
+
+    @note Use run_() if your kernel code doesn't support adjusted globalsize.
     */
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
+
+    /** @brief Run the OpenCL kernel
+     *
+     * @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
+     * @param globalsize work items for each dimension. This value is passed to OpenCL without changes.
+     * @param localsize work-group size for each dimension.
+     * @param sync specify whether to wait for OpenCL computation to finish before return.
+     * @param q command queue
+     */
+    bool run_(int dims, size_t globalsize[], size_t localsize[], bool sync, const Queue& q=Queue());
+
     bool runTask(bool sync, const Queue& q=Queue());
 
-    /** @brief Similar to synchronized run() call with returning of kernel execution time
+    /** @brief Similar to synchronized run_() call with returning of kernel execution time
+     *
      * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
      * @return Execution time in nanoseconds or negative number on error
      */
@@ -464,12 +549,13 @@ protected:
 class CV_EXPORTS Program
 {
 public:
-    Program();
+    Program() CV_NOEXCEPT;
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     Program(const Program& prog);
-
     Program& operator = (const Program& prog);
+    Program(Program&& prog) CV_NOEXCEPT;
+    Program& operator = (Program&& prog) CV_NOEXCEPT;
     ~Program();
 
     bool create(const ProgramSource& src,
@@ -490,6 +576,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 public:
@@ -509,13 +596,15 @@ class CV_EXPORTS ProgramSource
 public:
     typedef uint64 hash_t; // deprecated
 
-    ProgramSource();
+    ProgramSource() CV_NOEXCEPT;
     explicit ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash);
     explicit ProgramSource(const String& prog); // deprecated
     explicit ProgramSource(const char* prog); // deprecated
     ~ProgramSource();
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
+    ProgramSource(ProgramSource&& prog) CV_NOEXCEPT;
+    ProgramSource& operator = (ProgramSource&& prog) CV_NOEXCEPT;
 
     const String& source() const; // deprecated
     hash_t hash() const; // deprecated
@@ -571,6 +660,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -578,21 +668,32 @@ protected:
 class CV_EXPORTS PlatformInfo
 {
 public:
-    PlatformInfo();
+    PlatformInfo() CV_NOEXCEPT;
+    /**
+     * @param id pointer cl_platform_id (cl_platform_id*)
+     */
     explicit PlatformInfo(void* id);
     ~PlatformInfo();
 
     PlatformInfo(const PlatformInfo& i);
     PlatformInfo& operator =(const PlatformInfo& i);
+    PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT;
+    PlatformInfo& operator = (PlatformInfo&& i) CV_NOEXCEPT;
 
     String name() const;
     String vendor() const;
+
+    /// See CL_PLATFORM_VERSION
     String version() const;
+    int versionMajor() const;
+    int versionMinor() const;
+
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
-protected:
     struct Impl;
+    bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -638,7 +739,7 @@ CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const Str
 class CV_EXPORTS Image2D
 {
 public:
-    Image2D();
+    Image2D() CV_NOEXCEPT;
 
     /**
     @param src UMat object from which to get image properties and data
@@ -651,6 +752,8 @@ public:
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
+    Image2D(Image2D &&) CV_NOEXCEPT;
+    Image2D &operator=(Image2D &&) CV_NOEXCEPT;
 
     /** Indicates if creating an aliased image should succeed.
     Depends on the underlying platform and the dimensions of the UMat.
@@ -688,6 +791,110 @@ private:
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
+
+class CV_EXPORTS_W OpenCLExecutionContext
+{
+public:
+    OpenCLExecutionContext() = default;
+    ~OpenCLExecutionContext() = default;
+
+    OpenCLExecutionContext(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext(OpenCLExecutionContext&&) = default;
+
+    OpenCLExecutionContext& operator=(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext& operator=(OpenCLExecutionContext&&) = default;
+
+    /** Get associated ocl::Context */
+    Context& getContext() const;
+    /** Get the single default associated ocl::Device */
+    Device& getDevice() const;
+    /** Get the single ocl::Queue that is associated with the ocl::Context and
+     *  the single default ocl::Device
+     */
+    Queue& getQueue() const;
+
+    bool useOpenCL() const;
+    void setUseOpenCL(bool flag);
+
+    /** Get OpenCL execution context of current thread.
+     *
+     * Initialize OpenCL execution context if it is empty
+     * - create new
+     * - reuse context of the main thread (threadID = 0)
+     */
+    static OpenCLExecutionContext& getCurrent();
+
+    /** Get OpenCL execution context of current thread (can be empty) */
+    static OpenCLExecutionContext& getCurrentRef();
+
+    /** Bind this OpenCL execution context to current thread.
+     *
+     * Context can't be empty.
+     *
+     * @note clFinish is not called for queue of previous execution context
+     */
+    void bind() const;
+
+    /** Creates new execution context with same OpenCV context and device
+     *
+     * @param q OpenCL queue
+     */
+    OpenCLExecutionContext cloneWithNewQueue(const ocl::Queue& q) const;
+    /** @overload */
+    OpenCLExecutionContext cloneWithNewQueue() const;
+
+    /** @brief Creates OpenCL execution context
+     * OpenCV will check if available OpenCL platform has platformName name,
+     * then assign context to OpenCV.
+     * The deviceID device will be used as target device and a new command queue will be created.
+     *
+     * @note On success, ownership of one reference of the context and device is taken.
+     * The caller should additionally call `clRetainContext` and/or `clRetainDevice`
+     * to increase the reference count if it wishes to continue using them.
+     *
+     * @param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
+     * @param platformID ID of platform attached context was created for (cl_platform_id)
+     * @param context OpenCL context to be attached to OpenCV (cl_context)
+     * @param deviceID OpenCL device (cl_device_id)
+     */
+    static OpenCLExecutionContext create(const std::string& platformName, void* platformID, void* context, void* deviceID);
+
+    /** @brief Creates OpenCL execution context
+     *
+     * @param context non-empty OpenCL context
+     * @param device non-empty OpenCL device (must be a part of context)
+     * @param queue non-empty OpenCL queue for provided context and device
+     */
+    static OpenCLExecutionContext create(const Context& context, const Device& device, const ocl::Queue& queue);
+    /** @overload */
+    static OpenCLExecutionContext create(const Context& context, const Device& device);
+
+    struct Impl;
+    inline bool empty() const { return !p; }
+    void release();
+protected:
+    std::shared_ptr<Impl> p;
+};
+
+class OpenCLExecutionContextScope
+{
+    OpenCLExecutionContext ctx_;
+public:
+    inline OpenCLExecutionContextScope(const OpenCLExecutionContext& ctx)
+    {
+        CV_Assert(!ctx.empty());
+        ctx_ = OpenCLExecutionContext::getCurrentRef();
+        ctx.bind();
+    }
+
+    inline ~OpenCLExecutionContextScope()
+    {
+        if (!ctx_.empty())
+        {
+            ctx_.bind();
+        }
+    }
+};
 
 #ifdef __OPENCV_BUILD
 namespace internal {

@@ -31,6 +31,8 @@
 #ifndef OPENCV_FLANN_OBJECT_FACTORY_H_
 #define OPENCV_FLANN_OBJECT_FACTORY_H_
 
+//! @cond IGNORED
+
 #include <map>
 
 namespace cvflann
@@ -87,5 +89,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_OBJECT_FACTORY_H_ */

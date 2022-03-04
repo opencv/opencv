@@ -45,6 +45,7 @@
 
 #include "utils.hpp"
 #include "bitstrm.hpp"
+#include "exif.hpp"
 #include <map>
 #include <sstream>
 
@@ -82,6 +83,7 @@ public:
     int height() const { return m_height; }
     virtual int type() const { return m_type; }
 
+    ExifEntry_t getExifTag(const ExifTagName tag) const;
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
     virtual int setScale( const int& scale_denom );
@@ -138,6 +140,7 @@ protected:
     String m_signature;
     Mat m_buf;
     bool m_buf_supported;
+    ExifReader m_exif;
 };
 
 

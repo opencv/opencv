@@ -8,6 +8,7 @@
 // OpenVX related functions
 
 #include "precomp.hpp"
+#include "opencv2/core/utils/tls.hpp"
 #include "opencv2/core/ovx.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
@@ -76,13 +77,13 @@ bool haveOpenVX()
 bool useOpenVX()
 {
 #ifdef HAVE_OPENVX
-    CoreTLSData* data = getCoreTlsData().get();
-    if( data->useOpenVX < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenVX < 0)
     {
         // enabled (if available) by default
-        data->useOpenVX = haveOpenVX() ? 1 : 0;
+        data.useOpenVX = haveOpenVX() ? 1 : 0;
     }
-    return data->useOpenVX > 0;
+    return data.useOpenVX > 0;
 #else
     return false;
 #endif
@@ -93,8 +94,8 @@ void setUseOpenVX(bool flag)
 #ifdef HAVE_OPENVX
     if( haveOpenVX() )
     {
-        CoreTLSData* data = getCoreTlsData().get();
-        data->useOpenVX = flag ? 1 : 0;
+        CoreTLSData& data = getCoreTlsData();
+        data.useOpenVX = flag ? 1 : 0;
     }
 #else
     CV_Assert(!flag && "OpenVX support isn't enabled at compile time");

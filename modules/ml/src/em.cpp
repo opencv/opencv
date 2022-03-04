@@ -112,6 +112,7 @@ public:
 
     bool train(const Ptr<TrainData>& data, int) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         Mat samples = data->getTrainSamples(), labels;
         return trainEM(samples, labels, noArray(), noArray());
     }
@@ -655,7 +656,7 @@ public:
 
         // Update weights
         // not normalized first
-        reduce(trainProbs, weights, 0, CV_REDUCE_SUM);
+        reduce(trainProbs, weights, 0, REDUCE_SUM);
 
         // Update means
         means.create(nclusters, dim, CV_64FC1);

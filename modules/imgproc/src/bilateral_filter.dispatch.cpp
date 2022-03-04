@@ -406,6 +406,8 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+
     _dst.create( _src.size(), _src.type() );
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),

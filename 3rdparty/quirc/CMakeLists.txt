@@ -8,7 +8,7 @@ ocv_include_directories(${CURR_INCLUDE_DIR})
 file(GLOB_RECURSE quirc_headers RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "include/*.h")
 file(GLOB_RECURSE quirc_sources RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "src/*.c")
 
-add_library(${PROJECT_NAME} STATIC ${quirc_headers} ${quirc_sources})
+add_library(${PROJECT_NAME} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${quirc_headers} ${quirc_sources})
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow)
 
 set_target_properties(${PROJECT_NAME}
@@ -24,7 +24,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${PROJECT_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${PROJECT_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(${PROJECT_NAME} LICENSE)

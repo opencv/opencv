@@ -1,8 +1,15 @@
 Extract horizontal and vertical lines by using morphological operations {#tutorial_morph_lines_detection}
 =============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_hitOrMiss}
 @next_tutorial{tutorial_pyramids}
+
+|    |    |
+| -: | :- |
+| Original author | Theodore Tsesmelis |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -30,7 +37,7 @@ Two of the most basic morphological operations are dilation and erosion. Dilatio
 
     ![Dilation on a Grayscale Image](images/morph6.gif)
 
--   __Erosion__: The vise versa applies for the erosion operation. The value of the output pixel is the <b><em>minimum</em></b> value of all the pixels that fall within the structuring element's size and shape. Look the at the example figures below:
+-   __Erosion__: The vice versa applies for the erosion operation. The value of the output pixel is the <b><em>minimum</em></b> value of all the pixels that fall within the structuring element's size and shape. Look the at the example figures below:
 
     ![Erosion on a Binary Image](images/morph211.png)
 
@@ -54,24 +61,24 @@ Code
 This tutorial code's is shown lines below.
 
 @add_toggle_cpp
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp).
 @include samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp
 @end_toggle
 
 @add_toggle_java
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java).
 @include samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java
 @end_toggle
 
 @add_toggle_python
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py).
 @include samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py
 @end_toggle
 
 Explanation / Result
 --------------------
 
-Get image from [here](https://raw.githubusercontent.com/opencv/opencv/master/doc/tutorials/imgproc/morph_lines_detection/images/src.png) .
+Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/imgproc/morph_lines_detection/images/src.png) .
 
 #### Load Image
 
