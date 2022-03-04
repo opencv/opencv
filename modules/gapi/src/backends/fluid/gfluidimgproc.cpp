@@ -1857,11 +1857,13 @@ struct LinearScratchDesc {
         return static_cast<int>(size);
     }
 };
-static inline double invRatio(int inSz, int outSz) {
+CV_ALWAYS_INLINE double invRatio(int inSz, int outSz)
+{
     return static_cast<double>(outSz) / inSz;
 }
 
-static inline double ratio(int inSz, int outSz) {
+CV_ALWAYS_INLINE double ratio(int inSz, int outSz)
+{
     return 1 / invRatio(inSz, outSz);
 }
 
@@ -2137,25 +2139,22 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
         dst[l] = out.OutLine<float>(l);
     }
 
-#if CV_SIMD
-    const auto* clone = scr.clone;
-    auto* tmp = scr.tmp;
+#if CV_SSE4_1
+    constexpr int nlanes = 4;
 
-    if (inSz.width >= 16 && outSz.width >= 16)
+    if (inSz.width >= nlanes && outSz.width >= nlanes)
     {
-        simd_resize<numChan>(reinterpret_cast<uint8_t**>(dst),
-                             reinterpret_cast<const uint8_t**>(src0),
-                             reinterpret_cast<const uint8_t**>(src1),
-                             reinterpret_cast<const short*>(alpha),
-                             reinterpret_cast<const short*>(clone),
-                             reinterpret_cast<const short*>(mapsx),
-                             reinterpret_cast<const short*>(beta),
-                             reinterpret_cast<uint8_t*>(tmp),
-                             inSz, outSz, lpi);
+        sse41::calcRowLinear32FC1Impl(reinterpret_cast<float**>(dst),
+                                      reinterpret_cast<const float**>(src0),
+                                      reinterpret_cast<const float**>(src1),
+                                      reinterpret_cast<const float*>(alpha),
+                                      reinterpret_cast<const int*>(mapsx),
+                                      reinterpret_cast<const float*>(beta),
+                                      inSz, outSz, lpi);
 
         return;
     }
-#endif // CV_SIMD
+#endif // CV_SSE4_1
 
     using alpha_type = typename Mapper::alpha_type;
     for (int l = 0; l < lpi; ++l)

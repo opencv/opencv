@@ -554,7 +554,162 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
         }
     }
 }
-} // namespace sse42
+
+CV_ALWAYS_INLINE void v_gather_pairs(const float src[], const int* mapsx,
+                                     v_float32x4& low, v_float32x4& high)
+{
+    __m128 l = _mm_setzero_ps();
+    l = _mm_loadl_pi(l, (const __m64*)&src[mapsx[0]]);  // pair of floats
+    l = _mm_loadh_pi(l, (const __m64*)&src[mapsx[1]]);
+    low.val = l;
+
+    __m128 h = _mm_setzero_ps();
+    h = _mm_loadl_pi(h, (const __m64*)&src[mapsx[2]]);
+    h = _mm_loadh_pi(h, (const __m64*)&src[mapsx[3]]);
+    high.val = h;
+}
+
+CV_ALWAYS_INLINE void v_deinterleave(const v_float32x4& low, const v_float32x4& high,
+                                     v_float32x4& even,      v_float32x4& odd)
+{
+    __m128 tmp0 = _mm_unpacklo_ps(low.val, high.val);
+    __m128 tmp1 = _mm_unpackhi_ps(low.val, high.val);
+    even.val = _mm_unpacklo_ps(tmp0, tmp1);
+    odd .val = _mm_unpackhi_ps(tmp0, tmp1);
+}
+
+// Resize (bi-linear, 32FC1)
+CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
+                                             const float *src0[],
+                                             const float *src1[],
+                                             const float  alpha[],
+                                             const int    mapsx[],
+                                             const float  beta[],
+                                             const Size& inSz,
+                                             const Size& outSz,
+                                             const int   lpi)
+{
+    bool xRatioEq1 = inSz.width == outSz.width;
+    bool yRatioEq1 = inSz.height == outSz.height;
+
+    constexpr int nlanes = v_float32x4::nlanes;
+
+    if (!xRatioEq1 && !yRatioEq1)
+    {
+        for (int line = 0; line < lpi; ++line) {
+            float beta0 = beta[line];
+            float beta1 = 1 - beta0;
+            v_float32x4 v_beta0 = v_setall_f32(beta0);
+            int x = 0;
+
+            v_float32x4 low1, high1, s00, s01;
+            v_float32x4 low2, high2, s10, s11;
+            for (; x <= outSz.width - nlanes; x += nlanes)
+            {
+                v_float32x4 alpha0 = v_load(&alpha[x]);
+                //  v_float32 alpha1 = 1.f - alpha0;
+
+                v_gather_pairs(src0[line], &mapsx[x], low1, high1);
+                v_deinterleave(low1, high1, s00, s01);
+
+                //  v_float32 res0 = s00*alpha0 + s01*alpha1;
+                v_float32x4 res0 = v_fma(s00 - s01, alpha0, s01);
+
+                v_gather_pairs(src1[line], &mapsx[x], low2, high2);
+                v_deinterleave(low2, high2, s10, s11);
+
+                //  v_float32 res1 = s10*alpha0 + s11*alpha1;
+                v_float32x4 res1 = v_fma(s10 - s11, alpha0, s11);
+
+                //  v_float32 d = res0*beta0 + res1*beta1;
+                v_float32x4 d = v_fma(res0 - res1, v_beta0, res1);
+
+                vx_store(&dst[line][x], d);
+            }
+
+            for (; x < outSz.width; ++x)
+            {
+                float alpha0 = alpha[x];
+                float alpha1 = 1 - alpha0;
+                int   sx0 = mapsx[x];
+                int   sx1 = sx0 + 1;
+                float res0 = src0[line][sx0] * alpha0 + src0[line][sx1] * alpha1;
+                float res1 = src1[line][sx0] * alpha0 + src1[line][sx1] * alpha1;
+                dst[line][x] = beta0 * res0 + beta1 * res1;
+            }
+        }
+
+    }
+    else if (!xRatioEq1)
+    {
+        GAPI_DbgAssert(yRatioEq1);
+
+        for (int line = 0; line < lpi; ++line) {
+            int x = 0;
+
+            v_float32x4 low, high, s00, s01;
+            for (; x <= outSz.width - nlanes; x += nlanes) {
+                v_float32x4 alpha0 = v_load(&alpha[x]);
+                //  v_float32 alpha1 = 1.f - alpha0;
+
+                v_gather_pairs(src0[line], &mapsx[x], low, high);
+                v_deinterleave(low, high, s00, s01);
+
+                //  v_float32 d = s00*alpha0 + s01*alpha1;
+                v_float32x4 d = v_fma(s00 - s01, alpha0, s01);
+
+                vx_store(&dst[line][x], d);
+            }
+
+            for (; x < outSz.width; ++x) {
+                float alpha0 = alpha[x];
+                float alpha1 = 1 - alpha0;
+                int   sx0 = mapsx[x];
+                int   sx1 = sx0 + 1;
+                dst[line][x] = src0[line][sx0] * alpha0 + src0[line][sx1] * alpha1;
+            }
+        }
+
+    }
+    else if (!yRatioEq1)
+    {
+        GAPI_DbgAssert(xRatioEq1);
+        int length = inSz.width;  // == outSz.width
+
+        for (int line = 0; line < lpi; ++line) {
+            float beta0 = beta[line];
+            float beta1 = 1 - beta0;
+            v_float32x4 v_beta0 = v_setall_f32(beta0);
+            int x = 0;
+
+            for (; x <= length - nlanes; x += nlanes) {
+                v_float32x4 s0 = v_load(&src0[line][x]);
+                v_float32x4 s1 = v_load(&src1[line][x]);
+
+                //  v_float32 d = s0*beta0 + s1*beta1;
+                v_float32x4 d = v_fma(s0 - s1, v_beta0, s1);
+
+                v_store(&dst[line][x], d);
+            }
+
+            for (; x < length; ++x) {
+                dst[line][x] = beta0 * src0[line][x] + beta1 * src1[line][x];
+            }
+        }
+
+    }
+    else
+    {
+        GAPI_DbgAssert(xRatioEq1 && yRatioEq1);
+        int length = inSz.width;  // == outSz.width
+        for (int line = 0; line < lpi; ++line)
+        {
+            memcpy(dst[line], src0[line], length * sizeof(float));
+        }
+    }
+}
+
+} // namespace sse41
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
