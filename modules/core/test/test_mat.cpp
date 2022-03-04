@@ -2381,4 +2381,14 @@ TEST(Mat, ptrVecni_20044)
     EXPECT_EQ(int(6), *(ci));
 }
 
+TEST(Mat, VecMatx_4650)
+{
+  // Makes sure the following compiles.
+  cv::Vec3b a;
+  a = cv::Vec3b::ones();
+  a = cv::Vec3b::zeros();
+  a = cv::Vec3b::randn(0, 10);
+  a = cv::Vec3b::randu(0, 10);
+}
+
 }} // namespace
