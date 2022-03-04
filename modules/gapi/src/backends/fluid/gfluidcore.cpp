@@ -380,136 +380,6 @@ CV_ALWAYS_INLINE int absdiff_simd(const T in1[], const T in2[], T out[], int len
 }
 
 template<typename T, typename VT>
-CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], int length)
-{
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
-
-    if (length < nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            VT a = vx_load(&in1[x]);
-            VT b = vx_load(&in2[x]);
-            vx_store(&out[x], a + b);
-        }
-
-        if (x < length && (in1 != out) && (in2 != out))
-        {
-            x = length - nlanes;
-            continue;  // process one more time (unaligned tail)
-        }
-        break;
-    }
-
-    return x;
-}
-
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int length)
-{
-    if (std::is_same<DST, float>::value && !std::is_same<SRC, float>::value)
-        return 0;
-
-    if (std::is_same<DST, SRC>::value)
-    {
-        if (std::is_same<DST, uchar>::value)
-        {
-            return add_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
-                                                     reinterpret_cast<const uchar*>(in2),
-                                                     reinterpret_cast<uchar*>(out), length);
-        }
-        else if (std::is_same<DST, short>::value)
-        {
-            return add_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
-                                                     reinterpret_cast<const short*>(in2),
-                                                     reinterpret_cast<short*>(out), length);
-        }
-        else if (std::is_same<DST, float>::value)
-        {
-            return add_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
-                                                       reinterpret_cast<const float*>(in2),
-                                                       reinterpret_cast<float*>(out), length);
-        }
-    }
-    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
-                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
-                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
-                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(a1 + b1, a2 + b2));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
-                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
-                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
-                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
-                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
-
-                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
-                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
-                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
-                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(v_round(a1 + b1), v_round(a2 + b2)),
-                                                                     v_pack(v_round(a3 + b3), v_round(a4 + b4))));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
-                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-
-    return 0;
-}
-
-template<typename T, typename VT>
 CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], int length)
 {
     constexpr int nlanes = static_cast<int>(VT::nlanes);
@@ -641,7 +511,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 #endif // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
-static CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2,
+CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2,
                                         Arithm arithm, double scale=1)
 {
     static_assert(std::is_same<SRC1, SRC2>::value, "wrong types");
@@ -652,7 +522,7 @@ static CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const Vie
 
     int width  = dst.length();
     int chan   = dst.meta().chan;
-    int length = width * chan;
+    const int length = width * chan;
 
     // NB: assume in/out types are not 64-bits
     float _scale = static_cast<float>( scale );
@@ -708,13 +578,22 @@ GAPI_FLUID_KERNEL(GFluidAdd, cv::gapi::core::GAdd, false)
     static void run(const View &src1, const View &src2, int /*dtype*/, Buffer &dst)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
-        BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
