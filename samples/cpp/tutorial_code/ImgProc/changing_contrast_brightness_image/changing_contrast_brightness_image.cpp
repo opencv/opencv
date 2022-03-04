@@ -64,8 +64,8 @@ void on_gamma_correction_trackbar(int, void *)
 
 int main( int argc, char** argv )
 {
-    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-    img_original = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    img_original = imread( samples::findFile( parser.get<String>( "@input" ) ) );
     if( img_original.empty() )
     {
       cout << "Could not open or find the image!\n" << endl;

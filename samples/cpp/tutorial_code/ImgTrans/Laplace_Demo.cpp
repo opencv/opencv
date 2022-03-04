@@ -26,14 +26,14 @@ int main( int argc, char** argv )
     //![variables]
 
     //![load]
-    const char* imageName = argc >=2 ? argv[1] : "../data/lena.jpg";
+    const char* imageName = argc >=2 ? argv[1] : "lena.jpg";
 
-    src = imread( imageName, IMREAD_COLOR ); // Load an image
+    src = imread( samples::findFile( imageName ), IMREAD_COLOR ); // Load an image
 
     // Check if image is loaded fine
     if(src.empty()){
         printf(" Error opening image\n");
-        printf(" Program Arguments: [image_name -- default ../data/lena.jpg] \n");
+        printf(" Program Arguments: [image_name -- default lena.jpg] \n");
         return -1;
     }
     //![load]

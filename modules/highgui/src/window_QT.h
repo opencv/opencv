@@ -48,7 +48,14 @@
 
 #if defined( HAVE_QT_OPENGL )
 #include <QtOpenGL>
-#include <QGLWidget>
+
+  // QGLWidget deprecated and no longer functions with Qt6, use QOpenGLWidget instead
+  #ifdef HAVE_QT6
+  #include <QOpenGLWidget>
+  #else
+  #include <QGLWidget>
+  #endif
+
 #endif
 
 #include <QAbstractEventDispatcher>
@@ -76,6 +83,7 @@
 #include <QDate>
 #include <QFileDialog>
 #include <QToolBar>
+#include <QClipboard>
 
 #include <QAction>
 #include <QCheckBox>
@@ -91,6 +99,7 @@ enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
         shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+        shortcut_copy_clipbrd   = Qt::CTRL + Qt::Key_C,
         shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
         shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
         shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
@@ -254,7 +263,7 @@ private:
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
     CvTrackbarCallback2 callback2;//look like it is use by python binding
-    int* dataSlider;
+    int* dataSlider;  // deprecated
     void* userdata;
 };
 
@@ -429,7 +438,14 @@ protected:
 
 #ifdef HAVE_QT_OPENGL
 
-class OpenGlViewPort : public QGLWidget, public OCVViewPort
+// Use QOpenGLWidget for Qt6 (QGLWidget is deprecated)
+#ifdef HAVE_QT6
+typedef QOpenGLWidget OpenCVQtWidgetBase;
+#else
+typedef QGLWidget OpenCVQtWidgetBase;
+#endif
+
+class OpenGlViewPort : public OpenCVQtWidgetBase, public OCVViewPort
 {
 public:
     explicit OpenGlViewPort(QWidget* parent);
@@ -518,6 +534,7 @@ public slots:
     void ZoomOut();
 
     void saveView();
+    void copy2Clipbrd();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event) CV_OVERRIDE;

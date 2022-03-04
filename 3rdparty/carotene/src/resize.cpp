@@ -758,7 +758,7 @@ inline void resizeAreaRounding(const Size2D &ssize, const Size2D &dsize,
     }
     else if (channels == 3)
     {
-        if ((wr == 2.0f) && (wr == 2.0f))
+        if ((wr == 2.0f) && (hr == 2.0f))
         {
 #ifndef __ANDROID__
             size_t roiw16 = dsize.width >= 15 ? (dsize.width - 15) * 3 : 0;

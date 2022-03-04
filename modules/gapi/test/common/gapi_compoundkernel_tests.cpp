@@ -227,6 +227,73 @@ namespace
         }
     };
 
+    G_TYPED_KERNEL(GToInterleaved, <GMat(GMatP)>, "org.opencv.test.to_interleaved")
+    {
+        static GMatDesc outMeta(GMatDesc in)
+        {
+            GAPI_Assert(in.planar == true);
+            GAPI_Assert(in.chan == 3);
+            return in.asInterleaved();
+        }
+    };
+
+    G_TYPED_KERNEL(GToPlanar, <GMatP(GMat)>, "org.opencv.test.to_planar")
+    {
+        static GMatDesc outMeta(GMatDesc in)
+        {
+            GAPI_Assert(in.planar == false);
+            GAPI_Assert(in.chan == 3);
+            return in.asPlanar();
+        }
+    };
+
+    GAPI_OCV_KERNEL(GToInterleavedImpl, GToInterleaved)
+    {
+        static void run(const cv::Mat& in, cv::Mat& out)
+        {
+            constexpr int inPlanesCount = 3;
+            int inPlaneHeight = in.rows / inPlanesCount;
+
+            std::vector<cv::Mat> inPlanes(inPlanesCount);
+            for (int i = 0; i < inPlanesCount; ++i)
+            {
+                int startRow = i * inPlaneHeight;
+                int endRow = startRow + inPlaneHeight;
+                inPlanes[i] = in.rowRange(startRow, endRow);
+            }
+
+            cv::merge(inPlanes, out);
+        }
+    };
+
+    GAPI_OCV_KERNEL(GToPlanarImpl, GToPlanar)
+    {
+        static void run(const cv::Mat& in, cv::Mat& out)
+        {
+            std::vector<cv::Mat> inPlanes;
+            cv::split(in, inPlanes);
+            cv::vconcat(inPlanes, out);
+        }
+    };
+
+    G_TYPED_KERNEL(GCompoundToInterleavedToPlanar, <GMatP(GMatP)>,
+                   "org.opencv.test.compound_to_interleaved_to_planar")
+    {
+        static GMatDesc outMeta(GMatDesc in)
+        {
+            GAPI_Assert(in.planar == true);
+            GAPI_Assert(in.chan == 3);
+            return in;
+        }
+    };
+
+    GAPI_COMPOUND_KERNEL(GCompoundToInterleavedToPlanarImpl, GCompoundToInterleavedToPlanar)
+    {
+        static GMatP expand(cv::GMatP in)
+        {
+            return GToPlanar::on(GToInterleaved::on(in));
+        }
+    };
 } // namespace
 
 // FIXME avoid cv::combine that use custom and default kernels together
@@ -245,7 +312,7 @@ TEST(GCompoundKernel, ReplaceDefaultKernel)
     comp.apply(cv::gin(in_mat1, in_mat2), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 - in_mat2 - in_mat2;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, DoubleAddC)
@@ -270,7 +337,7 @@ TEST(GCompoundKernel, DoubleAddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, AddC)
@@ -295,7 +362,7 @@ TEST(GCompoundKernel, AddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, MergeWithSplit)
@@ -315,7 +382,7 @@ TEST(GCompoundKernel, MergeWithSplit)
     comp.apply(cv::gin(in_mat), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, AddWithAddC)
@@ -338,7 +405,7 @@ TEST(GCompoundKernel, AddWithAddC)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, SplitWithAdd)
@@ -364,8 +431,8 @@ TEST(GCompoundKernel, SplitWithAdd)
     ref_mat1 = channels[0] + channels[1];
     ref_mat2 = channels[2];
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != ref_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != ref_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, ref_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, ref_mat2, NORM_INF));
 }
 
 TEST(GCompoundKernel, ParallelAddC)
@@ -391,8 +458,8 @@ TEST(GCompoundKernel, ParallelAddC)
     ref_mat1 = in_mat + scalar;
     ref_mat2 = in_mat + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != ref_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != ref_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, ref_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, ref_mat2, NORM_INF));
 }
 
 TEST(GCompoundKernel, GCompundKernelAndDefaultUseOneData)
@@ -415,7 +482,7 @@ TEST(GCompoundKernel, GCompundKernelAndDefaultUseOneData)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + in_mat2 + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, CompoundExpandedToCompound)
@@ -441,7 +508,7 @@ TEST(GCompoundKernel, CompoundExpandedToCompound)
     comp.apply(cv::gin(in_mat1, in_mat2, scalar), cv::gout(out_mat), cv::compile_args(full_pkg));
     ref_mat = in_mat1 + in_mat2 + scalar + scalar + scalar;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 }
 
 TEST(GCompoundKernel, MaxInArray)
@@ -494,7 +561,32 @@ TEST(GCompoundKernel, RightGArrayHandle)
 
     comp.apply(cv::gin(in_mat1, in_v, in_mat2), cv::gout(out_mat), cv::compile_args(full_pkg));
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != ref_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
+
+}
+
+TEST(GCompoundKernel, ToInterleavedToPlanar)
+{
+    cv::GMatP in;
+    cv::GMatP out = GCompoundToInterleavedToPlanar::on(in);
+    const auto pkg = cv::gapi::kernels<GCompoundToInterleavedToPlanarImpl,
+                                       GToInterleavedImpl,
+                                       GToPlanarImpl>();
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    constexpr int numPlanes = 3;
+    cv::Mat in_mat(cv::Size(15, 15), CV_8UC1),
+            out_mat,
+            ref_mat;
+
+    cv::randu(in_mat, 0, 255);
+    ref_mat = in_mat;
+
+    comp.compile(cv::descr_of(in_mat).asPlanar(numPlanes), cv::compile_args(pkg))
+         (cv::gin(in_mat), cv::gout(out_mat));
+
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
 
 }
 } // opencv_test

@@ -8,7 +8,7 @@ This is a demo that shows mean-shift based tracking
 You select a color objects such as your face and it tracks it.
 This reads from video camera (0 by default, or the camera number the user enters)
 
-http://www.robinhewitt.com/research/track/camshift.html
+[1] http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.14.7673
 
 Usage:
 ------

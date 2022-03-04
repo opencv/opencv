@@ -1,7 +1,7 @@
 The Independent JPEG Group's JPEG software
 ==========================================
 
-README for release 9c of 14-Jan-2018
+README for release 9d of 12-Jan-2020
 ====================================
 
 This distribution contains the ninth public release of the Independent JPEG
@@ -10,8 +10,8 @@ to use it for any purpose, subject to the conditions under LEGAL ISSUES, below.
 
 This software is the work of Tom Lane, Guido Vollbeding, Philip Gladstone,
 Bill Allombert, Jim Boucher, Lee Crocker, Bob Friesenhahn, Ben Jackson,
-Julian Minguillon, Luis Ortiz, George Phillips, Davide Rossi, Ge' Weijers,
-and other members of the Independent JPEG Group.
+John Korejwa, Julian Minguillon, Luis Ortiz, George Phillips, Davide Rossi,
+Ge' Weijers, and other members of the Independent JPEG Group.
 
 IJG is not affiliated with the ISO/IEC JTC1/SC29/WG1 standards committee
 (previously known as JPEG, together with ITU-T SG16).
@@ -115,7 +115,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2018, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this
@@ -151,13 +151,6 @@ It is copyright by the Free Software Foundation but is freely distributable.
 The same holds for its supporting scripts (config.guess, config.sub,
 ltmain.sh).  Another support script, install-sh, is copyright by X Consortium
 but is also freely distributable.
-
-The IJG distribution formerly included code to read and write GIF files.
-To avoid entanglement with the Unisys LZW patent (now expired), GIF reading
-support has been removed altogether, and the GIF writer has been simplified
-to produce "uncompressed GIFs".  This technique does not use the LZW
-algorithm; the resulting GIF files are larger than usual, but are readable
-by all standard GIF decoders.
 
 
 REFERENCES
@@ -246,8 +239,8 @@ ARCHIVE LOCATIONS
 The "official" archive site for this software is www.ijg.org.
 The most recent released version can always be found there in
 directory "files".  This particular version will be archived as
-http://www.ijg.org/files/jpegsrc.v9c.tar.gz, and in Windows-compatible
-"zip" archive format as http://www.ijg.org/files/jpegsr9c.zip.
+http://www.ijg.org/files/jpegsrc.v9d.tar.gz, and in Windows-compatible
+"zip" archive format as http://www.ijg.org/files/jpegsr9d.zip.
 
 The JPEG FAQ (Frequently Asked Questions) article is a source of some
 general information about JPEG.

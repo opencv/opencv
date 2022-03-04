@@ -19,7 +19,7 @@ typedef TestBaseWithParam<VideoKNNParamType> KNN_GetBackgroundImage;
 
 using namespace opencv_test;
 
-OCL_PERF_TEST_P(KNN_Apply, KNN, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1,3)))
+OCL_PERF_TEST_P(KNN_Apply, KNN, Combine(Values("cv/video/768x576.avi", "cv/video/1920x1080.avi"), Values(1,3)))
 {
     VideoKNNParamType params = GetParam();
 
@@ -51,8 +51,8 @@ OCL_PERF_TEST_P(KNN_Apply, KNN, Combine(Values("gpu/video/768x576.avi", "gpu/vid
 }
 
 OCL_PERF_TEST_P(KNN_GetBackgroundImage, KNN, Values(
-        std::make_pair<string, int>("gpu/video/768x576.avi", 5),
-        std::make_pair<string, int>("gpu/video/1920x1080.avi", 5)))
+        std::make_pair<string, int>("cv/video/768x576.avi", 5),
+        std::make_pair<string, int>("cv/video/1920x1080.avi", 5)))
 {
     VideoKNNParamType params = GetParam();
 

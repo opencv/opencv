@@ -166,7 +166,17 @@ OCL_PERF_TEST_P(CornerMinEigenValFixture, CornerMinEigenVal,
 
     OCL_TEST_CYCLE() cv::cornerMinEigenVal(src, dst, blockSize, apertureSize, borderType);
 
-    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+#ifdef HAVE_OPENCL
+    bool strictCheck = !ocl::useOpenCL() || ocl::Device::getDefault().isIntel();
+#else
+    bool strictCheck = true;
+#endif
+
+    // using native_* OpenCL functions on non-intel devices may lose accuracy
+    if (strictCheck)
+        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+    else
+        SANITY_CHECK(dst, 0.1, ERROR_RELATIVE);
 }
 
 ///////////// CornerHarris ////////////////////////

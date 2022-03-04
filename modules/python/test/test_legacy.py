@@ -20,8 +20,13 @@ class Hackathon244Tests(NewOpenCVTests):
         flag, ajpg = cv.imencode("img_q90.jpg", a, [cv.IMWRITE_JPEG_QUALITY, 90])
         self.assertEqual(flag, True)
         self.assertEqual(ajpg.dtype, np.uint8)
-        self.assertGreater(ajpg.shape[0], 1)
-        self.assertEqual(ajpg.shape[1], 1)
+        self.assertTrue(isinstance(ajpg, np.ndarray), "imencode returned buffer of wrong type: {}".format(type(ajpg)))
+        self.assertEqual(len(ajpg.shape), 1, "imencode returned buffer with wrong shape: {}".format(ajpg.shape))
+        self.assertGreaterEqual(len(ajpg), 1, "imencode length of the returned buffer should be at least 1")
+        self.assertLessEqual(
+            len(ajpg), a.size,
+            "imencode length of the returned buffer shouldn't exceed number of elements in original image"
+        )
 
     def test_projectPoints(self):
         objpt = np.float64([[1,2,3]])
@@ -76,7 +81,7 @@ class Hackathon244Tests(NewOpenCVTests):
         mc, mr = cv.minEnclosingCircle(a)
 
         be0 = ((150.2511749267578, 150.77322387695312), (158.024658203125, 197.57696533203125), 37.57804489135742)
-        br0 = ((161.2974090576172, 154.41793823242188), (199.2301483154297, 207.7177734375), -9.164555549621582)
+        br0 = ((161.2974090576172, 154.41793823242188), (207.7177734375, 199.2301483154297), 80.83544921875)
         mc0, mr0 = (160.41790771484375, 144.55152893066406), 136.713500977
 
         self.check_close_boxes(be, be0, 5, 15)

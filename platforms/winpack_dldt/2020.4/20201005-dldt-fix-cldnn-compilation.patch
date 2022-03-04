@@ -1,0 +1,12 @@
+diff --git a/inference-engine/thirdparty/clDNN/kernel_selector/common/tensor_type.h b/inference-engine/thirdparty/clDNN/kernel_selector/common/tensor_type.h
+index 3dbdfd0b..6b04b910 100644
+--- a/inference-engine/thirdparty/clDNN/kernel_selector/common/tensor_type.h
++++ b/inference-engine/thirdparty/clDNN/kernel_selector/common/tensor_type.h
+@@ -15,6 +15,7 @@
+ 
+ #pragma once
+ 
++#include <stdexcept>
+ #include "common_types.h"
+ #include "common_tools.h"
+ #include <vector>

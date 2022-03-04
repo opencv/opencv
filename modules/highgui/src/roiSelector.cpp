@@ -106,10 +106,10 @@ class ROISelector
         bool isDrawing;
         Rect2d box;
         Mat image;
+        Point2f startPos;
 
         // parameters for drawing from the center
         bool drawFromCenter;
-        Point2f center;
 
         // initializer list
         handlerT() : isDrawing(false), drawFromCenter(true){};
@@ -136,19 +136,31 @@ class ROISelector
             {
                 if (selectorParams.drawFromCenter)
                 {
-                    selectorParams.box.width = 2 * (x - selectorParams.center.x);
-                    selectorParams.box.height = 2 * (y - selectorParams.center.y);
-                    selectorParams.box.x = std::min(
-                                std::max(selectorParams.center.x - selectorParams.box.width / 2.0, 0.), (double)imageSize.width);
-                    selectorParams.box.y = std::min(
-                                std::max(selectorParams.center.y - selectorParams.box.height / 2.0, 0.), (double)imageSize.height);
+                    // limit half extends to imageSize
+                    float halfWidth = std::min(std::min(
+                            std::abs(x - selectorParams.startPos.x),
+                            selectorParams.startPos.x),
+                            imageSize.width - selectorParams.startPos.x);
+                    float halfHeight = std::min(std::min(
+                            std::abs(y - selectorParams.startPos.y),
+                            selectorParams.startPos.y),
+                            imageSize.height - selectorParams.startPos.y);
+
+                    selectorParams.box.width = halfWidth * 2;
+                    selectorParams.box.height = halfHeight * 2;
+                    selectorParams.box.x = selectorParams.startPos.x - halfWidth;
+                    selectorParams.box.y = selectorParams.startPos.y - halfHeight;
+
                 }
                 else
                 {
-                    selectorParams.box.width = std::max(
-                                std::min(x - selectorParams.box.x, (double)imageSize.width - selectorParams.box.x), - selectorParams.box.x);
-                    selectorParams.box.height = std::max(
-                                std::min(y - selectorParams.box.y, (double)imageSize.height - selectorParams.box.y), - selectorParams.box.y);
+                    // limit x and y to imageSize
+                    int lx = std::min(std::max(x, 0), imageSize.width);
+                    int by = std::min(std::max(y, 0), imageSize.height);
+                    selectorParams.box.width = std::abs(lx - selectorParams.startPos.x);
+                    selectorParams.box.height = std::abs(by - selectorParams.startPos.y);
+                    selectorParams.box.x = std::min((float)lx, selectorParams.startPos.x);
+                    selectorParams.box.y = std::min((float)by, selectorParams.startPos.y);
                 }
             }
             break;
@@ -157,7 +169,7 @@ class ROISelector
         case EVENT_LBUTTONDOWN:
             selectorParams.isDrawing = true;
             selectorParams.box = Rect2d(x, y, 0, 0);
-            selectorParams.center = Point2f((float)x, (float)y);
+            selectorParams.startPos = Point2f((float)x, (float)y);
             break;
 
         // cleaning up the selected bounding box

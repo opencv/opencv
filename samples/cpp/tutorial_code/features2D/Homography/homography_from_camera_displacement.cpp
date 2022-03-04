@@ -65,8 +65,8 @@ void computeC2MC1(const Mat &R1, const Mat &tvec1, const Mat &R2, const Mat &tve
 void homographyFromCameraDisplacement(const string &img1Path, const string &img2Path, const Size &patternSize,
                                       const float squareSize, const string &intrinsicsPath)
 {
-    Mat img1 = imread(img1Path);
-    Mat img2 = imread(img2Path);
+    Mat img1 = imread( samples::findFile( img1Path ) );
+    Mat img2 = imread( samples::findFile( img2Path ) );
 
     //! [compute-poses]
     vector<Point2f> corners1, corners2;
@@ -82,7 +82,7 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
     vector<Point3f> objectPoints;
     calcChessboardCorners(patternSize, squareSize, objectPoints);
 
-    FileStorage fs(intrinsicsPath, FileStorage::READ);
+    FileStorage fs( samples::findFile( intrinsicsPath ), FileStorage::READ);
     Mat cameraMatrix, distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
     fs["distortion_coefficients"] >> distCoeffs;
@@ -170,9 +170,9 @@ void homographyFromCameraDisplacement(const string &img1Path, const string &img2
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image1         | ../data/left02.jpg | path to the source chessboard image }"
-      "{ image2         | ../data/left01.jpg | path to the desired chessboard image }"
-      "{ intrinsics     | ../data/left_intrinsics.yml | path to camera intrinsics }"
+      "{ image1         | left02.jpg | path to the source chessboard image }"
+      "{ image2         | left01.jpg | path to the desired chessboard image }"
+      "{ intrinsics     | left_intrinsics.yml | path to camera intrinsics }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }"
       "{ square_size    | 0.025 | chessboard square size }";

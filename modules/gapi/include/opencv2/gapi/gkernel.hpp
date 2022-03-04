@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -26,7 +26,17 @@
 
 namespace cv {
 
-using GShapes = std::vector<GShape>;
+struct GTypeInfo
+{
+    GShape                 shape;
+    cv::detail::OpaqueKind kind;
+    detail::HostCtor       ctor;
+};
+
+using GShapes    = std::vector<GShape>;
+using GKinds     = std::vector<cv::detail::OpaqueKind>;
+using GCtors     = std::vector<detail::HostCtor>;
+using GTypesInfo = std::vector<GTypeInfo>;
 
 // GKernel describes kernel API to the system
 // FIXME: add attributes of a kernel, (e.g. number and types
@@ -35,15 +45,21 @@ struct GAPI_EXPORTS GKernel
 {
     using M = std::function<GMetaArgs(const GMetaArgs &, const GArgs &)>;
 
-    const std::string name;       // kernel ID, defined by its API (signature)
-    const M           outMeta;    // generic adaptor to API::outMeta(...)
-    const GShapes     outShapes; // types (shapes) kernel's outputs
+    std::string name;       // kernel ID, defined by its API (signature)
+    std::string tag;        // some (implementation-specific) tag
+    M           outMeta;    // generic adaptor to API::outMeta(...)
+    GShapes     outShapes;  // types (shapes) kernel's outputs
+    GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
+    GCtors      outCtors;   // captured constructors for template output types
 };
+// TODO: It's questionable if inKinds should really be here. Instead,
+// this information could come from meta.
 
 // GKernelImpl describes particular kernel implementation to the system
 struct GAPI_EXPORTS GKernelImpl
 {
     util::any         opaque;    // backend-specific opaque info
+    GKernel::M        outMeta;   // for deserialized graphs, the outMeta is taken here
 };
 
 template<typename, typename> class GKernelTypeM;
@@ -54,26 +70,31 @@ namespace detail
     // yield() is used in graph construction time as a generic method to obtain
     // lazy "return value" of G-API operations
     //
-    namespace
+    template<typename T> struct Yield;
+    template<> struct Yield<cv::GMat>
     {
-        template<typename T> struct Yield;
-        template<> struct Yield<cv::GMat>
-        {
-            static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
-        };
-        template<> struct Yield<cv::GMatP>
-        {
-            static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
-        };
-        template<> struct Yield<cv::GScalar>
-        {
-            static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
-        };
-        template<typename U> struct Yield<cv::GArray<U> >
-        {
-            static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
-        };
-    } // anonymous namespace
+        static inline cv::GMat yield(cv::GCall &call, int i) { return call.yield(i); }
+    };
+    template<> struct Yield<cv::GMatP>
+    {
+        static inline cv::GMatP yield(cv::GCall &call, int i) { return call.yieldP(i); }
+    };
+    template<> struct Yield<cv::GScalar>
+    {
+        static inline cv::GScalar yield(cv::GCall &call, int i) { return call.yieldScalar(i); }
+    };
+    template<typename U> struct Yield<cv::GArray<U> >
+    {
+        static inline cv::GArray<U> yield(cv::GCall &call, int i) { return call.yieldArray<U>(i); }
+    };
+    template<typename U> struct Yield<cv::GOpaque<U> >
+    {
+        static inline cv::GOpaque<U> yield(cv::GCall &call, int i) { return call.yieldOpaque<U>(i); }
+    };
+    template<> struct Yield<GFrame>
+    {
+        static inline cv::GFrame yield(cv::GCall &call, int i) { return call.yieldFrame(i); }
+    };
 
     ////////////////////////////////////////////////////////////////////////////
     // Helper classes which brings outputMeta() marshalling to kernel
@@ -85,9 +106,12 @@ namespace detail
     template<typename T> struct MetaType;
     template<> struct MetaType<cv::GMat>    { using type = GMatDesc; };
     template<> struct MetaType<cv::GMatP>   { using type = GMatDesc; };
+    template<> struct MetaType<cv::GFrame>  { using type = GFrameDesc; };
     template<> struct MetaType<cv::GScalar> { using type = GScalarDesc; };
-    template<typename U> struct MetaType<cv::GArray<U> > { using type = GArrayDesc; };
+    template<typename U> struct MetaType<cv::GArray<U> >  { using type = GArrayDesc; };
+    template<typename U> struct MetaType<cv::GOpaque<U> > { using type = GOpaqueDesc; };
     template<typename T> struct MetaType    { using type = T; }; // opaque args passed as-is
+    // FIXME: Move it to type traits?
 
     // 2. Hacky test based on MetaType to check if we operate on G-* type or not
     template<typename T> using is_nongapi_type = std::is_same<T, typename MetaType<T>::type>;
@@ -166,6 +190,12 @@ namespace detail
         }
     };
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Helper class to introduce tags to calls. By default there's no tag
+    struct NoTag {
+        static constexpr const char *tag() { return ""; }
+    };
+
 } // namespace detail
 
 // GKernelType and GKernelTypeM are base classes which implement typed ::on()
@@ -175,8 +205,9 @@ namespace detail
 // GKernelTypeM respectively.
 
 template<typename K, typename... R, typename... Args>
-class GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
+class GKernelTypeM<K, std::function<std::tuple<R...>(Args...)> >
+    : public detail::MetaHelper<K, std::tuple<Args...>, std::tuple<R...>>
+    , public detail::NoTag
 {
     template<int... IIs>
     static std::tuple<R...> yield(cv::GCall &call, detail::Seq<IIs...>)
@@ -188,10 +219,16 @@ public:
     using InArgs  = std::tuple<Args...>;
     using OutArgs = std::tuple<R...>;
 
+    // TODO: Args&&... here?
     static std::tuple<R...> on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), &K::getOutMeta, {detail::GTypeTraits<R>::shape...}});
-        call.pass(args...);
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<R>::shape...}
+                              , {detail::GTypeTraits<Args>::op_kind...}
+                              , {detail::GObtainCtor<R>::get()...}});
+        call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
 };
@@ -199,8 +236,9 @@ public:
 template<typename, typename> class GKernelType;
 
 template<typename K, typename R, typename... Args>
-class GKernelType<K, std::function<R(Args...)> >:
-        public detail::MetaHelper<K, std::tuple<Args...>, R>
+class GKernelType<K, std::function<R(Args...)> >
+    : public detail::MetaHelper<K, std::tuple<Args...>, R>
+    , public detail::NoTag
 {
 public:
     using InArgs  = std::tuple<Args...>;
@@ -208,11 +246,30 @@ public:
 
     static R on(Args... args)
     {
-        cv::GCall call(GKernel{K::id(), &K::getOutMeta, {detail::GTypeTraits<R>::shape}});
+        cv::GCall call(GKernel{ K::id()
+                              , K::tag()
+                              , &K::getOutMeta
+                              , {detail::GTypeTraits<R>::shape}
+                              , {detail::GTypeTraits<Args>::op_kind...}
+                              , {detail::GObtainCtor<R>::get()}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }
 };
+
+namespace detail {
+// This tiny class eliminates the semantic difference between
+// GKernelType and GKernelTypeM.
+template<typename, typename> class KernelTypeMedium;
+
+template<typename K, typename... R, typename... Args>
+class KernelTypeMedium<K, std::function<std::tuple<R...>(Args...)>> :
+    public cv::GKernelTypeM<K, std::function<std::tuple<R...>(Args...)>> {};
+
+template<typename K, typename R, typename... Args>
+class KernelTypeMedium<K, std::function<R(Args...)>> :
+    public cv::GKernelType<K, std::function<R(Args...)>> {};
+} // namespace detail
 
 } // namespace cv
 
@@ -221,28 +278,93 @@ public:
 // The problem is that every typed kernel should have ::id() but body
 // of the class is defined by user (with outMeta, other stuff)
 
+//! @cond IGNORED
 #define G_ID_HELPER_CLASS(Class)  Class##IdHelper
 
 #define G_ID_HELPER_BODY(Class, Id)                                         \
-    namespace detail                                                        \
+    struct G_ID_HELPER_CLASS(Class)                                         \
     {                                                                       \
-        struct G_ID_HELPER_CLASS(Class)                                     \
-        {                                                                   \
-            static constexpr const char * id() {return Id;};                \
-        };                                                                  \
-    }
+        static constexpr const char * id() {return Id;}                     \
+    };                                                                      \
+//! @endcond
 
-#define G_TYPED_KERNEL(Class, API, Id)                                      \
-    G_ID_HELPER_BODY(Class, Id)                                             \
-    struct Class final: public cv::GKernelType<Class, std::function API >,  \
-                        public detail::G_ID_HELPER_CLASS(Class)
+#define GET_G_TYPED_KERNEL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, NAME, ...) NAME
+#define COMBINE_SIGNATURE(...) __VA_ARGS__
+// Ensure correct __VA_ARGS__ expansion on Windows
+#define __WRAP_VAARGS(x) x
+
+/**
+ * Helper for G_TYPED_KERNEL declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ * @param API an `std::function<>`-like signature for the operation;
+ *        return type is a single value or a tuple of multiple values.
+ * @param Id string identifier for the operation. Must be unique.
+ */
+#define G_TYPED_KERNEL_HELPER(Class, API, Id)                                               \
+    G_ID_HELPER_BODY(Class, Id)                                                             \
+    struct Class final: public cv::detail::KernelTypeMedium<Class, std::function API >,     \
+                        public G_ID_HELPER_CLASS(Class)
 // {body} is to be defined by user
 
-#define G_TYPED_KERNEL_M(Class, API, Id)                                    \
-    G_ID_HELPER_BODY(Class, Id)                                             \
-    struct Class final: public cv::GKernelTypeM<Class, std::function API >, \
-                        public detail::G_ID_HELPER_CLASS(Class)
-// {body} is to be defined by user
+#define G_TYPED_KERNEL_HELPER_2(Class, _1, _2, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2), Id)
+
+#define G_TYPED_KERNEL_HELPER_3(Class, _1, _2, _3, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3), Id)
+
+#define G_TYPED_KERNEL_HELPER_4(Class, _1, _2, _3, _4, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4), Id)
+
+#define G_TYPED_KERNEL_HELPER_5(Class, _1, _2, _3, _4, _5, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5), Id)
+
+#define G_TYPED_KERNEL_HELPER_6(Class, _1, _2, _3, _4, _5, _6, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6), Id)
+
+#define G_TYPED_KERNEL_HELPER_7(Class, _1, _2, _3, _4, _5, _6, _7, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7), Id)
+
+#define G_TYPED_KERNEL_HELPER_8(Class, _1, _2, _3, _4, _5, _6, _7, _8, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8), Id)
+
+#define G_TYPED_KERNEL_HELPER_9(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9), Id)
+
+#define G_TYPED_KERNEL_HELPER_10(Class, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, Id) \
+G_TYPED_KERNEL_HELPER(Class, COMBINE_SIGNATURE(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10), Id)
+
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api)
+ * for more details.
+ *
+ * @param Class type name for this operation.
+ */
+#define G_TYPED_KERNEL(Class, ...) __WRAP_VAARGS(GET_G_TYPED_KERNEL(__VA_ARGS__, \
+                                                 G_TYPED_KERNEL_HELPER_10, \
+                                                 G_TYPED_KERNEL_HELPER_9, \
+                                                 G_TYPED_KERNEL_HELPER_8, \
+                                                 G_TYPED_KERNEL_HELPER_7, \
+                                                 G_TYPED_KERNEL_HELPER_6, \
+                                                 G_TYPED_KERNEL_HELPER_5, \
+                                                 G_TYPED_KERNEL_HELPER_4, \
+                                                 G_TYPED_KERNEL_HELPER_3, \
+                                                 G_TYPED_KERNEL_HELPER_2, \
+                                                 G_TYPED_KERNEL_HELPER)(Class, __VA_ARGS__)) \
+
+/**
+ * Declares a new G-API Operation. See [Kernel API](@ref gapi_kernel_api) for more details.
+ *
+ * @deprecated This macro is deprecated in favor of `G_TYPED_KERNEL` that is used for declaring any
+ * G-API Operation.
+ *
+ * @param Class type name for this operation.
+ */
+#define G_TYPED_KERNEL_M G_TYPED_KERNEL
+
+#define G_API_OP   G_TYPED_KERNEL
+#define G_API_OP_M G_API_OP
 
 namespace cv
 {
@@ -250,6 +372,7 @@ namespace gapi
 {
     // Prework: model "Device" API before it gets to G-API headers.
     // FIXME: Don't mix with internal Backends class!
+    /// @private
     class GAPI_EXPORTS GBackend
     {
     public:
@@ -287,9 +410,29 @@ namespace std
     };
 } // namespace std
 
-
 namespace cv {
+    class GAPI_EXPORTS_W_SIMPLE GKernelPackage;
+
 namespace gapi {
+    GAPI_EXPORTS cv::GKernelPackage combine(const cv::GKernelPackage  &lhs,
+                                            const cv::GKernelPackage  &rhs);
+
+    /// @private
+    class GFunctor
+    {
+    public:
+        virtual cv::GKernelImpl impl()       const = 0;
+        virtual cv::gapi::GBackend backend() const = 0;
+        const char* id()                     const { return m_id; }
+
+        virtual ~GFunctor() = default;
+    protected:
+        GFunctor(const char* id) : m_id(id) { };
+    private:
+        const char* m_id;
+    };
+} // namespace gapi
+
     /** \addtogroup gapi_compile_args
      * @{
      */
@@ -311,7 +454,7 @@ namespace gapi {
      * implementations in form of type list (variadic template) and
      * generates a kernel package atop of that.
      *
-     * Kernel packages can be also generated programatically, starting
+     * Kernel packages can be also generated programmatically, starting
      * with an empty package (created with the default constructor)
      * and then by populating it with kernels via call to
      * GKernelPackage::include(). Note this method is also a template
@@ -321,11 +464,11 @@ namespace gapi {
      * Finally, two kernel packages can be combined into a new one
      * with function cv::gapi::combine().
      */
-    class GAPI_EXPORTS GKernelPackage
+    class GAPI_EXPORTS_W_SIMPLE GKernelPackage
     {
 
         /// @private
-        using M = std::unordered_map<std::string, std::pair<GBackend, GKernelImpl>>;
+        using M = std::unordered_map<std::string, std::pair<cv::gapi::GBackend, cv::GKernelImpl>>;
 
         /// @private
         M m_id_kernels;
@@ -335,23 +478,18 @@ namespace gapi {
 
     protected:
         /// @private
-        // Check if package contains ANY implementation of a kernel API
-        // by API textual id.
-        bool includesAPI(const std::string &id) const;
-
-        /// @private
         // Remove ALL implementations of the given API (identified by ID)
         void removeAPI(const std::string &id);
 
         /// @private
         // Partial include() specialization for kernels
         template <typename KImpl>
-        typename std::enable_if<(std::is_base_of<detail::KernelTag, KImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::KernelTag, KImpl>::value), void>::type
         includeHelper()
         {
             auto backend     = KImpl::backend();
             auto kernel_id   = KImpl::API::id();
-            auto kernel_impl = GKernelImpl{KImpl::kernel()};
+            auto kernel_impl = GKernelImpl{KImpl::kernel(), &KImpl::API::getOutMeta};
             removeAPI(kernel_id);
 
             m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
@@ -360,13 +498,15 @@ namespace gapi {
         /// @private
         // Partial include() specialization for transformations
         template <typename TImpl>
-        typename std::enable_if<(std::is_base_of<detail::TransformTag, TImpl>::value), void>::type
+        typename std::enable_if<(std::is_base_of<cv::detail::TransformTag, TImpl>::value), void>::type
         includeHelper()
         {
             m_transformations.emplace_back(TImpl::transformation());
         }
 
     public:
+        void include(const cv::gapi::GFunctor& functor);
+
         /**
          * @brief Returns total number of kernels
          * in the package (across all backends included)
@@ -383,6 +523,13 @@ namespace gapi {
         const std::vector<GTransform>& get_transformations() const;
 
         /**
+         * @brief Returns vector of kernel ids included in the package
+         *
+         * @return vector of kernel ids included in the package
+         */
+        std::vector<std::string> get_kernel_ids() const;
+
+        /**
          * @brief Test if a particular kernel _implementation_ KImpl is
          * included in this kernel package.
          *
@@ -395,7 +542,7 @@ namespace gapi {
         template<typename KImpl>
         bool includes() const
         {
-            static_assert(std::is_base_of<detail::KernelTag, KImpl>::value,
+            static_assert(std::is_base_of<cv::detail::KernelTag, KImpl>::value,
                           "includes() can be applied to kernels only");
 
             auto kernel_it = m_id_kernels.find(KImpl::API::id());
@@ -411,7 +558,7 @@ namespace gapi {
          *
          * @param backend backend which kernels to remove
          */
-        void remove(const GBackend& backend);
+        void remove(const cv::gapi::GBackend& backend);
 
         /**
          * @brief Remove all kernels implementing the given API from
@@ -437,6 +584,10 @@ namespace gapi {
             return includesAPI(KAPI::id());
         }
 
+        /// @private
+        bool includesAPI(const std::string &id) const;
+
+        // FIXME: The below comment is wrong, and who needs this function?
         /**
          * @brief Find a kernel (by its API)
          *
@@ -447,7 +598,7 @@ namespace gapi {
          *
          */
         template<typename KAPI>
-        GBackend lookup() const
+        cv::gapi::GBackend lookup() const
         {
             return lookup(KAPI::id()).first;
         }
@@ -468,11 +619,19 @@ namespace gapi {
         }
 
         /**
+         * @brief Adds a new kernel based on it's backend and id into the kernel package
+         *
+         * @param backend backend associated with the kernel
+         * @param kernel_id a name/id of the kernel
+         */
+        void include(const cv::gapi::GBackend& backend, const std::string& kernel_id);
+
+        /**
          * @brief Lists all backends which are included into package
          *
          * @return vector of backends
          */
-        std::vector<GBackend> backends() const;
+        std::vector<cv::gapi::GBackend> backends() const;
 
         // TODO: Doxygen bug -- it wants me to place this comment
         // here, not below.
@@ -483,9 +642,17 @@ namespace gapi {
          * @param rhs "Right-hand-side" package in the process
          * @return a new kernel package.
          */
-        friend GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                                   const GKernelPackage  &rhs);
+        friend GAPI_EXPORTS GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
+                                                             const GKernelPackage  &rhs);
     };
+    /** @} */
+
+namespace gapi {
+    using GKernelPackage = cv::GKernelPackage; // Keep backward compatibility
+
+    /** \addtogroup gapi_compile_args
+     * @{
+     */
 
     /**
      * @brief Create a kernel package object containing kernels
@@ -499,7 +666,7 @@ namespace gapi {
      * Use this function to pass kernel implementations (defined in
      * either way) and transformations to the system. Example:
      *
-     * @snippet modules/gapi/samples/api_ref_snippets.cpp kernels_snippet
+     * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp kernels_snippet
      *
      * Note that kernels() itself is a function returning object, not
      * a type, so having `()` at the end is important -- it must be a
@@ -509,7 +676,7 @@ namespace gapi {
     {
         // FIXME: currently there is no check that transformations' signatures are unique
         // and won't be any intersection in graph compilation stage
-        static_assert(detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
+        static_assert(cv::detail::all_unique<typename KK::API...>::value, "Kernels API must be unique");
 
         GKernelPackage pkg;
 
@@ -524,12 +691,38 @@ namespace gapi {
         return pkg;
     };
 
+    template<typename... FF>
+    GKernelPackage kernels(FF&... functors)
+    {
+        GKernelPackage pkg;
+        int unused[] = { 0, (pkg.include(functors), 0)... };
+        cv::util::suppress_unused_warning(unused);
+        return pkg;
+    };
+
     /** @} */
 
-    GAPI_EXPORTS GKernelPackage combine(const GKernelPackage  &lhs,
-                                        const GKernelPackage  &rhs);
     /**
-     * @brief cv::use_only() is a special combinator which hints G-API to use only
+     * @brief Combines multiple G-API kernel packages into one
+     *
+     * @overload
+     *
+     * This function successively combines the passed kernel packages using a right fold.
+     * Calling `combine(a, b, c)` is equal to `combine(a, combine(b, c))`.
+     *
+     * @return The resulting kernel package
+     */
+    template<typename... Ps>
+    cv::GKernelPackage combine(const cv::GKernelPackage &a, const cv::GKernelPackage &b, Ps&&... rest)
+    {
+        return combine(a, combine(b, rest...));
+    }
+
+    /** \addtogroup gapi_compile_args
+     * @{
+     */
+    /**
+     * @brief cv::gapi::use_only() is a special combinator which hints G-API to use only
      * kernels specified in cv::GComputation::compile() (and not to extend kernels available by
      * default with that package).
      */
@@ -537,12 +730,13 @@ namespace gapi {
     {
         GKernelPackage pkg;
     };
+    /** @} */
 
 } // namespace gapi
 
 namespace detail
 {
-    template<> struct CompileArgTag<cv::gapi::GKernelPackage>
+    template<> struct CompileArgTag<cv::GKernelPackage>
     {
         static const char* tag() { return "gapi.kernel_package"; }
     };
@@ -552,6 +746,7 @@ namespace detail
         static const char* tag() { return "gapi.use_only"; }
     };
 } // namespace detail
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GKERNEL_HPP

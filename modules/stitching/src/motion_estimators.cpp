@@ -886,6 +886,45 @@ void BundleAdjusterAffinePartial::calcJacobian(Mat &jac)
 
 //////////////////////////////////////////////////////////////////////////////
 
+WaveCorrectKind autoDetectWaveCorrectKind(const std::vector<Mat> &rmats)
+{
+    std::vector<float> xs, ys;
+    xs.reserve(rmats.size());
+    ys.reserve(rmats.size());
+
+    // Project a [0, 0, 1, 1] point to the camera image frame
+    // Ignore intrinsic parameters and camera translation as they
+    // have little influence
+    // This also means we can simply use "rmat.col(2)" as the
+    // projected point homogeneous coordinate
+    for (const Mat& rmat: rmats)
+    {
+        CV_Assert(rmat.type() == CV_32F);
+        xs.push_back(rmat.at<float>(0, 2) / rmat.at<float>(2, 2));
+        ys.push_back(rmat.at<float>(1, 2) / rmat.at<float>(2, 2));
+    }
+
+    // Calculate the delta between the max and min values for
+    // both the X and Y axis
+    auto min_max_x = std::minmax_element(xs.begin(), xs.end());
+    auto min_max_y = std::minmax_element(ys.begin(), ys.end());
+    double delta_x = *min_max_x.second - *min_max_x.first;
+    double delta_y = *min_max_y.second - *min_max_y.first;
+
+    // If the Y delta is the biggest, it means the images
+    // mostly span along the vertical axis: correct this axis
+    if (delta_y > delta_x)
+    {
+        LOGLN("  using vertical wave correction");
+        return WAVE_CORRECT_VERT;
+    }
+    else
+    {
+        LOGLN("  using horizontal wave correction");
+        return WAVE_CORRECT_HORIZ;
+    }
+}
+
 void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
 {
     LOGLN("Wave correcting...");
@@ -898,12 +937,18 @@ void waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind)
         return;
     }
 
+    if (kind == WAVE_CORRECT_AUTO)
+    {
+        kind = autoDetectWaveCorrectKind(rmats);
+    }
+
     Mat moment = Mat::zeros(3, 3, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)
     {
         Mat col = rmats[i].col(0);
         moment += col * col.t();
     }
+
     Mat eigen_vals, eigen_vecs;
     eigen(moment, eigen_vals, eigen_vecs);
 

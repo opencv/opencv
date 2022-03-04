@@ -18,11 +18,11 @@ using namespace cv;
 int main(int argc, char** argv)
 {
     //! [Load image]
-    CommandLineParser parser( argc, argv, "{@input | ../data/lena.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+    CommandLineParser parser( argc, argv, "{@input | lena.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR );
     if( src.empty() )
     {
-        return -1;
+        return EXIT_FAILURE;
     }
     //! [Load image]
 
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
     //! [Set the ranges ( for B,G,R) )]
     float range[] = { 0, 256 }; //the upper boundary is exclusive
-    const float* histRange = { range };
+    const float* histRange[] = { range };
     //! [Set the ranges ( for B,G,R) )]
 
     //! [Set histogram param]
@@ -46,9 +46,9 @@ int main(int argc, char** argv)
 
     //! [Compute the histograms]
     Mat b_hist, g_hist, r_hist;
-    calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, &histRange, uniform, accumulate );
-    calcHist( &bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, &histRange, uniform, accumulate );
-    calcHist( &bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, &histRange, uniform, accumulate );
+    calcHist( &bgr_planes[0], 1, 0, Mat(), b_hist, 1, &histSize, histRange, uniform, accumulate );
+    calcHist( &bgr_planes[1], 1, 0, Mat(), g_hist, 1, &histSize, histRange, uniform, accumulate );
+    calcHist( &bgr_planes[2], 1, 0, Mat(), r_hist, 1, &histSize, histRange, uniform, accumulate );
     //! [Compute the histograms]
 
     //! [Draw the histograms for B, G and R]
@@ -85,5 +85,5 @@ int main(int argc, char** argv)
     waitKey();
     //! [Display]
 
-    return 0;
+    return EXIT_SUCCESS;
 }

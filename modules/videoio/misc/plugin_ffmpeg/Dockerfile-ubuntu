@@ -1,7 +1,7 @@
 ARG VER
 FROM ubuntu:$VER
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get --no-install-recommends install -y \
         libavcodec-dev \
         libavfilter-dev \
         libavformat-dev \

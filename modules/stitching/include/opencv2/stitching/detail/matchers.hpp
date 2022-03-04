@@ -59,7 +59,7 @@ struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
     CV_PROP_RW int img_idx;
     CV_PROP_RW Size img_size;
-    std::vector<KeyPoint> keypoints;
+    CV_PROP_RW std::vector<KeyPoint> keypoints;
     CV_PROP_RW UMat descriptors;
     CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; };
 };
@@ -215,14 +215,14 @@ finds two best matches for each feature and leaves the best one only if the
 ratio between descriptor distances is greater than the threshold match_conf.
 
 Unlike cv::detail::BestOf2NearestMatcher this matcher uses affine
-transformation (affine trasformation estimate will be placed in matches_info).
+transformation (affine transformation estimate will be placed in matches_info).
 
 @sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
  */
 class CV_EXPORTS_W AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
 {
 public:
-    /** @brief Constructs a "best of 2 nearest" matcher that expects affine trasformation
+    /** @brief Constructs a "best of 2 nearest" matcher that expects affine transformation
     between images
 
     @param full_affine whether to use full affine transformation with 6 degress of freedom or reduced

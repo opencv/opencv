@@ -1,6 +1,17 @@
 Introduction to Java Development {#tutorial_java_dev_intro}
 ================================
 
+@prev_tutorial{tutorial_windows_visual_studio_image_watch}
+@next_tutorial{tutorial_java_eclipse}
+
+|    |    |
+| -: | :- |
+| Original author | Eric Christiansen and Andrey Pavlenko |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
+
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development. This guide will help you to create your first Java (or Scala) application using
 OpenCV. We will use either [Apache Ant](http://ant.apache.org/) or [Simple Build Tool

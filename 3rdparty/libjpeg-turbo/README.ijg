@@ -128,7 +128,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2016, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this
@@ -157,19 +157,6 @@ software".
 We specifically permit and encourage the use of this software as the basis of
 commercial products, provided that all warranty or liability claims are
 assumed by the product vendor.
-
-
-The IJG distribution formerly included code to read and write GIF files.
-To avoid entanglement with the Unisys LZW patent (now expired), GIF reading
-support has been removed altogether, and the GIF writer has been simplified
-to produce "uncompressed GIFs".  This technique does not use the LZW
-algorithm; the resulting GIF files are larger than usual, but are readable
-by all standard GIF decoders.
-
-We are required to state that
-    "The Graphics Interchange Format(c) is the Copyright property of
-    CompuServe Incorporated.  GIF(sm) is a Service Mark property of
-    CompuServe Incorporated."
 
 
 REFERENCES
@@ -223,12 +210,12 @@ https://www.iso.org/standard/54989.html and http://www.itu.int/rec/T-REC-T.871.
 A PDF file of the older JFIF 1.02 specification is available at
 http://www.w3.org/Graphics/JPEG/jfif3.pdf.
 
-The TIFF 6.0 file format specification can be obtained by FTP from
-ftp://ftp.sgi.com/graphics/tiff/TIFF6.ps.gz.  The JPEG incorporation scheme
-found in the TIFF 6.0 spec of 3-June-92 has a number of serious problems.
-IJG does not recommend use of the TIFF 6.0 design (TIFF Compression tag 6).
-Instead, we recommend the JPEG design proposed by TIFF Technical Note #2
-(Compression tag 7).  Copies of this Note can be obtained from
+The TIFF 6.0 file format specification can be obtained from
+http://mirrors.ctan.org/graphics/tiff/TIFF6.ps.gz.  The JPEG incorporation
+scheme found in the TIFF 6.0 spec of 3-June-92 has a number of serious
+problems.  IJG does not recommend use of the TIFF 6.0 design (TIFF Compression
+tag 6).  Instead, we recommend the JPEG design proposed by TIFF Technical Note
+#2 (Compression tag 7).  Copies of this Note can be obtained from
 http://www.ijg.org/files/.  It is expected that the next revision
 of the TIFF spec will replace the 6.0 JPEG design with the Note's design.
 Although IJG's own code does not support TIFF/JPEG, the free libtiff library
@@ -243,14 +230,8 @@ The most recent released version can always be found there in
 directory "files".
 
 The JPEG FAQ (Frequently Asked Questions) article is a source of some
-general information about JPEG.
-It is available on the World Wide Web at http://www.faqs.org/faqs/jpeg-faq/
-and other news.answers archive sites, including the official news.answers
-archive at rtfm.mit.edu: ftp://rtfm.mit.edu/pub/usenet/news.answers/jpeg-faq/.
-If you don't have Web or FTP access, send e-mail to mail-server@rtfm.mit.edu
-with body
-        send usenet/news.answers/jpeg-faq/part1
-        send usenet/news.answers/jpeg-faq/part2
+general information about JPEG.  It is available at
+http://www.faqs.org/faqs/jpeg-faq.
 
 
 FILE FORMAT COMPATIBILITY

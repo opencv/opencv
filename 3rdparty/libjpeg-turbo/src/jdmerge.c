@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2009, 2011, 2014-2015, D. R. Commander.
+ * Copyright (C) 2009, 2011, 2014-2015, 2020, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -40,40 +40,12 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+#include "jdmerge.h"
 #include "jsimd.h"
 #include "jconfigint.h"
 
 #ifdef UPSAMPLE_MERGING_SUPPORTED
 
-
-/* Private subobject */
-
-typedef struct {
-  struct jpeg_upsampler pub;    /* public fields */
-
-  /* Pointer to routine to do actual upsampling/conversion of one row group */
-  void (*upmethod) (j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
-                    JDIMENSION in_row_group_ctr, JSAMPARRAY output_buf);
-
-  /* Private state for YCC->RGB conversion */
-  int *Cr_r_tab;                /* => table for Cr to R conversion */
-  int *Cb_b_tab;                /* => table for Cb to B conversion */
-  JLONG *Cr_g_tab;              /* => table for Cr to G conversion */
-  JLONG *Cb_g_tab;              /* => table for Cb to G conversion */
-
-  /* For 2:1 vertical sampling, we produce two output rows at a time.
-   * We need a "spare" row buffer to hold the second output row if the
-   * application provides just a one-row buffer; we also use the spare
-   * to discard the dummy last row if the image height is odd.
-   */
-  JSAMPROW spare_row;
-  boolean spare_full;           /* T if spare buffer is occupied */
-
-  JDIMENSION out_row_width;     /* samples per output row */
-  JDIMENSION rows_to_go;        /* counts rows remaining in image */
-} my_upsampler;
-
-typedef my_upsampler *my_upsample_ptr;
 
 #define SCALEBITS       16      /* speediest right-shift on some machines */
 #define ONE_HALF        ((JLONG)1 << (SCALEBITS - 1))
@@ -189,7 +161,7 @@ typedef my_upsampler *my_upsample_ptr;
 LOCAL(void)
 build_ycc_rgb_table(j_decompress_ptr cinfo)
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   int i;
   JLONG x;
   SHIFT_TEMPS
@@ -232,7 +204,7 @@ build_ycc_rgb_table(j_decompress_ptr cinfo)
 METHODDEF(void)
 start_pass_merged_upsample(j_decompress_ptr cinfo)
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
 
   /* Mark the spare buffer empty */
   upsample->spare_full = FALSE;
@@ -254,7 +226,7 @@ merged_2v_upsample(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                    JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 /* 2:1 vertical sampling case: may need a spare row. */
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   JSAMPROW work_ptrs[2];
   JDIMENSION num_rows;          /* number of rows returned to caller */
 
@@ -305,7 +277,7 @@ merged_1v_upsample(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                    JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 /* 1:1 vertical sampling case: much easier, never need a spare row. */
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
 
   /* Just do the upsampling. */
   (*upsample->upmethod) (cinfo, input_buf, *in_row_group_ctr,
@@ -420,16 +392,13 @@ h2v2_merged_upsample(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
  * RGB565 conversion
  */
 
-#define PACK_SHORT_565_LE(r, g, b)  ((((r) << 8) & 0xF800) | \
-                                     (((g) << 3) & 0x7E0) | ((b) >> 3))
-#define PACK_SHORT_565_BE(r, g, b)  (((r) & 0xF8) | ((g) >> 5) | \
-                                     (((g) << 11) & 0xE000) | \
-                                     (((b) << 5) & 0x1F00))
+#define PACK_SHORT_565_LE(r, g, b) \
+  ((((r) << 8) & 0xF800) | (((g) << 3) & 0x7E0) | ((b) >> 3))
+#define PACK_SHORT_565_BE(r, g, b) \
+  (((r) & 0xF8) | ((g) >> 5) | (((g) << 11) & 0xE000) | (((b) << 5) & 0x1F00))
 
 #define PACK_TWO_PIXELS_LE(l, r)    ((r << 16) | l)
 #define PACK_TWO_PIXELS_BE(l, r)    ((l << 16) | r)
-
-#define PACK_NEED_ALIGNMENT(ptr)    (((size_t)(ptr)) & 3)
 
 #define WRITE_TWO_PIXELS_LE(addr, pixels) { \
   ((INT16 *)(addr))[0] = (INT16)(pixels); \
@@ -568,11 +537,11 @@ h2v2_merged_upsample_565D(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
 GLOBAL(void)
 jinit_merged_upsampler(j_decompress_ptr cinfo)
 {
-  my_upsample_ptr upsample;
+  my_merged_upsample_ptr upsample;
 
-  upsample = (my_upsample_ptr)
+  upsample = (my_merged_upsample_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                sizeof(my_upsampler));
+                                sizeof(my_merged_upsampler));
   cinfo->upsample = (struct jpeg_upsampler *)upsample;
   upsample->pub.start_pass = start_pass_merged_upsample;
   upsample->pub.need_context_rows = FALSE;

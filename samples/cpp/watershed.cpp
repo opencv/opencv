@@ -9,11 +9,10 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis program demonstrates the famous watershed segmentation algorithm in OpenCV: watershed()\n"
-            "Usage:\n"
-            "./watershed [image_name -- default is fruits.jpg]\n" << endl;
+            "Usage:\n" << argv[0] <<" [image_name -- default is fruits.jpg]\n" << endl;
 
 
     cout << "Hot keys: \n"
@@ -51,7 +50,7 @@ int main( int argc, char** argv )
     cv::CommandLineParser parser(argc, argv, "{help h | | }{ @input | fruits.jpg | }");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     string filename = samples::findFile(parser.get<string>("@input"));
@@ -59,10 +58,11 @@ int main( int argc, char** argv )
 
     if( img0.empty() )
     {
-        cout << "Couldn't open image " << filename << ". Usage: watershed <image_name>\n";
+        cout << "Couldn't open image ";
+        help(argv);
         return 0;
     }
-    help();
+    help(argv);
     namedWindow( "image", 1 );
 
     img0.copyTo(img);

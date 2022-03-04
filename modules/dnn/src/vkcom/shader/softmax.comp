@@ -46,7 +46,7 @@ void main()
         }
     }
 
-    // substract, exp and accumulate along channel
+    // subtract, exp and accumulate along channel
     for (int i = 0; i < p.channel_size; ++i)
         sum_buffer[reduced_buffer_off + i] = 0.f;
 

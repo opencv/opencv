@@ -18,7 +18,6 @@
 #define HAVE_UNSIGNED_SHORT
 #undef INCOMPLETE_TYPES_BROKEN
 #undef RIGHT_SHIFT_IS_UNSIGNED
-#undef __CHAR_UNSIGNED__
 
 /* Define "boolean" as unsigned char, not int, per Windows custom */
 #ifndef __RPCNDR_H__            /* don't conflict if rpcndr.h already read */

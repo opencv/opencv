@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -14,13 +14,17 @@
 cv::GOrigin::GOrigin(GShape s,
                     const cv::GNode& n,
                     std::size_t p,
-                    const cv::gimpl::HostCtor c)
-    : shape(s), node(n), port(p), ctor(c)
+                    const cv::gimpl::HostCtor c,
+                    cv::detail::OpaqueKind k)
+    : shape(s), node(n), port(p), ctor(c), kind(k)
 {
 }
 
 cv::GOrigin::GOrigin(GShape s, cv::gimpl::ConstVal v)
-    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT)
+    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT),
+      kind(util::holds_alternative<detail::VectorRef>(v)
+               ? util::get<detail::VectorRef>(v).getKind()
+               : cv::detail::OpaqueKind::CV_UNKNOWN)
 {
 }
 

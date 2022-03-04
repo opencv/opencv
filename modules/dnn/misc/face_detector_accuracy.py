@@ -154,8 +154,13 @@ if args.proto and args.model:
             top = int(out[0, 0, i, 4] * img.shape[0])
             right = int(out[0, 0, i, 5] * img.shape[1])
             bottom = int(out[0, 0, i, 6] * img.shape[0])
-            addDetection(detections, imageId, left, top, width=right - left + 1,
-                         height=bottom - top + 1, score=confidence)
+
+            x = max(0, min(left, img.shape[1] - 1))
+            y = max(0, min(top, img.shape[0] - 1))
+            w = max(0, min(right - x + 1, img.shape[1] - x))
+            h = max(0, min(bottom - y + 1, img.shape[0] - y))
+
+            addDetection(detections, imageId, x, y, w, h, score=confidence)
 
 elif args.cascade:
     cascade = cv.CascadeClassifier(args.cascade)

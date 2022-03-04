@@ -15,6 +15,7 @@ namespace cv
 namespace gapi_test_kernels
 {
 using cv::gapi::core::GMat3;
+using GMat2 = std::tuple<GMat, GMat>;
 
 G_TYPED_KERNEL(TAddSimple, <GMat(GMat, GMat)>, "test.fluid.add_simple") {
     static cv::GMatDesc outMeta(cv::GMatDesc a, cv::GMatDesc) {
@@ -112,10 +113,24 @@ G_TYPED_KERNEL_M(TSplit3_4lpi, <GMat3(GMat)>, "test.fluid.split3_4lpi") {
     }
 };
 
+G_TYPED_KERNEL(TEqualizeHist, <GMat(GMat, GArray<int>)>, "test.fluid.equalize_hist")
+{
+    static GMatDesc outMeta(GMatDesc in, const cv::GArrayDesc&) {
+        return in;
+    }
+};
+
+G_TYPED_KERNEL(TCalcHist, <GArray<int>(GMat)>, "test.ocv.calc_hist")
+{
+    static GArrayDesc outMeta(GMatDesc) {
+        return {};
+    }
+};
+
 GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3);
 std::tuple<GMat, GMat, GMat> split3_4lpi(const GMat& src);
 
-extern cv::gapi::GKernelPackage fluidTestPackage;
+extern cv::GKernelPackage fluidTestPackage;
 
 } // namespace gapi_test_kernels
 } // namespace cv

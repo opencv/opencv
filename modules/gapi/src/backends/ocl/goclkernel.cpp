@@ -19,19 +19,24 @@ cv::UMat& cv::GOCLContext::outMatR(int output)
     return (*(util::get<cv::UMat*>(m_results.at(output))));
 }
 
-const cv::gapi::own::Scalar& cv::GOCLContext::inVal(int input)
+const cv::Scalar& cv::GOCLContext::inVal(int input)
 {
-    return inArg<cv::gapi::own::Scalar>(input);
+    return inArg<cv::Scalar>(input);
 }
 
-cv::gapi::own::Scalar& cv::GOCLContext::outValR(int output)
+cv::Scalar& cv::GOCLContext::outValR(int output)
 {
-    return *util::get<cv::gapi::own::Scalar*>(m_results.at(output));
+    return *util::get<cv::Scalar*>(m_results.at(output));
 }
 
 cv::detail::VectorRef& cv::GOCLContext::outVecRef(int output)
 {
     return util::get<cv::detail::VectorRef>(m_results.at(output));
+}
+
+cv::detail::OpaqueRef& cv::GOCLContext::outOpaqueRef(int output)
+{
+    return util::get<cv::detail::OpaqueRef>(m_results.at(output));
 }
 
 cv::GOCLKernel::GOCLKernel()

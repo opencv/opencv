@@ -17,6 +17,12 @@
 #if !defined(JAS_WIN_MSVC_BUILD)
 /* A configure-based build is being used. */
 
+#include <stdio.h>
+
+// uClibc-ng workaround: https://github.com/opencv/opencv/pull/15279
+#ifndef L_tmpnam
+#define L_tmpnam 20
+#endif
 
 
 /* Extra debugging support */

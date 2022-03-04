@@ -1,5 +1,15 @@
 # How to schedule your network for Halide backend {#tutorial_dnn_halide_scheduling}
 
+@tableofcontents
+
+@prev_tutorial{tutorial_dnn_halide}
+@next_tutorial{tutorial_dnn_android}
+
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3 |
+
 ## Introduction
 Halide code is the same for every device we use. But for achieving the satisfied
 efficiency we should schedule computations properly. In this tutorial we describe
@@ -35,7 +45,7 @@ correspondingly. In example, for variable `x` in range `[0, 10)` directive
 `split: { x: 2 }` gives new ones `xo` in range `[0, 5)` and `xi` in range `[0, 2)`.
 Variable name `x` is no longer available in the same scheduling node.
 
-You can find scheduling examples at [opencv_extra/testdata/dnn](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
+You can find scheduling examples at [opencv_extra/testdata/dnn](https://github.com/opencv/opencv_extra/tree/4.x/testdata/dnn)
 and use it for schedule your networks.
 
 ## Layers fusing

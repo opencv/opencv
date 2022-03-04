@@ -61,32 +61,22 @@ easily switch between different algorithms solving the same problem. This sectio
 matching descriptors that are represented as vectors in a multidimensional space. All objects that
 implement vector descriptor matchers inherit the DescriptorMatcher interface.
 
-@note
-   -   An example explaining keypoint matching can be found at
-        opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
-    -   An example on descriptor matching evaluation can be found at
-        opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
-    -   An example on one to many image matching can be found at
-        opencv_source_code/samples/cpp/matching_to_many_images.cpp
-
     @defgroup features2d_draw Drawing Function of Keypoints and Matches
     @defgroup features2d_category Object Categorization
 
 This section describes approaches based on local 2D features and used to categorize objects.
 
-@note
-   -   A complete Bag-Of-Words sample can be found at
-        opencv_source_code/samples/cpp/bagofwords_classification.cpp
-    -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv_source_code/samples/python/find_obj.py
-
+    @defgroup feature2d_hal Hardware Acceleration Layer
+    @{
+        @defgroup features2d_hal_interface Interface
+    @}
   @}
  */
 
 namespace cv
 {
 
-//! @addtogroup features2d
+//! @addtogroup features2d_main
 //! @{
 
 // //! writes vector of keypoints to the file storage
@@ -237,8 +227,96 @@ the vector descriptor extractors inherit the DescriptorExtractor interface.
  */
 typedef Feature2D DescriptorExtractor;
 
-//! @addtogroup features2d_main
-//! @{
+
+/** @brief Class for implementing the wrapper which makes detectors and extractors to be affine invariant,
+described as ASIFT in @cite YM11 .
+*/
+class CV_EXPORTS_W AffineFeature : public Feature2D
+{
+public:
+    /**
+    @param backend The detector/extractor you want to use as backend.
+    @param maxTilt The highest power index of tilt factor. 5 is used in the paper as tilt sampling range n.
+    @param minTilt The lowest power index of tilt factor. 0 is used in the paper.
+    @param tiltStep Tilt sampling step \f$\delta_t\f$ in Algorithm 1 in the paper.
+    @param rotateStepBase Rotation sampling step factor b in Algorithm 1 in the paper.
+    */
+    CV_WRAP static Ptr<AffineFeature> create(const Ptr<Feature2D>& backend,
+        int maxTilt = 5, int minTilt = 0, float tiltStep = 1.4142135623730951f, float rotateStepBase = 72);
+
+    CV_WRAP virtual void setViewParams(const std::vector<float>& tilts, const std::vector<float>& rolls) = 0;
+    CV_WRAP virtual void getViewParams(std::vector<float>& tilts, std::vector<float>& rolls) const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
+typedef AffineFeature AffineFeatureDetector;
+typedef AffineFeature AffineDescriptorExtractor;
+
+
+/** @brief Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform
+(SIFT) algorithm by D. Lowe @cite Lowe04 .
+*/
+class CV_EXPORTS_W SIFT : public Feature2D
+{
+public:
+    /**
+    @param nfeatures The number of best features to retain. The features are ranked by their scores
+    (measured in SIFT algorithm as the local contrast)
+
+    @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
+    number of octaves is computed automatically from the image resolution.
+
+    @param contrastThreshold The contrast threshold used to filter out weak features in semi-uniform
+    (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
+
+    @note The contrast threshold will be divided by nOctaveLayers when the filtering is applied. When
+    nOctaveLayers is set to default and if you want to use the value used in D. Lowe paper, 0.03, set
+    this argument to 0.09.
+
+    @param edgeThreshold The threshold used to filter out edge-like features. Note that the its meaning
+    is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are
+    filtered out (more features are retained).
+
+    @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
+    is captured with a weak camera with soft lenses, you might want to reduce the number.
+    */
+    CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
+        double contrastThreshold = 0.04, double edgeThreshold = 10,
+        double sigma = 1.6);
+
+    /** @brief Create SIFT with specified descriptorType.
+    @param nfeatures The number of best features to retain. The features are ranked by their scores
+    (measured in SIFT algorithm as the local contrast)
+
+    @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
+    number of octaves is computed automatically from the image resolution.
+
+    @param contrastThreshold The contrast threshold used to filter out weak features in semi-uniform
+    (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
+
+    @note The contrast threshold will be divided by nOctaveLayers when the filtering is applied. When
+    nOctaveLayers is set to default and if you want to use the value used in D. Lowe paper, 0.03, set
+    this argument to 0.09.
+
+    @param edgeThreshold The threshold used to filter out edge-like features. Note that the its meaning
+    is different from the contrastThreshold, i.e. the larger the edgeThreshold, the less features are
+    filtered out (more features are retained).
+
+    @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
+    is captured with a weak camera with soft lenses, you might want to reduce the number.
+
+    @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
+    */
+    CV_WRAP static Ptr<SIFT> create(int nfeatures, int nOctaveLayers,
+        double contrastThreshold, double edgeThreshold,
+        double sigma, int descriptorType);
+
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
+
+typedef SIFT SiftFeatureDetector;
+typedef SIFT SiftDescriptorExtractor;
+
 
 /** @brief Class implementing the BRISK keypoint detector and descriptor extractor, described in @cite LCS11 .
  */
@@ -386,30 +464,29 @@ article](http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions)).
 than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
 
 - the color image algorithm is taken from: @cite forssen2007maximally ; it should be much slower
-than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source
-code which is distributed under GPL.
+than grey image method ( 3~4 times )
 
 - (Python) A complete example showing the use of the %MSER detector can be found at samples/python/mser.py
 */
 class CV_EXPORTS_W MSER : public Feature2D
 {
 public:
-    /** @brief Full consturctor for %MSER detector
+    /** @brief Full constructor for %MSER detector
 
-    @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
-    @param _min_area prune the area which smaller than minArea
-    @param _max_area prune the area which bigger than maxArea
-    @param _max_variation prune the area have similar size to its children
-    @param _min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
-    @param _max_evolution  for color image, the evolution steps
-    @param _area_threshold for color image, the area threshold to cause re-initialize
-    @param _min_margin for color image, ignore too small margin
-    @param _edge_blur_size for color image, the aperture size for edge blur
+    @param delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
+    @param min_area prune the area which smaller than minArea
+    @param max_area prune the area which bigger than maxArea
+    @param max_variation prune the area have similar size to its children
+    @param min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
+    @param max_evolution  for color image, the evolution steps
+    @param area_threshold for color image, the area threshold to cause re-initialize
+    @param min_margin for color image, ignore too small margin
+    @param edge_blur_size for color image, the aperture size for edge blur
      */
-    CV_WRAP static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
-          double _max_variation=0.25, double _min_diversity=.2,
-          int _max_evolution=200, double _area_threshold=1.01,
-          double _min_margin=0.003, int _edge_blur_size=5 );
+    CV_WRAP static Ptr<MSER> create( int delta=5, int min_area=60, int max_area=14400,
+          double max_variation=0.25, double min_diversity=.2,
+          int max_evolution=200, double area_threshold=1.01,
+          double min_margin=0.003, int edge_blur_size=5 );
 
     /** @brief Detect %MSER regions
 
@@ -1028,7 +1105,7 @@ public:
     that is, copies both parameters and train data. If emptyTrainData is true, the method creates an
     object copy with the current parameters but with empty train data.
      */
-    CV_WRAP virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
+    CV_WRAP CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
     /** @brief Creates a descriptor matcher of a given type with the default parameters (using default
     constructor).
@@ -1088,7 +1165,7 @@ protected:
     static bool isPossibleMatch( InputArray mask, int queryIdx, int trainIdx );
     static bool isMaskedOut( InputArrayOfArrays masks, int queryIdx );
 
-    static Mat clone_op( Mat m ) { return m.clone(); }
+    CV_NODISCARD_STD static Mat clone_op( Mat m ) { return m.clone(); }
     void checkMasks( InputArrayOfArrays masks, int queryDescriptorsCount ) const;
 
     //! Collection of descriptors from train images.
@@ -1129,7 +1206,7 @@ public:
      */
     CV_WRAP static Ptr<BFMatcher> create( int normType=NORM_L2, bool crossCheck=false ) ;
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
+    CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
         InputArrayOfArrays masks=noArray(), bool compactResult=false ) CV_OVERRIDE;
@@ -1168,7 +1245,7 @@ public:
 
     CV_WRAP static Ptr<FlannBasedMatcher> create();
 
-    virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
+    CV_NODISCARD_STD virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const CV_OVERRIDE;
 protected:
     static void convertToDMatches( const DescriptorCollection& descriptors,
                                    const Mat& indices, const Mat& distances,
@@ -1260,6 +1337,13 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              const std::vector<char>& matchesMask=std::vector<char>(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
 
 /** @overload */
+CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
+                             InputArray img2, const std::vector<KeyPoint>& keypoints2,
+                             const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
+                             const int matchesThickness, const Scalar& matchColor=Scalar::all(-1),
+                             const Scalar& singlePointColor=Scalar::all(-1), const std::vector<char>& matchesMask=std::vector<char>(),
+                             DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+
 CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,

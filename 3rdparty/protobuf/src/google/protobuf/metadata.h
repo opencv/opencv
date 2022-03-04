@@ -28,51 +28,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// This header file defines an internal class that encapsulates internal message
-// metadata (Unknown-field set, Arena pointer, ...) and allows its
-// representation to be made more space-efficient via various optimizations.
-//
-// Note that this is distinct from google::protobuf::Metadata, which encapsulates
-// Descriptor and Reflection pointers.
-
 #ifndef GOOGLE_PROTOBUF_METADATA_H__
 #define GOOGLE_PROTOBUF_METADATA_H__
 
-#include <google/protobuf/metadata_lite.h>
-#include <google/protobuf/unknown_field_set.h>
+// TODO(b/151117630): Remove this file and all instances where it gets imported.
 
-namespace google {
-namespace protobuf {
-namespace internal {
-
-class InternalMetadataWithArena
-    : public InternalMetadataWithArenaBase<UnknownFieldSet,
-                                           InternalMetadataWithArena> {
- public:
-  InternalMetadataWithArena() {}
-  explicit InternalMetadataWithArena(Arena* arena)
-      : InternalMetadataWithArenaBase<UnknownFieldSet,
-                                           InternalMetadataWithArena>(arena) {}
-
-  void DoSwap(UnknownFieldSet* other) {
-    mutable_unknown_fields()->Swap(other);
-  }
-
-  void DoMergeFrom(const UnknownFieldSet& other) {
-    mutable_unknown_fields()->MergeFrom(other);
-  }
-
-  void DoClear() {
-    mutable_unknown_fields()->Clear();
-  }
-
-  static const UnknownFieldSet& default_instance() {
-    return *UnknownFieldSet::default_instance();
-  }
-};
-
-}  // namespace internal
-}  // namespace protobuf
-
-}  // namespace google
 #endif  // GOOGLE_PROTOBUF_METADATA_H__

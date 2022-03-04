@@ -4,5 +4,3 @@ if(ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 20)
   set(libs "-landroid -llog -lmediandk")
   ocv_add_external_target(android_mediandk "" "${libs}" "HAVE_ANDROID_MEDIANDK")
 endif()
-
-set(HAVE_ANDROID_MEDIANDK ${HAVE_ANDROID_MEDIANDK} PARENT_SCOPE)

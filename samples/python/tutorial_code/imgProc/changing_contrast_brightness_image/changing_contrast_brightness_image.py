@@ -25,8 +25,8 @@ def gammaCorrection():
     res = cv.LUT(img_original, lookUpTable)
     ## [changing-contrast-brightness-gamma-correction]
 
-    img_gamma_corrected = cv.hconcat([img_original, res]);
-    cv.imshow("Gamma correction", img_gamma_corrected);
+    img_gamma_corrected = cv.hconcat([img_original, res])
+    cv.imshow("Gamma correction", img_gamma_corrected)
 
 def on_linear_transform_alpha_trackbar(val):
     global alpha

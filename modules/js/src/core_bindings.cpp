@@ -71,16 +71,34 @@
 #include <emscripten/bind.h>
 
 @INCLUDES@
+#include "../../../modules/core/src/parallel_impl.hpp"
+
+#ifdef TEST_WASM_INTRIN
+#include "../../../modules/core/include/opencv2/core/hal/intrin.hpp"
+#include "../../../modules/core/include/opencv2/core/utils/trace.hpp"
+#include "../../../modules/ts/include/opencv2/ts/ts_gtest.h"
+namespace cv {
+namespace hal {
+#include "../../../modules/core/test/test_intrin_utils.hpp"
+}
+}
+#endif
 
 using namespace emscripten;
 using namespace cv;
 
+using namespace cv::segmentation;  // FIXIT
+
 #ifdef HAVE_OPENCV_DNN
-using namespace dnn;
+using namespace cv::dnn;
 #endif
 
 #ifdef HAVE_OPENCV_ARUCO
 using namespace aruco;
+#endif
+
+#ifdef HAVE_OPENCV_VIDEO
+typedef TrackerMIL::Params TrackerMIL_Params;
 #endif
 
 namespace binding_utils
@@ -350,6 +368,23 @@ namespace binding_utils
         result.call<void>("push", arg2);
         return result;
     }
+
+
+    void Tracker_init_wrapper(cv::Tracker& arg0, const cv::Mat& arg1, const Rect& arg2)
+    {
+        return arg0.init(arg1, arg2);
+    }
+
+    emscripten::val Tracker_update_wrapper(cv::Tracker& arg0, const cv::Mat& arg1)
+    {
+        Rect rect;
+        bool update = arg0.update(arg1, rect);
+
+        emscripten::val result = emscripten::val::array();
+        result.call<void>("push", update);
+        result.call<void>("push", rect);
+        return result;
+    }
 #endif  // HAVE_OPENCV_VIDEO
 
     std::string getExceptionMsg(const cv::Exception& e) {
@@ -368,6 +403,51 @@ namespace binding_utils
     std::string getBuildInformation() {
         return cv::getBuildInformation();
     }
+
+#ifdef TEST_WASM_INTRIN
+    void test_hal_intrin_uint8() {
+        cv::hal::test_hal_intrin_uint8();
+    }
+    void test_hal_intrin_int8() {
+        cv::hal::test_hal_intrin_int8();
+    }
+    void test_hal_intrin_uint16() {
+        cv::hal::test_hal_intrin_uint16();
+    }
+    void test_hal_intrin_int16() {
+        cv::hal::test_hal_intrin_int16();
+    }
+    void test_hal_intrin_uint32() {
+        cv::hal::test_hal_intrin_uint32();
+    }
+    void test_hal_intrin_int32() {
+        cv::hal::test_hal_intrin_int32();
+    }
+    void test_hal_intrin_uint64() {
+        cv::hal::test_hal_intrin_uint64();
+    }
+    void test_hal_intrin_int64() {
+        cv::hal::test_hal_intrin_int64();
+    }
+    void test_hal_intrin_float32() {
+        cv::hal::test_hal_intrin_float32();
+    }
+    void test_hal_intrin_float64() {
+        cv::hal::test_hal_intrin_float64();
+    }
+    void test_hal_intrin_all() {
+        cv::hal::test_hal_intrin_uint8();
+        cv::hal::test_hal_intrin_int8();
+        cv::hal::test_hal_intrin_uint16();
+        cv::hal::test_hal_intrin_int16();
+        cv::hal::test_hal_intrin_uint32();
+        cv::hal::test_hal_intrin_int32();
+        cv::hal::test_hal_intrin_uint64();
+        cv::hal::test_hal_intrin_int64();
+        cv::hal::test_hal_intrin_float32();
+        cv::hal::test_hal_intrin_float64();
+    }
+#endif
 }
 
 EMSCRIPTEN_BINDINGS(binding_utils)
@@ -542,10 +622,10 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("distance", &cv::DMatch::distance);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
-        .element(index<0>())
-        .element(index<1>())
-        .element(index<2>())
-        .element(index<3>());
+        .element(emscripten::index<0>())
+        .element(emscripten::index<1>())
+        .element(emscripten::index<2>())
+        .element(emscripten::index<3>());
 
     emscripten::value_object<binding_utils::MinMaxLoc>("MinMaxLoc")
         .field("minVal", &binding_utils::MinMaxLoc::minVal)
@@ -617,9 +697,33 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
 
     function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
+
+    emscripten::class_<cv::Tracker >("Tracker")
+        .function("init", select_overload<void(cv::Tracker&,const cv::Mat&,const Rect&)>(&binding_utils::Tracker_init_wrapper), pure_virtual())
+        .function("update", select_overload<emscripten::val(cv::Tracker&,const cv::Mat&)>(&binding_utils::Tracker_update_wrapper), pure_virtual());
+
 #endif
 
     function("getBuildInformation", &binding_utils::getBuildInformation);
+
+#ifdef HAVE_PTHREADS_PF
+    function("parallel_pthreads_set_threads_num", &cv::parallel_pthreads_set_threads_num);
+    function("parallel_pthreads_get_threads_num", &cv::parallel_pthreads_get_threads_num);
+#endif
+
+#ifdef TEST_WASM_INTRIN
+    function("test_hal_intrin_uint8", &binding_utils::test_hal_intrin_uint8);
+    function("test_hal_intrin_int8", &binding_utils::test_hal_intrin_int8);
+    function("test_hal_intrin_uint16", &binding_utils::test_hal_intrin_uint16);
+    function("test_hal_intrin_int16", &binding_utils::test_hal_intrin_int16);
+    function("test_hal_intrin_uint32", &binding_utils::test_hal_intrin_uint32);
+    function("test_hal_intrin_int32", &binding_utils::test_hal_intrin_int32);
+    function("test_hal_intrin_uint64", &binding_utils::test_hal_intrin_uint64);
+    function("test_hal_intrin_int64", &binding_utils::test_hal_intrin_int64);
+    function("test_hal_intrin_float32", &binding_utils::test_hal_intrin_float32);
+    function("test_hal_intrin_float64", &binding_utils::test_hal_intrin_float64);
+    function("test_hal_intrin_all", &binding_utils::test_hal_intrin_all);
+#endif
 
     constant("CV_8UC1", CV_8UC1);
     constant("CV_8UC2", CV_8UC2);

@@ -9,13 +9,13 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout <<
             "\nThis program demonstrates Laplace point/edge detection using OpenCV function Laplacian()\n"
             "It captures from the camera of your choice: 0, 1, ... default 0\n"
             "Call:\n"
-            "./laplace -c=<camera #, default 0> -p=<index of the frame to be decoded/captured next>\n" << endl;
+         <<  argv[0] << " -c=<camera #, default 0> -p=<index of the frame to be decoded/captured next>\n" << endl;
 }
 
 enum {GAUSSIAN, BLUR, MEDIAN};
@@ -26,7 +26,7 @@ int smoothType = GAUSSIAN;
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser(argc, argv, "{ c | 0 | }{ p | | }");
-    help();
+    help(argv);
 
     VideoCapture cap;
     string camera = parser.get<string>("c");

@@ -15,7 +15,7 @@ int main( int argc, const char** argv )
 
     cout << "This program demonstrates the use of template matching with mask." << endl
          << endl
-         << "Available methods: https://docs.opencv.org/master/df/dfb/group__imgproc__object.html#ga3a7850640f1fe1f58fe91a2d7583695d" << endl
+         << "Available methods: https://docs.opencv.org/4.x/df/dfb/group__imgproc__object.html#ga3a7850640f1fe1f58fe91a2d7583695d" << endl
          << "    TM_SQDIFF = " << (int)TM_SQDIFF << endl
          << "    TM_SQDIFF_NORMED = " << (int)TM_SQDIFF_NORMED << endl
          << "    TM_CCORR = " << (int)TM_CCORR << endl

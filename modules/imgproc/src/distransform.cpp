@@ -270,7 +270,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
             if( !s[j] )
             {
                 tmp[j] = 0;
-                //assert( lls[j] != 0 );
+                //CV_Assert( lls[j] != 0 );
             }
             else
             {
@@ -795,7 +795,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
         if( maskSize == CV_DIST_MASK_3 )
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700) && 0  // disabled: https://github.com/opencv/opencv/issues/15904
             CV_IPP_CHECK()
             {
                 IppiSize roi = { src.cols, src.rows };

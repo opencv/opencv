@@ -1,8 +1,15 @@
 Random generator and text with OpenCV {#tutorial_random_generator_and_text}
 =====================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_basic_geometric_drawing}
 @next_tutorial{tutorial_gausian_median_blur_bilateral_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goals
 -----
@@ -23,7 +30,7 @@ Code
     to populate our image with a big number of geometric figures. Since we will be initializing them
     in a random fashion, this process will be automatic and made by using *loops* .
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp)
+    [here](https://github.com/opencv/opencv/blob/4.x/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp)
 
 Explanation
 -----------
@@ -210,12 +217,12 @@ Explanation
     @code{.cpp}
     image2 = image - Scalar::all(i)
     @endcode
-    So, **image2** is the substraction of **image** and **Scalar::all(i)**. In fact, what happens
-    here is that every pixel of **image2** will be the result of substracting every pixel of
+    So, **image2** is the subtraction of **image** and **Scalar::all(i)**. In fact, what happens
+    here is that every pixel of **image2** will be the result of subtracting every pixel of
     **image** minus the value of **i** (remember that for each pixel we are considering three values
     such as R, G and B, so each of them will be affected)
 
-    Also remember that the substraction operation *always* performs internally a **saturate**
+    Also remember that the subtraction operation *always* performs internally a **saturate**
     operation, which means that the result obtained will always be inside the allowed range (no
     negative and between 0 and 255 for our example).
 

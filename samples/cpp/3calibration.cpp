@@ -17,10 +17,10 @@ using namespace std;
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
-static void help()
+static void help(char** argv)
 {
         printf( "\nThis is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
-               "Usage: 3calibration\n"
+               "Usage: %s\n"
                "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
                "     -h=<board_height>        # the number of inner corners per another board dimension\n"
                "     [-s=<squareSize>]       # square size in some user-defined units (1 by default)\n"
@@ -29,7 +29,7 @@ static void help()
                "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
                "     [-p]                     # fix the principal point at the center\n"
                "     [input_data]             # input data - text file with a list of the images of the board\n"
-               "\n" );
+               "\n", argv[0] );
 
 }
 
@@ -190,7 +190,7 @@ int main( int argc, char** argv )
         "{zt||}{a|1|}{p||}{@input||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     boardSize.width = parser.get<int>("w");
@@ -207,7 +207,7 @@ int main( int argc, char** argv )
     inputFilename = parser.get<string>("@input");
     if (!parser.check())
     {
-        help();
+        help(argv);
         parser.printErrors();
         return -1;
     }

@@ -17,8 +17,8 @@ using namespace cv;
 int main(int argc, char** argv)
 {
     //! [load_image]
-    CommandLineParser parser(argc, argv, "{@input | ../data/notes.png | input image}");
-    Mat src = imread(parser.get<String>("@input"), IMREAD_COLOR);
+    CommandLineParser parser(argc, argv, "{@input | notes.png | input image}");
+    Mat src = imread( samples::findFile( parser.get<String>("@input") ), IMREAD_COLOR);
     if (src.empty())
     {
         cout << "Could not open or find the image!\n" << endl;

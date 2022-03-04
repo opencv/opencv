@@ -61,11 +61,6 @@
    unsigned. */
 #cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1
 
-/* Define to 1 if type `char' is unsigned and you are not using gcc.  */
-#ifndef __CHAR_UNSIGNED__
-  #cmakedefine __CHAR_UNSIGNED__ 1
-#endif
-
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
 

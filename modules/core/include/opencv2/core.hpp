@@ -50,7 +50,6 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/version.hpp"
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
@@ -73,8 +72,10 @@
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_logging Logging facilities
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
+        @defgroup core_utils_vsx VSX utilities
         @defgroup core_utils_softfloat Softfloat support
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
@@ -94,6 +95,10 @@
             @defgroup core_hal_intrin_impl Private implementation helpers
         @}
         @defgroup core_lowlevel_api Low-level API for external libraries / plugins
+    @}
+    @defgroup core_parallel Parallel Processing
+    @{
+        @defgroup core_parallel_backend Parallel backends API
     @}
 @}
  */
@@ -201,6 +206,9 @@ enum CovarFlags {
     COVAR_COLS      = 16
 };
 
+//! @addtogroup core_cluster
+//!  @{
+
 //! k-Means flags
 enum KmeansFlags {
     /** Select random initial centers in each attempt.*/
@@ -214,12 +222,18 @@ enum KmeansFlags {
     KMEANS_USE_INITIAL_LABELS = 1
 };
 
+//! @} core_cluster
+
+//! @addtogroup core_array
+//! @{
+
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
                    REDUCE_MIN = 3  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
                  };
 
+//! @} core_array
 
 /** @brief Swaps two matrices
 */
@@ -805,12 +819,45 @@ mixChannels , or split .
 @param minLoc pointer to the returned minimum location (in 2D case); NULL is used if not required.
 @param maxLoc pointer to the returned maximum location (in 2D case); NULL is used if not required.
 @param mask optional mask used to select a sub-array.
-@sa max, min, compare, inRange, extractImageCOI, mixChannels, split, Mat::reshape
+@sa max, min, reduceArgMin, reduceArgMax, compare, inRange, extractImageCOI, mixChannels, split, Mat::reshape
 */
 CV_EXPORTS_W void minMaxLoc(InputArray src, CV_OUT double* minVal,
                             CV_OUT double* maxVal = 0, CV_OUT Point* minLoc = 0,
                             CV_OUT Point* maxLoc = 0, InputArray mask = noArray());
 
+/**
+ * @brief Finds indices of min elements along provided axis
+ *
+ * @note
+ *      - If input or output array is not continuous, this function will create an internal copy.
+ *      - NaN handling is left unspecified, see patchNaNs().
+ *      - The returned index is always in bounds of input matrix.
+ *
+ * @param src input single-channel array.
+ * @param dst output array of type CV_32SC1 with the same dimensionality as src,
+ * except for axis being reduced - it should be set to 1.
+ * @param lastIndex whether to get the index of first or last occurrence of min.
+ * @param axis axis to reduce along.
+ * @sa reduceArgMax, minMaxLoc, min, max, compare, reduce
+ */
+CV_EXPORTS_W void reduceArgMin(InputArray src, OutputArray dst, int axis, bool lastIndex = false);
+
+/**
+ * @brief Finds indices of max elements along provided axis
+ *
+ * @note
+ *      - If input or output array is not continuous, this function will create an internal copy.
+ *      - NaN handling is left unspecified, see patchNaNs().
+ *      - The returned index is always in bounds of input matrix.
+ *
+ * @param src input single-channel array.
+ * @param dst output array of type CV_32SC1 with the same dimensionality as src,
+ * except for axis being reduced - it should be set to 1.
+ * @param lastIndex whether to get the index of first or last occurrence of max.
+ * @param axis axis to reduce along.
+ * @sa reduceArgMin, minMaxLoc, min, max, compare, reduce
+ */
+CV_EXPORTS_W void reduceArgMax(InputArray src, OutputArray dst, int axis, bool lastIndex = false);
 
 /** @brief Finds the global minimum and maximum in an array
 
@@ -872,7 +919,7 @@ a single row. 1 means that the matrix is reduced to a single column.
 @param rtype reduction operation that could be one of #ReduceTypes
 @param dtype when negative, the output vector will have the same type as the input matrix,
 otherwise, its type will be CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()).
-@sa repeat
+@sa repeat, reduceArgMin, reduceArgMax
 */
 CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, int dtype = -1);
 
@@ -1612,7 +1659,9 @@ elements.
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
-/** @brief converts NaN's to the given number
+/** @brief converts NaNs to the given number
+@param a input/output matrix (CV_32F type).
+@param val value to convert the NaNs
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 

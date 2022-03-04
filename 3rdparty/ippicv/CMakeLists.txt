@@ -17,7 +17,7 @@ file(GLOB lib_hdrs ${IPP_IW_PATH}/include/*.h ${IPP_IW_PATH}/include/iw/*.h ${IP
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
-add_library(${IPP_IW_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+add_library(${IPP_IW_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 
 if(UNIX)
   if(CV_GCC OR CV_CLANG OR CV_ICC)
@@ -41,5 +41,5 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${IPP_IW_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${IPP_IW_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()

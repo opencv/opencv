@@ -1,6 +1,17 @@
 Cross compilation for ARM based Linux systems {#tutorial_arm_crosscompile_with_cmake}
 =============================================
 
+@prev_tutorial{tutorial_macos_install}
+@next_tutorial{tutorial_building_tegra_cuda}
+
+|    |    |
+| -: | :- |
+| Original author |  Alexander Smorkalov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
+
 This steps are tested on Ubuntu Linux 12.04, but should work for other Linux distributions. I case
 of other distributions package names and names of cross compilation tools may differ. There are
 several popular EABI versions that are used on ARM platform. This tutorial is written for *gnueabi*

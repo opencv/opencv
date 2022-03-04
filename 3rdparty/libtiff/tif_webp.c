@@ -267,6 +267,12 @@ TWebPPreDecode(TIFF* tif, uint16 s)
       segment_height = td->td_rowsperstrip;
   }
 
+  if( segment_width > 16383 || segment_height > 16383 ) {
+      TIFFErrorExt(tif->tif_clientdata, module,
+                   "WEBP maximum image dimensions are 16383 x 16383.");
+      return 0;
+  }
+
   if( (sp->state & LSTATE_INIT_DECODE) == 0 )
       tif->tif_setupdecode(tif);
       
@@ -333,7 +339,7 @@ TWebPSetupEncode(TIFF* tif)
   }
   
   /* check bits per sample and data type */
-  if ((nBitsPerSample != 8) && (sampleFormat != 1)) {
+  if ((nBitsPerSample != 8) || (sampleFormat != SAMPLEFORMAT_UINT)) {
     TIFFErrorExt(tif->tif_clientdata, module,
                 "WEBP driver requires 8 bit unsigned data");
     return 0;
@@ -349,27 +355,31 @@ TWebPSetupEncode(TIFF* tif)
 
   sp->state |= LSTATE_INIT_ENCODE;
 
+  if (!WebPPictureInit(&sp->sPicture)) {
+    TIFFErrorExt(tif->tif_clientdata, module,
+        "Error initializing WebP picture.");
+    return 0;
+  }
+
   if (!WebPConfigInitInternal(&sp->sEncoderConfig, WEBP_PRESET_DEFAULT,
-                              sp->quality_level,
+                              (float)sp->quality_level,
                               WEBP_ENCODER_ABI_VERSION)) {
     TIFFErrorExt(tif->tif_clientdata, module,
       "Error creating WebP encoder configuration.");
     return 0;
   }
 
-#if WEBP_ENCODER_ABI_VERSION >= 0x0100
-  sp->sEncoderConfig.lossless = sp->lossless;
-#endif
+  // WebPConfigInitInternal above sets lossless to false
+  #if WEBP_ENCODER_ABI_VERSION >= 0x0100
+    sp->sEncoderConfig.lossless = sp->lossless;
+    if (sp->lossless) {
+      sp->sPicture.use_argb = 1;
+    }
+  #endif
 
   if (!WebPValidateConfig(&sp->sEncoderConfig)) {
     TIFFErrorExt(tif->tif_clientdata, module,
       "Error with WebP encoder configuration.");
-    return 0;
-  }
-
-  if (!WebPPictureInit(&sp->sPicture)) {
-    TIFFErrorExt(tif->tif_clientdata, module,
-        "Error initializing WebP picture.");
     return 0;
   }
 
@@ -415,6 +425,12 @@ TWebPPreEncode(TIFF* tif, uint16 s)
   /* set up buffer for raw data */
   /* given above check and that nSamples <= 4, buffer_size is <= 1 GB */
   sp->buffer_size = segment_width * segment_height * sp->nSamples;
+  
+  if (sp->pBuffer != NULL) {
+      _TIFFfree(sp->pBuffer);
+      sp->pBuffer = NULL;    
+  }
+  
   sp->pBuffer = _TIFFmalloc(sp->buffer_size);
   if( !sp->pBuffer) {
       TIFFErrorExt(tif->tif_clientdata, module, "Cannot allocate buffer");
@@ -460,7 +476,7 @@ TWebPPostEncode(TIFF* tif)
                     "WebPPictureImportRGB() failed");
       return 0;
   }
-
+  
   if (!WebPEncode(&sp->sEncoderConfig, &sp->sPicture)) {
 
 #if WEBP_ENCODER_ABI_VERSION >= 0x0100
@@ -540,15 +556,13 @@ TWebPCleanup(TIFF* tif)
   }
   
   if (sp->pBuffer != NULL) {
-    _TIFFfree(sp->pBuffer);
-    sp->pBuffer = NULL;
+      _TIFFfree(sp->pBuffer);
+      sp->pBuffer = NULL;    
   }
 
-  if (tif->tif_data) {
-    _TIFFfree(tif->tif_data);
-    tif->tif_data = NULL;
-  }
-  
+  _TIFFfree(tif->tif_data);
+  tif->tif_data = NULL;
+
   _TIFFSetDefaultCompressionState(tif);
 }
 
@@ -570,6 +584,9 @@ TWebPVSetField(TIFF* tif, uint32 tag, va_list ap)
   case TIFFTAG_WEBP_LOSSLESS:
     #if WEBP_ENCODER_ABI_VERSION >= 0x0100
     sp->lossless = va_arg(ap, int);
+    if (sp->lossless){
+      sp->quality_level = 100;
+    }
     return 1;
     #else
       TIFFErrorExt(tif->tif_clientdata, module,
@@ -617,6 +634,7 @@ TIFFInitWebP(TIFF* tif, int scheme)
   static const char module[] = "TIFFInitWebP";
   WebPState* sp;
 
+  (void)scheme;
   assert( scheme == COMPRESSION_WEBP );
 
   /*
@@ -645,7 +663,7 @@ TIFFInitWebP(TIFF* tif, int scheme)
   tif->tif_tagmethods.vsetfield = TWebPVSetField;	/* hook for codec tags */
 
   /* Default values for codec-specific fields */
-  sp->quality_level = 75.0f;		/* default comp. level */
+  sp->quality_level = 75;		/* default comp. level */
   sp->lossless = 0; /* default to false */
   sp->state = 0;
   sp->nSamples = 0;

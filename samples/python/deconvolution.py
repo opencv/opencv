@@ -15,7 +15,7 @@ Usage:
 
   Use sliders to adjust PSF paramitiers.
   Keys:
-    SPACE - switch btw linear/cirular PSF
+    SPACE - switch btw linear/circular PSF
     ESC   - exit
 
 Examples:

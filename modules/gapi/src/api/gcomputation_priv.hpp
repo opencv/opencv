@@ -8,20 +8,45 @@
 #ifndef OPENCV_GAPI_GCOMPUTATION_PRIV_HPP
 #define OPENCV_GAPI_GCOMPUTATION_PRIV_HPP
 
+#include <ade/graph.hpp>
+
+#include "opencv2/gapi/util/variant.hpp"
+
 #include "opencv2/gapi.hpp"
 #include "opencv2/gapi/gcall.hpp"
 
 #include "opencv2/gapi/util/variant.hpp"
 
+#include "backends/common/serialization.hpp"
+
 namespace cv {
+
+struct GraphInfo
+{
+    using Ptr = std::shared_ptr<GraphInfo>;
+    cv::GTypesInfo inputs;
+    cv::GTypesInfo outputs;
+};
 
 class GComputation::Priv
 {
 public:
-    GCompiled   m_lastCompiled;
-    GMetaArgs   m_lastMetas; // TODO: make GCompiled remember its metas?
-    GProtoArgs  m_ins;
-    GProtoArgs  m_outs;
+    struct Expr {
+        cv::GProtoArgs m_ins;
+        cv::GProtoArgs m_outs;
+    };
+
+    using Dump = cv::gapi::s11n::GSerialized;
+
+    using Shape = cv::util::variant
+        < Expr    // An expression-based graph
+        , Dump    // A deserialized graph
+        >;
+
+    GCompiled      m_lastCompiled;
+    GMetaArgs      m_lastMetas; // TODO: make GCompiled remember its metas?
+    Shape          m_shape;
+    GraphInfo::Ptr m_info;      // NB: Used by python bridge
 };
 
 }

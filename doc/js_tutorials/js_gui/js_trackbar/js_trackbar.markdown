@@ -36,7 +36,7 @@ let x = document.getElementById('myRange');
 @endcode
 
 As a trackbar, the range element need a trackbar name, the default value, minimum value, maximum value,
-step and the callback function which is executed everytime trackbar value changes. The callback function
+step and the callback function which is executed every time trackbar value changes. The callback function
 always has a default argument, which is the trackbar position. Additionally, a text element to display the
 trackbar value is fine. In our case, we can create the trackbar as below:
 @code{.html}

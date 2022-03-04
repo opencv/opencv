@@ -1,6 +1,17 @@
 OpenCV4Android SDK {#tutorial_O4A_SDK}
 ==================
 
+@prev_tutorial{tutorial_android_dev_intro}
+@next_tutorial{tutorial_dev_with_OCV_on_Android}
+
+|    |    |
+| -: | :- |
+| Original author | Vsevolod Glumov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
+
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
 This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple Mac
@@ -17,7 +28,7 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
-forum](http://answers.opencv.org). We'll do our best to help you out.
+forum](https://forum.opencv.org). We'll do our best to help you out.
 
 General info
 ------------
@@ -71,7 +82,7 @@ The structure of package contents looks as follows:
 
 -   `doc` folder contains various OpenCV documentation in PDF format. It's also available online at
     <http://docs.opencv.org>.
-    @note The most recent docs (nightly build) are at <http://docs.opencv.org/master>. Generally, it's more
+    @note The most recent docs (nightly build) are at <http://docs.opencv.org/4.x>. Generally, it's more
     up-to-date, but can refer to not-yet-released functionality.
     @todo I'm not sure that this is the best place to talk about OpenCV Manager
 

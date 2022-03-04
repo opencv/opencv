@@ -160,14 +160,7 @@ TEST(Core_Ptr, assignment)
 
     {
         Ptr<Reporter> p1(new Reporter(&deleted1));
-#if defined(__clang__) && (__clang_major__ >= 9) && !defined(__APPLE__)
-CV_DO_PRAGMA(GCC diagnostic push)
-CV_DO_PRAGMA(GCC diagnostic ignored "-Wself-assign-overloaded")
-#endif
-        p1 = p1;
-#if defined(__clang__) && (__clang_major__ >= 9) && !defined(__APPLE__)
-CV_DO_PRAGMA(GCC diagnostic pop)
-#endif
+        p1 = *&p1;
         EXPECT_FALSE(deleted1);
     }
 

@@ -30,6 +30,8 @@
 #ifndef OPENCV_FLANN_ALL_INDICES_H_
 #define OPENCV_FLANN_ALL_INDICES_H_
 
+//! @cond IGNORED
+
 #include "general.h"
 
 #include "nn_index.h"
@@ -80,7 +82,7 @@ struct index_creator
             nnIndex = new LshIndex<Distance>(dataset, params, distance);
             break;
         default:
-            throw FLANNException("Unknown index type");
+            FLANN_THROW(cv::Error::StsBadArg, "Unknown index type");
         }
 
         return nnIndex;
@@ -109,7 +111,7 @@ struct index_creator<False,VectorSpace,Distance>
             nnIndex = new LshIndex<Distance>(dataset, params, distance);
             break;
         default:
-            throw FLANNException("Unknown index type");
+            FLANN_THROW(cv::Error::StsBadArg, "Unknown index type");
         }
 
         return nnIndex;
@@ -128,6 +130,9 @@ struct index_creator<False,False,Distance>
         case FLANN_INDEX_LINEAR:
             nnIndex = new LinearIndex<Distance>(dataset, params, distance);
             break;
+        case FLANN_INDEX_KMEANS:
+            nnIndex = new KMeansIndex<Distance>(dataset, params, distance);
+            break;
         case FLANN_INDEX_HIERARCHICAL:
             nnIndex = new HierarchicalClusteringIndex<Distance>(dataset, params, distance);
             break;
@@ -135,7 +140,7 @@ struct index_creator<False,False,Distance>
             nnIndex = new LshIndex<Distance>(dataset, params, distance);
             break;
         default:
-            throw FLANNException("Unknown index type");
+            FLANN_THROW(cv::Error::StsBadArg, "Unknown index type");
         }
 
         return nnIndex;
@@ -151,5 +156,7 @@ NNIndex<Distance>* create_index_by_type(const Matrix<typename Distance::ElementT
 }
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_ALL_INDICES_H_ */

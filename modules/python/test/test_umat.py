@@ -4,7 +4,21 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
+import os
+
 from tests_common import NewOpenCVTests
+
+
+def load_exposure_seq(path):
+    images = []
+    times = []
+    with open(os.path.join(path, 'list.txt'), 'r') as list_file:
+        for line in list_file.readlines():
+            name, time = line.split()
+            images.append(cv.imread(os.path.join(path, name)))
+            times.append(1. / float(time))
+    return images, times
+
 
 class UMat(NewOpenCVTests):
 
@@ -84,6 +98,23 @@ class UMat(NewOpenCVTests):
         for _p1_mask_err_umat in [_p1_mask_err_umat1, _p1_mask_err_umat2]:
             for data_umat0, data_umat in zip(_p1_mask_err_umat0[:2], _p1_mask_err_umat[:2]):
                 self.assertTrue(np.allclose(data_umat0, data_umat))
+
+    def test_umat_merge_mertens(self):
+        if self.extraTestDataPath is None:
+            self.fail('Test data is not available')
+
+        test_data_path = os.path.join(self.extraTestDataPath, 'cv', 'hdr')
+
+        images, _ = load_exposure_seq(os.path.join(test_data_path, 'exposures'))
+
+        merge = cv.createMergeMertens()
+        mat_result = merge.process(images)
+
+        umat_images = [cv.UMat(img) for img in images]
+        umat_result = merge.process(umat_images)
+
+        self.assertTrue(np.allclose(umat_result.get(), mat_result))
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
