@@ -46,7 +46,8 @@ const std::string keys =
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
-    "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}";
+    "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
+    "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }";
 
 namespace {
 bool is_gpu(const std::string &device_name) {
@@ -64,6 +65,28 @@ std::string get_weights_path(const std::string &model_path) {
         });
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
+}
+
+cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
+    cv::Rect rv;
+    char delim[3];
+
+    std::stringstream is(rc);
+    is >> rv.x >> delim[0] >> rv.y >> delim[1] >> rv.width >> delim[2] >> rv.height;
+    if (is.bad()) {
+        return cv::util::optional<cv::Rect>(); // empty value
+    }
+    const auto is_delim = [](char c) {
+        return c == ',';
+    };
+    if (!std::all_of(std::begin(delim), std::end(delim), is_delim)) {
+        return cv::util::optional<cv::Rect>(); // empty value
+
+    }
+    if (rv.x < 0 || rv.y < 0 || rv.width <= 0 || rv.height <= 0) {
+        return cv::util::optional<cv::Rect>(); // empty value
+    }
+    return cv::util::make_optional(std::move(rv));
 }
 
 #ifdef HAVE_INF_ENGINE
@@ -127,9 +150,14 @@ using GRect       = cv::GOpaque<cv::Rect>;
 using GSize       = cv::GOpaque<cv::Size>;
 using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
 
-G_API_OP(LocateROI, <GRect(GSize, std::reference_wrapper<const std::string>)>, "sample.custom.locate-roi") {
-    static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &,
-                                   std::reference_wrapper<const std::string>) {
+G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-ssd") {
+    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GOpaqueDesc &, const cv::GOpaqueDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
+G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
+    static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &) {
         return cv::empty_gopaque_desc();
     }
 };
@@ -151,29 +179,18 @@ GAPI_OCV_KERNEL(OCVLocateROI, LocateROI) {
     // the most convenient aspect ratio for detectors to use)
 
     static void run(const cv::Size& in_size,
-                    std::reference_wrapper<const std::string> device_id_ref,
                     cv::Rect &out_rect) {
 
         // Identify the central point & square size (- some padding)
-        // NB: GPU plugin in InferenceEngine doesn't support ROI at now
-        if (!is_gpu(device_id_ref.get())) {
-            const auto center = cv::Point{in_size.width/2, in_size.height/2};
-            auto sqside = std::min(in_size.width, in_size.height);
+        const auto center = cv::Point{in_size.width/2, in_size.height/2};
+        auto sqside = std::min(in_size.width, in_size.height);
 
-            // Now build the central square ROI
-            out_rect = cv::Rect{ center.x - sqside/2
-                                , center.y - sqside/2
-                                , sqside
-                                , sqside
-                                };
-        } else {
-            // use whole frame for GPU device
-            out_rect = cv::Rect{ 0
-                                , 0
-                                , in_size.width
-                                , in_size.height
-                                };
-        }
+        // Now build the central square ROI
+        out_rect = cv::Rect{ center.x - sqside/2
+                             , center.y - sqside/2
+                             , sqside
+                             , sqside
+                            };
     }
 };
 
@@ -190,6 +207,55 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
         out_prims.emplace_back(cvt(in_roi, CV_RGB(0,255,255))); // cyan
         for (auto &&rc : in_face_rcs) {
             out_prims.emplace_back(cvt(rc, CV_RGB(0,255,0)));   // green
+        }
+    }
+};
+
+GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
+    static void run(const cv::Mat &in_ssd_result,
+                    const cv::Rect &in_roi,
+                    const cv::Size &in_parent_size,
+                    std::vector<cv::Rect> &out_objects) {
+        const auto &in_ssd_dims = in_ssd_result.size;
+        CV_Assert(in_ssd_dims.dims() == 4u);
+
+        const int MAX_PROPOSALS = in_ssd_dims[2];
+        const int OBJECT_SIZE   = in_ssd_dims[3];
+        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
+
+        const cv::Size up_roi = in_roi.size();
+        const cv::Rect surface({0,0}, in_parent_size);
+
+        out_objects.clear();
+
+        const float *data = in_ssd_result.ptr<float>();
+        for (int i = 0; i < MAX_PROPOSALS; i++) {
+            const float image_id   = data[i * OBJECT_SIZE + 0];
+            const float label      = data[i * OBJECT_SIZE + 1];
+            const float confidence = data[i * OBJECT_SIZE + 2];
+            const float rc_left    = data[i * OBJECT_SIZE + 3];
+            const float rc_top     = data[i * OBJECT_SIZE + 4];
+            const float rc_right   = data[i * OBJECT_SIZE + 5];
+            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
+            (void) label; // unused
+
+            if (image_id < 0.f) {
+                break;    // marks end-of-detections
+            }
+            if (confidence < 0.5f) {
+                continue; // skip objects with low confidence
+            }
+
+            // map relative coordinates to the original image scale
+            // taking the ROI into account
+            cv::Rect rc;
+            rc.x      = static_cast<int>(rc_left   * up_roi.width);
+            rc.y      = static_cast<int>(rc_top    * up_roi.height);
+            rc.width  = static_cast<int>(rc_right  * up_roi.width)  - rc.x;
+            rc.height = static_cast<int>(rc_bottom * up_roi.height) - rc.y;
+            rc.x += in_roi.x;
+            rc.y += in_roi.y;
+            out_objects.emplace_back(rc & surface);
         }
     }
 };
@@ -212,6 +278,7 @@ int main(int argc, char *argv[]) {
     // get file name
     const auto file_path = cmd.get<std::string>("input");
     const auto output = cmd.get<std::string>("output");
+    const auto opt_roi = parse_roi(cmd.get<std::string>("roi"));
     const auto face_model_path = cmd.get<std::string>("facem");
     const auto streaming_queue_capacity = cmd.get<uint32_t>("streaming_queue_capacity");
     const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
@@ -325,8 +392,12 @@ int main(int argc, char *argv[]) {
     }
 #endif // HAVE_INF_ENGINE
 
+    // Turn on VPP preproc
+    face_net.cfgPreprocessingDeviceContext(accel_device_ptr, accel_ctx_ptr);
+
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
+        , custom::OCVParseSSD
         , custom::OCVBBoxes>();
     auto networks = cv::gapi::networks(face_net);
     auto face_detection_args = cv::compile_args(networks, kernels);
@@ -335,7 +406,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Create source
-    cv::Ptr<cv::gapi::wip::IStreamSource> cap;
+    cv::gapi::wip::IStreamSource::Ptr cap;
     try {
         if (is_gpu(device_id)) {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
@@ -353,29 +424,42 @@ int main(int argc, char *argv[]) {
 
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
+    auto inputs = cv::gin(cap);
 
     // Now build the graph
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
-    auto roi = custom::LocateROI::on(size, std::cref(device_id));
-    auto blob = cv::gapi::infer<custom::FaceDetector>(in);
-    cv::GArray<cv::Rect> rcs = cv::gapi::parseSSD(blob, size, 0.5f, true, true);
-    auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
-    auto out = cv::gapi::streaming::BGR(out_frame);
-
     cv::GStreamingCompiled pipeline;
-    try {
+    if (opt_roi.has_value()) {
+        // Use the value provided by user
+        std::cout << "Will run inference for static region "
+                  << opt_roi.value()
+                  << " only"
+                  << std::endl;
+        cv::GOpaque<cv::Rect> in_roi;
+        auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
+        cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, in_roi, size);
+        auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, in_roi));
+        auto out = cv::gapi::streaming::BGR(out_frame);
+        pipeline = cv::GComputation(cv::GIn(in, in_roi), cv::GOut(out))
+            .compileStreaming(std::move(face_detection_args));
+
+        // Since the ROI to detect is manual, make it part of the input vector
+        inputs.push_back(cv::gin(opt_roi.value())[0]);
+    } else {
+        // Automatically detect ROI to infer. Make it output parameter
+        std::cout << "ROI is not set or invalid. Locating it automatically"
+                  << std::endl;
+        cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(size);
+        auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
+        cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, roi, size);
+        auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
+        auto out = cv::gapi::streaming::BGR(out_frame);
         pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
                 .compileStreaming(std::move(face_detection_args));
-    } catch (const std::exception& ex) {
-        std::cerr << "Exception occured during pipeline construction: " << ex.what() << std::endl;
-        return -1;
     }
     // The execution part
-
-    // TODO USE may set pool size from outside and set queue_capacity size,
-    // compile arg: cv::gapi::streaming::queue_capacity
-    pipeline.setSource(std::move(cap));
+    pipeline.setSource(std::move(inputs));
     pipeline.start();
 
     size_t frames = 0u;

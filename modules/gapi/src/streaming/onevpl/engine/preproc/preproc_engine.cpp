@@ -455,7 +455,7 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
         case MFX_WRN_IN_EXECUTION:
-            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_IN_EXECUTION");
+            GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "] got MFX_WRN_IN_EXECUTION");
             return ExecutionStatus::Continue;
         default:
             GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status) <<
