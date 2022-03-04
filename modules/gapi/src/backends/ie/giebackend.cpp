@@ -699,11 +699,7 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
                         ctx.uu.preproc_engine_impl->is_applicable(frame);
         if (param.has_value()) {
             GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded remote frame will be used");
-
-            auto inputs = ctx.uu.net.getInputsInfo();
             const auto &input_name = ctx.uu.params.input_names.at(0);
-            auto ii = inputs.at(input_name);
-
             const cv::GFrameDesc& expected_net_input_descr =
                     ctx.uu.net_input_params.get_param(input_name);
             cv::gapi::wip::pp_session pp_sess =
@@ -751,6 +747,7 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
                                  cv::gapi::ie::TraitAs hint,
+                                 const std::string& layer_name,
                                  const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
                                  bool* out_is_preprocessed = nullptr) {
@@ -767,13 +764,8 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                             ctx.uu.preproc_engine_impl->is_applicable(frame);
                 if (param.has_value()) {
                     GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded frame will be used");
-
-                    auto inputs = ctx.uu.net.getInputsInfo();
-                    const auto &input_name = ctx.uu.params.input_names.at(0);
-                    auto ii = inputs.at(input_name);
-
                     const cv::GFrameDesc& expected_net_input_descr =
-                            ctx.uu.net_input_params.get_param(input_name);
+                            ctx.uu.net_input_params.get_param(layer_name);
                     cv::gapi::wip::pp_session pp_sess =
                             ctx.uu.preproc_engine_impl->initialize_preproc(param.value(), expected_net_input_descr);
 
@@ -1355,6 +1347,7 @@ struct Infer: public cv::detail::KernelTag {
                                 ? cv::gapi::ie::TraitAs::IMAGE : cv::gapi::ie::TraitAs::TENSOR;
 
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint,
+                                                                  layer_name,
                                                                   cv::util::optional<cv::Rect>{});
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
@@ -1464,6 +1457,7 @@ struct InferROI: public cv::detail::KernelTag {
                         bool preprocessed = false;
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                        *(ctx->uu.params.input_names.begin()),
                                         cv::util::make_optional(this_roi),
                                         slot_ptr, &preprocessed);
                         if (!preprocessed) {
@@ -1569,6 +1563,7 @@ struct InferList: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                              ctx->uu.params.input_names[0u],
                                               cv::util::optional<cv::Rect>{});
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
@@ -1717,6 +1712,7 @@ struct InferList2: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE,
+                                           ctx->uu.params.input_names[0u],
                                            cv::util::optional<cv::Rect>{});
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
         if (list_size == 0u) {
