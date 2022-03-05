@@ -28,7 +28,7 @@ namespace wip {
 
 template<typename SpecificPreprocEngine, typename ...PreprocEngineArgs >
 std::unique_ptr<SpecificPreprocEngine>
-IPreprocEngine::create_preproc_engine_impl(const PreprocEngineArgs& ...args) {
+IPreprocEngine::create_preproc_engine_impl(const PreprocEngineArgs& ...) {
     GAPI_Assert(false && "Unsupported ");
 }
 
@@ -38,6 +38,9 @@ IPreprocEngine::create_preproc_engine_impl(const std::string &device_id,
                                            const cv::util::optional<void*> &device_ptr,
                                            const cv::util::optional<void*> &context_ptr) {
     using namespace onevpl;
+    cv::util::suppress_unused_warning(device_id);
+    cv::util::suppress_unused_warning(device_ptr);
+    cv::util::suppress_unused_warning(context_ptr);
     std::unique_ptr<VPPPreprocDispatcher> dispatcher(new VPPPreprocDispatcher);
 #ifdef HAVE_ONEVPL
     if (device_ptr.value() && context_ptr.value()) {
@@ -66,7 +69,7 @@ IPreprocEngine::create_preproc_engine_impl(const std::string &device_id,
                         std::unique_ptr<VPLAccelerationPolicy>{
                                 new VPLCPUAccelerationPolicy(
                                     std::make_shared<CfgParamDeviceSelector>(CfgParams{}))});
-        GAPI_LOG_INFO(nullptr, "VPP preprocessing engine created");
+        GAPI_LOG_INFO(nullptr, "CPU VPP preprocessing engine created");
     }
 #endif // HAVE_ONEVPL
     return dispatcher;
