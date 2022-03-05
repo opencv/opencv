@@ -2082,7 +2082,7 @@ TEST_P(Layer_Test_Slice, variable_input_shape)
     int targetId = get<1>(GetParam());
 
     int begin[] = {0, 0, 0, 0};
-    int end[] = {-1, -1, -1, -1};
+    int end[] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
 
     Net net;
     LayerParams lp;
