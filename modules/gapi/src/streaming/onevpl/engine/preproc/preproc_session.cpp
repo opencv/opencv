@@ -60,6 +60,24 @@ void VPPPreprocSession::init_surface_pool(VPLAccelerationPolicy::pool_key_t key)
 const mfxFrameInfo& VPPPreprocSession::get_video_param() const {
     return mfx_vpp_out_param.vpp.Out;
 }
+
+VPPPreprocSession::outgoing_task::outgoing_task(mfxSyncPoint acquired_sync_handle,
+                                                mfxFrameSurface1* acquired_surface_ptr,
+                                                VPPPreprocSession::incoming_task &&in) :
+    sync_handle(acquired_sync_handle),
+    vpp_surface_ptr(acquired_surface_ptr),
+    original_surface_ptr(in.decoded_surface_ptr),
+    original_frame_info(std::move(in.decoded_frame_info)),
+    original_frame(in.decoded_frame_copy) {
+}
+
+void VPPPreprocSession::outgoing_task::release_frame() {
+    // restore initial surface params
+    memcpy(&(original_surface_ptr->Info),
+           &original_frame_info, sizeof(Surface::info_t));
+    // release references on frame adapter
+    original_frame = cv::MediaFrame();
+}
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

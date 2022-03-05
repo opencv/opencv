@@ -47,7 +47,8 @@ public:
                                   const GFrameDesc& required_frame_descr) override;
 
     cv::MediaFrame run_sync(const pp_session &session_handle,
-                            const cv::MediaFrame& in_frame) override;
+                            const cv::MediaFrame& in_frame,
+                            const cv::util::optional<cv::Rect> &opt_roi) override;
 
 private:
     std::map<mfxFrameInfo, session_ptr_type, FrameInfoComparator> preproc_session_map;
