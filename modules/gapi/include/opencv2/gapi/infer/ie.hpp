@@ -383,7 +383,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -401,7 +401,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 

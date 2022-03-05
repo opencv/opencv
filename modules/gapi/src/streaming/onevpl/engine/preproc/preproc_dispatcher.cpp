@@ -8,12 +8,12 @@
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
 
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_session.hpp"
-#include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
 
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
