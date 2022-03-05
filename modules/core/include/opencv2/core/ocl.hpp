@@ -748,7 +748,6 @@ public:
         image or src will be reflected in both objects.
     */
     explicit Image2D(const UMat &src, bool norm = false, bool alias = false);
-
     Image2D(const Image2D & i);
     ~Image2D();
 

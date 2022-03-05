@@ -13,6 +13,7 @@
 #include <opencv2/gapi/gpu/ggpukernel.hpp>
 #include "opencl_kernels_test_gapi.hpp"
 
+
 namespace cv
 {
 
