@@ -1681,10 +1681,8 @@ void TFImporter::parseStridedSlice(tensorflow::GraphDef& net, const tensorflow::
     int end_mask = getLayerAttr(layer, "end_mask").i();
     for (int i = 0; i < num; ++i)
     {
-        if (ends.at<int>(i) < 0)
-            ends.at<int>(i) -= 1;
         if (end_mask & (1 << i))
-            ends.at<int>(i) = -1;
+            ends.at<int>(i) = INT_MAX;
         if (strides.at<int>(i) != 1)
             CV_Error(Error::StsNotImplemented,
                      format("StridedSlice with stride %d", strides.at<int>(i)));
@@ -1982,15 +1980,16 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     int64_t pads[8];
     bool explicit_pads = getExplicitPadding(layerParams, layer, pads);
     int64_t begs[4] = {};
-    int64_t ends[4] = {-1, -1, -1, -1};
+    int64_t ends[4] = {};
     if (explicit_pads)
     {
         name += "/deconv";
         layerParams.set("pad_mode", "VALID");
+        ends[0] = ends[1] = INT_MAX;
         for (int i = 2; i < 4; ++i) // begins=[0, 0, a, b], ends=[-1, -1, c, d]
         {
             begs[i] = pads[2*i];
-            ends[i] = -1 - pads[2*i + 1];
+            ends[i] = -pads[2*i + 1];
         }
     }
 
@@ -2010,8 +2009,8 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     const int strideX = layerParams.get<int>("stride_w");
     Mat outShape = getTensorContent(getConstBlob(layer, value_id, 0));
     int shift = (getDataLayout(layer) == DATA_LAYOUT_NCHW);
-    const int outH = outShape.at<int>(1 + shift) + begs[2] - 1 - ends[2];
-    const int outW = outShape.at<int>(2 + shift) + begs[3] - 1 - ends[3];
+    const int outH = outShape.at<int>(1 + shift) + begs[2] - ends[2];
+    const int outW = outShape.at<int>(2 + shift) + begs[3] - ends[3];
     if (layerParams.get<String>("pad_mode") == "SAME")
     {
         layerParams.set("adj_w", (outW - 1) % strideX);
