@@ -27,7 +27,8 @@ struct IPreprocEngine {
         initialize_preproc(const pp_params& initial_frame_param,
                            const GFrameDesc& required_frame_descr) = 0;
     virtual cv::MediaFrame
-        run_sync(const pp_session &sess, const cv::MediaFrame& in_frame) = 0;
+        run_sync(const pp_session &sess, const cv::MediaFrame& in_frame,
+                 const cv::util::optional<cv::Rect> &opt_roi = {}) = 0;
 };
 } // namespace wip
 } // namespace gapi

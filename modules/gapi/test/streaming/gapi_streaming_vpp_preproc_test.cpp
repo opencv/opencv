@@ -181,6 +181,8 @@ using acceleration_t    = int;
 using out_frame_info_t  = cv::GFrameDesc;
 using preproc_args_t    = std::tuple<source_t, decoder_t, acceleration_t, out_frame_info_t>;
 
+static cv::util::optional<cv::Rect> empty_roi;
+
 class VPPPreprocParams : public ::testing::TestWithParam<preproc_args_t> {};
 
 preproc_args_t files[] = {
@@ -246,7 +248,9 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
                                                                  required_frame_param);
 
     // 2) make preproc using incoming decoded frame & preproc session
-    cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess, first_decoded_frame);
+    cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess,
+                                                            first_decoded_frame,
+                                                            empty_roi);
     cv::GFrameDesc first_outcome_pp_desc = first_pp_frame.desc();
     ASSERT_FALSE(first_frame_decoded_desc == first_outcome_pp_desc);
 
@@ -278,7 +282,9 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
             ASSERT_EQ(pp_sess.get<EngineSession>().get(),
                       first_pp_sess.get<EngineSession>().get());
 
-            cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
+            cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess,
+                                                              decoded_frame,
+                                                              empty_roi);
             cv::GFrameDesc pp_desc = pp_frame.desc();
             ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
             in_progress = false;
@@ -291,8 +297,95 @@ TEST(OneVPL_Source_PreprocEngine, functional_single_thread)
     ASSERT_NE(frames_processed_count, 1);
 }
 
+void decode_function(cv::gapi::wip::onevpl::VPLLegacyDecodeEngine &decode_engine,
+                     cv::gapi::wip::onevpl::ProcessingEngineBase::session_ptr sess_ptr,
+                     SafeQueue &queue, size_t &decoded_number) {
+    // decode first frame
+    {
+        cv::MediaFrame decoded_frame;
+        ASSERT_NO_THROW(decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
+        queue.push(std::move(decoded_frame));
+    }
 
-TEST_P(VPPPreprocParams, functional_different_threads)
+    // launch pipeline
+    try {
+        while(true) {
+            queue.push(extract_decoded_frame(sess_ptr->session, decode_engine));
+            decoded_number++;
+        }
+    } catch (...) {}
+
+    // send stop
+    queue.push_stop();
+}
+
+void preproc_function(cv::gapi::wip::onevpl::VPPPreprocEngine &preproc_engine, SafeQueue&queue,
+                      size_t &preproc_number, const out_frame_info_t &required_frame_param,
+                      const cv::util::optional<cv::Rect> &roi_rect = {}) {
+    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
+    // create preproc session based on frame description & network info
+    cv::MediaFrame first_decoded_frame = queue.pop();
+    cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(first_decoded_frame);
+    ASSERT_TRUE(first_pp_params.has_value());
+    pp_session first_pp_sess =
+                    preproc_engine.initialize_preproc(first_pp_params.value(),
+                                                      required_frame_param);
+
+    // make preproc using incoming decoded frame & preproc session
+    cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess,
+                                                            first_decoded_frame,
+                                                            roi_rect);
+    cv::GFrameDesc first_outcome_pp_desc = first_pp_frame.desc();
+
+    // do not hold media frames because they share limited DX11 surface pool resources
+    first_decoded_frame = cv::MediaFrame();
+    first_pp_frame = cv::MediaFrame();
+
+    // launch pipeline
+    bool in_progress = false;
+    // let's allow counting of preprocessed frames to check this value later:
+    // Currently, it looks redundant to implement any kind of gracefull shutdown logic
+    // in this test - so let's apply agreement that media source is processed
+    // succesfully when preproc_number != 1 in result.
+    // Specific validation logic which adhere to explicit counter value may be implemented
+    // in particular test scope
+    preproc_number = 1;
+    try {
+        while(true) {
+            cv::MediaFrame decoded_frame = queue.pop();
+            if (SafeQueue::is_stop(decoded_frame)) {
+                break;
+            }
+            in_progress = true;
+
+            cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
+            ASSERT_TRUE(params.has_value());
+            ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
+
+            pp_session pp_sess = preproc_engine.initialize_preproc(params.value(),
+                                                                   required_frame_param);
+            ASSERT_EQ(pp_sess.get<EngineSession>().get(),
+                      first_pp_sess.get<EngineSession>().get());
+
+            cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame, empty_roi);
+            cv::GFrameDesc pp_desc = pp_frame.desc();
+            ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
+            in_progress = false;
+            preproc_number++;
+        }
+    } catch (...) {}
+
+    // test if interruption has happened
+    ASSERT_FALSE(in_progress);
+    ASSERT_NE(preproc_number, 1);
+}
+
+using roi_t = cv::util::optional<cv::Rect>;
+using preproc_roi_args_t = decltype(std::tuple_cat(std::declval<preproc_args_t>(),
+                                                   std::declval<std::tuple<roi_t>>()));
+class VPPPreprocROIParams : public ::testing::TestWithParam<preproc_roi_args_t> {};
+TEST_P(VPPPreprocROIParams, functional_roi_different_threads)
 {
     using namespace cv::gapi::wip;
     using namespace cv::gapi::wip::onevpl;
@@ -300,7 +393,8 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     decoder_t decoder_id;
     acceleration_t accel;
     out_frame_info_t required_frame_param;
-    std::tie(file_path, decoder_id, accel, required_frame_param) = GetParam();
+    roi_t opt_roi;
+    std::tie(file_path, decoder_id, accel, required_frame_param, opt_roi) = GetParam();
 
     file_path = findDataFile(file_path);
 
@@ -338,87 +432,52 @@ TEST_P(VPPPreprocParams, functional_different_threads)
     size_t decoded_number = 1;
     size_t preproc_number = 0;
 
-    std::thread decode_thread([&decode_engine, sess_ptr,
-                               &queue, &decoded_number] () {
-        // decode first frame
-        {
-            cv::MediaFrame decoded_frame;
-            ASSERT_NO_THROW(decoded_frame = extract_decoded_frame(sess_ptr->session, decode_engine));
-            queue.push(std::move(decoded_frame));
-        }
-
-        // launch pipeline
-        try {
-            while(true) {
-                queue.push(extract_decoded_frame(sess_ptr->session, decode_engine));
-                decoded_number++;
-            }
-        } catch (...) {}
-
-        // send stop
-        queue.push_stop();
-    });
-
-    std::thread preproc_thread([&preproc_engine, &queue, &preproc_number, required_frame_param] () {
-        // create preproc session based on frame description & network info
-        cv::MediaFrame first_decoded_frame = queue.pop();
-        cv::util::optional<pp_params> first_pp_params = preproc_engine.is_applicable(first_decoded_frame);
-        ASSERT_TRUE(first_pp_params.has_value());
-        pp_session first_pp_sess =
-                    preproc_engine.initialize_preproc(first_pp_params.value(), required_frame_param);
-
-        // make preproc using incoming decoded frame & preproc session
-        cv::MediaFrame first_pp_frame = preproc_engine.run_sync(first_pp_sess, first_decoded_frame);
-        cv::GFrameDesc first_outcome_pp_desc = first_pp_frame.desc();
-
-        // do not hold media frames because they share limited DX11 surface pool resources
-        first_decoded_frame = cv::MediaFrame();
-        first_pp_frame = cv::MediaFrame();
-
-        // launch pipeline
-        bool in_progress = false;
-        // let's allow counting of preprocessed frames to check this value later:
-        // Currently, it looks redundant to implement any kind of gracefull shutdown logic
-        // in this test - so let's apply agreement that media source is processed
-        // succesfully when preproc_number != 1 in result
-        preproc_number = 1;
-        try {
-            while(true) {
-                cv::MediaFrame decoded_frame = queue.pop();
-                if (SafeQueue::is_stop(decoded_frame)) {
-                    break;
-                }
-                in_progress = true;
-
-                cv::util::optional<pp_params> params = preproc_engine.is_applicable(decoded_frame);
-                ASSERT_TRUE(params.has_value());
-                ASSERT_TRUE(0 == memcmp(&params.value(), &first_pp_params.value(), sizeof(pp_params)));
-
-                pp_session pp_sess = preproc_engine.initialize_preproc(params.value(),
-                                                                       required_frame_param);
-                ASSERT_EQ(pp_sess.get<EngineSession>().get(),
-                          first_pp_sess.get<EngineSession>().get());
-
-                cv::MediaFrame pp_frame = preproc_engine.run_sync(pp_sess, decoded_frame);
-                cv::GFrameDesc pp_desc = pp_frame.desc();
-                ASSERT_TRUE(pp_desc == first_outcome_pp_desc);
-                in_progress = false;
-                preproc_number++;
-            }
-        } catch (...) {}
-
-        // test if interruption has happened
-        ASSERT_FALSE(in_progress);
-        ASSERT_NE(preproc_number, 1);
-    });
+    std::thread decode_thread(decode_function, std::ref(decode_engine), sess_ptr,
+                              std::ref(queue), std::ref(decoded_number));
+    std::thread preproc_thread(preproc_function, std::ref(preproc_engine),
+                               std::ref(queue), std::ref(preproc_number),
+                               std::cref(required_frame_param),
+                               std::cref(opt_roi));
 
     decode_thread.join();
     preproc_thread.join();
     ASSERT_EQ(preproc_number, decoded_number);
 }
 
-INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngine, VPPPreprocParams,
-                        testing::ValuesIn(files));
+preproc_roi_args_t files_w_roi[] = {
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{cv::Rect{0,0,50,50}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{cv::Rect{0,0,100,100}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h264",
+                    MFX_CODEC_AVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1080}}},
+                    roi_t{cv::Rect{100,100,200,200}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
+                    roi_t{cv::Rect{0,0,100,100}}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
+                    roi_t{}},
+    preproc_roi_args_t {"highgui/video/big_buck_bunny.h265",
+                    MFX_CODEC_HEVC,     MFX_ACCEL_MODE_VIA_D3D11,
+                    out_frame_info_t{cv::GFrameDesc {cv::MediaFormat::NV12, {1920, 1280}}},
+                    roi_t{cv::Rect{100,100,200,200}}}
+};
+
+INSTANTIATE_TEST_CASE_P(OneVPL_Source_PreprocEngineROI, VPPPreprocROIParams,
+                        testing::ValuesIn(files_w_roi));
+
 
 using VPPInnerPreprocParams = VPPPreprocParams;
 TEST_P(VPPInnerPreprocParams, functional_inner_preproc_size)
