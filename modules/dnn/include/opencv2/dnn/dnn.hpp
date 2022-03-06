@@ -1329,7 +1329,7 @@ CV__DNN_INLINE_NS_BEGIN
 
          /**
           * @brief Set enable/disable softmax post processing option.
-          * 
+          *
           * If this option is true, softmax is applied after forward inference within the classify() function
           * to convert the confidences range to [0.0-1.0].
           * This function allows you to toggle this behavior.
@@ -1340,7 +1340,7 @@ CV__DNN_INLINE_NS_BEGIN
 
          /**
           * @brief Get enable/disable softmax post processing option.
-          * 
+          *
           * This option defaults to false, softmax post processing is not applied within the classify() function.
           */
          CV_WRAP bool getEnableSoftmaxPostProcessing() const;
@@ -1355,7 +1355,6 @@ CV__DNN_INLINE_NS_BEGIN
 
          /**
           * @brief Apply softmax process to output blob from predict().
-          * 
           * @param[in] inblob The input blob.
           * @param[out] outblob The output blob applied softmax.
           */
