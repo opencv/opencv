@@ -1332,7 +1332,7 @@ CV__DNN_INLINE_NS_BEGIN
           * Please turn true when not contain SoftMax layer in model.
           * @param[in] softmax Set apply/not-apply SoftMax within the classify() function.
           */
-         CV_WRAP ClassificationModel& setSoftMax(bool apply = false);
+         CV_WRAP ClassificationModel& setSoftMax(bool apply);
 
          /**
           * @brief Getter for SoftMax option.
