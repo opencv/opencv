@@ -1333,7 +1333,7 @@ CV__DNN_INLINE_NS_BEGIN
           * to convert the confidences range to [0.0-1.0].
           * This function allows you to toggle this behavior.
           * Please turn true when not contain SoftMax layer in model.
-          * @param[in] softmax Set apply/not-apply SoftMax within the classify() function.
+          * @param[in] apply Set apply/not-apply SoftMax within the classify() function.
           */
          CV_WRAP ClassificationModel& setSoftMax(bool apply);
 
