@@ -263,7 +263,7 @@ std::pair<int, float> ClassificationModel::classify(InputArray frame)
 
     if (getEnableSoftmaxPostProcessing())
     {
-        ClassificationModel::softmax(out, out);
+        cv::dnn::softmax(out, out);
     }
 
     double conf;
@@ -275,20 +275,6 @@ std::pair<int, float> ClassificationModel::classify(InputArray frame)
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 {
     std::tie(classId, conf) = classify(frame);
-}
-
-void ClassificationModel::softmax(InputArray inblob, OutputArray outblob)
-{
-    CV_Assert(inblob.rows() == 1);
-    CV_Assert(inblob.type() == CV_32FC1);
-
-    const Mat input = inblob.getMat();
-    outblob.create(inblob.size(), inblob.type());
-
-    Mat exp;
-    const float max = *std::max_element(input.begin<float>(), input.end<float>());
-    cv::exp((input - max), exp);
-    outblob.getMat() = exp / cv::sum(exp)[0];
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)
