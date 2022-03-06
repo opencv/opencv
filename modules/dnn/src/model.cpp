@@ -197,6 +197,12 @@ void Model::predict(InputArray frame, OutputArrayOfArrays outs) const
 }
 
 
+ClassificationModel::ClassificationModel()
+    : Model()
+{
+    // nothing
+}
+
 ClassificationModel::ClassificationModel(const String& model, const String& config)
     : Model(model, config)
 {

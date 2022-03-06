@@ -1310,6 +1310,9 @@ CV__DNN_INLINE_NS_BEGIN
      class CV_EXPORTS_W_SIMPLE ClassificationModel : public Model
      {
      public:
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+         ClassificationModel();
+
          /**
           * @brief Create classification model from network represented in one of the supported formats.
           * An order of @p model and @p config arguments does not matter.
