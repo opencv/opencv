@@ -209,21 +209,53 @@ ClassificationModel::ClassificationModel(const Net& network)
     // nothing
 }
 
+ClassificationModel& ClassificationModel::setSoftMax(bool apply)
+{
+    applySoftmax = apply;
+    return *this;
+}
+
+bool ClassificationModel::getSoftMax() const
+{
+    return applySoftmax;
+}
+
 std::pair<int, float> ClassificationModel::classify(InputArray frame)
 {
-    std::vector<Mat> outs;
+    std::vector<cv::Mat> outs;
     impl->processFrame(frame, outs);
     CV_Assert(outs.size() == 1);
 
+    cv::Mat out = outs[0].reshape( 1, 1 );
+
+    if (applySoftmax)
+    {
+        ClassificationModel::softMax(out, out);
+    }
+
     double conf;
     cv::Point maxLoc;
-    minMaxLoc(outs[0].reshape(1, 1), nullptr, &conf, nullptr, &maxLoc);
+    cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
     return {maxLoc.x, static_cast<float>(conf)};
 }
 
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 {
     std::tie(classId, conf) = classify(frame);
+}
+
+void ClassificationModel::softMax(InputArray inblob, OutputArray outblob)
+{
+    CV_Assert(inblob.rows() == 1);
+    CV_Assert(inblob.type() == CV_32FC1);
+
+    const cv::Mat input = inblob.getMat();
+    outblob.create(inblob.size(), inblob.type());
+
+    cv::Mat exp;
+    const float max = *std::max_element(input.begin<float>(), input.end<float>());
+    cv::exp((input - max), exp);
+    outblob.getMat() = exp / cv::sum(exp)[0];
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)

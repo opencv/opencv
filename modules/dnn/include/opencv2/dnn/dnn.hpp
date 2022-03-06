@@ -1324,6 +1324,22 @@ CV__DNN_INLINE_NS_BEGIN
           */
          CV_WRAP ClassificationModel(const Net& network);
 
+         /**
+          * @brief The default for SoftMax option is false.
+          * If this option is true, SoftMax is applied after forward inference within the classify() function
+          * to convert the confidences range to [0.0-1.0].
+          * This function allows you to toggle this behavior.
+          * Please turn true when not contain SoftMax layer in model.
+          * @param[in] softmax Set apply/not-apply SoftMax within the classify() function.
+          */
+         CV_WRAP ClassificationModel& setSoftMax(bool apply = false);
+
+         /**
+          * @brief Getter for SoftMax option.
+          * This option defaults to false, SoftMax is not applied within the classify() function.
+          */
+         CV_WRAP bool getSoftMax() const;
+
          /** @brief Given the @p input frame, create input blob, run net and return top-1 prediction.
           *  @param[in]  frame  The input image.
           */
@@ -1331,6 +1347,16 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @overload */
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
+
+         /**
+          * @brief Apply SoftMax process to output blob from predict().
+          * @param[in] inblob The input blob.
+          * @param[out] outblob The output blob applied SoftMax.
+          */
+         CV_WRAP static void softMax(InputArray inblob, OutputArray outblob);
+
+     private:
+         bool applySoftmax = false;
      };
 
      /** @brief This class represents high-level API for keypoints models
