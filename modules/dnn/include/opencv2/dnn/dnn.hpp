@@ -1328,20 +1328,22 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP ClassificationModel(const Net& network);
 
          /**
-          * @brief The default for SoftMax option is false.
-          * If this option is true, SoftMax is applied after forward inference within the classify() function
+          * @brief Set enable/disable softmax post processing option.
+          * 
+          * If this option is true, softmax is applied after forward inference within the classify() function
           * to convert the confidences range to [0.0-1.0].
           * This function allows you to toggle this behavior.
-          * Please turn true when not contain SoftMax layer in model.
-          * @param[in] apply Set apply/not-apply SoftMax within the classify() function.
+          * Please turn true when not contain softmax layer in model.
+          * @param[in] enable Set enable softmax post processing within the classify() function.
           */
-         CV_WRAP ClassificationModel& setSoftMax(bool apply);
+         CV_WRAP ClassificationModel& setEnableSoftmaxPostProcessing(bool enable);
 
          /**
-          * @brief Getter for SoftMax option.
-          * This option defaults to false, SoftMax is not applied within the classify() function.
+          * @brief Get enable/disable softmax post processing option.
+          * 
+          * This option defaults to false, softmax post processing is not applied within the classify() function.
           */
-         CV_WRAP bool getSoftMax() const;
+         CV_WRAP bool getEnableSoftmaxPostProcessing() const;
 
          /** @brief Given the @p input frame, create input blob, run net and return top-1 prediction.
           *  @param[in]  frame  The input image.
@@ -1352,14 +1354,12 @@ CV__DNN_INLINE_NS_BEGIN
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
 
          /**
-          * @brief Apply SoftMax process to output blob from predict().
+          * @brief Apply softmax process to output blob from predict().
+          * 
           * @param[in] inblob The input blob.
-          * @param[out] outblob The output blob applied SoftMax.
+          * @param[out] outblob The output blob applied softmax.
           */
-         CV_WRAP static void softMax(InputArray inblob, OutputArray outblob);
-
-     private:
-         bool applySoftmax = false;
+         CV_WRAP static void softmax(InputArray inblob, OutputArray outblob);
      };
 
      /** @brief This class represents high-level API for keypoints models
