@@ -225,7 +225,7 @@ public:
 
         if(getEnableSoftmaxPostProcessing())
         {
-            ClassificationModel_Impl::softmax(out, out);
+            softmax(out, out);
         }
 
         double conf;
@@ -234,11 +234,9 @@ public:
         return {maxLoc.x, static_cast<float>(conf)};
     }
 
-    static void softmax(InputArray inblob, OutputArray outblob)
+protected:
+    void softmax(InputArray inblob, OutputArray outblob)
     {
-        CV_Assert(inblob.rows() == 1);
-        CV_Assert(inblob.type() == CV_32FC1);
-
         const Mat input = inblob.getMat();
         outblob.create(inblob.size(), inblob.type());
 
@@ -293,11 +291,6 @@ std::pair<int, float> ClassificationModel::classify(InputArray frame)
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 {
     std::tie(classId, conf) = classify(frame);
-}
-
-void ClassificationModel::softmax(InputArray inblob, OutputArray outblob)
-{
-    ClassificationModel_Impl::softmax(inblob, outblob);
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)

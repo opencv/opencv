@@ -1352,13 +1352,6 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @overload */
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
-
-         /**
-          * @brief Apply softmax process to output blob from predict().
-          * @param[in] inblob The input blob.
-          * @param[out] outblob The output blob applied softmax.
-          */
-         CV_WRAP static void softmax(InputArray inblob, OutputArray outblob);
      };
 
      /** @brief This class represents high-level API for keypoints models
