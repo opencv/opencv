@@ -52,6 +52,11 @@
 
 namespace cv {
 namespace dnn {
+
+namespace accessor {
+class DnnNetAccessor;  // forward declaration
+}
+
 CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
@@ -840,8 +845,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-    private:
+
         struct Impl;
+        inline Impl* getImpl() const { return impl.get(); }
+        inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
+        friend class accessor::DnnNetAccessor;
+    protected:
         Ptr<Impl> impl;
     };
 

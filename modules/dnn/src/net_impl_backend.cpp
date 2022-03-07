@@ -109,11 +109,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
     else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
-        initNgraphBackend(blobsToKeep_);
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of OpenVINO");
-#endif
+        CV_Assert(0 && "Inheritance must be used with OpenVINO backend");
     }
     else if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -154,10 +150,13 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
-void Net::Impl::setPreferableBackend(int backendId)
+void Net::Impl::setPreferableBackend(Net& net, int backendId)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
         backendId = (Backend)getParam_DNN_BACKEND_DEFAULT();
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
 
     if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
     {
@@ -165,15 +164,16 @@ void Net::Impl::setPreferableBackend(int backendId)
         backendId = DNN_BACKEND_OPENCV;
     }
 
-#ifdef HAVE_INF_ENGINE
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-#endif
-
     if (preferableBackend != backendId)
     {
         preferableBackend = backendId;
         clear();
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            switchToOpenVINOBackend(net);
+        }
+#endif
     }
 }
 

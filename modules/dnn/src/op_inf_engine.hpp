@@ -73,6 +73,8 @@ void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
 
 CV__DNN_INLINE_NS_BEGIN
 
+void switchToOpenVINOBackend(Net& net);
+
 namespace openvino {
 
 // TODO: use std::string as parameter

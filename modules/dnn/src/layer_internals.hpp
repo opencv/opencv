@@ -112,6 +112,30 @@ struct LayerData
 
         return layerInstance;
     }
+
+    void resetAllocation()
+    {
+        if (id == 0)
+            return;  // skip "input" layer (assertion in Net::Impl::allocateLayers)
+
+        layerInstance.release();
+        outputBlobs.clear();
+        inputBlobs.clear();
+        internals.clear();
+
+        outputBlobsWrappers.clear();
+        inputBlobsWrappers.clear();
+        internalBlobsWrappers.clear();
+
+        backendNodes.clear();
+
+        skip = false;
+        flag = 0;
+
+#ifdef HAVE_CUDA
+        cudaD2HBackgroundTransfers.clear();
+#endif
+    }
 };
 
 
