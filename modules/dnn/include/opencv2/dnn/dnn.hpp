@@ -1193,11 +1193,6 @@ CV__DNN_INLINE_NS_BEGIN
                                    const float sigma = 0.5,
                                    SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
 
-    /** @brief Apply softmax process to blob.
-     * @param[in] inblob The input blob.
-     * @param[out] outblob The output blob applied softmax.
-     */
-    CV_EXPORTS_W void softmax(InputArray inblob, OutputArray outblob);
 
      /** @brief This class is presented high-level API for neural networks.
       *
@@ -1357,6 +1352,13 @@ CV__DNN_INLINE_NS_BEGIN
 
          /** @overload */
          CV_WRAP void classify(InputArray frame, CV_OUT int& classId, CV_OUT float& conf);
+
+         /**
+          * @brief Apply softmax process to output blob from predict().
+          * @param[in] inblob The input blob.
+          * @param[out] outblob The output blob applied softmax.
+          */
+         CV_WRAP static void softmax(InputArray inblob, OutputArray outblob);
      };
 
      /** @brief This class represents high-level API for keypoints models
