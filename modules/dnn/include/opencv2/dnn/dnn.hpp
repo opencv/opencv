@@ -1310,6 +1310,9 @@ CV__DNN_INLINE_NS_BEGIN
      class CV_EXPORTS_W_SIMPLE ClassificationModel : public Model
      {
      public:
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+         ClassificationModel();
+
          /**
           * @brief Create classification model from network represented in one of the supported formats.
           * An order of @p model and @p config arguments does not matter.
@@ -1323,6 +1326,24 @@ CV__DNN_INLINE_NS_BEGIN
           * @param[in] network Net object.
           */
          CV_WRAP ClassificationModel(const Net& network);
+
+         /**
+          * @brief Set enable/disable softmax post processing option.
+          *
+          * If this option is true, softmax is applied after forward inference within the classify() function
+          * to convert the confidences range to [0.0-1.0].
+          * This function allows you to toggle this behavior.
+          * Please turn true when not contain softmax layer in model.
+          * @param[in] enable Set enable softmax post processing within the classify() function.
+          */
+         CV_WRAP ClassificationModel& setEnableSoftmaxPostProcessing(bool enable);
+
+         /**
+          * @brief Get enable/disable softmax post processing option.
+          *
+          * This option defaults to false, softmax post processing is not applied within the classify() function.
+          */
+         CV_WRAP bool getEnableSoftmaxPostProcessing() const;
 
          /** @brief Given the @p input frame, create input blob, run net and return top-1 prediction.
           *  @param[in]  frame  The input image.
