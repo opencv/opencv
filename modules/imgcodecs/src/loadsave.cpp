@@ -363,8 +363,8 @@ static void exifTransform(int orientation, Mat &img)
     }
 }
 
-template <class T> static void setProperty(std::map<String, String> &p, ExifReader &reader, const ExifTagName tag, const String &tag_str, T ExifEntry_t::* field) {
-    ExifEntry_t entry = reader.getTag(tag);
+template <class T> static void setProperty(std::map<String, String> &p, Ptr <BaseImageDecoder> decoder, const ExifTagName tag, const String &tag_str, T ExifEntry_t::* field) {
+    ExifEntry_t entry = decoder->getExifTag(tag);
     if (entry.tag != INVALID_TAG) {
         p[tag_str] = p[BaseImageDecoder::toString((int)tag)] = BaseImageDecoder::toString(entry.*field);
     }
@@ -372,53 +372,33 @@ template <class T> static void setProperty(std::map<String, String> &p, ExifRead
 #define setProperty(p, reader, tag, entry) setProperty(p, reader, tag, #tag, entry)
 
 // TODO: implement
-static void applyExif(std::istream &stream, Mat &img, bool rotate, std::map<String, String> *properties)
+static void applyExif(Ptr <BaseImageDecoder> decoder, Mat &img, bool rotate, std::map<String, String> *properties)
 {
-//     ExifReader reader(stream);
-//     if (reader.parse()) {
-//         if (rotate) {
-//             ExifEntry_t entry = reader.getTag(ORIENTATION);
-//             if (entry.tag != INVALID_TAG) {
-//                 exifTransform(entry.field_u16, img); //orientation is unsigned short, so check field_u16
-//             }
-//         }
-
-//         if (properties) {
-//             // TIFFTAG-like names
-// #define DOCUMENTNAME DOCUMENT_NAME
-// #define IMAGEDESCRIPTION IMAGE_DESCRIPTION
-// #define DATETIME DATE_TIME
-//             std::map<String, String> &p = *properties;
-//             setProperty(p, reader, DOCUMENTNAME, &ExifEntry_t::field_str);
-//             setProperty(p, reader, IMAGEDESCRIPTION, &ExifEntry_t::field_str);
-//             setProperty(p, reader, MAKE, &ExifEntry_t::field_str);
-//             setProperty(p, reader, MODEL, &ExifEntry_t::field_str);
-//             setProperty(p, reader, ORIENTATION, &ExifEntry_t::field_u16);
-//             setProperty(p, reader, SOFTWARE, &ExifEntry_t::field_str);
-//             setProperty(p, reader, DATETIME, &ExifEntry_t::field_str);
-//             setProperty(p, reader, COPYRIGHT, &ExifEntry_t::field_str);
-//             std::map<String, String>::const_iterator doc_name = p.find(BaseImageDecoder::toString((int)DOCUMENTNAME));
-//             if(doc_name != p.end()) {
-//                 p[BaseImageDecoder::document_name] = doc_name->second;
-//             }
-//         }
-//     }
-}
-
-static void applyExif(const String &filename, Mat &img, bool rotate, std::map<String, String> *properties)
-{
-    if (filename.size() > 0) {
-        std::ifstream stream(filename.c_str(), std::ios_base::in | std::ios_base::binary);
-        applyExif(stream, img, rotate, properties);
+    if (rotate) {
+        ExifEntry_t entry = decoder->getExifTag(ORIENTATION);
+        if (entry.tag != INVALID_TAG) {
+            exifTransform(entry.field_u16, img); //orientation is unsigned short, so check field_u16
+        }
     }
-}
 
-static void applyExif(const Mat &buf, Mat &img, bool rotate, std::map<String, String> *properties)
-{
-    if (buf.isContinuous()) {
-        ByteStreamBuffer bsb(reinterpret_cast<char *>(buf.data), buf.total() * buf.elemSize());
-        std::istream stream(&bsb);
-        applyExif(stream, img, rotate, properties);
+    if (properties) {
+        // TIFFTAG-like names
+#define DOCUMENTNAME DOCUMENT_NAME
+#define IMAGEDESCRIPTION IMAGE_DESCRIPTION
+#define DATETIME DATE_TIME
+        std::map<String, String> &p = *properties;
+        setProperty(p, decoder, DOCUMENTNAME, &ExifEntry_t::field_str);
+        setProperty(p, decoder, IMAGEDESCRIPTION, &ExifEntry_t::field_str);
+        setProperty(p, decoder, MAKE, &ExifEntry_t::field_str);
+        setProperty(p, decoder, MODEL, &ExifEntry_t::field_str);
+        setProperty(p, decoder, ORIENTATION, &ExifEntry_t::field_u16);
+        setProperty(p, decoder, SOFTWARE, &ExifEntry_t::field_str);
+        setProperty(p, decoder, DATETIME, &ExifEntry_t::field_str);
+        setProperty(p, decoder, COPYRIGHT, &ExifEntry_t::field_str);
+        std::map<String, String>::const_iterator doc_name = p.find(BaseImageDecoder::toString((int)DOCUMENTNAME));
+        if(doc_name != p.end()) {
+            p[BaseImageDecoder::document_name] = doc_name->second;
+         }
     }
 }
 
@@ -442,10 +422,10 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
     CV_TRACE_FUNCTION();
     MultiLoad load(flags);
     if(!load.read(filename)) return false;
-    size_t size = load.size();
+    int size = static_cast<int>(load.size());
     if(count < 0 || start + count > size) count = size - start;
-    for(int i = 0; i < count; ++i, ++start) {
-        mats.push_back(load.at(start));
+    for(int i = 0; i < count; ++i) {
+        mats.push_back(load.at(start + i));
     }
     return !mats.empty();
 }
@@ -939,8 +919,7 @@ Mat MultiLoad::current(int flags, std::map<String, String> *properties, Mat *dst
 
     // optionally rotate the data if EXIF' orientation flag says so
     bool rotate = (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED;
-    if (!m_file.empty()) applyExif(m_file, mat, rotate, properties);
-    else applyExif(m_buf, mat, rotate, properties);
+    applyExif(m_decoder, mat, rotate, properties);
 
     return mat;
 }
