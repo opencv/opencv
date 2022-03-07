@@ -371,7 +371,6 @@ template <class T> static void setProperty(std::map<String, String> &p, Ptr <Bas
 }
 #define setProperty(p, reader, tag, entry) setProperty(p, reader, tag, #tag, entry)
 
-// TODO: implement
 static void applyExif(Ptr <BaseImageDecoder> decoder, Mat &img, bool rotate, std::map<String, String> *properties)
 {
     if (rotate) {
@@ -451,69 +450,13 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
     return !mats.empty();
 }
 
-static
-size_t imcount_(const String& filename, int flags)
-{
-    /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-
-#ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#else
-        CV_UNUSED(flags);
-#endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    /// if no decoder was found, return nothing.
-    if (!decoder) {
-        return 0;
-    }
-
-    /// set the filename in the driver
-    decoder->setSource(filename);
-
-    // read the header to make sure it succeeds
-    try
-    {
-        // read the header to make sure it succeeds
-        if (!decoder->readHeader(0))
-            return 0;
-    }
-    catch (const cv::Exception& e)
-    {
-        std::cerr << "imcount_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-        return 0;
-    }
-    catch (...)
-    {
-        std::cerr << "imcount_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
-        return 0;
-    }
-
-    size_t result = 1;
-
-
-    while (decoder->nextPage())
-    {
-        ++result;
-    }
-
-    return result;
-}
-
 size_t imcount(const String& filename, int flags)
 {
     CV_TRACE_FUNCTION();
-
-    return imcount_(filename, flags);
+    MultiLoad load(flags);
+    if(!load.read(filename)) return 0;
+    return load.size();
 }
-
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& iparams, const std::map<int, String>& sparams,
