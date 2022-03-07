@@ -215,7 +215,26 @@ public:
         return applySoftmax;
     }
 
-private:
+    std::pair<int, float> classify(InputArray frame)
+    {
+        std::vector<Mat> outs;
+        processFrame(frame, outs);
+        CV_Assert(outs.size() == 1);
+
+        Mat out = outs[0].reshape(1, 1);
+
+        if(getEnableSoftmaxPostProcessing())
+        {
+            ClassificationModel::softmax(out, out);
+        }
+
+        double conf;
+        Point maxLoc;
+        cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
+        return { maxLoc.x, static_cast<float>( conf ) };
+    }
+
+protected:
     bool applySoftmax = false;
 };
 
@@ -232,7 +251,7 @@ ClassificationModel::ClassificationModel(const String& model, const String& conf
 }
 
 ClassificationModel::ClassificationModel(const Net& network)
-    : Model(network)
+    : Model()
 {
     impl = makePtr<ClassificationModel_Impl>();
     impl->initNet(network);
@@ -254,22 +273,7 @@ bool ClassificationModel::getEnableSoftmaxPostProcessing() const
 std::pair<int, float> ClassificationModel::classify(InputArray frame)
 {
     CV_Assert(impl != nullptr && impl.dynamicCast<ClassificationModel_Impl>() != nullptr);
-
-    std::vector<Mat> outs;
-    impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
-
-    Mat out = outs[0].reshape(1, 1);
-
-    if (getEnableSoftmaxPostProcessing())
-    {
-        ClassificationModel::softmax(out, out);
-    }
-
-    double conf;
-    Point maxLoc;
-    cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
-    return {maxLoc.x, static_cast<float>(conf)};
+    return impl.dynamicCast<ClassificationModel_Impl>()->classify(frame);
 }
 
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
