@@ -225,13 +225,27 @@ public:
 
         if(getEnableSoftmaxPostProcessing())
         {
-            ClassificationModel::softmax(out, out);
+            ClassificationModel_Impl::softmax(out, out);
         }
 
         double conf;
         Point maxLoc;
         cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
-        return { maxLoc.x, static_cast<float>( conf ) };
+        return {maxLoc.x, static_cast<float>(conf)};
+    }
+
+    static void softmax(InputArray inblob, OutputArray outblob)
+    {
+        CV_Assert(inblob.rows() == 1);
+        CV_Assert(inblob.type() == CV_32FC1);
+
+        const Mat input = inblob.getMat();
+        outblob.create(inblob.size(), inblob.type());
+
+        Mat exp;
+        const float max = *std::max_element(input.begin<float>(), input.end<float>());
+        cv::exp((input - max), exp);
+        outblob.getMat() = exp / cv::sum(exp)[0];
     }
 
 protected:
@@ -283,16 +297,7 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 
 void ClassificationModel::softmax(InputArray inblob, OutputArray outblob)
 {
-    CV_Assert(inblob.rows() == 1);
-    CV_Assert(inblob.type() == CV_32FC1);
-
-    const Mat input = inblob.getMat();
-    outblob.create(inblob.size(), inblob.type());
-
-    Mat exp;
-    const float max = *std::max_element(input.begin<float>(), input.end<float>());
-    cv::exp((input - max), exp);
-    outblob.getMat() = exp / cv::sum(exp)[0];
+    ClassificationModel_Impl::softmax(inblob, outblob);
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)
