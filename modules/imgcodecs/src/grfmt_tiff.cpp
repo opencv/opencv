@@ -557,7 +557,7 @@ bool  TiffDecoder::readData( Mat& img )
             AutoBuffer<uchar> _src_buffer(src_buffer_size);
             uchar* src_buffer = _src_buffer.data();
             AutoBuffer<uchar> _src_buffer_unpacked(needsUnpacking ? src_buffer_unpacked_size : 0);
-            uchar* row_buffer_unpacked = needsUnpacking ? _src_buffer_unpacked.data() : nullptr;
+            uchar* src_buffer_unpacked = needsUnpacking ? _src_buffer_unpacked.data() : nullptr;
             int tileidx = 0;
 
             for (int y = 0; y < m_height; y += (int)tile_height0)
@@ -634,9 +634,9 @@ bool  TiffDecoder::readData( Mat& img )
                                     if (bpp == 12)
                                     {
                                         _unpack12To16(src_buffer+i*((tile_width0*ncn* bpp + bitsPerByte - 1)/bitsPerByte),
-                                                      (ushort*)row_buffer_unpacked + i*tile_width0*ncn, ncn * tile_width0);
+                                                      (ushort*)src_buffer_unpacked + i*tile_width0*ncn, ncn * tile_width0);
                                     }
-                                    buffer16 = (ushort*)row_buffer_unpacked;
+                                    buffer16 = (ushort*)src_buffer_unpacked + i*tile_width0*ncn;
                                 }
 
                                 if (color)
@@ -644,14 +644,14 @@ bool  TiffDecoder::readData( Mat& img )
                                     if (ncn == 1)
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                     }
                                     else if (ncn == 3)
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                     }
@@ -659,14 +659,14 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         if (wanted_channels == 4)
                                         {
-                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16 + i*tile_width0*ncn, 0,
+                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                         }
                                         else
                                         {
                                             CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
-                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
+                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1), 2);
                                         }
@@ -682,12 +682,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         memcpy(img.ptr<ushort>(img_y + i, x),
-                                               buffer16 + i*tile_width0*ncn,
+                                               buffer16,
                                                tile_width*sizeof(ushort));
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1), ncn, 2);
                                     }
