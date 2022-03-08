@@ -122,15 +122,15 @@ TEST(Imgcodecs_Tiff, decode_12)
     /* see issue #21700
     */
     const string root = cvtest::TS::ptr()->get_data_path();
-    cv::Mat img8UC1 = imread(root + "pattern_8uc1.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img8UC3 = imread(root + "pattern_8uc3.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img8UC4 = imread(root + "pattern_8uc4.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC1 = imread(root + "pattern_16uc1.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC3 = imread(root + "pattern_16uc3.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC4 = imread(root + "pattern_16uc4.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img12UC1 = imread(root + "pattern_12uc1.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img12UC3 = imread(root + "pattern_12uc3.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img12UC4 = imread(root + "pattern_12uc4.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img8UC1 = imread(root + "readwrite/pattern_8uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img8UC3 = imread(root + "readwrite/pattern_8uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img8UC4 = imread(root + "readwrite/pattern_8uc4.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC1 = imread(root + "readwrite/pattern_16uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC3 = imread(root + "readwrite/pattern_16uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC4 = imread(root + "readwrite/pattern_16uc4.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img12UC1 = imread(root + "readwrite/pattern_12uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img12UC3 = imread(root + "readwrite/pattern_12uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img12UC4 = imread(root + "readwrite/pattern_12uc4.tif", cv::IMREAD_UNCHANGED);
     ASSERT_TRUE(img16UC1.size() == img12UC1.size());
     ASSERT_TRUE(img16UC3.size() == img12UC3.size());
     ASSERT_TRUE(img16UC4.size() == img12UC4.size());
