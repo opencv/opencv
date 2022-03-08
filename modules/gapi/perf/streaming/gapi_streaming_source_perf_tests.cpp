@@ -205,6 +205,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     }
     VPPPreprocEngine preproc_engine(std::move(policy));
     cv::gapi::wip::Data out;
+    cv::util::optional<cv::Rect> empty_roi;
     TEST_CYCLE()
     {
         source_ptr->pull(out);
@@ -212,7 +213,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
         cv::util::optional<pp_params> param = preproc_engine.is_applicable(frame);
         pp_session sess = preproc_engine.initialize_preproc(param.value(),
                                                             required_frame_param);
-        (void)preproc_engine.run_sync(sess, frame);
+        (void)preproc_engine.run_sync(sess, frame, empty_roi);
     }
 
     SANITY_CHECK_NOTHING();
@@ -269,6 +270,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     }
     VPPPreprocEngine preproc_engine(std::move(policy));
     cv::gapi::wip::Data out;
+    cv::util::optional<cv::Rect> empty_roi;
     TEST_CYCLE()
     {
         source_ptr->pull(out);
@@ -276,7 +278,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
         cv::util::optional<pp_params> param = preproc_engine.is_applicable(frame);
         pp_session sess = preproc_engine.initialize_preproc(param.value(),
                                                             required_frame_param);
-        (void)preproc_engine.run_sync(sess, frame);
+        (void)preproc_engine.run_sync(sess, frame, empty_roi);
     }
 
     SANITY_CHECK_NOTHING();
