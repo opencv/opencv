@@ -503,9 +503,9 @@ Jpeg2KOpjDecoderBase::Jpeg2KOpjDecoderBase(OPJ_CODEC_FORMAT format)
     m_buf_supported = true;
 }
 
-// TODO: read properties
 bool Jpeg2KOpjDecoderBase::readHeader(std::map<String, String> *properties)
 {
+    if(properties) properties->clear();
     if (!m_buf.empty()) {
         opjBuf_ = detail::OpjMemoryBuffer(m_buf);
         stream_ = opjCreateBufferInputStream(&opjBuf_);
@@ -583,8 +583,7 @@ bool Jpeg2KOpjDecoderBase::readHeader(std::map<String, String> *properties)
     return true;
 }
 
-// TODO: read properties
-bool Jpeg2KOpjDecoderBase::readData(Mat& img, std::map<String, String> *properties)
+bool Jpeg2KOpjDecoderBase::readData(Mat& img, std::map<String, String> */*properties*/)
 {
     using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift);
 

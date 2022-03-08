@@ -416,7 +416,6 @@ Mat imread( const String& filename, int flags )
     return load.read(filename) ? *load : Mat();
 }
 
-// TODO: check
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int count, int flags) {
     CV_TRACE_FUNCTION();
     MultiLoad load(flags);
