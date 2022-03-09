@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
+#include <algorithm>
 
 namespace opencv_test { namespace {
 
@@ -2126,6 +2127,80 @@ TEST(Core_minMaxIdx, regression_9207_1)
     EXPECT_EQ(0, maxIdx[0]);
     EXPECT_EQ(0, maxIdx[1]);
 }
+
+
+class TransposeND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
+{
+public:
+    std::vector<int> m_shape;
+    int m_type;
+
+    void SetUp()
+    {
+        std::tie(m_shape, m_type) = GetParam();
+    }
+};
+
+
+TEST_P(TransposeND, basic)
+{
+    setRNGSeed(42);
+    Mat inp(m_shape, m_type);
+    randu(inp, 0, 255);
+
+    std::vector<int> order(m_shape.size());
+    std::iota(order.begin(), order.end(), 0);
+    auto transposer = [&order] (const std::vector<int>& id)
+    {
+        std::vector<int> ret(id.size());
+        for (size_t i = 0; i < id.size(); ++i)
+        {
+            ret[i] = id[order[i]];
+        }
+        return ret;
+    };
+    auto advancer = [&inp] (std::vector<int>& id)
+    {
+        for (int j = static_cast<int>(id.size() - 1); j >= 0; --j)
+        {
+            ++id[j];
+            if (id[j] != inp.size[j])
+            {
+                break;
+            }
+            id[j] = 0;
+        }
+    };
+
+    do
+    {
+        Mat out;
+        cv::transpose(inp, order, out);
+        std::vector<int> id(order.size());
+        for (size_t i = 0; i < inp.total(); ++i)
+        {
+            auto new_id = transposer(id);
+            switch (inp.type())
+            {
+            case CV_8UC1:
+                CV_Assert(inp.at<uint8_t>(id.data()) == out.at<uint8_t>(new_id.data()));
+                break;
+            case CV_32FC1:
+                CV_Assert(inp.at<float>(id.data()) == out.at<float>(new_id.data()));
+                break;
+            default:
+                CV_Error(Error::StsBadArg, format("Unsupported type: %d", inp.type()));
+            }
+            advancer(id);
+        }
+    } while (std::next_permutation(order.begin(), order.end()));
+}
+
+
+INSTANTIATE_TEST_CASE_P(Arithm, TransposeND, testing::Combine(
+    testing::Values(std::vector<int>{2, 3, 4}, std::vector<int>{5, 10}),
+    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
+));
 
 
 TEST(Core_minMaxIdx, regression_9207_2)

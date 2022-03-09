@@ -1739,6 +1739,13 @@ should be done separately if needed.
 */
 CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
 
+/** @brief Transpose for n-dimensional matrices.
+ * @param src input array.
+ * @param order new order of dimensions.
+ * @param dst output array of the same type as src.
+ */
+CV_EXPORTS_W void transpose(const Mat& src, const std::vector<int>& order, OutputArray dst);
+
 /** @brief Performs the matrix transformation of every array element.
 
 The function cv::transform performs the matrix transformation of every

@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 namespace cv {
 
@@ -279,6 +280,69 @@ void transpose( InputArray _src, OutputArray _dst )
         CV_Assert( func != 0 );
         func( src.ptr(), src.step, dst.ptr(), dst.step, src.size() );
     }
+}
+
+
+
+template <typename T>
+struct transposeImpl
+{
+    void operator()(const cv::Mat& inp, cv::Mat& out, const std::vector<int>& order) const
+    {
+        int continuous_idx = 0;
+        for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
+        {
+            if (order[i] != i)
+            {
+                continuous_idx = i + 1;
+                break;
+            }
+        }
+
+        size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
+        size_t outer_size = out.total() / continuous_size;
+
+        std::vector<size_t> steps(order.size());
+        for (int i = 0; i < static_cast<int>(steps.size()); ++i)
+        {
+            steps[order[i]] = out.step1(i);
+        }
+
+        auto* src = inp.ptr<const T>();
+        auto* dst = out.ptr<T>();
+
+        size_t dst_offset = 0;
+        for (size_t i = 0; i < outer_size; ++i)
+        {
+            std::memcpy(dst + dst_offset, src, out.elemSize() * continuous_size);
+            src += continuous_size;
+            for (int j = continuous_idx - 1; j >= 0; --j)
+            {
+                dst_offset += steps[j];
+                if ((dst_offset / steps[j]) % inp.size[j] != 0)
+                {
+                    break;
+                }
+                dst_offset -= steps[j] * inp.size[j];
+            }
+        }
+    }
+};
+
+void transpose(const Mat& inp, const std::vector<int>& order, OutputArray _out)
+{
+    CV_Assert(inp.isContinuous() && inp.channels() == 1);
+
+    std::vector<int> newShape(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+    {
+        newShape[i] = inp.size[order[i]];
+    }
+
+    _out.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
+    Mat out = _out.getMat();
+    CV_Assert(out.isContinuous()); // does OutputArray::create always returns continuous matrix?
+    cv::detail::depthDispatch<transposeImpl>(inp.depth(), inp, out, order);
 }
 
 
