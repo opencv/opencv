@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
                                    " if set to 0. If it's specified will be"
                                    " applied for every pipeline. }"
         "{ app_mode    | realtime  | Application mode (realtime/benchmark). }"
-        "{ drop_frames | false     | Drop frames if it comes faster than pipeline is completed. }"
+        "{ drop_frames | false     | Drop frames if they come earlier than pipeline is completed. }"
         "{ exec_list   |           | A comma-separated list of pipelines that"
                                    " will be executed. Spaces around commas"
                                    " are prohibited. }";
@@ -295,7 +295,6 @@ int main(int argc, char* argv[]) {
         for (const auto& name : exec_list) {
             const auto& pl_fn = check_and_get_fn(pipelines_fn, name, "Pipelines");
             builder.setName(name);
-
             // NB: Set source
             {
                 const auto& src_fn = check_and_get_fn(pl_fn, "source", name);
@@ -309,7 +308,6 @@ int main(int argc, char* argv[]) {
                 if (app_mode == AppMode::BENCHMARK) {
                     latency = 0.0;
                 }
-
                 auto src = std::make_shared<DummySource>(latency, output, drop_frames);
                 builder.setSource(src_name, src);
             }
