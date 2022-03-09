@@ -376,7 +376,7 @@ namespace cv {
                     int begin[] = {0, split_size * group_id, 0, 0};
                     cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin, 4);
 
-                    int end[] = {-1, begin[1] + split_size, -1, -1};
+                    int end[] = {INT_MAX, begin[1] + split_size, INT_MAX, INT_MAX};
                     cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end, 4);
 
                     darknet::LayerParameter lp;
