@@ -836,7 +836,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // (5) Run the kernel.
     try {
         kk.run(ctx, *m_reqPool);
-    } catch (const std::exception& e) {
+    } catch (...) {
         auto eptr = std::current_exception();
         for (auto i : ade::util::iota(ctx->uu.params.num_out))
         {
