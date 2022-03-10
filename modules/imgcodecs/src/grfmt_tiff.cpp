@@ -443,8 +443,12 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
 static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
     //5*8b=4*10b : 5 src for 4 dst
+    constexpr const size_t bitsPerByte = 8;
+    constexpr const size_t packedBitsCount = 10;
+    constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
     constexpr const size_t srcElementsPerPacket = 5;
     constexpr const size_t dstElementsPerPacket = 4;
+    constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
     const size_t fullPacketsCount = std::min({
         expectedDstElements/dstElementsPerPacket,
         (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
@@ -460,8 +464,8 @@ static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
           buf.u8[srcElementsPerPacket-1-j] = *src++;
         for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
         {
-          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & 0x3FF);
-          buf.u64 >>= 10;
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & packedBitsMask);
+          buf.u64 >>= packedBitsCount;
         }
         dst += dstElementsPerPacket;
     }
@@ -469,24 +473,30 @@ static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
         expectedDstElements-fullPacketsCount*dstElementsPerPacket,
         static_cast<size_t>(dstEnd-dst)
     );
-    while(remainingDstElements > 0)
+    bool stop = !remainingDstElements;
+    while(!stop)
     {
         for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
             buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
         for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
         {
-            if (remainingDstElements--)
-              *dst++ = static_cast<ushort>((buf.u64 >> (40-(j+1)*10)) & 0x3FF);
+            stop |= !(remainingDstElements--);
+            if (!stop)
+              *dst++ = static_cast<ushort>((buf.u64 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
         }
-    }//end while(remainingDstElements > 0)
+    }//end while(!stop)
 }
 //end _unpack10To16()
 
 static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
   //3*8b=2*12b : 3 src for 2 dst
+  constexpr const size_t bitsPerByte = 8;
+  constexpr const size_t packedBitsCount = 12;
+  constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
   constexpr const size_t srcElementsPerPacket = 3;
   constexpr const size_t dstElementsPerPacket = 2;
+  constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
   const size_t fullPacketsCount = std::min({
     expectedDstElements/dstElementsPerPacket,
     (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
@@ -502,8 +512,8 @@ static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
           buf.u8[srcElementsPerPacket-1-j] = *src++;
       for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
       {
-          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u32 & 0xFFF);
-          buf.u32 >>= 12;
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u32 & packedBitsMask);
+          buf.u32 >>= packedBitsCount;
       }
       dst += dstElementsPerPacket;
   }
@@ -511,24 +521,30 @@ static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
       expectedDstElements-fullPacketsCount*dstElementsPerPacket,
       static_cast<size_t>(dstEnd-dst)
   );
-  while(remainingDstElements > 0)
+  bool stop = !remainingDstElements;
+  while(!stop)
   {
       for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
           buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
       for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
       {
-          if (remainingDstElements--)
-              *dst++ = static_cast<ushort>((buf.u32 >> (24-(j+1)*12)) & 0xFFF);
+          stop |= !(remainingDstElements--);
+          if (!stop)
+              *dst++ = static_cast<ushort>((buf.u32 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
       }
-  }//end while(remainingDstElements > 0)
+  }//end while(!stop)
 }
 //end _unpack12To16()
 
 static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
     //7*8b=4*14b : 7 src for 4 dst
+    constexpr const size_t bitsPerByte = 8;
+    constexpr const size_t packedBitsCount = 14;
+    constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
     constexpr const size_t srcElementsPerPacket = 7;
     constexpr const size_t dstElementsPerPacket = 4;
+    constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
     const size_t fullPacketsCount = std::min({
         expectedDstElements/dstElementsPerPacket,
         (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
@@ -544,8 +560,8 @@ static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
             buf.u8[srcElementsPerPacket-1-j] = *src++;
         for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
         {
-            dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & 0x3FFF);
-            buf.u64 >>= 14;
+            dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & packedBitsMask);
+            buf.u64 >>= packedBitsCount;
         }
         dst += dstElementsPerPacket;
     }
@@ -553,16 +569,18 @@ static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
         expectedDstElements-fullPacketsCount*dstElementsPerPacket,
         static_cast<size_t>(dstEnd-dst)
     );
-    while(remainingDstElements > 0)
+    bool stop = !remainingDstElements;
+    while(!stop)
     {
         for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
             buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
         for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
         {
-            if (remainingDstElements--)
-                *dst++ = static_cast<ushort>((buf.u64 >> (56-(j+1)*14)) & 0x3FFF);
+            stop |= !(remainingDstElements--);
+            if (!stop)
+                *dst++ = static_cast<ushort>((buf.u64 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
         }
-    }//end while(remainingDstElements > 0)
+    }//end while(!stop)
 }
 //end _unpack14To16()
 
