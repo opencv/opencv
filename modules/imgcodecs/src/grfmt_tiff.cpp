@@ -443,7 +443,6 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
 static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
     //5*8b=4*10b : 5 src for 4 dst
-    constexpr const size_t bitsPerByte = 8;
     constexpr const size_t packedBitsCount = 10;
     constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
     constexpr const size_t srcElementsPerPacket = 5;
@@ -491,7 +490,6 @@ static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
 static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
   //3*8b=2*12b : 3 src for 2 dst
-  constexpr const size_t bitsPerByte = 8;
   constexpr const size_t packedBitsCount = 12;
   constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
   constexpr const size_t srcElementsPerPacket = 3;
@@ -539,7 +537,6 @@ static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
 static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
     //7*8b=4*14b : 7 src for 4 dst
-    constexpr const size_t bitsPerByte = 8;
     constexpr const size_t packedBitsCount = 14;
     constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
     constexpr const size_t srcElementsPerPacket = 7;
