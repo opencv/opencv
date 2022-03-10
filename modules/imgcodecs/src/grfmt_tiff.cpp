@@ -325,7 +325,9 @@ bool TiffDecoder::readHeader()
                 result = true;
                 break;
             }
+            case 10:
             case 12:
+            case 14:
             case 16:
             {
                 CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
@@ -348,7 +350,7 @@ bool TiffDecoder::readHeader()
                 result = true;
                 break;
             default:
-                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 12, 16, 32 or 64.");
+                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 10, 12, 14, 16, 32 or 64.");
             }
         }
     }
@@ -438,26 +440,131 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
     }
 }
 
-static void _unpack12To16(const uchar* src, ushort* dst, size_t nbElements)
+static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
 {
-  //we read 3 src bytes to produce 2 dst values
-  const size_t nbPairElementsElement = (nbElements/2);
-  for(size_t i = 0 ; i<nbPairElementsElement ; ++i)
+    //5*8b=4*10b : 5 src for 4 dst
+    constexpr const size_t srcElementsPerPacket = 5;
+    constexpr const size_t dstElementsPerPacket = 4;
+    const size_t fullPacketsCount = std::min({
+        expectedDstElements/dstElementsPerPacket,
+        (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+        (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+    });
+    union {
+      unsigned __int64 u64;
+      unsigned __int8  u8[8];
+    } buf = {0};
+    for(size_t i = 0 ; i<fullPacketsCount ; ++i)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = *src++;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & 0x3FF);
+          buf.u64 >>= 10;
+        }
+        dst += dstElementsPerPacket;
+    }
+    size_t remainingDstElements = std::min(
+        expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+        static_cast<size_t>(dstEnd-dst)
+    );
+    while(remainingDstElements > 0)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            if (remainingDstElements--)
+              *dst++ = static_cast<ushort>((buf.u64 >> (40-(j+1)*10)) & 0x3FF);
+        }
+    }//end while(remainingDstElements > 0)
+}
+//end _unpack10To16()
+
+static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
+{
+  //3*8b=2*12b : 3 src for 2 dst
+  constexpr const size_t srcElementsPerPacket = 3;
+  constexpr const size_t dstElementsPerPacket = 2;
+  const size_t fullPacketsCount = std::min({
+    expectedDstElements/dstElementsPerPacket,
+    (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+    (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+  });
+  union {
+      unsigned __int32 u32;
+      unsigned __int8  u8[4];
+  } buf = {0};
+  for(size_t i = 0 ; i<fullPacketsCount ; ++i)
   {
-    const uchar b0 = *src++;
-    const uchar b1 = *src++;
-    const uchar b2 = *src++;
-    *dst++ = (static_cast<ushort>(b0)<<4)|static_cast<ushort>(b1>>4);
-    *dst++ = (static_cast<ushort>(b1&0x0F)<<8)|static_cast<ushort>(b2);
+      for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = *src++;
+      for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+      {
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u32 & 0xFFF);
+          buf.u32 >>= 12;
+      }
+      dst += dstElementsPerPacket;
   }
-  if (2*nbPairElementsElement < nbElements)
+  size_t remainingDstElements = std::min(
+      expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+      static_cast<size_t>(dstEnd-dst)
+  );
+  while(remainingDstElements > 0)
   {
-    const uchar b0 = *src++;
-    const uchar b1 = *src++;
-    *dst++ = (static_cast<ushort>(b0)<<4)|static_cast<ushort>(b1>>4);
-  }//end if (2*nbPairElementsElement < nbElements)
+      for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+      for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+      {
+          if (remainingDstElements--)
+              *dst++ = static_cast<ushort>((buf.u32 >> (24-(j+1)*12)) & 0xFFF);
+      }
+  }//end while(remainingDstElements > 0)
 }
 //end _unpack12To16()
+
+static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
+{
+    //7*8b=4*14b : 7 src for 4 dst
+    constexpr const size_t srcElementsPerPacket = 7;
+    constexpr const size_t dstElementsPerPacket = 4;
+    const size_t fullPacketsCount = std::min({
+        expectedDstElements/dstElementsPerPacket,
+        (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+        (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+        });
+    union {
+        unsigned __int64 u64;
+        unsigned __int8  u8[8];
+    } buf = {0};
+    for(size_t i = 0 ; i<fullPacketsCount ; ++i)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = *src++;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & 0x3FFF);
+            buf.u64 >>= 14;
+        }
+        dst += dstElementsPerPacket;
+    }
+    size_t remainingDstElements = std::min(
+        expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+        static_cast<size_t>(dstEnd-dst)
+    );
+    while(remainingDstElements > 0)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            if (remainingDstElements--)
+                *dst++ = static_cast<ushort>((buf.u64 >> (56-(j+1)*14)) & 0x3FFF);
+        }
+    }//end while(remainingDstElements > 0)
+}
+//end _unpack14To16()
 
 bool  TiffDecoder::readData( Mat& img )
 {
@@ -551,8 +658,10 @@ bool  TiffDecoder::readData( Mat& img )
                 CV_Assert(ncn == img.channels());
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
-            const size_t src_buffer_size = tile_height0 * ((ncn * tile_width0 * bpp + bitsPerByte - 1)/bitsPerByte);
-            const size_t src_buffer_unpacked_size = tile_height0 * ((ncn * tile_width0 * dst_bpp + bitsPerByte - 1)/bitsPerByte);
+            const size_t src_buffer_bytes_per_row = ((ncn * tile_width0 * bpp + bitsPerByte - 1)/bitsPerByte);
+            const size_t src_buffer_size = tile_height0 * src_buffer_bytes_per_row;
+            const size_t src_buffer_unpacked_bytes_per_row = ((ncn * tile_width0 * dst_bpp + bitsPerByte - 1)/bitsPerByte);
+            const size_t src_buffer_unpacked_size = tile_height0 * src_buffer_unpacked_bytes_per_row;
             const bool needsUnpacking = (bpp < dst_bpp);
             AutoBuffer<uchar> _src_buffer(src_buffer_size);
             uchar* src_buffer = _src_buffer.data();
@@ -628,15 +737,24 @@ bool  TiffDecoder::readData( Mat& img )
 
                             for (int i = 0; i < tile_height; i++)
                             {
-                                ushort* buffer16 = (ushort*)src_buffer+i*tile_width0*ncn;
+                                ushort* buffer16 = (ushort*)(src_buffer+i*src_buffer_bytes_per_row);
                                 if (needsUnpacking)
                                 {
-                                    if (bpp == 12)
-                                    {
-                                        _unpack12To16(src_buffer+i*((tile_width0*ncn* bpp + bitsPerByte - 1)/bitsPerByte),
-                                                      (ushort*)src_buffer_unpacked + i*tile_width0*ncn, ncn * tile_width0);
-                                    }
-                                    buffer16 = (ushort*)src_buffer_unpacked + i*tile_width0*ncn;
+                                    const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
+                                    uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
+                                    if (bpp == 10)
+                                        _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                            (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                            ncn * tile_width0);
+                                    else if (bpp == 12)
+                                        _unpack12To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
+                                    else if (bpp == 14)
+                                        _unpack14To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                            (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                            ncn * tile_width0);
+                                    buffer16 = (ushort*)dst_unpacked;
                                 }
 
                                 if (color)

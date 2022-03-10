@@ -125,15 +125,30 @@ TEST(Imgcodecs_Tiff, decode_12)
     cv::Mat img8UC1 = imread(root + "readwrite/pattern_8uc1.tif", cv::IMREAD_UNCHANGED);
     cv::Mat img8UC3 = imread(root + "readwrite/pattern_8uc3.tif", cv::IMREAD_UNCHANGED);
     cv::Mat img8UC4 = imread(root + "readwrite/pattern_8uc4.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC1 = imread(root + "readwrite/pattern_16uc1.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC3 = imread(root + "readwrite/pattern_16uc3.tif", cv::IMREAD_UNCHANGED);
-    cv::Mat img16UC4 = imread(root + "readwrite/pattern_16uc4.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img10UC1 = imread(root + "readwrite/pattern_10uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img10UC3 = imread(root + "readwrite/pattern_10uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img10UC4 = imread(root + "readwrite/pattern_10uc4.tif", cv::IMREAD_UNCHANGED);
     cv::Mat img12UC1 = imread(root + "readwrite/pattern_12uc1.tif", cv::IMREAD_UNCHANGED);
     cv::Mat img12UC3 = imread(root + "readwrite/pattern_12uc3.tif", cv::IMREAD_UNCHANGED);
     cv::Mat img12UC4 = imread(root + "readwrite/pattern_12uc4.tif", cv::IMREAD_UNCHANGED);
-    ASSERT_TRUE(img16UC1.size() == img12UC1.size());
-    ASSERT_TRUE(img16UC3.size() == img12UC3.size());
-    ASSERT_TRUE(img16UC4.size() == img12UC4.size());
+    cv::Mat img14UC1 = imread(root + "readwrite/pattern_14uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img14UC3 = imread(root + "readwrite/pattern_14uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img14UC4 = imread(root + "readwrite/pattern_14uc4.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC1 = imread(root + "readwrite/pattern_16uc1.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC3 = imread(root + "readwrite/pattern_16uc3.tif", cv::IMREAD_UNCHANGED);
+    cv::Mat img16UC4 = imread(root + "readwrite/pattern_16uc4.tif", cv::IMREAD_UNCHANGED);
+    ASSERT_TRUE(img8UC1.size() == img10UC1.size());
+    ASSERT_TRUE(img8UC3.size() == img10UC3.size());
+    ASSERT_TRUE(img8UC4.size() == img10UC4.size());
+    ASSERT_TRUE(img8UC1.size() == img12UC1.size());
+    ASSERT_TRUE(img8UC3.size() == img12UC3.size());
+    ASSERT_TRUE(img8UC4.size() == img12UC4.size());
+    ASSERT_TRUE(img8UC1.size() == img14UC1.size());
+    ASSERT_TRUE(img8UC3.size() == img14UC3.size());
+    ASSERT_TRUE(img8UC4.size() == img14UC4.size());
+    ASSERT_TRUE(img8UC1.size() == img16UC1.size());
+    ASSERT_TRUE(img8UC3.size() == img16UC3.size());
+    ASSERT_TRUE(img8UC4.size() == img16UC4.size());
 
     const double maxDiff = 256;//samples do not have the exact same values because of the tool that created them
     cv::Mat tmp;
@@ -154,6 +169,15 @@ TEST(Imgcodecs_Tiff, decode_12)
     diff = tmp.empty() ? 0. : cv::norm(tmp.reshape(1), img16UC4.reshape(1), cv::NORM_INF);
     ASSERT_TRUE(img16UC3.empty() || (diff <= maxDiff));
 
+    diff = img16UC1.empty() ? 0. : cv::norm(img10UC1.reshape(1), img16UC1.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img10UC1.empty() || (diff <= maxDiff));
+
+    diff = img16UC3.empty() ? 0. : cv::norm(img10UC3.reshape(1), img16UC3.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img10UC3.empty() || (diff <= maxDiff));
+
+    diff = img16UC4.empty() ? 0. : cv::norm(img10UC4.reshape(1), img16UC4.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img10UC4.empty() || (diff <= maxDiff));
+
     diff = img16UC1.empty() ? 0. : cv::norm(img12UC1.reshape(1), img16UC1.reshape(1), cv::NORM_INF);
     ASSERT_TRUE(img12UC1.empty() || (diff <= maxDiff));
 
@@ -162,6 +186,15 @@ TEST(Imgcodecs_Tiff, decode_12)
 
     diff = img16UC4.empty() ? 0. : cv::norm(img12UC4.reshape(1), img16UC4.reshape(1), cv::NORM_INF);
     ASSERT_TRUE(img12UC4.empty() || (diff <= maxDiff));
+
+    diff = img16UC1.empty() ? 0. : cv::norm(img14UC1.reshape(1), img16UC1.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img14UC1.empty() || (diff <= maxDiff));
+
+    diff = img16UC3.empty() ? 0. : cv::norm(img14UC3.reshape(1), img16UC3.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img14UC3.empty() || (diff <= maxDiff));
+
+    diff = img16UC4.empty() ? 0. : cv::norm(img14UC4.reshape(1), img16UC4.reshape(1), cv::NORM_INF);
+    ASSERT_TRUE(img14UC4.empty() || (diff <= maxDiff));
 }
 
 TEST(Imgcodecs_Tiff, decode_infinite_rowsperstrip)
