@@ -34,6 +34,21 @@ bool FrameInfoComparator::equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& 
     return lhs == rhs;
 }
 
+void apply_roi(mfxFrameSurface1* surface_handle,
+               const cv::util::optional<cv::Rect> &opt_roi) {
+    if (opt_roi.has_value()) {
+        const cv::Rect &roi = opt_roi.value();
+        surface_handle->Info.CropX = static_cast<mfxU16>(roi.x);
+        surface_handle->Info.CropY = static_cast<mfxU16>(roi.y);
+        surface_handle->Info.CropW = static_cast<mfxU16>(roi.width);
+        surface_handle->Info.CropH = static_cast<mfxU16>(roi.height);
+        GAPI_LOG_DEBUG(nullptr, "applied ROI {" << surface_handle->Info.CropX <<
+                                ", " << surface_handle->Info.CropY << "}, "
+                                "{ " << surface_handle->Info.CropX + surface_handle->Info.CropW <<
+                                ", " << surface_handle->Info.CropY + surface_handle->Info.CropH << "}");
+    }
+}
+
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
     ProcessingEngineBase(std::move(accel)) {
     GAPI_LOG_INFO(nullptr, "Create VPP preprocessing engine");
@@ -57,31 +72,25 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
                         my_sess.sync_in_queue.pop();
                         auto *vpp_suface = my_sess.processing_surface_ptr.lock()->get_handle();
 
-                       /* TODO: consider CROP/ROI here
-                        static int x_offset = 0;
-                        static int y_offset = 0;
-                        dec_surface->Info.CropX = x_offset;
-                        dec_surface->Info.CropY = y_offset;
-                        dec_surface->Info.CropW = 100 + x_offset++;
-                        dec_surface->Info.CropH = 100 + y_offset++;
-                        */
-                        session_type::outgoing_task vpp_pending_op {pending_op.sync_handle, nullptr};
+                        apply_roi(pending_op.decoded_surface_ptr, pending_op.roi);
+
+                        mfxSyncPoint vpp_sync_handle{};
                         my_sess.last_status = MFXVideoVPP_RunFrameVPPAsync(my_sess.session,
                                                                            pending_op.decoded_surface_ptr,
                                                                            vpp_suface,
-                                                                           nullptr, &vpp_pending_op.sync_handle);
-                        vpp_pending_op.vpp_surface_ptr = vpp_suface;
-
+                                                                           nullptr, &vpp_sync_handle);
+                        session_type::outgoing_task vpp_pending_op {vpp_sync_handle,
+                                                                    vpp_suface,
+                                                                    std::move(pending_op) };
                         GAPI_LOG_DEBUG(nullptr, "Got VPP async operation" <<
                                                 ", sync id:  " <<
                                                 vpp_pending_op.sync_handle <<
                                                 ", dec surface:  " <<
-                                                pending_op.decoded_surface_ptr <<
+                                                vpp_pending_op.original_surface_ptr <<
                                                 ", trans surface: " <<
                                                 vpp_pending_op.vpp_surface_ptr <<
                                                 ", status: " <<
                                                 mfxstatus_to_string(my_sess.last_status));
-
                         // NB: process status
                         if (my_sess.last_status == MFX_ERR_MORE_SURFACE ||
                             my_sess.last_status == MFX_ERR_NONE) {
@@ -131,6 +140,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
 
                     // put frames in ready queue on success
                     if (MFX_ERR_NONE == sess.last_status) {
+                        pending_op.release_frame();
                         on_frame_ready(my_sess, pending_op.vpp_surface_ptr);
                     }
                 }
@@ -327,8 +337,8 @@ VPPPreprocEngine::initialize_session(mfxSession,
     return {};
 }
 
-cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame) {
-
+cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame,
+                                          const cv::util::optional<cv::Rect> &roi) {
     std::shared_ptr<EngineSession> pp_sess_impl = sess.get<EngineSession>();
     if (!pp_sess_impl) {
         // bypass case
@@ -347,8 +357,10 @@ cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::Medi
 
     // schedule decoded surface into preproc queue
     session_type::incoming_task in_preproc_request {nullptr,
-                                                  vpl_adapter->get_surface()->get_handle(),
-                                                  in_frame};
+                                                    vpl_adapter->get_surface()->get_handle(),
+                                                    vpl_adapter->get_surface()->get_info(),
+                                                    in_frame,
+                                                    roi};
     s->sync_in_queue.emplace(in_preproc_request);
 
     // invoke pipeline to transform decoded surface into preprocessed surface

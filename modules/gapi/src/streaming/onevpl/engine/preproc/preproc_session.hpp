@@ -41,12 +41,24 @@ private:
     struct incoming_task {
         mfxSyncPoint sync_handle;
         mfxFrameSurface1* decoded_surface_ptr;
+        Surface::info_t decoded_frame_info;
         cv::MediaFrame decoded_frame_copy;
+        cv::util::optional<cv::Rect> roi;
     };
 
     struct outgoing_task {
+        outgoing_task() = default;
+        outgoing_task(mfxSyncPoint acquired_sync_handle,
+                      mfxFrameSurface1* acquired_surface_ptr,
+                      incoming_task &&in);
         mfxSyncPoint sync_handle;
         mfxFrameSurface1* vpp_surface_ptr;
+
+        mfxFrameSurface1* original_surface_ptr;
+        void release_frame();
+    private:
+        Surface::info_t original_frame_info;
+        cv::MediaFrame original_frame;
     };
 
     std::queue<incoming_task> sync_in_queue;

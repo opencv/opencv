@@ -954,7 +954,7 @@ struct TorchImporter
                 int size = scalarParams.get<int>("size");
 
                 int begins[] = {0, 0, size, size};
-                int ends[] = {-1, -1, -size - 1, -size - 1};
+                int ends[] = {INT_MAX, INT_MAX, -size, -size};
 
                 newModule->apiType = "Slice";
                 layerParams.set("begin", DictValue::arrayInt<int*>(&begins[0], 4));
