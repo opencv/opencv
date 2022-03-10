@@ -451,8 +451,8 @@ static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
         (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
     });
     union {
-      uint64 u64;
-      uint8  u8[8];
+      uint64_t u64;
+      uint8_t  u8[8];
     } buf = {0};
     for(size_t i = 0 ; i<fullPacketsCount ; ++i)
     {
@@ -493,8 +493,8 @@ static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
     (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
   });
   union {
-      uint32 u32;
-      uint8  u8[4];
+      uint32_t u32;
+      uint8_t  u8[4];
   } buf = {0};
   for(size_t i = 0 ; i<fullPacketsCount ; ++i)
   {
@@ -535,8 +535,8 @@ static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
         (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
         });
     union {
-        uint64 u64;
-        uint8  u8[8];
+        uint64_t u64;
+        uint8_t  u8[8];
     } buf = {0};
     for(size_t i = 0 ; i<fullPacketsCount ; ++i)
     {
