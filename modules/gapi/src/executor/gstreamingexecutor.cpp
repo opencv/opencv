@@ -446,7 +446,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
                break;
            }
            default:
-                cv::util::throw_error(std::logic_error("Unsupported cmd type in getInputVector()"));
+               GAPI_Assert(false && "Unsupported cmd type in getInputVector()");
         }
     } // for(in_queues)
 
@@ -1805,6 +1805,8 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
             std::rethrow_exception(cv::util::get<Exception>(cmd).eptr);
             return true;
         }
+        default:
+            GAPI_Assert(false && "Unsupported cmd type in pull");
     }
     GAPI_Assert(false && "Unreachable code");
 }

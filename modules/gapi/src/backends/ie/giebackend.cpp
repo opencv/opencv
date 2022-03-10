@@ -959,12 +959,13 @@ static void PostOutputs(InferenceEngine::InferRequest &request,
     GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
 
     if (code != IE::StatusCode::OK) {
-        ctx->eptr = std::make_exception_ptr(
-               std::logic_error("IE::InferRequest finished with not OK status"));
+        std::stringstream ss;
+        ss << "InferRequest for model: " << ctx->uu.params.model_path
+           << " finished with InferenceEngine::StatusCode: " << static_cast<int>(code);
+        ctx->eptr = std::make_exception_ptr(std::logic_error(ss.str()));
     }
 
-    for (auto i : ade::util::iota(ctx->uu.params.num_out))
-    {
+    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
         auto& out_mat = ctx->outMatR(i);
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
