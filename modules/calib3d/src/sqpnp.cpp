@@ -247,14 +247,15 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
     p_ = -q_inv * qa_sum;
 
     omega_ += qa_sum.t() * p_;
-
-    cv::eigen(omega_, s_, u_);
-    u_ = u_.t(); // eigenvectors were returned as rows
-#if 0
-    // SVD equivalent of the eigendecomposition, retained for reference
+    
     cv::SVD omega_svd(omega_, cv::SVD::FULL_UV);
     s_ = omega_svd.w;
     u_ = cv::Mat(omega_svd.vt.t());
+
+#if 0
+    // EVD equivalent of the SVD, seems less stable
+    cv::eigen(omega_, s_, u_);
+    u_ = u_.t(); // eigenvectors were returned as rows
 #endif
 
     CV_Assert(s_(0) >= 1e-7);
