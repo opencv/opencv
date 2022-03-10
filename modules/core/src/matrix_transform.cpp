@@ -283,55 +283,19 @@ void transpose( InputArray _src, OutputArray _dst )
 }
 
 
-
-template <typename T>
-struct transposeImpl
+void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst_)
 {
-    void operator()(const cv::Mat& inp, cv::Mat& out, const std::vector<int>& order) const
+    Mat inp = src_.getMat();
+    CV_Assert(inp.isContinuous());
+    CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
+    CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
+
+    auto order_ = order;
+    std::sort(order_.begin(), order_.end());
+    for (size_t i = 0; i < order_.size(); ++i)
     {
-        int continuous_idx = 0;
-        for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
-        {
-            if (order[i] != i)
-            {
-                continuous_idx = i + 1;
-                break;
-            }
-        }
-
-        size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
-        size_t outer_size = out.total() / continuous_size;
-
-        std::vector<size_t> steps(order.size());
-        for (int i = 0; i < static_cast<int>(steps.size()); ++i)
-        {
-            steps[order[i]] = out.step1(i);
-        }
-
-        auto* src = inp.ptr<const T>();
-        auto* dst = out.ptr<T>();
-
-        size_t dst_offset = 0;
-        for (size_t i = 0; i < outer_size; ++i)
-        {
-            std::memcpy(dst + dst_offset, src, out.elemSize() * continuous_size);
-            src += continuous_size;
-            for (int j = continuous_idx - 1; j >= 0; --j)
-            {
-                dst_offset += steps[j];
-                if ((dst_offset / steps[j]) % inp.size[j] != 0)
-                {
-                    break;
-                }
-                dst_offset -= steps[j] * inp.size[j];
-            }
-        }
+        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
     }
-};
-
-void transpose(const Mat& inp, const std::vector<int>& order, OutputArray _out)
-{
-    CV_Assert(inp.isContinuous() && inp.channels() == 1);
 
     std::vector<int> newShape(order.size());
     for (size_t i = 0; i < order.size(); ++i)
@@ -339,10 +303,49 @@ void transpose(const Mat& inp, const std::vector<int>& order, OutputArray _out)
         newShape[i] = inp.size[order[i]];
     }
 
-    _out.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
-    Mat out = _out.getMat();
-    CV_Assert(out.isContinuous()); // does OutputArray::create always returns continuous matrix?
-    cv::detail::depthDispatch<transposeImpl>(inp.depth(), inp, out, order);
+    dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
+    Mat out = dst_.getMat();
+    CV_Assert(out.isContinuous());
+    CV_Assert(inp.data != out.data);
+
+    int continuous_idx = 0;
+    for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
+    {
+        if (order[i] != i)
+        {
+            continuous_idx = i + 1;
+            break;
+        }
+    }
+
+    size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
+    size_t outer_size = out.total() / continuous_size;
+
+    std::vector<size_t> steps(order.size());
+    for (int i = 0; i < static_cast<int>(steps.size()); ++i)
+    {
+        steps[i] = inp.step1(order[i]);
+    }
+
+    auto* src = inp.ptr<const unsigned char>();
+    auto* dst = out.ptr<unsigned char>();
+
+    size_t src_offset = 0;
+    size_t es = out.elemSize();
+    for (size_t i = 0; i < outer_size; ++i)
+    {
+        std::memcpy(dst, src + es * src_offset, es * continuous_size);
+        dst += es * continuous_size;
+        for (int j = continuous_idx - 1; j >= 0; --j)
+        {
+            src_offset += steps[j];
+            if ((src_offset / steps[j]) % out.size[j] != 0)
+            {
+                break;
+            }
+            src_offset -= steps[j] * out.size[j];
+        }
+    }
 }
 
 

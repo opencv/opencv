@@ -2144,7 +2144,6 @@ public:
 
 TEST_P(TransposeND, basic)
 {
-    setRNGSeed(42);
     Mat inp(m_shape, m_type);
     randu(inp, 0, 255);
 
@@ -2175,7 +2174,7 @@ TEST_P(TransposeND, basic)
     do
     {
         Mat out;
-        cv::transpose(inp, order, out);
+        cv::transposeND(inp, order, out);
         std::vector<int> id(order.size());
         for (size_t i = 0; i < inp.total(); ++i)
         {
@@ -2183,13 +2182,13 @@ TEST_P(TransposeND, basic)
             switch (inp.type())
             {
             case CV_8UC1:
-                CV_Assert(inp.at<uint8_t>(id.data()) == out.at<uint8_t>(new_id.data()));
+                ASSERT_EQ(inp.at<uint8_t>(id.data()), out.at<uint8_t>(new_id.data()));
                 break;
             case CV_32FC1:
-                CV_Assert(inp.at<float>(id.data()) == out.at<float>(new_id.data()));
+                ASSERT_EQ(inp.at<float>(id.data()), out.at<float>(new_id.data()));
                 break;
             default:
-                CV_Error(Error::StsBadArg, format("Unsupported type: %d", inp.type()));
+                FAIL() << "Unsupported type: " << inp.type();
             }
             advancer(id);
         }
