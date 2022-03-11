@@ -126,13 +126,23 @@ private:
     inline bool positiveMajorityDepths(const SQPSolution& solution, InputArray objectPoints) const;
 
     /*
-    * @brief                Determines the nearest rotation matrix to a given rotation matrix.
-    *                       Input and output are 9x1 vector representing a vector stored in row-major
+    * @brief                Determines the nearest rotation matrix to a given rotation matrix using SVD.
+    *                       Input and output are 9x1 vector representing a matrix stored in row-major
     *                       order.
     * @param e              The input 3x3 matrix stored in a vector in row-major order.
     * @param r              The nearest rotation matrix to the input e (again in row-major order).
     */
-    static void nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
+    static void nearestRotationMatrixSVD(const cv::Matx<double, 9, 1>& e,
+        cv::Matx<double, 9, 1>& r);
+
+    /*
+    * @brief                Determines the nearest rotation matrix to a given rotation matrix using the FOAM algorithm.
+    *                       Input and output are 9x1 vector representing a matrix stored in row-major
+    *                       order.
+    * @param e              The input 3x3 matrix stored in a vector in row-major order.
+    * @param r              The nearest rotation matrix to the input e (again in row-major order).
+    */
+    static void nearestRotationMatrixFOAM(const cv::Matx<double, 9, 1>& e,
         cv::Matx<double, 9, 1>& r);
 
     /*
