@@ -176,8 +176,8 @@ TEST(Core_RotatedRect, intersection)
     intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
     ASSERT_LE(std::abs(intersectionArea-r1.size.area()), 1e-1);
 
-    r1 = cv::RotatedRect(cv::Point2f(45.0715866, 39.8825722), cv::Size2f(3.0f, 3.0f), 0.10067749f);
-    r2 = cv::RotatedRect(cv::Point2f(45.0715866, 39.8825874), cv::Size2f(3.0f, 3.0f), 0.10067749f);
+    r1 = cv::RotatedRect(cv::Point2f(45.0715866f, 39.8825722f), cv::Size2f(3.0f, 3.0f), 0.10067749f);
+    r2 = cv::RotatedRect(cv::Point2f(45.0715866f, 39.8825874f), cv::Size2f(3.0f, 3.0f), 0.10067749f);
     intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
     intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
     ASSERT_LE(std::abs(intersectionArea-r1.size.area()), 1e-3);
