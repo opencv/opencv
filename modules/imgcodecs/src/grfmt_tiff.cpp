@@ -449,9 +449,9 @@ static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
     constexpr const size_t dstElementsPerPacket = 4;
     constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
     const size_t fullPacketsCount = std::min({
-        expectedDstElements/dstElementsPerPacket,
-        (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
-        (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+      expectedDstElements/dstElementsPerPacket,
+      (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+      (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
     });
     union {
       uint64_t u64;
@@ -543,10 +543,10 @@ static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, us
     constexpr const size_t dstElementsPerPacket = 4;
     constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
     const size_t fullPacketsCount = std::min({
-        expectedDstElements/dstElementsPerPacket,
-        (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
-        (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
-        });
+      expectedDstElements/dstElementsPerPacket,
+      (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+      (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+    });
     union {
         uint64_t u64;
         uint8_t  u8[8];
@@ -614,7 +614,7 @@ bool  TiffDecoder::readData( Mat& img )
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16 img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
-        const int bitsPerByte = 8;
+        constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         bool vert_flip = dst_bpp == 8 &&
                         (img_orientation == ORIENTATION_BOTRIGHT || img_orientation == ORIENTATION_RIGHTBOT ||
@@ -673,9 +673,9 @@ bool  TiffDecoder::readData( Mat& img )
                 CV_Assert(ncn == img.channels());
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
-            const size_t src_buffer_bytes_per_row = ((ncn * tile_width0 * bpp + bitsPerByte - 1)/bitsPerByte);
+            const size_t src_buffer_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * bpp), static_cast<size_t>(bitsPerByte));
             const size_t src_buffer_size = tile_height0 * src_buffer_bytes_per_row;
-            const size_t src_buffer_unpacked_bytes_per_row = ((ncn * tile_width0 * dst_bpp + bitsPerByte - 1)/bitsPerByte);
+            const size_t src_buffer_unpacked_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * dst_bpp), static_cast<size_t>(bitsPerByte));
             const size_t src_buffer_unpacked_size = tile_height0 * src_buffer_unpacked_bytes_per_row;
             const bool needsUnpacking = (bpp < dst_bpp);
             AutoBuffer<uchar> _src_buffer(src_buffer_size);
@@ -759,16 +759,16 @@ bool  TiffDecoder::readData( Mat& img )
                                     uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
                                     if (bpp == 10)
                                         _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
-                                            (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
-                                            ncn * tile_width0);
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
                                     else if (bpp == 12)
                                         _unpack12To16(src_packed, src_packed+src_buffer_bytes_per_row,
                                                       (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
                                                       ncn * tile_width0);
                                     else if (bpp == 14)
                                         _unpack14To16(src_packed, src_packed+src_buffer_bytes_per_row,
-                                            (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
-                                            ncn * tile_width0);
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
                                     buffer16 = (ushort*)dst_unpacked;
                                 }
 
