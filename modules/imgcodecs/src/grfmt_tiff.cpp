@@ -325,6 +325,9 @@ bool TiffDecoder::readHeader()
                 result = true;
                 break;
             }
+            case 10:
+            case 12:
+            case 14:
             case 16:
             {
                 CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
@@ -347,7 +350,7 @@ bool TiffDecoder::readHeader()
                 result = true;
                 break;
             default:
-                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 16, 32 or 64.");
+                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 10, 12, 14, 16, 32 or 64.");
             }
         }
     }
@@ -437,6 +440,147 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
     }
 }
 
+static void _unpack10To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
+{
+    //5*8b=4*10b : 5 src for 4 dst
+    constexpr const size_t packedBitsCount = 10;
+    constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
+    constexpr const size_t srcElementsPerPacket = 5;
+    constexpr const size_t dstElementsPerPacket = 4;
+    constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
+    const size_t fullPacketsCount = std::min({
+      expectedDstElements/dstElementsPerPacket,
+      (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+      (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+    });
+    union {
+      uint64_t u64;
+      uint8_t  u8[8];
+    } buf = {0};
+    for(size_t i = 0 ; i<fullPacketsCount ; ++i)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = *src++;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & packedBitsMask);
+          buf.u64 >>= packedBitsCount;
+        }
+        dst += dstElementsPerPacket;
+    }
+    size_t remainingDstElements = std::min(
+        expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+        static_cast<size_t>(dstEnd-dst)
+    );
+    bool stop = !remainingDstElements;
+    while(!stop)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            stop |= !(remainingDstElements--);
+            if (!stop)
+              *dst++ = static_cast<ushort>((buf.u64 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
+        }
+    }//end while(!stop)
+}
+//end _unpack10To16()
+
+static void _unpack12To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
+{
+  //3*8b=2*12b : 3 src for 2 dst
+  constexpr const size_t packedBitsCount = 12;
+  constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
+  constexpr const size_t srcElementsPerPacket = 3;
+  constexpr const size_t dstElementsPerPacket = 2;
+  constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
+  const size_t fullPacketsCount = std::min({
+    expectedDstElements/dstElementsPerPacket,
+    (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+    (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+  });
+  union {
+      uint32_t u32;
+      uint8_t  u8[4];
+  } buf = {0};
+  for(size_t i = 0 ; i<fullPacketsCount ; ++i)
+  {
+      for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = *src++;
+      for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+      {
+          dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u32 & packedBitsMask);
+          buf.u32 >>= packedBitsCount;
+      }
+      dst += dstElementsPerPacket;
+  }
+  size_t remainingDstElements = std::min(
+      expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+      static_cast<size_t>(dstEnd-dst)
+  );
+  bool stop = !remainingDstElements;
+  while(!stop)
+  {
+      for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+          buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+      for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+      {
+          stop |= !(remainingDstElements--);
+          if (!stop)
+              *dst++ = static_cast<ushort>((buf.u32 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
+      }
+  }//end while(!stop)
+}
+//end _unpack12To16()
+
+static void _unpack14To16(const uchar* src, const uchar* srcEnd, ushort* dst, ushort* dstEnd, size_t expectedDstElements)
+{
+    //7*8b=4*14b : 7 src for 4 dst
+    constexpr const size_t packedBitsCount = 14;
+    constexpr const size_t packedBitsMask = ((1<<packedBitsCount)-1);
+    constexpr const size_t srcElementsPerPacket = 7;
+    constexpr const size_t dstElementsPerPacket = 4;
+    constexpr const size_t bitsPerPacket = dstElementsPerPacket*packedBitsCount;
+    const size_t fullPacketsCount = std::min({
+      expectedDstElements/dstElementsPerPacket,
+      (static_cast<size_t>(srcEnd-src)/srcElementsPerPacket),
+      (static_cast<size_t>(dstEnd-dst)/dstElementsPerPacket)
+    });
+    union {
+        uint64_t u64;
+        uint8_t  u8[8];
+    } buf = {0};
+    for(size_t i = 0 ; i<fullPacketsCount ; ++i)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = *src++;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            dst[dstElementsPerPacket-1-j] = static_cast<ushort>(buf.u64 & packedBitsMask);
+            buf.u64 >>= packedBitsCount;
+        }
+        dst += dstElementsPerPacket;
+    }
+    size_t remainingDstElements = std::min(
+        expectedDstElements-fullPacketsCount*dstElementsPerPacket,
+        static_cast<size_t>(dstEnd-dst)
+    );
+    bool stop = !remainingDstElements;
+    while(!stop)
+    {
+        for(size_t j = 0 ; j<srcElementsPerPacket ; ++j)
+            buf.u8[srcElementsPerPacket-1-j] = (src<srcEnd) ? *src++ : 0;
+        for(size_t j = 0 ; j<dstElementsPerPacket ; ++j)
+        {
+            stop |= !(remainingDstElements--);
+            if (!stop)
+                *dst++ = static_cast<ushort>((buf.u64 >> (bitsPerPacket-(j+1)*packedBitsCount)) & packedBitsMask);
+        }
+    }//end while(!stop)
+}
+//end _unpack14To16()
+
 bool  TiffDecoder::readData( Mat& img )
 {
     int type = img.type();
@@ -470,7 +614,7 @@ bool  TiffDecoder::readData( Mat& img )
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16 img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
-        const int bitsPerByte = 8;
+        constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         bool vert_flip = dst_bpp == 8 &&
                         (img_orientation == ORIENTATION_BOTRIGHT || img_orientation == ORIENTATION_RIGHTBOT ||
@@ -529,10 +673,15 @@ bool  TiffDecoder::readData( Mat& img )
                 CV_Assert(ncn == img.channels());
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
-            const size_t buffer_size = (bpp / bitsPerByte) * ncn * tile_height0 * tile_width0;
-            AutoBuffer<uchar> _buffer(buffer_size);
-            uchar* buffer = _buffer.data();
-            ushort* buffer16 = (ushort*)buffer;
+            const size_t src_buffer_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * bpp), static_cast<size_t>(bitsPerByte));
+            const size_t src_buffer_size = tile_height0 * src_buffer_bytes_per_row;
+            const size_t src_buffer_unpacked_bytes_per_row = divUp(static_cast<size_t>(ncn * tile_width0 * dst_bpp), static_cast<size_t>(bitsPerByte));
+            const size_t src_buffer_unpacked_size = tile_height0 * src_buffer_unpacked_bytes_per_row;
+            const bool needsUnpacking = (bpp < dst_bpp);
+            AutoBuffer<uchar> _src_buffer(src_buffer_size);
+            uchar* src_buffer = _src_buffer.data();
+            AutoBuffer<uchar> _src_buffer_unpacked(needsUnpacking ? src_buffer_unpacked_size : 0);
+            uchar* src_buffer_unpacked = needsUnpacking ? _src_buffer_unpacked.data() : nullptr;
             int tileidx = 0;
 
             for (int y = 0; y < m_height; y += (int)tile_height0)
@@ -549,14 +698,14 @@ bool  TiffDecoder::readData( Mat& img )
                     {
                         case 8:
                         {
-                            uchar* bstart = buffer;
+                            uchar* bstart = src_buffer;
                             if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32*)buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32*)src_buffer));
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32*)buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32*)src_buffer));
                                 // Tiles fill the buffer from the bottom up
                                 bstart += (tile_height0 - tile_height) * tile_width0 * 4;
                             }
@@ -594,28 +743,48 @@ bool  TiffDecoder::readData( Mat& img )
                         {
                             if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32*)buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32*)src_buffer, src_buffer_size) >= 0);
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32*)buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32*)src_buffer, src_buffer_size) >= 0);
                             }
 
                             for (int i = 0; i < tile_height; i++)
                             {
+                                ushort* buffer16 = (ushort*)(src_buffer+i*src_buffer_bytes_per_row);
+                                if (needsUnpacking)
+                                {
+                                    const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
+                                    uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
+                                    if (bpp == 10)
+                                        _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
+                                    else if (bpp == 12)
+                                        _unpack12To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
+                                    else if (bpp == 14)
+                                        _unpack14To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                      ncn * tile_width0);
+                                    buffer16 = (ushort*)dst_unpacked;
+                                }
+
                                 if (color)
                                 {
                                     if (ncn == 1)
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                     }
                                     else if (ncn == 3)
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                     }
@@ -623,14 +792,14 @@ bool  TiffDecoder::readData( Mat& img )
                                     {
                                         if (wanted_channels == 4)
                                         {
-                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16 + i*tile_width0*ncn, 0,
+                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1));
                                         }
                                         else
                                         {
                                             CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
-                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
+                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1), 2);
                                         }
@@ -646,12 +815,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         memcpy(img.ptr<ushort>(img_y + i, x),
-                                               buffer16 + i*tile_width0*ncn,
+                                               buffer16,
                                                tile_width*sizeof(ushort));
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
+                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
                                                 Size(tile_width, 1), ncn, 2);
                                     }
@@ -665,14 +834,14 @@ bool  TiffDecoder::readData( Mat& img )
                         {
                             if( !is_tiled )
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, src_buffer, src_buffer_size) >= 0);
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, src_buffer, src_buffer_size) >= 0);
                             }
 
-                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), buffer);
+                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), src_buffer);
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3)
@@ -691,6 +860,8 @@ bool  TiffDecoder::readData( Mat& img )
                 }  // for x
             }  // for y
         }
+        if (bpp < dst_bpp)
+          img *= (1<<(dst_bpp-bpp));
         fixOrientation(img, img_orientation, dst_bpp);
     }
 
