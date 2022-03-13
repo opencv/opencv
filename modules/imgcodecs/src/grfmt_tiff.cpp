@@ -710,32 +710,40 @@ bool  TiffDecoder::readData( Mat& img )
                                 bstart += (tile_height0 - tile_height) * tile_width0 * 4;
                             }
 
-                            for (int i = 0; i < tile_height; i++)
-                            {
-                                if (color)
-                                {
-                                    if (wanted_channels == 4)
+                            const int minimalBytesPerPacket = 1<<12;
+                            const int rowsPerPacket = std::max(1, static_cast<int>(minimalBytesPerPacket/(ncn * tile_width0 * sizeof(uchar))));
+                            const int rowsPacketsCount = divUp(tile_height, rowsPerPacket);
+                            const Range all(0, tile_height);
+                            parallel_for_(all, [=,&img](const cv::Range& range) -> void {
+                                    for (int i = range.start; i < range.end; ++i)
+                                    //for (int i = 0; i < tile_height; ++i)
                                     {
-                                        icvCvt_BGRA2RGBA_8u_C4R(bstart + i*tile_width0*4, 0,
-                                                img.ptr(img_y + tile_height - i - 1, x), 0,
-                                                Size(tile_width, 1) );
+                                        if (color)
+                                        {
+                                            if (wanted_channels == 4)
+                                            {
+                                                icvCvt_BGRA2RGBA_8u_C4R(bstart + i*tile_width0*4, 0,
+                                                        img.ptr(img_y + tile_height - i - 1, x), 0,
+                                                        Size(tile_width, 1) );
+                                            }
+                                            else
+                                            {
+                                                CV_CheckEQ(wanted_channels, 3, "TIFF-8bpp: BGR/BGRA images are supported only");
+                                                icvCvt_BGRA2BGR_8u_C4C3R(bstart + i*tile_width0*4, 0,
+                                                        img.ptr(img_y + tile_height - i - 1, x), 0,
+                                                        Size(tile_width, 1), 2);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            CV_CheckEQ(wanted_channels, 1, "");
+                                            icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
+                                                    img.ptr(img_y + tile_height - i - 1, x), 0,
+                                                    Size(tile_width, 1), 2);
+                                        }
                                     }
-                                    else
-                                    {
-                                        CV_CheckEQ(wanted_channels, 3, "TIFF-8bpp: BGR/BGRA images are supported only");
-                                        icvCvt_BGRA2BGR_8u_C4C3R(bstart + i*tile_width0*4, 0,
-                                                img.ptr(img_y + tile_height - i - 1, x), 0,
-                                                Size(tile_width, 1), 2);
-                                    }
-                                }
-                                else
-                                {
-                                    CV_CheckEQ(wanted_channels, 1, "");
-                                    icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
-                                            img.ptr(img_y + tile_height - i - 1, x), 0,
-                                            Size(tile_width, 1), 2);
-                                }
-                            }
+                                },
+                                rowsPacketsCount);
                             break;
                         }
 
@@ -750,82 +758,90 @@ bool  TiffDecoder::readData( Mat& img )
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32*)src_buffer, src_buffer_size) >= 0);
                             }
 
-                            for (int i = 0; i < tile_height; i++)
-                            {
-                                ushort* buffer16 = (ushort*)(src_buffer+i*src_buffer_bytes_per_row);
-                                if (needsUnpacking)
-                                {
-                                    const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
-                                    uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
-                                    if (bpp == 10)
-                                        _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
-                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
-                                                      ncn * tile_width0);
-                                    else if (bpp == 12)
-                                        _unpack12To16(src_packed, src_packed+src_buffer_bytes_per_row,
-                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
-                                                      ncn * tile_width0);
-                                    else if (bpp == 14)
-                                        _unpack14To16(src_packed, src_packed+src_buffer_bytes_per_row,
-                                                      (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
-                                                      ncn * tile_width0);
-                                    buffer16 = (ushort*)dst_unpacked;
-                                }
-
-                                if (color)
-                                {
-                                    if (ncn == 1)
+                            const int minimalBytesPerPacket = 1<<12;
+                            const int rowsPerPacket = std::max(1, static_cast<int>(minimalBytesPerPacket/(ncn * tile_width0 * sizeof(uchar))));
+                            const int rowsPacketsCount = divUp(tile_height, rowsPerPacket);
+                            const Range all(0, tile_height);
+                            parallel_for_(all, [=,&img](const cv::Range& range) -> void {
+                                    for (int i = range.start; i < range.end; ++i)
+                                    //for (int i = 0; i < tile_height; ++i)
                                     {
-                                        CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1));
-                                    }
-                                    else if (ncn == 3)
-                                    {
-                                        CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1));
-                                    }
-                                    else if (ncn == 4)
-                                    {
-                                        if (wanted_channels == 4)
+                                        ushort* buffer16 = (ushort*)(src_buffer+i*src_buffer_bytes_per_row);
+                                        if (needsUnpacking)
                                         {
-                                            icvCvt_BGRA2RGBA_16u_C4R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1));
+                                            const uchar* src_packed = src_buffer+i*src_buffer_bytes_per_row;
+                                            uchar* dst_unpacked = src_buffer_unpacked+i*src_buffer_unpacked_bytes_per_row;
+                                            if (bpp == 10)
+                                                _unpack10To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                              (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                              ncn * tile_width0);
+                                            else if (bpp == 12)
+                                                _unpack12To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                              (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                              ncn * tile_width0);
+                                            else if (bpp == 14)
+                                                _unpack14To16(src_packed, src_packed+src_buffer_bytes_per_row,
+                                                              (ushort*)dst_unpacked, (ushort*)(dst_unpacked+src_buffer_unpacked_bytes_per_row),
+                                                              ncn * tile_width0);
+                                            buffer16 = (ushort*)dst_unpacked;
+                                        }
+
+                                        if (color)
+                                        {
+                                            if (ncn == 1)
+                                            {
+                                                CV_CheckEQ(wanted_channels, 3, "");
+                                                icvCvt_Gray2BGR_16u_C1C3R(buffer16, 0,
+                                                        img.ptr<ushort>(img_y + i, x), 0,
+                                                        Size(tile_width, 1));
+                                            }
+                                            else if (ncn == 3)
+                                            {
+                                                CV_CheckEQ(wanted_channels, 3, "");
+                                                icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
+                                                        img.ptr<ushort>(img_y + i, x), 0,
+                                                        Size(tile_width, 1));
+                                            }
+                                            else if (ncn == 4)
+                                            {
+                                                if (wanted_channels == 4)
+                                                {
+                                                    icvCvt_BGRA2RGBA_16u_C4R(buffer16, 0,
+                                                        img.ptr<ushort>(img_y + i, x), 0,
+                                                        Size(tile_width, 1));
+                                                }
+                                                else
+                                                {
+                                                    CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
+                                                    icvCvt_BGRA2BGR_16u_C4C3R(buffer16, 0,
+                                                        img.ptr<ushort>(img_y + i, x), 0,
+                                                        Size(tile_width, 1), 2);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                CV_Error(Error::StsError, "Not supported");
+                                            }
                                         }
                                         else
                                         {
-                                            CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
-                                            icvCvt_BGRA2BGR_16u_C4C3R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1), 2);
+                                            CV_CheckEQ(wanted_channels, 1, "");
+                                            if( ncn == 1 )
+                                            {
+                                                memcpy(img.ptr<ushort>(img_y + i, x),
+                                                       buffer16,
+                                                       tile_width*sizeof(ushort));
+                                            }
+                                            else
+                                            {
+                                                icvCvt_BGRA2Gray_16u_CnC1R(buffer16, 0,
+                                                        img.ptr<ushort>(img_y + i, x), 0,
+                                                        Size(tile_width, 1), ncn, 2);
+                                            }
                                         }
                                     }
-                                    else
-                                    {
-                                        CV_Error(Error::StsError, "Not supported");
-                                    }
-                                }
-                                else
-                                {
-                                    CV_CheckEQ(wanted_channels, 1, "");
-                                    if( ncn == 1 )
-                                    {
-                                        memcpy(img.ptr<ushort>(img_y + i, x),
-                                               buffer16,
-                                               tile_width*sizeof(ushort));
-                                    }
-                                    else
-                                    {
-                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1), ncn, 2);
-                                    }
-                                }
-                            }
+                                },
+                                rowsPacketsCount);
                             break;
                         }
 
