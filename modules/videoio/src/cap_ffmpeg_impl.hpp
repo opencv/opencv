@@ -1519,7 +1519,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 #if USE_AV_HW_CODECS
     if (sw_picture != picture)
     {
-        av_frame_unref(sw_picture);
+        av_frame_free(&sw_picture);
     }
 #endif
     return true;
