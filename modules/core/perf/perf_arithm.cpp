@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include <numeric>
 
 namespace opencv_test
 {
@@ -389,6 +390,29 @@ PERF_TEST_P_(BinaryOpTest, reciprocal)
     declare.in(b, WARMUP_RNG).out(c);
 
     TEST_CYCLE() cv::divide(scale, b, c);
+
+    SANITY_CHECK_NOTHING();
+}
+
+
+PERF_TEST_P_(BinaryOpTest, transposeND)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type).reshape(1);
+
+    std::vector<int> order(a.dims);
+    std::iota(order.begin(), order.end(), 0);
+    std::reverse(order.begin(), order.end());
+
+    std::vector<int> new_sz(a.dims);
+    std::copy(a.size.p, a.size.p + a.dims, new_sz.begin());
+    std::reverse(new_sz.begin(), new_sz.end());
+    cv::Mat b = Mat(new_sz, type);
+
+    declare.in(a,WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transposeND(a, order, b);
 
     SANITY_CHECK_NOTHING();
 }

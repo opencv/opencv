@@ -1739,6 +1739,16 @@ should be done separately if needed.
 */
 CV_EXPORTS_W void transpose(InputArray src, OutputArray dst);
 
+/** @brief Transpose for n-dimensional matrices.
+ *
+ * @note Input should be continuous single-channel matrix.
+ * @param src input array.
+ * @param order a permutation of [0,1,..,N-1] where N is the number of axes of src.
+ * The i’th axis of dst will correspond to the axis numbered order[i] of the input.
+ * @param dst output array of the same type as src.
+ */
+CV_EXPORTS_W void transposeND(InputArray src, const std::vector<int>& order, OutputArray dst);
+
 /** @brief Performs the matrix transformation of every array element.
 
 The function cv::transform performs the matrix transformation of every

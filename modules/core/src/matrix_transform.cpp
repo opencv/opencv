@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 namespace cv {
 
@@ -278,6 +279,72 @@ void transpose( InputArray _src, OutputArray _dst )
         TransposeFunc func = transposeTab[esz];
         CV_Assert( func != 0 );
         func( src.ptr(), src.step, dst.ptr(), dst.step, src.size() );
+    }
+}
+
+
+void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst_)
+{
+    Mat inp = src_.getMat();
+    CV_Assert(inp.isContinuous());
+    CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
+    CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
+
+    auto order_ = order;
+    std::sort(order_.begin(), order_.end());
+    for (size_t i = 0; i < order_.size(); ++i)
+    {
+        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
+    }
+
+    std::vector<int> newShape(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+    {
+        newShape[i] = inp.size[order[i]];
+    }
+
+    dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
+    Mat out = dst_.getMat();
+    CV_Assert(out.isContinuous());
+    CV_Assert(inp.data != out.data);
+
+    int continuous_idx = 0;
+    for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
+    {
+        if (order[i] != i)
+        {
+            continuous_idx = i + 1;
+            break;
+        }
+    }
+
+    size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
+    size_t outer_size = out.total() / continuous_size;
+
+    std::vector<size_t> steps(order.size());
+    for (int i = 0; i < static_cast<int>(steps.size()); ++i)
+    {
+        steps[i] = inp.step1(order[i]);
+    }
+
+    auto* src = inp.ptr<const unsigned char>();
+    auto* dst = out.ptr<unsigned char>();
+
+    size_t src_offset = 0;
+    size_t es = out.elemSize();
+    for (size_t i = 0; i < outer_size; ++i)
+    {
+        std::memcpy(dst, src + es * src_offset, es * continuous_size);
+        dst += es * continuous_size;
+        for (int j = continuous_idx - 1; j >= 0; --j)
+        {
+            src_offset += steps[j];
+            if ((src_offset / steps[j]) % out.size[j] != 0)
+            {
+                break;
+            }
+            src_offset -= steps[j] * out.size[j];
+        }
     }
 }
 
