@@ -4,11 +4,11 @@
 //
 // Copyright (C) 2022 Intel Corporation
 
-#ifndef GAPI_STREAMING_ONVPL_PREPROC_DISPATCHER_HPP
-#define GAPI_STREAMING_ONVPL_PREPROC_DISPATCHER_HPP
+#ifndef GAPI_STREAMING_ONEVPL_PREPROC_DISPATCHER_HPP
+#define GAPI_STREAMING_ONEVPL_PREPROC_DISPATCHER_HPP
 
 #include <memory>
-#include <set>
+#include <vector>
 
 #include "streaming/onevpl/engine/preproc_engine_interface.hpp"
 #include "streaming/onevpl/engine/preproc_defines.hpp"
@@ -36,18 +36,18 @@ public:
 
     template<class PreprocImpl, class ...Args>
     void insert_worker(Args&& ...args) {
-        workers.insert(std::make_shared<PreprocImpl>(std::forward<Args>(args)...));
+        workers.emplace_back(std::make_shared<PreprocImpl>(std::forward<Args>(args)...));
     }
 
     size_t size() const {
         return workers.size();
     }
 private:
-    std::set<std::shared_ptr<cv::gapi::wip::IPreprocEngine>> workers;
+    std::vector<std::shared_ptr<cv::gapi::wip::IPreprocEngine>> workers;
 };
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
 #endif // HAVE_ONEVPL
-#endif // GAPI_STREAMING_ONVPL_PREPROC_DISPATCHER_HPP
+#endif // GAPI_STREAMING_ONEVPL_PREPROC_DISPATCHER_HPP
