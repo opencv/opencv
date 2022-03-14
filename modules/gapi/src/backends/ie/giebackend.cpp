@@ -300,6 +300,7 @@ struct IEUnit {
                             cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
         if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
+            GAPI_LOG_DEBUG(nullptr, "create IE remote ctx for device id: " << params.device_id);
             rctx = ie_core.CreateContext(params.device_id, *ctx_params);
         }
 
@@ -712,6 +713,10 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
     cv::MediaFrame frame = ctx.inFrame(i);
     if (ctx.uu.preproc_engine_impl) {
         GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded remote frame in remote ctx");
+
+        //TODO
+        frame.blobParams();
+
         frame = preprocess_frame_impl(std::move(frame), layer_name, ctx, opt_roi,
                                       out_keep_alive_frame, out_is_preprocessed);
     }
@@ -748,9 +753,15 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
                                  bool* out_is_preprocessed = nullptr) {
-    if (ctx.uu.rctx != nullptr) {
-        return extractRemoteBlob(ctx, i, layer_name, opt_roi,
-                                 out_keep_alive_frame, out_is_preprocessed);
+    try {
+        if (ctx.uu.rctx != nullptr) {
+            return extractRemoteBlob(ctx, i, layer_name, opt_roi,
+                                     out_keep_alive_frame, out_is_preprocessed);
+        }
+    } catch(const std::exception &ex) {
+        //TODO VPL only
+        GAPI_LOG_DEBUG(nullptr, "Try to fallback to GIE streaming CPU use-case");
+        GAPI_DbgAssert(ctx.uu.preproc_engine_impl && "VPL only scenario");
     }
 
     switch (ctx.inShape(i)) {
@@ -1157,6 +1168,7 @@ static void PostOutputs(InferenceEngine::InferRequest &request,
         ctx->out.post(std::move(output), ctx->eptr);
     }
 
+    ctx->views.clear();
     ctx->releaseKeepAliveFrame(&request);
 }
 

@@ -46,7 +46,9 @@ const std::string keys =
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
-    "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }";
+    "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }"
+    "{ source_device                | GPU                                       | choose device for decoding }"
+    "{ preproc_device               | CPU                                       | choose device for preprocessing }";
 
 namespace {
 std::string get_weights_path(const std::string &model_path) {
@@ -280,6 +282,8 @@ int main(int argc, char *argv[]) {
     const auto source_decode_queue_capacity = cmd.get<uint32_t>("frames_pool_size");
     const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
     const auto device_id = cmd.get<std::string>("faced");
+    const auto source_device = cmd.get<std::string>("source_device");
+    const auto preproc_device = cmd.get<std::string>("preproc_device");
 
     // check ouput file extension
     if (!output.empty()) {
@@ -331,6 +335,7 @@ int main(int argc, char *argv[]) {
     auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
     auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
+    // choose accelerating device
     if (device_id.find("GPU") != std::string::npos) {
         auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
@@ -384,7 +389,9 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
     if (accel_device.has_value() &&
-        accel_device.value().get_name().find("GPU") != std::string::npos) {
+        accel_device.value().get_name().find("GPU") != std::string::npos &&
+        device_id.find("GPU") != std::string::npos) {
+        /* NB: no need to create rctx for cpu device in OV */
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
                                               {"VA_DEVICE", accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
@@ -394,8 +401,8 @@ int main(int argc, char *argv[]) {
     }
 #endif // HAVE_INF_ENGINE
 
-    // turn on preproc
-    if (accel_device.has_value() && accel_ctx.has_value()) {
+    // Turn on VPP preproc if available & required
+    if (accel_device.has_value() && accel_ctx.has_value() && !preproc_device.empty()) {
         face_net.cfgPreprocessingParams(accel_device.value(),
                                         accel_ctx.value());
         std::cout << "enforce VPP preprocessing on " << device_id << std::endl;
