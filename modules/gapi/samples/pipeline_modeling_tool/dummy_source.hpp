@@ -39,7 +39,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
     using namespace std::chrono;
     using namespace cv::gapi::streaming;
 
-    // NB: In case it's the first pull.
+    // NB: Wait m_latency before return the first frame.
     if (m_next_tick_ts == -1) {
         m_next_tick_ts = utils::timestamp<milliseconds>() + m_latency;
     }
@@ -70,7 +70,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          *  update current seq_id correspondingly.
          *
          *  if drop_frames is enabled, wait for the next tick, otherwise
-         *  return last writen frame (+2) immediately.
+         *  return last writen frame (+2 at the picture above) immediately.
          */
         int64_t num_frames =
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
