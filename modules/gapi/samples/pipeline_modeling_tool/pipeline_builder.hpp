@@ -92,7 +92,7 @@ struct SubGraphCall {
                             const size_t     call_every_nth,
                             cv::Mat&         out,
                             SubGraphState&   state) {
-                // NB: Do call in the first iteration and skip on others.
+                // NB: Make a call on the first iteration and skip the furthers.
                 if (state.call_counter == 0) {
                     state.cc(in, state.last_result);
                 }
@@ -533,7 +533,11 @@ Pipeline::Ptr PipelineBuilder::construct() {
             // (3). Extract proto input from every input node.
             inputs.push_back(in_data.arg.value());
         }
+        // NB: If node shouldn't be called on each iterations,
+        // it should be wrapped into subgraph which is able to skip calling.
         if (call.call_every_nth != 1u) {
+            // FIXME: Limitation of the subgraph operation (<GMat(GMat)>).
+            // G-API doesn't support dynamic number of inputs/outputs.
             if (inputs.size() > 1u) {
                 throw std::logic_error(
                         "skip_frame_nth is supported only for single input subgraphs");
@@ -543,8 +547,10 @@ Pipeline::Ptr PipelineBuilder::construct() {
                 throw std::logic_error(
                         "skip_frame_nth is supported only for single output subgraphs");
             }
-
             // FIXME: Should be generalized.
+            // Now every subgraph contains only single node
+            // which has single input/output.
+            GAPI_Assert(cv::util::holds_alternative<cv::GMat>(inputs[0]));
             cv::GProtoArgs subgr_inputs{cv::GProtoArg{cv::GMat()}};
             cv::GProtoArgs subgr_outputs;
             call.run(subgr_inputs, subgr_outputs);

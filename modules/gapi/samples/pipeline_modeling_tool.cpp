@@ -318,6 +318,7 @@ int main(int argc, char* argv[]) {
                     check_and_read<std::string>(node_fn, "name", "node");
                 auto node_type =
                     check_and_read<std::string>(node_fn, "type", "node");
+                // FIXME: Impossible to read size_t due OpenCV limitations.
                 auto call_every_nth_opt = readOpt<int>(node_fn["call_every_nth"]);
                 auto call_every_nth =
                     call_every_nth_opt.has_value() ? call_every_nth_opt.value() : 1;
