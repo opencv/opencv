@@ -19,12 +19,12 @@ namespace wip {
 
 #ifdef VPP_PREPROC_ENGINE
 #define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::onevpl::vpp_pp_params
-#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::onevpl::vpp_pp_session_ptr
+#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::onevpl::vpp_pp_session
 #else // VPP_PREPROC_ENGINE
 struct empty_pp_params {};
 struct empty_pp_session {};
 #define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::empty_pp_params;
-#define GAPI_BACKEND_PP_SESSIONS        std::shared_ptr<cv::gapi::wip::empty_pp_session>;
+#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::empty_pp_session;
 #endif // VPP_PREPROC_ENGINE
 
 struct pp_params {
@@ -57,26 +57,25 @@ private:
 struct pp_session {
     using value_type = cv::util::variant<GAPI_BACKEND_PP_SESSIONS>;
 
-    template<typename BackendSpecificSesionType>
-    static pp_session create(std::shared_ptr<BackendSpecificSesionType> session) {
-        static_assert(cv::detail::contains<std::shared_ptr<BackendSpecificSesionType>,
+    template<typename BackendSpecificSesionType, typename ...Args>
+    static pp_session create(Args&& ...args) {
+        static_assert(cv::detail::contains<BackendSpecificSesionType,
                                            GAPI_BACKEND_PP_SESSIONS>::value,
                       "Invalid BackendSpecificSesionType requested");
         pp_session ret;
-        ret.value = session;
+        ret.value = BackendSpecificSesionType{std::forward<Args>(args)...};;
         return ret;
     }
 
     template<typename BackendSpecificSesionType>
-    std::shared_ptr<BackendSpecificSesionType> get() {
-        using ptr_type = std::shared_ptr<BackendSpecificSesionType>;
-        static_assert(cv::detail::contains<ptr_type, GAPI_BACKEND_PP_SESSIONS>::value,
+    BackendSpecificSesionType &get() {
+        static_assert(cv::detail::contains<BackendSpecificSesionType, GAPI_BACKEND_PP_SESSIONS>::value,
                       "Invalid BackendSpecificSesionType requested");
-        return cv::util::get<ptr_type>(value);
+        return cv::util::get<BackendSpecificSesionType>(value);
     }
 
     template<typename BackendSpecificSesionType>
-    std::shared_ptr<BackendSpecificSesionType> get() const {
+    const BackendSpecificSesionType &get() const {
         return const_cast<pp_session*>(this)->get<BackendSpecificSesionType>();
     }
 private:
