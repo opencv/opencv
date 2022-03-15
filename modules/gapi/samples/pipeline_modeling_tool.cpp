@@ -318,8 +318,13 @@ int main(int argc, char* argv[]) {
                     check_and_read<std::string>(node_fn, "name", "node");
                 auto node_type =
                     check_and_read<std::string>(node_fn, "type", "node");
-                auto skip_opt = readOpt<int>(node_fn["skip_every_nth"]);
-                auto skip_every_nth = skip_opt.has_value() ? skip_opt.value() : 0;
+                auto call_every_nth_opt = readOpt<int>(node_fn["call_every_nth"]);
+                auto call_every_nth =
+                    call_every_nth_opt.has_value() ? call_every_nth_opt.value() : 1;
+                if (call_every_nth <= 0) {
+                    throw std::logic_error(node_name + " call_every_nth must be greater than zero");
+                }
+
                 if (node_type == "Dummy") {
                     auto time =
                         check_and_read<double>(node_fn, "time", node_name);
@@ -328,7 +333,7 @@ int main(int argc, char* argv[]) {
                     }
                     auto output =
                         check_and_read<OutputDescr>(node_fn, "output", node_name);
-                    builder.addDummy(node_name, skip_every_nth, time, output);
+                    builder.addDummy(node_name, call_every_nth, time, output);
                 } else if (node_type == "Infer") {
                     InferParams params;
                     params.path   = read<ModelPath>(node_fn);
@@ -339,7 +344,7 @@ int main(int argc, char* argv[]) {
                     params.output_layers =
                         readList<std::string>(node_fn, "output_layers", node_name);
                     params.config = config;
-                    builder.addInfer(node_name, skip_every_nth, params);
+                    builder.addInfer(node_name, call_every_nth, params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
                 }
