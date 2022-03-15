@@ -27,6 +27,7 @@ struct CallNode {
     using F = std::function<void(const cv::GProtoArgs&, cv::GProtoArgs&)>;
 
     std::string name;
+    int         skip_every_nth;
     F           run;
 };
 
@@ -42,6 +43,75 @@ struct Node {
     std::vector<Node::WPtr> in_nodes;
     std::vector<Node::Ptr>  out_nodes;
     Kind kind;
+};
+
+struct SubGraphCall {
+    G_API_OP(GSubGraph,
+             <cv::GMat(cv::GMat, cv::GComputation, int)>,
+             "custom.subgraph") {
+        static cv::GMatDesc outMeta(const cv::GMatDesc& in,
+                                    cv::GComputation    comp,
+                                    const int           /*skip*/) {
+            auto out_metas = comp.compile(in).outMetas();
+            GAPI_Assert(out_metas.size() == 1u);
+            GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(out_metas[0]));
+            return cv::util::get<cv::GMatDesc>(out_metas[0]);
+        }
+
+    };
+
+    struct SubGraphState {
+        cv::Mat       last_result;
+        cv::GCompiled cc;
+        int           skip_counter = 0;
+    };
+
+    GAPI_OCV_KERNEL_ST(SubGraphImpl, GSubGraph, SubGraphState) {
+            static void setup(const cv::GMatDesc&             in,
+                              cv::GComputation                comp,
+                              const int                       skip,
+                              std::shared_ptr<SubGraphState>& state,
+                              const cv::GCompileArgs&         args) {
+                state.reset(new SubGraphState{});
+                const auto copy = args;
+                state->cc = comp.compile(in, std::move(copy));
+
+                GAPI_Assert(state->cc.outMetas().size() == 1u);
+                auto out_meta = state->cc.outMetas()[0];
+                GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(out_meta));
+                auto out_desc = cv::util::get<cv::GMatDesc>(out_meta);
+
+                utils::createNDMat(state->last_result, out_desc.dims, out_desc.depth);
+            }
+
+            static void run(const cv::Mat       &in,
+                            cv::GComputation    /*comp*/,
+                            const int           skip,
+                            cv::Mat&            out,
+                            SubGraphState&      state) {
+                if (state.skip_counter == skip - 1) {
+                    state.skip_counter = 0;
+                } else {
+                    state.cc(in, state.last_result);
+                    state.skip_counter++;
+                }
+                state.last_result.copyTo(out);
+            }
+    };
+
+    void operator()(const cv::GProtoArgs& inputs, cv::GProtoArgs& outputs) {
+        GAPI_Assert(inputs.size() == 1u);
+        GAPI_Assert(cv::util::holds_alternative<cv::GMat>(inputs[0]));
+        GAPI_Assert(outputs.empty());
+        auto in = cv::util::get<cv::GMat>(inputs[0]);
+        outputs.emplace_back(GSubGraph::on(in, comp, skip));
+    }
+
+    size_t numInputs()  const { return 1; }
+    size_t numOutputs() const { return 1; }
+
+    cv::GComputation comp;
+    int              skip;
 };
 
 struct DummyCall {
@@ -179,10 +249,13 @@ class PipelineBuilder {
 public:
     PipelineBuilder();
     void addDummy(const std::string& name,
+                  const int          skip_every_nth,
                   const double       time,
                   const OutputDescr& output);
 
-    void addInfer(const std::string& name, const InferParams& params);
+    void addInfer(const std::string& name,
+                  const int          skip_every_nth,
+                  const InferParams& params);
 
     void setSource(const std::string& name,
                    double latency,
@@ -199,6 +272,7 @@ public:
 private:
     template <typename CallT>
     void addCall(const std::string& name,
+                 const int          skip_every_nth,
                  CallT&&            call);
 
     Pipeline::Ptr construct();
@@ -228,19 +302,23 @@ private:
 PipelineBuilder::PipelineBuilder() : m_state(new State{}) { };
 
 void PipelineBuilder::addDummy(const std::string&  name,
+                               const int           skip_every_nth,
                                const double        time,
                                const OutputDescr&  output) {
     m_state->kernels.include<DummyCall::GCPUDummy>();
-    addCall(name, DummyCall{time, output});
+    addCall(name, skip_every_nth, DummyCall{time, output});
 }
 
 template <typename CallT>
 void PipelineBuilder::addCall(const std::string& name,
+                              const int          skip_every_nth,
                               CallT&&            call) {
 
     size_t num_inputs  = call.numInputs();
     size_t num_outputs = call.numOutputs();
-    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{name, std::move(call)}}});
+    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{name,
+                                                           skip_every_nth,
+                                                           std::move(call)}}});
     // NB: Create placeholders for inputs.
     call_node->in_nodes.resize(num_inputs);
     // NB: Create outputs with empty data.
@@ -259,6 +337,7 @@ void PipelineBuilder::addCall(const std::string& name,
 }
 
 void PipelineBuilder::addInfer(const std::string& name,
+                               const int          skip_every_nth,
                                const InferParams& params) {
     // NB: No default ctor for Params.
     std::unique_ptr<cv::gapi::ie::Params<cv::gapi::Generic>> pp;
@@ -279,7 +358,9 @@ void PipelineBuilder::addInfer(const std::string& name,
     pp->pluginConfig(params.config);
     m_state->networks += cv::gapi::networks(*pp);
 
-    addCall(name, InferCall{name, params.input_layers, params.output_layers});
+    addCall(name,
+            skip_every_nth,
+            InferCall{name, params.input_layers, params.output_layers});
 }
 
 void PipelineBuilder::addEdge(const Edge& edge) {
@@ -320,7 +401,7 @@ void PipelineBuilder::setSource(const std::string& name,
                                 const OutputDescr& output) {
     GAPI_Assert(!m_state->src);
     m_state->src = std::make_shared<DummySource>(latency, output);
-    addCall(name, SourceCall{});
+    addCall(name, 0, SourceCall{});
 }
 
 void PipelineBuilder::setMode(PLMode mode) {
@@ -426,8 +507,15 @@ Pipeline::Ptr PipelineBuilder::construct() {
             sorted_calls.push_back(n);
         }
     }
+
+    m_state->kernels.include<SubGraphCall::SubGraphImpl>();
+
+    m_state->compile_args.emplace_back(m_state->networks);
+    m_state->compile_args.emplace_back(m_state->kernels);
+
     // (2). Go through every call node.
     for (auto call_node : sorted_calls) {
+        auto& call = cv::util::get<CallNode>(call_node->kind);
         cv::GProtoArgs outputs;
         cv::GProtoArgs inputs;
         for (size_t i = 0; i < call_node->in_nodes.size(); ++i) {
@@ -440,8 +528,18 @@ Pipeline::Ptr PipelineBuilder::construct() {
             inputs.push_back(in_data.arg.value());
         }
         // (4). Run call and get outputs.
-        auto call = cv::util::get<CallNode>(call_node->kind);
         call.run(inputs, outputs);
+        if (call.skip_every_nth != 0) {
+            auto comp = cv::GComputation(cv::GProtoInputArgs{inputs},
+                                         cv::GProtoOutputArgs{outputs});
+            call = CallNode{call.name,
+                            0,
+                            SubGraphCall{std::move(comp),
+                                         call.skip_every_nth}};
+            outputs.clear();
+            call.run(inputs, outputs);
+        }
+
         // (5) If call node doesn't have inputs
         // it means that it's input producer node (Source).
         if (call_node->in_nodes.empty()) {
@@ -461,9 +559,6 @@ Pipeline::Ptr PipelineBuilder::construct() {
             }
         }
     }
-
-    m_state->compile_args.emplace_back(m_state->networks);
-    m_state->compile_args.emplace_back(m_state->kernels);
 
     if (m_state->mode == PLMode::STREAMING) {
         GAPI_Assert(graph_inputs.size() == 1);
