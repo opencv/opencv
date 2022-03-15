@@ -18,9 +18,13 @@ namespace onevpl {
 struct vpp_pp_params {
     mfxSession handle;
     mfxFrameInfo info;
+    void *reserved = nullptr;
 };
 
-using vpp_pp_session_ptr = std::shared_ptr<EngineSession>;
+struct vpp_pp_session {
+    std::shared_ptr<EngineSession> handle;
+    void *reserved = nullptr;
+};
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

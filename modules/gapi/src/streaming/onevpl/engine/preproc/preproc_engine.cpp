@@ -163,7 +163,8 @@ cv::util::optional<pp_params> VPPPreprocEngine::is_applicable(const cv::MediaFra
     if (vpl_adapter) {
         ret = cv::util::make_optional<pp_params>(
                         pp_params::create<vpp_pp_params>(vpl_adapter->get_session_handle(),
-                                                         vpl_adapter->get_surface()->get_info()));
+                                                         vpl_adapter->get_surface()->get_info(),
+                                                         vpl_adapter));
         GAPI_LOG_DEBUG(nullptr, "VPP preprocessing applicable, session [" <<
                                 vpl_adapter->get_session_handle() << "]");
     }
@@ -203,7 +204,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     // check In & Out equally to bypass preproc
     if (mfxVPPParams.vpp.Out == mfxVPPParams.vpp.In) {
         GAPI_LOG_DEBUG(nullptr, "no preproc required");
-        return pp_session::create<EngineSession>(nullptr);
+        return pp_session::create<vpp_pp_session>(nullptr);
     }
 
     // recalculate size param according to VPP alignment
@@ -221,7 +222,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     auto it = preproc_session_map.find(mfxVPPParams.vpp.In);
     if (it != preproc_session_map.end()) {
         GAPI_LOG_DEBUG(nullptr, "[" << it->second->session << "] found");
-        return pp_session::create(std::static_pointer_cast<EngineSession>(it->second));
+        return pp_session::create<vpp_pp_session>(std::static_pointer_cast<EngineSession>(it->second));
     }
 
     // NB: make some sanity checks
@@ -311,7 +312,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     bool inserted = preproc_session_map.emplace(mfxVPPParams.vpp.In, sess_ptr).second;
     GAPI_Assert(inserted && "preproc session is exist");
     GAPI_LOG_INFO(nullptr, "VPPPreprocSession created, total sessions: " << preproc_session_map.size());
-    return pp_session::create(std::static_pointer_cast<EngineSession>(sess_ptr));
+    return pp_session::create<vpp_pp_session>(std::static_pointer_cast<EngineSession>(sess_ptr));
 }
 
 void VPPPreprocEngine::on_frame_ready(session_type& sess,
@@ -339,12 +340,12 @@ VPPPreprocEngine::initialize_session(mfxSession,
 
 cv::MediaFrame VPPPreprocEngine::run_sync(const pp_session& sess, const cv::MediaFrame& in_frame,
                                           const cv::util::optional<cv::Rect> &roi) {
-    std::shared_ptr<EngineSession> pp_sess_impl = sess.get<EngineSession>();
-    if (!pp_sess_impl) {
+    vpp_pp_session pp_sess_impl = sess.get<vpp_pp_session>();
+    if (!pp_sess_impl.handle) {
         // bypass case
         return in_frame;
     }
-    session_ptr_type s = std::static_pointer_cast<session_type>(pp_sess_impl);
+    session_ptr_type s = std::static_pointer_cast<session_type>(pp_sess_impl.handle);
     GAPI_DbgAssert(s && "Session is nullptr");
     GAPI_DbgAssert(is_applicable(in_frame) &&
                    "VPP preproc is not applicable for the given frame");

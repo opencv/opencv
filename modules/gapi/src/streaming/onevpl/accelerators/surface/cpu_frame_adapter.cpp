@@ -18,7 +18,7 @@ namespace onevpl {
 
 VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surface,
                                                  SessionHandle assoc_handle):
-    BaseFrameAdapter(surface, assoc_handle) {
+    BaseFrameAdapter(surface, assoc_handle, AccelType::HOST) {
 }
 
 VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() = default;
