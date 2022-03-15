@@ -558,7 +558,6 @@ Pipeline::Ptr PipelineBuilder::construct() {
         }
         // (4). Run call and get outputs.
         call.run(inputs, outputs);
-
         // (5) If call node doesn't have inputs
         // it means that it's input producer node (Source).
         if (call_node->in_nodes.empty()) {

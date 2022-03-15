@@ -324,6 +324,7 @@ int main(int argc, char* argv[]) {
                 if (call_every_nth <= 0) {
                     throw std::logic_error(node_name + " call_every_nth must be greater than zero");
                 }
+                size_t call_every_nth_u = static_cast<size_t>(call_every_nth);
 
                 if (node_type == "Dummy") {
                     auto time =
@@ -333,7 +334,7 @@ int main(int argc, char* argv[]) {
                     }
                     auto output =
                         check_and_read<OutputDescr>(node_fn, "output", node_name);
-                    builder.addDummy(node_name, call_every_nth, time, output);
+                    builder.addDummy(node_name, call_every_nth_u, time, output);
                 } else if (node_type == "Infer") {
                     InferParams params;
                     params.path   = read<ModelPath>(node_fn);
@@ -344,7 +345,7 @@ int main(int argc, char* argv[]) {
                     params.output_layers =
                         readList<std::string>(node_fn, "output_layers", node_name);
                     params.config = config;
-                    builder.addInfer(node_name, call_every_nth, params);
+                    builder.addInfer(node_name, call_every_nth_u, params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
                 }
