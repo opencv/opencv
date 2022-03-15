@@ -45,5 +45,4 @@ private:
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_PREPROC_DISPATCHER_HPP
