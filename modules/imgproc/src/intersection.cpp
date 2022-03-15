@@ -113,8 +113,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         for( int j = 0; j < 4; j++ )
         {
             // Solve for 2x2 Ax=b
-            float x21 = pts2[j].x - pts1[i].x;
-            float y21 = pts2[j].y - pts1[i].y;
+            const float x21 = pts2[j].x - pts1[i].x;
+            const float y21 = pts2[j].y - pts1[i].y;
 
             float vx1 = vec1[i].x;
             float vy1 = vec1[i].y;
@@ -122,20 +122,20 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
-            float numericalScalingFactor = std::min(std::abs(vx1*vx1+vy1*vy1), std::abs(vx2*vx2+vy2*vy2));
-            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/(numericalScalingFactor);
-            if (std::isinf(numericalScalingFactor))
-                numericalScalingFactor = 1.f;
+            float normalizationScale  = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
+            //normalizationScale is a square, and we usually limit accuracy around 1e-6, so normalizationScale should be rather limited by ((1e-6)^2)=1e-12
+            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
 
-            vx1 *= numericalScalingFactor;
-            vy1 *= numericalScalingFactor;
-            vx2 *= numericalScalingFactor;
-            vy2 *= numericalScalingFactor;
+            vx1 *= normalizationScale;
+            vy1 *= normalizationScale;
+            vx2 *= normalizationScale;
+            vy2 *= normalizationScale;
 
-            float det = vx2*vy1 - vx1*vy2;
+            const float det = vx2*vy1 - vx1*vy2;
+            const float detInvScaled = !det ? std::numeric_limits<float>::quiet_NaN() : (normalizationScale/det);
 
-            float t1 = (vx2*y21 - vy2*x21)*numericalScalingFactor/det;
-            float t2 = (vx1*y21 - vy1*x21)*numericalScalingFactor/det;
+            const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
+            const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
 
             // This takes care of parallel lines
             if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
@@ -145,8 +145,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
             if( t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f )
             {
-                float xi = pts1[i].x + vec1[i].x*t1;
-                float yi = pts1[i].y + vec1[i].y*t1;
+                const float xi = pts1[i].x + vec1[i].x*t1;
+                const float yi = pts1[i].y + vec1[i].y*t1;
 
                 intersection.push_back(Point2f(xi,yi));
             }
@@ -167,22 +167,20 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        float x = pts1[i].x;
-        float y = pts1[i].y;
+        const float x = pts1[i].x;
+        const float y = pts1[i].y;
 
         for( int j = 0; j < 4; j++ )
         {
-            float numericalScalingFactor = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
-            if (std::isinf(numericalScalingFactor))
-                numericalScalingFactor = 1.f;
+            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
+            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float A = -vec2[j].y*numericalScalingFactor;
-            float B = vec2[j].x*numericalScalingFactor;
-            float C = -(A*pts2[j].x + B*pts2[j].y);
+            const float A = -vec2[j].y*normalizationScale ;
+            const float B = vec2[j].x*normalizationScale ;
+            const float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            float s = A*x + B*y + C;
+            const float s = A*x + B*y + C;
 
             if( s >= 0 )
             {
@@ -209,22 +207,22 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        float x = pts2[i].x;
-        float y = pts2[i].y;
+        const float x = pts2[i].x;
+        const float y = pts2[i].y;
 
         for( int j = 0; j < 4; j++ )
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float numericalScalingFactor = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            numericalScalingFactor = !numericalScalingFactor ? 1.f : 1.f/numericalScalingFactor;
-            if (std::isinf(numericalScalingFactor))
-                numericalScalingFactor = 1.f;
-            float A = -vec1[j].y*numericalScalingFactor;
-            float B = vec1[j].x*numericalScalingFactor;
-            float C = -(A*pts1[j].x + B*pts1[j].y);
+            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
+            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
+            if (std::isinf(normalizationScale ))
+                normalizationScale  = 1.f;
+            const float A = -vec1[j].y*normalizationScale ;
+            const float B = vec1[j].x*normalizationScale ;
+            const float C = -(A*pts1[j].x + B*pts1[j].y);
 
-            float s = A*x + B*y + C;
+            const float s = A*x + B*y + C;
 
             if( s >= 0 )
             {
@@ -249,7 +247,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     }
 
     // Get rid of duplicated points
-    int Nstride = N;
+    const int Nstride = N;
     cv::AutoBuffer<float, 100> distPt(N * N);
     cv::AutoBuffer<int> ptDistRemap(N);
     for (int i = 0; i < N; ++i)
@@ -259,7 +257,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         for (int j = i + 1; j < N; )
         {
             const Point2f pt1 = intersection[j];
-            float d2 = normL2Sqr<float>(pt1 - pt0);
+            const float d2 = normL2Sqr<float>(pt1 - pt0);
             if(d2 <= samePointEps)
             {
                 if (j < N - 1)
@@ -278,10 +276,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         float minD = distPt[1];
         for (int i = 0; i < N - 1; ++i)
         {
-            float* pDist = distPt.data() + Nstride * ptDistRemap[i];
+            const float* pDist = distPt.data() + Nstride * ptDistRemap[i];
             for (int j = i + 1; j < N; ++j)
             {
-                float d = pDist[ptDistRemap[j]];
+                const float d = pDist[ptDistRemap[j]];
                 if (d < minD)
                 {
                     minD = d;
