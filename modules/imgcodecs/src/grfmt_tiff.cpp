@@ -714,7 +714,7 @@ bool  TiffDecoder::readData( Mat& img )
                             const int rowsPerPacket = std::max(1, static_cast<int>(minimalBytesPerPacket/(ncn * tile_width0 * sizeof(uchar))));
                             const int rowsPacketsCount = divUp(tile_height, rowsPerPacket);
                             const Range all(0, tile_height);
-                            parallel_for_(all, [=,&img](const cv::Range& range) -> void {
+                            parallel_for_(all, [&](const cv::Range& range) -> void {
                                     for (int i = range.start; i < range.end; ++i)
                                     //for (int i = 0; i < tile_height; ++i)
                                     {
@@ -762,7 +762,7 @@ bool  TiffDecoder::readData( Mat& img )
                             const int rowsPerPacket = std::max(1, static_cast<int>(minimalBytesPerPacket/(ncn * tile_width0 * sizeof(uchar))));
                             const int rowsPacketsCount = divUp(tile_height, rowsPerPacket);
                             const Range all(0, tile_height);
-                            parallel_for_(all, [=,&img](const cv::Range& range) -> void {
+                            parallel_for_(all, [&](const cv::Range& range) -> void {
                                     for (int i = range.start; i < range.end; ++i)
                                     //for (int i = 0; i < tile_height; ++i)
                                     {
