@@ -224,6 +224,7 @@ int main(int argc, char* argv[]) {
                                    " if set to 0. If it's specified will be"
                                    " applied for every pipeline. }"
         "{ app_mode    | realtime  | Application mode (realtime/benchmark). }"
+        "{ drop_frames | false     | Drop frames if they come earlier than pipeline is completed. }"
         "{ exec_list   |           | A comma-separated list of pipelines that"
                                    " will be executed. Spaces around commas"
                                    " are prohibited. }";
@@ -238,10 +239,11 @@ int main(int argc, char* argv[]) {
         const auto load_config = cmd.get<std::string>("load_config");
         const auto cached_dir  = cmd.get<std::string>("cache_dir");
         const auto log_file    = cmd.get<std::string>("log_file");
-        const auto pl_mode     = strToPLMode(cmd.get<std::string>("pl_mode"));
+        const auto cmd_pl_mode = strToPLMode(cmd.get<std::string>("pl_mode"));
         const auto qc          = cmd.get<int>("qc");
         const auto app_mode    = strToAppMode(cmd.get<std::string>("app_mode"));
         const auto exec_str    = cmd.get<std::string>("exec_list");
+        const auto drop_frames = cmd.get<bool>("drop_frames");
 
         cv::FileStorage fs;
         if (cfg.empty()) {
@@ -306,7 +308,8 @@ int main(int argc, char* argv[]) {
                 if (app_mode == AppMode::BENCHMARK) {
                     latency = 0.0;
                 }
-                builder.setSource(src_name, latency, output);
+                auto src = std::make_shared<DummySource>(latency, output, drop_frames);
+                builder.setSource(src_name, src);
             }
 
             const auto& nodes_fn = check_and_get_fn(pl_fn, "nodes", name);
@@ -361,9 +364,18 @@ int main(int argc, char* argv[]) {
                 builder.addEdge(edge);
             }
 
+            auto cfg_pl_mode = readOpt<std::string>(pl_fn["mode"]);
             // NB: Pipeline mode from config takes priority over cmd.
-            auto mode = readOpt<std::string>(pl_fn["mode"]);
-            builder.setMode(mode.has_value() ? strToPLMode(mode.value()) : pl_mode);
+            auto pl_mode = cfg_pl_mode.has_value()
+                ? strToPLMode(cfg_pl_mode.value()) : cmd_pl_mode;
+            // NB: Using drop_frames with streaming pipelines will follow to
+            // incorrect performance results.
+            if (drop_frames && pl_mode == PLMode::STREAMING) {
+                throw std::logic_error(
+                        "--drop_frames option is supported only for pipelines in \"regular\" mode");
+            }
+
+            builder.setMode(pl_mode);
 
             // NB: Queue capacity from config takes priority over cmd.
             auto config_qc = readOpt<int>(pl_fn["queue_capacity"]);
