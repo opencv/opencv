@@ -23,12 +23,16 @@ struct Edge {
     P dst;
 };
 
+struct CallParams {
+    std::string name;
+    size_t      call_every_nth;
+};
+
 struct CallNode {
     using F = std::function<void(const cv::GProtoArgs&, cv::GProtoArgs&)>;
 
-    std::string name;
-    size_t      call_every_nth;
-    F           run;
+    CallParams params;
+    F          run;
 };
 
 struct DataNode {
@@ -240,6 +244,11 @@ struct ImportPath {
 
 using ModelPath = cv::util::variant<ImportPath, LoadPath>;
 
+struct DummyParams {
+    double      time;
+    OutputDescr output;
+};
+
 struct InferParams {
     std::string name;
     ModelPath   path;
@@ -252,14 +261,11 @@ struct InferParams {
 class PipelineBuilder {
 public:
     PipelineBuilder();
-    void addDummy(const std::string& name,
-                  const size_t       call_every_nth,
-                  const double       time,
-                  const OutputDescr& output);
+    void addDummy(const CallParams&  call_params,
+                  const DummyParams& dummy_params);
 
-    void addInfer(const std::string& name,
-                  const size_t       call_every_nth,
-                  const InferParams& params);
+    void addInfer(const CallParams&  call_params,
+                  const InferParams& infer_params);
 
     void setSource(const std::string&           name,
                    std::shared_ptr<DummySource> src);
@@ -274,9 +280,8 @@ public:
 
 private:
     template <typename CallT>
-    void addCall(const std::string& name,
-                 const size_t       call_every_nth,
-                 CallT&&            call);
+    void addCall(const CallParams& call_params,
+                 CallT&&           call);
 
     Pipeline::Ptr construct();
 
@@ -304,24 +309,22 @@ private:
 
 PipelineBuilder::PipelineBuilder() : m_state(new State{}) { };
 
-void PipelineBuilder::addDummy(const std::string&  name,
-                               const size_t        call_every_nth,
-                               const double        time,
-                               const OutputDescr&  output) {
+void PipelineBuilder::addDummy(const CallParams&  call_params,
+                               const DummyParams& dummy_params) {
     m_state->kernels.include<DummyCall::GCPUDummy>();
-    addCall(name, call_every_nth, DummyCall{time, output});
+    addCall(call_params,
+            DummyCall{dummy_params.time, dummy_params.output});
 }
 
 template <typename CallT>
-void PipelineBuilder::addCall(const std::string& name,
-                              const size_t       call_every_nth,
-                              CallT&&            call) {
+void PipelineBuilder::addCall(const CallParams& call_params,
+                              CallT&&           call) {
 
-    GAPI_Assert(call_every_nth != 0);
+    GAPI_Assert(call_params.call_every_nth != 0);
     size_t num_inputs  = call.numInputs();
     size_t num_outputs = call.numOutputs();
-    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{name,
-                                                           call_every_nth,
+    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{call_params.name,
+                                                           call_params.call_every_nth,
                                                            std::move(call)}}});
     // NB: Create placeholders for inputs.
     call_node->in_nodes.resize(num_inputs);
@@ -332,39 +335,39 @@ void PipelineBuilder::addCall(const std::string& name,
                                                    Node::Kind{DataNode{}}});
     }
 
-    auto it = m_state->calls_map.find(name);
+    auto it = m_state->calls_map.find(call_params.name);
     if (it != m_state->calls_map.end()) {
-        throw std::logic_error("Node: " + name + " already exists!");
+        throw std::logic_error("Node: " + call_params.name + " already exists!");
     }
-    m_state->calls_map.emplace(name, call_node);
+    m_state->calls_map.emplace(call_params.name, call_node);
     m_state->all_calls.emplace_back(call_node);
 }
 
-void PipelineBuilder::addInfer(const std::string& name,
-                               const size_t       call_every_nth,
-                               const InferParams& params) {
+void PipelineBuilder::addInfer(const CallParams&  call_params,
+                               const InferParams& infer_params) {
     // NB: No default ctor for Params.
     std::unique_ptr<cv::gapi::ie::Params<cv::gapi::Generic>> pp;
-    if (cv::util::holds_alternative<LoadPath>(params.path)) {
-       auto load_path = cv::util::get<LoadPath>(params.path);
-       pp.reset(new cv::gapi::ie::Params<cv::gapi::Generic>(name,
+    if (cv::util::holds_alternative<LoadPath>(infer_params.path)) {
+       auto load_path = cv::util::get<LoadPath>(infer_params.path);
+       pp.reset(new cv::gapi::ie::Params<cv::gapi::Generic>(call_params.name,
                                                             load_path.xml,
                                                             load_path.bin,
-                                                            params.device));
+                                                            infer_params.device));
     } else {
-        GAPI_Assert(cv::util::holds_alternative<ImportPath>(params.path));
-        auto import_path = cv::util::get<ImportPath>(params.path);
-        pp.reset(new cv::gapi::ie::Params<cv::gapi::Generic>(name,
+        GAPI_Assert(cv::util::holds_alternative<ImportPath>(infer_params.path));
+        auto import_path = cv::util::get<ImportPath>(infer_params.path);
+        pp.reset(new cv::gapi::ie::Params<cv::gapi::Generic>(call_params.name,
                                                              import_path.blob,
-                                                             params.device));
+                                                             infer_params.device));
     }
 
-    pp->pluginConfig(params.config);
+    pp->pluginConfig(infer_params.config);
     m_state->networks += cv::gapi::networks(*pp);
 
-    addCall(name,
-            call_every_nth,
-            InferCall{name, params.input_layers, params.output_layers});
+    addCall(call_params,
+            InferCall{call_params.name,
+                      infer_params.input_layers,
+                      infer_params.output_layers});
 }
 
 void PipelineBuilder::addEdge(const Edge& edge) {
@@ -404,7 +407,7 @@ void PipelineBuilder::setSource(const std::string&           name,
                                 std::shared_ptr<DummySource> src) {
     GAPI_Assert(!m_state->src && "Only single source pipelines are supported!");
     m_state->src = src;
-    addCall(name, 1u/*call_every_nth*/, SourceCall{});
+    addCall(CallParams{name, 1u/*call_every_nth*/}, SourceCall{});
 }
 
 void PipelineBuilder::setMode(PLMode mode) {
@@ -491,7 +494,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
             if (in_data_node.expired()) {
                 const auto& call = cv::util::get<CallNode>(call_node->kind);
                 throw std::logic_error(
-                        "Node: " + call.name + " in Pipeline: " + m_state->name +
+                        "Node: " + call.params.name + " in Pipeline: " + m_state->name +
                         " has dangling input by in port: " + std::to_string(i));
             }
         }
@@ -531,7 +534,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
         }
         // NB: If node shouldn't be called on each iterations,
         // it should be wrapped into subgraph which is able to skip calling.
-        if (call.call_every_nth != 1u) {
+        if (call.params.call_every_nth != 1u) {
             // FIXME: Limitation of the subgraph operation (<GMat(GMat)>).
             // G-API doesn't support dynamic number of inputs/outputs.
             if (inputs.size() > 1u) {
@@ -554,11 +557,10 @@ Pipeline::Ptr PipelineBuilder::construct() {
             call.run(subgr_inputs, subgr_outputs);
             auto comp = cv::GComputation(cv::GProtoInputArgs{subgr_inputs},
                                          cv::GProtoOutputArgs{subgr_outputs});
-            call = CallNode{call.name,
-                            1u/*call_every_nth*/,
+            call = CallNode{CallParams{call.params.name, 1u/*call_every_nth*/},
                             SubGraphCall{std::move(comp),
                                          m_state->compile_args,
-                                         call.call_every_nth}};
+                                         call.params.call_every_nth}};
         }
         // (4). Run call and get outputs.
         call.run(inputs, outputs);

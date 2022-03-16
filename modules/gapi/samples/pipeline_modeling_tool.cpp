@@ -332,26 +332,28 @@ int main(int argc, char* argv[]) {
                 }
                 size_t call_every_nth_u = static_cast<size_t>(call_every_nth);
 
+                CallParams call_params{node_name, call_every_nth_u};
                 if (node_type == "Dummy") {
-                    auto time =
+                    DummyParams dummy_params;
+                    dummy_params.time =
                         check_and_read<double>(node_fn, "time", node_name);
-                    if (time < 0) {
+                    if (dummy_params.time < 0) {
                         throw std::logic_error(node_name + " time must be positive");
                     }
-                    auto output =
+                    dummy_params.output =
                         check_and_read<OutputDescr>(node_fn, "output", node_name);
-                    builder.addDummy(node_name, call_every_nth_u, time, output);
+                    builder.addDummy(call_params, dummy_params);
                 } else if (node_type == "Infer") {
-                    InferParams params;
-                    params.path   = read<ModelPath>(node_fn);
-                    params.device =
+                    InferParams infer_params;
+                    infer_params.path   = read<ModelPath>(node_fn);
+                    infer_params.device =
                         check_and_read<std::string>(node_fn, "device", node_name);
-                    params.input_layers =
+                    infer_params.input_layers =
                         readList<std::string>(node_fn, "input_layers", node_name);
-                    params.output_layers =
+                    infer_params.output_layers =
                         readList<std::string>(node_fn, "output_layers", node_name);
-                    params.config = config;
-                    builder.addInfer(node_name, call_every_nth_u, params);
+                    infer_params.config = config;
+                    builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
                 }
