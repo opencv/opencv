@@ -77,13 +77,11 @@ struct SubGraphCall {
                               const cv::GCompileArgs&         /*args*/) {
                 state.reset(new SubGraphState{});
                 state->cc = comp.compile(in, std::move(compile_args));
-
-                GAPI_Assert(state->cc.outMetas().size() == 1u);
-                auto out_meta = state->cc.outMetas()[0];
-                GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(out_meta));
-                auto out_desc = cv::util::get<cv::GMatDesc>(out_meta);
-
-                utils::createNDMat(state->last_result, out_desc.dims, out_desc.depth);
+                auto out_desc =
+                    cv::util::get<cv::GMatDesc>(state->cc.outMetas()[0]);
+                utils::createNDMat(state->last_result,
+                                   out_desc.dims,
+                                   out_desc.depth);
             }
 
             static void run(const cv::Mat&   in,
@@ -538,12 +536,14 @@ Pipeline::Ptr PipelineBuilder::construct() {
             // G-API doesn't support dynamic number of inputs/outputs.
             if (inputs.size() > 1u) {
                 throw std::logic_error(
-                        "skip_frame_nth is supported only for single input subgraphs");
+                        "skip_frame_nth is supported only for single input subgraphs\n"
+                        "Current subgraph has " + std::to_string(inputs.size()) + " inputs");
             }
 
             if (outputs.size() > 1u) {
                 throw std::logic_error(
-                        "skip_frame_nth is supported only for single output subgraphs");
+                        "skip_frame_nth is supported only for single output subgraphs\n"
+                        "Current subgraph has " + std::to_string(inputs.size()) + " outputs");
             }
             // FIXME: Should be generalized.
             // Now every subgraph contains only single node

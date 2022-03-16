@@ -326,7 +326,9 @@ int main(int argc, char* argv[]) {
                 auto call_every_nth =
                     call_every_nth_opt.has_value() ? call_every_nth_opt.value() : 1;
                 if (call_every_nth <= 0) {
-                    throw std::logic_error(node_name + " call_every_nth must be greater than zero");
+                    throw std::logic_error(
+                            node_name + " call_every_nth must be greater than zero\n"
+                            "Current call_every_nth: " + std::to_string(call_every_nth));
                 }
                 size_t call_every_nth_u = static_cast<size_t>(call_every_nth);
 
