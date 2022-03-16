@@ -907,25 +907,52 @@ def test_error_invalid_pl_mode():
   cfg_file = """\"%YAML:1.0
 work_time: 1000
 Pipelines:
-PL1:
-  source:
-    name: 'Src'
-    latency: 20
-    output:
-      dims: [1,2,3,4]
-      precision: 'U8'
-  nodes:
-    - name: 'Node0'
-      type: 'Dummy'
-      time: 0.2
+  PL1:
+    source:
+      name: 'Src'
+      latency: 20
       output:
         dims: [1,2,3,4]
         precision: 'U8'
-  edges:
-    - from: 'Src'
-      to: 'Node0'\" """
+    nodes:
+      - name: 'Node0'
+        type: 'Dummy'
+        time: 0.2
+        output:
+          dims: [1,2,3,4]
+          precision: 'U8'
+    edges:
+      - from: 'Src'
+        to: 'Node0'\" """
 
   exec_str = '{} --cfg={} --app_mode=unknown'.format(pipeline_modeling_tool, cfg_file)
   out = get_output(exec_str)
   assert out.startswith('Unsupported AppMode: unknown\n'
                         'Please chose between: realtime and benchmark')
+
+
+def test_error_drop_frames_with_streaming():
+    cfg_file = """\"%YAML:1.0
+work_time: 1000
+Pipelines:
+  PL1:
+    source:
+      name: 'Src'
+      latency: 20
+      output:
+        dims: [1,2,3,4]
+        precision: 'U8'
+    nodes:
+      - name: 'Node0'
+        type: 'Dummy'
+        time: 0.2
+        output:
+          dims: [1,2,3,4]
+          precision: 'U8'
+    edges:
+      - from: 'Src'
+        to: 'Node0'\" """
+
+    exec_str = '{} --cfg={} --pl_mode=streaming --drop_frames'.format(pipeline_modeling_tool, cfg_file)
+    out = get_output(exec_str)
+    assert out.startswith('--drop_frames option is supported only for pipelines in "regular" mode')

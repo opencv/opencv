@@ -42,7 +42,7 @@ void unlock_mid(mfxMemId mid, mfxFrameData &data, MediaFrame::Access mode) {
 
 VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> assoc_surface,
                                                    SessionHandle assoc_handle):
-    BaseFrameAdapter(assoc_surface, assoc_handle) {
+    BaseFrameAdapter(assoc_surface, assoc_handle, AccelType::DX11) {
     Surface::data_t& data = assoc_surface->get_data();
 
     LockAdapter* alloc_data = reinterpret_cast<LockAdapter*>(data.MemId);
