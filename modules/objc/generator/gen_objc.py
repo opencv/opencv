@@ -1170,7 +1170,7 @@ class ObjectiveCWrapperGenerator(object):
                     objc_name = fi.objc_name if not constructor else ("init" + ("With" + (args[0].name[0].upper() + args[0].name[1:]) if len(args) > 0 else ""))
                 )
 
-            method_declarations.write( Template(
+            method_declaration = Template(
 """$prototype$swift_name$deprecation_decl;
 
 """
@@ -1179,6 +1179,20 @@ class ObjectiveCWrapperGenerator(object):
                     swift_name = " NS_SWIFT_NAME(" + fi.swift_name + "(" + build_swift_signature(args) + "))" if not constructor else "",
                     deprecation_decl = " DEPRECATED_ATTRIBUTE" if fi.deprecated else ""
                 )
+
+            # Undefine common macros that conflict with method names
+            method_declarations.write( Template(
+"""#pragma push_macro("$swift_name")
+#undef $swift_name
+
+$method_declaration
+#pragma pop_macro("$swift_name")
+
+"""
+                ).substitute(
+                    swift_name = fi.swift_name,
+                    method_declaration = method_declaration
+                ) if fi.swift_name in ["sqrt", "pow", "exp", "log"] else method_declaration
             )
 
             method_implementations.write( Template(
