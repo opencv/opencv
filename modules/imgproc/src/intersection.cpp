@@ -132,7 +132,9 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             vy2 *= normalizationScale;
 
             const float det = vx2*vy1 - vx1*vy2;
-            const float detInvScaled = !det ? std::numeric_limits<float>::quiet_NaN() : (normalizationScale/det);
+            if (std::abs(det) < 1e-12)//like normalizationScale, we consider accuracy around 1e-6, i.e. 1e-12 when squared
+              continue;
+            const float detInvScaled = normalizationScale/det;
 
             const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
             const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
