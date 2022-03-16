@@ -1042,7 +1042,8 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                   
     while (!output.done())
     {
         GAPI_ITT_AUTO_TRACE_GUARD(island_hndl);
-        // NB: In case input message is Exception handle it in general way.
+        // NB: In case the input message is an cv::gimpl::Exception
+        // handle it in a general way.
         if (cv::util::holds_alternative<cv::gimpl::Exception>(input.read()))
         {
             auto in_msg = input.get();
