@@ -392,7 +392,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
     std::vector<OutObj> out_objs;
     const auto &in_desc  = in.desc();
     const auto &out_desc = out.desc();
-    auto        in_msg   = in.get();
+    const auto  in_msg   = in.get();
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         out.post(cv::gimpl::EndOfStream{});

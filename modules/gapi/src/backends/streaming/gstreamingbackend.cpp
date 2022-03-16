@@ -165,7 +165,7 @@ struct Copy: public cv::detail::KernelTag
 void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
                       cv::gimpl::GIslandExecutable::IOutput &out)
 {
-    auto in_msg = in.get();
+    const auto in_msg = in.get();
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         out.post(cv::gimpl::EndOfStream{});
@@ -206,7 +206,7 @@ public:
     explicit GAccessorActorBase(const cv::GCompileArgs&) {}
     virtual void run(cv::gimpl::GIslandExecutable::IInput  &in,
                      cv::gimpl::GIslandExecutable::IOutput &out) override {
-        auto in_msg = in.get();
+        const auto in_msg = in.get();
         if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
         {
             out.post(cv::gimpl::EndOfStream{});

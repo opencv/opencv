@@ -495,7 +495,7 @@ void cv::gimpl::GOAKExecutable::handleStopStream() {
 
 void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                                     GIslandExecutable::IOutput &out) {
-    auto in_msg = in.get();
+    const auto in_msg = in.get();
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg)) {
         out.post(cv::gimpl::EndOfStream{});
