@@ -10,98 +10,6 @@
 
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
-#include "opencv2/opencv_modules.hpp"
-#include "pycompat.hpp"
-#include <map>
-
-#include <type_traits>  // std::enable_if
-
-template<typename T, class TEnable = void>  // TEnable is used for SFINAE checks
-struct PyOpenCV_Converter
-{
-    //static inline bool to(PyObject* obj, T& p, const char* name);
-    //static inline PyObject* from(const T& src);
-};
-
-// TODO: don't know how to implement this, this only keeps the compiler quiet
-// used by new versions of imwrite() and imencode()
-template<> struct PyOpenCV_Converter<std::map<int, int> > {
-    static bool to(PyObject*, std::map<int, int>&, const char*) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-    static PyObject* from(const std::map<int, int>&) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-};
-
-// TODO: don't know how to implement this, this only keeps the compiler quiet
-// used by new versions of imwrite() and imencode()
-template<> struct PyOpenCV_Converter<std::map<int, cv::String> > {
-    static bool to(PyObject*, std::map<int, std::string>&, const char*) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-    static PyObject* from(const std::map<int, cv::String>&) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-};
-
-// TODO: don't know how to implement this, this only keeps the compiler quiet
-// used by MultiLoad
-template<> struct PyOpenCV_Converter<std::map<cv::String, cv::String> > {
-    static bool to(PyObject*, std::map<cv::String, std::string>&, const char*) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-    static PyObject* from(const std::map<cv::String, cv::String>&) {
-        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
-    }
-};
-
-template<typename T> static
-bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>") { return PyOpenCV_Converter<T>::to(obj, p, name); }
-
-template<typename T> static
-PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src); }
-
-static PyObject* opencv_error = NULL;
-
-static int failmsg(const char *fmt, ...)
-{
-    char str[1000];
-
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(str, sizeof(str), fmt, ap);
-    va_end(ap);
-
-    PyErr_SetString(PyExc_TypeError, str);
-    return 0;
-}
-
-struct ArgInfo
-{
-    const char * name;
-    bool outputarg;
-    // more fields may be added if necessary
-
-    ArgInfo(const char * name_, bool outputarg_)
-        : name(name_)
-        , outputarg(outputarg_) {}
-
-    // to match with older pyopencv_to function signature
-    operator const char *() const { return name; }
-};
-
-class PyAllowThreads
-{
-public:
-    PyAllowThreads() : _state(PyEval_SaveThread()) {}
-    ~PyAllowThreads()
-    {
-        PyEval_RestoreThread(_state);
-    }
-private:
-    PyThreadState* _state;
-};
 
 
 #include "cv2_util.hpp"
@@ -149,9 +57,6 @@ typedef std::map<int, int> map_int_and_int;
 typedef std::map<int, String> map_int_and_String;
 typedef std::map<String, String> map_String_and_String;
 
-static PyObject* failmsgp(const char *fmt, ...)
-{
-  char str[1000];
 // enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
 

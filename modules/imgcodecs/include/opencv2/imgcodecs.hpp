@@ -101,8 +101,8 @@ enum ImwriteFlags {
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
        IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction resolution as defined by IMWRITE_TIFF_RESUNIT
-       IMWRITE_TIFF_YDPI           = 258, //!< For TIFF, use to specify the Y direction resolution as defined by IMWRITE_TIFF_RESUNIT
-       IMWRITE_TIFF_COMPRESSION    = 259, //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction resolution as defined by IMWRITE_TIFF_RESUNIT
+       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
        IMWRITE_TIFF_PREDICTOR      = 317, //!< For TIFF, LZW-predictor, default is PREDICTOR_HORIZONTAL. Deviant numeric value (TIFFTAG_PREDICTOR) for backward-compatibility.
        IMWRITE_TIFF_PAGENUMBER1    = 260, //! For TIFF: first page number (current)
        IMWRITE_TIFF_PAGENUMBER2    = 261, //! For TIFF: second page number (total)

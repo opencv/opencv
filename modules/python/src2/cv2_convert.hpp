@@ -5,6 +5,7 @@
 #include "cv2_util.hpp"
 #include "cv2_numpy.hpp"
 #include <vector>
+#include <map>
 #include <string>
 #include <type_traits>  // std::enable_if
 
@@ -80,6 +81,40 @@ PyObject* pyopencv_from(const cv::Matx<_Tp, m, n>& matx)
 // --- bool
 template<> bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const bool& value);
+
+// --- map
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by new versions of imwrite() and imencode()
+template<> struct PyOpenCV_Converter<std::map<int, int> > {
+    static bool to(PyObject*, std::map<int, int>&, const ArgInfo&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<int, int>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+};
+
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by new versions of imwrite() and imencode()
+template<> struct PyOpenCV_Converter<std::map<int, cv::String> > {
+    static bool to(PyObject*, std::map<int, std::string>&, const ArgInfo&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<int, cv::String>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+};
+
+// TODO: don't know how to implement this, this only keeps the compiler quiet
+// used by MultiLoad
+template<> struct PyOpenCV_Converter<std::map<cv::String, cv::String> > {
+    static bool to(PyObject*, std::map<cv::String, std::string>&, const ArgInfo&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+    }
+    static PyObject* from(const std::map<cv::String, cv::String>&) {
+        CV_Error(cv::Error::StsBadFunc, "not yet implemented");
+   }
+};
 
 // --- Mat
 template<> bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo& info);
