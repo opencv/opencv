@@ -21,6 +21,11 @@ namespace opencv_test
     {
         std::string method;
     };
+
+    struct CountStateSetupsParams
+    {
+        int* pState = nullptr;
+    };
 } // namespace opencv_test
 
 namespace cv
@@ -32,6 +37,14 @@ namespace cv
             static const char* tag()
             {
                 return "org.opencv.test.background_substractor_state_params";
+            }
+        };
+
+        template<> struct CompileArgTag<opencv_test::CountStateSetupsParams>
+        {
+            static const char* tag()
+            {
+                return "org.opencv.test.count_state_setups_params";
             }
         };
     } // namespace detail
@@ -127,6 +140,30 @@ namespace
         }
     };
 #endif
+
+    G_TYPED_KERNEL(GCountStateSetups, <cv::GOpaque<bool>(GMat)>,
+                   "org.opencv.test.count_state_setups")
+    {
+        static GOpaqueDesc outMeta(GMatDesc /* in */) { return empty_gopaque_desc(); }
+    };
+
+    GAPI_OCV_KERNEL_ST(GOCVCountStateSetups, GCountStateSetups, int)
+    {
+        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &,
+                          const cv::GCompileArgs &compileArgs)
+        {
+            auto params = cv::gapi::getCompileArg<CountStateSetupsParams>(compileArgs)
+                .value_or(CountStateSetupsParams { });
+            if (params.pState != nullptr) {
+                (*params.pState)++;
+            }
+        }
+
+        static void run(const cv::Mat & , bool &out, int &)
+        {
+            out = true;
+        }
+    };
 };
 
 TEST(StatefulKernel, StateIsMutableInRuntime)
@@ -413,6 +450,78 @@ TEST(StatefulKernel, StateIsAutoResetOnReshape)
 
     cv::Mat in_mat2(16, 16, CV_8UC1);
     run(in_mat2);
+}
+
+TEST(StatefulKernel, StateIsInitOnceInSetSourceWithMeta)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pState = new int(0);
+
+    // Compilation & testing
+    auto ccomp = c.compileStreaming(cv::descr_of(inputData),
+        cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                         params));
+
+    ccomp.setSource(cv::gin(inputData));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    int counter { };
+    bool result;
+    // Process mat 100 times
+    while (ccomp.pull(cv::gout(result)) && (counter++ < 100)) {
+        EXPECT_TRUE(params.pState != nullptr);
+        EXPECT_EQ(1, *params.pState);
+    }
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+TEST(StatefulKernel, StateIsInitOnceInSetSourceWithouthMeta)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pState = new int(0);
+
+    // Compilation & testing
+    auto ccomp = c.compileStreaming(
+        cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                         params));
+
+    ccomp.setSource(cv::gin(inputData));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    int counter { };
+    bool result;
+    // Process mat 100 times
+    while (ccomp.pull(cv::gout(result)) && (counter++ < 100)) {
+        EXPECT_TRUE(params.pState != nullptr);
+        EXPECT_EQ(1, *params.pState);
+    }
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
 }
 
 //-------------------------------------------------------------------------------------------------------------

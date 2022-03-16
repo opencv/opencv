@@ -12,6 +12,7 @@
 
 #include <utility> // tuple, required by magazine
 #include <unordered_map> // required by magazine
+#include <mutex> // required by std::once_flag
 
 #include <ade/graph.hpp>
 
@@ -77,6 +78,8 @@ protected:
         ade::NodeHandle data_nh;
     };
     std::vector<DataDesc> m_slots;
+
+    std::once_flag m_prep_flag;
 
     class Input;
     class Output;

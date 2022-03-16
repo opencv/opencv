@@ -113,8 +113,6 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         }
     }
     makeReshape();
-    // For each stateful kernel call 'setup' user callback to initialize state.
-    setupKernelStates();
 }
 
 // FIXME: Document what it does
