@@ -25,6 +25,9 @@
 
 #include "gfluidimgproc_func.hpp"
 
+#if CV_AVX2
+#include "gfluidimgproc_simd_avx2.hpp"
+#endif
 #if CV_SSE4_1
 #include "gfluidcore_simd_sse41.hpp"
 #endif
@@ -2137,6 +2140,23 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
         src1[l] = in.InLine<const float>(index1);
         dst[l] = out.OutLine<float>(l);
     }
+
+#if CV_AVX2
+    constexpr int nlanes = 8;
+
+    if (inSz.width >= nlanes && outSz.width >= nlanes)
+    {
+        avx2::calcRowLinear32FC1Impl(reinterpret_cast<float**>(dst),
+                                     reinterpret_cast<const float**>(src0),
+                                     reinterpret_cast<const float**>(src1),
+                                     reinterpret_cast<const float*>(alpha),
+                                     reinterpret_cast<const int*>(mapsx),
+                                     reinterpret_cast<const float*>(beta),
+                                     inSz, outSz, lpi);
+
+        return;
+    }
+#endif // CV_AVX2
 
     using alpha_type = typename Mapper::alpha_type;
     for (int l = 0; l < lpi; ++l)
