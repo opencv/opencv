@@ -2198,7 +2198,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        }
        else
        {
-           GAPI_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
+           CV_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
        }
    }
 
@@ -2225,7 +2225,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
         }
         else
         {
-            GAPI_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
+            CV_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
         }
     }
 };
