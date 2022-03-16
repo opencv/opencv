@@ -207,11 +207,16 @@ TEST_P(Test_ONNX_layers, Gather)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    testONNXModels("gather");
+    testONNXModels("gather", npy, 0, 0, false, false);
+    testONNXModels("gather_scalar", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, GatherMulti)
+{
     // GPU plugin unsupported slice for constant
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    testONNXModels("gather_scalar", npy, 0, 0, false, false);
+    testONNXModels("gather_multi", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D)
@@ -1424,7 +1429,7 @@ TEST_P(Test_ONNX_layers, GatherMultiOutput)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
 #endif
 
-    testONNXModels("gather_multi_output");
+    testONNXModels("gather_multi_output", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, DynamicAxes_squeeze_and_conv)
@@ -1475,7 +1480,7 @@ TEST_P(Test_ONNX_layers, DynamicAxes_gather)
     }
 #endif
 #endif
-    testONNXModels("gather_dynamic_axes");
+    testONNXModels("gather_dynamic_axes", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, DynamicAxes_gather_scalar)
@@ -1504,7 +1509,7 @@ TEST_P(Test_ONNX_layers, DynamicAxes_gather_scalar)
     }
 #endif
 #endif
-    testONNXModels("gather_scalar_dynamic_axes");
+    testONNXModels("gather_scalar_dynamic_axes", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, DynamicAxes_slice)
