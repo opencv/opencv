@@ -398,11 +398,6 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
-    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
-    {
-        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
-        return;
-    }
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
     in_objs.reserve(in_desc.size());

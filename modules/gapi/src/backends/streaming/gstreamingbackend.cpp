@@ -172,12 +172,6 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
         return;
     }
 
-    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
-    {
-        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
-        return;
-    }
-
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
@@ -216,12 +210,6 @@ public:
         if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
         {
             out.post(cv::gimpl::EndOfStream{});
-            return;
-        }
-
-        if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
-        {
-            out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
             return;
         }
 

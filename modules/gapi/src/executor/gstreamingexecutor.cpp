@@ -726,13 +726,7 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
     std::vector<Q*> &in_queues; // FIXME: This can be part of QueueReader
     cv::GRunArgs &in_constants; // FIXME: This can be part of QueueReader
 
-    virtual cv::gimpl::StreamMsg get() override
-    {
-        GAPI_ITT_STATIC_LOCAL_HANDLE(inputs_get_hndl, "StreamingInput::get");
-        GAPI_ITT_AUTO_TRACE_GUARD(inputs_get_hndl);
-
-        return qr.getInputVector(in_queues, in_constants);
-    }
+    cv::optional<cv::gimpl::StreamMsg> last_read_msg;
 
     virtual cv::gimpl::StreamMsg try_get() override
     {
@@ -747,6 +741,30 @@ class StreamingInput final: public cv::gimpl::GIslandExecutable::IInput
         : qr(rdr), in_queues(inq), in_constants(inc)
     {
         set(in_descs);
+    }
+
+    const cv::gimpl::StreamMsg& read()
+    {
+        GAPI_ITT_STATIC_LOCAL_HANDLE(inputs_get_hndl, "StreamingInput::read");
+        GAPI_ITT_AUTO_TRACE_GUARD(inputs_get_hndl);
+
+        last_read_msg =
+            cv::optional<cv::gimpl::StreamMsg>(
+                    qr.getInputVector(in_queues, in_constants));
+        return last_read_msg.value();
+    }
+
+    virtual cv::gimpl::StreamMsg get() override
+    {
+        GAPI_ITT_STATIC_LOCAL_HANDLE(inputs_get_hndl, "StreamingInput::get");
+        GAPI_ITT_AUTO_TRACE_GUARD(inputs_get_hndl);
+
+        if (!last_read_msg.has_value()) {
+            (void)read();
+        }
+        auto msg = std::move(last_read_msg.value());
+        last_read_msg = cv::optional<cv::gimpl::StreamMsg>();
+        return msg;
     }
 };
 
@@ -940,32 +958,6 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
         }
     }
 
-    virtual void post(cv::gimpl::Exception&& error) override
-    {
-        std::lock_guard<std::mutex> lock{m_mutex};
-        // If the posting list is empty, just broadcast the stop message.
-        // If it is not, enqueue the Stop message in the postings list.
-        for (auto &&it : ade::util::indexed(m_postings))
-        {
-            const auto  idx = ade::util::index(it);
-                  auto &lst = ade::util::value(it);
-            if (lst.empty())
-            {
-                for (auto &&q : m_out_queues[idx])
-                {
-                    q->push(Cmd(std::move(error)));
-                }
-            }
-            else
-            {
-                Posting p;
-                p.data = Posting::V{std::move(error)};
-                p.ready = true;
-                lst.push_back(std::move(p)); // FIXME: For some reason {}-ctor didn't work here
-            }
-        }
-    }
-
     void meta(const cv::GRunArgP &out, const cv::GRunArg::Meta &m) override
     {
         std::lock_guard<std::mutex> lock{m_mutex};
@@ -996,6 +988,32 @@ public:
         // when it posted/resent all STOP messages to all its outputs.
         return m_stops_sent == desc().size();
     }
+
+    virtual void post(cv::gimpl::Exception&& error) override
+    {
+        std::lock_guard<std::mutex> lock{m_mutex};
+        // If the posting list is empty, just broadcast the stop message.
+        // If it is not, enqueue the Stop message in the postings list.
+        for (auto &&it : ade::util::indexed(m_postings))
+        {
+            const auto  idx = ade::util::index(it);
+                  auto &lst = ade::util::value(it);
+            if (lst.empty())
+            {
+                for (auto &&q : m_out_queues[idx])
+                {
+                    q->push(Cmd(std::move(error)));
+                }
+            }
+            else
+            {
+                Posting p;
+                p.data = Posting::V{std::move(error)};
+                p.ready = true;
+                lst.push_back(std::move(p)); // FIXME: For some reason {}-ctor didn't work here
+            }
+        }
+    }
 };
 
 // This thread is a plain dumb processing actor. What it do is just:
@@ -1024,7 +1042,16 @@ void islandActorThread(std::vector<cv::gimpl::RcDesc> in_rcs,                   
     while (!output.done())
     {
         GAPI_ITT_AUTO_TRACE_GUARD(island_hndl);
-        island_exec->run(input, output);
+        // NB: In case input message is Exception handle it in general way.
+        if (cv::util::holds_alternative<cv::gimpl::Exception>(input.read()))
+        {
+            auto in_msg = input.get();
+            output.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
+        }
+        else
+        {
+            island_exec->run(input, output);
+        }
     }
 }
 

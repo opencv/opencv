@@ -798,13 +798,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
         return;
     }
 
-    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg))
-    {
-        // (4) If the Exception message is revieved, propagate it further.
-        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
-        return;
-    }
-
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
 

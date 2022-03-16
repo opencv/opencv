@@ -502,11 +502,6 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         return;
     }
 
-    if (cv::util::holds_alternative<cv::gimpl::Exception>(in_msg)) {
-        out.post(std::move(cv::util::get<cv::gimpl::Exception>(in_msg)));
-        return;
-    }
-
     for (const auto& in_q : m_in_queues) {
         auto q = m_device->getInputQueue(in_q.first);
         q->send(in_q.second);
