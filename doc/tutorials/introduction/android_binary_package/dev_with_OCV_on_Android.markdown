@@ -240,7 +240,7 @@ taken:
 Hello OpenCV Sample
 -------------------
 
-Here are basic steps to guide you trough the process of creating a simple OpenCV-centric
+Here are basic steps to guide you through the process of creating a simple OpenCV-centric
 application. It will be capable of accessing camera output, processing it and displaying the result.
 
 -#  Open Eclipse IDE, create a new clean workspace, create a new Android project

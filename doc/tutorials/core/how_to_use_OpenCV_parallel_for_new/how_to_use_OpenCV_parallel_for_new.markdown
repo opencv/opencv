@@ -92,7 +92,7 @@ We then fill value to the corresponding pixel in the dst image.
 
 ### Parallel implementation
 
-When looking at the sequential implementation, we can notice that each pixel depends on multiple neighbouring pixels but only one pixel is edited at a time. Thus, to optimize the computation, we can split the image into stripes and parallely perform convolution on each, by exploiting the multi-core architecture of modern processor. The OpenCV @ref cv::parallel_for_ framework automatically decides how to split the computation efficiently and does most of the work for us.
+When looking at the sequential implementation, we can notice that each pixel depends on multiple neighbouring pixels but only one pixel is edited at a time. Thus, to optimize the computation, we can split the image into stripes and parallelly perform convolution on each, by exploiting the multi-core architecture of modern processor. The OpenCV @ref cv::parallel_for_ framework automatically decides how to split the computation efficiently and does most of the work for us.
 
 @note Although values of a pixel in a particular stripe may depend on pixel values outside the stripe, these are only read only operations and hence will not cause undefined behaviour.
 

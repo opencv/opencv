@@ -20,7 +20,7 @@ This pretty-printer can show element type, `is_continuous`, `is_submatrix` flags
 
 # Installation {#tutorial_linux_gdb_pretty_printer_installation}
 
-Move into `opencv/samples/gdb/`. Place `mat_pretty_printer.py` in a convinient place, rename `gdbinit` to `.gdbinit`  and move it into your home folder. Change 'source' line of `.gdbinit` to point to your `mat_pretty_printer.py` path.
+Move into `opencv/samples/gdb/`. Place `mat_pretty_printer.py` in a convenient place, rename `gdbinit` to `.gdbinit`  and move it into your home folder. Change 'source' line of `.gdbinit` to point to your `mat_pretty_printer.py` path.
 
 In order to check version of python bundled with your gdb, use the following commands from the gdb shell:
 
@@ -34,5 +34,5 @@ If the version of python 3 installed in your system doesn't match the version in
 
 # Usage {#tutorial_linux_gdb_pretty_printer_usage}
 
-The fields in a debugger prefixed with `view_` are pseudo-fields added for convinience, the rest are left as is.
-If you feel that the number of elements in truncated view is too low, you can edit `mat_pretty_printer.py` - `np.set_printoptions` controlls everything matrix display-related.
+The fields in a debugger prefixed with `view_` are pseudo-fields added for convenience, the rest are left as is.
+If you feel that the number of elements in truncated view is too low, you can edit `mat_pretty_printer.py` - `np.set_printoptions` controls everything matrix display-related.
