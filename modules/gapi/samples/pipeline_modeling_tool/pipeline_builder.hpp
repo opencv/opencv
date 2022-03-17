@@ -51,7 +51,7 @@ struct Node {
 
 struct SubGraphCall {
     G_API_OP(GSubGraph,
-             <cv::GMat(cv::GMat, cv::GComputation, cv::GCompileArgs, int)>,
+             <cv::GMat(cv::GMat, cv::GComputation, cv::GCompileArgs, size_t)>,
              "custom.subgraph") {
         static cv::GMatDesc outMeta(const cv::GMatDesc& in,
                                     cv::GComputation    comp,
