@@ -71,10 +71,9 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
     checkImage(image);
 
     TMat depth;
-
     if (useDepth)
     {
-        frame.getDepth(depth);
+        frame.getScaledDepth(depth);
         if (depth.empty())
         {
             if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
@@ -90,6 +89,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
                 std::vector<TMat> xyz;
                 split(cloud, xyz);
                 frame.setDepth(xyz[2]);
+                frame.getScaledDepth(depth);
             }
             else
                 CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
@@ -194,10 +194,12 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
             std::vector<TMat> xyz;
             split(cloud, xyz);
             frame.setDepth(xyz[2]);
+            frame.getScaledDepth(depth);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
+
     checkDepth(depth, depth.size());
 
     TMat mask;
