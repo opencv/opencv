@@ -8,12 +8,51 @@
 #include "precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include "op_vkcom.hpp"
+#include "net_impl.hpp"
 
 namespace cv
 {
 namespace dnn
 {
 #ifdef HAVE_VULKAN
+
+CV__DNN_INLINE_NS_BEGIN
+
+
+void Net::Impl::initVkComBackend()
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(preferableBackend == DNN_BACKEND_VKCOM);
+
+    for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
+    {
+        LayerData &ld = it->second;
+        Ptr<Layer> layer = ld.layerInstance;
+        if (!layer->supportBackend(preferableBackend))
+        {
+            continue;
+        }
+
+        ld.skip = false;
+
+        try
+        {
+            ld.backendNodes[DNN_BACKEND_VKCOM] =
+                layer->initVkCom(ld.inputBlobsWrappers);
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "initVkCom failed, fallback to CPU implementation. " << e.what());
+            ld.backendNodes[DNN_BACKEND_VKCOM] = Ptr<BackendNode>();
+        }
+    }
+}
+
+CV__DNN_INLINE_NS_END
+
+
+///////////////////////////////////////////////////////////////////////////////
+
     void copyToTensor(vkcom::Tensor &dst, const Mat &src)
     {
         CV_Assert(src.isContinuous() && src.type() == CV_32F);

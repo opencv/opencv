@@ -73,6 +73,13 @@ void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
 
 CV__DNN_INLINE_NS_BEGIN
 
+namespace openvino {
+
+// TODO: use std::string as parameter
+bool checkTarget(Target target);
+
+}  // namespace openvino
+
 bool isMyriadX();
 
 bool isArmComputePlugin();
