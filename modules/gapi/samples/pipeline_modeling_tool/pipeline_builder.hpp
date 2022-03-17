@@ -56,7 +56,8 @@ struct SubGraphCall {
         static cv::GMatDesc outMeta(const cv::GMatDesc& in,
                                     cv::GComputation    comp,
                                     cv::GCompileArgs    compile_args,
-                                    const size_t        /*call_every_nth*/) {
+                                    const size_t        call_every_nth) {
+            GAPI_Assert(call_every_nth > 0);
             auto out_metas =
                 comp.compile(in, std::move(compile_args)).outMetas();
             GAPI_Assert(out_metas.size() == 1u);
@@ -320,7 +321,6 @@ template <typename CallT>
 void PipelineBuilder::addCall(const CallParams& call_params,
                               CallT&&           call) {
 
-    GAPI_Assert(call_params.call_every_nth != 0);
     size_t num_inputs  = call.numInputs();
     size_t num_outputs = call.numOutputs();
     Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{call_params.name,
