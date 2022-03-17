@@ -1567,4 +1567,4 @@ int TextDetectionModel_DB::getMaxCandidates() const
 }
 
 
-}} // namespace
+}}  // namespace

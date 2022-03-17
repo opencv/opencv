@@ -254,6 +254,31 @@ cv::String getInferenceEngineCPUType()
     return cpu_type;
 }
 
+
+namespace openvino {
+
+bool checkTarget(Target target)
+{
+    // Lightweight detection
+    const std::vector<std::string> devices = getCore("").GetAvailableDevices();
+    for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
+    {
+        if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
+            return true;
+        if (std::string::npos != i->find("HDDL") && target == DNN_TARGET_HDDL)
+            return true;
+        else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
+            return true;
+        else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
+            return true;
+        else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+            return true;
+    }
+    return false;
+}
+
+}  // namespace openvino
+
 #else  // HAVE_INF_ENGINE
 
 cv::String getInferenceEngineBackendType()

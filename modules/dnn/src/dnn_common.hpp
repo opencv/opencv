@@ -19,7 +19,44 @@ void initializeLayerFactory();
 extern bool DNN_DIAGNOSTICS_RUN;
 extern bool DNN_SKIP_REAL_IMPORT;
 
-namespace detail {
+//
+// dnn_params.cpp
+//
+
+/// Network dump level
+size_t getParam_DNN_NETWORK_DUMP();
+
+/// This parameter is useful to run with valgrind memory errors detection
+bool getParam_DNN_DISABLE_MEMORY_OPTIMIZATIONS();
+
+#ifdef HAVE_OPENCL
+bool getParam_DNN_OPENCL_ALLOW_ALL_DEVICES();
+#endif
+
+int getParam_DNN_BACKEND_DEFAULT();
+
+// Additional checks (slowdowns execution!)
+bool getParam_DNN_CHECK_NAN_INF();
+bool getParam_DNN_CHECK_NAN_INF_DUMP();
+bool getParam_DNN_CHECK_NAN_INF_RAISE_ERROR();
+
+
+inline namespace detail {
+
+typedef std::vector<MatShape> ShapesVec;
+
+struct LayerShapes
+{
+    ShapesVec in, out, internal;
+    // No guarantees that layer which support in-place computations
+    // will be computed in-place (input.data_ptr == output.data_ptr).
+    // If layer said that it could work in-place and layers after it
+    // no longer use input blob, we'll set output = input.
+    bool supportInPlace;
+    LayerShapes() {supportInPlace = false;}
+};
+
+
 #define CALL_MEMBER_FN(object, ptrToMemFn)  ((object).*(ptrToMemFn))
 
 class NotImplemented : public Layer
@@ -81,8 +118,6 @@ struct NetImplBase
 
 }  // namespace detail
 
-
-typedef std::vector<MatShape> ShapesVec;
 
 static inline std::string toString(const ShapesVec& shapes, const std::string& name = std::string())
 {
