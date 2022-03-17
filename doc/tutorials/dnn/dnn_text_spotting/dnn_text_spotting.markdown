@@ -29,8 +29,8 @@ Before recognition, you should `setVocabulary` and `setDecodeType`.
 - "CTC-prefix-beam-search", the output of the text recognition model should be a probability matrix same with "CTC-greedy".
     - The algorithm is proposed at Hannun's [paper](https://arxiv.org/abs/1408.2873).
     - `setDecodeOptsCTCPrefixBeamSearch` could be used to control the beam size in search step.
-    - To futher optimize for big vocabulary, a new option `vocPruneSize` is introduced to avoid iterate the whole vocbulary
-       but only the number of `vocPruneSize` tokens with top probabilty.
+    - To further optimize for big vocabulary, a new option `vocPruneSize` is introduced to avoid iterate the whole vocbulary
+       but only the number of `vocPruneSize` tokens with top probability.
 
 @ref cv::dnn::TextRecognitionModel::recognize() is the main function for text recognition.
 - The input image should be a cropped text image or an image with `roiRects`
