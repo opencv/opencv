@@ -204,6 +204,7 @@ TEST(GPU, Symm7x7_test)
     }
 }
 
+namespace {
 class TestMediaBGR final: public cv::MediaFrame::IAdapter {
     cv::Mat m_mat;
     using Cb = cv::MediaFrame::View::Callback;
@@ -254,6 +255,7 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
     EXPECT_LE(normInf, lInf) << comment;
 }
+} // anonymous
 
 G_API_OP(MF2Umt, <GMat(GFrame)>, "test.MediaFrame_UMt") {
     static GMatDesc outMeta(GFrameDesc d) {
