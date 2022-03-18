@@ -300,12 +300,9 @@ void PoseSolver::solveInternal(InputArray objectPoints)
         }
     }
 
-    int c = 1;
-
-    while (min_sq_err > 3 * s_[9 - num_eigen_points - c] && 9 - num_eigen_points - c > 0)
+    int index, c = 1;
+    while ((index = 9 - num_eigen_points - c) > 0 && min_sq_err > 3 * s_[index])
     {
-        int index = 9 - num_eigen_points - c;
-
         const cv::Matx<double, 9, 1> e = u_.col(index);
         SQPSolution solutions[2];
 
