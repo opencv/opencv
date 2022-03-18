@@ -204,7 +204,6 @@ TEST(GPU, Symm7x7_test)
     }
 }
 
-// MB it deserves own test file
 class TestMediaBGR final: public cv::MediaFrame::IAdapter {
     cv::Mat m_mat;
     using Cb = cv::MediaFrame::View::Callback;
@@ -245,16 +244,28 @@ public:
     }
 };
 
-G_API_OP(MFUmt, <GMat(GFrame)>, "test.MediaFrame_UMt") {
-    static GMatDesc outMeta(GFrameDesc d) { return GMatDesc{CV_8U, 3, d.size}; }
+void normAssert(cv::InputArray ref, cv::InputArray test,
+                const char *comment /*= ""*/,
+                double l1 = 0.00001, double lInf = 0.0001)
+{
+    double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
+    EXPECT_LE(normL1, l1) << comment;
+
+    double normInf = cvtest::norm(ref, test, cv::NORM_INF);
+    EXPECT_LE(normInf, lInf) << comment;
+}
+
+G_API_OP(MF2Umt, <GMat(GFrame)>, "test.MediaFrame_UMt") {
+    static GMatDesc outMeta(GFrameDesc d) {
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        return GMatDesc{CV_8U, 3, d.size};
+    }
 };
-GAPI_OCL_KERNEL(GMFUmt, MFUmt) {
+
+GAPI_OCL_KERNEL(GMF2Umt, MF2Umt) {
     static void run(const cv::MediaFrame& in, cv::UMat& out) {
         auto d = in.desc();
-        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
         auto view = in.access(cv::MediaFrame::Access::R);
-        // NOTE: use convertFromD3D11Texture2DtoCLMem and convertFromImage
-        // to create UMat to avoid host-device copy
         cv::Mat mt(d.size, CV_8UC3, view.ptr[0]);
         mt.copyTo(out);
     }
@@ -262,9 +273,9 @@ GAPI_OCL_KERNEL(GMFUmt, MFUmt) {
 
 TEST(GPU, MediaFrameToUMat) {
     cv::GFrame in;
-    auto out = MFUmt::on(in);
+    auto out = MF2Umt::on(in);
     auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(out))
-        .compileStreaming(cv::compile_args(cv::gapi::kernels<GMFUmt>()));
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GMF2Umt>()));
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
     try {
@@ -272,13 +283,19 @@ TEST(GPU, MediaFrameToUMat) {
     } catch(...) {
         throw SkipTestException("Video file can not be opened");
     }
+    cv::VideoCapture cap(filepath);
     pipe.start();
 
-    cv::Mat out_mat;
+    cv::Mat out_mat, ocv_mat;
     bool run = true;
-    while (run) {
+    while (true) {
         EXPECT_NO_THROW(run = pipe.pull(cv::gout(out_mat)));
+        if (!run) break;
+        cap.read(ocv_mat);
         EXPECT_FALSE(out_mat.empty());
+        EXPECT_FALSE(ocv_mat.empty());
+        EXPECT_EQ(out_mat.total(), ocv_mat.total());
+        normAssert(ocv_mat, out_mat, "Test of correct pulling of mat");
     }
 }
 
