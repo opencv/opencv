@@ -7321,9 +7321,6 @@ struct Image2D::Impl
         handle = 0;
         refcount = 1;
         init(mem);
-        if (handle == nullptr) {
-            CV_OCL_CHECK(clReleaseMemObject(mem));
-        }
     }
 
     ~Impl()

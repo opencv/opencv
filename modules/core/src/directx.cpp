@@ -1355,6 +1355,10 @@ static OpenCLExecutionContext getExecContextbyD3D11TextureAndDevice(ID3D11Textur
          CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Expected Vendor of device is Intel");
     }
 
+    if (!device.isExtensionSupported("cl_khr_d3d11_sharing")) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't support cl_khr_d3d11_sharing extension");
+    }
+
     cl_device_id cl_device = static_cast<cl_device_id>(device.ptr());
     size_t out_size = 0; // size in bytes
     cl_int status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, 0, nullptr, &out_size);
@@ -1378,10 +1382,6 @@ static OpenCLExecutionContext getExecContextbyD3D11TextureAndDevice(ID3D11Textur
         CV_Error(cv::Error::StsNullPtr, "OpenCL: GetDevice returns empty pD3D11Device in convertFromD3D11Texture2DtoCLMem");
     }
 
-    if (!device.isExtensionSupported("cl_khr_d3d11_sharing")) {
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't support cl_khr_d3d11_sharing extension");
-    }
-
     cl_context_properties properties[] = {
             CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
             CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
@@ -1391,6 +1391,7 @@ static OpenCLExecutionContext getExecContextbyD3D11TextureAndDevice(ID3D11Textur
     cl_context context = NULL;
     context = clCreateContext(properties, 1, &cl_device, NULL, NULL, &status);
     if (status != CL_SUCCESS) {
+        pD3D11Device->Release();
         CV_Error(status, "OpenCL: clCreateContext failed");
     }
     OpenCLExecutionContext clExecCtx;
