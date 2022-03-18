@@ -323,8 +323,7 @@ void PipelineBuilder::addCall(const CallParams& call_params,
 
     size_t num_inputs  = call.numInputs();
     size_t num_outputs = call.numOutputs();
-    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{call_params.name,
-                                                           call_params.call_every_nth,
+    Node::Ptr call_node(new Node{{},{},Node::Kind{CallNode{call_params,
                                                            std::move(call)}}});
     // NB: Create placeholders for inputs.
     call_node->in_nodes.resize(num_inputs);
