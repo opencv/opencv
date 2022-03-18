@@ -48,6 +48,7 @@
 #define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
 #define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
 
+#define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)

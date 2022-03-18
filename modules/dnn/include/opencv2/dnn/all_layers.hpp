@@ -262,7 +262,7 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int input_zp, output_zp;
-        float output_sc;
+        float input_sc, output_sc;
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
@@ -322,6 +322,7 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int input_zp, output_zp;
+        float input_sc, output_sc;
         static Ptr<PoolingLayerInt8> create(const LayerParams& params);
     };
 
@@ -351,7 +352,8 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS InnerProductLayerInt8 : public InnerProductLayer
     {
     public:
-        int output_zp;
+        int input_zp, output_zp;
+        float input_sc, output_sc;
         static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
     };
 

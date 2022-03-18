@@ -3050,6 +3050,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     layerParams.type = "ConvolutionInt8";
     layerParams.set("num_output", outCn);
     layerParams.set("input_zeropoint", inp_zp.at<int8_t>(0));
+    layerParams.set("input_scale",inp_sc.at<float>(0));
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(biasFused);
     layerParams.blobs.push_back(outputMultiplier);
@@ -3089,6 +3090,9 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     layerParams.type = "InnerProductInt8";
     layerParams.set("num_output", outCn);
     layerParams.set("axis", firstInpDims - secondInpDims + 1);
+    layerParams.set("input_scale", inp_sc.at<float>(0));
+    layerParams.set("input_zeropoint", inp_zp.at<int8_t>(0));
+
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(bias);
     layerParams.blobs.push_back(outputMultiplier);
@@ -3159,6 +3163,7 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
             rescaleParams.set("depth", CV_8S);
             rescaleParams.set("scale", scale);
             rescaleParams.set("shift", shift);
+            rescaleParams.set("isEltwise", true);
             addLayer(rescaleParams, node_proto);
             return;
         }
@@ -3207,7 +3212,6 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
                 Mat blob_dequantized;
                 blob.convertTo(blob_dequantized, CV_32F, inp_scales[1], -(inp_scales[1] * inp_zps[1]));
                 layerParams.blobs.push_back(blob_dequantized);
-                layerParams.set("input_scales", DictValue::arrayReal(inp_scales.data(), inp_scales.size()));
             }
         }
     }
@@ -3222,9 +3226,9 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
     {
         layerParams.type = "ScaleInt8";
         layerParams.set("bias_term", op == "sum");
-        layerParams.set("input_scales", DictValue::arrayReal(inp_scales.data(), inp_scales.size()));
     }
 
+    layerParams.set("input_scales", DictValue::arrayReal(inp_scales.data(), inp_scales.size()));
     layerParams.set("input_zeropoints", DictValue::arrayInt(inp_zps.data(), inp_zps.size()));
     addLayer(layerParams, node_proto);
 }
@@ -3250,6 +3254,9 @@ void ONNXImporter::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::
     }
 
     layerParams.type = "ReLUInt8";
+    layerParams.set("input_scale", inp_sc);
+    layerParams.set("input_zeropoint", inp_zp);
+    layerParams.set("slope", slope);
     layerParams.blobs.push_back(lookUpTable);
     addLayer(layerParams, node_proto);
 }
@@ -3274,6 +3281,8 @@ void ONNXImporter::parseQSigmoid(LayerParams& layerParams, const opencv_onnx::No
     }
 
     layerParams.type = "SigmoidInt8";
+    layerParams.set("input_scale", inp_sc);
+    layerParams.set("input_zeropoint", inp_zp);
     layerParams.blobs.push_back(lookUpTable);
     addLayer(layerParams, node_proto);
 }
@@ -3327,6 +3336,7 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
                 rescaleParams.set("depth", CV_8S);
                 rescaleParams.set("scale", scale);
                 rescaleParams.set("shift", shift);
+                rescaleParams.set("isEltwise", false);
 
                 opencv_onnx::NodeProto proto;
                 proto.add_input(node_proto.input(i));

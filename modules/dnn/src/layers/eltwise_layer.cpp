@@ -875,6 +875,8 @@ public:
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
     {
+        params.set("input_scales", DictValue::arrayReal(scales[0].data(), scales[0].size()));
+        params.set("input_zeropoints", DictValue::arrayInt(zeropoints[0].data(), zeropoints[0].size()));
         if (op == SUM)
         {
             std::vector<float> newCoeffs;
@@ -897,7 +899,6 @@ public:
             newCoeffs[0] /= scales[1][0];
             params.set("coeff", DictValue::arrayReal(newCoeffs.data(), newCoeffs.size()));
             params.set("offset", zeropoints[1][0]);
-            params.set("input_zeropoints", DictValue::arrayInt(zeropoints[0].data(), zeropoints[0].size()));
             return true;
         }
         return op == MAX;

@@ -76,6 +76,12 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             }
 #endif
         }
+        else if (preferableBackend == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            return Ptr<BackendWrapper>(new TimVXBackendWrapper(baseBuffer, host));
+#endif
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -133,6 +139,14 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of CUDA/CUDNN");
 #endif
     }
+    else if (preferableBackend == DNN_BACKEND_TIMVX)
+    {
+#ifdef HAVE_TIMVX
+        initTimVXBackend();
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of TimVX");
+#endif
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, cv::format("Unknown backend identifier: %d", preferableBackend));
@@ -145,9 +159,9 @@ void Net::Impl::setPreferableBackend(int backendId)
     if (backendId == DNN_BACKEND_DEFAULT)
         backendId = (Backend)getParam_DNN_BACKEND_DEFAULT();
 
-    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV)
+    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only default backend supports quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only default and TIMVX backends support quantized networks");
         backendId = DNN_BACKEND_OPENCV;
     }
 
@@ -166,9 +180,9 @@ void Net::Impl::setPreferableBackend(int backendId)
 void Net::Impl::setPreferableTarget(int targetId)
 {
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&
-        targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16)
+        targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16 && targetId != DNN_TARGET_NPU)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only CPU and OpenCL/OpenCL FP16 target is supported by quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only CPU, OpenCL/OpenCL FP16 and NPU targets are supported by quantized networks");
         targetId = DNN_TARGET_CPU;
     }
 

@@ -11,6 +11,7 @@
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
+#include "op_timvx.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
@@ -150,6 +151,14 @@ struct Net::Impl : public detail::NetImplBase
 
 #ifdef HAVE_VULKAN
     void initVkComBackend();
+#endif
+
+#ifdef HAVE_TIMVX
+    // Create timVxInfo for reserve tvGraphList.
+    TimVXInfo timVxInfo = TimVXInfo();
+    void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
+    void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
+    void initTimVXBackend();
 #endif
 
 #ifdef HAVE_CUDA

@@ -9,6 +9,7 @@
 
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "../op_timvx.hpp"
 #include <iostream>
 #include <numeric>
 
@@ -46,6 +47,7 @@ public:
         int ngroups = params.get<int>("group", 1);
         CV_Assert(numOutput % ngroups == 0);
 
+        input_sc = params.get<float>("input_scale");
         input_zp = params.get<int>("input_zeropoint");
         output_zp = params.get<int>("zeropoints");
         output_sc = params.get<float>("scales");
@@ -181,6 +183,16 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         size_t ksize = kernel_size.size();
+
+#ifdef HAVE_TIMVX
+        if (backendId == DNN_BACKEND_TIMVX)
+        {
+            /* only Conv1d and Conv2d supported. */
+            if (ksize == 2 || ksize == 1)
+                return true;
+            return false;
+        }
+#endif
         // Only default backend and Conv1D/Conv2D/Conv3D are supported
         return backendId == DNN_BACKEND_OPENCV && ksize >= 1 && ksize <= 3;
     }
@@ -261,6 +273,11 @@ public:
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        // TODO! add activation in convolution.
+#ifdef HAVE_TIMVX
+        if (preferableTarget == DNN_TARGET_NPU)
+            return false;
+#endif
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
         if (!activ_int8.empty())
         {
@@ -298,6 +315,249 @@ public:
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
         outputMultiplier[outCn] = outputMultiplier[outCn+1] = outputMultiplier[outCn-1];
+    }
+
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        /* TODO :support GroupConv;
+        Ref:
+        https://github.com/VeriSilicon/TIM-VX/blob/main/docs/Operators.md#conv2d
+        Link Reference: https://github.com/VeriSilicon/TIM-VX/blob/main/src/tim/vx/ops/conv1d_test.cc
+        */
+
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        Mat tvWeightMat = blobs[0];
+
+        std::vector<int> tvBiasVec;
+        tvBiasVec.assign(biasvec.begin(), biasvec.end() - 2);
+        Mat tvBiasMat(tvBiasVec);
+
+        for (int i = 0; i < numOutput; i++)
+        {
+            tvBiasVec[i] += input_zp * (cv::sum(blobs[0].row(i))[0]);
+        }
+
+        // Padding Type
+        tim::vx::PadType tvPadType;
+
+        if (padMode.empty())
+        {
+            tvPadType = tim::vx::PadType::AUTO; // TODO! check the padding type.
+        }
+        else if(padMode == "VALID")
+        {
+            tvPadType = tim::vx::PadType::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            tvPadType = tim::vx::PadType::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsError, "Unsupported padding mode in TimVXBackend!");
+        }
+
+        size_t ksize = kernel_size.size();
+
+        std::vector<int> inputsIndex;
+        std::vector<int> outputsIndex;
+
+        CV_Assert(inputsWrapper.size() == 1);
+        CV_Assert(ksize == 2 || ksize == 1);
+
+        std::vector<float> weight_scs, bias_scs;
+        std::vector<int32_t> weight_zps, bias_zps;
+
+        weight_scs.resize(numOutput);
+        bias_scs.resize(numOutput);
+
+        for (int i = 0; i < numOutput; i++)
+        {
+            bias_scs[i] = outputMultiplier[i] * output_sc;
+            weight_scs[i] = bias_scs[i] / input_sc;
+        }
+
+        weight_zps.assign(numOutput, 0);
+        bias_zps.assign(numOutput, 0);
+
+        bool tvSymmetric;
+        tvSymmetric = getQuantType(weight_scs, numOutput);
+
+        // input Tensor
+        auto inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        int input_index = -1, weight_index = -1, bias_index = -1, output_index = -1;
+
+        if (inputWrapper->isTensor())
+        {
+            input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+            if (input_index == -1)
+            {
+                // Copy To New inputWrapper
+                Mat tmp = inputWrapper->getMat();
+                inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+            }
+        }
+
+        if (!inputWrapper->isTensor())
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, input_sc, input_zp));
+            inputWrapper->createTensor(graph, tim::vx::TensorAttribute::INPUT, tvInputQuant);
+            input_index = tvGraph->addWrapper(inputWrapper);
+        }
+        inputsIndex.push_back(input_index);
+
+        // weight Tensor
+        auto tvConvWeightShape = shape(tvWeightMat);
+        Mat tvInputMat = inputWrapper->getMat();
+        // calculate group value.
+        int group = tvInputMat.size[1] / tvWeightMat.size[1];
+
+        // TODO! It will be supported in future.
+        if (tvSymmetric && tvWeightMat.total() == tvConvWeightShape[0])
+            return Ptr<TimVXBackendNode>();
+        // Reverse weight shape From OpenCV NCHW to TimVX WHCN.
+        std::reverse(tvConvWeightShape.begin(), tvConvWeightShape.end());
+
+        Ptr<TimVXBackendWrapper> weightWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tvWeightMat));
+        Ptr<tim::vx::Quantization> weightQuant;
+
+        if (tvSymmetric)
+        {
+            int wtChanneldim = tvWeightMat.dims - 1;
+            weightQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::SYMMETRIC_PER_CHANNEL, wtChanneldim,
+                                              weight_scs, weight_zps));
+        }
+        else
+        {
+            weightQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, weight_scs[0], 0));
+        }
+        weightWrapper->createTensor(graph,tim::vx::TensorAttribute::CONSTANT, weightQuant);
+
+        weight_index = tvGraph->addWrapper(weightWrapper);
+        inputsIndex.push_back(weight_index);
+
+        // Bias Tensor
+        Ptr<TimVXBackendWrapper> biasWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tvBiasMat));
+        Ptr<tim::vx::Quantization> biasQuant;
+
+        if (tvSymmetric)
+        {
+            biasQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::SYMMETRIC_PER_CHANNEL, 0,
+                                              bias_scs, bias_zps));
+        }
+        else
+        {
+            biasQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, weight_scs[0] * input_sc, 0));
+        }
+
+        biasWrapper->createTensor(graph, tim::vx::TensorAttribute::CONSTANT, biasQuant);
+        bias_index = tvGraph->addWrapper(biasWrapper);
+        inputsIndex.push_back(bias_index);
+        // Output tensor
+        CV_Assert(outputsWrapper.size() == 1);
+        auto outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        Ptr<tim::vx::Quantization> outputQuant = Ptr<tim::vx::Quantization>(
+                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, output_sc, output_zp));
+
+        if (isLast)
+        {
+            // From OpenCV NCHW, to TimVX WHCN
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        std::shared_ptr<tim::vx::Operation> tvConv;
+
+        if (ksize == 2)  // for conv2d
+        {
+            int multiplier = 0;
+            if(group == tvConvWeightShape[3] && group != 1)
+                multiplier = 1;
+            if (group == 1 || (group == tvConvWeightShape[3] && group != 1)) // Conv2D || DeConv2D
+            {
+                if (tvPadType == tim::vx::PadType::AUTO) {
+                    tvConv = graph->CreateOperation<tim::vx::ops::Conv2d>(
+                            tvConvWeightShape[3], tvPadType,
+                            std::array<uint32_t, 2>({(uint32_t) kernel_size[1], (uint32_t) kernel_size[0]}),
+                            std::array<uint32_t, 2>({(uint32_t) strides[1], (uint32_t) strides[0]}),
+                            std::array<uint32_t, 2>({(uint32_t) dilations[1], (uint32_t) dilations[0]}),
+                            std::array<uint32_t, 4>({(uint32_t) pads_begin[1], (uint32_t) pads_end[1],
+                                                     (uint32_t) pads_begin[0], (uint32_t) pads_end[0]}),
+                            multiplier);
+                }
+                else
+                {
+                    tvConv = graph->CreateOperation<tim::vx::ops::Conv2d>(
+                            tvPadType,
+                            std::array<uint32_t, 2>({(uint32_t) strides[1], (uint32_t) strides[0]}),
+                            std::array<uint32_t, 2>({(uint32_t) dilations[1], (uint32_t) dilations[0]}),
+                            multiplier);
+                }
+            }
+            else
+            {
+                // GroupedConv2d
+                if (tvPadType == tim::vx::PadType::AUTO)
+                {
+                    tvConv = graph->CreateOperation<tim::vx::ops::GroupedConv2d>(
+                            std::array<uint32_t, 4>({(uint32_t) pads_begin[1], (uint32_t) pads_end[1],
+                                                     (uint32_t) pads_begin[0], (uint32_t) pads_end[0]}),
+                            std::array<uint32_t, 2>({(uint32_t)strides[1], (uint32_t)strides[0]}),
+                            std::array<uint32_t, 2>({(uint32_t)dilations[1], (uint32_t)dilations[0]}),
+                            group);
+                }
+                else
+                {
+                    tvConv = graph->CreateOperation<tim::vx::ops::GroupedConv2d>(
+                            tvPadType,
+                            std::array<uint32_t, 2>({(uint32_t)strides[1], (uint32_t)strides[0]}),
+                            std::array<uint32_t, 2>({(uint32_t)dilations[1], (uint32_t)dilations[0]}),
+                            group);
+                }
+            }
+        }
+        else
+        {
+            // for Conv1d
+            if (group != 1)
+                CV_Error( CV_StsNotImplemented, " Grouped Conv1d or Depth-Wise Conv1d are not supported by "
+                                                "TimVX Backend. Please try OpenCV Backend.");
+            tvConv = graph->CreateOperation<tim::vx::ops::Conv1d>(
+                    tvConvWeightShape[2], tvPadType, (uint32_t)kernel_size[0],
+                    (uint32_t)strides[0],(uint32_t)dilations[0],
+                    std::array<uint32_t, 2>({(uint32_t)pads_begin[0], (uint32_t)pads_end[0]}));
+        }
+        // Create TimVXBackendNode
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvConv, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
     }
 
     class ParallelConv : public cv::ParallelLoopBody

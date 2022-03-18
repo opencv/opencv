@@ -38,7 +38,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
 
     if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
                     preferableBackend != DNN_BACKEND_CUDA &&
-                    preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
+                    preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+                    preferableBackend != DNN_BACKEND_TIMVX))
        return;
 
 #if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
