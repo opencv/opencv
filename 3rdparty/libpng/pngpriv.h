@@ -492,15 +492,19 @@
    static_cast<type>(static_cast<const void*>(value))
 #else
 #  define png_voidcast(type, value) (value)
-#  ifdef _WIN64
-#     ifdef __GNUC__
-         typedef unsigned long long png_ptruint;
-#     else
-         typedef unsigned __int64 png_ptruint;
-#     endif
-#  else
-      typedef unsigned long png_ptruint;
-#  endif
+
+//#  ifdef _WIN64
+//#     ifdef __GNUC__
+//         typedef unsigned long long png_ptruint;
+//#     else
+//         typedef unsigned __int64 png_ptruint;
+//#     endif
+//#  else
+//      typedef unsigned long png_ptruint;
+//#  endif
+#include <stdint.h>
+typedef uintptr_t png_ptruint;
+
 #  define png_constcast(type, value) ((type)(png_ptruint)(const void*)(value))
 #  define png_aligncast(type, value) ((void*)(value))
 #  define png_aligncastconst(type, value) ((const void*)(value))
