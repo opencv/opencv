@@ -634,7 +634,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                         pin = inp_i_data->inputBlobsId[0];
                         inp_i_data = &layers[pin.lid];
                     }
-                    conv_layer = conv_layer && (inp_i_data->getLayerInstance()->type == "Convolution");
+                    conv_layer = conv_layer && (getLayerInstance(*inp_i_data)->type == "Convolution");
                 }
                 if (!conv_layer)
                     continue;

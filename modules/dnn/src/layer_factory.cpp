@@ -4,8 +4,6 @@
 
 #include "precomp.hpp"
 
-#include <opencv2/imgproc.hpp>
-
 #include <opencv2/dnn/layer_reg.private.hpp>  // getLayerFactoryImpl
 
 

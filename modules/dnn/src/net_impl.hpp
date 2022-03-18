@@ -54,7 +54,6 @@ struct Net::Impl : public detail::NetImplBase
     int preferableBackend;
     int preferableTarget;
     String halideConfigFile;
-//    bool skipInfEngineInit;
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper>> backendWrappers;
@@ -83,6 +82,32 @@ struct Net::Impl : public detail::NetImplBase
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>());
 
+
+    virtual Ptr<Layer> createLayerInstance(const LayerData& ld) const
+    {
+        return LayerFactory::createLayerInstance(ld.type, const_cast<LayerParams&>(ld.params));
+    }
+    Ptr<Layer> getLayerInstance(LayerData& ld) const
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(type, "type", ld.type.c_str());
+
+        if (ld.layerInstance)
+            return ld.layerInstance;
+
+        ld.layerInstance = createLayerInstance(ld);
+        if (!ld.layerInstance && basePtr_)
+        {
+            ld.layerInstance = basePtr_->createLayerInstance(ld);
+            CV_LOG_IF_DEBUG(NULL, ld.layerInstance, "Created layer \"" + ld.name + "\" of type \"" + ld.type + "\" from upstream layers registry");
+        }
+        if (!ld.layerInstance)
+        {
+            CV_Error(Error::StsError, "Can't create layer \"" + ld.name + "\" of type \"" + ld.type + "\"");
+        }
+
+        return ld.layerInstance;
+    }
 
     Ptr<Layer> getLayer(int layerId) const;
     Ptr<Layer> getLayer(const LayerId& layerId) const;
