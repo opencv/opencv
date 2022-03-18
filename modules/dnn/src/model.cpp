@@ -799,7 +799,7 @@ struct TextRecognitionModel_Impl : public Model::Impl
 
     virtual
     std::string ctcPrefixBeamSearchDecode(const Mat& prediction) {
-          // CTC prefix beam seach decode.
+          // CTC prefix beam search decode.
           // For more detail, refer to:
           // https://distill.pub/2017/ctc/#inference
           // https://gist.github.com/awni/56369a90d03953e370f3964c826ed4b0i

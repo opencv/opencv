@@ -159,7 +159,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         /* We can do a copy if the reduced rank is two and only the first axis is sliced.
          * The general requirement is that only one axis is sliced and all the axes that
-         * preceed the sliced axis are singleton. However, the reductions above will remove
+         * precede the sliced axis are singleton. However, the reductions above will remove
          * all the leading singleton axes and merge the trailing unsliced axes into one, or
          * zero if there are no trailing unsliced axes. The latter is handled separately.
          */

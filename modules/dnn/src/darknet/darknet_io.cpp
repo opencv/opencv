@@ -791,7 +791,7 @@ namespace cv {
                             if (layers_vec.size() > 1)
                             {
                                 // layer ids in layers_vec - inputs of Slice layers
-                                // after adding offset to layers_vec: layer ids - ouputs of Slice layers
+                                // after adding offset to layers_vec: layer ids - outputs of Slice layers
                                 for (size_t k = 0; k < layers_vec.size(); ++k)
                                     layers_vec[k] += layers_vec.size();
 

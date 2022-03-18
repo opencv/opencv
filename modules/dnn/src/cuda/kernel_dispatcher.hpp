@@ -33,7 +33,7 @@
  * template <class T, std::size_t Rank>
  * void launch_some_kernel(...);
  *
- * // creates the dispatcher named "some_dispatcher" which invokves the correct instantiation of "launch_some_kernel"
+ * // creates the dispatcher named "some_dispatcher" which invokes the correct instantiation of "launch_some_kernel"
  * GENERATE_KERNEL_DISPATCHER(some_dispatcher, launch_some_kernel);
  *
  * // internal API function

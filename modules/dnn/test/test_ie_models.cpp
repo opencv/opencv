@@ -290,7 +290,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
         if (cvtest::debugLevel > 0)
         {
             const std::vector<size_t>& dims = desc.getDims();
-            std::cout << "Input: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
+            std::cout << "Input: '" << it.first << "' precision=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
             std::cout << "]  ocv_mat=" << inputsMap[it.first].size << " of " << typeToString(inputsMap[it.first].type()) << std::endl;
@@ -308,7 +308,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
         if (cvtest::debugLevel > 0)
         {
             const std::vector<size_t>& dims = desc.getDims();
-            std::cout << "Output: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
+            std::cout << "Output: '" << it.first << "' precision=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
             std::cout << "]  ocv_mat=" << outputsMap[it.first].size << " of " << typeToString(outputsMap[it.first].type()) << std::endl;
