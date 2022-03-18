@@ -122,6 +122,7 @@ private:
     void parseMaxUnpool            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGlobalPool           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSlice                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSplit                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1087,7 +1088,7 @@ void ONNXImporter::parseAveragePool(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter::parseGlobalPool(LayerParams &layerParams, const opencv_onnx::NodeProto &node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     const std::string& layer_type = node_proto.op_type();
@@ -1096,157 +1097,176 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     CV_Assert(node_proto.input_size() == 1);
     layerParams.type = "Pooling";
     String pool;
-    if (layer_type == "GlobalMaxPool" || layer_type == "ReduceMax")
+    if (layer_type == "GlobalMaxPool")
         pool = "MAX";
-    else if (layer_type == "ReduceSum")
-        pool = "SUM";
-    else
+    else if (layer_type == "GlobalAveragePool")
         pool = "AVE";
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported Pooling type of " + layer_type + " operation.");
+
+    CV_Assert(!layerParams.has("axes"));
+    layerParams.set("global_pooling", true);
     layerParams.set("pool", pool);
-    layerParams.set("global_pooling", !layerParams.has("axes"));
-    bool keepdims = layerParams.get<int>("keepdims", 1) == 1;
-    if (layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+{
+    opencv_onnx::NodeProto node_proto = node_proto_;
+    const std::string& layer_type = node_proto.op_type();
+    const std::string output_name = node_proto.output(0);
+    int depth = layerParams.get<int>("depth", CV_32F);
+
+    CV_Assert(node_proto.input_size() <= 2);
+    String reduceType;
+
+    if (layer_type == "ReduceMax")
+        reduceType = "MAX";
+    else if (layer_type == "ReduceMin")
+        reduceType = "MIN";
+    else if (layer_type == "ReduceSum")
+        reduceType = "SUM";
+    else if (layer_type == "ReduceSumSquare")
+        reduceType = "SUM_SQUARE";
+    else if (layer_type == "ReduceProd")
+        reduceType = "PROD";
+    else if (layer_type == "ReduceL1")
+        reduceType = "L1";
+    else if (layer_type == "ReduceL2")
+        reduceType = "L2";
+    else if (layer_type == "ReduceLogSum")
+        reduceType = "LOG_SUM";
+    else if (layer_type == "ReduceLogSumExp")
+        reduceType = "LOG_SUM_EXP";
+    else if (layer_type == "ReduceMean")
+        reduceType = "AVE";
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported Pooling type of " + layer_type + " operation.");
+
+    // The ReduceInt8 can only support "MAX" and "MIN".
+    if (depth == CV_8S)
     {
-        MatShape inpShape = outShapes[node_proto.input(0)];
+        CV_Assert(reduceType == "MAX" || reduceType == "MIN");
+    }
+
+    layerParams.type = (depth == CV_8S) ? "ReduceInt8" : "Reduce";
+    layerParams.set("reduce", reduceType);
+    bool keepdims = layerParams.get<int>("keepdims", 1) == 1;
+
+    if (layer_type == "ReduceSum" && node_proto.input_size() == 2)
+    {
+        // TODO support the opset 13 of ReduceSum.
+        //  in opset 13, the ReduceSum has two input, it takes axes as input instead of attribute
+        //  details:https://github.com/onnx/onnx/issues/3420#issuecomment-844295687
+        CV_Error(Error::StsNotImplemented, "Unsupported " + layer_type + " operation of opset 13, please try to "
+                                                                         "re-export the onnx model with opset 11.");
+    }
+
+    MatShape inpShape = outShapes[node_proto.input(0)];
+    std::vector<bool> shouldDelete(inpShape.size(), false);
+
+    if (layerParams.has("axes"))
+    {
         DictValue axes = layerParams.get("axes");
-        MatShape targetShape;
-        std::vector<bool> shouldDelete(inpShape.size(), false);
-        for (int i = 0; i < axes.size(); i++) {
+        for (int i = 0; i < axes.size(); i++)
+        {
             int axis = normalize_axis(axes.get<int>(i), inpShape.size());
             shouldDelete[axis] = true;
         }
-        for (int axis = 0; axis < inpShape.size(); ++axis){
-            if (!shouldDelete[axis])
-                targetShape.push_back(inpShape[axis]);
-            else if (keepdims)
-                targetShape.push_back(1);
-        }
-
-        if (inpShape.size() == 3 && axes.size() <= 2)
-        {
-            int axis = normalize_axis(axes.get<int>(0), inpShape.size());
-            CV_CheckNE(axis, 0, "");
-
-            LayerParams reshapeLp;
-            reshapeLp.name = layerParams.name + "/reshape";
-            reshapeLp.type = "Reshape";
-            CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-            reshapeLp.set("axis", 0);
-            reshapeLp.set("num_axes", 1);
-            int newShape[] = {1, -1};
-            reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 2));
-
-            opencv_onnx::NodeProto proto;
-            proto.add_input(node_proto.input(0));
-            proto.add_output(reshapeLp.name);
-            addLayer(reshapeLp, proto);
-
-            LayerParams avgLp;
-            avgLp.name = layerParams.name + "/avg";
-            avgLp.type = "Pooling";
-            CV_Assert(layer_id.find(avgLp.name) == layer_id.end());
-            avgLp.set("pool", pool);
-            if (axes.size() == 2)
-            {
-                CV_CheckEQ(normalize_axis(axes.get<int>(0), inpShape.size()), 1, "Unsupported mode");
-                CV_CheckEQ(normalize_axis(axes.get<int>(1), inpShape.size()), 2, "Unsupported mode");
-                avgLp.set("global_pooling", true);
-            }
-            else
-            {
-                avgLp.set(axis == 2 ? "global_pooling_w" : "global_pooling_h", true);
-                avgLp.set(axis == 2 ? "kernel_h" : "kernel_w", 1);
-            }
-
-            node_proto.set_input(0, reshapeLp.name);
-            node_proto.set_output(0, avgLp.name);
-            addLayer(avgLp, node_proto);
-        }
-        else
-        {
-            if (inpShape.size() != 4 && inpShape.size() != 5)
-                CV_Error(Error::StsNotImplemented, "Unsupported input shape of " + layer_type + " operation.");
-
-            CV_Assert(axes.size() <= inpShape.size() - 2);
-            std::vector<int> kernel_size(inpShape.size() - 2, 1);
-            if (axes.size() == 1 && (normalize_axis(axes.get<int>(0), inpShape.size()) <= 1))
-            {
-                int axis = normalize_axis(axes.get<int>(0), inpShape.size());
-                MatShape newShape = inpShape;
-                newShape[axis + 1] = total(newShape, axis + 1);
-                newShape.resize(axis + 2);
-                newShape.insert(newShape.begin(), 2 - axis, 1);
-
-                LayerParams reshapeLp;
-                reshapeLp.type = "Reshape";
-                reshapeLp.name = layerParams.name + "/reshape";
-                CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-                reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], newShape.size()));
-
-                node_proto.set_output(0, reshapeLp.name);
-                addLayer(reshapeLp, node_proto);
-
-                kernel_size.resize(2);
-                kernel_size[0] = inpShape[axis];
-                node_proto.set_input(0, node_proto.output(0));
-            }
-            else
-            {
-                for (int i = 0; i < axes.size(); i++) {
-                    int axis = normalize_axis(axes.get<int>(i), inpShape.size());
-                    CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
-                    kernel_size[axis - 2] = inpShape[axis];
-                }
-            }
-
-            LayerParams poolLp = layerParams;
-            poolLp.name = layerParams.name + "/avg";
-            CV_Assert(layer_id.find(poolLp.name) == layer_id.end());
-            poolLp.set("kernel_size", DictValue::arrayInt(&kernel_size[0], kernel_size.size()));
-
-            node_proto.set_output(0, poolLp.name);
-            addLayer(poolLp, node_proto);
-        }
-
-        layerParams.type = "Reshape";
-        layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
-
-        node_proto.set_input(0, node_proto.output(0));
-        node_proto.set_output(0, output_name);
     }
-    else if (!layerParams.has("axes") && (layer_type == "ReduceMean" || layer_type == "ReduceSum" || layer_type == "ReduceMax"))
+    else
     {
-        IterShape_t shapeIt = outShapes.find(node_proto.input(0));
-        CV_Assert(shapeIt != outShapes.end());
-        const size_t dims = keepdims ? shapeIt->second.size() : 1;
-
-        LayerParams reshapeLp;
-        reshapeLp.name = layerParams.name + "/reshape";
-        reshapeLp.type = "Reshape";
-        CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-        int newShape[] = {1, 1, 1, -1};
-        reshapeLp.set("dim", DictValue::arrayInt(&newShape[0], 4));
-
-        opencv_onnx::NodeProto proto;
-        proto.add_input(node_proto.input(0));
-        proto.add_output(reshapeLp.name);
-        addLayer(reshapeLp, proto);
-
-        LayerParams poolLp = layerParams;
-        poolLp.name = layerParams.name + "/pool";
-        CV_Assert(layer_id.find(poolLp.name) == layer_id.end());
-
-        node_proto.set_input(0, reshapeLp.name);
-        node_proto.set_output(0, poolLp.name);
-        addLayer(poolLp, node_proto);
-
-        layerParams.type = "Reshape";
-        std::vector<int> targetShape(dims, 1);
-        layerParams.set("dim", DictValue::arrayInt(targetShape.data(), targetShape.size()));
-
-        node_proto.set_input(0, node_proto.output(0));
-        node_proto.set_output(0, output_name);
+        for (int i = 0; i < inpShape.size(); i++)
+        {
+            shouldDelete[i] = true;
+        }
     }
+
+    MatShape targetShape;
+    for (int i = 0; i < inpShape.size(); ++i)
+    {
+        if (!shouldDelete[i])
+        {
+            targetShape.push_back(inpShape[i]);
+        }
+        else if (keepdims)
+        {
+            targetShape.push_back(1);
+        }
+    }
+
+    if (targetShape.empty())
+        targetShape.push_back(1);
+
+    // Using PermuteLayer to move the deleted axis to the last.
+    std::vector<int> perm(inpShape.size(), 0);
+    for (int i = 0; i < inpShape.size(); i++)
+        perm[i] = i;
+
+    bool needPermuet = false;
+    for (int i = 0; i < inpShape.size(); i++)
+    {
+        if (shouldDelete[i])
+        {
+            // find the first not deleted element.
+            std::vector<bool>::iterator iter = std::find(shouldDelete.begin() + i, shouldDelete.end(), false);
+
+            if (iter != shouldDelete.end())
+            {
+                int index = iter - shouldDelete.begin();
+
+                bool temp = shouldDelete[index];
+                shouldDelete[index] = shouldDelete[i];
+                shouldDelete[i] = temp;
+
+                std::swap(perm[index], perm[i]);
+                std::swap(inpShape[index], inpShape[i]);
+                needPermuet = true;
+            }
+            else
+                break;
+        }
+    }
+
+    auto inputString= node_proto.input(0);
+    if (needPermuet)
+    {
+        LayerParams permuteLp;
+        permuteLp.name = layerParams.name + "/permute";
+        permuteLp.type = (depth == CV_8S) ? "PermuteInt8" : "Permute";
+        permuteLp.set("order", DictValue::arrayInt(perm.data(), perm.size()));
+
+        opencv_onnx::NodeProto protoPermute;
+        protoPermute.add_input(inputString);
+        protoPermute.add_output(permuteLp.name);
+        addLayer(permuteLp, protoPermute);
+        inputString = permuteLp.name;
+    }
+
+    std::vector<int> deletedDims;
+    for (int axis_i = 0; axis_i < inpShape.size(); ++axis_i)
+    {
+        if (shouldDelete[axis_i])
+        {
+            deletedDims.push_back(inpShape[axis_i]);
+        }
+    }
+
+    LayerParams reduceLp = layerParams;
+    reduceLp.name = layerParams.name + "/reduce";
+    CV_Assert(layer_id.find(reduceLp.name) == layer_id.end());
+    reduceLp.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
+
+    node_proto.set_input(0, inputString);
+    node_proto.set_output(0, reduceLp.name);
+    addLayer(reduceLp, node_proto);
+
+    layerParams.type = (depth == CV_8S) ? "ReshapeInt8" : "Reshape";
+    layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
+
+    node_proto.set_input(0, node_proto.output(0));
+    node_proto.set_output(0, output_name);
+
     addLayer(layerParams, node_proto);
 }
 
@@ -3406,8 +3426,10 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["MaxUnpool"] = &ONNXImporter::parseMaxUnpool;
     dispatch["MaxPool"] = &ONNXImporter::parseMaxPool;
     dispatch["AveragePool"] = &ONNXImporter::parseAveragePool;
-    dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] =
-            dispatch["ReduceMax"] = &ONNXImporter::parseReduce;
+    dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = &ONNXImporter::parseGlobalPool;
+    dispatch["ReduceMax"] = dispatch["ReduceMin"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] = dispatch["ReduceMax"] =
+            dispatch["ReduceMin"] = dispatch["ReduceSumSquare"] = dispatch["ReduceProd"] = dispatch["ReduceL1"] =
+            dispatch["ReduceL2"] = dispatch["ReduceLogSum"] = dispatch["ReduceLogSumExp"] = &ONNXImporter::parseReduce;
     dispatch["Slice"] = &ONNXImporter::parseSlice;
     dispatch["Split"] = &ONNXImporter::parseSplit;
     dispatch["Add"] = dispatch["Sum"] = dispatch["Sub"] = &ONNXImporter::parseBias;

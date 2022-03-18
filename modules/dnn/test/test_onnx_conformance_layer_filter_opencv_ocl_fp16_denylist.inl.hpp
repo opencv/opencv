@@ -20,3 +20,14 @@
 "test_split_equal_parts_2d",
 "test_split_equal_parts_default_axis",
 "test_tan",
+"test_reduce_l2_default_axes_keepdims_example", // Expected: (normL1) <= (l1), actual: 0.00490189 vs 0.004
+"test_reduce_log_sum_exp_default_axes_keepdims_example", // Expected: (normL1) <= (l1), actual: 0.00671387 vs 0.004
+"test_reduce_prod_default_axes_keepdims_example", // Expected: (normL1) <= (l1), actual: inf vs 0.004
+"test_reduce_prod_default_axes_keepdims_random", // Expected: (normL1) <= (l1), actual: 18.6621 vs 0.004, Expected: (normInf) <= (lInf), actual: 18.6621 vs 0.02
+"test_reduce_prod_do_not_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+"test_reduce_prod_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+"test_reduce_prod_negative_axes_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+"test_reduce_sum_square_default_axes_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.0183411 vs 0.004
+"test_reduce_sum_square_do_not_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+"test_reduce_sum_square_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+"test_reduce_sum_square_negative_axes_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
