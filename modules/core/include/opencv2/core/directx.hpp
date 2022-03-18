@@ -127,7 +127,8 @@ CV_EXPORTS void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11T
 //
 //! @param pD3D11Texture2D - source D3D11 texture
 //! @param dst             - destination OutputArray
-CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst);
+//! @param device - pointer to cv::ocl::Device that will be used for context creation
+CV_EXPORTS void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst, cv::ocl::Device* device = nullptr);
 
 //! @brief Gets devices from all platforms which can be assoiated with D3D11Device.
 //

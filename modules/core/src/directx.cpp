@@ -1345,6 +1345,166 @@ static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, Outp
 }
 #endif
 
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+static OpenCLExecutionContext getExecContextbyD3D11TextureAndDevice(ID3D11Texture2D* pD3D11Texture2D, Device& device) {
+    if (device.ptr() == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: convertFromD3D11Texture2DtoCLMem got empty Device object");
+    }
+
+    if (!device.isIntel()) {
+         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Expected Vendor of device is Intel");
+    }
+
+    cl_device_id cl_device = static_cast<cl_device_id>(device.ptr());
+    size_t out_size = 0; // size in bytes
+    cl_int status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, 0, nullptr, &out_size);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clGetDeviceInfo failed");
+    }
+    cl_platform_id platform = nullptr; // The platform associated with this device.
+    status = clGetDeviceInfo(cl_device, CL_DEVICE_PLATFORM, out_size, &platform, nullptr);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clGetDeviceInfo failed");
+    }
+    if (platform == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: clGetDeviceInfo returns empty platform");
+    }
+    auto&& platformName = PlatformInfo(&platform).name();
+
+    ID3D11Device *pD3D11Device = nullptr;
+    pD3D11Texture2D->GetDevice(&pD3D11Device);
+
+    if (pD3D11Device == nullptr) {
+        CV_Error(cv::Error::StsNullPtr, "OpenCL: GetDevice returns empty pD3D11Device in convertFromD3D11Texture2DtoCLMem");
+    }
+
+    if (!device.isExtensionSupported("cl_khr_d3d11_sharing")) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Device doesn't support cl_khr_d3d11_sharing extension");
+    }
+
+    cl_context_properties properties[] = {
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
+            CL_CONTEXT_D3D11_DEVICE_KHR, (cl_context_properties)(pD3D11Device),
+            CL_CONTEXT_INTEROP_USER_SYNC, CL_FALSE,
+            NULL, NULL
+    };
+    cl_context context = NULL;
+    context = clCreateContext(properties, 1, &cl_device, NULL, NULL, &status);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clCreateContext failed");
+    }
+    OpenCLExecutionContext clExecCtx;
+    try {
+        clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, cl_device);
+        clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D11>(platform, pD3D11Device));
+    } catch (...) {
+        pD3D11Device->Release();
+        throw;
+    }
+    pD3D11Device->Release();
+    return clExecCtx;
+}
+#endif
+
+#if defined(HAVE_DIRECTX) && defined(HAVE_OPENCL)
+static void __convertFromD3D11Texture2DDev(ID3D11Texture2D* pD3D11Texture2D, Device& device, OutputArray dst) {
+    OpenCLExecutionContext clExecCtx =
+        getExecContextbyD3D11TextureAndDevice(pD3D11Texture2D, device);
+    if (clExecCtx.empty()) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Execution Context is empty");
+    }
+    clExecCtx.bind();
+    auto context = const_cast<Context&>(clExecCtx.getContext());
+
+    OpenCL_D3D11* impl = context.getUserContext<OpenCL_D3D11>().get();
+    if (impl == nullptr) {
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initialized without DirectX interoperability");
+    }
+
+    D3D11_TEXTURE2D_DESC desc = { 0 };
+    pD3D11Texture2D->GetDesc(&desc);
+
+    UMat u = dst.getUMat();
+    // TODO Add support for roi
+    CV_Assert(u.offset == 0);
+    CV_Assert(u.isContinuous());
+    int textureType = getTypeFromDXGI_FORMAT(desc.Format);
+    CV_Assert(textureType >= 0);
+
+    u.create(Size(desc.Width, desc.Height), textureType);
+    cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
+
+    cl_int status = 0;
+    cl_mem clImage = impl->clCreateFromD3D11Texture2DKHR((cl_context)context.ptr(), CL_MEM_READ_ONLY, pD3D11Texture2D, 0, &status);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clCreateFromD3D11Texture2DKHR failed during image memory creation");
+    }
+#ifdef HAVE_DIRECTX_NV12
+    cl_mem clImageUV = 0;
+    if(DXGI_FORMAT_NV12 == desc.Format) {
+        clImageUV = impl->clCreateFromD3D11Texture2DKHR((cl_context)context.ptr(), CL_MEM_READ_ONLY, pD3D11Texture2D, 1, &status);
+        if (status != CL_SUCCESS) {
+            CV_Error(status, "OpenCL: clCreateFromD3D11Texture2DKHR failed during UV memory creation");
+        }
+    }
+#endif
+    Queue queue(context, device);
+    cl_command_queue q = (cl_command_queue)queue.ptr();
+
+    status = impl->clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS) {
+        CV_Error(status, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
+    }
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format) {
+        status = impl->clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS) {
+            CV_Error(status, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
+        }
+        if(!ocl::ocl_convert_nv12_to_bgr(clImage, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows)) {
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
+        }
+        status = impl->clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImageUV, 0, NULL, NULL);
+        if (status != CL_SUCCESS) {
+            CV_Error(status, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
+        }
+    } else
+#endif
+    {
+        size_t offset = 0; // TODO
+        size_t origin[3] = { 0, 0, 0 };
+        size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1 };
+
+        status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, origin, region, offset, 0, NULL, NULL);
+        if (status != CL_SUCCESS) {
+            CV_Error(status, "OpenCL: clEnqueueCopyImageToBuffer failed");
+        }
+    }
+
+    status = impl->clEnqueueReleaseD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        CV_Error(status, "OpenCL: clEnqueueReleaseD3D11ObjectsKHR failed");
+
+    status = clFinish(q); // TODO Use events
+    if (status != CL_SUCCESS)
+        CV_Error(status, "OpenCL: clFinish failed");
+
+    status = clReleaseMemObject(clImage); // TODO RAII
+    if (status != CL_SUCCESS)
+        CV_Error(status, "OpenCL: clReleaseMem failed");
+
+#ifdef HAVE_DIRECTX_NV12
+    if(DXGI_FORMAT_NV12 == desc.Format)
+    {
+        status = clReleaseMemObject(clImageUV);
+        if (status != CL_SUCCESS)
+            CV_Error(status, "OpenCL: clReleaseMem failed");
+    }
+#endif
+}
+#endif
+
 void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 {
     CV_UNUSED(src); CV_UNUSED(pD3D11Texture2D);
@@ -1372,14 +1532,18 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 #endif
 }
 
-void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst)
+void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst, Device* device)
 {
-    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst);
+    CV_UNUSED(pD3D11Texture2D); CV_UNUSED(dst); CV_UNUSED(device);
 #if !defined(HAVE_DIRECTX)
     NO_DIRECTX_SUPPORT_ERROR;
 #elif !defined(HAVE_OPENCL)
     NO_OPENCL_SUPPORT_ERROR;
 #else
+    if (device != nullptr) {
+        __convertFromD3D11Texture2DDev(pD3D11Texture2D, *device, dst);
+        return;
+    }
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
 #ifdef HAVE_OPENCL_D3D11_NV
@@ -1484,8 +1648,8 @@ std::vector<std::pair<int, cv::ocl::Device>> getDeviceIDsByD3D11Device(ID3D11Dev
                                   std::make_move_iterator(temp_devices.end()));
         }
 
-        // try with CL_ALL_DEVICES_FOR_D3D11_KHR
         temp_devices.clear();
+        // try with CL_ALL_DEVICES_FOR_D3D11_KHR
         temp_devices = findKHRDevice(clGetDeviceIDsFromD3D11KHR,
                                      pD3D11Device,
                                      CL_ALL_DEVICES_FOR_D3D11_KHR,
