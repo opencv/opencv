@@ -33,7 +33,7 @@ private:
     double highfreq = sample_rate / 2;
 
 public:
-    // Mel filterbanks preperation
+    // Mel filterbanks preparation
     double hz_to_mel(double frequencies)
     {
         //Converts frequencies from hz to mel scale
@@ -149,7 +149,7 @@ public:
         return weights;
     }
 
-    // STFT preperation
+    // STFT preparation
     vector<double> pad_window_center(vector<double>&data, int size)
     {
         // Pad the window out to n_fft size
