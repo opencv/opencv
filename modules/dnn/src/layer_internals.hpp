@@ -96,22 +96,6 @@ struct LayerData
 
     int flag;
 
-    Ptr<Layer> getLayerInstance()
-    {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(type, "type", type.c_str());
-
-        if (layerInstance)
-            return layerInstance;
-
-        layerInstance = LayerFactory::createLayerInstance(type, params);
-        if (!layerInstance)
-        {
-            CV_Error(Error::StsError, "Can't create layer \"" + name + "\" of type \"" + type + "\"");
-        }
-
-        return layerInstance;
-    }
 
     void resetAllocation()
     {

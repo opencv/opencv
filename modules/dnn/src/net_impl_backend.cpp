@@ -7,6 +7,9 @@
 #include "net_impl.hpp"
 #include "legacy_backend.hpp"
 
+#include "backend.hpp"
+#include "factory.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -166,14 +169,22 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 
     if (preferableBackend != backendId)
     {
-        preferableBackend = backendId;
         clear();
-#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
+#if defined(HAVE_INF_ENGINE)
             switchToOpenVINOBackend(net);
-        }
+#elif defined(ENABLE_PLUGINS)
+            auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
+            networkBackend.switchBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "OpenVINO backend is not available in the current OpenCV build");
 #endif
+        }
+        else
+        {
+            preferableBackend = backendId;
+        }
     }
 }
 

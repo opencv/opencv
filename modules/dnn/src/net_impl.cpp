@@ -222,14 +222,14 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 Ptr<Layer> Net::Impl::getLayer(int layerId) const
 {
     LayerData& ld = getLayerData(layerId);
-    return ld.getLayerInstance();
+    return getLayerInstance(ld);
 }
 
 
 Ptr<Layer> Net::Impl::getLayer(const LayerId& layerId) const
 {
     LayerData& ld = getLayerData(layerId);
-    return ld.getLayerInstance();
+    return getLayerInstance(ld);
 }
 
 
@@ -321,7 +321,7 @@ int Net::Impl::resolvePinOutputName(LayerData& ld, const String& outName) const
 {
     if (outName.empty())
         return 0;
-    return ld.getLayerInstance()->outputNameToIndex(outName);
+    return getLayerInstance(ld)->outputNameToIndex(outName);
 }
 
 
@@ -522,7 +522,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
 
-    Ptr<Layer> layerPtr = ld.getLayerInstance();
+    Ptr<Layer> layerPtr = getLayerInstance(ld);
     {
         std::vector<Mat> inps(ld.inputBlobs.size());
         for (int i = 0; i < ld.inputBlobs.size(); ++i)
@@ -1148,7 +1148,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     ShapesVec& os = layerShapes.out;
     ShapesVec& ints = layerShapes.internal;
     int requiredOutputs = layerData.requiredOutputs.size();
-    Ptr<Layer> l = layerData.getLayerInstance();
+    const Ptr<Layer>& l = getLayerInstance(layerData);
     CV_Assert(l);
     bool layerSupportInPlace = false;
     try
@@ -1302,7 +1302,7 @@ void Net::Impl::updateLayersShapes()
                 const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
                 layerShapes.in.push_back(shape);
             }
-            layerData.getLayerInstance()->updateMemoryShapes(layerShapes.in);
+            getLayerInstance(layerData)->updateMemoryShapes(layerShapes.in);
         }
         CV_LOG_DEBUG(NULL, "Layer " << layerId << ": " << toString(layerShapes.in, "input shapes"));
         CV_LOG_IF_DEBUG(NULL, !layerShapes.out.empty(), "Layer " << layerId << ": " << toString(layerShapes.out, "output shapes"));
@@ -1451,7 +1451,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 Mat Net::Impl::getParam(int layer, int numParam) const
 {
     LayerData& ld = getLayerData(layer);
-    std::vector<Mat>& layerBlobs = ld.getLayerInstance()->blobs;
+    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     return layerBlobs[numParam];
 }
@@ -1460,7 +1460,8 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
     LayerData& ld = getLayerData(layer);
 
-    std::vector<Mat>& layerBlobs = ld.getLayerInstance()->blobs;
+    // FIXIT we should not modify "execution" instance
+    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
@@ -1927,7 +1928,7 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
 
     for (int i = 0; i < ids.size(); i++)
     {
-        flops += layers[ids[i]].getLayerInstance()->getFLOPS(inShapes[i], outShapes[i]);
+        flops += getLayerInstance(layers[ids[i]])->getFLOPS(inShapes[i], outShapes[i]);
     }
 
     return flops;
@@ -1944,7 +1945,7 @@ int64 Net::Impl::getFLOPS(
     LayerShapes shapes;
     getLayerShapes(netInputShapes, layerId, shapes);
 
-    return const_cast<LayerData&>(layer->second).getLayerInstance()->getFLOPS(shapes.in, shapes.out);
+    return getLayerInstance(const_cast<LayerData&>(layer->second))->getFLOPS(shapes.in, shapes.out);
 }
 
 
