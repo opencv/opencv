@@ -45,6 +45,9 @@ int main( int argc, char* argv[] )
             featureParams[fi]->printDefaults();
         return 0;
     }
+    /*
+    adding lines of coeds for testing
+    */
 
     for( int i = 1; i < argc; i++ )
     {
