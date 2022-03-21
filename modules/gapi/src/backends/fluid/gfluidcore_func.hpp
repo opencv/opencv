@@ -244,6 +244,28 @@ ADD_SIMD(float, float)
 
 #undef ADD_SIMD
 
+#define SUB_SIMD(SRC, DST)                                                     \
+int sub_simd(const SRC in1[], const SRC in2[], DST out[], const int length);
+
+SUB_SIMD(uchar, uchar)
+SUB_SIMD(ushort, uchar)
+SUB_SIMD(short, uchar)
+SUB_SIMD(float, uchar)
+SUB_SIMD(short, short)
+SUB_SIMD(ushort, short)
+SUB_SIMD(uchar, short)
+SUB_SIMD(float, short)
+SUB_SIMD(ushort, ushort)
+SUB_SIMD(uchar, ushort)
+SUB_SIMD(short, ushort)
+SUB_SIMD(float, ushort)
+SUB_SIMD(uchar, float)
+SUB_SIMD(ushort, float)
+SUB_SIMD(short, float)
+SUB_SIMD(float, float)
+
+#undef SUB_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
