@@ -107,6 +107,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
         TMat pyr0;
         frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
         frame.setMask(pyr0);
+        frame.getMask(mask);
     }
     checkMask(mask, image.size());
 
@@ -210,6 +211,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
         TMat pyr0;
         frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
         frame.setMask(pyr0);
+        frame.getMask(mask);
     }
     checkMask(mask, depth.size());
 

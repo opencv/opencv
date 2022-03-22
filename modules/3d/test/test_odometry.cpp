@@ -364,8 +364,9 @@ void OdometryTest::prepareFrameCheck()
 
     odometry.prepareFrame(odf);
 
-    Mat points;
+    Mat points, mask;
     odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    odf.getPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
 
     OdometryFrame todf = odometry.createOdometryFrame();
     if (otype != OdometryType::DEPTH)
@@ -377,6 +378,8 @@ void OdometryTest::prepareFrameCheck()
     }
     todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
     todf.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_MASK);
+    todf.setPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
 
     odometry.prepareFrame(todf);
 }
