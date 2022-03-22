@@ -116,7 +116,6 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
     }
     else if (!xRatioEq1)
     {
-        GAPI_DbgAssert(yRatioEq1);
 
         for (int line = 0; line < lpi; ++line) {
             int x = 0;
@@ -148,7 +147,6 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
     }
     else if (!yRatioEq1)
     {
-        GAPI_DbgAssert(xRatioEq1);
         int length = inSz.width;  // == outSz.width
 
         for (int line = 0; line < lpi; ++line) {
@@ -176,12 +174,8 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
     }
     else
     {
-        GAPI_DbgAssert(xRatioEq1 && yRatioEq1);
         int length = inSz.width;  // == outSz.width
-        for (int line = 0; line < lpi; ++line)
-        {
-            memcpy(dst[line], src0[line], length * sizeof(float));
-        }
+        memcpy(dst[0], src0[0], length * sizeof(float)*lpi);
     }
 }
 } // namespace avx2
