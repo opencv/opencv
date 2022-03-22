@@ -2,18 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
 
-#include <ade/util/zip_range.hpp>
-
 #include <opencv2/gapi/opencv_includes.hpp>
 
-#include "api/gproto_priv.hpp" // ptr(GRunArgP)
 #include "executor/gexecutor.hpp"
-#include "compiler/passes/passes.hpp"
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : m_orig_graph(std::move(g_model))
@@ -26,7 +22,6 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
 
 void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 {
-    // (2)
     const auto proto = m_gm.metadata().get<Protocol>();
 
     // Basic check if input/output arguments are correct
@@ -94,7 +89,6 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 #endif // !defined(GAPI_STANDALONE)
         }
     }
-
     runImpl(std::move(args));
 }
 

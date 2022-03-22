@@ -2,16 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_SERIAL_EXECUTOR_HPP
 #define OPENCV_GAPI_SERIAL_EXECUTOR_HPP
 
 #include <memory> // unique_ptr, shared_ptr
-
-#include <utility> // tuple, required by magazine
-#include <unordered_map> // required by magazine
 
 #include <ade/graph.hpp>
 
@@ -21,37 +18,19 @@
 namespace cv {
 namespace gimpl {
 
-// Graph-level executor interface.
+// Graph-level executor serial implementation.
 //
-// This class specifies API for a "super-executor" which orchestrates
-// the overall Island graph execution.
+// This class implements naive Island graph execution model which is similar
+// to current CPU (OpenCV) plugin execution model.
+// The execution steps are:
+// 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
+// 2. Put input/output GComputation arguments to the storage
+// 3. For every Island, prepare vectors of input/output parameter descs
+// 4. Iterate over a list of operations (sorted in the topological order)
+// 5. For every operation, form a list of input/output data objects
+// 6. Run GIslandExecutable
+// 7. writeBack
 //
-// Every Island (subgraph) execution is delegated to a particular
-// backend and is done opaquely to the GExecutor.
-//
-// Inputs to a GExecutor instance are:
-// - GIslandModel - a high-level graph model which may be seen as a
-//   "procedure" to execute.
-//   - GModel - a low-level graph of operations (from which a GIslandModel
-//     is projected)
-// - GComputation runtime arguments - vectors of input/output objects
-//
-// Every GExecutor is responsible for
-// a. Maintaining non-island (intermediate) data objects within graph
-// b. Providing GIslandExecutables with input/output data according to
-//    their protocols
-// c. Triggering execution of GIslandExecutables when task/data dependencies
-//    are met.
-//
-// By default G-API stores all data on host, and cross-Island
-// exchange happens via host buffers (and CV data objects).
-//
-// Today's exchange data objects are:
-// - cv::Mat               - for image buffers
-// - cv::Scalar            - for single values (with up to four components inside)
-// - cv::detail::VectorRef - an untyped wrapper over std::vector<T>
-//
-
 class GSerialExecutor final : public GExecutor
 {
 protected:

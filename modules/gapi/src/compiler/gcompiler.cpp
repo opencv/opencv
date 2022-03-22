@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -451,8 +451,7 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     GModel::ConstGraph cgr(*pg);
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
-    // FIXME: select which executor will be actually used,
-    // make GExecutor abstract.
+    // FIXME: select which executor will be actually used
     std::unique_ptr<GExecutor> pE(new GSerialExecutor(std::move(pg)));
 
     GCompiled compiled;
@@ -474,7 +473,8 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
     }
 
     GModel::ConstGraph cgr(*pg);
-
+    // FIXME: select which executor will be actually used,
+    // make GExecutor abstract.
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));
     if (!m_metas.empty() && !outMetas.empty())

@@ -2,16 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GEXECUTOR_HPP
 #define OPENCV_GAPI_GEXECUTOR_HPP
 
 #include <memory> // unique_ptr, shared_ptr
-
-#include <utility> // tuple, required by magazine
-#include <unordered_map> // required by magazine
 
 #include <ade/graph.hpp>
 
@@ -20,9 +17,9 @@
 namespace cv {
 namespace gimpl {
 
-// Graph-level executor interface.
+// Graph-level executor abstract interface.
 //
-// This class specifies API for a "super-executor" which orchestrates
+// This class defines API for a "super-executor" which orchestrates
 // the overall Island graph execution.
 //
 // Every Island (subgraph) execution is delegated to a particular
@@ -47,10 +44,11 @@ namespace gimpl {
 //
 // Today's exchange data objects are:
 // - cv::Mat               - for image buffers
+// - cv::MediaFrame        - for media buffers
 // - cv::Scalar            - for single values (with up to four components inside)
 // - cv::detail::VectorRef - an untyped wrapper over std::vector<T>
+// - cv::detail::OpaqueRef - an untyped wrapper over an object with an arbitrary type T
 //
-
 class GExecutor
 {
 protected:

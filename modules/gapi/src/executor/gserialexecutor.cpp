@@ -2,83 +2,22 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
+
+#include <utility> // tuple, required by magazine
+#include <unordered_map> // required by magazine
 
 #include <ade/util/zip_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
 #include "api/gproto_priv.hpp" // ptr(GRunArgP)
-#include "executor/gserialexecutor.hpp"
 #include "compiler/passes/passes.hpp"
 
-cv::gimpl::GSerialExecutor::GSerialExecutor(std::unique_ptr<ade::Graph> &&g_model)
-    : GExecutor(std::move(g_model))
-{
-    // NB: Right now GIslandModel is acyclic, so for a naive execution,
-    // simple unrolling to a list of triggers is enough
-
-    // Naive execution model is similar to current CPU (OpenCV) plugin
-    // execution model:
-    // 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
-    // 2. Put input/output GComputation arguments to the storage
-    // 3. For every Island, prepare vectors of input/output parameter descs
-    // 4. Iterate over a list of operations (sorted in the topological order)
-    // 5. For every operation, form a list of input/output data objects
-    // 6. Run GIslandExecutable
-    // 7. writeBack
-
-    auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-    for (auto nh : sorted.nodes())
-    {
-        switch (m_gim.metadata(nh).get<NodeKind>().k)
-        {
-        case NodeKind::ISLAND:
-            {
-                std::vector<RcDesc> input_rcs;
-                std::vector<RcDesc> output_rcs;
-                input_rcs.reserve(nh->inNodes().size());
-                output_rcs.reserve(nh->outNodes().size());
-
-                auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
-                    const auto orig_data_nh
-                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
-                    const auto &orig_data_info
-                        = m_gm.metadata(orig_data_nh).get<Data>();
-                    vec.emplace_back(RcDesc{ orig_data_info.rc
-                                           , orig_data_info.shape
-                                           , orig_data_info.ctor});
-                };
-                // (3)
-                for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
-                for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
-
-                m_ops.emplace_back(OpDesc{ std::move(input_rcs)
-                                         , std::move(output_rcs)
-                                         , m_gim.metadata(nh).get<IslandExec>().object
-                                         });
-            }
-            break;
-
-        case NodeKind::SLOT:
-            {
-                const auto orig_data_nh
-                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
-                // (1)
-                initResource(nh, orig_data_nh);
-                m_slots.emplace_back(DataDesc{nh, orig_data_nh});
-            }
-            break;
-
-        default:
-            GAPI_Assert(false);
-            break;
-        } // switch(kind)
-    } // for(gim nodes)
-}
+#include "executor/gserialexecutor.hpp"
 
 namespace cv {
 namespace gimpl {
@@ -99,7 +38,8 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg)); break;
     case GRunArg::index_of<cv::RMat>() :
         mag_rmat = util::get<cv::RMat>(arg); break;
-    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not "
+                                                "match to resource description ?"));
     }
     // FIXME: has to take extra care about meta here for this particuluar
     // case, just because this function exists at all
@@ -120,7 +60,8 @@ void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
         mag_rmat = make_rmat<RMatOnMat>(*util::get<Mat*>(arg)); break;
     case GRunArgP::index_of<cv::RMat*>() :
         mag_rmat = *util::get<cv::RMat*>(arg); break;
-    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not "
+                                                "match to resource description ?"));
     }
 }
 
@@ -164,7 +105,8 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         break;
     }
     case GRunArgP::index_of<cv::RMat*>() : /* do nothing */ break;
-    default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
+    default: util::throw_error(std::logic_error("content type of the runtime argument does not "
+                                                "match to resource description ?"));
     }
 }
 
@@ -189,6 +131,46 @@ void assignMetaStubExec(Mag& mag, const RcDesc &rc, const cv::GRunArg::Meta &met
 } // anonymous namespace
 }}} // namespace cv::gimpl::magazine
 
+class cv::gimpl::GSerialExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
+{
+    cv::gimpl::Mag &mag;
+    virtual StreamMsg get() override
+    {
+        cv::GRunArgs res;
+        for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
+        return StreamMsg{std::move(res)};
+    }
+    virtual StreamMsg try_get() override { return get(); }
+public:
+    Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
+};
+
+class cv::gimpl::GSerialExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
+{
+    cv::gimpl::Mag &mag;
+    std::unordered_map<const void*, int> out_idx;
+
+    GRunArgP get(int idx) override
+    {
+        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
+        // Remember the output port for this output object
+        out_idx[cv::gimpl::proto::ptr(r)] = idx;
+        return r;
+    }
+    void post(GRunArgP&&) override { } // Do nothing here
+    void post(EndOfStream&&) override {} // Do nothing here too
+    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
+    {
+        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
+        magazine::assignMetaStubExec(mag, desc()[idx], m);
+    }
+public:
+    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs)
+        : mag(m)
+    {
+        set(rcs);
+    }
+};
 
 void cv::gimpl::GSerialExecutor::initResource(const ade::NodeHandle & nh, const ade::NodeHandle &orig_nh)
 {
@@ -248,46 +230,59 @@ void cv::gimpl::GSerialExecutor::initResource(const ade::NodeHandle & nh, const 
     }
 }
 
-class cv::gimpl::GSerialExecutor::Input final: public cv::gimpl::GIslandExecutable::IInput
+cv::gimpl::GSerialExecutor::GSerialExecutor(std::unique_ptr<ade::Graph> &&g_model)
+    : GExecutor(std::move(g_model))
 {
-    cv::gimpl::Mag &mag;
-    virtual StreamMsg get() override
+    // NB: Right now GIslandModel is acyclic, so for a naive execution,
+    // simple unrolling to a list of triggers is enough
+    auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
+    for (auto nh : sorted.nodes())
     {
-        cv::GRunArgs res;
-        for (const auto &rc : desc()) { res.emplace_back(magazine::getArg(mag, rc)); }
-        return StreamMsg{std::move(res)};
-    }
-    virtual StreamMsg try_get() override { return get(); }
-public:
-    Input(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs) : mag(m) { set(rcs); }
-};
+        switch (m_gim.metadata(nh).get<NodeKind>().k)
+        {
+        case NodeKind::SLOT:
+            {
+                const auto orig_data_nh
+                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
+                // (1)
+                initResource(nh, orig_data_nh);
+                m_slots.emplace_back(DataDesc{nh, orig_data_nh});
+            }
+            break;
 
-class cv::gimpl::GSerialExecutor::Output final: public cv::gimpl::GIslandExecutable::IOutput
-{
-    cv::gimpl::Mag &mag;
-    std::unordered_map<const void*, int> out_idx;
+        case NodeKind::ISLAND:
+            {
+                std::vector<RcDesc> input_rcs;
+                std::vector<RcDesc> output_rcs;
+                input_rcs.reserve(nh->inNodes().size());
+                output_rcs.reserve(nh->outNodes().size());
 
-    GRunArgP get(int idx) override
-    {
-        auto r = magazine::getObjPtrExec(mag, desc()[idx]);
-        // Remember the output port for this output object
-        out_idx[cv::gimpl::proto::ptr(r)] = idx;
-        return r;
-    }
-    void post(GRunArgP&&) override { } // Do nothing here
-    void post(EndOfStream&&) override {} // Do nothing here too
-    void meta(const GRunArgP &out, const GRunArg::Meta &m) override
-    {
-        const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
-        magazine::assignMetaStubExec(mag, desc()[idx], m);
-    }
-public:
-    Output(cv::gimpl::Mag &m, const std::vector<RcDesc> &rcs)
-        : mag(m)
-    {
-        set(rcs);
-    }
-};
+                auto xtract = [&](ade::NodeHandle slot_nh, std::vector<RcDesc> &vec) {
+                    const auto orig_data_nh
+                        = m_gim.metadata(slot_nh).get<DataSlot>().original_data_node;
+                    const auto &orig_data_info
+                        = m_gm.metadata(orig_data_nh).get<Data>();
+                    vec.emplace_back(RcDesc{ orig_data_info.rc
+                                           , orig_data_info.shape
+                                           , orig_data_info.ctor});
+                };
+                // (3)
+                for (auto in_slot_nh  : nh->inNodes())  xtract(in_slot_nh,  input_rcs);
+                for (auto out_slot_nh : nh->outNodes()) xtract(out_slot_nh, output_rcs);
+
+                m_ops.emplace_back(OpDesc{ std::move(input_rcs)
+                                         , std::move(output_rcs)
+                                         , m_gim.metadata(nh).get<IslandExec>().object
+                                         });
+            }
+            break;
+
+        default:
+            GAPI_Assert(false);
+            break;
+        } // switch(kind)
+    } // for(gim nodes)
+}
 
 void cv::gimpl::GSerialExecutor::runImpl(cv::gimpl::GRuntimeArgs &&args)
 {
@@ -313,7 +308,7 @@ void cv::gimpl::GSerialExecutor::runImpl(cv::gimpl::GRuntimeArgs &&args)
         magazine::resetInternalData(m_res, data);
     }
 
-    // Run the script
+    // (4) Run the script
     for (auto &op : m_ops)
     {
         // (5), (6)
