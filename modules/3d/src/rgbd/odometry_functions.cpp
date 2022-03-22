@@ -188,6 +188,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
             TMat pyr0;
             frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
             frame.setDepth(pyr0);
+            frame.getScaledDepth(depth);
         }
         else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
         {
@@ -273,6 +274,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             TMat n0;
             frame.getPyramidAt(n0, OdometryFramePyramidType::PYR_NORM, 0);
             frame.setNormals(n0);
+            frame.getNormals(normals);
         }
         else
         {
@@ -293,8 +295,8 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             frame.getPyramidAt(c0, OdometryFramePyramidType::PYR_CLOUD, 0);
             normalsComputer->apply(c0, normals);
             frame.setNormals(normals);
+            frame.getNormals(normals);
         }
-
     }
 
     std::vector<TMat> npyramids;
