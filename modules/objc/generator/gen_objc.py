@@ -82,6 +82,9 @@ ManualFuncs = {}
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {}
 
+# { class : { func : { prolog : "", epilog : "" } } }
+header_fix = {}
+
 # { class : { enum: fixed_enum } }
 enum_fix = {}
 
@@ -479,6 +482,9 @@ class FuncInfo(GeneralInfo):
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
         func_fix_map = func_arg_fix.get(self.classname or module, {}).get(self.objc_name, {})
+        header_fixes = header_fix.get(self.classname or module, {}).get(self.objc_name, {})
+        self.prolog = header_fixes.get('prolog', None)
+        self.epilog = header_fixes.get('epilog', None)
         for a in decl[3]:
             arg = a[:]
             arg_fix_map = func_fix_map.get(arg[1], {})
@@ -1170,6 +1176,9 @@ class ObjectiveCWrapperGenerator(object):
                     objc_name = fi.objc_name if not constructor else ("init" + ("With" + (args[0].name[0].upper() + args[0].name[1:]) if len(args) > 0 else ""))
                 )
 
+            if fi.prolog is not None:
+                method_declarations.write("\n%s\n\n" % fi.prolog)
+
             method_declarations.write( Template(
 """$prototype$swift_name$deprecation_decl;
 
@@ -1180,6 +1189,9 @@ class ObjectiveCWrapperGenerator(object):
                     deprecation_decl = " DEPRECATED_ATTRIBUTE" if fi.deprecated else ""
                 )
             )
+
+            if fi.epilog is not None:
+                method_declarations.write("%s\n\n" % fi.epilog)
 
             method_implementations.write( Template(
 """$prototype {$prologue
@@ -1646,6 +1658,7 @@ if __name__ == "__main__":
             AdditionalImports[module] = gen_type_dict.get("AdditionalImports", {})
             ManualFuncs.update(gen_type_dict.get("ManualFuncs", {}))
             func_arg_fix.update(gen_type_dict.get("func_arg_fix", {}))
+            header_fix.update(gen_type_dict.get("header_fix", {}))
             enum_fix.update(gen_type_dict.get("enum_fix", {}))
             const_fix.update(gen_type_dict.get("const_fix", {}))
             namespaces_dict.update(gen_type_dict.get("namespaces_dict", {}))
