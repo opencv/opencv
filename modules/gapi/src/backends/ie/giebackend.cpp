@@ -274,13 +274,13 @@ struct IEUnit {
 
     // NEW FIXME: Need to aggregate getInputInfo & GetInputInfo from network
     // into generic wrapper and invoke it at once in single place instead of
-    // analyzing ParamDesc::Kind::Load/Import every type when we need to get access
-    // for network info/
+    // analyzing ParamDesc::Kind::Load/Import every time when we need to get access
+    // for network info.
     // In term of introducing custom VPP/VPL preprocessing functionality
     // It was decided to use GFrameDesc as such aggregated network info with limitation
     // that VPP/VPL produces cv::MediaFrame only. But it should be not considered as
     // final solution
-    class InputFrameDesc {
+    class InputFramesDesc {
         using input_name_type = std::string;
         using description_type = cv::GFrameDesc;
         std::map<input_name_type, description_type> map;
@@ -289,12 +289,10 @@ struct IEUnit {
         const description_type &get_param(const input_name_type &input) const;
 
         void set_param(const input_name_type &input,
-                       const IE::InputInfo::Ptr& ii);
-        void set_param(const input_name_type &input,
-                       const IE::InputInfo::CPtr& ii);
+                       const IE::TensorDesc& desc);
     };
 
-    InputFrameDesc net_input_params;
+    InputFramesDesc net_input_params;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -395,7 +393,7 @@ struct IEUnit {
     }
 };
 
-bool IEUnit::InputFrameDesc::is_applicable(const cv::GMetaArg &mm) {
+bool IEUnit::InputFramesDesc::is_applicable(const cv::GMetaArg &mm) {
     switch (mm.index()) {
         case cv::GMetaArg::index_of<cv::GFrameDesc>():
             return true;
@@ -404,58 +402,32 @@ bool IEUnit::InputFrameDesc::is_applicable(const cv::GMetaArg &mm) {
     }
 }
 
-const IEUnit::InputFrameDesc::description_type &
-IEUnit::InputFrameDesc::get_param(const input_name_type &input) const {
+const IEUnit::InputFramesDesc::description_type &
+IEUnit::InputFramesDesc::get_param(const input_name_type &input) const {
     auto it = map.find(input);
-    GAPI_Assert(it != map.end() && "No appropriate input is found in InputFrameDesc");
+    GAPI_Assert(it != map.end() && "No appropriate input is found in InputFramesDesc");
     return it->second;
 }
 
-void IEUnit::InputFrameDesc::set_param(const input_name_type &input,
-                                       const IE::InputInfo::Ptr& ii) {
-    GAPI_DbgAssert(ii && "IE::InputInfo::Ptr is nullptr");
+void IEUnit::InputFramesDesc::set_param(const input_name_type &input,
+                                        const IE::TensorDesc& desc) {
     description_type ret;
     ret.fmt = cv::MediaFormat::NV12;
-    const InferenceEngine::SizeVector& inDims = ii->getTensorDesc().getDims();
-    auto layout = ii->getTensorDesc().getLayout();
-    GAPI_LOG_DEBUG(nullptr, "network input: " << ii->name() <<
+    const InferenceEngine::SizeVector& inDims = desc.getDims();
+    auto layout = desc.getLayout();
+    GAPI_LOG_DEBUG(nullptr, "network input: " << input <<
                             ", tensor dims: " << inDims[0] << ", " << inDims[1] <<
                              ", " << inDims[2] << ", " << inDims[3]);
-    if (layout == InferenceEngine::NHWC) {
-        ret.size.width = static_cast<int>(inDims[2]);
-        ret.size.height = static_cast<int>(inDims[1]);
-    } else if (layout == InferenceEngine::NCHW) {
-        ret.size.width = static_cast<int>(inDims[3]);
-        ret.size.height = static_cast<int>(inDims[2]);
-    } else {
+    if (layout != InferenceEngine::NHWC && layout != InferenceEngine::NCHW) {
+        GAPI_LOG_WARNING(nullptr, "Unsupported layout for VPP preproc: " << layout <<
+                                  ", input name: " << input);
         GAPI_Assert(false && "Unsupported layout for VPP preproc");
     }
+    ret.size.width = static_cast<int>(inDims[3]);
+    ret.size.height = static_cast<int>(inDims[2]);
 
     auto res = map.emplace(input, ret);
-    GAPI_Assert(res.second && "Duplicated input info in InputFrameDesc are not allowable");
-}
-
-void IEUnit::InputFrameDesc::set_param(const input_name_type &input,
-                                       const IE::InputInfo::CPtr& ii) {
-    GAPI_DbgAssert(ii && "IE::InputInfo::Ptr is nullptr");
-    description_type ret;
-    ret.fmt = cv::MediaFormat::NV12;
-    const InferenceEngine::SizeVector& inDims = ii->getTensorDesc().getDims();
-    auto layout = ii->getTensorDesc().getLayout();
-    GAPI_LOG_DEBUG(nullptr, "network input: " << ii->name() <<
-                            ", tensor dims: " << inDims[0] << ", " << inDims[1] <<
-                             ", " << inDims[2] << ", " << inDims[3]);
-    if (layout == InferenceEngine::NHWC) {
-        ret.size.width = static_cast<int>(inDims[2]);
-        ret.size.height = static_cast<int>(inDims[1]);
-    } else if (layout == InferenceEngine::NCHW) {
-        ret.size.width = static_cast<int>(inDims[3]);
-        ret.size.height = static_cast<int>(inDims[2]);
-    } else {
-        GAPI_Assert(false && "Unsupported layout for VPP preproc");
-    }
-    auto res = map.emplace(input, ret);
-    GAPI_Assert(res.second && "Duplicated input info in InputFrameDesc are not allowable");
+    GAPI_Assert(res.second && "Duplicated input info in InputFramesDesc are not allowable");
 }
 
 class IECallContext
@@ -501,8 +473,8 @@ public:
     std::exception_ptr eptr;
 
     using req_key_t = void*;
-    cv::MediaFrame* prepare_keep_alive_frame_slot(req_key_t key);
-    size_t release_keep_alive_frame(req_key_t key);
+    cv::MediaFrame* prepareKeepAliveFrameSlot(req_key_t key);
+    size_t releaseKeepAliveFrame(req_key_t key);
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
@@ -627,13 +599,13 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
     }
 }
 
-cv::MediaFrame* IECallContext::prepare_keep_alive_frame_slot(req_key_t key) {
+cv::MediaFrame* IECallContext::prepareKeepAliveFrameSlot(req_key_t key) {
     std::unique_lock<std::mutex> lock(keep_alive_frames_mutex);
     auto placeholder_it = keep_alive_pp_frames.emplace(key, cv::MediaFrame()).first;
     return &placeholder_it->second;
 }
 
-size_t IECallContext::release_keep_alive_frame(req_key_t key) {
+size_t IECallContext::releaseKeepAliveFrame(req_key_t key) {
     size_t elapsed_count = 0;
     void *prev_slot = nullptr;
     {
@@ -686,7 +658,37 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
+cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::string &layer_name,
+                                    IECallContext& ctx,
+                                    const cv::util::optional<cv::Rect> &opt_roi,
+                                    cv::MediaFrame* out_keep_alive_frame,
+                                    bool* out_is_preprocessed) {
+    cv::util::optional<cv::gapi::wip::pp_params> param =
+                        ctx.uu.preproc_engine_impl->is_applicable(in_frame);
+    if (param.has_value()) {
+        GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded remote frame will be used");
+        const cv::GFrameDesc& expected_net_input_descr =
+                    ctx.uu.net_input_params.get_param(layer_name);
+        cv::gapi::wip::pp_session pp_sess =
+                    ctx.uu.preproc_engine_impl->initialize_preproc(param.value(),
+                                                                   expected_net_input_descr);
+
+        in_frame = ctx.uu.preproc_engine_impl->run_sync(pp_sess, in_frame, opt_roi);
+
+        if (out_keep_alive_frame != nullptr) {
+            GAPI_LOG_DEBUG(nullptr, "remember preprocessed remote frame to keep it busy from reuse, slot: " <<
+                                    out_keep_alive_frame);
+            *out_keep_alive_frame = in_frame;
+        }
+        if (out_is_preprocessed) {
+            *out_is_preprocessed = true;
+        }
+    } // otherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
+    return std::move(in_frame);
+}
+
 inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
+                                       const std::string &layer_name,
                                        const cv::util::optional<cv::Rect> &opt_roi,
                                        cv::MediaFrame* out_keep_alive_frame,
                                        bool* out_is_preprocessed) {
@@ -694,29 +696,9 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
                 "Remote blob is supported for MediaFrame only");
     cv::MediaFrame frame = ctx.inFrame(i);
     if (ctx.uu.preproc_engine_impl) {
-        GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded remote frame");
-        cv::util::optional<cv::gapi::wip::pp_params> param =
-                        ctx.uu.preproc_engine_impl->is_applicable(frame);
-        if (param.has_value()) {
-            GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded remote frame will be used");
-            const auto &input_name = ctx.uu.params.input_names.at(0);
-            const cv::GFrameDesc& expected_net_input_descr =
-                    ctx.uu.net_input_params.get_param(input_name);
-            cv::gapi::wip::pp_session pp_sess =
-                    ctx.uu.preproc_engine_impl->initialize_preproc(param.value(),
-                                                                   expected_net_input_descr);
-
-            frame = ctx.uu.preproc_engine_impl->run_sync(pp_sess, frame, opt_roi);
-
-            if (out_keep_alive_frame != nullptr) {
-                GAPI_LOG_DEBUG(nullptr, "remember preprocessed remote frame to keep it busy from reuse, slot: " <<
-                                        out_keep_alive_frame);
-                *out_keep_alive_frame = frame;
-            }
-            if (out_is_preprocessed) {
-                *out_is_preprocessed = true;
-            }
-        } // otherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
+        GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded remote frame in remote ctx");
+        frame = preprocess_frame_impl(std::move(frame), layer_name, ctx, opt_roi,
+                                      out_keep_alive_frame, out_is_preprocessed);
     }
 
     // Request params for result frame whatever it got preprocessed or not
@@ -752,35 +734,17 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
                                  bool* out_is_preprocessed = nullptr) {
     if (ctx.uu.rctx != nullptr) {
-        return extractRemoteBlob(ctx, i, opt_roi, out_keep_alive_frame, out_is_preprocessed);
+        return extractRemoteBlob(ctx, i, layer_name, opt_roi,
+                                 out_keep_alive_frame, out_is_preprocessed);
     }
 
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             auto frame = ctx.inFrame(i);
             if (ctx.uu.preproc_engine_impl) {
-                GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded frame");
-                cv::util::optional<cv::gapi::wip::pp_params> param =
-                            ctx.uu.preproc_engine_impl->is_applicable(frame);
-                if (param.has_value()) {
-                    GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded frame will be used");
-                    const cv::GFrameDesc& expected_net_input_descr =
-                            ctx.uu.net_input_params.get_param(layer_name);
-                    cv::gapi::wip::pp_session pp_sess =
-                            ctx.uu.preproc_engine_impl->initialize_preproc(param.value(), expected_net_input_descr);
-
-                    frame = ctx.uu.preproc_engine_impl->run_sync(pp_sess, frame, opt_roi);
-
-                    if (out_keep_alive_frame != nullptr) {
-                        GAPI_LOG_DEBUG(nullptr, "remember preprocessed frame to keep it busy from reuse, slot: " <<
-                                                out_keep_alive_frame);
-                        *out_keep_alive_frame = frame;
-                    }
-
-                    if (out_is_preprocessed) {
-                        *out_is_preprocessed = true;
-                    }
-                } // otherwise it is not suitable frame, then check on other preproc backend or rely on IE plugin
+                GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded frame in local ctx");
+                frame = preprocess_frame_impl(std::move(frame), layer_name, ctx, opt_roi,
+                                              out_keep_alive_frame, out_is_preprocessed);
             }
             ctx.views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
             return wrapIE(*(ctx.views.back()), frame.desc());
@@ -1165,7 +1129,7 @@ static void PostOutputs(InferenceEngine::InferRequest &request,
         ctx->out.post(std::move(output), ctx->eptr);
     }
 
-    ctx->release_keep_alive_frame(&request);
+    ctx->releaseKeepAliveFrame(&request);
 }
 
 class PostOutputsList {
@@ -1282,7 +1246,8 @@ struct Infer: public cv::detail::KernelTag {
 
                     // NB: configure input param for further preproc
                     if (uu.net_input_params.is_applicable(mm)) {
-                        const_cast<IEUnit::InputFrameDesc &>(uu.net_input_params).set_param(input_name, ii);
+                        const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
+                                .set_param(input_name, ii->getTensorDesc());
                     }
             }
 
@@ -1304,9 +1269,10 @@ struct Infer: public cv::detail::KernelTag {
                 const auto & mm = std::get<1>(it);
                 non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm));
 
-                // NB: configure intput param for further preproc
+                // NB: configure input param for further preproc
                 if (uu.net_input_params.is_applicable(mm)) {
-                    const_cast<IEUnit::InputFrameDesc &>(uu.net_input_params).set_param(input_name, ii);
+                    const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
+                                .set_param(input_name, ii->getTensorDesc());
                 }
             }
         }
@@ -1406,7 +1372,8 @@ struct InferROI: public cv::detail::KernelTag {
 
             // NB: configure input param for further preproc
             if (uu.net_input_params.is_applicable(mm)) {
-                const_cast<IEUnit::InputFrameDesc &>(uu.net_input_params).set_param(input_name, ii);
+                const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
+                            .set_param(input_name, ii->getTensorDesc());
             }
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
@@ -1418,7 +1385,8 @@ struct InferROI: public cv::detail::KernelTag {
 
             // NB: configure intput param for further preproc
             if (uu.net_input_params.is_applicable(mm)) {
-                const_cast<IEUnit::InputFrameDesc &>(uu.net_input_params).set_param(input_name, ii);
+                const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
+                            .set_param(input_name, ii->getTensorDesc());
             }
         }
 
@@ -1450,7 +1418,7 @@ struct InferROI: public cv::detail::KernelTag {
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
                         // reserve unique slot for keep alive preprocessed frame
-                        cv::MediaFrame* slot_ptr = ctx->prepare_keep_alive_frame_slot(&req);
+                        cv::MediaFrame* slot_ptr = ctx->prepareKeepAliveFrameSlot(&req);
 
                         // NB: This blob will be used to make roi from its, so
                         // it should be treated as image

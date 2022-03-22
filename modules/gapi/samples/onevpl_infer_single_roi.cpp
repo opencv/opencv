@@ -57,16 +57,17 @@ bool is_gpu(const std::string &device_name) {
 std::string get_weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
-    CV_Assert(sz > EXT_LEN);
+    GAPI_Assert(sz > EXT_LEN);
 
     auto ext = model_path.substr(sz - EXT_LEN);
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){
             return static_cast<unsigned char>(std::tolower(c));
         });
-    CV_Assert(ext == ".xml");
+    GAPI_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
 
+// TODO: It duplicates infer_single_roi sample
 cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
     cv::Rect rv;
     char delim[3];
@@ -156,6 +157,7 @@ G_API_OP(ParseSSD, <GDetections(cv::GMat, GRect, GSize)>, "sample.custom.parse-s
     }
 };
 
+// TODO: It duplicates infer_single_roi sample
 G_API_OP(LocateROI, <GRect(GSize)>, "sample.custom.locate-roi") {
     static cv::GOpaqueDesc outMeta(const cv::GOpaqueDesc &) {
         return cv::empty_gopaque_desc();
@@ -217,11 +219,11 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
                     const cv::Size &in_parent_size,
                     std::vector<cv::Rect> &out_objects) {
         const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
+        GAPI_Assert(in_ssd_dims.dims() == 4u);
 
         const int MAX_PROPOSALS = in_ssd_dims[2];
         const int OBJECT_SIZE   = in_ssd_dims[3];
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
+        GAPI_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
 
         const cv::Size up_roi = in_roi.size();
         const cv::Rect surface({0,0}, in_parent_size);
@@ -468,7 +470,7 @@ int main(int argc, char *argv[]) {
     if (!output.empty() && !writer.isOpened()) {
         const auto sz = cv::Size{frame_descr.size.width, frame_descr.size.height};
         writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
-        CV_Assert(writer.isOpened());
+        GAPI_Assert(writer.isOpened());
     }
 
     cv::Mat outMat;
