@@ -64,6 +64,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
             TMat pyr0;
             frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_IMAGE, 0);
             frame.setImage(pyr0);
+            frame.getGrayImage(image);
         }
         else
             CV_Error(Error::StsBadSize, "Image or pyramidImage have to be set.");
