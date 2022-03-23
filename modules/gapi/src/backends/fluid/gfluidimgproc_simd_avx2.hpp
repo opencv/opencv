@@ -21,10 +21,6 @@
 #include <limits>
 #include <vector>
 
-#if defined __GNUC__
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wstrict-overflow"
-#endif
 namespace cv {
 namespace gapi {
 namespace fluid {
