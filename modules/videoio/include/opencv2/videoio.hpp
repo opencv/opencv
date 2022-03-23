@@ -751,7 +751,7 @@ public:
      */
     CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
 
-    /** @brief  Opens a camera for video capturing
+    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
 
     @overload
 
@@ -775,7 +775,7 @@ public:
     */
     CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
 
-    /** @brief Returns true if video capturing has been initialized already.
+    /** @brief  Opens a camera for video capturing with API Preference and parameters
 
     @overload
 
