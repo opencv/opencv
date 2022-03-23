@@ -300,6 +300,10 @@ struct IEUnit {
                             cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
         if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
+            if (params.inference_device_selector != 0)
+            {
+                // TODO
+            }
             rctx = ie_core.CreateContext(params.device_id, *ctx_params);
         }
 
@@ -365,14 +369,12 @@ struct IEUnit {
         }
 
         using namespace cv::gapi::wip::onevpl;
-        if (params.device_ptr.has_value() && params.context_ptr.has_value()) {
+        if (params.pp_device_selector) {
             using namespace cv::gapi::wip;
             GAPI_LOG_INFO(nullptr, "VPP preproc creation requested");
             preproc_engine_impl =
                 IPreprocEngine::create_preproc_engine<onevpl::VPPPreprocDispatcher>(
-                                    params.device_id,
-                                    params.device_ptr,
-                                    params.context_ptr);
+                                    params.pp_device_selector);
             GAPI_LOG_INFO(nullptr, "VPP preproc created successfuly");
         }
     }

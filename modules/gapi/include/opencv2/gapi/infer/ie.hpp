@@ -25,6 +25,11 @@ namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
 
+namespace wip {
+namespace onevpl {
+    struct IDeviceSelector;
+}
+}
 /**
  * @brief This namespace contains G-API OpenVINO backend functions,
  * structures, and symbols.
@@ -85,8 +90,8 @@ struct ParamDesc {
     // net.setBatchSize(1) will overwrite it.
     cv::optional<size_t> batch_size;
 
-    cv::optional<void *> device_ptr;
-    cv::optional<void *> context_ptr;
+    std::shared_ptr<wip::onevpl::IDeviceSelector> pp_device_selector;
+    std::shared_ptr<wip::onevpl::IDeviceSelector> inference_device_selector;
 };
 } // namespace detail
 
@@ -343,9 +348,13 @@ public:
         return *this;
     }
 
-    Params<Net>& cfgPreprocessingDeviceContext(void *device_ptr, void *context_ptr) {
-        desc.device_ptr = cv::util::make_optional(device_ptr);
-        desc.context_ptr = cv::util::make_optional(context_ptr);
+    Params<Net>& cfgPreprocessingDeviceContext(std::shared_ptr<wip::onevpl::IDeviceSelector> selector) {
+        desc.pp_device_selector = selector;
+        return *this;
+    }
+
+    Params<Net>& cfgInferenceDeviceContext(std::shared_ptr<wip::onevpl::IDeviceSelector> selector) {
+        desc.inference_device_selector = selector;
         return *this;
     }
 

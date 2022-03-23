@@ -110,6 +110,20 @@ GMetaArg GSource::descr_of() const
     return m_priv->descr_of();
 }
 } // namespace onevpl
+
+
+std::shared_ptr<onevpl::IDeviceSelector> create_device_selector_default(
+                                                        const onevpl::CfgParams& params) {
+    return std::make_shared<onevpl::CfgParamDeviceSelector>(params);
+}
+
+std::shared_ptr<onevpl::IDeviceSelector> create_device_selector_ext(
+                                                        onevpl::Device::Ptr device_ptr,
+                                                        const std::string& device_id,
+                                                        onevpl::Context::Ptr ctx_ptr,
+                                                        const onevpl::CfgParams& params) {
+    return std::make_shared<onevpl::CfgParamDeviceSelector>(device_ptr, device_id, ctx_ptr, params);
+}
 } // namespace wip
 } // namespace gapi
 } // namespace cv

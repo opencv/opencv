@@ -7,6 +7,7 @@
 
 #include "streaming/onevpl/engine/preproc_engine_interface.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
@@ -75,6 +76,25 @@ IPreprocEngine::create_preproc_engine_impl(const std::string &device_id,
     return dispatcher;
 }
 
+template <>
+std::unique_ptr<onevpl::VPPPreprocDispatcher>
+IPreprocEngine::create_preproc_engine_impl(const std::shared_ptr<onevpl::IDeviceSelector> &selector) {
+    using namespace onevpl;
+    std::unique_ptr<VPPPreprocDispatcher> dispatcher(new VPPPreprocDispatcher);
+    GAPI_Assert(selector && "IDeviceSelector must not be null");
+    auto devs = selector->select_devices();
+    auto ctxs = selector->select_context();
+    GAPI_Assert(devs.empty() && "IDeviceSelector must be valid and provide devices selection");
+    GAPI_Assert(ctxs.empty() && "IDeviceSelector must be valid and provide contexts selection");
+    const auto &first_dev = devs.begin()->second;
+    const auto &first_ctx = *ctxs.begin();
+
+    return create_preproc_engine_impl<onevpl::VPPPreprocDispatcher>(
+                                      first_dev.get_name(),
+                                      cv::util::make_optional<void*>(first_dev.get_ptr()),
+                                      cv::util::make_optional<void*>(first_ctx.get_ptr()));
+}
+
 
 // Force instantiation
 template
@@ -84,6 +104,11 @@ IPreprocEngine::create_preproc_engine_impl<onevpl::VPPPreprocDispatcher, const s
                                           (const std::string &device_id,
                                            const cv::util::optional<void*> &device_ptr,
                                            const cv::util::optional<void*> &context_ptr);
+
+template
+std::unique_ptr<onevpl::VPPPreprocDispatcher>
+IPreprocEngine::create_preproc_engine_impl<onevpl::VPPPreprocDispatcher, const std::shared_ptr<onevpl::IDeviceSelector> &>
+                                          (const std::shared_ptr<onevpl::IDeviceSelector> &selector);
 } // namespace wip
 } // namespace gapi
 } // namespace cv

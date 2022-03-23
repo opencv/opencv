@@ -89,58 +89,6 @@ cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
     }
     return cv::util::make_optional(std::move(rv));
 }
-
-#ifdef HAVE_INF_ENGINE
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-
-// Since ATL headers might not be available on specific MSVS Build Tools
-// we use simple `CComPtr` implementation like as `ComPtrGuard`
-// which is not supposed to be the full functional replacement of `CComPtr`
-// and it uses as RAII to make sure utilization is correct
-template <typename COMNonManageableType>
-void release(COMNonManageableType *ptr) {
-    if (ptr) {
-        ptr->Release();
-    }
-}
-
-template <typename COMNonManageableType>
-using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
-
-template <typename COMNonManageableType>
-ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
-    return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
-}
-
-
-using AccelParamsType = std::tuple<ComPtrGuard<ID3D11Device>, ComPtrGuard<ID3D11DeviceContext>>;
-
-AccelParamsType create_device_with_ctx(IDXGIAdapter* adapter) {
-    UINT flags = 0;
-    D3D_FEATURE_LEVEL feature_levels[] = { D3D_FEATURE_LEVEL_11_1,
-                                           D3D_FEATURE_LEVEL_11_0,
-                                         };
-    D3D_FEATURE_LEVEL featureLevel;
-    ID3D11Device* ret_device_ptr = nullptr;
-    ID3D11DeviceContext* ret_ctx_ptr = nullptr;
-    HRESULT err = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN,
-                                    nullptr, flags,
-                                    feature_levels,
-                                    ARRAYSIZE(feature_levels),
-                                    D3D11_SDK_VERSION, &ret_device_ptr,
-                                    &featureLevel, &ret_ctx_ptr);
-    if (FAILED(err)) {
-        throw std::runtime_error("Cannot create D3D11CreateDevice, error: " +
-                                 std::to_string(HRESULT_CODE(err)));
-    }
-
-    return std::make_tuple(createCOMPtrGuard(ret_device_ptr),
-                           createCOMPtrGuard(ret_ctx_ptr));
-}
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-#endif // HAVE_INF_ENGINE
 } // anonymous namespace
 
 namespace custom {
@@ -316,86 +264,40 @@ int main(int argc, char *argv[]) {
         source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_vpp_frames_pool_size(source_vpp_queue_capacity));
     }
 
-    auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
-        face_model_path,                 // path to topology IR
-        get_weights_path(face_model_path),   // path to weights
-        device_id
-    };
-
-    // Create device_ptr & context_ptr using graphic API
-    // InferenceEngine requires such device & context to create its own
-    // remote shared context through InferenceEngine::ParamMap in
-    // GAPI InferenceEngine backend to provide interoperability with onevpl::GSource
-    // So GAPI InferenceEngine backend and onevpl::GSource MUST share the same
-    // device and context
-    void* accel_device_ptr = nullptr;
-    void* accel_ctx_ptr = nullptr;
-
-#ifdef HAVE_INF_ENGINE
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-    auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
-    auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
-
     if (is_gpu(device_id)) {
-        auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
-        {
-            IDXGIFactory* out_factory = nullptr;
-            HRESULT err = CreateDXGIFactory(__uuidof(IDXGIFactory),
-                                        reinterpret_cast<void**>(&out_factory));
-            if (FAILED(err)) {
-                std::cerr << "Cannot create CreateDXGIFactory, error: " << HRESULT_CODE(err) << std::endl;
-                return -1;
-            }
-            adapter_factory = createCOMPtrGuard(out_factory);
-        }
-
-        auto intel_adapter = createCOMPtrGuard<IDXGIAdapter>();
-        UINT adapter_index = 0;
-        const unsigned int refIntelVendorID = 0x8086;
-        IDXGIAdapter* out_adapter = nullptr;
-
-        while (adapter_factory->EnumAdapters(adapter_index, &out_adapter) != DXGI_ERROR_NOT_FOUND) {
-            DXGI_ADAPTER_DESC desc{};
-            out_adapter->GetDesc(&desc);
-            if (desc.VendorId == refIntelVendorID) {
-                intel_adapter = createCOMPtrGuard(out_adapter);
-                break;
-            }
-            ++adapter_index;
-        }
-
-        if (!intel_adapter) {
-            std::cerr << "No Intel GPU adapter on aboard. Exit" << std::endl;
-            return -1;
-        }
-
-        std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
-        accel_device_ptr = reinterpret_cast<void*>(dx11_dev.get());
-        accel_ctx_ptr = reinterpret_cast<void*>(dx11_ctx.get());
-
         // put accel type description for VPL source
         source_cfgs.push_back(cfg::create_from_string(
                                         "mfxImplDescription.AccelerationMode"
                                         ":"
                                         "MFX_ACCEL_MODE_VIA_D3D11"));
     }
+    auto device_selector_ptr = cv::gapi::wip::create_device_selector_default(source_cfgs);
 
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
+    auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
+        face_model_path,                 // path to topology IR
+        get_weights_path(face_model_path),   // path to weights
+        device_id
+    };
+
+    // Turn on preproc
+    face_net.cfgPreprocessingDeviceContext(device_selector_ptr);
+
+    // Turn on Inference
+    face_net.cfgInferenceDeviceContext(device_selector_ptr);
+
+#ifdef HAVE_INF_ENGINE
+
     // set ctx_config for GPU device only - no need in case of CPU device type
     if (is_gpu(device_id)) {
-        InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                              {"VA_DEVICE", accel_device_ptr} });
-        face_net.cfgContextParams(ctx_config);
-
         // NB: consider NV12 surface because it's one of native GPU image format
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
+
+        // TODO Will be removed when `cfgInferenceDeviceContext` is done
+        InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
+                                              {"VA_DEVICE", device_selector_ptr->select_devices().begin()->second.get_ptr()} });
+        face_net.cfgContextParams(ctx_config);
     }
 #endif // HAVE_INF_ENGINE
-
-    // Turn on VPP preproc
-    face_net.cfgPreprocessingDeviceContext(accel_device_ptr, accel_ctx_ptr);
 
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
@@ -410,14 +312,7 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::gapi::wip::IStreamSource::Ptr cap;
     try {
-        if (is_gpu(device_id)) {
-            cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
-                                                 device_id,
-                                                 accel_device_ptr,
-                                                 accel_ctx_ptr);
-        } else {
-            cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
-        }
+        cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs, device_selector_ptr);
         std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;

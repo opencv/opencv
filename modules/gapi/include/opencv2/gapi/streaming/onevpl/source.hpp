@@ -83,6 +83,16 @@ GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_onevpl_src(Args&&... args)
     return make_src<onevpl::GSource>(std::forward<Args>(args)...);
 }
 
+
+
+GAPI_EXPORTS_W std::shared_ptr<onevpl::IDeviceSelector> create_device_selector_default(
+                                                        const onevpl::CfgParams& params = {});
+
+GAPI_EXPORTS_W std::shared_ptr<onevpl::IDeviceSelector> create_device_selector_ext(
+                                                        onevpl::Device::Ptr device_ptr,
+                                                        const std::string& device_id,
+                                                        onevpl::Context::Ptr ctx_ptr,
+                                                        const onevpl::CfgParams& params);
 } // namespace wip
 } // namespace gapi
 } // namespace cv
