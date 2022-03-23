@@ -97,10 +97,10 @@ Building OpenCV.js from Source
     @endcode
 
     @note
-    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader utilizes the [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) to detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to use the UMD version of [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) and introduce the `loader.js` in your Web application.
+    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader utilizes the [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) to detect the features of the browser and load corresponding OpenCV.js automatically. To use it, you need to use the UMD version of [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) and introduce the `loader.js` in your Web application.
 
     Example Code:
-    @code{.javascipt}
+    @code{.javascript}
     // Set paths configuration
     let pathsConfig = {
         wasm: "../../build_wasm/opencv.js",
@@ -173,7 +173,7 @@ This snippet and the following require [Node.js](https://nodejs.org) to be insta
 
 ### Headless with Puppeteer
 
-Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/GoogleChrome/puppeteer#readme) which is a version of Google Chrome that runs in the terminal (useful for Continuos integration like travis CI, etc)
+Alternatively tests can run with [GoogleChrome/puppeteer](https://github.com/GoogleChrome/puppeteer#readme) which is a version of Google Chrome that runs in the terminal (useful for Continuous integration like travis CI, etc)
 
 @code{.sh}
 cd build_js/bin
@@ -229,7 +229,7 @@ node tests.js
     The simd optimization is experimental as wasm simd is still in development.
 
     @note
-    Now only emscripten LLVM upstream backend supports wasm simd, refering to https://emscripten.org/docs/porting/simd.html. So you need to setup upstream backend environment with the following command first:
+    Now only emscripten LLVM upstream backend supports wasm simd, referring to https://emscripten.org/docs/porting/simd.html. So you need to setup upstream backend environment with the following command first:
     @code{.bash}
     ./emsdk update
     ./emsdk install latest-upstream
