@@ -11,7 +11,7 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'category:dnn_timvx')
     runs-on: ubuntu-20.04
     # Docker image from https://hub.docker.com/r/yuentau/ocv_ubuntu
-    container: yuentau/ocv_ubuntu:20.04
+    container: docker.io/yuentau/ocv_ubuntu:20.04
     env:
       PR_AUTHOR: ${{ github.event.pull_request.user.login }}
       SOURCE_BRANCH_NAME: ${{ github.head_ref }}
