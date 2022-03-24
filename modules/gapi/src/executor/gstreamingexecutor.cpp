@@ -1595,7 +1595,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         island_meta_info = GIslandModel::traceIslandName(op.nh, m_gim);
 #endif // OPENCV_WITH_ITT
 
-        // Notify island executable about new coming stream to let it update its internal variables.
+        // Notify island executable about a new stream to let it update its internal variables.
         op.isl_exec->handleNewStream();
 
         m_threads.emplace_back(islandActorThread,

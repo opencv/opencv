@@ -24,7 +24,7 @@ namespace opencv_test
 
     struct CountStateSetupsParams
     {
-        int* pState = nullptr;
+        int* pSetupsCount = nullptr;
     };
 } // namespace opencv_test
 
@@ -154,8 +154,8 @@ namespace
         {
             auto params = cv::gapi::getCompileArg<CountStateSetupsParams>(compileArgs)
                 .value_or(CountStateSetupsParams { });
-            if (params.pState != nullptr) {
-                (*params.pState)++;
+            if (params.pSetupsCount != nullptr) {
+                (*params.pSetupsCount)++;
             }
         }
 
@@ -165,6 +165,74 @@ namespace
         }
     };
 };
+
+TEST(StatefulKernel, StateInitOnceInRegularMode)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount = new int(0);
+
+    // Testing for 100 frames
+    bool result { };
+    for (int i = 0; i < 100; ++i) {
+        c.apply(cv::gin(inputData), cv::gout(result),
+                cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(), params));
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+};
+
+struct StateInitOnce : public ::testing::TestWithParam<bool>{};
+TEST_P(StateInitOnce, StreamingMode)
+{
+    bool compileWithMeta = GetParam();
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount = new int(0);
+
+    // Compilation & testing
+    auto ccomp = (compileWithMeta)
+        ? c.compileStreaming(cv::descr_of(inputData),
+              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                               params))
+        : c.compileStreaming(
+              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                               params));
+
+    ccomp.setSource(cv::gin(inputData));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    int counter { };
+    bool result;
+    // Process mat 100 times
+    while (ccomp.pull(cv::gout(result)) && (counter++ < 100)) {
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+INSTANTIATE_TEST_CASE_P(StatefulKernel, StateInitOnce, ::testing::Bool());
 
 TEST(StatefulKernel, StateIsMutableInRuntime)
 {
@@ -451,50 +519,6 @@ TEST(StatefulKernel, StateIsAutoResetOnReshape)
     cv::Mat in_mat2(16, 16, CV_8UC1);
     run(in_mat2);
 }
-
-struct StateInitOnce : public ::testing::TestWithParam<bool>{};
-TEST_P(StateInitOnce, CompiledWithInputMeta)
-{
-    bool compileWithMeta = GetParam();
-    cv::GMat in;
-    cv::GOpaque<bool> out = GCountStateSetups::on(in);
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
-
-    // Input mat:
-    cv::Mat inputData(1080, 1920, CV_8UC1);
-    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
-
-    // variable to update when state is initialized in the kernel
-    CountStateSetupsParams stateParams;
-    stateParams.pState = new int(0);
-
-    // Compilation & testing
-    auto ccomp = (compileWithMeta)
-        ? c.compileStreaming(cv::descr_of(inputData),
-              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
-                               stateParams))
-        : c.compileStreaming(
-              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
-                               stateParams));
-
-    ccomp.setSource(cv::gin(inputData));
-
-    ccomp.start();
-    EXPECT_TRUE(ccomp.running());
-
-    int counter { };
-    bool result;
-    // Process mat 100 times
-    while (ccomp.pull(cv::gout(result)) && (counter++ < 100)) {
-        EXPECT_TRUE(stateParams.pState != nullptr);
-        EXPECT_EQ(1, *stateParams.pState);
-    }
-
-    ccomp.stop();
-    EXPECT_FALSE(ccomp.running());
-}
-
-INSTANTIATE_TEST_CASE_P(StatefulKernel, StateInitOnce, ::testing::Bool());
 
 //-------------------------------------------------------------------------------------------------------------
 
