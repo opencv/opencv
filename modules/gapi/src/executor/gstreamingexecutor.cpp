@@ -385,7 +385,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
 
     cv::optional<cv::gimpl::Exception> exception;
     for (auto &&it : ade::util::indexed(in_queues))
-
+    {
        auto id = ade::util::index(it);
        auto &q = ade::util::value(it);
 
