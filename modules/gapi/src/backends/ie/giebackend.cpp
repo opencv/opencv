@@ -365,14 +365,13 @@ struct IEUnit {
         }
 
         using namespace cv::gapi::wip::onevpl;
-        if (params.device_ptr.has_value() && params.context_ptr.has_value()) {
+        if (params.vpl_preproc_device.has_value() && params.vpl_preproc_ctx.has_value()) {
             using namespace cv::gapi::wip;
             GAPI_LOG_INFO(nullptr, "VPP preproc creation requested");
             preproc_engine_impl =
                 IPreprocEngine::create_preproc_engine<onevpl::VPPPreprocDispatcher>(
-                                    params.device_id,
-                                    params.device_ptr,
-                                    params.context_ptr);
+                                    params.vpl_preproc_device.value(),
+                                    params.vpl_preproc_ctx.value());
             GAPI_LOG_INFO(nullptr, "VPP preproc created successfuly");
         }
     }

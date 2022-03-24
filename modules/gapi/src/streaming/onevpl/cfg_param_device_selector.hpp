@@ -26,6 +26,9 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
                            const std::string& device_id,
                            Context::Ptr ctx_ptr,
                            const CfgParams& params);
+    CfgParamDeviceSelector(const Device &device_ptr,
+                           const Context &ctx_ptr,
+                           CfgParams params);
     ~CfgParamDeviceSelector();
 
     DeviceScoreTable select_devices() const override;

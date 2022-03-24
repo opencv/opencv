@@ -81,6 +81,30 @@ IDeviceSelector::Score::Type IDeviceSelector::Score::get() const {
 IDeviceSelector::~IDeviceSelector() {
 }
 
+namespace detail
+{
+struct DeviceContextCreator : public IDeviceSelector {
+    DeviceScoreTable select_devices() const override { return {};}
+    DeviceContexts select_context() override { return {};}
+
+    template<typename Entity, typename ...Args>
+    static Entity create_entity(Args &&...args) {
+        return IDeviceSelector::create<Entity>(std::forward<Args>(args)...);
+    }
+};
+}
+
+Device create_device(Device::Ptr device_ptr,
+                     const std::string& device_name,
+                     AccelType type) {
+    return detail::DeviceContextCreator::create_entity<Device>(device_ptr, device_name, type);
+}
+
+Context create_context(Context::Ptr ctx_ptr,
+                      AccelType type) {
+    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr, type);
+}
+
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

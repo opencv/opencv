@@ -11,7 +11,6 @@
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/render.hpp>
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
-#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
 #include <opencv2/gapi/infer/parsers.hpp>
 
@@ -328,8 +327,8 @@ int main(int argc, char *argv[]) {
     // GAPI InferenceEngine backend to provide interoperability with onevpl::GSource
     // So GAPI InferenceEngine backend and onevpl::GSource MUST share the same
     // device and context
-    void* accel_device_ptr = nullptr;
-    void* accel_ctx_ptr = nullptr;
+    cv::util::optional<cv::gapi::wip::onevpl::Device> accel_device;
+    cv::util::optional<cv::gapi::wip::onevpl::Context> accel_ctx;
 
 #ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
@@ -371,8 +370,15 @@ int main(int argc, char *argv[]) {
         }
 
         std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
-        accel_device_ptr = reinterpret_cast<void*>(dx11_dev.get());
-        accel_ctx_ptr = reinterpret_cast<void*>(dx11_ctx.get());
+        accel_device = cv::util::make_optional(
+                            cv::gapi::wip::onevpl::create_device(
+                                                        reinterpret_cast<void*>(dx11_dev.get()),
+                                                        device_id,
+                                                        cv::gapi::wip::onevpl::AccelType::DX11));
+        accel_ctx = cv::util::make_optional(
+                            cv::gapi::wip::onevpl::create_context(
+                                                        reinterpret_cast<void*>(dx11_ctx.get()),
+                                                        cv::gapi::wip::onevpl::AccelType::DX11));
 
         // put accel type description for VPL source
         source_cfgs.push_back(cfg::create_from_string(
@@ -384,9 +390,9 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
-    if (is_gpu(device_id)) {
+    if (is_gpu(device_id) && accel_device.has_value()) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                              {"VA_DEVICE", accel_device_ptr} });
+                                              {"VA_DEVICE", accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
 
         // NB: consider NV12 surface because it's one of native GPU image format
@@ -394,8 +400,12 @@ int main(int argc, char *argv[]) {
     }
 #endif // HAVE_INF_ENGINE
 
-    // Turn on VPP preproc
-    face_net.cfgPreprocessingDeviceContext(accel_device_ptr, accel_ctx_ptr);
+    // turn on preproc
+    if (accel_device.has_value() && accel_ctx.has_value()) {
+        face_net.cfgPreprocessingParams(accel_device.value(),
+                                        accel_ctx.value());
+        std::cout << "enforce VPP preprocessing on " << device_id << std::endl;
+    }
 
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
@@ -410,11 +420,10 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::gapi::wip::IStreamSource::Ptr cap;
     try {
-        if (is_gpu(device_id)) {
+        if (accel_device.has_value() && accel_ctx.has_value()) {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
-                                                 device_id,
-                                                 accel_device_ptr,
-                                                 accel_ctx_ptr);
+                                                 accel_device.value(),
+                                                 accel_ctx.value());
         } else {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         }
@@ -427,7 +436,7 @@ int main(int argc, char *argv[]) {
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
     auto inputs = cv::gin(cap);
-
+try {
     // Now build the graph
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
@@ -485,6 +494,9 @@ int main(int argc, char *argv[]) {
     }
     tm.stop();
     std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+}catch (const std::exception &ex) {
+    std::cerr << ex.what() << std::endl;
+}
     return 0;
 }
 

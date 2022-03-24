@@ -36,7 +36,7 @@ struct IPreprocEngine {
                       "SpecificPreprocEngine must have reachable ancessor IPreprocEngine");
         return create_preproc_engine_impl<SpecificPreprocEngine, PreprocEngineArgs...>(args...);
     }
-//private:
+private:
     template<typename SpecificPreprocEngine, typename ...PreprocEngineArgs >
     static std::unique_ptr<SpecificPreprocEngine> create_preproc_engine_impl(const PreprocEngineArgs &...args);
 };

@@ -22,6 +22,7 @@ namespace onevpl {
 enum class AccelType: uint8_t {
     HOST,
     DX11,
+    CUSTOM_ACCEL_TYPE = 127,
 
     LAST_VALUE = std::numeric_limits<uint8_t>::max()
 };
@@ -58,6 +59,12 @@ private:
     Ptr ptr;
     AccelType type;
 };
+
+GAPI_EXPORTS Device create_device(Device::Ptr device_ptr,
+                                  const std::string& device_name,
+                                  AccelType type);
+GAPI_EXPORTS Context create_context(Context::Ptr ctx_ptr,
+                                    AccelType type);
 
 struct GAPI_EXPORTS IDeviceSelector {
     using Ptr = std::shared_ptr<IDeviceSelector>;

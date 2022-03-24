@@ -20,6 +20,7 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp> // Preproc Dev & Ctx
 
 namespace cv {
 namespace gapi {
@@ -85,8 +86,8 @@ struct ParamDesc {
     // net.setBatchSize(1) will overwrite it.
     cv::optional<size_t> batch_size;
 
-    cv::optional<void *> device_ptr;
-    cv::optional<void *> context_ptr;
+    cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
+    cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 };
 } // namespace detail
 
@@ -343,9 +344,10 @@ public:
         return *this;
     }
 
-    Params<Net>& cfgPreprocessingDeviceContext(void *device_ptr, void *context_ptr) {
-        desc.device_ptr = cv::util::make_optional(device_ptr);
-        desc.context_ptr = cv::util::make_optional(context_ptr);
+    Params<Net>& cfgPreprocessingParams(const cv::gapi::wip::onevpl::Device &device,
+                                        const cv::gapi::wip::onevpl::Context &ctx) {
+        desc.vpl_preproc_device = cv::util::make_optional(device);
+        desc.vpl_preproc_ctx = cv::util::make_optional(ctx);
         return *this;
     }
 
