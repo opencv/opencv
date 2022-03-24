@@ -54,7 +54,7 @@ struct VPLAccelerationPolicy
     virtual void init(session_t session) = 0;
     virtual void deinit(session_t session) = 0;
 
-    // Limitation: cannot give guarantee in succesful memory realloccation
+    // Limitation: cannot give guarantee in successful memory realloccation
     // for existing workspace in existing pool (see realloc)
     // thus it is not implemented,
     // PLEASE provide initial memory area large enough

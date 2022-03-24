@@ -766,7 +766,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         // 1. Link input nodes to camera
         for (const auto& nh : in_nodes) {
             GAPI_Assert(m_oak_nodes.at(nh).inputs.size() == 1);
-            // FIXME: cover other camera outputs
+            // FIXME: convert other camera outputs
             // Link preview to infer, video to all other nodes
             if (m_oak_infer_info.find(nh) == m_oak_infer_info.end()) {
                 m_camera_input->video.link(*(m_oak_nodes.at(nh).inputs[0]));
