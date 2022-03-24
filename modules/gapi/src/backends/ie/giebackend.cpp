@@ -389,10 +389,11 @@ public:
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
 
-    // NB: Need to gurantee that MediaFrame::View don't die until request is over.
+    // NB: Need to gurantee that MediaFrame::View doesn't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
 
+    // To store exception appeared in callback.
     std::exception_ptr eptr;
 
 private:
@@ -706,6 +707,8 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
             static_cast<callback_t>(
                 std::bind(&cv::gimpl::ie::RequestPool::callback, this,
                           t, id, _1, _2)));
+    // NB: InferRequest is already marked as busy
+    // in case of exception need to return it back to the idle.
     try {
         t.run(request);
     } catch (...) {
@@ -719,6 +722,10 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           size_t id,
                                           IE::InferRequest request,
                                           IE::StatusCode code) noexcept {
+    // NB: Inference is over.
+    // 1. Run callback
+    // 2. Destroy callback to free resources.
+    // 3. Mark InferRequest as idle.
     task.callback(request, code);
     request.SetCompletionCallback([](){});
     m_idle_ids.push(id);

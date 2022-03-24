@@ -2913,6 +2913,8 @@ TEST(Infer, ModelWith2DInputs)
     normAssert(ref_mat, gapi_mat, "Test model output");
 }
 
+#endif // HAVE_NGRAPH
+
 TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatchStreaming)
 {
     const std::string device = "MYRIAD";
@@ -2945,13 +2947,14 @@ TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatchStreaming)
     pipeline.setSource(cv::gin(in_mat));
     pipeline.start();
 
+    // NB: Blob precision is U8, but user pass FP32 data, so exception will be thrown.
+    // Now exception comes directly from IE, but since G-API has information
+    // about data precision at the compile stage, consider the possibility of
+    // throwing exception from there.
     for (int i = 0; i < 10; ++i) {
         EXPECT_ANY_THROW(pipeline.pull(cv::gout(gapi_age, gapi_gender)));
     }
 }
-
-
-#endif // HAVE_NGRAPH
 
 } // namespace opencv_test
 

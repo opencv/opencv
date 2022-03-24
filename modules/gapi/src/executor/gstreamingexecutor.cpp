@@ -380,74 +380,74 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
     // NOTE: in order to maintain the GRunArg's underlying object
     // lifetime, keep the whole cmd vector (of size == # of inputs)
     // in memory.
-   m_cmd.resize(in_queues.size());
-   cv::GRunArgs isl_inputs(in_queues.size());
+    m_cmd.resize(in_queues.size());
+    cv::GRunArgs isl_inputs(in_queues.size());
 
-   cv::optional<cv::gimpl::Exception> exception;
-   for (auto &&it : ade::util::indexed(in_queues))
-   {
+    cv::optional<cv::gimpl::Exception> exception;
+    for (auto &&it : ade::util::indexed(in_queues))
+
        auto id = ade::util::index(it);
-        auto &q = ade::util::value(it);
+       auto &q = ade::util::value(it);
 
-        if (q == nullptr)
-        {
-            GAPI_Assert(!in_constants.empty());
-            // NULL queue means a graph-constant value (like a
-            // value-initialized scalar)
-            // It can also hold a constant value received with
-            // Stop::Kind::CNST message (see above).
-            isl_inputs[id] = in_constants[id];
-            continue;
-        }
+       if (q == nullptr)
+       {
+           GAPI_Assert(!in_constants.empty());
+           // NULL queue means a graph-constant value (like a
+           // value-initialized scalar)
+           // It can also hold a constant value received with
+           // Stop::Kind::CNST message (see above).
+           isl_inputs[id] = in_constants[id];
+           continue;
+       }
 
-        q->pop(m_cmd[id]);
-        switch (m_cmd[id].index())
-        {
-            case Cmd::index_of<cv::GRunArg>():
-                isl_inputs[id] = cv::util::get<cv::GRunArg>(m_cmd[id]);
-                break;
-            case Cmd::index_of<Stop>():
-            {
-                const auto &stop = cv::util::get<Stop>(m_cmd[id]);
-                if (stop.kind == Stop::Kind::CNST)
-                {
-                    // We've got a Stop signal from a const source,
-                    // propagated as a result of real stream reaching its
-                    // end.  Sometimes these signals come earlier than
-                    // real EOS Stops so are deprioritized -- just
-                    // remember the Const value here and continue
-                    // processing other queues. Set queue pointer to
-                    // nullptr and update the const_val vector
-                    // appropriately
-                    m_finishing = true;
-                    in_queues[id] = nullptr;
-                    in_constants.resize(in_queues.size());
-                    in_constants[id] = std::move(stop.cdata);
-
-                    // NEXT time (on a next call to getInputVector()), the
-                    // "q==nullptr" check above will be triggered, but now
-                    // we need to make it manually:
-                    isl_inputs[id] = in_constants[id];
-                }
-                else
-                {
-                    GAPI_Assert(stop.kind == Stop::Kind::HARD);
-                    rewindToStop(in_queues, id);
-                    // After queues are read to the proper indicator,
-                    // indicate end-of-stream
-                    return cv::gimpl::StreamMsg{cv::gimpl::EndOfStream{}};
-               } // if(Cnst)
+       q->pop(m_cmd[id]);
+       switch (m_cmd[id].index())
+       {
+           case Cmd::index_of<cv::GRunArg>():
+               isl_inputs[id] = cv::util::get<cv::GRunArg>(m_cmd[id]);
                break;
-           }
-           case Cmd::index_of<cv::gimpl::Exception>():
+           case Cmd::index_of<Stop>():
            {
-               exception =
-                   cv::util::make_optional(cv::util::get<cv::gimpl::Exception>(m_cmd[id]));
-               break;
-           }
-           default:
-               GAPI_Assert(false && "Unsupported cmd type in getInputVector()");
-        }
+               const auto &stop = cv::util::get<Stop>(m_cmd[id]);
+               if (stop.kind == Stop::Kind::CNST)
+               {
+                   // We've got a Stop signal from a const source,
+                   // propagated as a result of real stream reaching its
+                   // end.  Sometimes these signals come earlier than
+                   // real EOS Stops so are deprioritized -- just
+                   // remember the Const value here and continue
+                   // processing other queues. Set queue pointer to
+                   // nullptr and update the const_val vector
+                   // appropriately
+                   m_finishing = true;
+                   in_queues[id] = nullptr;
+                   in_constants.resize(in_queues.size());
+                   in_constants[id] = std::move(stop.cdata);
+
+                   // NEXT time (on a next call to getInputVector()), the
+                   // "q==nullptr" check above will be triggered, but now
+                   // we need to make it manually:
+                   isl_inputs[id] = in_constants[id];
+               }
+               else
+               {
+                   GAPI_Assert(stop.kind == Stop::Kind::HARD);
+                   rewindToStop(in_queues, id);
+                   // After queues are read to the proper indicator,
+                   // indicate end-of-stream
+                   return cv::gimpl::StreamMsg{cv::gimpl::EndOfStream{}};
+              } // if(Cnst)
+              break;
+          }
+          case Cmd::index_of<cv::gimpl::Exception>():
+          {
+              exception =
+                  cv::util::make_optional(cv::util::get<cv::gimpl::Exception>(m_cmd[id]));
+              break;
+          }
+          default:
+              GAPI_Assert(false && "Unsupported cmd type in getInputVector()");
+       }
     } // for(in_queues)
 
     if (exception.has_value()) {
