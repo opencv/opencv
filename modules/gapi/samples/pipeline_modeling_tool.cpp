@@ -179,8 +179,7 @@ CallParams read<CallParams>(const cv::FileNode& fn) {
         check_and_read<std::string>(fn, "name", "node");
     // FIXME: Impossible to read size_t due OpenCV limitations.
     auto call_every_nth_opt = readOpt<int>(fn["call_every_nth"]);
-    auto call_every_nth =
-        call_every_nth_opt.has_value() ? call_every_nth_opt.value() : 1;
+    auto call_every_nth = call_every_nth_opt.value_or(1);
     if (call_every_nth <= 0) {
         throw std::logic_error(
                 name + " call_every_nth must be greater than zero\n"
