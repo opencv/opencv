@@ -44,7 +44,7 @@ import os
             model.graph.initializer.insert(i,init)
         ```
 
-     6. Add an additional reshape node to handle the inconsistant input from python and c++ of openCV.
+     6. Add an additional reshape node to handle the inconsistent input from python and c++ of openCV.
         see https://github.com/opencv/opencv/issues/19091
         Make & insert a new node with 'Reshape' operation & required initializer
         ```
@@ -256,7 +256,7 @@ class FilterbankFeatures:
         weights *= enorm[:, np.newaxis]
         return weights
 
-    # STFT preperation
+    # STFT preparation
     def pad_window_center(self, data, size, axis=-1, **kwargs):
         '''
             Centers the data and pads.
@@ -329,7 +329,7 @@ class FilterbankFeatures:
                     then padded with zeros to match n_fft
                 fft_window : a vector or array of length `n_fft` having values computed by a
                     window function
-                pad_mode : mode while padding the singnal
+                pad_mode : mode while padding the signal
                 return_complex : returns array with complex data type if `True`
             return : Matrix of short-term Fourier transform coefficients.
         '''
