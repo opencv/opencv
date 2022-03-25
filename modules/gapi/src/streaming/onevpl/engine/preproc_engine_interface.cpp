@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2022 Intel Corporation
 
-
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include "streaming/onevpl/engine/preproc_engine_interface.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
 
