@@ -433,40 +433,33 @@ int main(int argc, char *argv[]) {
 
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
+    cv::GOpaque<cv::Rect> in_roi;
     auto inputs = cv::gin(cap);
-try {
+
     // Now build the graph
     cv::GFrame in;
     auto size = cv::gapi::streaming::size(in);
-    cv::GStreamingCompiled pipeline;
-    if (opt_roi.has_value()) {
+    auto graph_inputs = cv::GIn(in);
+    if (!opt_roi.has_value()) {
+        // Automatically detect ROI to infer. Make it output parameter
+        std::cout << "ROI is not set or invalid. Locating it automatically"
+                  << std::endl;
+        in_roi = custom::LocateROI::on(size);
+    } else {
         // Use the value provided by user
         std::cout << "Will run inference for static region "
                   << opt_roi.value()
                   << " only"
                   << std::endl;
-        cv::GOpaque<cv::Rect> in_roi;
-        auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
-        cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, in_roi, size);
-        auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, in_roi));
-        auto out = cv::gapi::streaming::BGR(out_frame);
-        pipeline = cv::GComputation(cv::GIn(in, in_roi), cv::GOut(out))
-            .compileStreaming(std::move(face_detection_args));
-
-        // Since the ROI to detect is manual, make it part of the input vector
-        inputs.push_back(cv::gin(opt_roi.value())[0]);
-    } else {
-        // Automatically detect ROI to infer. Make it output parameter
-        std::cout << "ROI is not set or invalid. Locating it automatically"
-                  << std::endl;
-        cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(size);
-        auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);
-        cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, roi, size);
-        auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, roi));
-        auto out = cv::gapi::streaming::BGR(out_frame);
-        pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
-                .compileStreaming(std::move(face_detection_args));
+        graph_inputs += cv::GIn(in_roi);
+        inputs += cv::gin(opt_roi.value());
     }
+    auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
+    cv::GArray<cv::Rect> rcs = custom::ParseSSD::on(blob, in_roi, size);
+    auto out_frame = cv::gapi::wip::draw::renderFrame(in, custom::BBoxes::on(rcs, in_roi));
+    auto out = cv::gapi::streaming::BGR(out_frame);
+    cv::GStreamingCompiled pipeline = cv::GComputation(std::move(graph_inputs), cv::GOut(out))   // and move here
+                                        .compileStreaming(std::move(face_detection_args));
     // The execution part
     pipeline.setSource(std::move(inputs));
     pipeline.start();
@@ -492,9 +485,7 @@ try {
     }
     tm.stop();
     std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
-}catch (const std::exception &ex) {
-    std::cerr << ex.what() << std::endl;
-}
+
     return 0;
 }
 
