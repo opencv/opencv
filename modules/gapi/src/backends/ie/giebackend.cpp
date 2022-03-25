@@ -389,9 +389,12 @@ public:
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
 
-    // NB: Need to gurantee that MediaFrame::View don't die until request is over.
+    // NB: Need to gurantee that MediaFrame::View doesn't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
+
+    // To store exception appeared in callback.
+    std::exception_ptr eptr;
 
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
@@ -656,7 +659,7 @@ std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInfe
 class cv::gimpl::ie::RequestPool {
 public:
     using RunF      = std::function<void(InferenceEngine::InferRequest&)>;
-    using CallbackF = std::function<void(InferenceEngine::InferRequest&)>;
+    using CallbackF = std::function<void(InferenceEngine::InferRequest&, InferenceEngine::StatusCode)>;
 
     // NB: The task is represented by:
     // RunF      - function which is set blobs and run async inference.
@@ -675,7 +678,7 @@ private:
     void callback(Task task,
                   size_t id,
                   IE::InferRequest request,
-                  IE::StatusCode code);
+                  IE::StatusCode code) noexcept;
     void setup();
 
     QueueClass<size_t>                         m_idle_ids;
@@ -706,32 +709,28 @@ void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
             static_cast<callback_t>(
                 std::bind(&cv::gimpl::ie::RequestPool::callback, this,
                           t, id, _1, _2)));
-    t.run(request);
+    // NB: InferRequest is already marked as busy
+    // in case of exception need to return it back to the idle.
+    try {
+        t.run(request);
+    } catch (...) {
+        request.SetCompletionCallback([](){});
+        m_idle_ids.push(id);
+        throw;
+    }
 }
 
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           size_t id,
                                           IE::InferRequest request,
-                                          IE::StatusCode code) {
-    // FIXME: Any exception which is arrised here must not leave this callback,
-    // because it won't be handled.
-    try {
-        if (code != IE::StatusCode::OK) {
-            throw std::logic_error("IE::InferRequest finished with not OK status");
-        }
-        task.callback(request);
-        // NB: IE::InferRequest keeps the callback until the new one is set.
-        // Since user's callback might keep resources that should be released,
-        // need to destroy its after execution.
-        // Let's set the empty one to cause the destruction of a callback.
-        request.SetCompletionCallback([](){});
-        m_idle_ids.push(id);
-    } catch (const std::exception& e) {
-        GAPI_LOG_FATAL(NULL, "Callback failed with error: " << e.what());
-        //FIXME: Exception CAN't be rethrown here, since this callback works
-        // in separate IE thread and such scenarios aren't handled properly in
-        // G-API so far.
-    }
+                                          IE::StatusCode code) noexcept {
+    // NB: Inference is over.
+    // 1. Run callback
+    // 2. Destroy callback to free resources.
+    // 3. Mark InferRequest as idle.
+    task.callback(request, code);
+    request.SetCompletionCallback([](){});
+    m_idle_ids.push(id);
 }
 
 // NB: Not thread-safe.
@@ -786,18 +785,19 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     //     1. Collect island inputs/outputs.
     //     2. Create kernel context. (Every kernel has his own context).
     //     3. If the EndOfStream message is recieved, wait until all passed task are done.
-    //     4.
+    //     4. If the Exception message is revieved, propagate it further.
+    //     5.
     //        5.1 Run the kernel.
     //        5.2 Kernel wait for all nececcary infer requests and start asynchronous execution.
     //        5.3 After the kernel is finished continue processing next frame.
     //
-    //     5. If graph is compiled in non-streaming mode, wait until all tasks are done.
+    //     6. If graph is compiled in non-streaming mode, wait until all tasks are done.
 
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 
-    const auto &in_desc  = in.desc();
-    const auto  in_msg   = in.get();
+    const auto &in_desc = in.desc();
+          auto  in_msg  = in.get();
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
@@ -835,10 +835,20 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
-    // (4) Run the kernel.
-    kk.run(ctx, *m_reqPool);
+    // (5) Run the kernel.
+    try {
+        kk.run(ctx, *m_reqPool);
+    } catch (...) {
+        auto eptr = std::current_exception();
+        for (auto i : ade::util::iota(ctx->uu.params.num_out))
+        {
+            auto output = ctx->output(i);
+            ctx->out.post(std::move(output), eptr);
+        }
+        return;
+    }
 
-    // (5) In non-streaming mode need to wait until the all tasks are done
+    // (6) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
         m_reqPool->waitAll();
@@ -944,19 +954,26 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
 
 // NB: This is a callback used by async infer
 // to post outputs blobs (cv::GMat's).
-static void PostOutputs(InferenceEngine::InferRequest   &request,
-                        std::shared_ptr<IECallContext>   ctx) {
+static void PostOutputs(InferenceEngine::InferRequest &request,
+                        InferenceEngine::StatusCode    code,
+                        std::shared_ptr<IECallContext> ctx) {
     GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
     GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
 
-    for (auto i : ade::util::iota(ctx->uu.params.num_out))
-    {
+    if (code != IE::StatusCode::OK) {
+        std::stringstream ss;
+        ss << "InferRequest for model: " << ctx->uu.params.model_path
+           << " finished with InferenceEngine::StatusCode: " << static_cast<int>(code);
+        ctx->eptr = std::make_exception_ptr(std::logic_error(ss.str()));
+    }
+
+    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
         auto& out_mat = ctx->outMatR(i);
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
         ctx->out.meta(output, ctx->input(0).meta);
-        ctx->out.post(std::move(output));
+        ctx->out.post(std::move(output), ctx->eptr);
     }
 }
 
@@ -966,7 +983,9 @@ public:
                     std::shared_ptr<IECallContext> ctx,
                     std::vector<std::vector<int>>&& cached_dims);
 
-    void operator()(InferenceEngine::InferRequest &request, size_t pos) const;
+    void operator()(InferenceEngine::InferRequest &request,
+                    InferenceEngine::StatusCode    code,
+                    size_t                         pos) const;
 
 private:
     struct Priv {
@@ -987,20 +1006,30 @@ PostOutputsList::PostOutputsList(size_t size,
     m_priv->cached_dims = std::move(cached_dims);
 }
 
-void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos) const {
+void PostOutputsList::operator()(InferenceEngine::InferRequest &req,
+                                 InferenceEngine::StatusCode    code,
+                                 size_t                         pos) const {
     auto&& ctx         = m_priv->ctx;
     auto&& cached_dims = m_priv->cached_dims;
     auto&& finished    = m_priv->finished;
     auto&& size        = m_priv->size;
-    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-        std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
-        IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
-        GAPI_Assert(out_blob);
+    if (code != IE::StatusCode::OK) {
+        ctx->eptr = std::make_exception_ptr(
+               std::logic_error("IE::InferRequest finished with not OK status"));
+    }
 
-        // FIXME: Avoid data copy. Not sure if it is possible though
-        out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-        copyFromIE(out_blob, out_vec[pos]);
+    if (!ctx->eptr) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+            IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+            GAPI_Assert(out_blob);
+
+            // FIXME: Avoid data copy. Not sure if it is possible though
+            out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+            copyFromIE(out_blob, out_vec[pos]);
+        }
     }
     ++finished;
 
@@ -1008,7 +1037,7 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos)
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             auto output = ctx->output(i);
             ctx->out.meta(output, ctx->input(0).meta);
-            ctx->out.post(std::move(output));
+            ctx->out.post(std::move(output), ctx->eptr);
         }
     }
 }
@@ -1123,7 +1152,7 @@ struct Infer: public cv::detail::KernelTag {
                         // What about to do that in RequestPool ?
                         req.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, ctx)
+                    std::bind(PostOutputs, _1, _2, ctx)
                 }
         );
     }
@@ -1218,7 +1247,7 @@ struct InferROI: public cv::detail::KernelTag {
                         // What about to do that in RequestPool ?
                         req.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, ctx)
+                    std::bind(PostOutputs, _1, _2, ctx)
                 }
         );
     }
@@ -1294,7 +1323,6 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
-
         const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         // NB: In case there is no input data need to post output anyway
         if (in_roi_vec.empty()) {
@@ -1335,7 +1363,7 @@ struct InferList: public cv::detail::KernelTag {
                         setROIBlob(req, ctx->uu.params.input_names[0u], this_blob, rc, *ctx);
                         req.StartAsync();
                     },
-                    std::bind(callback, std::placeholders::_1, pos)
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
                 }
             );
         }
@@ -1506,7 +1534,7 @@ struct InferList2: public cv::detail::KernelTag {
                         }
                         req.StartAsync();
                     },
-                    std::bind(callback, std::placeholders::_1, list_idx)
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, list_idx)
                 } // task
             );
         } // for

@@ -412,7 +412,17 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
         out_objs.emplace_back(ade::util::value(it),
                               out.get(ade::util::checked_cast<int>(ade::util::index(it))));
     }
-    run(std::move(in_objs), std::move(out_objs));
+
+    try {
+        run(std::move(in_objs), std::move(out_objs));
+    } catch (...) {
+        auto eptr = std::current_exception();
+        for (auto &&it: out_objs)
+        {
+            out.post(std::move(it.second), eptr);
+        }
+        return;
+    }
 
     // Propagate in-graph meta down to the graph
     // Note: this is not a complete implementation! Mainly this is a stub

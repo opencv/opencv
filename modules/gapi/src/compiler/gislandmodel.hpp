@@ -161,7 +161,12 @@ public:
     const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
 };
 struct EndOfStream {};
-using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs>;
+
+struct Exception {
+    std::exception_ptr eptr;
+};
+
+using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs, Exception>;
 struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
     virtual ~IInput() = default;
     virtual StreamMsg get() = 0;     // Get a new input vector (blocking)
@@ -169,9 +174,11 @@ struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
 };
 struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
     virtual ~IOutput() = default;
-    virtual GRunArgP get(int idx) = 0;  // Allocate (wrap) a new data object for output idx
-    virtual void post(GRunArgP&&) = 0;  // Release the object back to the framework (mark available)
-    virtual void post(EndOfStream&&) = 0; // Post end-of-stream marker back to the framework
+    virtual GRunArgP get(int idx) = 0;                                 // Allocate (wrap) a new data object for output idx
+    virtual void post(GRunArgP&&, const std::exception_ptr& = {}) = 0; // Release the object back to the framework (mark available)
+    virtual void post(EndOfStream&&) = 0;                              // Post end-of-stream marker back to the framework
+    virtual void post(Exception&&) = 0;
+
 
     // Assign accumulated metadata to the given output object.
     // This method can only be called after get() and before post().
