@@ -25,6 +25,9 @@
 
 #include "gfluidimgproc_func.hpp"
 
+#if CV_AVX2
+#include "gfluidimgproc_simd_avx2.hpp"
+#endif
 #if CV_SSE4_1
 #include "gfluidcore_simd_sse41.hpp"
 #endif
@@ -2132,10 +2135,24 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     {
         auto index0 = mapsy[outY + l] - inY;
         auto index1 = mapsy[outSz.height + outY + l] - inY;
+
         src0[l] = in.InLine<const float>(index0);
         src1[l] = in.InLine<const float>(index1);
         dst[l] = out.OutLine<float>(l);
     }
+
+#if CV_AVX2
+    // number floats in AVX2 SIMD vector.
+    constexpr int nlanes = 8;
+
+    if (inSz.width >= nlanes && outSz.width >= nlanes)
+    {
+        avx2::calcRowLinear32FC1Impl(dst, src0, src1, alpha, mapsx, beta,
+                                     inSz, outSz, lpi);
+
+        return;
+    }
+#endif // CV_AVX2
 
     using alpha_type = typename Mapper::alpha_type;
     for (int l = 0; l < lpi; ++l)
@@ -2150,6 +2167,7 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
             auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
             auto sx0 = mapsx[x];
             auto sx1 = sx0 + 1;
+
             float tmp0 = resize_main_calculation(b0, src0[l][sx0], b1, src1[l][sx0]);
             float tmp1 = resize_main_calculation(b0, src0[l][sx1], b1, src1[l][sx1]);
             dst[l][x] = resize_main_calculation(alpha0, tmp0, alpha1, tmp1);
@@ -2174,6 +2192,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
        GAPI_Assert((in.depth == CV_8U && in.chan == 3) ||
                    (in.depth == CV_32F && in.chan == 1));
        GAPI_Assert(interp == cv::INTER_LINEAR);
+
        int outSz_w;
        int outSz_h;
        if (outSz.width == 0 || outSz.height == 0)
@@ -2212,6 +2231,7 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
         GAPI_Assert((in.meta().depth == CV_8U && in.meta().chan == 3) ||
                     (in.meta().depth == CV_32F && in.meta().chan == 1));
         GAPI_Assert(interp == cv::INTER_LINEAR);
+
         const int channels = in.meta().chan;
         const int depth = in.meta().depth;
 
