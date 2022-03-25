@@ -94,15 +94,27 @@ struct DeviceContextCreator : public IDeviceSelector {
 };
 }
 
-Device create_device(Device::Ptr device_ptr,
-                     const std::string& device_name,
-                     AccelType type) {
-    return detail::DeviceContextCreator::create_entity<Device>(device_ptr, device_name, type);
+Device create_host_device() {
+    return detail::DeviceContextCreator::create_entity<Device>(nullptr,
+                                                               "CPU",
+                                                               AccelType::HOST);
 }
 
-Context create_context(Context::Ptr ctx_ptr,
-                      AccelType type) {
-    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr, type);
+Context create_host_context() {
+    return detail::DeviceContextCreator::create_entity<Context>(nullptr,
+                                                                AccelType::HOST);
+}
+
+Device create_dx11_device(Device::Ptr device_ptr,
+                          const std::string& device_name) {
+    return detail::DeviceContextCreator::create_entity<Device>(device_ptr,
+                                                               device_name,
+                                                               AccelType::DX11);
+}
+
+Context create_dx11_context(Context::Ptr ctx_ptr) {
+    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr,
+                                                                AccelType::DX11);
 }
 
 } // namespace onevpl

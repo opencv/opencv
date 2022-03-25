@@ -34,49 +34,6 @@ IPreprocEngine::create_preproc_engine_impl(const PreprocEngineArgs& ...) {
 
 template <>
 std::unique_ptr<onevpl::VPPPreprocDispatcher>
-IPreprocEngine::create_preproc_engine_impl(const std::string &device_id,
-                                           const cv::util::optional<void*> &device_ptr,
-                                           const cv::util::optional<void*> &context_ptr) {
-    using namespace onevpl;
-    cv::util::suppress_unused_warning(device_id);
-    cv::util::suppress_unused_warning(device_ptr);
-    cv::util::suppress_unused_warning(context_ptr);
-    std::unique_ptr<VPPPreprocDispatcher> dispatcher(new VPPPreprocDispatcher);
-#ifdef HAVE_ONEVPL
-    if (device_ptr.value() && context_ptr.value()) {
-        bool gpu_pp_is_created = false;
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-        GAPI_LOG_INFO(nullptr, "Device & Context detected: build GPU VPP preprocessing engine");
-        // create GPU VPP preproc engine
-        dispatcher->insert_worker<VPPPreprocEngine>(
-                                std::unique_ptr<VPLAccelerationPolicy>{
-                                        new VPLDX11AccelerationPolicy(
-                                            std::make_shared<CfgParamDeviceSelector>(
-                                                    device_ptr.value(),
-                                                    device_id,
-                                                    context_ptr.value(),
-                                                    CfgParams{CfgParam::create_acceleration_mode("MFX_ACCEL_MODE_VIA_D3D11")}))
-                                });
-        GAPI_LOG_INFO(nullptr, "GPU VPP preprocessing engine created");
-        gpu_pp_is_created = true;
-#endif
-#endif
-        GAPI_Assert(gpu_pp_is_created && "VPP preproc for GPU is requested, but it is avaiable only for DX11 at now");
-    } else {
-        GAPI_LOG_INFO(nullptr, "Build CPU VPP preprocessing engine");
-        dispatcher->insert_worker<VPPPreprocEngine>(
-                        std::unique_ptr<VPLAccelerationPolicy>{
-                                new VPLCPUAccelerationPolicy(
-                                    std::make_shared<CfgParamDeviceSelector>(CfgParams{}))});
-        GAPI_LOG_INFO(nullptr, "CPU VPP preprocessing engine created");
-    }
-#endif // HAVE_ONEVPL
-    return dispatcher;
-}
-
-template <>
-std::unique_ptr<onevpl::VPPPreprocDispatcher>
 IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
                                            const onevpl::Context &context) {
     using namespace onevpl;
@@ -88,7 +45,7 @@ IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
         bool gpu_pp_is_created = false;
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-        GAPI_LOG_INFO(nullptr, "Device & Context detected: build GPU VPP preprocessing engine");
+        GAPI_LOG_INFO(nullptr, "Creating DX11 VPP preprocessing engine");
         // create GPU VPP preproc engine
         dispatcher->insert_worker<VPPPreprocEngine>(
                                 std::unique_ptr<VPLAccelerationPolicy>{
@@ -96,13 +53,13 @@ IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
                                             std::make_shared<CfgParamDeviceSelector>(
                                                     device, context, CfgParams{}))
                                 });
-        GAPI_LOG_INFO(nullptr, "GPU VPP preprocessing engine created");
+        GAPI_LOG_INFO(nullptr, "DX11 VPP preprocessing engine created");
         gpu_pp_is_created = true;
 #endif
 #endif
         GAPI_Assert(gpu_pp_is_created && "VPP preproc for GPU is requested, but it is avaiable only for DX11 at now");
     } else {
-        GAPI_LOG_INFO(nullptr, "Build CPU VPP preprocessing engine");
+        GAPI_LOG_INFO(nullptr, "Creating CPU VPP preprocessing engine");
         dispatcher->insert_worker<VPPPreprocEngine>(
                         std::unique_ptr<VPLAccelerationPolicy>{
                                 new VPLCPUAccelerationPolicy(
@@ -117,11 +74,10 @@ IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
 // Force instantiation
 template
 std::unique_ptr<onevpl::VPPPreprocDispatcher>
-IPreprocEngine::create_preproc_engine_impl<onevpl::VPPPreprocDispatcher, const std::string &,
-                                           const cv::util::optional<void*> &, const cv::util::optional<void*> &>
-                                          (const std::string &device_id,
-                                           const cv::util::optional<void*> &device_ptr,
-                                           const cv::util::optional<void*> &context_ptr);
+IPreprocEngine::create_preproc_engine_impl<onevpl::VPPPreprocDispatcher,
+                                           const onevpl::Device &,const onevpl::Context &>
+                                          (const onevpl::Device &device,
+                                           const onevpl::Context &ctx);
 } // namespace wip
 } // namespace gapi
 } // namespace cv

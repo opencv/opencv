@@ -60,11 +60,12 @@ private:
     AccelType type;
 };
 
-GAPI_EXPORTS Device create_device(Device::Ptr device_ptr,
-                                  const std::string& device_name,
-                                  AccelType type);
-GAPI_EXPORTS Context create_context(Context::Ptr ctx_ptr,
-                                    AccelType type);
+GAPI_EXPORTS Device create_host_device();
+GAPI_EXPORTS Context create_host_context();
+
+GAPI_EXPORTS Device create_dx11_device(Device::Ptr device_ptr,
+                                       const std::string& device_name);
+GAPI_EXPORTS Context create_dx11_context(Context::Ptr ctx_ptr);
 
 struct GAPI_EXPORTS IDeviceSelector {
     using Ptr = std::shared_ptr<IDeviceSelector>;

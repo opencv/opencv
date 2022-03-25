@@ -51,7 +51,7 @@ void apply_roi(mfxFrameSurface1* surface_handle,
 
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
     ProcessingEngineBase(std::move(accel)) {
-    GAPI_LOG_INFO(nullptr, "Create VPP preprocessing engine");
+    GAPI_LOG_DEBUG(nullptr, "Create VPP preprocessing engine");
     preprocessed_frames_count = 0;
     create_pipeline(
         // 0) preproc decoded surface with VPP params

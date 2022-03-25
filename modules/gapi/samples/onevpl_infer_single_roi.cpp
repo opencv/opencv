@@ -371,14 +371,12 @@ int main(int argc, char *argv[]) {
 
         std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
         accel_device = cv::util::make_optional(
-                            cv::gapi::wip::onevpl::create_device(
+                            cv::gapi::wip::onevpl::create_dx11_device(
                                                         reinterpret_cast<void*>(dx11_dev.get()),
-                                                        device_id,
-                                                        cv::gapi::wip::onevpl::AccelType::DX11));
+                                                        device_id));
         accel_ctx = cv::util::make_optional(
-                            cv::gapi::wip::onevpl::create_context(
-                                                        reinterpret_cast<void*>(dx11_ctx.get()),
-                                                        cv::gapi::wip::onevpl::AccelType::DX11));
+                            cv::gapi::wip::onevpl::create_dx11_context(
+                                                        reinterpret_cast<void*>(dx11_ctx.get())));
 
         // put accel type description for VPL source
         source_cfgs.push_back(cfg::create_from_string(
