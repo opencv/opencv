@@ -410,11 +410,6 @@ void createMat(const cv::GMatDesc &desc, cv::Mat& mat)
     else
     {
         GAPI_Assert(!desc.planar);
-        // NB: WA if mat.dims equal to 1, it would be impossible to reallocate it,
-        // so set dims = 2 and return it back after mat.create.
-        if (mat.dims == 1) {
-            mat.dims = 2;
-        }
         mat.create(desc.dims, desc.depth);
         // NB: WA for 1D mats.
         if (desc.dims.size() == 1u) {
