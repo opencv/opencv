@@ -173,6 +173,50 @@ static PLMode strToPLMode(const std::string& mode_str) {
     }
 }
 
+template <>
+CallParams read<CallParams>(const cv::FileNode& fn) {
+    auto name =
+        check_and_read<std::string>(fn, "name", "node");
+    // FIXME: Impossible to read size_t due OpenCV limitations.
+    auto call_every_nth_opt = readOpt<int>(fn["call_every_nth"]);
+    auto call_every_nth = call_every_nth_opt.value_or(1);
+    if (call_every_nth <= 0) {
+        throw std::logic_error(
+                name + " call_every_nth must be greater than zero\n"
+                "Current call_every_nth: " + std::to_string(call_every_nth));
+    }
+    return CallParams{std::move(name), static_cast<size_t>(call_every_nth)};
+}
+
+template <>
+InferParams read<InferParams>(const cv::FileNode& fn) {
+    auto name =
+        check_and_read<std::string>(fn, "name", "node");
+
+    InferParams params;
+    params.path          = read<ModelPath>(fn);
+    params.device        = check_and_read<std::string>(fn, "device", name);
+    params.input_layers  = readList<std::string>(fn, "input_layers", name);
+    params.output_layers = readList<std::string>(fn, "output_layers", name);
+
+    return params;
+}
+
+template <>
+DummyParams read<DummyParams>(const cv::FileNode& fn) {
+    auto name =
+        check_and_read<std::string>(fn, "name", "node");
+
+    DummyParams params;
+    params.time = check_and_read<double>(fn, "time", name);
+    if (params.time < 0) {
+        throw std::logic_error(name + " time must be positive");
+    }
+    params.output = check_and_read<OutputDescr>(fn, "output", name);
+
+    return params;
+}
+
 static std::vector<std::string> parseExecList(const std::string& exec_list) {
     std::vector<std::string> pl_types;
     std::stringstream ss(exec_list);
@@ -316,31 +360,17 @@ int main(int argc, char* argv[]) {
             if (!nodes_fn.isSeq()) {
                 throw std::logic_error("nodes in " + name + " must be a sequence");
             }
+
             for (auto node_fn : nodes_fn) {
-                auto node_name =
-                    check_and_read<std::string>(node_fn, "name", "node");
+                auto call_params = read<CallParams>(node_fn);
                 auto node_type =
                     check_and_read<std::string>(node_fn, "type", "node");
                 if (node_type == "Dummy") {
-                    auto time =
-                        check_and_read<double>(node_fn, "time", node_name);
-                    if (time < 0) {
-                        throw std::logic_error(node_name + " time must be positive");
-                    }
-                    auto output =
-                        check_and_read<OutputDescr>(node_fn, "output", node_name);
-                    builder.addDummy(node_name, time, output);
+                    builder.addDummy(call_params, read<DummyParams>(node_fn));
                 } else if (node_type == "Infer") {
-                    InferParams params;
-                    params.path   = read<ModelPath>(node_fn);
-                    params.device =
-                        check_and_read<std::string>(node_fn, "device", node_name);
-                    params.input_layers =
-                        readList<std::string>(node_fn, "input_layers", node_name);
-                    params.output_layers =
-                        readList<std::string>(node_fn, "output_layers", node_name);
-                    params.config = config;
-                    builder.addInfer(node_name, params);
+                    auto infer_params = read<InferParams>(node_fn);
+                    infer_params.config = config;
+                    builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
                 }
