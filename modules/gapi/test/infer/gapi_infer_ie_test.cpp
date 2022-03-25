@@ -2915,6 +2915,47 @@ TEST(Infer, ModelWith2DInputs)
 
 #endif // HAVE_NGRAPH
 
+TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatchStreaming)
+{
+    const std::string device = "MYRIAD";
+    skipIfDeviceNotAvailable(device);
+
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    // NB: Precision for inputs is U8.
+    params.model_path = compileAgeGenderBlob(device);
+    params.device_id = device;
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    cv::GMat in, age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(age, gender))
+        .compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+
+    cv::Mat in_mat(320, 240, CV_32FC3);
+    cv::randu(in_mat, 0, 1);
+    cv::Mat gapi_age, gapi_gender;
+
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    // NB: Blob precision is U8, but user pass FP32 data, so exception will be thrown.
+    // Now exception comes directly from IE, but since G-API has information
+    // about data precision at the compile stage, consider the possibility of
+    // throwing exception from there.
+    for (int i = 0; i < 10; ++i) {
+        EXPECT_ANY_THROW(pipeline.pull(cv::gout(gapi_age, gapi_gender)));
+    }
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE

@@ -172,6 +172,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
         return;
     }
 
+    GAPI_DbgAssert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
 
@@ -212,6 +213,7 @@ public:
             return;
         }
 
+        GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
         const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
         GAPI_Assert(in_args.size() == 1u);
         auto frame = cv::util::get<cv::MediaFrame>(in_args[0]);

@@ -100,7 +100,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output_axis_offset < output.get_axis_size(axis));
 
-        /* if axes preceeding the concat axis are all singleton, the concat blocks are contiguous
+        /* if axes preceding the concat axis are all singleton, the concat blocks are contiguous
          * in the output and we can copy each block directly
          */
         if (output.size_range(0, axis) == 1)
