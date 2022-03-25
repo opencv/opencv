@@ -2142,16 +2142,12 @@ CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
     }
 
 #if CV_AVX2
+    // number floats in AVX2 SIMD vector.
     constexpr int nlanes = 8;
 
     if (inSz.width >= nlanes && outSz.width >= nlanes)
     {
-        avx2::calcRowLinear32FC1Impl(reinterpret_cast<float**>(dst),
-                                     reinterpret_cast<const float**>(src0),
-                                     reinterpret_cast<const float**>(src1),
-                                     reinterpret_cast<const float*>(alpha),
-                                     reinterpret_cast<const int*>(mapsx),
-                                     reinterpret_cast<const float*>(beta),
+        avx2::calcRowLinear32FC1Impl(dst, src0, src1, alpha, mapsx, beta,
                                      inSz, outSz, lpi);
 
         return;
