@@ -49,10 +49,6 @@ const std::string keys =
     "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }";
 
 namespace {
-bool is_gpu(const std::string &device_name) {
-    return device_name.find("GPU") != std::string::npos;
-}
-
 std::string get_weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
@@ -336,7 +332,7 @@ int main(int argc, char *argv[]) {
     auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
     auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
-    if (is_gpu(device_id)) {
+    if (device_id.find("GPU") != std::string::npos) {
         auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
             IDXGIFactory* out_factory = nullptr;
@@ -388,7 +384,8 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
     // set ctx_config for GPU device only - no need in case of CPU device type
-    if (is_gpu(device_id) && accel_device.has_value()) {
+    if (accel_device.has_value() &&
+        accel_device.value().get_name().find("GPU") != std::string::npos) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
                                               {"VA_DEVICE", accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
