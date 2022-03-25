@@ -9,6 +9,20 @@
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/util/util.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
+#include <opencv2/gapi/util/util.hpp>
+
+namespace cv
+{
+struct Own {};
+namespace gapi
+{
+namespace own
+{
+struct ConvertibleToOwn{};
+struct NotConvertibleToOwn{};
+} // own
+} // gapi
+} // cv
 
 struct NoGhape {};
 struct HasGShape {
@@ -38,6 +52,8 @@ struct HasGShape {
 struct MimicGShape {
      static constexpr int shape = 0;
 };
+=======
+>>>>>>> Fix library compilation
 #define DISALLOWED_LIST  cv::gapi::own::NotConvertibleToOwn
 namespace opencv_test
 {

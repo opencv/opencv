@@ -87,13 +87,13 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
 
         ParamCreator<ValueType> creator;
         if (name == CfgParam::implementation_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
         } else if (name == CfgParam::decoder_id_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
         } else if (name == CfgParam::acceleration_mode_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if ((name == CfgParam::frames_pool_size_name()) || (name == CfgParam::vpp_frames_pool_size_name())) {
             ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
         } else if ((name == CfgParam::vpp_in_width_name()) || (name == CfgParam::vpp_in_height_name()) ||

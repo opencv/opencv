@@ -26,12 +26,11 @@
 #pragma comment(lib, "dxgi")
 #undef D3D11_NO_HELPERS
 #undef NOMINMAX
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
 
 #include <codecvt>
 #include "opencv2/core/directx.hpp"
-#ifdef HAVE_OPENCL
-#include <CL/cl_d3d11.h>
-#endif
 
 namespace cv {
 namespace gapi {
@@ -288,6 +287,4 @@ CfgParamDeviceSelector::DeviceContexts CfgParamDeviceSelector::select_context() 
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL

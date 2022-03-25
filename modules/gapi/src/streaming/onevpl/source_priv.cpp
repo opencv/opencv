@@ -288,12 +288,16 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
     mfxVariant accel_mode = cfg_param_to_mfx_variant(*accel_mode_it);
 
     switch(accel_mode.Data.U32) {
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
         case MFX_ACCEL_MODE_VIA_D3D11:
         {
             std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy(selector));
             ret = std::move(cand);
             break;
         }
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
         case MFX_ACCEL_MODE_NA:
         {
             std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(selector));
