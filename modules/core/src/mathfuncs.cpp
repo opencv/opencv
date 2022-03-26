@@ -270,6 +270,9 @@ void cartToPolar( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
+              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
+
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
 
@@ -563,6 +566,9 @@ void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
+              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
