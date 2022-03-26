@@ -22,7 +22,7 @@ public:
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     */
-    CV_WRAP Volume(VolumeType vtype);
+    CV_WRAP explicit Volume(VolumeType vtype);
 
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].

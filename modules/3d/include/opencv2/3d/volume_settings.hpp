@@ -27,7 +27,7 @@ public:
     /** @brief Constructor of settings for custom Volume type.
     * @param volumeType volume type.
     */
-    VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
+    explicit VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
 
     ~VolumeSettings();
 

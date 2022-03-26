@@ -1,11 +1,17 @@
 import numpy as np
 import cv2 as cv
-import quaternion
 import argparse
 
+# for more info about this function look cv::Quat::toRotMat3x3(...)
+def calcR(a, b, c, d):
+    return np.array([
+        [1 - 2 * (c * c + d * d), 2 * (b * c - a * d)    , 2 * (b * d + a * c)],
+        [2 * (b * c + a * d)    , 1 - 2 * (b * b + d * d), 2 * (c * d - a * b)],
+        [2 * (b * d - a * c)    , 2 * (c * d + a * b)    , 1 - 2 * (b * b + c * c)]
+    ])
+
 def make_Rt(val):
-    q = np.quaternion(val[6], val[3], val[4] ,val[5])
-    R = quaternion.as_rotation_matrix(q)
+    R = calcR(val[6], val[3], val[4] ,val[5])
     t = np.array([ [val[0]], [val[1]], [val[2]] ])
     tmp = np.array([0, 0, 0, 1])
 
