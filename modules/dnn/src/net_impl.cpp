@@ -1130,8 +1130,12 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
             if (it == inOutShapes.end() || it->second.out.empty())
             {
                 getLayerShapesRecursively(layerId, inOutShapes);
+                it = inOutShapes.find(layerId);
+                CV_Assert(it != inOutShapes.end());
             }
-            const MatShape& shape = inOutShapes[layerId].out[inputLayerIds[i].oid];
+            const int out_port = inputLayerIds[i].oid;
+            CV_CheckLT(out_port, (int)it->second.out.size(), "");
+            const MatShape& shape = it->second.out[out_port];
             layerShapes.in.push_back(shape);
         }
     }

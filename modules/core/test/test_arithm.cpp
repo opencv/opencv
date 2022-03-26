@@ -2620,5 +2620,36 @@ TEST(Core_Magnitude, regression_19506)
     }
 }
 
+TEST(Core_CartPolar, inplace)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    cv::Mat1d A[2] = {cv::Mat1d(10, 10), cv::Mat1d(10, 10)};
+    cv::Mat1d B[2], C[2];
+    cv::UMat uA[2];
+
+    for(int i = 0; i < 2; ++i)
+    {
+        cvtest::randUni(rng, A[i], Scalar::all(-1000), Scalar::all(1000));
+        A[i].copyTo(uA[i]);
+    }
+
+    // Reverse
+    cv::cartToPolar(A[0], A[1], B[0], B[1], false);
+    cv::polarToCart(B[0], B[1], C[0], C[1], false);
+    EXPECT_MAT_NEAR(A[0], C[0], 2);
+    EXPECT_MAT_NEAR(A[1], C[1], 2);
+
+    // Inplace
+    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[0], B[1], false), cv::Exception);
+    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[1], B[0], false), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[0], A[1], false), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[1], A[0], false), cv::Exception);
+    // Inplace OCL
+    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[1], uA[0]), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+
+}
 
 }} // namespace

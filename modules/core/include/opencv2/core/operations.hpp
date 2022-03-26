@@ -230,6 +230,22 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::randn(_Tp a, _Tp b)
     return M;
 }
 
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn> Vec<_Tp, cn>::randu(_Tp a, _Tp b)
+{
+    Vec<_Tp,cn> V;
+    cv::randu(V, Scalar(a), Scalar(b));
+    return V;
+}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn> Vec<_Tp, cn>::randn(_Tp a, _Tp b)
+{
+    Vec<_Tp,cn> V;
+    cv::randn(V, Scalar(a), Scalar(b));
+    return V;
+}
+
 template<typename _Tp, int m, int n> inline
 Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
 {

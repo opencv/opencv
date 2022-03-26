@@ -2371,6 +2371,18 @@ TEST(Mat, ptrVecni_20044)
     EXPECT_EQ(int(6), *(ci));
 }
 
+
+TEST(Mat, VecMatx_4650)
+{
+  // Makes sure the following compiles.
+  cv::Vec3b a;
+  a = cv::Vec3b::ones();
+  a = cv::Vec3b::zeros();
+  a = cv::Vec3b::randn(0, 10);
+  a = cv::Vec3b::randu(0, 10);
+}
+
+
 TEST(Mat, reverse_iterator_19967)
 {
     // empty iterator (#16855)
@@ -2448,5 +2460,6 @@ TEST(Mat, reverse_iterator_19967)
     EXPECT_FALSE((std::is_assignable<decltype(m_1d_const_t.rbegin()), uchar>::value)) << "Constness of const iterator violated.";
 
 }
+
 
 }} // namespace

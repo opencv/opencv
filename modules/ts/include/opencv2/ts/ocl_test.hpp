@@ -89,7 +89,7 @@ extern int test_loop_times;
 #define EXPECT_MAT_NORM(mat, eps) \
 do \
 { \
-    EXPECT_LE(TestUtils::checkNorm1(mat), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNorm1(mat), eps) \
 } while ((void)0, 0)
 
 #undef EXPECT_MAT_NEAR
@@ -98,7 +98,7 @@ do \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(TestUtils::checkNorm2(mat1, mat2), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNorm2(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
 } while ((void)0, 0)
 
@@ -107,7 +107,7 @@ do \
 { \
     ASSERT_EQ((mat1).type(), (mat2).type()); \
     ASSERT_EQ((mat1).size(), (mat2).size()); \
-    EXPECT_LE(TestUtils::checkNormRelative((mat1), (mat2)), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNormRelative((mat1), (mat2)), eps) \
         << "Size: " << (mat1).size() << std::endl; \
 } while ((void)0, 0)
 
@@ -146,7 +146,7 @@ do \
 { \
     ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
     ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
-    EXPECT_LE(TestUtils::checkNorm2(name ## _roi, u ## name ## _roi), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNorm2(name ## _roi, u ## name ## _roi), eps) \
         << "Size: " << name ## _roi.size() << std::endl; \
     Point _offset; \
     Size _wholeSize; \
@@ -155,7 +155,7 @@ do \
     _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
     ASSERT_EQ(name.type(), u ## name.type()); \
     ASSERT_EQ(name.size(), u ## name.size()); \
-    EXPECT_LE(TestUtils::checkNorm2(name, u ## name, _mask), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNorm2(name, u ## name, _mask), eps) \
         << "Size: " << name ## _roi.size() << std::endl; \
 } while ((void)0, 0)
 
@@ -183,7 +183,7 @@ do \
 { \
     ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
     ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
-    EXPECT_LE(TestUtils::checkNormRelativeSparse(name ## _roi, u ## name ## _roi), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNormRelativeSparse(name ## _roi, u ## name ## _roi), eps) \
         << "Size: " << name ## _roi.size() << std::endl; \
     Point _offset; \
     Size _wholeSize; \
@@ -192,7 +192,7 @@ do \
     _mask(Rect(_offset, name ## _roi.size())).setTo(Scalar::all(0)); \
     ASSERT_EQ(name.type(), u ## name.type()); \
     ASSERT_EQ(name.size(), u ## name.size()); \
-    EXPECT_LE(TestUtils::checkNormRelativeSparse(name, u ## name, _mask), eps) \
+    EXPECT_LE(cvtest::ocl::TestUtils::checkNormRelativeSparse(name, u ## name, _mask), eps) \
         << "Size: " << name ## _roi.size() << std::endl; \
 } while ((void)0, 0)
 
