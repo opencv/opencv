@@ -671,7 +671,7 @@ cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::strin
         cv::GFrameDesc expected_net_input_descr =
                     ctx.uu.net_input_params.get_param(layer_name);
 
-        // TODO: Find a better place to convifure media format for GPU
+        // TODO: Find a better place to configure media format for GPU
         // adjust color conversion to NV12 according to OV GPU limitation
         if(ctx.uu.params.device_id.find("GPU") != std::string::npos &&
            ctx.uu.rctx) {
