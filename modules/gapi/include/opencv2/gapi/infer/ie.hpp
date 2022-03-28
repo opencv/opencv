@@ -20,7 +20,7 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
-#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp> // Preproc Dev & Ctx
+#include <opencv2/gapi/streaming/onevpl/accel_types.hpp> // Preproc Dev & Ctx
 
 namespace cv {
 namespace gapi {

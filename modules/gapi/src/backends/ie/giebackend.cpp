@@ -393,12 +393,7 @@ struct IEUnit {
 };
 
 bool IEUnit::InputFramesDesc::is_applicable(const cv::GMetaArg &mm) {
-    switch (mm.index()) {
-        case cv::GMetaArg::index_of<cv::GFrameDesc>():
-            return true;
-        default:
-            return false;
-    }
+    return cv::util::holds_alternative<cv::GFrameDesc>(mm);
 }
 
 const IEUnit::InputFramesDesc::description_type &
@@ -422,6 +417,7 @@ void IEUnit::InputFramesDesc::set_param(const input_name_type &input,
                                   ", input name: " << input);
         GAPI_Assert(false && "Unsupported layout for VPP preproc");
     }
+    GAPI_Assert(inDims.size() == 4u);
     ret.size.width = static_cast<int>(inDims[3]);
     ret.size.height = static_cast<int>(inDims[2]);
 
@@ -599,16 +595,22 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
 }
 
 cv::MediaFrame* IECallContext::prepareKeepAliveFrameSlot(req_key_t key) {
-    std::unique_lock<std::mutex> lock(keep_alive_frames_mutex);
-    auto placeholder_it = keep_alive_pp_frames.emplace(key, cv::MediaFrame()).first;
-    return &placeholder_it->second;
+    std::lock_guard<std::mutex> lock(keep_alive_frames_mutex);
+    return &keep_alive_pp_frames[key];
 }
 
 size_t IECallContext::releaseKeepAliveFrame(req_key_t key) {
     size_t elapsed_count = 0;
     void *prev_slot = nullptr;
+    // NB: release MediaFrame previously captured by prepareKeepAliveFrameSlot
+    // We must capture it to keep a reference counter on inner media adapter
+    // to ensure that frame resource would be locked until inference done.
+    // Otherwise decoder could seized this frame resource as free/unlocked resource
+    // from resource pool
+    // Current  function just take a unique frame `key` and overwrite stored
+    // actual frame by empty frame
     {
-        std::unique_lock<std::mutex> lock(keep_alive_frames_mutex);
+        std::lock_guard<std::mutex> lock(keep_alive_frames_mutex);
         auto ka_frame_it = keep_alive_pp_frames.find(key);
         if (ka_frame_it != keep_alive_pp_frames.end()) {
             prev_slot = &ka_frame_it->second;
@@ -666,8 +668,22 @@ cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::strin
                         ctx.uu.preproc_engine_impl->is_applicable(in_frame);
     if (param.has_value()) {
         GAPI_LOG_DEBUG(nullptr, "VPP preprocessing for decoded remote frame will be used");
-        const cv::GFrameDesc& expected_net_input_descr =
+        cv::GFrameDesc expected_net_input_descr =
                     ctx.uu.net_input_params.get_param(layer_name);
+
+        // TODO: Find a better place to convifure media format for GPU
+        // adjust color conversion to NV12 according to OV GPU limitation
+        if(ctx.uu.params.device_id.find("GPU") != std::string::npos &&
+           ctx.uu.rctx) {
+            auto it = ctx.uu.params.config.find(std::string("GPU_NV12_TWO_INPUTS"));
+            if (it != ctx.uu.params.config.end()) {
+                if (it->second == "YES") {
+                    GAPI_LOG_DEBUG(nullptr, "Adjust preprocessing GPU media format to NV12");
+                    expected_net_input_descr.fmt = cv::MediaFormat::NV12;
+                }
+            }
+        }
+
         cv::gapi::wip::pp_session pp_sess =
                     ctx.uu.preproc_engine_impl->initialize_preproc(param.value(),
                                                                    expected_net_input_descr);

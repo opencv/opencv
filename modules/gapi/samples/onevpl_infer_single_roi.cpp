@@ -77,7 +77,6 @@ cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
     };
     if (!std::all_of(std::begin(delim), std::end(delim), is_delim)) {
         return cv::util::optional<cv::Rect>(); // empty value
-
     }
     if (rv.x < 0 || rv.y < 0 || rv.width <= 0 || rv.height <= 0) {
         return cv::util::optional<cv::Rect>(); // empty value
