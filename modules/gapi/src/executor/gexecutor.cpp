@@ -83,6 +83,9 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
         } // switch(kind)
     } // for(gim nodes)
+
+    // (4)
+    prepareForNewStream();
 }
 
 namespace cv {
@@ -382,9 +385,6 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         const auto& data = m_gm.metadata(sd.data_nh).get<Data>();
         magazine::resetInternalData(m_res, data);
     }
-
-    // Ask every GIslandExecutable to prepate its internal states for a new stream (4)
-    std::call_once(m_prep_flag, [this](){ this->prepareForNewStream(); });
 
     // Run the script (5)
     for (auto &op : m_ops)

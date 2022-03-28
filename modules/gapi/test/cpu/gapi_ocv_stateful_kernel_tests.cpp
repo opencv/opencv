@@ -267,8 +267,46 @@ TEST(StatefulKernel, StateIsMutableInRuntime)
     EXPECT_EQ(1, actualCallsCount);
 
 }
+TEST(StateIsResetOnNewStream, RegularMode)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
-TEST(StatefulKernel, StateIsAutoResetForNewStream)
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount = new int(0);
+
+    auto setupsCounter = c.compile(cv::descr_of(inputData),
+                                   cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                                                    params));
+
+    bool result { };
+    for (int i = 0; i < 2; ++i) {
+        setupsCounter(cv::gin(inputData), cv::gout(result));
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+
+    EXPECT_TRUE(params.pSetupsCount != nullptr);
+    EXPECT_EQ(1, *params.pSetupsCount);
+    setupsCounter.prepareForNewStream();
+    EXPECT_TRUE(params.pSetupsCount != nullptr);
+    // States re-initialization will be called upon their kernels executions only
+    EXPECT_EQ(1, *params.pSetupsCount);
+
+    for (int i = 0; i < 2; ++i) {
+        setupsCounter(cv::gin(inputData), cv::gout(result));
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(2, *params.pSetupsCount);
+    }
+}
+
+TEST(StateIsResetOnNewStream, StreamingMode)
 {
     cv::GMat in;
     cv::GOpaque<bool> out = GIsStateUpToDate::on(in);
