@@ -797,7 +797,20 @@ static void setROIBlob(InferenceEngine::InferRequest& req,
                        const IECallContext&           ctx) {
     if (ctx.uu.params.device_id.find("GPU") != std::string::npos &&
         ctx.uu.rctx) {
-        setBlob(req, layer_name, blob, ctx);
+        try {
+            // NB: make_shared_blob() cannot work with GPU NV12 & ROI at the moment.
+            // OpenVINO produces exception with unsupported status.
+            // To do not encounter with silent crash situation we should catch OV exception
+            // and suggest to avoid this problem by using inner preprocessing feature.
+            // VPP/VPL proprocessing are supported at the moment
+            setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
+        } catch (const std::exception &ex) {
+            GAPI_LOG_WARNING(nullptr, "cannot set ROI blob for layer: " << layer_name <<
+                                      ", reason:\n" << ex.what() <<
+                                      "\nTry using self GAPI preprocessing feature: "
+                                      " Check method `cfgPreprocessingParams` in `cv::gapi::ie::Params`");
+            throw;
+        }
     } else {
         setBlob(req, layer_name, IE::make_shared_blob(blob, toIE(roi)), ctx);
     }
