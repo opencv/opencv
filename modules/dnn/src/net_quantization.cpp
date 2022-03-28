@@ -133,7 +133,9 @@ Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outpu
         if (ld.type == "Blank" || ld.type == "Dropout" || ld.type == "Identity" || ld.type == "Silence" ||
             ld.type == "Flatten" || ld.type == "Padding" || ld.type == "Permute" || ld.type == "Reshape" ||
             ld.type == "ReLU6" || ld.type == "Reorg" || ld.type == "ShuffleChannel" || ld.type == "Resize" ||
-           (ld.type == "ReLU" && !ld.params.get<float>("negative_slope", 0.f)) /* ReLU with negative slope 0 */)
+           (ld.type == "ReLU" && !ld.params.get<float>("negative_slope", 0.f)) || /* ReLU with negative slope 0 */
+           (ld.type == "Reduce" && (toLowerCase(ld.params.get<String>("reduce")) == "max" ||
+            toLowerCase(ld.params.get<String>("reduce")) == "min")))
         {
             for (int i = 0; i < ld.outputBlobs.size(); i++)
             {

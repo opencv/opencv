@@ -1002,7 +1002,7 @@ class CppHeaderParser(object):
                         docstring = ""
                     if stmt_type == "namespace":
                         chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
-                        self.namespaces.add('.'.join(chunks))
+                        self.namespaces.add('.'.join(filter(lambda c: len(c)> 0, chunks)))
                 else:
                     stmt_type, name, parse_flag = "block", "", False
 
