@@ -8,8 +8,6 @@
 #include "test_precomp.hpp"
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/util/util.hpp>
-#include <opencv2/gapi/gtype_traits.hpp>
-#include <opencv2/gapi/util/util.hpp>
 
 namespace cv
 {
@@ -31,29 +29,6 @@ struct HasGShape {
 struct MimicGShape {
      static constexpr int shape = 0;
 };
-
-namespace cv
-{
-struct Own {};
-namespace gapi
-{
-namespace own
-{
-struct ConvertibleToOwn{};
-struct NotConvertibleToOwn{};
-} // own
-} // gapi
-} // cv
-
-struct NoGhape {};
-struct HasGShape {
-    static constexpr cv::GShape shape = cv::GShape::GFRAME;
-};
-struct MimicGShape {
-     static constexpr int shape = 0;
-};
-=======
->>>>>>> Fix library compilation
 #define DISALLOWED_LIST  cv::gapi::own::NotConvertibleToOwn
 namespace opencv_test
 {
@@ -97,4 +72,4 @@ TEST(GAPIUtil, GTypeList)
     static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn is not in empty denial list");
     static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn is not in denial list");
 }
-} // namespace opencv_test
+}

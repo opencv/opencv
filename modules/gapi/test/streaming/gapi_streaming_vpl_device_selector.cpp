@@ -201,7 +201,7 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, DX11DeviceFromCfgParamWithDX11Disab
 {
     using namespace cv::gapi::wip::onevpl;
     std::vector<CfgParam> cfg_params_w_non_existed_dx11;
-    cfg_params_w_not_existed_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+    cfg_params_w_non_existed_dx11.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
     EXPECT_THROW(CfgParamDeviceSelector{cfg_params_w_non_existed_dx11},
                  std::logic_error);
 }

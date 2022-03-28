@@ -154,7 +154,7 @@ private:
     mfxFrameAllocator m_allocator;
 };
 template <class LockProcessor, class UnlockProcessor>
-std::map<mfxMemId, UnlockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::lock_processor_table {};
+std::map<mfxMemId, LockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::lock_processor_table {};
 
 template <class LockProcessor, class UnlockProcessor>
 std::map<mfxMemId, UnlockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::unlock_processor_table {};
@@ -1024,8 +1024,7 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
         }
     } while(frame_num < min_available_frames_count);
 }
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+
 
 TEST(OneVPL_Source_DX11_FrameLockable, LockUnlock_without_Adaptee)
 {
@@ -1114,6 +1113,8 @@ TEST(OneVPL_Source_DX11_FrameLockable, LockUnlock_with_Adaptee)
     EXPECT_EQ(w_lock_counter, exec_count);
     EXPECT_EQ(w_unlock_counter, exec_count);
 }
+#endif // HAVE_DIRECTX
+#endif // HAVE_D3D11
 }
 } // namespace opencv_test
 #endif // HAVE_ONEVPL
