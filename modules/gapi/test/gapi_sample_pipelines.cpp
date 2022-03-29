@@ -63,7 +63,7 @@ namespace
                         const cv::GMatDesc& /*desc*/,
                         cv::Mat&            out)
         {
-            std::fill_n(out.ptr<uint8_t>(), out.total() * out.elemSize(), 0u);
+            out.setTo(0);
         }
     };
 
