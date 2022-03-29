@@ -1555,102 +1555,43 @@ GAPI_FLUID_KERNEL(GFluidLUT, cv::gapi::core::GLUT, false)
 //
 //-------------------------
 
-#if CV_SIMD128
-template<typename DST, typename SRC>
-CV_ALWAYS_INLINE int run_convertto_simd(DST*, const SRC*, int)
+template<typename T>
+CV_ALWAYS_INLINE void convertto_impl(const T in[], T out[], const int length)
 {
-    return 0;
+    memcpy(out, in, length * sizeof(T));
 }
-CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int length)
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE void convertto_impl(const SRC in[], DST out[], const int length)
 {
-    int l = 0;
-    for (; l <= length - 16; l += 16)
-    {
-        v_int32x4 i0, i1, i2, i3;
-        i0 = v_round( v_load( (float*)& in[l     ] ) );
-        i1 = v_round( v_load( (float*)& in[l +  4] ) );
-        i2 = v_round( v_load( (float*)& in[l +  8] ) );
-        i3 = v_round( v_load( (float*)& in[l + 12] ) );
-
-        v_uint16x8 us0, us1;
-        us0 = v_pack_u(i0, i1);
-        us1 = v_pack_u(i2, i3);
-
-        v_uint8x16 uc;
-        uc = v_pack(us0, us1);
-        v_store((uchar*)& out[l], uc);
-    }
-    return l;
-}
-CV_ALWAYS_INLINE int run_convertto_simd(ushort *out, const float *in, const int length)
-{
-    int l = 0;
-    for (; l <= length - 8; l += 8)
-    {
-        v_int32x4 i0, i1;
-        i0 = v_round( v_load( (float*)& in[l     ] ) );
-        i1 = v_round( v_load( (float*)& in[l +  4] ) );
-
-        v_uint16x8 us;
-        us = v_pack_u(i0, i1);
-        v_store((ushort*)& out[l], us);
-    }
-    return l;
-}
-#endif
-
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_integral<DST>::value &&
-                               std::is_floating_point<SRC>::value, bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
-{
-    // manual SIMD if need rounding
-    static_assert(std::is_same<SRC,float>::value, "64-bit floating-point source is not supported");
-    int l = 0; // cycle index
-#if CV_SIMD128
-    l = run_convertto_simd(out, in, length);
+    int x = 0;
+#if CV_SIMD
+    x = convertto_simd(in, out, length);
 #endif
     // tail of SIMD cycle
-    for (; l < length; l++)
+    for (; x < length; ++x)
     {
-        out[l] = saturate<DST>(in[l], rintf);
+        out[x] = saturate<DST>(in[x], rintf);
     }
 }
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_integral<DST>::value &&
-                               std::is_integral<SRC>::value   , bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE void convertto_impl(const SRC *in, DST* out, const float alpha, const float beta,
+                                     const int length)
 {
-    for (int l = 0; l < length; l++)
+    int x = 0;
+#if CV_SIMD
+    x = convertto_scaled_simd(in, out, alpha, beta, length);
+#endif
+
+    for (; x < length; ++x)
     {
-        out[l] = saturate<DST>(in[l]);
-    }
-}
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_floating_point<DST>::value, bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
-{
-    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
-    for (int l = 0; l < length; l++)
-    {
-        out[l] = static_cast<DST>(in[l]);
+        out[x] = saturate<DST>(in[x] * alpha + beta, rintf);
     }
 }
 
 template<typename DST, typename SRC>
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const float alpha, const float beta,
-                                    const int length)
-{
-    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
-    // TODO: optimize if alpha and beta and data are integral
-    for (int l = 0; l < length; l++)
-    {
-        out[l] = saturate<DST>(in[l] * alpha + beta, rintf);
-    }
-}
-
-template<typename DST, typename SRC>
-static void run_convertto(Buffer &dst, const View &src, double _alpha, double _beta)
+CV_ALWAYS_INLINE void run_convertto(Buffer &dst, const View &src, double _alpha, double _beta)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -1664,13 +1605,13 @@ static void run_convertto(Buffer &dst, const View &src, double _alpha, double _b
     const auto beta  = static_cast<float>( _beta  );
 
     // compute faster if no alpha no beta
-    if (1.f == alpha && 0.f == beta)
+    if ((std::fabs(alpha - 1.f) < FLT_EPSILON) && (std::fabs(beta) < FLT_EPSILON))
     {
-        run_convertto(out, in, length);
+        convertto_impl(in, out, length);
     }
     else // if alpha or beta is non-trivial
     {
-        run_convertto(out, in, alpha, beta, length);
+        convertto_impl(in, out, alpha, beta, length);
     }
 }
 
@@ -1681,22 +1622,22 @@ GAPI_FLUID_KERNEL(GFluidConvertTo, cv::gapi::core::GConvertTo, false)
     static void run(const View &src, int /*rtype*/, double alpha, double beta, Buffer &dst)
     {
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar , ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar ,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar ,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar,  float, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, ushort, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  float, run_convertto, dst, src, alpha, beta);
-        UNARY_( short, uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_( short, ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_( short,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_( short,  float, run_convertto, dst, src, alpha, beta);
-        UNARY_( float, uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_( float, ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_( float,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_( float,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(short, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(short, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(short,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(short,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(float, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(float, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(float,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(float,  float, run_convertto, dst, src, alpha, beta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }

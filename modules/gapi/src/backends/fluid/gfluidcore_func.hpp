@@ -266,6 +266,47 @@ SUB_SIMD(float, float)
 
 #undef SUB_SIMD
 
+#define CONVERTTO_NOCOEF_SIMD(SRC, DST)                                                    \
+int convertto_simd(const SRC in[], DST out[], const int length);
+
+CONVERTTO_NOCOEF_SIMD(ushort, uchar)
+CONVERTTO_NOCOEF_SIMD(short, uchar)
+CONVERTTO_NOCOEF_SIMD(float, uchar)
+CONVERTTO_NOCOEF_SIMD(ushort, short)
+CONVERTTO_NOCOEF_SIMD(uchar, short)
+CONVERTTO_NOCOEF_SIMD(float, short)
+CONVERTTO_NOCOEF_SIMD(uchar, ushort)
+CONVERTTO_NOCOEF_SIMD(short, ushort)
+CONVERTTO_NOCOEF_SIMD(float, ushort)
+CONVERTTO_NOCOEF_SIMD(uchar, float)
+CONVERTTO_NOCOEF_SIMD(ushort, float)
+CONVERTTO_NOCOEF_SIMD(short, float)
+
+#undef CONVERTTO_NOCOEF_SIMD
+
+#define CONVERTTO_SCALED_SIMD(SRC, DST)                                     \
+int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
+                          const float beta, const int length);
+
+CONVERTTO_SCALED_SIMD(uchar, uchar)
+CONVERTTO_SCALED_SIMD(ushort, uchar)
+CONVERTTO_SCALED_SIMD(short, uchar)
+CONVERTTO_SCALED_SIMD(float, uchar)
+CONVERTTO_SCALED_SIMD(short, short)
+CONVERTTO_SCALED_SIMD(ushort, short)
+CONVERTTO_SCALED_SIMD(uchar, short)
+CONVERTTO_SCALED_SIMD(float, short)
+CONVERTTO_SCALED_SIMD(ushort, ushort)
+CONVERTTO_SCALED_SIMD(uchar, ushort)
+CONVERTTO_SCALED_SIMD(short, ushort)
+CONVERTTO_SCALED_SIMD(float, ushort)
+CONVERTTO_SCALED_SIMD(uchar, float)
+CONVERTTO_SCALED_SIMD(ushort, float)
+CONVERTTO_SCALED_SIMD(short, float)
+CONVERTTO_SCALED_SIMD(float, float)
+
+#undef CONVERTTO_SCALED_SIMD
+
 }  // namespace fluid
 }  // namespace gapi
 }  // namespace cv
