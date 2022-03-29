@@ -151,12 +151,16 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     page_size_bytes = sysInfo.dwPageSize;
-
     GAPI_LOG_DEBUG(nullptr, "page size: " << page_size_bytes << ", preallocated_raw_bytes: " << preallocated_raw_bytes);
     preallocated_pool_memory_ptr = _aligned_malloc(preallocated_raw_bytes, page_size_bytes);
 #else
-    GAPI_Assert(false && "Compatibility is not tested for systems differ than \"_WIN32\". "
-                         "Please feel free to set it up under OPENCV contribution policy");
+    int err = posix_memalign(&preallocated_pool_memory_ptr, page_size_bytes, preallocated_raw_bytes);
+    if (err) {
+        GAPI_LOG_WARNING(nullptr, "Cannot allocate aligned memory, size: " << preallocated_raw_bytes <<
+                                  ", alignment: " << page_size_bytes << ", error: " <<
+                                  strerror(err));
+    }
+    
 #endif
 
     if (!preallocated_pool_memory_ptr) {
@@ -173,8 +177,9 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
         GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
         ptr = nullptr;
 #else
-        GAPI_Assert(false && "Not implemented for systems differ than \"_WIN32\". "
-                             "Please feel free to set it up under OPENCV contribution policy");
+        free(ptr);
+        GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
+        ptr = nullptr;
 #endif
 
         });

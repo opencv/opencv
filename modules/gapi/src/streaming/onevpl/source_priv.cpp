@@ -11,6 +11,7 @@
 #include "streaming/onevpl/engine/transcode/transcode_engine_legacy.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/data_provider_defines.hpp"
@@ -298,6 +299,12 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
         }
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
+        case MFX_ACCEL_MODE_VIA_VAAPI:
+        {
+            std::unique_ptr<VPLVAAPIAccelerationPolicy> cand(new VPLVAAPIAccelerationPolicy(selector));
+            ret = std::move(cand);
+            break;
+        }
         case MFX_ACCEL_MODE_NA:
         {
             std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(selector));

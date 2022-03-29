@@ -253,7 +253,8 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     // Input parameters finished, now initialize decode
     // create decoder for session accoring to header recovered from source file
-
+    GAPI_LOG_INFO(nullptr, "Initialize decoder for session: " << mfx_session <<
+                           ", frame info: " << mfx_frame_info_to_string(mfxDecParams.mfx.FrameInfo));
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error initializing Decode, error: " +

@@ -136,6 +136,10 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 #endif // HAVE_D3D11
             break;
         }
+        case MFX_IMPL_VIA_VAAPI : {
+            GAPI_LOG_WARNING(nullptr, "TODO MFX_IMPL_VIA_VAAPI falls back to CPU case")
+            break;
+        }
         case MFX_ACCEL_MODE_NA: {
             // nothing to do
             break;
