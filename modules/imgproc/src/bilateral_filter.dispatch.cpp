@@ -50,7 +50,6 @@
 
 #include "bilateral_filter.simd.hpp"
 #include "bilateral_filter.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
-#include "opencv2/core/private_iw.hpp"
 
 /****************************************************************************************\
                                    Bilateral Filtering

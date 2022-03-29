@@ -45,7 +45,6 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "filter.hpp"
-#include "opencv2/core/private_iw.hpp"
 
 /****************************************************************************************\
                              Sobel & Scharr Derivative Filters

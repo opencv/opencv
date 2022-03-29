@@ -6,7 +6,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "convert.hpp"
-#include "opencv2/core/private_iw.hpp"
 
 /****************************************************************************************\
 *                       Generalized split/merge: mixing channels                         *

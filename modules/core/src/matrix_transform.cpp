@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/private_iw.hpp"
 
 namespace cv {
 
