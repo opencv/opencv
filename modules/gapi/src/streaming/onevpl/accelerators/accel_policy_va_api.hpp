@@ -16,10 +16,14 @@
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 
-
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #include "va/va.h"
 #include "va/va_drm.h"
-
+#else
+    typedef void* VADisplay;
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // __linux__
 
 namespace cv {
 namespace gapi {
@@ -46,8 +50,10 @@ struct GAPI_EXPORTS VPLVAAPIAccelerationPolicy final : public VPLAccelerationPol
 
 private:
     std::unique_ptr<VPLAccelerationPolicy> cpu_dispatcher;
+#ifdef __linux__
     VADisplay va_handle;
     int device_fd;  // TODO Move it out in device selector
+#endif // __linux__
 };
 } // namespace onevpl
 } // namespace wip

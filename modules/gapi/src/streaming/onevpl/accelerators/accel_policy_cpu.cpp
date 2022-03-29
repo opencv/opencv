@@ -160,7 +160,6 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
                                   ", alignment: " << page_size_bytes << ", error: " <<
                                   strerror(err));
     }
-    
 #endif
 
     if (!preallocated_pool_memory_ptr) {

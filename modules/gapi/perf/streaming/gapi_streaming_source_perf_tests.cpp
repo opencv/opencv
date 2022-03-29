@@ -197,11 +197,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     // create VPP preproc engine
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
-#ifdef HAVE_DIRECTX
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
-#else
-        return;
-#endif
     } else if (mode.empty()){
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
     } else {
@@ -268,11 +264,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     // create VPP preproc engine
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
-#ifdef HAVE_DIRECTX
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
-#else
-        return;
-#endif
     } else {
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
     }

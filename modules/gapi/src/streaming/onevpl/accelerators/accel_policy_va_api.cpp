@@ -8,10 +8,12 @@
 #include <cstdlib>
 #include <exception>
 
+#ifdef __linux__
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#endif // __linux__
 
 #include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
@@ -22,12 +24,13 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+#ifdef __linux__
 VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
     VPLAccelerationPolicy(selector),
     cpu_dispatcher(new VPLCPUAccelerationPolicy(selector)),
     va_handle(),
     device_fd(-1) {
-
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
     // TODO Move it out in device selector
     device_fd = open("/dev/dri/renderD128", O_RDWR);
     if (device_fd < 0) {
@@ -48,8 +51,10 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
         close(device_fd);
         throw std::runtime_error("vaInitialize failed");
     }
-
     GAPI_LOG_INFO(nullptr, "created");
+#else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 }
 
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() {
@@ -58,8 +63,8 @@ VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() {
 }
 
 void VPLVAAPIAccelerationPolicy::init(session_t session) {
-    GAPI_LOG_INFO(nullptr, "initialize session: " << session);
-    
+    GAPI_LOG_INFO(nullptr, "session: " << session);
+
     cpu_dispatcher->init(session);
     mfxStatus sts = MFXVideoCORE_SetHandle(session,
                                            static_cast<mfxHandleType>(MFX_HANDLE_VA_DISPLAY),
@@ -69,11 +74,11 @@ void VPLVAAPIAccelerationPolicy::init(session_t session) {
         throw std::logic_error("Cannot create VPLVAAPIAccelerationPolicy, MFXVideoCORE_SetHandle error: " +
                                mfxstatus_to_string(sts));
     }
-    GAPI_LOG_INFO(nullptr, "VPLVAAPIAccelerationPolicy initialized, session: " << session);
+    GAPI_LOG_INFO(nullptr, "finished successfully, session: " << session);
 }
 
 void VPLVAAPIAccelerationPolicy::deinit(session_t session) {
-    GAPI_LOG_INFO(nullptr, "deinitialize session: " << session);
+    GAPI_LOG_INFO(nullptr, "session: " << session);
 }
 
 VPLVAAPIAccelerationPolicy::pool_key_t
@@ -98,6 +103,46 @@ cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool
                                                                           const FrameConstructorArgs &params) {
     return cpu_dispatcher->create_frame_adapter(key, params);
 }
+
+#else // __linux__
+
+VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() = default;
+
+void VPLVAAPIAccelerationPolicy::init(session_t ) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+void VPLVAAPIAccelerationPolicy::deinit(session_t) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+VPLVAAPIAccelerationPolicy::pool_key_t VPLVAAPIAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest&,
+                                                                                     mfxFrameInfo&) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+VPLVAAPIAccelerationPolicy::surface_weak_ptr_t VPLVAAPIAccelerationPolicy::get_free_surface(pool_key_t) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLVAAPIAccelerationPolicy::get_free_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLVAAPIAccelerationPolicy::get_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+
+cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool_key_t,
+                                                                          const FrameConstructorArgs &) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+#endif // __linux__
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
