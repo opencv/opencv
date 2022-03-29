@@ -349,22 +349,18 @@ int convertto_simd(const SRC in[], DST out[], const int length)      \
                     CV_CPU_DISPATCH_MODES_ALL);                      \
 }
 
-//CONVERTTO_NOCOEF_SIMD(uchar, uchar)
 CONVERTTO_NOCOEF_SIMD(ushort, uchar)
 CONVERTTO_NOCOEF_SIMD(short, uchar)
 CONVERTTO_NOCOEF_SIMD(float, uchar)
-//CONVERTTO_NOCOEF_SIMD(short, short)
 CONVERTTO_NOCOEF_SIMD(ushort, short)
 CONVERTTO_NOCOEF_SIMD(uchar, short)
 CONVERTTO_NOCOEF_SIMD(float, short)
-//CONVERTTO_NOCOEF_SIMD(ushort, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, ushort)
 CONVERTTO_NOCOEF_SIMD(short, ushort)
 CONVERTTO_NOCOEF_SIMD(float, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, float)
 CONVERTTO_NOCOEF_SIMD(ushort, float)
 CONVERTTO_NOCOEF_SIMD(short, float)
-//CONVERTTO_NOCOEF_SIMD(float, float)
 
 #undef CONVERTTO_NOCOEF_SIMD
 

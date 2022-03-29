@@ -278,22 +278,18 @@ SUB_SIMD(float, float)
 #define CONVERTTO_NOCOEF_SIMD(SRC, DST)                                             \
 int convertto_simd(const SRC in[], DST out[], const int length);
 
-CONVERTTO_NOCOEF_SIMD(uchar, uchar)
 CONVERTTO_NOCOEF_SIMD(ushort, uchar)
 CONVERTTO_NOCOEF_SIMD(short, uchar)
 CONVERTTO_NOCOEF_SIMD(float, uchar)
-CONVERTTO_NOCOEF_SIMD(short, short)
 CONVERTTO_NOCOEF_SIMD(ushort, short)
 CONVERTTO_NOCOEF_SIMD(uchar, short)
 CONVERTTO_NOCOEF_SIMD(float, short)
-CONVERTTO_NOCOEF_SIMD(ushort, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, ushort)
 CONVERTTO_NOCOEF_SIMD(short, ushort)
 CONVERTTO_NOCOEF_SIMD(float, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, float)
 CONVERTTO_NOCOEF_SIMD(ushort, float)
 CONVERTTO_NOCOEF_SIMD(short, float)
-CONVERTTO_NOCOEF_SIMD(float, float)
 
 #undef CONVERTTO_NOCOEF_SIMD
 
@@ -333,6 +329,11 @@ int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#define SRC_SHORT_OR_USHORT std::is_same<SRC, short>::value || std::is_same<SRC, ushort>::value
+#define DST_SHORT_OR_USHORT std::is_same<DST, short>::value || std::is_same<DST, ushort>::value
+#define SRC_DST_SHORT_AND_USHORT (std::is_same<SRC, short>::value && std::is_same<DST, ushort>::value) || (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value)
+#define SRC_DST_SHORT_OR_USHORT (std::is_same<SRC, short>::value && std::is_same<DST, short>::value) || (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value)
 
 struct scale_tag {};
 struct not_scale_tag {};
@@ -2866,8 +2867,7 @@ CV_ALWAYS_INLINE void convertto_simd_nocoeff_impl(const float* inx, uchar* outx)
 
 template<typename SRC>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<SRC, short>::value ||
-                        std::is_same<SRC, ushort>::value, void>::type
+typename std::enable_if<SRC_SHORT_OR_USHORT, void>::type
 convertto_simd_nocoeff_impl(const SRC* inx, uchar* outx)
 {
     constexpr int nlanes = v_uint8::nlanes;
@@ -2882,8 +2882,7 @@ convertto_simd_nocoeff_impl(const SRC* inx, uchar* outx)
 
 template<typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, void>::type
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
 convertto_simd_nocoeff_impl(const float* inx, DST* outx)
 {
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;
@@ -2896,8 +2895,7 @@ convertto_simd_nocoeff_impl(const float* inx, DST* outx)
 
 template<typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, void>::type
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
 convertto_simd_nocoeff_impl(const uchar* inx, DST* outx)
 {
     v_uint8 a = vx_load(inx);
@@ -2908,8 +2906,7 @@ convertto_simd_nocoeff_impl(const uchar* inx, DST* outx)
 
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<(std::is_same<SRC, short>::value && std::is_same<DST, ushort>::value) ||
-                        (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value), void>::type
+typename std::enable_if<SRC_DST_SHORT_AND_USHORT, void>::type
 convertto_simd_nocoeff_impl(const SRC* inx, DST* outx)
 {
     vector_type_of_t<SRC> a = vx_load(inx);
@@ -2947,22 +2944,18 @@ int convertto_simd(const SRC in[], DST out[], const int length)    \
     return x;                                                      \
 }
 
-//CONVERTTO_NOCOEF_SIMD(uchar, uchar)
 CONVERTTO_NOCOEF_SIMD(ushort, uchar)
 CONVERTTO_NOCOEF_SIMD(short, uchar)
 CONVERTTO_NOCOEF_SIMD(float, uchar)
-//CONVERTTO_NOCOEF_SIMD(short, short)
 CONVERTTO_NOCOEF_SIMD(ushort, short)
 CONVERTTO_NOCOEF_SIMD(uchar, short)
 CONVERTTO_NOCOEF_SIMD(float, short)
-//CONVERTTO_NOCOEF_SIMD(ushort, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, ushort)
 CONVERTTO_NOCOEF_SIMD(short, ushort)
 CONVERTTO_NOCOEF_SIMD(float, ushort)
 CONVERTTO_NOCOEF_SIMD(uchar, float)
 CONVERTTO_NOCOEF_SIMD(ushort, float)
 CONVERTTO_NOCOEF_SIMD(short, float)
-//CONVERTTO_NOCOEF_SIMD(float, float)
 
 #undef CONVERTTO_NOCOEF_SIMD
 
@@ -2987,8 +2980,7 @@ CV_ALWAYS_INLINE void convertto_scaled_simd_impl(const float* inx, uchar* outx,
 
 template<typename SRC>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<SRC, short>::value ||
-                        std::is_same<SRC, ushort>::value, void>::type
+typename std::enable_if<SRC_SHORT_OR_USHORT, void>::type
 convertto_scaled_simd_impl(const SRC* inx, uchar* outx, const v_float32& v_alpha,
                            const v_float32& v_beta)
 {
@@ -3034,8 +3026,7 @@ CV_ALWAYS_INLINE void convertto_scaled_simd_impl(const uchar* inx, uchar* outx,
 
 template<typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, void>::type
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
 convertto_scaled_simd_impl(const float* inx, DST* outx,
                            const v_float32& v_alpha,
                            const v_float32& v_beta)
@@ -3053,8 +3044,7 @@ convertto_scaled_simd_impl(const float* inx, DST* outx,
 
 template<typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<std::is_same<DST, short>::value ||
-                        std::is_same<DST, ushort>::value, void>::type
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
 convertto_scaled_simd_impl(const uchar* inx, DST* outx,
                            const v_float32& v_alpha,
                            const v_float32& v_beta)
@@ -3072,10 +3062,8 @@ convertto_scaled_simd_impl(const uchar* inx, DST* outx,
 
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE
-typename std::enable_if<(std::is_same<SRC, short>::value && std::is_same<DST, ushort>::value) ||
-                        (std::is_same<SRC, short>::value && std::is_same<DST, short>::value) ||
-                        (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value) ||
-                        (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value), void>::type
+typename std::enable_if<SRC_DST_SHORT_AND_USHORT ||
+                        SRC_DST_SHORT_OR_USHORT, void>::type
 convertto_scaled_simd_impl(const SRC* inx, DST* outx,
                            const v_float32& v_alpha,
                            const v_float32& v_beta)
