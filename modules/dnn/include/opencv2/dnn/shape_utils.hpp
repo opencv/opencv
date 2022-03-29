@@ -44,6 +44,9 @@
 
 #include <opencv2/dnn/dnn.hpp>
 #include <opencv2/core/types_c.h>  // CV_MAX_DIM
+#include <iostream>
+#include <ostream>
+#include <sstream>
 
 namespace cv {
 namespace dnn {
@@ -192,7 +195,10 @@ static inline std::string toString(const MatShape& shape, const String& name = "
     ss << " ]";
     return ss.str();
 }
-
+static inline void print(const MatShape& shape, const String& name = "")
+{
+    std::cout << toString(shape, name) << std::endl;
+}
 static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
 {
     out << toString(shape);

@@ -46,20 +46,9 @@
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 
-#include <iostream>
-#include <ostream>
-#include <sstream>
-
 #ifdef HAVE_INF_ENGINE
 #include <thread>
 #endif
-
-namespace cv { namespace dnn { namespace dnn4_v20210608 {
-static inline void print(const MatShape& shape, const String& name = "")
-{
-    std::cout << toString(shape, name) << std::endl;
-}
-}}} // namespace
 
 namespace opencv_test { namespace {
 
