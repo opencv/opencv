@@ -275,6 +275,47 @@ SUB_SIMD(float, float)
 
 #undef SUB_SIMD
 
+#define CONVERTTO_NOCOEF_SIMD(SRC, DST)                                             \
+int convertto_simd(const SRC in[], DST out[], const int length);
+
+CONVERTTO_NOCOEF_SIMD(ushort, uchar)
+CONVERTTO_NOCOEF_SIMD(short, uchar)
+CONVERTTO_NOCOEF_SIMD(float, uchar)
+CONVERTTO_NOCOEF_SIMD(ushort, short)
+CONVERTTO_NOCOEF_SIMD(uchar, short)
+CONVERTTO_NOCOEF_SIMD(float, short)
+CONVERTTO_NOCOEF_SIMD(uchar, ushort)
+CONVERTTO_NOCOEF_SIMD(short, ushort)
+CONVERTTO_NOCOEF_SIMD(float, ushort)
+CONVERTTO_NOCOEF_SIMD(uchar, float)
+CONVERTTO_NOCOEF_SIMD(ushort, float)
+CONVERTTO_NOCOEF_SIMD(short, float)
+
+#undef CONVERTTO_NOCOEF_SIMD
+
+#define CONVERTTO_SCALED_SIMD(SRC, DST)                                     \
+int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
+                          const float beta, const int length);
+
+CONVERTTO_SCALED_SIMD(uchar, uchar)
+CONVERTTO_SCALED_SIMD(ushort, uchar)
+CONVERTTO_SCALED_SIMD(short, uchar)
+CONVERTTO_SCALED_SIMD(float, uchar)
+CONVERTTO_SCALED_SIMD(short, short)
+CONVERTTO_SCALED_SIMD(ushort, short)
+CONVERTTO_SCALED_SIMD(uchar, short)
+CONVERTTO_SCALED_SIMD(float, short)
+CONVERTTO_SCALED_SIMD(ushort, ushort)
+CONVERTTO_SCALED_SIMD(uchar, ushort)
+CONVERTTO_SCALED_SIMD(short, ushort)
+CONVERTTO_SCALED_SIMD(float, ushort)
+CONVERTTO_SCALED_SIMD(uchar, float)
+CONVERTTO_SCALED_SIMD(ushort, float)
+CONVERTTO_SCALED_SIMD(short, float)
+CONVERTTO_SCALED_SIMD(float, float)
+
+#undef CONVERTTO_SCALED_SIMD
+
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width);
 
@@ -288,6 +329,11 @@ int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#define SRC_SHORT_OR_USHORT std::is_same<SRC, short>::value || std::is_same<SRC, ushort>::value
+#define DST_SHORT_OR_USHORT std::is_same<DST, short>::value || std::is_same<DST, ushort>::value
+#define SRC_DST_SHORT_AND_USHORT (std::is_same<SRC, short>::value && std::is_same<DST, ushort>::value) || (std::is_same<SRC, ushort>::value && std::is_same<DST, short>::value)
+#define SRC_DST_SHORT_OR_USHORT (std::is_same<SRC, short>::value && std::is_same<DST, short>::value) || (std::is_same<SRC, ushort>::value && std::is_same<DST, ushort>::value)
 
 struct scale_tag {};
 struct not_scale_tag {};
@@ -2777,6 +2823,314 @@ SUB_SIMD(short, float)
 SUB_SIMD(float, float)
 
 #undef SUB_SIMD
+
+//-------------------------
+//
+// Fluid kernels: ConvertTo
+//
+//-------------------------
+
+CV_ALWAYS_INLINE void store_i16(ushort* outx, const v_uint16& res)
+{
+    vx_store(outx, res);
+}
+
+CV_ALWAYS_INLINE void store_i16(short* outx, const v_uint16& res)
+{
+    vx_store(outx, v_reinterpret_as_s16(res));
+}
+
+CV_ALWAYS_INLINE void store_i16(ushort* outx, const v_int16& res)
+{
+    vx_store(outx, v_reinterpret_as_u16(res));
+}
+
+CV_ALWAYS_INLINE void store_i16(short* outx, const v_int16& res)
+{
+    vx_store(outx, res);
+}
+
+CV_ALWAYS_INLINE void convertto_simd_nocoeff_impl(const float* inx, uchar* outx)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    v_int32 a1 = v_round(vx_load(inx));
+    v_int32 a2 = v_round(vx_load(&inx[nlanes/4]));
+    v_int32 a3 = v_round(vx_load(&inx[nlanes/2]));
+    v_int32 a4 = v_round(vx_load(&inx[3*nlanes/4]));
+
+    v_int16 r1 = v_pack(a1, a2);
+    v_int16 r2 = v_pack(a3, a4);
+
+    vx_store(outx, v_pack_u(r1, r2));
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE
+typename std::enable_if<SRC_SHORT_OR_USHORT, void>::type
+convertto_simd_nocoeff_impl(const SRC* inx, uchar* outx)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    vector_type_of_t<SRC> a1 = vx_load(inx);
+    vector_type_of_t<SRC> a2 = vx_load(&inx[nlanes/2]);
+
+    pack_store_uchar(outx, a1, a2);
+}
+
+//---------------------------------------------------------------------------------------
+
+template<typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
+convertto_simd_nocoeff_impl(const float* inx, DST* outx)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    v_int32 a1 = v_round(vx_load(inx));
+    v_int32 a2 = v_round(vx_load(&inx[nlanes/2]));
+
+    v_store_i16(outx, a1, a2);
+}
+
+template<typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
+convertto_simd_nocoeff_impl(const uchar* inx, DST* outx)
+{
+    v_uint8 a = vx_load(inx);
+    v_uint16 res = v_expand_low(a);
+
+    store_i16(outx, res);
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<SRC_DST_SHORT_AND_USHORT, void>::type
+convertto_simd_nocoeff_impl(const SRC* inx, DST* outx)
+{
+    vector_type_of_t<SRC> a = vx_load(inx);
+    store_i16(outx, a);
+}
+
+//---------------------------------------------------------------------------------------
+
+template<typename SRC>
+CV_ALWAYS_INLINE void convertto_simd_nocoeff_impl(const SRC* inx, float* outx)
+{
+    v_float32 a = vg_load_f32(inx);
+    vx_store(outx, a);
+}
+
+#define CONVERTTO_NOCOEF_SIMD(SRC, DST)                            \
+int convertto_simd(const SRC in[], DST out[], const int length)    \
+{                                                                  \
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;          \
+                                                                   \
+    int x = 0;                                                     \
+    for (;;)                                                       \
+    {                                                              \
+        for (; x <= length - nlanes; x += nlanes)                  \
+        {                                                          \
+            convertto_simd_nocoeff_impl(&in[x], &out[x]);          \
+        }                                                          \
+        if (x < length)                                            \
+        {                                                          \
+            x = length - nlanes;                                   \
+            continue;                                              \
+        }                                                          \
+        break;                                                     \
+    }                                                              \
+    return x;                                                      \
+}
+
+CONVERTTO_NOCOEF_SIMD(ushort, uchar)
+CONVERTTO_NOCOEF_SIMD(short, uchar)
+CONVERTTO_NOCOEF_SIMD(float, uchar)
+CONVERTTO_NOCOEF_SIMD(ushort, short)
+CONVERTTO_NOCOEF_SIMD(uchar, short)
+CONVERTTO_NOCOEF_SIMD(float, short)
+CONVERTTO_NOCOEF_SIMD(uchar, ushort)
+CONVERTTO_NOCOEF_SIMD(short, ushort)
+CONVERTTO_NOCOEF_SIMD(float, ushort)
+CONVERTTO_NOCOEF_SIMD(uchar, float)
+CONVERTTO_NOCOEF_SIMD(ushort, float)
+CONVERTTO_NOCOEF_SIMD(short, float)
+
+#undef CONVERTTO_NOCOEF_SIMD
+
+CV_ALWAYS_INLINE void convertto_scaled_simd_impl(const float* inx, uchar* outx,
+                                                 const v_float32& v_alpha,
+                                                 const v_float32& v_beta)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    v_float32 a1 = vx_load(inx);
+    v_float32 a2 = vx_load(&inx[nlanes / 4]);
+    v_float32 a3 = vx_load(&inx[nlanes / 2]);
+    v_float32 a4 = vx_load(&inx[3 * nlanes / 4]);
+
+    v_int32 r1 = v_round(v_fma(a1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(a2, v_alpha, v_beta));
+    v_int32 r3 = v_round(v_fma(a3, v_alpha, v_beta));
+    v_int32 r4 = v_round(v_fma(a4, v_alpha, v_beta));
+
+    vx_store(outx, v_pack_u(v_pack(r1, r2), v_pack(r3, r4)));
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE
+typename std::enable_if<SRC_SHORT_OR_USHORT, void>::type
+convertto_scaled_simd_impl(const SRC* inx, uchar* outx, const v_float32& v_alpha,
+                           const v_float32& v_beta)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    v_int16 a = v_reinterpret_as_s16(vx_load(inx));
+    v_int16 b = v_reinterpret_as_s16(vx_load(&inx[nlanes / 2]));
+
+    v_float32 a1 = v_cvt_f32(v_expand_low(a));
+    v_float32 a2 = v_cvt_f32(v_expand_high(a));
+    v_float32 b1 = v_cvt_f32(v_expand_low(b));
+    v_float32 b2 = v_cvt_f32(v_expand_high(b));
+
+    v_int32 r1 = v_round(v_fma(a1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(a2, v_alpha, v_beta));
+    v_int32 r3 = v_round(v_fma(b1, v_alpha, v_beta));
+    v_int32 r4 = v_round(v_fma(b2, v_alpha, v_beta));
+
+    vx_store(outx, v_pack_u(v_pack(r1, r2), v_pack(r3, r4)));
+}
+
+CV_ALWAYS_INLINE void convertto_scaled_simd_impl(const uchar* inx, uchar* outx,
+                                                 const v_float32& v_alpha,
+                                                 const v_float32& v_beta)
+{
+    v_uint8 a = vx_load(inx);
+    v_int16 a1 = v_reinterpret_as_s16(v_expand_low(a));
+    v_int16 a2 = v_reinterpret_as_s16(v_expand_high(a));
+
+    v_float32 f1 = v_cvt_f32(v_expand_low(a1));
+    v_float32 f2 = v_cvt_f32(v_expand_high(a1));
+
+    v_float32 f3 = v_cvt_f32(v_expand_low(a2));
+    v_float32 f4 = v_cvt_f32(v_expand_high(a2));
+
+    v_int32 r1 = v_round(v_fma(f1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(f2, v_alpha, v_beta));
+    v_int32 r3 = v_round(v_fma(f3, v_alpha, v_beta));
+    v_int32 r4 = v_round(v_fma(f4, v_alpha, v_beta));
+
+    vx_store(outx, v_pack_u(v_pack(r1, r2), v_pack(r3, r4)));
+}
+
+template<typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
+convertto_scaled_simd_impl(const float* inx, DST* outx,
+                           const v_float32& v_alpha,
+                           const v_float32& v_beta)
+{
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    v_float32 a1 = vx_load(inx);
+    v_float32 a2 = vx_load(&inx[nlanes / 2]);
+
+    v_int32 r1 = v_round(v_fma(a1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(a2, v_alpha, v_beta));
+
+    v_store_i16(outx, r1, r2);
+}
+
+template<typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<DST_SHORT_OR_USHORT, void>::type
+convertto_scaled_simd_impl(const uchar* inx, DST* outx,
+                           const v_float32& v_alpha,
+                           const v_float32& v_beta)
+{
+    v_int16 a = v_reinterpret_as_s16(vx_load_expand(inx));
+
+    v_float32 a1 = v_cvt_f32(v_expand_low(a));
+    v_float32 a2 = v_cvt_f32(v_expand_high(a));
+
+    v_int32 r1 = v_round(v_fma(a1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(a2, v_alpha, v_beta));
+
+    v_store_i16(outx, r1, r2);
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE
+typename std::enable_if<SRC_DST_SHORT_AND_USHORT ||
+                        SRC_DST_SHORT_OR_USHORT, void>::type
+convertto_scaled_simd_impl(const SRC* inx, DST* outx,
+                           const v_float32& v_alpha,
+                           const v_float32& v_beta)
+{
+    v_int16 a = v_reinterpret_as_s16(vx_load(inx));
+
+    v_float32 a1 = v_cvt_f32(v_expand_low(a));
+    v_float32 a2 = v_cvt_f32(v_expand_high(a));
+
+    v_int32 r1 = v_round(v_fma(a1, v_alpha, v_beta));
+    v_int32 r2 = v_round(v_fma(a2, v_alpha, v_beta));
+
+    v_store_i16(outx, r1, r2);
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE void convertto_scaled_simd_impl(const SRC* inx, float* outx,
+                                                 const v_float32& v_alpha,
+                                                 const v_float32& v_beta)
+{
+    v_float32 a = vg_load_f32(inx);
+    vx_store(outx, v_fma(a, v_alpha, v_beta));
+}
+
+#define CONVERTTO_SCALED_SIMD(SRC, DST)                                     \
+int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
+                          const float beta, const int length)               \
+{                                                                           \
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;                   \
+    v_float32 v_alpha = vx_setall_f32(alpha);                               \
+    v_float32 v_beta = vx_setall_f32(beta);                                 \
+                                                                            \
+    int x = 0;                                                              \
+    for (;;)                                                                \
+    {                                                                       \
+        for (; x <= length - nlanes; x += nlanes)                           \
+        {                                                                   \
+            convertto_scaled_simd_impl(&in[x], &out[x], v_alpha, v_beta);   \
+        }                                                                   \
+        if (x < length)                                                     \
+        {                                                                   \
+            x = length - nlanes;                                            \
+            continue;                                                       \
+        }                                                                   \
+        break;                                                              \
+    }                                                                       \
+    return x;                                                               \
+}
+
+CONVERTTO_SCALED_SIMD(uchar, uchar)
+CONVERTTO_SCALED_SIMD(ushort, uchar)
+CONVERTTO_SCALED_SIMD(short, uchar)
+CONVERTTO_SCALED_SIMD(float, uchar)
+CONVERTTO_SCALED_SIMD(short, short)
+CONVERTTO_SCALED_SIMD(ushort, short)
+CONVERTTO_SCALED_SIMD(uchar, short)
+CONVERTTO_SCALED_SIMD(float, short)
+CONVERTTO_SCALED_SIMD(ushort, ushort)
+CONVERTTO_SCALED_SIMD(uchar, ushort)
+CONVERTTO_SCALED_SIMD(short, ushort)
+CONVERTTO_SCALED_SIMD(float, ushort)
+CONVERTTO_SCALED_SIMD(uchar, float)
+CONVERTTO_SCALED_SIMD(ushort, float)
+CONVERTTO_SCALED_SIMD(short, float)
+CONVERTTO_SCALED_SIMD(float, float)
+
+#undef CONVERTTO_SCALED_SIMD
 
 #endif  // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

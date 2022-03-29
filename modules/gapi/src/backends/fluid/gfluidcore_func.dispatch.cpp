@@ -293,9 +293,8 @@ int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
 #define ADD_SIMD(SRC, DST)                                                    \
 int add_simd(const SRC in1[], const SRC in2[], DST out[], const int length)   \
 {                                                                             \
-                                                                              \
-        CV_CPU_DISPATCH(add_simd, (in1, in2, out, length),                    \
-                        CV_CPU_DISPATCH_MODES_ALL);                           \
+    CV_CPU_DISPATCH(add_simd, (in1, in2, out, length),                        \
+                    CV_CPU_DISPATCH_MODES_ALL);                               \
 }
 
 ADD_SIMD(uchar, uchar)
@@ -320,9 +319,8 @@ ADD_SIMD(float, float)
 #define SUB_SIMD(SRC, DST)                                                    \
 int sub_simd(const SRC in1[], const SRC in2[], DST out[], const int length)   \
 {                                                                             \
-                                                                              \
-        CV_CPU_DISPATCH(sub_simd, (in1, in2, out, length),                    \
-                        CV_CPU_DISPATCH_MODES_ALL);                           \
+    CV_CPU_DISPATCH(sub_simd, (in1, in2, out, length),                        \
+                    CV_CPU_DISPATCH_MODES_ALL);                               \
 }
 
 SUB_SIMD(uchar, uchar)
@@ -343,6 +341,55 @@ SUB_SIMD(short, float)
 SUB_SIMD(float, float)
 
 #undef SUB_SIMD
+
+#define CONVERTTO_NOCOEF_SIMD(SRC, DST)                              \
+int convertto_simd(const SRC in[], DST out[], const int length)      \
+{                                                                    \
+    CV_CPU_DISPATCH(convertto_simd, (in, out, length),               \
+                    CV_CPU_DISPATCH_MODES_ALL);                      \
+}
+
+CONVERTTO_NOCOEF_SIMD(ushort, uchar)
+CONVERTTO_NOCOEF_SIMD(short, uchar)
+CONVERTTO_NOCOEF_SIMD(float, uchar)
+CONVERTTO_NOCOEF_SIMD(ushort, short)
+CONVERTTO_NOCOEF_SIMD(uchar, short)
+CONVERTTO_NOCOEF_SIMD(float, short)
+CONVERTTO_NOCOEF_SIMD(uchar, ushort)
+CONVERTTO_NOCOEF_SIMD(short, ushort)
+CONVERTTO_NOCOEF_SIMD(float, ushort)
+CONVERTTO_NOCOEF_SIMD(uchar, float)
+CONVERTTO_NOCOEF_SIMD(ushort, float)
+CONVERTTO_NOCOEF_SIMD(short, float)
+
+#undef CONVERTTO_NOCOEF_SIMD
+
+#define CONVERTTO_SCALED_SIMD(SRC, DST)                                     \
+int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
+                          const float beta, const int length)               \
+{                                                                           \
+    CV_CPU_DISPATCH(convertto_scaled_simd, (in, out, alpha, beta, length),  \
+                    CV_CPU_DISPATCH_MODES_ALL);                             \
+}
+
+CONVERTTO_SCALED_SIMD(uchar, uchar)
+CONVERTTO_SCALED_SIMD(ushort, uchar)
+CONVERTTO_SCALED_SIMD(short, uchar)
+CONVERTTO_SCALED_SIMD(float, uchar)
+CONVERTTO_SCALED_SIMD(short, short)
+CONVERTTO_SCALED_SIMD(ushort, short)
+CONVERTTO_SCALED_SIMD(uchar, short)
+CONVERTTO_SCALED_SIMD(float, short)
+CONVERTTO_SCALED_SIMD(ushort, ushort)
+CONVERTTO_SCALED_SIMD(uchar, ushort)
+CONVERTTO_SCALED_SIMD(short, ushort)
+CONVERTTO_SCALED_SIMD(float, ushort)
+CONVERTTO_SCALED_SIMD(uchar, float)
+CONVERTTO_SCALED_SIMD(ushort, float)
+CONVERTTO_SCALED_SIMD(short, float)
+CONVERTTO_SCALED_SIMD(float, float)
+
+#undef CONVERTTO_SCALED_SIMD
 
 } // namespace fluid
 } // namespace gapi
