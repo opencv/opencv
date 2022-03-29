@@ -30,29 +30,57 @@ struct GOrigin;
  * @brief G-API data objects used to build G-API expressions.
  *
  * These objects do not own any particular data (except compile-time
- * associated values like with cv::GScalar) and are used to construct
- * graphs.
+ * associated values like with cv::GScalar or `cv::GArray<T>`) and are
+ * used only to construct graphs.
  *
  * Every graph in G-API starts and ends with data objects.
  *
  * Once constructed and compiled, G-API operates with regular host-side
  * data instead. Refer to the below table to find the mapping between
- * G-API and regular data types.
+ * G-API and regular data types when passing input and output data
+ * structures to G-API:
  *
  *    G-API data type    | I/O data type
  *    ------------------ | -------------
- *    cv::GMat           | cv::Mat
+ *    cv::GMat           | cv::Mat, cv::UMat, cv::RMat
  *    cv::GScalar        | cv::Scalar
  *    `cv::GArray<T>`    | std::vector<T>
  *    `cv::GOpaque<T>`   | T
+ *    cv::GFrame         | cv::MediaFrame
+ */
+/**
+ * @brief GMat class represents image or tensor data in the
+ * graph.
+ *
+ * GMat doesn't store any data itself, instead it describes a
+ * functional relationship between operations consuming and producing
+ * GMat objects.
+ *
+ * GMat is a virtual counterpart of Mat and UMat, but it
+ * doesn't mean G-API use Mat or UMat objects internally to represent
+ * GMat objects -- the internal data representation may be
+ * backend-specific or optimized out at all.
+ *
+ * @sa Mat, GMatDesc
  */
 class GAPI_EXPORTS_W_SIMPLE GMat
 {
 public:
+    /**
+     * @brief Constructs an empty GMat
+     *
+     * Normally, empty G-API data objects denote a starting point of
+     * the graph. When an empty GMat is assigned to a result of some
+     * operation, it obtains a functional link to this operation (and
+     * is not empty anymore).
+     */
     GAPI_WRAP GMat();                       // Empty constructor
-    GMat(const GNode &n, std::size_t out);  // Operation result constructor
 
+    /// @private
+    GMat(const GNode &n, std::size_t out);  // Operation result constructor
+    /// @private
     GOrigin& priv();                        // Internal use only
+    /// @private
     const GOrigin& priv()  const;           // Internal use only
 
 private:

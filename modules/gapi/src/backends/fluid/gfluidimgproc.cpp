@@ -25,6 +25,13 @@
 
 #include "gfluidimgproc_func.hpp"
 
+#if CV_AVX2
+#include "gfluidimgproc_simd_avx2.hpp"
+#endif
+#if CV_SSE4_1
+#include "gfluidcore_simd_sse41.hpp"
+#endif
+
 #include <opencv2/imgproc/hal/hal.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
@@ -1022,8 +1029,8 @@ GAPI_FLUID_KERNEL(GFluidSobel, cv::gapi::imgproc::GSobel, true)
         auto *kx = scratch.OutLine<float>();
         auto *ky = kx + ksz;
 
-        Mat kxmat(1, ksize, CV_32FC1, kx);
-        Mat kymat(ksize, 1, CV_32FC1, ky);
+        Mat kxmat(1, ksz, CV_32FC1, kx);
+        Mat kymat(ksz, 1, CV_32FC1, ky);
         getDerivKernels(kxmat, kymat, dx, dy, ksize);
     }
 
@@ -1181,12 +1188,12 @@ GAPI_FLUID_KERNEL(GFluidSobelXY, cv::gapi::imgproc::GSobelXY, true)
         auto *kx_dy = buf_helper.kx_dy;
         auto *ky_dy = buf_helper.ky_dy;
 
-        Mat kxmatX(1, ksize, CV_32FC1, kx_dx);
-        Mat kymatX(ksize, 1, CV_32FC1, ky_dx);
+        Mat kxmatX(1, ksz, CV_32FC1, kx_dx);
+        Mat kymatX(ksz, 1, CV_32FC1, ky_dx);
         getDerivKernels(kxmatX, kymatX, order, 0, ksize);
 
-        Mat kxmatY(1, ksize, CV_32FC1, kx_dy);
-        Mat kymatY(ksize, 1, CV_32FC1, ky_dy);
+        Mat kxmatY(1, ksz, CV_32FC1, kx_dy);
+        Mat kymatY(ksz, 1, CV_32FC1, ky_dy);
         getDerivKernels(kxmatY, kymatY, 0, order, ksize);
     }
 
@@ -1821,16 +1828,439 @@ GAPI_FLUID_KERNEL(GFluidBayerGR2RGB, cv::gapi::imgproc::GBayerGR2RGB, false)
     }
 };
 
+template<typename T, typename Mapper, int chanNum>
+struct LinearScratchDesc {
+    using alpha_t = typename Mapper::alpha_type;
+    using index_t = typename Mapper::index_type;
+
+    alpha_t* alpha;
+    alpha_t* clone;
+    index_t* mapsx;
+    alpha_t* beta;
+    index_t* mapsy;
+    T*       tmp;
+
+    LinearScratchDesc(int /*inW*/, int /*inH*/, int outW, int outH,  void* data) {
+        alpha = reinterpret_cast<alpha_t*>(data);
+        clone = reinterpret_cast<alpha_t*>(alpha + outW);
+        mapsx = reinterpret_cast<index_t*>(clone + outW*4);
+        beta  = reinterpret_cast<alpha_t*>(mapsx + outW);
+        mapsy = reinterpret_cast<index_t*>(beta  + outH);
+        tmp   = reinterpret_cast<T*>      (mapsy + outH*2);
+    }
+
+    static int bufSize(int inW, int /*inH*/, int outW, int outH, int lpi) {
+        auto size = outW * sizeof(alpha_t)     +
+                    outW * sizeof(alpha_t) * 4 +  // alpha clones
+                    outW * sizeof(index_t)     +
+                    outH * sizeof(alpha_t)     +
+                    outH * sizeof(index_t) * 2 +
+                     inW * sizeof(T) * lpi * chanNum;
+
+        return static_cast<int>(size);
+    }
+};
+static inline double invRatio(int inSz, int outSz) {
+    return static_cast<double>(outSz) / inSz;
+}
+
+static inline double ratio(int inSz, int outSz) {
+    return 1 / invRatio(inSz, outSz);
+}
+
+template<typename T, typename Mapper, int chanNum = 1>
+CV_ALWAYS_INLINE void initScratchLinear(const cv::GMatDesc& in,
+                                        const         Size& outSz,
+                                        cv::gapi::fluid::Buffer& scratch,
+                                        int  lpi)
+{
+    using alpha_type = typename Mapper::alpha_type;
+    static const auto unity = Mapper::unity;
+
+    auto inSz = in.size;
+    auto sbufsize = LinearScratchDesc<T, Mapper, chanNum>::bufSize(inSz.width, inSz.height, outSz.width, outSz.height, lpi);
+
+    Size scratch_size{sbufsize, 1};
+
+    cv::GMatDesc desc;
+    desc.chan = 1;
+    desc.depth = CV_8UC1;
+    desc.size = scratch_size;
+
+    cv::gapi::fluid::Buffer buffer(desc);
+    scratch = std::move(buffer);
+
+    double hRatio = ratio(in.size.width, outSz.width);
+    double vRatio = ratio(in.size.height, outSz.height);
+
+    LinearScratchDesc<T, Mapper, chanNum> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+
+    auto *alpha = scr.alpha;
+    auto *clone = scr.clone;
+    auto *index = scr.mapsx;
+
+    for (int x = 0; x < outSz.width; ++x)
+    {
+        auto map = Mapper::map(hRatio, 0, in.size.width, x);
+        auto alpha0 = map.alpha0;
+        auto index0 = map.index0;
+
+        // TRICK:
+        // Algorithm takes pair of input pixels, sx0'th and sx1'th,
+        // and compute result as alpha0*src[sx0] + alpha1*src[sx1].
+        // By definition: sx1 == sx0 + 1 either sx1 == sx0, and
+        // alpha0 + alpha1 == unity (scaled appropriately).
+        // Here we modify formulas for alpha0 and sx1: by assuming
+        // that sx1 == sx0 + 1 always, and patching alpha0 so that
+        // result remains intact.
+        // Note that we need in.size.width >= 2, for both sx0 and
+        // sx0+1 were indexing pixels inside the input's width.
+        if (map.index1 != map.index0 + 1) {
+            GAPI_DbgAssert(map.index1 == map.index0);
+            GAPI_DbgAssert(in.size.width >= 2);
+            if (map.index0 < in.size.width-1) {
+                // sx1=sx0+1 fits inside row,
+                // make sure alpha0=unity and alpha1=0,
+                // so that result equals src[sx0]*unity
+                alpha0 = saturate_cast<alpha_type>(unity);
+            } else {
+                // shift sx0 to left by 1 pixel,
+                // and make sure that alpha0=0 and alpha1==1,
+                // so that result equals to src[sx0+1]*unity
+                alpha0 = 0;
+                index0--;
+            }
+        }
+
+        alpha[x] = alpha0;
+        index[x] = index0;
+
+        for (int l = 0; l < 4; ++l) {
+            clone[4*x + l] = alpha0;
+        }
+    }
+
+    auto *beta    = scr.beta;
+    auto *index_y = scr.mapsy;
+
+    for (int y = 0; y < outSz.height; y++) {
+        auto mapY = Mapper::map(vRatio, 0, in.size.height, y);
+        beta[y] = mapY.alpha0;
+        index_y[y] = mapY.index0;
+        index_y[outSz.height + y] = mapY.index1;
+    }
+}
+
+template<typename F, typename I>
+struct MapperUnit {
+    F alpha0, alpha1;
+    I index0, index1;
+};
+
+CV_ALWAYS_INLINE uint8_t resize_calc_revert_fixedpoint(short alpha0, uint8_t src0, short alpha1, uint8_t src1)
+{
+    constexpr static const int half = 1 << 14;
+    return (src0 * alpha0 + src1 * alpha1 + half) >> 15;
+}
+
+CV_ALWAYS_INLINE float resize_main_calculation(float alpha0, float src0, float alpha1, float src1)
+{
+    return src0 * alpha0 + src1 * alpha1;
+}
+
+namespace linear {
+struct Mapper {
+    constexpr static const int ONE = 1 << 15;
+    typedef short alpha_type;
+    typedef short index_type;
+    constexpr static const int unity = ONE;
+
+    typedef MapperUnit<short, short> Unit;
+
+    static inline Unit map(double ratio, int start, int max, int outCoord) {
+        float f = static_cast<float>((outCoord + 0.5) * ratio - 0.5);
+        int s = cvFloor(f);
+        f -= s;
+
+        Unit u;
+
+        u.index0 = static_cast<short>(std::max(s - start, 0));
+        u.index1 = static_cast<short>(((f == 0.0) || s + 1 >= max) ? s - start : s - start + 1);
+
+        u.alpha0 = saturate_cast<short>(ONE * (1.0f - f));
+        u.alpha1 = saturate_cast<short>(ONE * f);
+
+        return u;
+    }
+};
+}  // namespace linear
+
+namespace linear32f {
+struct Mapper {
+    typedef float alpha_type;
+    typedef int   index_type;
+    constexpr static const float unity = 1;
+
+    typedef MapperUnit<float, int> Unit;
+
+    static inline Unit map(double ratio, int start, int max, int outCoord) {
+        float f = static_cast<float>((outCoord + 0.5) * ratio - 0.5);
+        int s = cvFloor(f);
+        f -= s;
+
+        Unit u;
+
+        u.index0 = std::max(s - start, 0);
+        u.index1 = ((std::fabs(f) <= FLT_EPSILON) || s + 1 >= max) ? s - start : s - start + 1;
+
+        u.alpha0 = 1.f - f;
+        u.alpha1 =       f;
+
+        return u;
+    }
+};
+}  // namespace linear32f
+
+template<typename T, class Mapper, int numChan>
+CV_ALWAYS_INLINE void calcRowLinearC(const cv::gapi::fluid::View  & in,
+                                     cv::gapi::fluid::Buffer& out,
+                                     cv::gapi::fluid::Buffer& scratch) {
+    using alpha_type = typename Mapper::alpha_type;
+
+    auto  inSz =  in.meta().size;
+    auto outSz = out.meta().size;
+
+    auto inY  = in.y();
+    int outY = out.y();
+    int lpi = out.lpi();
+
+    GAPI_DbgAssert(outY + lpi <= outSz.height);
+    GAPI_DbgAssert(lpi <= 4);
+
+    LinearScratchDesc<T, Mapper, numChan> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+
+    const auto *alpha = scr.alpha;
+    const auto *mapsx = scr.mapsx;
+    const auto *beta_0 = scr.beta;
+    const auto *mapsy = scr.mapsy;
+
+    const auto *beta = beta_0 + outY;
+    const T *src0[4];
+    const T *src1[4];
+    T* dst[4];
+
+    for (int l = 0; l < lpi; l++) {
+        auto index0 = mapsy[outY + l] - inY;
+        auto index1 = mapsy[outSz.height + outY + l] - inY;
+        src0[l] = in.InLine<const T>(index0);
+        src1[l] = in.InLine<const T>(index1);
+        dst[l] = out.OutLine<T>(l);
+    }
+
+#if CV_SSE4_1
+    const auto* clone = scr.clone;
+    auto* tmp = scr.tmp;
+
+    if (inSz.width >= 16 && outSz.width >= 16)
+    {
+        sse41::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
+                                                reinterpret_cast<const uint8_t**>(src0),
+                                                reinterpret_cast<const uint8_t**>(src1),
+                                                reinterpret_cast<const short*>(alpha),
+                                                reinterpret_cast<const short*>(clone),
+                                                reinterpret_cast<const short*>(mapsx),
+                                                reinterpret_cast<const short*>(beta),
+                                                reinterpret_cast<uint8_t*>(tmp),
+                                                inSz, outSz, lpi);
+
+        return;
+    }
+#endif // CV_SSE4_1
+    int length = out.length();
+    for (int l = 0; l < lpi; l++) {
+        constexpr static const auto unity = Mapper::unity;
+
+        auto beta0 =                                   beta[l];
+        auto beta1 = saturate_cast<alpha_type>(unity - beta[l]);
+
+        for (int x = 0; x < length; x++) {
+            auto alpha0 =                                   alpha[x];
+            auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
+            auto sx0 = mapsx[x];
+            auto sx1 = sx0 + 1;
+
+            for (int c = 0; c < numChan; c++) {
+                auto idx0 = numChan*sx0 + c;
+                auto idx1 = numChan*sx1 + c;
+                T tmp0 = resize_calc_revert_fixedpoint(beta0, src0[l][idx0], beta1, src1[l][idx0]);
+                T tmp1 = resize_calc_revert_fixedpoint(beta0, src0[l][idx1], beta1, src1[l][idx1]);
+                dst[l][numChan * x + c] = resize_calc_revert_fixedpoint(alpha0, tmp0, alpha1, tmp1);
+            }
+        }
+    }
+}
+
+template<class Mapper>
+CV_ALWAYS_INLINE void calcRowLinear(const cv::gapi::fluid::View& in,
+                                    cv::gapi::fluid::Buffer& out,
+                                    cv::gapi::fluid::Buffer& scratch)
+{
+    GAPI_DbgAssert((out.meta().depth == CV_32F) && (out.meta().chan == 1));
+
+    auto  inSz = in.meta().size;
+    auto outSz = out.meta().size;
+
+    auto inY = in.y();
+    int length = out.length();
+    int outY = out.y();
+    int lpi = out.lpi();
+    GAPI_DbgAssert(outY + lpi <= outSz.height);
+
+    GAPI_DbgAssert(lpi <= 4);
+
+    LinearScratchDesc<float, Mapper, 1> scr(inSz.width, inSz.height, outSz.width,
+                                            outSz.height, scratch.OutLineB());
+
+    const auto* alpha = scr.alpha;
+    const auto* mapsx = scr.mapsx;
+    const auto* beta0 = scr.beta;
+    const auto* mapsy = scr.mapsy;
+
+    const auto* beta = beta0 + outY;
+    const float* src0[4];
+    const float* src1[4];
+    float* dst[4];
+
+    for (int l = 0; l < lpi; ++l)
+    {
+        auto index0 = mapsy[outY + l] - inY;
+        auto index1 = mapsy[outSz.height + outY + l] - inY;
+
+        src0[l] = in.InLine<const float>(index0);
+        src1[l] = in.InLine<const float>(index1);
+        dst[l] = out.OutLine<float>(l);
+    }
+
+#if CV_AVX2
+    // number floats in AVX2 SIMD vector.
+    constexpr int nlanes = 8;
+
+    if (inSz.width >= nlanes && outSz.width >= nlanes)
+    {
+        avx2::calcRowLinear32FC1Impl(dst, src0, src1, alpha, mapsx, beta,
+                                     inSz, outSz, lpi);
+
+        return;
+    }
+#endif // CV_AVX2
+
+    using alpha_type = typename Mapper::alpha_type;
+    for (int l = 0; l < lpi; ++l)
+    {
+        constexpr static const auto unity = Mapper::unity;
+
+        auto b0 = beta[l];
+        auto b1 = saturate_cast<alpha_type>(unity - beta[l]);
+
+        for (int x = 0; x < length; ++x) {
+            auto alpha0 = alpha[x];
+            auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
+            auto sx0 = mapsx[x];
+            auto sx1 = sx0 + 1;
+
+            float tmp0 = resize_main_calculation(b0, src0[l][sx0], b1, src1[l][sx0]);
+            float tmp1 = resize_main_calculation(b0, src0[l][sx1], b1, src1[l][sx1]);
+            dst[l][x] = resize_main_calculation(alpha0, tmp0, alpha1, tmp1);
+        }
+    }
+}
+
+GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::imgproc::GResize, true)
+{
+    static const int Window = 1;
+    static const int LPI = 4;
+    static const auto Kind = GFluidKernel::Kind::Resize;
+
+    constexpr static const int INTER_RESIZE_COEF_BITS = 11;
+    constexpr static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
+    constexpr static const short ONE = INTER_RESIZE_COEF_SCALE;
+
+   static void initScratch(const cv::GMatDesc& in,
+                           cv::Size outSz, double fx, double fy, int interp,
+                           cv::gapi::fluid::Buffer &scratch)
+   {
+       GAPI_Assert((in.depth == CV_8U && in.chan == 3) ||
+                   (in.depth == CV_32F && in.chan == 1));
+       GAPI_Assert(interp == cv::INTER_LINEAR);
+
+       int outSz_w;
+       int outSz_h;
+       if (outSz.width == 0 || outSz.height == 0)
+       {
+           outSz_w = saturate_cast<int>(in.size.width * fx);
+           outSz_h = saturate_cast<int>(in.size.height * fy);
+       }
+       else
+       {
+           outSz_w = outSz.width;
+           outSz_h = outSz.height;
+       }
+       cv::Size outSize(outSz_w, outSz_h);
+
+       if (in.depth == CV_8U && in.chan == 3)
+       {
+           initScratchLinear<uchar, linear::Mapper, 3>(in, outSize, scratch, LPI);
+       }
+       else if (in.depth == CV_32F && in.chan == 1)
+       {
+           initScratchLinear<float, linear32f::Mapper, 1>(in, outSize, scratch, LPI);
+       }
+       else
+       {
+           CV_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
+       }
+   }
+
+    static void resetScratch(cv::gapi::fluid::Buffer& /*scratch*/)
+    {}
+
+    static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/,
+                    double /*fy*/, int interp, cv::gapi::fluid::Buffer& out,
+                    cv::gapi::fluid::Buffer& scratch)
+    {
+        GAPI_Assert((in.meta().depth == CV_8U && in.meta().chan == 3) ||
+                    (in.meta().depth == CV_32F && in.meta().chan == 1));
+        GAPI_Assert(interp == cv::INTER_LINEAR);
+
+        const int channels = in.meta().chan;
+        const int depth = in.meta().depth;
+
+        if (depth == CV_8U && channels == 3)
+        {
+            calcRowLinearC<uint8_t, linear::Mapper, 3>(in, out, scratch);
+        }
+        else if (depth == CV_32F && channels == 1)
+        {
+            calcRowLinear<linear32f::Mapper>(in, out, scratch);
+        }
+        else
+        {
+            CV_Error(cv::Error::StsBadArg, "unsupported combination of type and number of channel");
+        }
+    }
+};
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::fluid::kernels()
+cv::GKernelPackage cv::gapi::imgproc::fluid::kernels()
 {
     using namespace cv::gapi::fluid;
 
     return cv::gapi::kernels
     <   GFluidBGR2Gray
+      , GFluidResize
       , GFluidRGB2Gray
       , GFluidRGB2GrayCustom
       , GFluidRGB2YUV

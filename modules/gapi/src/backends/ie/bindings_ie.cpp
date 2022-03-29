@@ -37,3 +37,21 @@ cv::gapi::ie::PyParams cv::gapi::ie::params(const std::string &tag,
                                             const std::string &device) {
     return {tag, model, device};
 }
+
+cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::constInput(const std::string &layer_name,
+                                                           const cv::Mat &data,
+                                                           TraitAs hint) {
+    m_priv->constInput(layer_name, data, hint);
+    return *this;
+}
+
+cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::cfgNumRequests(size_t nireq) {
+    m_priv->cfgNumRequests(nireq);
+    return *this;
+}
+
+cv::gapi::ie::PyParams&
+cv::gapi::ie::PyParams::cfgBatchSize(const size_t size) {
+    m_priv->cfgBatchSize(size);
+    return *this;
+}

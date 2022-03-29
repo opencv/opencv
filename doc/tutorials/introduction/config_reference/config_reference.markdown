@@ -339,7 +339,7 @@ Integration with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg) library for deco
 - _swscale_
 - _avresample_ (optional)
 
-Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/master) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
+Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/4.x) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
 
 @note [Libav](https://en.wikipedia.org/wiki/Libav) library can be used instead of FFmpeg, but this combination is not actively supported.
 
@@ -476,9 +476,10 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `BUILD_PROTOBUF` | _ON_ | Build own copy of _protobuf_. Must be disabled if you want to use external library. |
 | `PROTOBUF_UPDATE_FILES` | _OFF_ | Re-generate all .proto files. _protoc_ compiler compatible with used version of _protobuf_ must be installed. |
 | `OPENCV_DNN_OPENCL` | _ON_ | Enable built-in OpenCL inference backend. |
-| `WITH_INF_ENGINE` | _OFF_ | Enables [Intel Inference Engine (IE)](https://github.com/openvinotoolkit/openvino) backend. Allows to execute networks in IE format (.xml + .bin). Inference Engine must be installed either as part of [OpenVINO toolkit](https://en.wikipedia.org/wiki/OpenVINO), either as a standalone library built from sources. |
-| `INF_ENGINE_RELEASE` | _2020040000_ | Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
-| `WITH_NGRAPH` | _OFF_ | Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
+| `WITH_INF_ENGINE` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables [Intel Inference Engine (IE)](https://github.com/openvinotoolkit/openvino) backend. Allows to execute networks in IE format (.xml + .bin). Inference Engine must be installed either as part of [OpenVINO toolkit](https://en.wikipedia.org/wiki/OpenVINO), either as a standalone library built from sources. |
+| `INF_ENGINE_RELEASE` | _2020040000_ | **Deprecated since OpenVINO 2022.1** Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
+| `WITH_NGRAPH` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
+| `WITH_OPENVINO` | _OFF_ | Enable Intel OpenVINO Toolkit support. Should be used for OpenVINO>=2022.1 instead of `WITH_INF_ENGINE` and `WITH_NGRAPH`. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
@@ -589,6 +590,14 @@ Some features have been added specifically for automated build environments, lik
 | `OPENCV_CMAKE_HOOKS_DIR` | _empty_ | OpenCV allows to customize configuration process by adding custom hook scripts at each stage and substage. cmake scripts with predefined names located in the directory set by this variable will be included before and after various configuration stages. Examples of file names: _CMAKE_INIT.cmake_, _PRE_CMAKE_BOOTSTRAP.cmake_, _POST_CMAKE_BOOTSTRAP.cmake_, etc.. Other names are not documented and can be found in the project cmake files by searching for the _ocv_cmake_hook_ macro calls. |
 | `OPENCV_DUMP_HOOKS_FLOW` | _OFF_ | Enables a debug message print on each cmake hook script call. |
 
+## Contrib Modules
+
+Following build options are utilized in `opencv_contrib` modules, as stated [previously](#tutorial_config_reference_general_contrib), these extra modules can be added to your final build by setting `DOPENCV_EXTRA_MODULES_PATH` option.
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `WITH_CLP` | _OFF_ | Will add [coinor](https://projects.coin-or.org/Clp) linear programming library build support which is required in `videostab` module. Make sure to install the development libraries of coinor-clp. |
+
 
 # Other non-documented options
 
@@ -605,7 +614,6 @@ Some features have been added specifically for automated build environments, lik
 `WITH_CPUFEATURES`
 `WITH_EIGEN`
 `WITH_OPENVX`
-`WITH_CLP`
 `WITH_DIRECTX`
 `WITH_VA`
 `WITH_LAPACK`

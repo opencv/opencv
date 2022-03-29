@@ -27,6 +27,7 @@ set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "All
 # TODO building plugins with OpenCV is not supported yet
 #set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
 #string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+#string(TOLOWER "${PARALLEL_PLUGIN_LIST}" PARALLEL_PLUGIN_LIST)
 
 
 ocv_add_module(core
@@ -144,6 +145,7 @@ ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
+    "${OPENGL_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
@@ -152,6 +154,14 @@ ocv_target_link_libraries(${the_module} PRIVATE
 if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
 endif()
+
+if(OPENCV_DISABLE_THREAD_SUPPORT)
+  ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")
+endif()
+
+if(OPENCV_SEMIHOSTING)
+  ocv_target_compile_definitions(${the_module} PRIVATE "-DOPENCV_SEMIHOSTING")
+endif(OPENCV_SEMIHOSTING)
 
 if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")

@@ -1,0 +1,14 @@
+{
+  "name": "image_classification",
+  "version": "0.0.1",
+  "description": "An Electron.js example of image_classification using webnn-native",
+  "main": "main.js",
+  "author": "WebNN-native Authors",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^15.1.2"
+  }
+}

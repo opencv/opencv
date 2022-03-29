@@ -51,6 +51,14 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
         DECLARE_DYNAMIC_BACKEND("QT")
 #endif
 #endif
+
+#ifdef _WIN32
+#ifdef HAVE_WIN32UI
+        DECLARE_STATIC_BACKEND("WIN32", createUIBackendWin32UI)
+#elif defined(ENABLE_PLUGINS)
+        DECLARE_DYNAMIC_BACKEND("WIN32")
+#endif
+#endif
     };
     return g_backends;
 };

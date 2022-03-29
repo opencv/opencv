@@ -29,6 +29,9 @@ namespace gimpl
 
 namespace gapi
 {
+/**
+ * @brief This namespace contains G-API OpenCL backend functions, structures, and symbols.
+ */
 namespace ocl
 {
     /**

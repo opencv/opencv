@@ -48,7 +48,14 @@
 
 #if defined( HAVE_QT_OPENGL )
 #include <QtOpenGL>
-#include <QGLWidget>
+
+  // QGLWidget deprecated and no longer functions with Qt6, use QOpenGLWidget instead
+  #ifdef HAVE_QT6
+  #include <QOpenGLWidget>
+  #else
+  #include <QGLWidget>
+  #endif
+
 #endif
 
 #include <QAbstractEventDispatcher>
@@ -431,7 +438,14 @@ protected:
 
 #ifdef HAVE_QT_OPENGL
 
-class OpenGlViewPort : public QGLWidget, public OCVViewPort
+// Use QOpenGLWidget for Qt6 (QGLWidget is deprecated)
+#ifdef HAVE_QT6
+typedef QOpenGLWidget OpenCVQtWidgetBase;
+#else
+typedef QGLWidget OpenCVQtWidgetBase;
+#endif
+
+class OpenGlViewPort : public OpenCVQtWidgetBase, public OCVViewPort
 {
 public:
     explicit OpenGlViewPort(QWidget* parent);

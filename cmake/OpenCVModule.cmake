@@ -254,7 +254,7 @@ function(_glob_locations out_paths out_names)
     list(LENGTH paths before)
     get_filename_component(path "${path}" ABSOLUTE)
     # Either module itself
-    if(NOT path STREQUAL CMAKE_CURRENT_SOURCE_DIR AND EXISTS "${path}/CMakeLists.txt")
+    if(NOT path STREQUAL "${OpenCV_SOURCE_DIR}/modules" AND EXISTS "${path}/CMakeLists.txt")
       get_filename_component(name "${path}" NAME)
       list(APPEND paths "${path}")
       list(APPEND names "${name}")
@@ -296,7 +296,7 @@ macro(_add_modules_1 paths names)
       list(GET ${names} ${i} __name)
       #message(STATUS "First pass: ${__name} => ${__path}")
       include("${__path}/cmake/init.cmake" OPTIONAL)
-      add_subdirectory("${__path}" "${CMAKE_CURRENT_BINARY_DIR}/.firstpass/${__name}")
+      add_subdirectory("${__path}" "${OpenCV_BINARY_DIR}/modules/.firstpass/${__name}")
     endforeach()
   endif()
 endmacro()
@@ -316,7 +316,7 @@ macro(_add_modules_2)
       endif()
       string(REGEX REPLACE "^opencv_" "" name "${m}")
       #message(STATUS "Second pass: ${name} => ${OPENCV_MODULE_${m}_LOCATION}")
-      add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${CMAKE_CURRENT_BINARY_DIR}/${name}")
+      add_subdirectory("${OPENCV_MODULE_${m}_LOCATION}" "${OpenCV_BINARY_DIR}/modules/${name}")
     endif()
     ocv_cmake_hook(POST_MODULES_CREATE_${the_module})
   endforeach()
@@ -369,11 +369,41 @@ macro(ocv_glob_modules main_root)
   __ocv_resolve_dependencies()
 
   # create modules
-  set(OPENCV_INITIAL_PASS OFF PARENT_SCOPE)
   set(OPENCV_INITIAL_PASS OFF)
   ocv_cmake_hook(PRE_MODULES_CREATE)
   _add_modules_2(${OPENCV_MODULES_BUILD})
   ocv_cmake_hook(POST_MODULES_CREATE)
+endmacro()
+
+
+# called by root CMakeLists.txt
+macro(ocv_register_modules)
+  if(NOT OPENCV_MODULES_PATH)
+    set(OPENCV_MODULES_PATH "${OpenCV_SOURCE_DIR}/modules")
+  endif()
+
+  ocv_glob_modules(${OPENCV_MODULES_PATH} ${OPENCV_EXTRA_MODULES_PATH})
+
+  # build lists of modules to be documented
+  set(OPENCV_MODULES_MAIN "")
+  set(OPENCV_MODULES_EXTRA "")
+
+  foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MODULES_DISABLED_AUTO} ${OPENCV_MODULES_DISABLED_FORCE})
+    string(REGEX REPLACE "^opencv_" "" mod "${mod}")
+    if("${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${OpenCV_SOURCE_DIR}/modules/${mod}")
+      list(APPEND OPENCV_MODULES_MAIN ${mod})
+    else()
+      list(APPEND OPENCV_MODULES_EXTRA ${mod})
+    endif()
+  endforeach()
+  ocv_list_sort(OPENCV_MODULES_MAIN)
+  ocv_list_sort(OPENCV_MODULES_EXTRA)
+  set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video calib3d features2d objdetect dnn ml flann photo stitching)
+  list(REMOVE_ITEM OPENCV_MODULES_MAIN ${FIXED_ORDER_MODULES})
+  set(OPENCV_MODULES_MAIN ${FIXED_ORDER_MODULES} ${OPENCV_MODULES_MAIN})
+
+  set(OPENCV_MODULES_MAIN ${OPENCV_MODULES_MAIN} CACHE INTERNAL "List of main modules" FORCE)
+  set(OPENCV_MODULES_EXTRA ${OPENCV_MODULES_EXTRA} CACHE INTERNAL "List of extra modules" FORCE)
 endmacro()
 
 
@@ -877,6 +907,7 @@ macro(ocv_create_module)
 endmacro()
 
 macro(_ocv_create_module)
+  add_definitions(-D__OPENCV_BUILD=1)
 
   ocv_compiler_optimization_process_sources(OPENCV_MODULE_${the_module}_SOURCES OPENCV_MODULE_${the_module}_DEPS_EXT ${the_module})
   set(__module_headers ${OPENCV_MODULE_${the_module}_HEADERS})

@@ -119,12 +119,12 @@ if(CV_GCC OR CV_CLANG)
     # we want.
     add_extra_compiler_option(-Wall)
   endif()
-  add_extra_compiler_option(-Werror=return-type)
-  add_extra_compiler_option(-Werror=non-virtual-dtor)
-  add_extra_compiler_option(-Werror=address)
-  add_extra_compiler_option(-Werror=sequence-point)
+  add_extra_compiler_option(-Wreturn-type)
+  add_extra_compiler_option(-Wnon-virtual-dtor)
+  add_extra_compiler_option(-Waddress)
+  add_extra_compiler_option(-Wsequence-point)
   add_extra_compiler_option(-Wformat)
-  add_extra_compiler_option(-Werror=format-security -Wformat)
+  add_extra_compiler_option(-Wformat-security -Wformat)
   add_extra_compiler_option(-Wmissing-declarations)
   add_extra_compiler_option(-Wmissing-prototypes)
   add_extra_compiler_option(-Wstrict-prototypes)
@@ -178,8 +178,17 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
-  # We need pthread's
-  if(UNIX AND NOT ANDROID AND NOT (APPLE AND CV_CLANG)) # TODO
+  # We need pthread's, unless we have explicitly disabled multi-thread execution.
+  if(NOT OPENCV_DISABLE_THREAD_SUPPORT
+      AND (
+        (UNIX
+          AND NOT ANDROID
+          AND NOT (APPLE AND CV_CLANG)
+          AND NOT EMSCRIPTEN
+        )
+        OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
+      )
+  ) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
@@ -305,6 +314,10 @@ if(MSVC)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
     set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
   endif()
+
+  if(AARCH64 AND NOT MSVC_VERSION LESS 1930)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _ARM64_DISTINCT_NEON_TYPES")
+  endif()
 endif()
 
 if(PROJECT_NAME STREQUAL "OpenCV")
@@ -358,6 +371,22 @@ if(NOT OPENCV_SKIP_LINK_AS_NEEDED)
   endif()
 endif()
 
+# Apply "-Wl,--no-undefined" linker flags: https://github.com/opencv/opencv/pull/21347
+if(NOT OPENCV_SKIP_LINK_NO_UNDEFINED)
+  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+    set(_option "-Wl,--no-undefined")
+    set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
+    ocv_check_compiler_flag(CXX "" HAVE_LINK_NO_UNDEFINED)
+    set(CMAKE_EXE_LINKER_FLAGS "${_saved_CMAKE_EXE_LINKER_FLAGS}")
+    if(HAVE_LINK_NO_UNDEFINED)
+      set(OPENCV_EXTRA_EXE_LINKER_FLAGS "${OPENCV_EXTRA_EXE_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_SHARED_LINKER_FLAGS "${OPENCV_EXTRA_SHARED_LINKER_FLAGS} ${_option}")
+      set(OPENCV_EXTRA_MODULE_LINKER_FLAGS "${OPENCV_EXTRA_MODULE_LINKER_FLAGS} ${_option}")
+    endif()
+  endif()
+endif()
+
 # combine all "extra" options
 if(NOT OPENCV_SKIP_EXTRA_COMPILER_FLAGS)
   set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")
@@ -397,6 +426,9 @@ if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
     endif()
   endif()
+
+  # Enable [[attribute]] syntax checking to prevent silent failure: "attribute is ignored in this syntactic position"
+  add_extra_compiler_option("/w15240")
 
   if(NOT ENABLE_NOISY_WARNINGS)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # conditional expression is constant

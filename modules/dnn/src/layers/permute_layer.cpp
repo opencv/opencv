@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -114,12 +115,16 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && preferableTarget == DNN_TARGET_CPU)
-            return _order.size() <= 4 || !isArmComputePlugin();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            if (preferableTarget == DNN_TARGET_CPU)
+                return _order.size() <= 4 || !isArmComputePlugin();
+            return true;
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
+               backendId == DNN_BACKEND_WEBNN ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
@@ -194,6 +199,7 @@ public:
 #endif
     }
 
+    template <class T>
     class PermuteInvoker : public ParallelLoopBody
     {
     public:
@@ -229,7 +235,7 @@ public:
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(r.end*stripeSize, orows);
 
-            const size_t esz = sizeof(float);
+            const size_t esz = sizeof(T);
             size_t ostep0 = out->step[0]/esz, ostep1 = out->step[1]/esz, ostep2 = out->step[2]/esz;
             const size_t* ord = &order->at(0);
             size_t istep0 = inp->step[ord[0]]/esz, istep1 = inp->step[ord[1]]/esz,
@@ -241,13 +247,13 @@ public:
             int i1 = (int)(val % n1);
             int i0 = (int)(val / n1);
 
-            const float* inptr_orig = inp->ptr<float>();
-            float* outptr_orig = out->ptr<float>();
+            const T* inptr_orig = inp->ptr<T>();
+            T* outptr_orig = out->ptr<T>();
 
             for( size_t ofs = stripeStart; ofs < stripeEnd; ofs++ )
             {
-                const float* inptr = inptr_orig + i0*istep0 + i1*istep1 + i2*istep2;
-                float* outptr = outptr_orig + i0*ostep0 + i1*ostep1 + i2*ostep2;
+                const T* inptr = inptr_orig + i0*istep0 + i1*istep1 + i2*istep2;
+                T* outptr = outptr_orig + i0*ostep0 + i1*ostep1 + i2*ostep2;
 
                 for( int i3 = 0; i3 < n3; i3++ )
                     outptr[i3] = inptr[i3*istep3];
@@ -321,7 +327,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   inputs_arr.depth() != CV_8S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16S)
@@ -365,39 +372,53 @@ public:
                 if( numAxes == 4 )
                 {
                     int nstripes = getNumThreads();
-                    PermuteInvoker::run(inp, out, _order, nstripes);
+                    if (inp.type() == CV_8S)
+                        PermuteInvoker<int8_t>::run(inp, out, _order, nstripes);
+                    else
+                        PermuteInvoker<float>::run(inp, out, _order, nstripes);
                 }
                 else
                 {
-                    const float *srcData = inp.ptr<float>();
-                    float *dstData = out.ptr<float>();
-
-                    for (i = 0; i < count; ++i)
+                    if (inp.type() == CV_8S)
                     {
-                        size_t oldPosition = 0;
-                        size_t newPosition = i;
+                        const int8_t *srcData = inp.ptr<int8_t>();
+                        int8_t *dstData = out.ptr<int8_t>();
 
-                        for (j = 0; j < numAxes; ++j)
+                        for (i = 0; i < count; ++i)
                         {
-                            oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                            newPosition %= newStride[j];
+                            size_t oldPosition = 0;
+                            size_t newPosition = i;
+
+                            for (j = 0; j < numAxes; ++j)
+                            {
+                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
+                                newPosition %= newStride[j];
+                            }
+                            dstData[i] = srcData[oldPosition];
                         }
-                        dstData[i] = srcData[oldPosition];
+                    }
+                    else
+                    {
+                        const float *srcData = inp.ptr<float>();
+                        float *dstData = out.ptr<float>();
+
+                        for (i = 0; i < count; ++i)
+                        {
+                            size_t oldPosition = 0;
+                            size_t newPosition = i;
+
+                            for (j = 0; j < numAxes; ++j)
+                            {
+                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
+                                newPosition %= newStride[j];
+                            }
+                            dstData[i] = srcData[oldPosition];
+                        }
                     }
                 }
             }
         }
     }
-
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::PermuteLayer ieLayer(name);
-        ieLayer.setOrder(_order);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH
@@ -413,6 +434,20 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<int32_t> permutation(_order.begin(), _order.end());
+        ml::TransposeOptions options;
+        options.permutation = permutation.data();
+        options.permutationCount = permutation.size();
+        auto operand = webnnGraphBuilder.Transpose(webnnInpOperand, &options);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
@@ -436,6 +471,11 @@ public:
     }
 #endif // HAVE_VULKAN
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        return true;
+    }
 
     size_t _count;
     std::vector<size_t> _order;

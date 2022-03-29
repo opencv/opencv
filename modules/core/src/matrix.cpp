@@ -176,27 +176,23 @@ public:
     }
 };
 
-namespace
+static
+MatAllocator*& getDefaultAllocatorMatRef()
 {
-    MatAllocator* volatile g_matAllocator = NULL;
+    static MatAllocator* g_matAllocator = Mat::getStdAllocator();
+    return g_matAllocator;
 }
 
 MatAllocator* Mat::getDefaultAllocator()
 {
-    if (g_matAllocator == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (g_matAllocator == NULL)
-        {
-            g_matAllocator = getStdAllocator();
-        }
-    }
-    return g_matAllocator;
+    return getDefaultAllocatorMatRef();
 }
+
 void Mat::setDefaultAllocator(MatAllocator* allocator)
 {
-    g_matAllocator = allocator;
+    getDefaultAllocatorMatRef() = allocator;
 }
+
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
@@ -269,7 +265,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
         else if( autoSteps )
         {
             m.step.p[i] = total;
-            int64 total1 = (int64)total*s;
+            uint64 total1 = (uint64)total*s;
             if( (uint64)total1 != (size_t)total1 )
                 CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
             total = (size_t)total1;
@@ -463,7 +459,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     }
     else
     {
-        CV_Assert(_step >= minstep);
+        CV_CheckGE(_step, minstep, "");
 
         if (_step % esz1 != 0)
         {
@@ -809,18 +805,17 @@ Mat::Mat(const Mat& m, const Rect& roi)
     data += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( u )
-        CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
     updateContinuityFlag();
 
+    addref();
     if( rows <= 0 || cols <= 0 )
     {
-        release();
         rows = cols = 0;
+        release();
     }
 }
 

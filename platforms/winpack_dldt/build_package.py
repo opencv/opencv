@@ -163,7 +163,7 @@ class BuilderDLDT:
         self.config = config
 
         cpath = self.config.dldt_config
-        log.info('DLDT build configration: %s', cpath)
+        log.info('DLDT build configuration: %s', cpath)
         if not os.path.exists(cpath):
             cpath = os.path.join(SCRIPT_DIR, cpath)
             if not os.path.exists(cpath):
@@ -189,7 +189,10 @@ class BuilderDLDT:
         if self.srcdir is None:
             self.srcdir = prepare_dir(self.outdir / 'sources', clean=clean_src_dir)
         self.build_dir = prepare_dir(self.outdir / 'build', clean=self.config.clean_dldt)
-        self.sysrootdir = prepare_dir(self.outdir / 'sysroot', clean=self.config.clean_dldt)
+        self.sysrootdir = prepare_dir(self.outdir / 'sysroot', clean=self.config.clean_dldt or self.config.clean_dldt_sysroot)
+        if not (self.config.clean_dldt or self.config.clean_dldt_sysroot):
+            _ = prepare_dir(self.sysrootdir / 'bin', clean=True)  # always clean sysroot/bin (package files)
+            _ = prepare_dir(self.sysrootdir / 'etc', clean=True)  # always clean sysroot/etc (package files)
 
         if self.config.build_subst_drive:
             if os.path.exists(self.config.build_subst_drive + ':\\'):
@@ -214,7 +217,7 @@ class BuilderDLDT:
             patch_hashsum = hashlib.md5(self.patch_file_contents.encode('utf-8')).hexdigest()
         except:
             log.warn("Can't compute hashsum of patches: %s", self.patch_file)
-        self.patch_hashsum = patch_hashsum
+        self.patch_hashsum = self.config.override_patch_hashsum if self.config.override_patch_hashsum else patch_hashsum
 
 
     def prepare_sources(self):
@@ -355,7 +358,6 @@ class Builder:
             BUILD_PERF_TESTS='OFF',
             ENABLE_CXX11='ON',
             WITH_INF_ENGINE='ON',
-            INF_ENGINE_RELEASE=str(self.config.dldt_release),
             WITH_TBB='ON',
             CPU_BASELINE='AVX2',
             CMAKE_INSTALL_PREFIX=str(self.install_dir),
@@ -383,10 +385,12 @@ class Builder:
             OPENCV_PYTHON_INSTALL_PATH='python',
         )
 
-        cmake_vars['INF_ENGINE_LIB_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/lib/intel64')
-        assert os.path.exists(cmake_vars['INF_ENGINE_LIB_DIRS:PATH']), cmake_vars['INF_ENGINE_LIB_DIRS:PATH']
-        cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/include')
-        assert os.path.exists(cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']), cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']
+        if self.config.dldt_release:
+            cmake_vars['INF_ENGINE_RELEASE'] = str(self.config.dldt_release)
+
+        InferenceEngine_DIR = str(builderDLDT.sysrootdir / 'deployment_tools' / 'inference_engine' / 'cmake')
+        assert os.path.exists(InferenceEngine_DIR), InferenceEngine_DIR
+        cmake_vars['InferenceEngine_DIR:PATH'] = InferenceEngine_DIR
 
         ngraph_DIR = str(builderDLDT.sysrootdir / 'ngraph/cmake')
         if not os.path.exists(ngraph_DIR):
@@ -466,8 +470,9 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2021.3'
-    dldt_release = '2021030000'
+    dldt_src_commit = '2021.4.2'
+    dldt_config = None
+    dldt_release = None
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
@@ -483,8 +488,9 @@ def main():
     parser.add_argument('--cmake_option', action='append', help='Append OpenCV CMake option')
     parser.add_argument('--cmake_option_dldt', action='append', help='Append CMake option for DLDT project')
 
-    parser.add_argument('--clean_dldt', action='store_true', help='Clear DLDT build and sysroot directories')
-    parser.add_argument('--clean_opencv', action='store_true', help='Clear OpenCV build directory')
+    parser.add_argument('--clean_dldt', action='store_true', help='Clean DLDT build and sysroot directories')
+    parser.add_argument('--clean_dldt_sysroot', action='store_true', help='Clean DLDT sysroot directories')
+    parser.add_argument('--clean_opencv', action='store_true', help='Clean OpenCV build directory')
 
     parser.add_argument('--build_debug', action='store_true', help='Build debug binaries')
     parser.add_argument('--build_tests', action='store_true', help='Build OpenCV tests')
@@ -494,12 +500,14 @@ def main():
     parser.add_argument('--dldt_src_branch', help='DLDT checkout branch')
     parser.add_argument('--dldt_src_commit', default=dldt_src_commit, help='DLDT source commit / tag (default: %s)' % dldt_src_commit)
     parser.add_argument('--dldt_src_git_clone_extra', action='append', help='DLDT git clone extra args')
-    parser.add_argument('--dldt_release', default=dldt_release, help='DLDT release code for INF_ENGINE_RELEASE (default: %s)' % dldt_release)
+    parser.add_argument('--dldt_release', default=dldt_release, help='DLDT release code for INF_ENGINE_RELEASE, e.g 2021030000 (default: %s)' % dldt_release)
 
     parser.add_argument('--dldt_reference_dir', help='DLDT reference git repository (optional)')
     parser.add_argument('--dldt_src_dir', help='DLDT custom source repository (skip git checkout and patching, use for TESTING only)')
 
-    parser.add_argument('--dldt_config', help='Specify DLDT build configuration (defaults to evaluate from DLDT commit/branch)')
+    parser.add_argument('--dldt_config', default=dldt_config, help='Specify DLDT build configuration (defaults to evaluate from DLDT commit/branch)')
+
+    parser.add_argument('--override_patch_hashsum', default='', help='(script debug mode)')
 
     args = parser.parse_args()
 
@@ -566,5 +574,5 @@ if __name__ == "__main__":
     try:
         main()
     except:
-        log.info('FATAL: Error occured. To investigate problem try to change logging level using LOGLEVEL=DEBUG environment variable.')
+        log.info('FATAL: Error occurred. To investigate problem try to change logging level using LOGLEVEL=DEBUG environment variable.')
         raise

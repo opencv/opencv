@@ -30,8 +30,8 @@ As a test case where to show off these using OpenCV I've created a small program
 video files and performs a similarity check between them. This is something you could use to check
 just how well a new video compressing algorithms works. Let there be a reference (original) video
 like [this small Megamind clip
-](https://github.com/opencv/opencv/tree/master/samples/data/Megamind.avi) and [a compressed
-version of it ](https://github.com/opencv/opencv/tree/master/samples/data/Megamind_bugy.avi).
+](https://github.com/opencv/opencv/tree/4.x/samples/data/Megamind.avi) and [a compressed
+version of it ](https://github.com/opencv/opencv/tree/4.x/samples/data/Megamind_bugy.avi).
 You may also find the source code and these video file in the
 `samples/data` folder of the OpenCV source library.
 
@@ -188,7 +188,7 @@ implementation below.
 
 This will return a similarity index for each channel of the image. This value is between zero and
 one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite
-costly, so while the PSNR may work in a real time like environment (24 frame per second) this will
+costly, so while the PSNR may work in a real time like environment (24 frames per second) this will
 take significantly more than to accomplish similar performance results.
 
 Therefore, the source code presented at the start of the tutorial will perform the PSNR measurement

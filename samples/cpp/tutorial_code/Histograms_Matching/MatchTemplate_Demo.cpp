@@ -89,7 +89,7 @@ void MatchingMethod( int, void* )
 
   //! [create_result_matrix]
   /// Create the result matrix
-  int result_cols =  img.cols - templ.cols + 1;
+  int result_cols = img.cols - templ.cols + 1;
   int result_rows = img.rows - templ.rows + 1;
 
   result.create( result_rows, result_cols, CV_32FC1 );

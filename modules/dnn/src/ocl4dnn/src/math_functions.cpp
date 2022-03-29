@@ -116,6 +116,7 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
                 .args(
                     ocl::KernelArg::PtrReadOnly(buffer),
                     image, offset,
+                    padded_width, padded_height,
                     width, height,
                     ld)
                 .run(2, global_copy, NULL, false);

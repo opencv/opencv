@@ -13,6 +13,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 
 const std::string about =
     "This is an OpenCV-based version of Privacy Masking Camera example";
@@ -49,64 +50,11 @@ G_API_NET(FaceDetector,   <cv::GMat(cv::GMat)>,                  "face-detector"
 
 using GDetections = cv::GArray<cv::Rect>;
 
-G_API_OP(ParseSSD, <GDetections(cv::GMat, cv::GMat, int)>, "custom.privacy_masking.postproc") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc &, const cv::GMatDesc &, int) {
-        return cv::empty_array_desc();
-    }
-};
-
 using GPrims = cv::GArray<cv::gapi::wip::draw::Prim>;
 
 G_API_OP(ToMosaic, <GPrims(GDetections, GDetections)>, "custom.privacy_masking.to_mosaic") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc &, const cv::GArrayDesc &) {
         return cv::empty_array_desc();
-    }
-};
-
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Mat &in_frame,
-                    const int      filter_label,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Size upscale = in_frame.size();
-        const cv::Rect surface({0,0}, upscale);
-
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-            if (filter_label != -1 && static_cast<int>(label) != filter_label) {
-                continue; // filter out object classes if filter is specified
-            }
-
-            cv::Rect rc;  // map relative coordinates to the original image scale
-            rc.x      = static_cast<int>(rc_left   * upscale.width);
-            rc.y      = static_cast<int>(rc_top    * upscale.height);
-            rc.width  = static_cast<int>(rc_right  * upscale.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * upscale.height) - rc.y;
-            out_objects.emplace_back(rc & surface);
-        }
     }
 };
 
@@ -150,10 +98,13 @@ int main(int argc, char *argv[])
     cv::GMat blob_faces  = cv::gapi::infer<custom::FaceDetector>(in);
     // VehLicDetector from Open Model Zoo marks vehicles with label "1" and
     // license plates with label "2", filter out license plates only.
-    cv::GArray<cv::Rect> rc_plates = custom::ParseSSD::on(blob_plates, in, 2);
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
+    cv::GArray<cv::Rect> rc_plates, rc_faces;
+    cv::GArray<int> labels;
+    std::tie(rc_plates, labels) = cv::gapi::parseSSD(blob_plates, sz, 0.5f, 2);
     // Face detector produces faces only so there's no need to filter by label,
     // pass "-1".
-    cv::GArray<cv::Rect> rc_faces  = custom::ParseSSD::on(blob_faces, in, -1);
+    std::tie(rc_faces, labels) = cv::gapi::parseSSD(blob_faces, sz, 0.5f, -1);
     cv::GMat out = cv::gapi::wip::draw::render3ch(in, custom::ToMosaic::on(rc_plates, rc_faces));
     cv::GComputation graph(in, out);
 
@@ -169,7 +120,7 @@ int main(int argc, char *argv[])
         weights_path(face_model_path),   // path to weights
         cmd.get<std::string>("faced"),   // device specifier
     };
-    auto kernels = cv::gapi::kernels<custom::OCVParseSSD, custom::OCVToMosaic>();
+    auto kernels = cv::gapi::kernels<custom::OCVToMosaic>();
     auto networks = cv::gapi::networks(plate_net, face_net);
 
     cv::TickMeter tm;

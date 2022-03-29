@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, D. R. Commander.
+ * Copyright (C) 2016, 2021, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -1032,7 +1032,7 @@ free_pool(j_common_ptr cinfo, int pool_id)
     large_pool_ptr next_lhdr_ptr = lhdr_ptr->next;
     space_freed = lhdr_ptr->bytes_used +
                   lhdr_ptr->bytes_left +
-                  sizeof(large_pool_hdr);
+                  sizeof(large_pool_hdr) + ALIGN_SIZE - 1;
     jpeg_free_large(cinfo, (void *)lhdr_ptr, space_freed);
     mem->total_space_allocated -= space_freed;
     lhdr_ptr = next_lhdr_ptr;
@@ -1045,7 +1045,7 @@ free_pool(j_common_ptr cinfo, int pool_id)
   while (shdr_ptr != NULL) {
     small_pool_ptr next_shdr_ptr = shdr_ptr->next;
     space_freed = shdr_ptr->bytes_used + shdr_ptr->bytes_left +
-                  sizeof(small_pool_hdr);
+                  sizeof(small_pool_hdr) + ALIGN_SIZE - 1;
     jpeg_free_small(cinfo, (void *)shdr_ptr, space_freed);
     mem->total_space_allocated -= space_freed;
     shdr_ptr = next_shdr_ptr;

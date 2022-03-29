@@ -70,17 +70,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             if (pnorm != 2)
                 return false;
 
-            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
-            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && isMyriad)
-                return !acrossSpatial;
-
             return startAxis == 1;
         }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && (pnorm == 1 || pnorm == 2));
     }
@@ -270,58 +268,6 @@ public:
     }
 
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getDims();
-        if (dims.size() == 4)
-        {
-            InferenceEngine::Builder::NormalizeLayer ieLayer(name);
-
-            ieLayer.setChannelShared(false);
-            ieLayer.setAcrossMaps(acrossSpatial);
-            ieLayer.setEpsilon(epsilon);
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            const int numChannels = dims[1];
-            InferenceEngine::Blob::Ptr weights;
-            if (blobs.empty())
-            {
-                weights = InferenceEngine::make_shared_blob<float>({
-                              InferenceEngine::Precision::FP32,
-                              {(size_t)numChannels}, InferenceEngine::Layout::C
-                          });
-                weights->allocate();
-
-                Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
-                Mat(numChannels, 1, CV_32F, Scalar(1)).copyTo(weightsMat);
-                l.getParameters()["channel_shared"] = false;
-            }
-            else
-            {
-                CV_Assert(numChannels == blobs[0].total());
-                weights = wrapToInfEngineBlob(blobs[0], {(size_t)numChannels}, InferenceEngine::Layout::C);
-                l.getParameters()["channel_shared"] = blobs[0].total() == 1;
-            }
-            addConstantData("weights", weights, l);
-            l.getParameters()["across_spatial"] = acrossSpatial;
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else
-        {
-            InferenceEngine::Builder::GRNLayer ieLayer(name);
-            ieLayer.setBeta(epsilon);
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            l.getParameters()["bias"] = epsilon;
-
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -338,7 +284,7 @@ public:
             std::iota(axes_data.begin(), axes_data.end(), 1);
         }
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
-        auto norm = std::make_shared<ngraph::op::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
+        auto norm = std::make_shared<ngraph::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
 
         CV_Assert(blobs.empty() || numChannels == blobs[0].total());
         std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);

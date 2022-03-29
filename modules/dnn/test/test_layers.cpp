@@ -196,13 +196,23 @@ TEST_P(Test_Caffe_layers, DeConvolution)
 
 TEST_P(Test_Caffe_layers, InnerProduct)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // IE exception: Ngraph operation Reshape with name Reshape_4219609 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     testLayerUsingCaffeModels("layer_inner_product", true);
 }
 
@@ -300,10 +310,12 @@ TEST_P(Test_Caffe_layers, Concat)
                      CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
+#if INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
         (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
                      CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 
 #endif
     testLayerUsingCaffeModels("layer_concat");
@@ -378,7 +390,7 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
     // Reference output values are in range [-0.0001, 10.3906]
     double l1 = (target == DNN_TARGET_MYRIAD) ? 0.005 : 0.0;
     double lInf = (target == DNN_TARGET_MYRIAD) ? 0.021 : 0.0;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
     {
         l1 = 0.006f; lInf = 0.05f;
@@ -445,7 +457,7 @@ class Layer_LSTM_Test : public ::testing::Test
 {
 public:
     int numInp, numOut;
-    Mat Wh, Wx, b;
+    Mat Wh, Wx, b, h, c;
     Ptr<LSTMLayer> layer;
     std::vector<Mat> inputs, outputs;
 
@@ -460,12 +472,17 @@ public:
         Wh = Mat::ones(4 * numOut, numOut, CV_32F);
         Wx = Mat::ones(4 * numOut, numInp, CV_32F);
         b  = Mat::ones(4 * numOut, 1, CV_32F);
+        h  = Mat::ones(4, numOut, CV_32F);
+        c  = Mat::ones(4, numOut, CV_32F);
 
         LayerParams lp;
-        lp.blobs.resize(3);
+        lp.blobs.resize(5);
         lp.blobs[0] = Wh;
         lp.blobs[1] = Wx;
         lp.blobs[2] = b;
+        lp.blobs[3] = h;
+        lp.blobs[4] = c;
+
         lp.set<bool>("produce_cell_output", produceCellOutput);
         lp.set<bool>("use_timestamp_dim", useTimestampDim);
 
@@ -513,10 +530,12 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
 {
     LayerParams lp;
-    lp.blobs.resize(3);
+    lp.blobs.resize(5);
     lp.blobs[0] = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));  // Wh
     lp.blobs[1] = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));  // Wx
     lp.blobs[2] = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));  // bias
+    lp.blobs[3] = Mat::zeros(2, 17, CV_32F);                     // h_0
+    lp.blobs[4] = Mat::zeros(2, 17, CV_32F);                     // c_0
     Ptr<LSTMLayer> layer = LSTMLayer::create(lp);
 
     Mat inp = blobFromNPY(_tf("recurrent.input.npy"));
@@ -524,6 +543,97 @@ TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
     runLayer(layer, inputs, outputs);
 
     Mat h_t_reference = blobFromNPY(_tf("lstm.prototxt.h_1.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
+TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
+{
+    Mat Wx = blobFromNPY(_tf("lstm.hidden.W.npy"));
+    Mat Wh = blobFromNPY(_tf("lstm.hidden.R.npy"));
+    Mat b = blobFromNPY(_tf("lstm.hidden.B.npy"));
+    Mat h0 = blobFromNPY(_tf("lstm.hidden.h0.npy"));
+    Mat c0 = blobFromNPY(_tf("lstm.hidden.c0.npy"));
+
+    const int numHidden = 3;
+    const int numDirs = Wx.size[0];
+    const int numFeatures = Wx.size[2];
+
+    b = b.reshape(1, b.size[0]);
+    Mat bx = b.colRange(0, b.cols / 2);
+    Mat bh = b.colRange(b.cols / 2, b.cols);
+    b = bx + bh;
+
+    // IFGO->IGFO
+    for (int k = 0; k < numDirs; ++k)
+    {
+        float* WxData = Wx.ptr<float>(k);
+        float* WhData = Wh.ptr<float>(k);
+        float* biasData = b.ptr<float>(k);
+        for (int j = 0; j < numHidden; ++j)
+        {
+            for (int i = 0; i < numFeatures; ++i)
+            {
+                std::swap(WxData[(numHidden + j) * numFeatures + i],
+                          WxData[(numHidden * 2 + j) * numFeatures + i]);
+            }
+            for (int i = 0; i < numHidden; ++i)
+            {
+                std::swap(WhData[(numHidden + j) * numHidden + i],
+                          WhData[(numHidden * 2 + j) * numHidden + i]);
+            }
+            std::swap(biasData[numHidden + j], biasData[numHidden * 2 + j]);
+        }
+    }
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+
+    LayerParams lstmParams;
+    lstmParams.blobs.resize(5);
+    lstmParams.blobs[0] = Wh;
+    lstmParams.blobs[1] = Wx;
+    lstmParams.blobs[2] = b;
+    lstmParams.blobs[3] = h0;
+    lstmParams.blobs[4] = c0;
+    lstmParams.set("bidirectional", false);
+    Ptr<LSTMLayer> layer = LSTMLayer::create(lstmParams);
+
+    Mat inp = blobFromNPY(_tf("lstm.hidden.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat h_t_reference = blobFromNPY(_tf("lstm.hidden.output.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
+TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
+{
+    Mat Wx = blobFromNPY(_tf("gru.W.npy"));
+    Mat Wh = blobFromNPY(_tf("gru.R.npy"));
+    Mat b = blobFromNPY(_tf("gru.B.npy"));
+    Mat h0 = blobFromNPY(_tf("gru.h0.npy"));
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    b = b.reshape(1, b.size[0]);
+
+    LayerParams gruParams;
+    gruParams.blobs.resize(4);
+    gruParams.blobs[0] = Wh;
+    gruParams.blobs[1] = Wx;
+    gruParams.blobs[2] = b;
+    gruParams.blobs[3] = h0;
+    gruParams.set("bidirectional", false);
+    Ptr<GRULayer> layer = GRULayer::create(gruParams);
+
+    Mat inp = blobFromNPY(_tf("gru.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat h_t_reference = blobFromNPY(_tf("gru.output.npy"));
     normAssert(h_t_reference, outputs[0]);
 }
 
@@ -571,6 +681,9 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
     bias.at<float>(2, 0) = 1e10f;  // Output gate - always output everything
     bias.at<float>(3, 0) = 0.f;  // Update signal
 
+    cv::Mat hInternal = cv::Mat::zeros(1, 1, CV_32FC1);
+    cv::Mat cInternal = cv::Mat::zeros(1, 1, CV_32FC1);
+
     LayerParams lp;
     lp.set("reverse", true);
     lp.set("use_timestamp_dim", true);
@@ -578,6 +691,8 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
     lp.blobs.push_back(Wh);
     lp.blobs.push_back(Wx);
     lp.blobs.push_back(bias);
+    lp.blobs.push_back(hInternal);
+    lp.blobs.push_back(cInternal);
 
     cv::Ptr<cv::dnn::LSTMLayer> layer = LSTMLayer::create(lp);
     std::vector<cv::Mat> outputs;
@@ -1150,12 +1265,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
     Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
@@ -1195,12 +1305,7 @@ TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     int blobSize[] = {2, 6, 75, 113};
     Mat inputs[] = {Mat(4, &blobSize[0], CV_8U), Mat()};
@@ -1233,12 +1338,7 @@ TEST_P(Layer_Test_Convolution_DLDT, multithreading)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     std::string xmlPath = _tf("layer_convolution.xml");
     std::string binPath = _tf("layer_convolution.bin");
@@ -1329,54 +1429,6 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs_3dim, Combine(
   Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
   testing::ValuesIn(getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)),
   testing::ValuesIn(list_sizes)
-));
-
-typedef testing::TestWithParam<tuple<int, int, tuple<Backend, Target> > > Test_DLDT_two_inputs;
-TEST_P(Test_DLDT_two_inputs, as_backend)
-{
-    static const float kScale = 0.5f;
-    static const float kScaleInv = 1.0f / kScale;
-
-    Backend backendId = get<0>(get<2>(GetParam()));
-    Target targetId = get<1>(get<2>(GetParam()));
-
-    Net net;
-    LayerParams lp;
-    lp.type = "Eltwise";
-    lp.name = "testLayer";
-    lp.set("operation", "sum");
-    int eltwiseId = net.addLayerToPrev(lp.name, lp.type, lp);  // connect to a first input
-    net.connect(0, 1, eltwiseId, 1);  // connect to a second input
-
-    int inpSize[] = {1, 2, 3, 4};
-    Mat firstInp(4, &inpSize[0], get<0>(GetParam()));
-    Mat secondInp(4, &inpSize[0], get<1>(GetParam()));
-    randu(firstInp, 0, 255);
-    randu(secondInp, 0, 255);
-
-    net.setInputsNames({"data", "second_input"});
-    net.setInput(firstInp, "data", kScale);
-    net.setInput(secondInp, "second_input", kScaleInv);
-    net.setPreferableBackend(backendId);
-    net.setPreferableTarget(targetId);
-    Mat out = net.forward();
-
-    Mat ref;
-    addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
-    // Output values are in range [0, 637.5].
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
-    if (targetId == DNN_TARGET_CUDA_FP16)
-    {
-        l1 = 0.06;
-        lInf = 0.3;
-    }
-    normAssert(out, ref, "", l1, lInf);
-}
-
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_DLDT_two_inputs, Combine(
-  Values(CV_8U, CV_32F), Values(CV_8U, CV_32F),
-  dnnBackendsAndTargets()
 ));
 
 class UnsupportedLayer : public Layer
@@ -2030,7 +2082,7 @@ TEST_P(Layer_Test_Slice, variable_input_shape)
     int targetId = get<1>(GetParam());
 
     int begin[] = {0, 0, 0, 0};
-    int end[] = {-1, -1, -1, -1};
+    int end[] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
 
     Net net;
     LayerParams lp;
@@ -2237,7 +2289,7 @@ public:
     static testing::internal::ParamGenerator<std::string> eltwiseOpList()
     {
         // TODO: automate list generation
-        return Values("sum", "max", "prod", "div");
+        return Values("sum", "max", "min", "prod", "div");
     }
 
     static testing::internal::ParamGenerator<std::string> activationLayersList()

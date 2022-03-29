@@ -20,8 +20,13 @@ class Hackathon244Tests(NewOpenCVTests):
         flag, ajpg = cv.imencode("img_q90.jpg", a, [cv.IMWRITE_JPEG_QUALITY, 90])
         self.assertEqual(flag, True)
         self.assertEqual(ajpg.dtype, np.uint8)
-        self.assertGreater(ajpg.shape[0], 1)
-        self.assertEqual(ajpg.shape[1], 1)
+        self.assertTrue(isinstance(ajpg, np.ndarray), "imencode returned buffer of wrong type: {}".format(type(ajpg)))
+        self.assertEqual(len(ajpg.shape), 1, "imencode returned buffer with wrong shape: {}".format(ajpg.shape))
+        self.assertGreaterEqual(len(ajpg), 1, "imencode length of the returned buffer should be at least 1")
+        self.assertLessEqual(
+            len(ajpg), a.size,
+            "imencode length of the returned buffer shouldn't exceed number of elements in original image"
+        )
 
     def test_projectPoints(self):
         objpt = np.float64([[1,2,3]])

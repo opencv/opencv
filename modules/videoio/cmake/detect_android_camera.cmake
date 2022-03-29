@@ -4,5 +4,3 @@ if(ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 23)
   set(libs "-landroid -llog -lcamera2ndk")
   ocv_add_external_target(android_native_camera "" "${libs}" "HAVE_ANDROID_NATIVE_CAMERA")
 endif()
-
-set(HAVE_ANDROID_NATIVE_CAMERA ${HAVE_ANDROID_NATIVE_CAMERA} PARENT_SCOPE)

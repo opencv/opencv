@@ -88,6 +88,32 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //    Notes:
  //F*/
 
+static void rotate90CCW(const cv::Point2f& in, cv::Point2f &out)
+{
+    out.x = -in.y;
+    out.y = in.x;
+}
+
+static void rotate90CW(const cv::Point2f& in, cv::Point2f &out)
+{
+    out.x = in.y;
+    out.y = -in.x;
+}
+
+static void rotate180(const cv::Point2f& in, cv::Point2f &out)
+{
+    out.x = -in.x;
+    out.y = -in.y;
+}
+
+/* return true if first vector is to the right (clockwise) of the second */
+static bool firstVecIsRight(const cv::Point2f& vec1, const cv::Point2f &vec2)
+{
+    cv::Point2f tmp;
+    rotate90CW(vec1, tmp);
+    return tmp.x * vec2.x + tmp.y * vec2.y < 0;
+}
+
 /* we will use usual cartesian coordinates */
 static void rotatingCalipers( const Point2f* points, int n, int mode, float* out )
 {
@@ -100,6 +126,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     Point2f* vect = (Point2f*)(inv_vect_length + n);
     int left = 0, bottom = 0, right = 0, top = 0;
     int seq[4] = { -1, -1, -1, -1 };
+    Point2f rot_vect[4];
 
     /* rotating calipers sides will always have coordinates
      (a,b) (-b,a) (-a,-b) (b, -a)
@@ -179,32 +206,18 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     /* all of edges will be checked while rotating calipers by 90 degrees */
     for( k = 0; k < n; k++ )
     {
-        /* sinus of minimal angle */
-        /*float sinus;*/
-
-        /* compute cosine of angle between calipers side and polygon edge */
-        /* dp - dot product */
-        float dp[4] = {
-            +base_a * vect[seq[0]].x + base_b * vect[seq[0]].y,
-            -base_b * vect[seq[1]].x + base_a * vect[seq[1]].y,
-            -base_a * vect[seq[2]].x - base_b * vect[seq[2]].y,
-            +base_b * vect[seq[3]].x - base_a * vect[seq[3]].y,
-        };
-
-        float maxcos = dp[0] * inv_vect_length[seq[0]];
-
         /* number of calipers edges, that has minimal angle with edge */
         int main_element = 0;
 
-        /* choose minimal angle */
-        for ( i = 1; i < 4; ++i )
+        /* choose minimum angle between calipers side and polygon edge by dot product sign */
+        rot_vect[0] = vect[seq[0]];
+        rotate90CW(vect[seq[1]], rot_vect[1]);
+        rotate180(vect[seq[2]], rot_vect[2]);
+        rotate90CCW(vect[seq[3]], rot_vect[3]);
+        for (i = 1; i < 4; i++)
         {
-            float cosalpha = dp[i] * inv_vect_length[seq[i]];
-            if (cosalpha > maxcos)
-            {
+            if (firstVecIsRight(rot_vect[i], rot_vect[main_element]))
                 main_element = i;
-                maxcos = cosalpha;
-            }
         }
 
         /*rotate calipers*/

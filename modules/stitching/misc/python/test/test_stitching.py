@@ -28,6 +28,9 @@ class stitching_detail_test(NewOpenCVTests):
         imgFea = cv.detail.computeImageFeatures2(finder,img)
         self.assertIsNotNone(imgFea)
 
+        # Added Test for PR #21180
+        self.assertIsNotNone(imgFea.keypoints)
+
         matcher = cv.detail_BestOf2NearestMatcher(False, 0.3)
         self.assertIsNotNone(matcher)
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, False, 0.3)

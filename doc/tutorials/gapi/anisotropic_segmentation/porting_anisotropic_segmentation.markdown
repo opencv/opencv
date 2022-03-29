@@ -142,7 +142,7 @@ being a Graph API, doesn't force its users to do that.
 However, a graph is still built implicitly when a cv::GComputation
 object is defined. It may be useful to inspect how the resulting graph
 looks like to check if it is generated correctly and if it really
-represents our alrogithm. It is also useful to learn the structure of
+represents our algorithm. It is also useful to learn the structure of
 the graph to see if it has any redundancies.
 
 G-API allows to dump generated graphs to `.dot` files which then
@@ -295,7 +295,7 @@ and specify it to G-API:
 
 In G-API, kernels (or operation implementations) are objects. Kernels are
 organized into collections, or _kernel packages_, represented by class
-cv::gapi::GKernelPackage. The main purpose of a kernel package is to
+cv::GKernelPackage. The main purpose of a kernel package is to
 capture which kernels we would like to use in our graph, and pass it
 as a _graph compilation option_:
 

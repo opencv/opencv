@@ -450,31 +450,184 @@ public:
             const sift_wt* currptr = img.ptr<sift_wt>(r);
             const sift_wt* prevptr = prev.ptr<sift_wt>(r);
             const sift_wt* nextptr = next.ptr<sift_wt>(r);
+            int c = SIFT_IMG_BORDER;
 
-            for( int c = SIFT_IMG_BORDER; c < cols-SIFT_IMG_BORDER; c++)
+#if CV_SIMD && !(DoG_TYPE_SHORT)
+            const int vecsize = v_float32::nlanes;
+            for( ; c <= cols-SIFT_IMG_BORDER - vecsize; c += vecsize)
+            {
+                v_float32 val = vx_load(&currptr[c]);
+                v_float32 _00,_01,_02;
+                v_float32 _10,    _12;
+                v_float32 _20,_21,_22;
+
+                v_float32 vmin,vmax;
+
+
+                v_float32 cond = v_abs(val) > vx_setall_f32((float)threshold);
+                if (!v_check_any(cond))
+                {
+                    continue;
+                }
+
+                _00 = vx_load(&currptr[c-step-1]); _01 = vx_load(&currptr[c-step]); _02 = vx_load(&currptr[c-step+1]);
+                _10 = vx_load(&currptr[c     -1]);                                  _12 = vx_load(&currptr[c     +1]);
+                _20 = vx_load(&currptr[c+step-1]); _21 = vx_load(&currptr[c+step]); _22 = vx_load(&currptr[c+step+1]);
+
+                vmax = v_max(v_max(v_max(_00,_01),v_max(_02,_10)),v_max(v_max(_12,_20),v_max(_21,_22)));
+                vmin = v_min(v_min(v_min(_00,_01),v_min(_02,_10)),v_min(v_min(_12,_20),v_min(_21,_22)));
+
+                v_float32 condp = cond & (val > vx_setall_f32(0)) & (val >= vmax);
+                v_float32 condm = cond & (val < vx_setall_f32(0)) & (val <= vmin);
+
+                cond = condp | condm;
+                if (!v_check_any(cond))
+                {
+                    continue;
+                }
+
+                _00 = vx_load(&prevptr[c-step-1]); _01 = vx_load(&prevptr[c-step]); _02 = vx_load(&prevptr[c-step+1]);
+                _10 = vx_load(&prevptr[c     -1]);                                  _12 = vx_load(&prevptr[c     +1]);
+                _20 = vx_load(&prevptr[c+step-1]); _21 = vx_load(&prevptr[c+step]); _22 = vx_load(&prevptr[c+step+1]);
+
+                vmax = v_max(v_max(v_max(_00,_01),v_max(_02,_10)),v_max(v_max(_12,_20),v_max(_21,_22)));
+                vmin = v_min(v_min(v_min(_00,_01),v_min(_02,_10)),v_min(v_min(_12,_20),v_min(_21,_22)));
+
+                condp &= (val >= vmax);
+                condm &= (val <= vmin);
+
+                cond = condp | condm;
+                if (!v_check_any(cond))
+                {
+                    continue;
+                }
+
+                v_float32 _11p = vx_load(&prevptr[c]);
+                v_float32 _11n = vx_load(&nextptr[c]);
+
+                v_float32 max_middle = v_max(_11n,_11p);
+                v_float32 min_middle = v_min(_11n,_11p);
+
+                _00 = vx_load(&nextptr[c-step-1]); _01 = vx_load(&nextptr[c-step]); _02 = vx_load(&nextptr[c-step+1]);
+                _10 = vx_load(&nextptr[c     -1]);                                  _12 = vx_load(&nextptr[c     +1]);
+                _20 = vx_load(&nextptr[c+step-1]); _21 = vx_load(&nextptr[c+step]); _22 = vx_load(&nextptr[c+step+1]);
+
+                vmax = v_max(v_max(v_max(_00,_01),v_max(_02,_10)),v_max(v_max(_12,_20),v_max(_21,_22)));
+                vmin = v_min(v_min(v_min(_00,_01),v_min(_02,_10)),v_min(v_min(_12,_20),v_min(_21,_22)));
+
+                condp &= (val >= v_max(vmax,max_middle));
+                condm &= (val <= v_min(vmin,min_middle));
+
+                cond = condp | condm;
+                if (!v_check_any(cond))
+                {
+                    continue;
+                }
+
+                int mask = v_signmask(cond);
+                for (int k = 0; k<vecsize;k++)
+                {
+                    if ((mask & (1<<k)) == 0)
+                        continue;
+
+                    CV_TRACE_REGION("pixel_candidate_simd");
+
+                    KeyPoint kpt;
+                    int r1 = r, c1 = c+k, layer = i;
+                    if( !adjustLocalExtrema(dog_pyr, kpt, o, layer, r1, c1,
+                                            nOctaveLayers, (float)contrastThreshold,
+                                            (float)edgeThreshold, (float)sigma) )
+                        continue;
+                    float scl_octv = kpt.size*0.5f/(1 << o);
+                    float omax = calcOrientationHist(gauss_pyr[o*(nOctaveLayers+3) + layer],
+                                                     Point(c1, r1),
+                                                     cvRound(SIFT_ORI_RADIUS * scl_octv),
+                                                     SIFT_ORI_SIG_FCTR * scl_octv,
+                                                     hist, n);
+                    float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
+                    for( int j = 0; j < n; j++ )
+                    {
+                        int l = j > 0 ? j - 1 : n - 1;
+                        int r2 = j < n-1 ? j + 1 : 0;
+
+                        if( hist[j] > hist[l]  &&  hist[j] > hist[r2]  &&  hist[j] >= mag_thr )
+                        {
+                            float bin = j + 0.5f * (hist[l]-hist[r2]) / (hist[l] - 2*hist[j] + hist[r2]);
+                            bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
+                            kpt.angle = 360.f - (float)((360.f/n) * bin);
+                            if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+                                kpt.angle = 0.f;
+
+                            kpts_.push_back(kpt);
+                        }
+                    }
+                }
+            }
+
+#endif //CV_SIMD && !(DoG_TYPE_SHORT)
+
+            // vector loop reminder, better predictibility and less branch density
+            for( ; c < cols-SIFT_IMG_BORDER; c++)
             {
                 sift_wt val = currptr[c];
+                if (std::abs(val) <= threshold)
+                    continue;
 
-                // find local extrema with pixel accuracy
-                if( std::abs(val) > threshold &&
-                   ((val > 0 && val >= currptr[c-1] && val >= currptr[c+1] &&
-                     val >= currptr[c-step-1] && val >= currptr[c-step] && val >= currptr[c-step+1] &&
-                     val >= currptr[c+step-1] && val >= currptr[c+step] && val >= currptr[c+step+1] &&
-                     val >= nextptr[c] && val >= nextptr[c-1] && val >= nextptr[c+1] &&
-                     val >= nextptr[c-step-1] && val >= nextptr[c-step] && val >= nextptr[c-step+1] &&
-                     val >= nextptr[c+step-1] && val >= nextptr[c+step] && val >= nextptr[c+step+1] &&
-                     val >= prevptr[c] && val >= prevptr[c-1] && val >= prevptr[c+1] &&
-                     val >= prevptr[c-step-1] && val >= prevptr[c-step] && val >= prevptr[c-step+1] &&
-                     val >= prevptr[c+step-1] && val >= prevptr[c+step] && val >= prevptr[c+step+1]) ||
-                    (val < 0 && val <= currptr[c-1] && val <= currptr[c+1] &&
-                     val <= currptr[c-step-1] && val <= currptr[c-step] && val <= currptr[c-step+1] &&
-                     val <= currptr[c+step-1] && val <= currptr[c+step] && val <= currptr[c+step+1] &&
-                     val <= nextptr[c] && val <= nextptr[c-1] && val <= nextptr[c+1] &&
-                     val <= nextptr[c-step-1] && val <= nextptr[c-step] && val <= nextptr[c-step+1] &&
-                     val <= nextptr[c+step-1] && val <= nextptr[c+step] && val <= nextptr[c+step+1] &&
-                     val <= prevptr[c] && val <= prevptr[c-1] && val <= prevptr[c+1] &&
-                     val <= prevptr[c-step-1] && val <= prevptr[c-step] && val <= prevptr[c-step+1] &&
-                     val <= prevptr[c+step-1] && val <= prevptr[c+step] && val <= prevptr[c+step+1])))
+                sift_wt _00,_01,_02;
+                sift_wt _10,    _12;
+                sift_wt _20,_21,_22;
+                _00 = currptr[c-step-1]; _01 = currptr[c-step]; _02 = currptr[c-step+1];
+                _10 = currptr[c     -1];                        _12 = currptr[c     +1];
+                _20 = currptr[c+step-1]; _21 = currptr[c+step]; _22 = currptr[c+step+1];
+
+                bool calculate = false;
+                if (val > 0)
+                {
+                    sift_wt vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                    if (val >= vmax)
+                    {
+                        _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
+                        _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
+                        _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
+                        vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                        if (val >= vmax)
+                        {
+                            _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
+                            _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
+                            _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+                            vmax = std::max(std::max(std::max(_00,_01),std::max(_02,_10)),std::max(std::max(_12,_20),std::max(_21,_22)));
+                            if (val >= vmax)
+                            {
+                                sift_wt _11p = prevptr[c], _11n = nextptr[c];
+                                calculate = (val >= std::max(_11p,_11n));
+                            }
+                        }
+                    }
+
+                } else  { // val cant be zero here (first abs took care of zero), must be negative
+                    sift_wt vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+                    if (val <= vmin)
+                    {
+                        _00 = prevptr[c-step-1]; _01 = prevptr[c-step]; _02 = prevptr[c-step+1];
+                        _10 = prevptr[c     -1];                        _12 = prevptr[c     +1];
+                        _20 = prevptr[c+step-1]; _21 = prevptr[c+step]; _22 = prevptr[c+step+1];
+                        vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+                        if (val <= vmin)
+                        {
+                            _00 = nextptr[c-step-1]; _01 = nextptr[c-step]; _02 = nextptr[c-step+1];
+                            _10 = nextptr[c     -1];                        _12 = nextptr[c     +1];
+                            _20 = nextptr[c+step-1]; _21 = nextptr[c+step]; _22 = nextptr[c+step+1];
+                            vmin = std::min(std::min(std::min(_00,_01),std::min(_02,_10)),std::min(std::min(_12,_20),std::min(_21,_22)));
+                            if (val <= vmin)
+                            {
+                                sift_wt _11p = prevptr[c], _11n = nextptr[c];
+                                calculate = (val <= std::min(_11p,_11n));
+                            }
+                        }
+                    }
+                }
+
+                if (calculate)
                 {
                     CV_TRACE_REGION("pixel_candidate");
 

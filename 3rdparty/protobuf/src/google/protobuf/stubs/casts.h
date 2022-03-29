@@ -32,11 +32,14 @@
 #define GOOGLE_PROTOBUF_CASTS_H__
 
 #include <google/protobuf/stubs/common.h>
-#include <google/protobuf/stubs/type_traits.h>
+
+#include <google/protobuf/port_def.inc>
+#include <type_traits>
 
 namespace google {
 namespace protobuf {
 namespace internal {
+
 // Use implicit_cast as a safe version of static_cast or const_cast
 // for upcasting in the type hierarchy (i.e. casting a pointer to Foo
 // to a pointer to SuperclassOfFoo or casting a pointer to Foo to
@@ -44,7 +47,7 @@ namespace internal {
 // When you use implicit_cast, the compiler checks that the cast is safe.
 // Such explicit implicit_casts are necessary in surprisingly many
 // situations where C++ demands an exact type match instead of an
-// argument type convertable to a target type.
+// argument type convertible to a target type.
 //
 // The From type can be inferred, so the preferred syntax for using
 // implicit_cast is the same as for static_cast etc.:
@@ -87,15 +90,15 @@ inline To down_cast(From* f) {                   // so we only accept pointers
     implicit_cast<From*, To>(0);
   }
 
-#if !defined(NDEBUG) && !defined(GOOGLE_PROTOBUF_NO_RTTI)
-  assert(f == NULL || dynamic_cast<To>(f) != NULL);  // RTTI: debug mode only!
+#if !defined(NDEBUG) && PROTOBUF_RTTI
+  assert(f == nullptr || dynamic_cast<To>(f) != nullptr);  // RTTI: debug mode only!
 #endif
   return static_cast<To>(f);
 }
 
 template<typename To, typename From>    // use like this: down_cast<T&>(foo);
 inline To down_cast(From& f) {
-  typedef typename remove_reference<To>::type* ToAsPointer;
+  typedef typename std::remove_reference<To>::type* ToAsPointer;
   // Ensures that To is a sub-type of From *.  This test is here only
   // for compile-time type checking, and has no overhead in an
   // optimized build at run-time, as it will be optimized away
@@ -104,17 +107,16 @@ inline To down_cast(From& f) {
     implicit_cast<From*, ToAsPointer>(0);
   }
 
-#if !defined(NDEBUG) && !defined(GOOGLE_PROTOBUF_NO_RTTI)
+#if !defined(NDEBUG) && PROTOBUF_RTTI
   // RTTI: debug mode only!
-  assert(dynamic_cast<ToAsPointer>(&f) != NULL);
+  assert(dynamic_cast<ToAsPointer>(&f) != nullptr);
 #endif
   return *static_cast<ToAsPointer>(&f);
 }
 
 template<typename To, typename From>
 inline To bit_cast(const From& from) {
-  GOOGLE_COMPILE_ASSERT(sizeof(From) == sizeof(To),
-                        bit_cast_with_different_sizes);
+  static_assert(sizeof(From) == sizeof(To), "bit_cast_with_different_sizes");
   To dest;
   memcpy(&dest, &from, sizeof(dest));
   return dest;
@@ -130,4 +132,7 @@ using internal::bit_cast;
 
 }  // namespace protobuf
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_CASTS_H__

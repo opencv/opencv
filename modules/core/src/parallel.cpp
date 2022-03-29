@@ -56,9 +56,9 @@
     #undef abs
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __GLIBC__ \
-    || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ \
-    || defined __OpenBSD__
+#if defined __unix__ || defined __APPLE__ || defined __GLIBC__ \
+    || defined __HAIKU__ || defined __EMSCRIPTEN__ \
+    || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -72,7 +72,7 @@
     #endif
 #endif
 
-#if defined CV_CXX11
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
 
@@ -153,6 +153,9 @@
 
 #include "opencv2/core/detail/exception_ptr.hpp"  // CV__EXCEPTION_PTR = 1 if std::exception_ptr is available
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
+
 using namespace cv;
 
 namespace cv {
@@ -203,6 +206,9 @@ namespace {
 
             // propagate main thread state
             rng = cv::theRNG();
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            details::saveFPDenormalsState(fp_denormals_base_state);
+#endif
 
 #ifdef OPENCV_TRACE
             traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
@@ -283,6 +289,11 @@ namespace {
                 }
             }
         }
+
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+        details::FPDenormalsModeState fp_denormals_base_state;
+#endif
+
     private:
         ParallelLoopBodyWrapperContext(const ParallelLoopBodyWrapperContext&); // disabled
         ParallelLoopBodyWrapperContext& operator=(const ParallelLoopBodyWrapperContext&); // disabled
@@ -319,6 +330,9 @@ namespace {
 
             // propagate main thread state
             cv::theRNG() = ctx.rng;
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            FPDenormalsIgnoreHintScope fp_denormals_scope(ctx.fp_denormals_base_state);
+#endif
 
             cv::Range r;
             cv::Range wholeRange = ctx.wholeRange;
@@ -884,9 +898,11 @@ T minNonZero(const T& val_1, const T& val_2)
     return (val_1 != 0) ? val_1 : val_2;
 }
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 static
 int getNumberOfCPUs_()
 {
+#ifndef OPENCV_SEMIHOSTING
     /*
      * Logic here is to try different methods of getting CPU counts and return
      * the minimum most value as it has high probablity of being right and safe.
@@ -978,6 +994,9 @@ int getNumberOfCPUs_()
 #endif
 
     return ncpus != 0 ? ncpus : 1;
+#else //  OPENCV_SEMIHOSTING
+    return 1;
+#endif //OPENCV_SEMIHOSTING
 }
 
 int getNumberOfCPUs()
@@ -985,6 +1004,13 @@ int getNumberOfCPUs()
     static int nCPUs = getNumberOfCPUs_();
     return nCPUs;  // cached value
 }
+
+#else  // OPENCV_DISABLE_THREAD_SUPPORT
+int getNumberOfCPUs()
+{
+    return 1;
+}
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
 
 const char* currentParallelFramework()
 {

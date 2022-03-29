@@ -184,7 +184,8 @@ static inline MatShape concat(const MatShape& a, const MatShape& b)
     return c;
 }
 
-static inline std::string toString(const MatShape& shape, const String& name = "")
+template<typename _Tp>
+static inline std::string toString(const std::vector<_Tp>& shape, const String& name = "")
 {
     std::ostringstream ss;
     if (!name.empty())
@@ -195,11 +196,14 @@ static inline std::string toString(const MatShape& shape, const String& name = "
     ss << " ]";
     return ss.str();
 }
-static inline void print(const MatShape& shape, const String& name = "")
+
+template<typename _Tp>
+static inline void print(const std::vector<_Tp>& shape, const String& name = "")
 {
     std::cout << toString(shape, name) << std::endl;
 }
-static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
+template<typename _Tp>
+static inline std::ostream& operator<<(std::ostream &out, const std::vector<_Tp>& shape)
 {
     out << toString(shape);
     return out;

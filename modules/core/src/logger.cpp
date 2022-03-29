@@ -181,17 +181,33 @@ LogLevel getLogLevel()
 
 namespace internal {
 
+static int getShowTimestampMode()
+{
+    static bool param_timestamp_enable = utils::getConfigurationParameterBool("OPENCV_LOG_TIMESTAMP", true);
+    static bool param_timestamp_ns_enable = utils::getConfigurationParameterBool("OPENCV_LOG_TIMESTAMP_NS", false);
+    return (param_timestamp_enable ? 1 : 0) + (param_timestamp_ns_enable ? 2 : 0);
+}
+
 void writeLogMessage(LogLevel logLevel, const char* message)
 {
     const int threadID = cv::utils::getThreadID();
+
+    std::string message_id;
+    switch (getShowTimestampMode())
+    {
+        case 1: message_id = cv::format("%d@%0.3f", threadID, getTimestampNS() * 1e-9); break;
+        case 1+2: message_id = cv::format("%d@%llu", threadID, (long long unsigned int)getTimestampNS()); break;
+        default: message_id = cv::format("%d", threadID); break;
+    }
+
     std::ostringstream ss;
     switch (logLevel)
     {
-    case LOG_LEVEL_FATAL:   ss << "[FATAL:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_ERROR:   ss << "[ERROR:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_WARNING: ss << "[ WARN:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_INFO:    ss << "[ INFO:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_DEBUG:   ss << "[DEBUG:" << threadID << "] " << message << std::endl; break;
+    case LOG_LEVEL_FATAL:   ss << "[FATAL:" << message_id << "] " << message << std::endl; break;
+    case LOG_LEVEL_ERROR:   ss << "[ERROR:" << message_id << "] " << message << std::endl; break;
+    case LOG_LEVEL_WARNING: ss << "[ WARN:" << message_id << "] " << message << std::endl; break;
+    case LOG_LEVEL_INFO:    ss << "[ INFO:" << message_id << "] " << message << std::endl; break;
+    case LOG_LEVEL_DEBUG:   ss << "[DEBUG:" << message_id << "] " << message << std::endl; break;
     case LOG_LEVEL_VERBOSE: ss << message << std::endl; break;
     case LOG_LEVEL_SILENT: return;  // avoid compiler warning about incomplete switch
     case ENUM_LOG_LEVEL_FORCE_INT: return;  // avoid compiler warning about incomplete switch

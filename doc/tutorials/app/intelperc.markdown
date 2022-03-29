@@ -5,6 +5,8 @@ Using Creative Senz3D and other Intel RealSense SDK compatible depth sensors {#t
 
 @prev_tutorial{tutorial_orbbec_astra}
 
+![hardwares](images/realsense.jpg)
+
 **Note**: This tutorial is partially obsolete since PerC SDK has been replaced with RealSense SDK
 
 Depth sensors compatible with Intel® RealSense SDK are supported through VideoCapture
@@ -81,5 +83,5 @@ there are two flags that should be used to set/get property of the needed genera
     flag value is assumed by default if neither of the two possible values of the property is set.
 
 For more information please refer to the example of usage
-[videocapture_intelperc.cpp](https://github.com/opencv/opencv/tree/master/samples/cpp/videocapture_intelperc.cpp)
+[videocapture_realsense.cpp](https://github.com/opencv/opencv/tree/4.x/samples/cpp/videocapture_realsense.cpp)
 in opencv/samples/cpp folder.

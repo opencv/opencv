@@ -27,19 +27,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp)
 @include samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java)
 @include samples/java/tutorial_code/ShapeDescriptors/bounding_rects_circles/GeneralContoursDemo1.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py)
 @include samples/python/tutorial_code/ShapeDescriptors/bounding_rects_circles/generalContours_demo1.py
 @end_toggle
 
@@ -79,7 +79,7 @@ The main function is rather simple, as follows from the comments we do the follo
    In general callback functions are used to react to some kind of signal, in our
    case it's trackbar's state change.
    Explicit one-time call of `thresh_callback` is necessary to display
-   the "Contours" window simultaniously with the "Source" window.
+   the "Contours" window simultaneously with the "Source" window.
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp trackbar

@@ -13,7 +13,7 @@ namespace cv {
 namespace gapi {
 namespace streaming {
 
-GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
+GAPI_EXPORTS cv::GKernelPackage kernels();
 
 G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
 {
@@ -74,7 +74,7 @@ e.g when graph's input needs to be passed directly to output, like in Streaming 
 @param in Input image
 @return Copy of the input
 */
-GAPI_EXPORTS GMat copy(const GMat& in);
+GAPI_EXPORTS_W GMat copy(const GMat& in);
 
 /** @brief Makes a copy of the input frame. Note that this copy may be not real
 (no actual data copied). Use this function to maintain graph contracts,

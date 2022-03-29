@@ -221,7 +221,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !_groupByClasses) ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !_locPredTransposed && _bboxesNormalized);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -462,7 +462,7 @@ public:
             // Retrieve all prior bboxes
             std::vector<util::NormalizedBBox> priorBBoxes;
             std::vector<std::vector<float> > priorVariances;
-            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, priorBBoxes, priorVariances);
+            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, _varianceEncodedInTarget, priorBBoxes, priorVariances);
 
             // Decode all loc predictions to bboxes
             util::NormalizedBBox clipBounds;
@@ -756,7 +756,7 @@ public:
         CV_Assert(prior_bboxes.size() == prior_variances.size());
         CV_Assert(prior_bboxes.size() == bboxes.size());
         size_t num_bboxes = prior_bboxes.size();
-        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4);
+        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4 || variance_encoded_in_target);
         decode_bboxes.clear(); decode_bboxes.resize(num_bboxes);
         if(variance_encoded_in_target)
         {
@@ -808,12 +808,13 @@ public:
     }
 
     // Get prior bounding boxes from prior_data
-    //    prior_data: 1 x 2 x num_priors * 4 x 1 blob.
+    //    prior_data: 1 x 1 x num_priors * 4 x 1 blob or 1 x 2 x num_priors * 4 x 1 blob.
     //    num_priors: number of priors.
     //    prior_bboxes: stores all the prior bboxes in the format of util::NormalizedBBox.
     //    prior_variances: stores all the variances needed by prior bboxes.
     static void GetPriorBBoxes(const float* priorData, const int& numPriors,
-                        bool normalized_bbox, std::vector<util::NormalizedBBox>& priorBBoxes,
+                        bool normalized_bbox, bool variance_encoded_in_target,
+                        std::vector<util::NormalizedBBox>& priorBBoxes,
                         std::vector<std::vector<float> >& priorVariances)
     {
         priorBBoxes.clear(); priorBBoxes.resize(numPriors);
@@ -829,13 +830,16 @@ public:
             bbox.set_size(BBoxSize(bbox, normalized_bbox));
         }
 
-        for (int i = 0; i < numPriors; ++i)
+        if (!variance_encoded_in_target)
         {
-            int startIdx = (numPriors + i) * 4;
-            // not needed here: priorVariances[i].clear();
-            for (int j = 0; j < 4; ++j)
+            for (int i = 0; i < numPriors; ++i)
             {
-                priorVariances[i].push_back(priorData[startIdx + j]);
+                int startIdx = (numPriors + i) * 4;
+                // not needed here: priorVariances[i].clear();
+                for (int j = 0; j < 4; ++j)
+                {
+                    priorVariances[i].push_back(priorData[startIdx + j]);
+                }
             }
         }
     }
@@ -996,30 +1000,6 @@ public:
         return make_cuda_node<cuda4dnn::DetectionOutputOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::DetectionOutputLayer ieLayer(name);
-
-        ieLayer.setNumClasses(_numClasses);
-        ieLayer.setShareLocation(_shareLocation);
-        ieLayer.setBackgroudLabelId(_backgroundLabelId);
-        ieLayer.setNMSThreshold(_nmsThreshold);
-        ieLayer.setTopK(_topK > 0 ? _topK : _keepTopK);
-        ieLayer.setKeepTopK(_keepTopK);
-        ieLayer.setConfidenceThreshold(_confidenceThreshold);
-        ieLayer.setVariantEncodedInTarget(_varianceEncodedInTarget);
-        ieLayer.setCodeType("caffe.PriorBoxParameter." + _codeType);
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(3));
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        l.getParameters()["eta"] = std::string("1.0");
-        l.getParameters()["clip"] = _clip;
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

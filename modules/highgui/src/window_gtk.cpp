@@ -364,7 +364,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
 
 
     }
-    assert( image_widget->scaled_image );
+    CV_Assert(image_widget->scaled_image);
 }
 
 static void
@@ -849,7 +849,7 @@ static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode)
     return false;
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_GTK(const String& winname, const String& title)
 {
     CV_LOCK_MUTEX();
 
@@ -1966,6 +1966,10 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     }
     else if( event->type == GDK_SCROLL )
     {
+        GdkEventScroll* event_scroll = (GdkEventScroll*)event;
+        pt32f.x = cvFloor(event_scroll->x);
+        pt32f.y = cvFloor(event_scroll->y);
+
 #if defined(GTK_VERSION3_4)
         // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separately
         double delta = (event->scroll.delta_x + event->scroll.delta_y);
@@ -2023,13 +2027,18 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
                (unsigned)pt.y < (unsigned)(image_widget->original_image->height)
             ))
         {
-            flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
-                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
-                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
-                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+            // handle non-keyboard (mouse) modifiers first
+            flags |=
                 BIT_MAP(state, GDK_BUTTON1_MASK, CV_EVENT_FLAG_LBUTTON)  |
                 BIT_MAP(state, GDK_BUTTON2_MASK, CV_EVENT_FLAG_MBUTTON)  |
                 BIT_MAP(state, GDK_BUTTON3_MASK, CV_EVENT_FLAG_RBUTTON);
+            // keyboard modifiers
+            state &= gtk_accelerator_get_default_mod_mask();
+            flags |=
+                BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
+                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
+                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }

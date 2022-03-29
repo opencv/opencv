@@ -64,6 +64,55 @@ namespace cv
 namespace dnn
 {
 
+Range normalizeRange(const Range& input_range, int n)
+{
+    Range range = input_range;
+
+    range.start = std::min(std::max(range.start, -n), n - 1);
+    if (range.start < 0)
+    {
+        range.start += n;
+    }
+
+    range.end = std::min(std::max(range.end, -n), n);
+    if (range.end < 0)
+    {
+        range.end += n;
+    }
+
+    return range;
+}
+
+std::vector<std::vector<cv::Range> > finalizeSliceRange(const MatShape& inpShape, int& axis,
+                                                        const std::vector<std::vector<cv::Range> >& inputSliceRanges)
+{
+    std::vector<std::vector<cv::Range> > sliceRanges = inputSliceRanges;
+    CV_Assert(inpShape.size() > 0);
+    bool axisNeg = (axis < 0);
+    axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
+
+    for (size_t i = 0; i < sliceRanges.size(); ++i){
+        std::vector<Range>& ranges = sliceRanges[i];
+        if (axisNeg)
+        {
+            ranges.insert(ranges.begin(), axis, Range::all());
+        }
+
+        for (size_t j = 0; j < ranges.size(); ++j)
+        {
+            int n = inpShape[j];
+            if (n <= 0)
+            {
+                continue;
+            }
+
+            ranges[j] = normalizeRange(ranges[j], n);
+        }
+    }
+
+    return sliceRanges;
+}
+
 class SliceLayerImpl : public SliceLayer
 {
 public:
@@ -75,20 +124,22 @@ public:
         num_split = params.get<int>("num_split", 0);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
+
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
+            int size = axis > 0 ? axis + 1 : 1;
             sliceRanges.resize(indicesValue.size() + 1,
-                               std::vector<Range>(std::max(axis,0) + 1, Range::all()));
+                               std::vector<Range>(size, Range::all()));
             int prevSlice = 0;
             for (int i = 0; i < indicesValue.size(); ++i)
             {
-                sliceRanges[i][axis].start = prevSlice;
-                sliceRanges[i][axis].end = indicesValue.get<int>(i);
-                prevSlice = sliceRanges[i][axis].end;
+                sliceRanges[i][size - 1].start = prevSlice;
+                sliceRanges[i][size - 1].end = indicesValue.get<int>(i);
+                prevSlice = sliceRanges[i][size - 1].end;
             }
-            sliceRanges.back()[axis].start = prevSlice;
+            sliceRanges.back()[size - 1].start = prevSlice;
         }
         else if (params.has("begin"))
         {
@@ -103,14 +154,13 @@ public:
             {
                 int start = begins.get<int>(i);
                 int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
-                CV_Assert(start >= 0);
 
                 sliceRanges[0][i].start = start;
                 if (params.has("size"))
                 {
                     int size = sizeOrEnd;
                     CV_Assert(size == -1 || size > 0);  // -1 value means range [start, axis_size).
-                    sliceRanges[0][i].end = size > 0 ? (start + size) : -1;  // We'll finalize a negative value later.
+                    sliceRanges[0][i].end = size > 0 ? (start + size) : INT_MAX;  // We'll finalize a negative value later.
                 }
                 else
                 {
@@ -140,12 +190,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
-                sliceRanges.size() == 1 && sliceRanges[0].size() == 4 && !hasSteps;
-#endif
-#ifdef HAVE_DNN_NGRAPH
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return sliceRanges.size() == 1 && !hasSteps;
 #endif
@@ -164,16 +209,19 @@ public:
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
 
-        if (!sliceRanges.empty())
+        int axis_rw = axis;
+        std::vector<std::vector<cv::Range> > sliceRanges_rw = finalizeSliceRange(inpShape, axis_rw, sliceRanges);
+
+        if (!sliceRanges_rw.empty())
         {
-            outputs.resize(sliceRanges.size(), inpShape);
+            outputs.resize(sliceRanges_rw.size(), inpShape);
             for (int i = 0; i < outputs.size(); ++i)
             {
-                CV_Assert(sliceRanges[i].size() <= inpShape.size());
-                for (int j = 0; j < sliceRanges[i].size(); ++j)
+                CV_Assert(sliceRanges_rw[i].size() <= inpShape.size());
+                for (int j = 0; j < sliceRanges_rw[i].size(); ++j)
                 {
                     if (shapesInitialized || inpShape[j] > 0)
-                        outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
+                        outputs[i][j] = normalizeRange(sliceRanges_rw[i][j], inpShape[j]).size();
 
                     if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
                         outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
@@ -182,10 +230,10 @@ public:
         }
         else  // Divide input blob on equal parts by axis.
         {
-            CV_Assert(0 <= axis && axis < inpShape.size());
+            CV_Assert(0 <= axis_rw && axis_rw < inpShape.size());
             int splits = num_split ? num_split : requiredOutputs;
-            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
-            inpShape[axis] /= splits;
+            CV_Assert(splits > 0 && inpShape[axis_rw] % splits == 0);
+            inpShape[axis_rw] /= splits;
             outputs.resize(splits, inpShape);
         }
         return false;
@@ -210,7 +258,7 @@ public:
         CV_Assert(inputs.size() == 1);
         const MatSize& inpShape = inputs[0].size;
 
-        finalSliceRanges = sliceRanges;
+        finalSliceRanges = finalizeSliceRange(shape(inputs[0]), axis, sliceRanges);
 
         if (sliceRanges.empty())
         {
@@ -240,7 +288,7 @@ public:
             // Clamp.
             for (int j = 0; j < finalSliceRanges[i].size(); ++j)
             {
-                finalSliceRanges[i][j] = normalize_axis_range(finalSliceRanges[i][j], inpShape[j]);
+                finalSliceRanges[i][j] = normalizeRange(finalSliceRanges[i][j], inpShape[j]);
             }
         }
 
@@ -492,7 +540,7 @@ public:
                     ocl::KernelArg::PtrReadOnly(input),
                     ocl::KernelArg::PtrWriteOnly(output)
                 )
-                .run(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
+                .run_(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
             if (!ret)
                 return false;
         }  // for outputs.size()
@@ -531,68 +579,15 @@ public:
             {
                 std::vector<int> inpIdx(dimsNum, 0);
                 std::vector<int> outIdx(dimsNum, 0);
-                getSliceRecursive(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                if (inpMat.type() == CV_16S)
+                    getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else if (inpMat.type() == CV_8S)
+                    getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else
+                    getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
             }
         }
     }
-
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        CV_Assert_N(finalSliceRanges.size() == 1, inputs.size() <= 2);
-
-        std::vector<size_t> axes, offsets, dims;
-        int from, to, step;
-        int numDims = finalSliceRanges[0].size();
-        if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
-        {
-            from = axis;
-            to = numDims;
-            step = 1;
-        }
-        else
-        {
-            from = numDims - 1;
-            to = axis - 1;
-            step = -1;
-        }
-        for (int i = from; i != to; i += step)
-        {
-            axes.push_back(i);
-            offsets.push_back(finalSliceRanges[0][i].start);
-            dims.push_back(finalSliceRanges[0][i].size());
-        }
-
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        ieLayer.setType("Crop");
-        ieLayer.getParameters()["axis"] = axes;
-        ieLayer.getParameters()["dim"] = dims;
-        ieLayer.getParameters()["offset"] = offsets;
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-
-        if (inputs.size() != 2)
-        {
-            std::vector<size_t> outShape(numDims);
-            for (int i = 0; i < numDims; ++i)
-                outShape[i] = finalSliceRanges[0][i].size();
-
-            ieLayer.getInputPorts()[1].setParameter("type", "weights");
-
-            auto shapeSource = InferenceEngine::make_shared_blob<float>({
-                                   InferenceEngine::Precision::FP32, outShape,
-                                   InferenceEngine::Layout::ANY
-                               });
-            shapeSource->allocate();
-            addConstantData("weights", shapeSource, ieLayer);
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif
-#endif
 
 
 #ifdef HAVE_DNN_NGRAPH
@@ -647,8 +642,20 @@ public:
     }
 #endif
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        const int numOutputs = scales[1].size();
+        for (int i = 0; i < numOutputs; i++)
+        {
+            if (scales[1][i] != scales[0][0])
+             return false;
+        }
+        return true;
+    }
 
 private:
+    template <typename T>
     void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
                            const std::vector<Range> &sliceRanges,
                            const std::vector<int> &sliceSteps, int dim, int dimsNum,
@@ -658,8 +665,6 @@ private:
         int end = sliceRanges[dim].end;
         int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
 
-        const bool is32F = inpMat.depth() == CV_32F;
-
         // TODO optimization is required (for 2D tail case at least)
         for (int k = begin, j = 0; k < end; k += step, j++)
         {
@@ -667,14 +672,9 @@ private:
             outIdx[dim] = j;
 
             if (dim + 1 < dimsNum)
-                getSliceRecursive(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
+                getSliceRecursive<T>(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
             else
-            {
-                if (is32F)
-                    outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
-                else
-                    outputs.at<short>(outIdx.data()) = inpMat.at<short>(inpIdx.data());  // 16F emulation
-            }
+                outputs.at<T>(outIdx.data()) = inpMat.at<T>(inpIdx.data());
         }
     }
 

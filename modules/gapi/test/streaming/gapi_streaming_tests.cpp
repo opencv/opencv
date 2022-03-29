@@ -2,12 +2,12 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2020 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 
 #include "../test_precomp.hpp"
 
-#include "../common/gapi_tests_common.hpp"
+#include "../common/gapi_streaming_tests_common.hpp"
 
 #include <thread> // sleep_for (Delay)
 
@@ -24,26 +24,13 @@
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
+#include <opencv2/gapi/gstreaming.hpp>
+
 
 namespace opencv_test
 {
 namespace
 {
-void initTestDataPath()
-{
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath) {
-            cvtest::addDataSearchPath(testDataPath);
-        }
-        initialized = true;
-    }
-#endif // WINRT
-}
 
 enum class KernelPackage: int
 {
@@ -70,7 +57,6 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
 struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
                                                                   cv::optional<size_t>>> {
     GAPI_Streaming() {
-        initTestDataPath();
         KernelPackage pkg_kind;
         std::tie(pkg_kind, cap) = GetParam();
         pkg = getKernelPackage(pkg_kind);
@@ -81,7 +67,7 @@ struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
         return cap;
     }
 
-    cv::gapi::GKernelPackage getKernelPackage(KernelPackage pkg_kind)
+    cv::GKernelPackage getKernelPackage(KernelPackage pkg_kind)
     {
         using namespace cv::gapi;
         switch (pkg_kind)
@@ -120,12 +106,12 @@ struct GAPI_Streaming: public ::testing::TestWithParam<std::tuple<KernelPackage,
         using namespace cv::gapi;
         auto args = cv::compile_args(use_only{pkg});
         if (cap) {
-            args += cv::compile_args(streaming::queue_capacity{cap.value()});
+            args += cv::compile_args(cv::gapi::streaming::queue_capacity{cap.value()});
         }
         return args;
     }
 
-    cv::gapi::GKernelPackage pkg;
+    cv::GKernelPackage       pkg;
     cv::optional<size_t>     cap;
 };
 
@@ -177,6 +163,26 @@ public:
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
     }
 };
+
+class TestMediaGRAY final : public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaGRAY(cv::Mat m, Cb cb = []() {})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{ cv::MediaFormat::GRAY, cv::Size(m_mat.cols, m_mat.rows) };
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{ m_cb });
+    }
+};
+
 
 class BGRSource : public cv::gapi::wip::GCaptureSource {
 public:
@@ -244,6 +250,120 @@ public:
     }
 };
 
+class GRAYSource : public cv::gapi::wip::GCaptureSource {
+public:
+    explicit GRAYSource(const std::string& pipeline)
+        : cv::gapi::wip::GCaptureSource(pipeline) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        if (cv::gapi::wip::GCaptureSource::pull(data)) {
+            cv::Mat bgr = cv::util::get<cv::Mat>(data);
+            cv::Mat gray;
+            cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+            data = cv::MediaFrame::Create<TestMediaGRAY>(gray);
+            return true;
+        }
+        return false;
+    }
+
+    GMetaArg descr_of() const override {
+        return cv::GMetaArg{ cv::GFrameDesc{cv::MediaFormat::GRAY,
+                                            cv::util::get<cv::GMatDesc>(
+                                            cv::gapi::wip::GCaptureSource::descr_of()).size} };
+    }
+};
+
+
+void checkPullOverload(const cv::Mat& ref,
+                       const bool has_output,
+                       cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>& args) {
+    EXPECT_TRUE(has_output);
+    using runArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    cv::Mat out_mat;
+    switch (args.index()) {
+        case runArgs::index_of<cv::GRunArgs>():
+        {
+            auto outputs = util::get<cv::GRunArgs>(args);
+            EXPECT_EQ(1u, outputs.size());
+            out_mat = cv::util::get<cv::Mat>(outputs[0]);
+            break;
+        }
+        case runArgs::index_of<cv::GOptRunArgs>():
+        {
+            auto outputs = util::get<cv::GOptRunArgs>(args);
+            EXPECT_EQ(1u, outputs.size());
+            auto opt_mat = cv::util::get<cv::optional<cv::Mat>>(outputs[0]);
+            ASSERT_TRUE(opt_mat.has_value());
+            out_mat = *opt_mat;
+            break;
+        }
+        default: GAPI_Assert(false && "Incorrect type of Args");
+    }
+
+    EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
+}
+
+class InvalidSource : public cv::gapi::wip::IStreamSource {
+public:
+    InvalidSource(const size_t throw_every_nth_frame,
+                  const size_t num_frames)
+        : m_throw_every_nth_frame(throw_every_nth_frame),
+          m_curr_frame_id(0u),
+          m_num_frames(num_frames),
+          m_mat(1, 1, CV_8U) {
+    }
+
+    static std::string exception_msg()
+    {
+        return "InvalidSource sucessfuly failed!";
+    }
+
+    bool pull(cv::gapi::wip::Data& d) {
+        ++m_curr_frame_id;
+        if (m_curr_frame_id > m_num_frames) {
+            return false;
+        }
+
+        if (m_curr_frame_id % m_throw_every_nth_frame == 0) {
+            throw std::logic_error(InvalidSource::exception_msg());
+            return true;
+        } else {
+            d = cv::Mat(m_mat);
+        }
+
+        return true;
+    }
+
+    cv::GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::descr_of(m_mat)};
+    }
+
+private:
+    size_t m_throw_every_nth_frame;
+    size_t m_curr_frame_id;
+    size_t m_num_frames;
+    cv::Mat m_mat;
+};
+
+G_TYPED_KERNEL(GThrowExceptionOp, <GMat(GMat)>, "org.opencv.test.throw_error_op")
+{
+     static GMatDesc outMeta(GMatDesc in) { return in; }
+};
+
+GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
+{
+    static std::string exception_msg()
+    {
+        return "GThrowExceptionKernel sucessfuly failed";
+    }
+
+    static void run(const cv::Mat&, cv::Mat&)
+    {
+        throw std::logic_error(GThrowExceptionKernel::exception_msg());
+    }
+};
+
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
@@ -297,7 +417,9 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
         // With constant inputs, the stream is endless so
         // the blocking pull() should never return `false`.
         EXPECT_TRUE(ccomp.pull(cv::gout(out_mat_gapi)));
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
 
     EXPECT_TRUE(ccomp.running());
@@ -349,7 +471,9 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
         frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
+        EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(ccomp.running());
@@ -786,8 +910,6 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Scalar data.
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar m = cv::gapi::mean(in);
     cv::GMat tmp = cv::gapi::convertTo(in, CV_32F) - m;
@@ -854,8 +976,6 @@ TEST(GAPI_Streaming_Types, XChangeVector)
     // This test verifies if Streaming works when pipeline steps
     // (islands) exchange Vector data.
 
-    initTestDataPath();
-
     cv::GMat in1, in2;
     cv::GMat in = cv::gapi::crop(in1, cv::Rect{0,0,576,576});
     cv::GScalar m = cv::gapi::mean(in);
@@ -920,8 +1040,6 @@ TEST(GAPI_Streaming_Types, OutputScalar)
     // This test verifies if Streaming works when pipeline
     // produces scalar data only
 
-    initTestDataPath();
-
     cv::GMat in;
     cv::GScalar out = cv::gapi::mean(in);
     auto sc = cv::GComputation(cv::GIn(in), cv::GOut(out))
@@ -959,7 +1077,6 @@ TEST(GAPI_Streaming_Types, OutputVector)
     // This test verifies if Streaming works when pipeline
     // produces vector data only
 
-    initTestDataPath();
     auto pkg = cv::gapi::kernels<TypesTest::OCVSumV>();
 
     cv::GMat in1, in2;
@@ -1050,7 +1167,7 @@ struct GAPI_Streaming_TemplateTypes: ::testing::Test {
     cv::GMat blur;
     cv::GArray<int> vec;
     cv::GOpaque<int> opq;
-    cv::gapi::GKernelPackage pkg;
+    cv::GKernelPackage pkg;
     cv::Mat in_mat;
 };
 
@@ -1074,7 +1191,7 @@ TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
         }
         GAPI_Assert(out_mat || out_int);
         if (out_int) {
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1121,7 +1238,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
                 return cv::GComputation(cv::GIn(a, b), cv::GOut(c));
             })
     {
-        initTestDataPath();
 
         const auto a_desc = cv::descr_of(m);
         const auto b_desc = cv::descr_of(m);
@@ -1136,7 +1252,6 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 
 TEST(GAPI_Streaming, TestTwoVideosDifferentLength)
 {
-    initTestDataPath();
     auto desc = cv::GMatDesc{CV_8U,3,{768,576}};
     auto path1 = findDataFile("cv/video/768x576.avi");
     auto path2 = findDataFile("highgui/video/big_buck_bunny.avi");
@@ -1336,13 +1451,45 @@ TEST(Streaming, Python_Pull_Overload)
 
     bool has_output;
     cv::GRunArgs outputs;
-    std::tie(has_output, outputs) = ccomp.pull();
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
 
-    EXPECT_TRUE(has_output);
-    EXPECT_EQ(1u, outputs.size());
+    std::tie(has_output, args) = ccomp.pull();
 
-    auto out_mat = cv::util::get<cv::Mat>(outputs[0]);
-    EXPECT_EQ(0., cv::norm(in_mat, out_mat, cv::NORM_INF));
+    checkPullOverload(in_mat, has_output, args);
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+TEST(GAPI_Streaming_Desync, Python_Pull_Overload)
+{
+    cv::GMat in;
+    cv::GMat out = cv::gapi::streaming::desync(in);
+    cv::GComputation c(in, out);
+
+    cv::Size sz(3,3);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+
+    auto ccomp = c.compileStreaming();
+
+    EXPECT_TRUE(ccomp);
+    EXPECT_FALSE(ccomp.running());
+
+    ccomp.setSource(cv::gin(in_mat));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    bool has_output;
+    cv::GRunArgs outputs;
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
+
+    std::tie(has_output, args) = ccomp.pull();
+
+    checkPullOverload(in_mat, has_output, args);
 
     ccomp.stop();
     EXPECT_FALSE(ccomp.running());
@@ -1366,8 +1513,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Regular)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1399,8 +1544,6 @@ TEST(GAPI_Streaming_Desync, SmokeTest_Streaming)
 
 TEST(GAPI_Streaming_Desync, SmokeTest_Streaming_TwoParts)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat tmp1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
     cv::GMat out1 = cv::gapi::Canny(tmp1, 32, 128, 3);
@@ -1536,8 +1679,6 @@ TEST(GAPI_Streaming_Desync, Negative_CrossOtherDesync_Tier1)
 
 TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1561,8 +1702,6 @@ TEST(GAPI_Streaming_Desync, Negative_SynchronizedPull)
 
 TEST(GAPI_Streaming_Desync, UseSpecialPull)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GMat out1 = cv::gapi::boxFilter(in, -1, cv::Size(3,3));
 
@@ -1660,7 +1799,7 @@ TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
         if (out_vec || out_int) {
             EXPECT_EQ(320, out_vec.value()[0]);
             EXPECT_EQ(240, out_vec.value()[1]);
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1719,7 +1858,6 @@ TEST(GAPI_Streaming_Desync, DesyncObjectConsumedByTwoIslandsViaSameDesync) {
 
 TEST(GAPI_Streaming, CopyFrame)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -1756,9 +1894,48 @@ TEST(GAPI_Streaming, CopyFrame)
     }
 }
 
+TEST(GAPI_Streaming, CopyFrameGray)
+{
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+        cv::Mat gray;
+        cvtColor(ocv_mat, gray, cv::COLOR_BGR2GRAY);
+        EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
+    }
+}
+
 TEST(GAPI_Streaming, CopyMat)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GMat in;
@@ -1795,7 +1972,6 @@ TEST(GAPI_Streaming, CopyMat)
 
 TEST(GAPI_Streaming, Reshape)
 {
-    initTestDataPath();
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::GFrame in;
@@ -1861,23 +2037,97 @@ TEST(GAPI_Streaming, Reshape)
     }
 }
 
+TEST(GAPI_Streaming, ReshapeGray)
+{
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::GFrame in;
+    auto out = cv::gapi::copy(in);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+
+    auto cc = comp.compileStreaming();
+    try {
+        cc.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame;
+    cv::Mat ocv_mat;
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame)) && num_frames < max_frames)
+    {
+        auto view = frame.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame.desc().size, CV_8UC1, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat;
+        cv::Mat gray;
+        cvtColor(ocv_mat, gray, cv::COLOR_BGR2GRAY);
+        EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
+    }
+
+    // Reshape the graph meta
+    filepath = findDataFile("cv/video/1920x1080.avi");
+    cc.stop();
+    try {
+        cc.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cv::MediaFrame frame2;
+    cv::Mat ocv_mat2;
+
+    num_frames = 0u;
+
+    cc.start();
+    while (cc.pull(cv::gout(frame2)) && num_frames < max_frames)
+    {
+        auto view = frame2.access(cv::MediaFrame::Access::R);
+        cv::Mat gapi_mat(frame2.desc().size, CV_8UC1, view.ptr[0]);
+        num_frames++;
+        cap >> ocv_mat2;
+        cv::Mat gray;
+        cvtColor(ocv_mat2, gray, cv::COLOR_BGR2GRAY);
+        EXPECT_EQ(0, cvtest::norm(gray, gapi_mat, NORM_INF));
+    }
+}
+
+
 namespace {
     enum class TestSourceType {
         BGR,
-        NV12
+        NV12,
+        GRAY
     };
     std::ostream& operator<<(std::ostream& os, TestSourceType a) {
         os << "Source:";
         switch (a) {
             case TestSourceType::BGR:  return os << "BGR";
             case TestSourceType::NV12: return os << "NV12";
+            case TestSourceType::GRAY: return os << "GRAY";
             default: CV_Assert(false && "unknown TestSourceType");
         }
     }
 
     cv::gapi::wip::IStreamSource::Ptr createTestSource(TestSourceType sourceType,
                                                        const std::string& pipeline) {
-        assert(sourceType == TestSourceType::BGR || sourceType == TestSourceType::NV12);
+        assert(sourceType == TestSourceType::BGR || sourceType == TestSourceType::NV12 || sourceType == TestSourceType::GRAY);
 
         cv::gapi::wip::IStreamSource::Ptr ptr { };
 
@@ -1899,6 +2149,16 @@ namespace {
                 catch(...) {
                     throw SkipTestException(std::string("NV12Source for '") + pipeline +
                                             "' couldn't be created!");
+                }
+                break;
+            }
+            case TestSourceType::GRAY: {
+                try {
+                    ptr = cv::gapi::wip::make_src<GRAYSource>(pipeline);
+                }
+                catch (...) {
+                    throw SkipTestException(std::string("GRAYSource for '") + pipeline +
+                        "' couldn't be created!");
                 }
                 break;
             }
@@ -1969,12 +2229,32 @@ namespace {
               cvtBGR2NV12(bgr, y, uv);
               return uv;
           } },
+        { std::make_pair(TestSourceType::GRAY, TestAccessType::BGR),
+          [](const cv::Mat& bgr) {
+              cv::Mat gray;
+              cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+              cv::Mat out_bgr;
+              cv::cvtColor(gray, out_bgr, cv::COLOR_GRAY2BGR);
+              return out_bgr;
+          } },
+        { std::make_pair(TestSourceType::GRAY, TestAccessType::Y),
+          [](const cv::Mat& bgr) {
+              cv::Mat gray;
+              cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+              return gray;
+          } },
+        { std::make_pair(TestSourceType::GRAY, TestAccessType::UV),
+          [](const cv::Mat& bgr) {
+              cv::Mat uv(bgr.size() / 2, CV_8UC2, cv::Scalar::all(127));
+              return uv;
+          } },
     };
 } // anonymous namespace
 
 struct GAPI_Accessors_In_Streaming : public TestWithParam<
     std::tuple<std::string,TestSourceType,TestAccessType>>
 { };
+
 
 TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
 {
@@ -1985,8 +2265,7 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat out = accessor(in);
@@ -2020,9 +2299,10 @@ TEST_P(GAPI_Accessors_In_Streaming, AccuracyTest)
 
 INSTANTIATE_TEST_CASE_P(TestAccessor, GAPI_Accessors_In_Streaming,
                         Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::BGR, TestSourceType::NV12),
+                                Values(TestSourceType::BGR, TestSourceType::NV12, TestSourceType::GRAY),
                                 Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV)
                         ));
+
 
 struct GAPI_Accessors_Meta_In_Streaming : public TestWithParam<
     std::tuple<std::string,TestSourceType,TestAccessType>>
@@ -2037,8 +2317,7 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
     auto accessor = gapi_functions[accessType];
     auto fromBGR = ref_functions[std::make_pair(sourceType, accessType)];
 
-    initTestDataPathOrSkip();
-    const std::string& absFilePath = findDataFile(filepath, false);
+    const std::string& absFilePath = findDataFile(filepath);
 
     cv::GFrame in;
     cv::GMat gmat = accessor(in);
@@ -2091,7 +2370,7 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
 
 INSTANTIATE_TEST_CASE_P(AccessorMeta, GAPI_Accessors_Meta_In_Streaming,
                         Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::BGR, TestSourceType::NV12),
+                                Values(TestSourceType::BGR, TestSourceType::NV12, TestSourceType::GRAY),
                                 Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV)
                         ));
 
@@ -2132,9 +2411,17 @@ TEST(GAPI_Streaming, TestPythonAPI)
 
     bool is_over = false;
     cv::GRunArgs out_args;
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
 
     // NB: Used by python bridge
-    std::tie(is_over, out_args) = cc.pull();
+    std::tie(is_over, args) = cc.pull();
+
+    switch (args.index()) {
+        case RunArgs::index_of<cv::GRunArgs>():
+            out_args = util::get<cv::GRunArgs>(args); break;
+        default: GAPI_Assert(false && "Incorrect type of return value");
+    }
 
     ASSERT_EQ(1u, out_args.size());
     ASSERT_TRUE(cv::util::holds_alternative<cv::Mat>(out_args[0]));
@@ -2143,6 +2430,251 @@ TEST(GAPI_Streaming, TestPythonAPI)
     EXPECT_TRUE(is_over);
 
     cc.stop();
+}
+
+#ifdef HAVE_ONEVPL
+
+TEST(OneVPL_Source, Init)
+{
+    using CfgParam = cv::gapi::wip::onevpl::CfgParam;
+
+    std::vector<CfgParam> src_params;
+    src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
+    src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+    src_params.push_back(CfgParam::create_decoder_id(MFX_CODEC_HEVC));
+    std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+
+    EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(streaming::onevpl::hevc_header)),
+                             sizeof(streaming::onevpl::hevc_header)));
+    std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> stream_data_provider =
+                std::make_shared<streaming::onevpl::StreamDataProvider>(stream);
+
+    cv::Ptr<cv::gapi::wip::IStreamSource> cap;
+    bool cap_created = false;
+    try {
+        cap = cv::gapi::wip::make_onevpl_src(stream_data_provider, src_params);
+        cap_created = true;
+    } catch (const std::exception&) {
+    }
+    ASSERT_TRUE(cap_created);
+
+    cv::gapi::wip::Data out;
+    while (cap->pull(out)) {
+        (void)out;
+    }
+    EXPECT_TRUE(stream_data_provider->empty());
+}
+#endif // HAVE_ONEVPL
+
+TEST(GAPI_Streaming, TestDesyncRMat) {
+    cv::GMat in;
+    auto blurred = cv::gapi::blur(in, cv::Size{3,3});
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = in - blurred;
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out)).compileStreaming();
+
+    cv::Size sz(32,32);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+    pipe.setSource(cv::gin(in_mat));
+    pipe.start();
+
+    cv::optional<cv::RMat> out_desync;
+    cv::optional<cv::RMat> out_rmat;
+    while (true) {
+        // Initially it threw "bad variant access" since there was
+        // no RMat handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_rmat)));
+        if (out_rmat) break;
+    }
+}
+
+G_API_OP(GTestBlur, <GFrame(GFrame)>, "test.blur") {
+    static GFrameDesc outMeta(GFrameDesc d) { return d; }
+};
+GAPI_OCV_KERNEL(GOcvTestBlur, GTestBlur) {
+    static void run(const cv::MediaFrame& in, cv::MediaFrame& out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat mat(d.size, CV_8UC3, view.ptr[0]);
+        cv::Mat blurred;
+        cv::blur(mat, blurred, cv::Size{3,3});
+        out = cv::MediaFrame::Create<TestMediaBGR>(blurred);
+    }
+};
+
+TEST(GAPI_Streaming, TestDesyncMediaFrame) {
+    cv::GFrame in;
+    auto blurred = GTestBlur::on(in);
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = GTestBlur::on(blurred);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GOcvTestBlur>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::optional<cv::MediaFrame> out_desync;
+    cv::optional<cv::MediaFrame> out_frame;
+    while (true) {
+        // Initially it threw "bad variant access" since there was
+        // no MediaFrame handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
+        if (out_frame) break;
+    }
+}
+
+G_API_OP(GTestBlurGray, <GFrame(GFrame)>, "test.blur_gray") {
+    static GFrameDesc outMeta(GFrameDesc d) { return d; }
+};
+GAPI_OCV_KERNEL(GOcvTestBlurGray, GTestBlurGray) {
+    static void run(const cv::MediaFrame & in, cv::MediaFrame & out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::GRAY);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat mat(d.size, CV_8UC1, view.ptr[0]);
+        cv::Mat blurred;
+        cv::blur(mat, blurred, cv::Size{ 3,3 });
+        out = cv::MediaFrame::Create<TestMediaGRAY>(blurred);
+    }
+};
+
+TEST(GAPI_Streaming, TestDesyncMediaFrameGray) {
+    cv::GFrame in;
+    auto blurred = GTestBlurGray::on(in);
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = GTestBlurGray::on(blurred);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GOcvTestBlurGray>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<GRAYSource>(filepath);
+    }
+    catch (...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::optional<cv::MediaFrame> out_desync;
+    cv::optional<cv::MediaFrame> out_frame;
+    while (true) {
+        // Initially it threw "bad variant access" since there was
+        // no MediaFrame handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
+        if (out_frame) break;
+    }
+}
+
+TEST(GAPI_Streaming_Exception, SingleKernelThrow) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in, GThrowExceptionOp::on(in))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GThrowExceptionKernel>()));
+
+    cv::Mat in_mat(cv::Size(300, 300), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(GThrowExceptionKernel::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, StreamingBackendExceptionAsInput) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in,
+            cv::gapi::copy(GThrowExceptionOp::on(in)))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GThrowExceptionKernel>()));
+
+    cv::Mat in_mat(cv::Size(300, 300), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(GThrowExceptionKernel::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, RegularBacckendsExceptionAsInput) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in,
+            cv::gapi::add(GThrowExceptionOp::on(in), GThrowExceptionOp::on(in)))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GThrowExceptionKernel>()));
+
+    cv::Mat in_mat(cv::Size(300, 300), CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    pipeline.setSource(cv::gin(in_mat));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(GThrowExceptionKernel::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, SourceThrow) {
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in, cv::gapi::copy(in)).compileStreaming();
+
+    pipeline.setSource(std::make_shared<InvalidSource>(1u, 1u));
+    pipeline.start();
+
+    EXPECT_THROW(
+            try {
+                cv::Mat out_mat;
+                pipeline.pull(cv::gout(out_mat));
+            } catch (const std::logic_error& e) {
+                EXPECT_EQ(InvalidSource::exception_msg(), e.what());
+                throw;
+            }, std::logic_error);
+}
+
+TEST(GAPI_Streaming_Exception, SourceThrowEverySecondFrame) {
+    constexpr size_t throw_every_nth_frame = 2u;
+    constexpr size_t num_frames = 10u;
+    size_t curr_frame = 0;
+    bool has_frame = true;
+    cv::Mat out_mat;
+
+    cv::GMat in;
+    auto pipeline = cv::GComputation(in, cv::gapi::copy(in)).compileStreaming();
+
+    pipeline.setSource(std::make_shared<InvalidSource>(throw_every_nth_frame, num_frames));
+    pipeline.start();
+    while (has_frame) {
+        ++curr_frame;
+        try {
+            has_frame = pipeline.pull(cv::gout(out_mat));
+        } catch (const std::exception& e) {
+            EXPECT_TRUE(curr_frame % throw_every_nth_frame == 0);
+            EXPECT_EQ(InvalidSource::exception_msg(), e.what());
+        }
+    }
+
+    // NB: Pull was called num_frames + 1(stop).
+    EXPECT_EQ(num_frames, curr_frame - 1);
 }
 
 } // namespace opencv_test

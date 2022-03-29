@@ -105,7 +105,7 @@ if __name__ == "__main__":
     path = args.build_path
     try:
         if not os.path.isdir(path):
-            raise Err("Not a directory (should contain CMakeCache.txt ot test executables)")
+            raise Err("Not a directory (should contain CMakeCache.txt to test executables)")
         cache = CMakeCache(args.configuration)
         fname = os.path.join(path, "CMakeCache.txt")
 

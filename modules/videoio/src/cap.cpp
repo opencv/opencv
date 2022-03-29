@@ -122,7 +122,11 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-
+            if (!info.backendFactory)
+            {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
+            }
             CV_CAPTURE_LOG_DEBUG(NULL,
                                  cv::format("VIDEOIO(%s): trying capture filename='%s' ...",
                                             info.name, filename.c_str()));
@@ -232,10 +236,14 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
+            if (!info.backendFactory)
+            {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
+            }
             CV_CAPTURE_LOG_DEBUG(NULL,
                                  cv::format("VIDEOIO(%s): trying capture cameraNum=%d ...",
                                             info.name, cameraNum));
-
             CV_Assert(!info.backendFactory.empty());
             const Ptr<IBackend> backend = info.backendFactory->getBackend();
             if (!backend.empty())

@@ -1194,7 +1194,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src1.elemSize();
         const int total = (int)it.size;
-        const int intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
+        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, intSumBlockSize);
         int isum = 0;
         int count = 0;

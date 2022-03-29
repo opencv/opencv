@@ -58,7 +58,7 @@ if __name__ == "__main__":
         macos_archs = "x86_64,arm64"
     print('Using MacOS ARCHS={}'.format(macos_archs))
 
-    catalyst_archs = args.macos_archs
+    catalyst_archs = args.catalyst_archs
     if not catalyst_archs and not args.build_only_specified_archs:
         # Supply defaults
         catalyst_archs = "x86_64,arm64"

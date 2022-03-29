@@ -65,7 +65,7 @@ DualQuat<T> DualQuat<T>::createFromAngleAxisTrans(const T angle, const Vec<T, 3>
 {
     Quat<T> r = Quat<T>::createFromAngleAxis(angle, axis);
     Quat<T> t{0, trans[0], trans[1], trans[2]};
-    return createFromQuat(r, t * r / 2);
+    return createFromQuat(r, t * r * T(0.5));
 }
 
 template <typename T>
@@ -79,7 +79,7 @@ DualQuat<T> DualQuat<T>::createFromMat(InputArray _R)
     Mat R = _R.getMat();
     Quat<T> r = Quat<T>::createFromRotMat(R.colRange(0, 3).rowRange(0, 3));
     Quat<T> trans(0, R.at<T>(0, 3), R.at<T>(1, 3), R.at<T>(2, 3));
-    return createFromQuat(r, trans * r / 2);
+    return createFromQuat(r, trans * r * T(0.5));
 }
 
 template <typename T>
@@ -91,7 +91,7 @@ DualQuat<T> DualQuat<T>::createFromAffine3(const Affine3<T> &R)
 template <typename T>
 DualQuat<T> DualQuat<T>::createFromPitch(const T angle, const T d, const Vec<T, 3> &axis, const Vec<T, 3> &moment)
 {
-    T half_angle = angle / 2, half_d = d / 2;
+    T half_angle = angle * T(0.5), half_d = d * T(0.5);
     Quat<T> qaxis = Quat<T>(0, axis[0], axis[1], axis[2]).normalize();
     Quat<T> qmoment = Quat<T>(0, moment[0], moment[1], moment[2]);
     qmoment -= qaxis * axis.dot(moment);
@@ -158,7 +158,7 @@ inline Quat<T> DualQuat<T>::getRotation(QuatAssumeType assumeUnit) const
 template <typename T>
 inline Vec<T, 3> DualQuat<T>::getTranslation(QuatAssumeType assumeUnit) const
 {
-    Quat<T> trans = 2.0 * (getDualPart() * getRealPart().inv(assumeUnit));
+    Quat<T> trans = T(2.0) * (getDualPart() * getRealPart().inv(assumeUnit));
     return Vec<T, 3>{trans[1], trans[2], trans[3]};
 }
 
@@ -320,8 +320,8 @@ template <typename _Tp>
 Matx<_Tp, 4, 4> jacob_exp(const Quat<_Tp> &q)
 {
     _Tp nv = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z);
-    _Tp sinc_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? 1 - nv * nv / 6 : std::sin(nv) / nv;
-    _Tp csiii_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? -(_Tp)1.0 / 3 : (std::cos(nv) - sinc_nv) / nv / nv;
+    _Tp sinc_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? _Tp(1.0) - nv * nv * _Tp(1.0/6.0) : std::sin(nv) / nv;
+    _Tp csiii_nv = abs(nv) < cv::DualQuat<_Tp>::CV_DUAL_QUAT_EPS ? -_Tp(1.0/3.0) : (std::cos(nv) - sinc_nv) / nv / nv;
     Matx<_Tp, 4, 4> J_exp_quat {
         std::cos(nv), -sinc_nv * q.x,  -sinc_nv * q.y,  -sinc_nv * q.z,
         sinc_nv * q.x, csiii_nv * q.x * q.x + sinc_nv, csiii_nv * q.x * q.y, csiii_nv * q.x * q.z,

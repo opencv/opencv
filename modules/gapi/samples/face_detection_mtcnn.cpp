@@ -589,30 +589,23 @@ int main(int argc, char* argv[]) {
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
+    cv::GMat in_transposedRGB = cv::gapi::transpose(in_originalRGB);
     cv::GOpaque<cv::Size> in_sz = cv::gapi::streaming::size(in_original);
-    cv::GMat in_resized[MAX_PYRAMID_LEVELS];
-    cv::GMat in_transposed[MAX_PYRAMID_LEVELS];
     cv::GMat regressions[MAX_PYRAMID_LEVELS];
     cv::GMat scores[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> nms_p_faces[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> total_faces[MAX_PYRAMID_LEVELS];
-    cv::GArray<custom::Face> faces_init(std::vector<custom::Face>{});
 
     //The very first PNet pyramid layer to init total_faces[0]
-    in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
-    in_transposed[0] = cv::gapi::transpose(in_resized[0]);
-    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], get_pnet_level_name(level_size[0]));
+    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposedRGB, get_pnet_level_name(level_size[0]));
     cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], static_cast<float>(scales[0]), conf_thresh_p);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(faces0, true);
     cv::GArray<custom::Face> final_faces_pnet0 = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
-    nms_p_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
-    total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
+    total_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
     {
-        in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
-        in_transposed[i] = cv::gapi::transpose(in_resized[i]);
-        std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], get_pnet_level_name(level_size[i]));
+        std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposedRGB, get_pnet_level_name(level_size[i]));
         cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], static_cast<float>(scales[i]), conf_thresh_p);
         cv::GArray<custom::Face> final_p_faces_for_bb2squares_i = custom::ApplyRegression::on(faces, true);
         cv::GArray<custom::Face> final_faces_pnet_i = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares_i);
@@ -626,8 +619,7 @@ int main(int argc, char* argv[]) {
     //Refinement part of MTCNN graph
     cv::GArray<cv::Rect> faces_roi_pnet = custom::R_O_NetPreProcGetROIs::on(final_faces_pnet, in_sz);
     cv::GArray<cv::GMat> regressionsRNet, scoresRNet;
-    cv::GMat in_originalRGB_transposed = cv::gapi::transpose(in_originalRGB);
-    std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_originalRGB_transposed);
+    std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_transposedRGB);
 
     //Refinement post-processing
     cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, conf_thresh_r);
@@ -638,7 +630,7 @@ int main(int argc, char* argv[]) {
     //Output part of MTCNN graph
     cv::GArray<cv::Rect> faces_roi_rnet = custom::R_O_NetPreProcGetROIs::on(final_faces_rnet, in_sz);
     cv::GArray<cv::GMat> regressionsONet, scoresONet, landmarksONet;
-    std::tie(regressionsONet, landmarksONet, scoresONet) = cv::gapi::infer<custom::MTCNNOutput>(faces_roi_rnet, in_originalRGB_transposed);
+    std::tie(regressionsONet, landmarksONet, scoresONet) = cv::gapi::infer<custom::MTCNNOutput>(faces_roi_rnet, in_transposedRGB);
 
     //Output post-processing
     cv::GArray<custom::Face> onet_post_proc_faces = custom::ONetPostProc::on(final_faces_rnet, scoresONet, regressionsONet, landmarksONet, conf_thresh_o);

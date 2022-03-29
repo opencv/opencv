@@ -30,7 +30,7 @@ Code
     to populate our image with a big number of geometric figures. Since we will be initializing them
     in a random fashion, this process will be automatic and made by using *loops* .
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp)
+    [here](https://github.com/opencv/opencv/blob/4.x/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp)
 
 Explanation
 -----------

@@ -15,6 +15,10 @@ cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> ii)
     : networks(ii) {
 }
 
+cv::gapi::GNetPackage::GNetPackage(std::vector<GNetParam> nets)
+    : networks(nets) {
+}
+
 std::vector<cv::gapi::GBackend> cv::gapi::GNetPackage::backends() const {
     std::unordered_set<cv::gapi::GBackend> unique_set;
     for (const auto &nn : networks) unique_set.insert(nn.backend);

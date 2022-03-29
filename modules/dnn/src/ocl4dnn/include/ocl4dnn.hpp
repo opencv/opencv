@@ -222,8 +222,6 @@ class OCL4DNNConvSpatial
         bool createDWConvKernel(int32_t blockWidth,
                                 int32_t blockHeight,
                                 int32_t blockDepth);
-        void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
-                             int32_t offset, int32_t size, bool write_only);
         bool convolve(const UMat &bottom, UMat &top,
                       const UMat &weight, const UMat &bias,
                       int32_t numImages,
@@ -269,7 +267,7 @@ class OCL4DNNConvSpatial
         void generate_idlf_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
                                       int blockM, int blockK, int simd_size);
         void setFusionDefine(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise);
-        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx);
+        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, int fused_eltwise_offset, ocl::Kernel &kernel, cl_uint &argIdx);
 
         int32_t group_;
         bool bias_term_;

@@ -61,11 +61,11 @@ namespace s11n {
  * executed. The below example expresses calculation of Sobel operator
  * for edge detection (\f$G = \sqrt{G_x^2 + G_y^2}\f$):
  *
- * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_def
+ * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp graph_def
  *
  * Full pipeline can be now captured with this object declaration:
  *
- * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_cap_full
+ * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp graph_cap_full
  *
  * Input/output data objects on which a call graph should be
  * reconstructed are passed using special wrappers cv::GIn and
@@ -78,7 +78,7 @@ namespace s11n {
  * expects that image gradients are already pre-calculated may be
  * defined like this:
  *
- * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_cap_sub
+ * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp graph_cap_sub
  *
  * The resulting graph would expect two inputs and produce one
  * output. In this case, it doesn't matter if gx/gy data objects are
@@ -130,7 +130,7 @@ public:
      * Graph can be defined in-place directly at the moment of its
      * construction with a lambda:
      *
-     * @snippet modules/gapi/samples/api_ref_snippets.cpp graph_gen
+     * @snippet samples/cpp/tutorial_code/gapi/doc_snippets/api_ref_snippets.cpp graph_gen
      *
      * This may be useful since all temporary objects (cv::GMats) and
      * namespaces can be localized to scope of lambda, without
@@ -437,11 +437,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
-
-    /// @private -- Exclude this function from OpenCV documentation
-    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
-                                                        GCompileArgs                   &&args = {});
+    GAPI_WRAP GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     /**
      * @brief Compile the computation for streaming mode.
@@ -463,6 +459,10 @@ public:
      * @sa @ref gapi_compile_args
      */
     GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                        GCompileArgs                   &&args = {});
 
     // 2. Direct metadata version
     /**

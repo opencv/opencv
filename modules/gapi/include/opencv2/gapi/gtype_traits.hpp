@@ -19,11 +19,25 @@
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/own/convert.hpp>
 
 namespace cv
 {
 namespace detail
 {
+    template<typename, typename = void>
+    struct contains_shape_field : std::false_type {};
+
+    template<typename TaggedTypeCandidate>
+    struct contains_shape_field<TaggedTypeCandidate,
+                                void_t<decltype(TaggedTypeCandidate::shape)>> :
+        std::is_same<typename std::decay<decltype(TaggedTypeCandidate::shape)>::type, GShape>
+    {};
+
+    template<typename Type>
+    struct has_gshape : contains_shape_field<Type> {};
+
     // FIXME: These traits and enum and possible numerous switch(kind)
     // block may be replaced with a special Handler<T> object or with
     // a double dispatch
@@ -42,19 +56,6 @@ namespace detail
         GARRAY,       // a cv::GArrayU  (note - exactly GArrayU,  not GArray<T>!)
         GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
     };
-
-    template<typename T>
-    constexpr const char* meta_to_string() noexcept;
-    template<>
-    constexpr const char* meta_to_string<cv::GMatDesc>() noexcept { return "GMatDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GScalarDesc>() noexcept { return "GScalarDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GArrayDesc>() noexcept { return "GArrayDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GOpaqueDesc>() noexcept { return "GOpaqueDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GFrameDesc>() noexcept { return "GFrameDesc";}
 
     // Describe G-API types (G-types) with traits.  Mostly used by
     // cv::GArg to store meta information about types passed into
@@ -194,10 +195,16 @@ namespace detail
         }
         template<typename U> static auto wrap_in (const U &u) -> typename GTypeTraits<T>::strip_type
         {
+            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value
+                            || cv::detail::contains<typename std::decay<U>::type, GAPI_OWN_TYPES_LIST>::value),
+                          "gin/gout must not be used with G* classes or cv::gapi::own::*");
             return GTypeTraits<T>::wrap_in(u);
         }
         template<typename U> static auto wrap_out(U &u) -> typename GTypeTraits<T>::strip_type
         {
+            static_assert(!(cv::detail::has_gshape<GTypeTraits<U>>::value
+                            || cv::detail::contains<typename std::decay<U>::type, GAPI_OWN_TYPES_LIST>::value),
+                          "gin/gout must not be used with G* classses or cv::gapi::own::*");
             return GTypeTraits<T>::wrap_out(u);
         }
     };

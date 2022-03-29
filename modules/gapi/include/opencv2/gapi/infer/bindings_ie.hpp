@@ -22,16 +22,30 @@ namespace ie {
 // This class can be marked as SIMPLE, because it's implemented as pimpl
 class GAPI_EXPORTS_W_SIMPLE PyParams {
 public:
+    GAPI_WRAP
     PyParams() = default;
 
+    GAPI_WRAP
     PyParams(const std::string &tag,
              const std::string &model,
              const std::string &weights,
              const std::string &device);
 
+    GAPI_WRAP
     PyParams(const std::string &tag,
              const std::string &model,
              const std::string &device);
+
+    GAPI_WRAP
+    PyParams& constInput(const std::string &layer_name,
+                         const cv::Mat &data,
+                         TraitAs hint = TraitAs::TENSOR);
+
+    GAPI_WRAP
+    PyParams& cfgNumRequests(size_t nireq);
+
+    GAPI_WRAP
+    PyParams& cfgBatchSize(const size_t size);
 
     GBackend      backend() const;
     std::string   tag()     const;

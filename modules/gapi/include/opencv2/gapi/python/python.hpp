@@ -13,6 +13,15 @@
 
 namespace cv {
 namespace gapi {
+
+/**
+ * @brief This namespace contains G-API Python backend functions,
+ * structures, and symbols.
+ *
+ * This functionality is required to enable G-API custom operations
+ * and kernels when using G-API from Python, no need to use it in the
+ * C++ form.
+ */
 namespace python {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();

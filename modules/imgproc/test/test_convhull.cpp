@@ -301,7 +301,7 @@ void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
@@ -310,7 +310,7 @@ void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
     n = CV_MAT_CN(point_type);
     point_type = CV_MAT_DEPTH(point_type);
 
-    assert( (point_type == CV_32S || point_type == CV_32F) && n <= 4 );
+    CV_Assert( (point_type == CV_32S || point_type == CV_32F) && n <= 4 );
 
     for( i = 0; i < total; i++ )
     {
@@ -1335,7 +1335,7 @@ void CV_FitEllipseTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
@@ -1621,7 +1621,7 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_DEPTH(CV_MAT_TYPE(ptm->type));
         data = ptm->data.ptr;
@@ -1788,13 +1788,13 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
     else
     {
         CvMat* ptm = (CvMat*)points;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
     }
 
-    assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
+    CV_Assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
 
     for( i = 0; i < total; i++ )
     {
@@ -1874,8 +1874,8 @@ void CV_ContourMomentsTest::generate_point_set( void* pointsSet )
     center.x = (float)(img_size.width*0.5 + (cvtest::randReal(rng)-0.5)*(img_size.width - max_sz*2)*0.8);
     center.y = (float)(img_size.height*0.5 + (cvtest::randReal(rng)-0.5)*(img_size.height - max_sz*2)*0.8);
 
-    assert( 0 < center.x - max_sz && center.x + max_sz < img_size.width &&
-        0 < center.y - max_sz && center.y + max_sz < img_size.height );
+    CV_Assert( 0 < center.x - max_sz && center.x + max_sz < img_size.width &&
+               0 < center.y - max_sz && center.y + max_sz < img_size.height );
 
     max_r_scale = cvtest::randReal(rng)*max_max_r_scale*0.01;
     angle = cvtest::randReal(rng)*360;
@@ -2382,6 +2382,112 @@ TEST(Imgproc_minAreaRect, reproducer_18157)
     RotatedRect rr = cv::minAreaRect(contour);
 
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minAreaRect, reproducer_19769_lightweight)
+{
+    const int N = 23;
+    float pts_[N][2] = {
+            {1325, 732}, {1248, 808}, {582, 1510}, {586, 1524},
+            {595, 1541}, {599, 1547}, {789, 1745}, {829, 1786},
+            {997, 1958}, {1116, 2074}, {1207, 2066}, {1216, 2058},
+            {1231, 2044}, {1265, 2011}, {2036, 1254}, {2100, 1191},
+            {2169, 1123}, {2315, 979}, {2395, 900}, {2438, 787},
+            {2434, 782}, {2416, 762}, {2266, 610}
+    };
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minAreaRect, reproducer_19769)
+{
+    const int N = 169;
+    float pts_[N][2] = {
+            {1854, 227}, {1850, 228}, {1847, 229}, {1835, 235},
+            {1832, 237}, {1829, 239}, {1825, 242}, {1818, 248},
+            {1807, 258}, {1759, 306}, {1712, 351}, {1708, 356},
+            {1658, 404}, {1655, 408}, {1602, 459}, {1599, 463},
+            {1542, 518}, {1477, 582}, {1402, 656}, {1325, 732},
+            {1248, 808}, {1161, 894}, {1157, 898}, {1155, 900},
+            {1068, 986}, {1060, 995}, {1058, 997}, {957, 1097},
+            {956, 1097}, {814, 1238}, {810, 1242}, {805, 1248},
+            {610, 1442}, {603, 1450}, {599, 1455}, {596, 1459},
+            {594, 1462}, {592, 1465}, {590, 1470}, {588, 1472},
+            {586, 1476}, {586, 1478}, {584, 1481}, {583, 1485},
+            {582, 1490}, {582, 1510}, {583, 1515}, {584, 1518},
+            {585, 1521}, {586, 1524}, {593, 1538}, {595, 1541},
+            {597, 1544}, {599, 1547}, {603, 1552}, {609, 1559},
+            {623, 1574}, {645, 1597}, {677, 1630}, {713, 1667},
+            {753, 1707}, {789, 1744}, {789, 1745}, {829, 1786},
+            {871, 1828}, {909, 1867}, {909, 1868}, {950, 1910},
+            {953, 1912}, {997, 1958}, {1047, 2009}, {1094, 2056},
+            {1105, 2066}, {1110, 2070}, {1113, 2072}, {1116, 2074},
+            {1119, 2076}, {1122, 2077}, {1124, 2079}, {1130, 2082},
+            {1133, 2083}, {1136, 2084}, {1139, 2085}, {1142, 2086},
+            {1148, 2087}, {1166, 2087}, {1170, 2086}, {1174, 2085},
+            {1177, 2084}, {1180, 2083}, {1188, 2079}, {1190, 2077},
+            {1193, 2076}, {1196, 2074}, {1199, 2072}, {1202, 2070},
+            {1207, 2066}, {1216, 2058}, {1231, 2044}, {1265, 2011},
+            {1314, 1962}, {1360, 1917}, {1361, 1917}, {1408, 1871},
+            {1457, 1822}, {1508, 1773}, {1512, 1768}, {1560, 1722},
+            {1617, 1665}, {1671, 1613}, {1730, 1554}, {1784, 1502},
+            {1786, 1500}, {1787, 1498}, {1846, 1440}, {1850, 1437},
+            {1908, 1380}, {1974, 1314}, {2034, 1256}, {2036, 1254},
+            {2100, 1191}, {2169, 1123}, {2242, 1051}, {2315, 979},
+            {2395, 900}, {2426, 869}, {2435, 859}, {2438, 855},
+            {2440, 852}, {2442, 849}, {2443, 846}, {2445, 844},
+            {2446, 842}, {2446, 840}, {2448, 837}, {2449, 834},
+            {2450, 829}, {2450, 814}, {2449, 809}, {2448, 806},
+            {2447, 803}, {2442, 793}, {2440, 790}, {2438, 787},
+            {2434, 782}, {2428, 775}, {2416, 762}, {2411, 758},
+            {2342, 688}, {2340, 686}, {2338, 684}, {2266, 610},
+            {2260, 605}, {2170, 513}, {2075, 417}, {2073, 415},
+            {2069, 412}, {1955, 297}, {1955, 296}, {1913, 254},
+            {1904, 246}, {1897, 240}, {1894, 238}, {1891, 236},
+            {1888, 234}, {1880, 230}, {1877, 229}, {1874, 228},
+            {1870, 227}
+    };
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_17585)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points(N, 2, CV_32FC1, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_20890)
+{
+    vector<Point> points;
+    points.push_back(Point(0, 0));
+    points.push_back(Point(0, 1));
+    points.push_back(Point(1, 1));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points1xN(1, N, CV_32FC2, static_cast<void*>(pts_));
+    cv::Mat pointsNx1(N, 1, CV_32FC2, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points1xN, triangle));
+    EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
 }
 
 }} // namespace

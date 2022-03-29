@@ -182,9 +182,12 @@ class TestInfo(object):
                 return 1
         return 0
 
+    def __lt__(self, other):
+        return self.__cmp__(other) == -1
+
 # This is a Sequence for compatibility with old scripts,
 # which treat parseLogFile's return value as a list.
-class TestRunInfo(collections.Sequence):
+class TestRunInfo(object):
     def __init__(self, properties, tests):
         self.properties = properties
         self.tests = tests

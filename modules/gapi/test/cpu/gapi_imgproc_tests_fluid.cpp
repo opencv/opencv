@@ -16,6 +16,37 @@ namespace
 namespace opencv_test
 {
 
+INSTANTIATE_TEST_CASE_P(ResizeTestFluid, ResizeTest,
+                        Combine(Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128),
+                                       cv::Size(64, 64),
+                                       cv::Size(30, 30)),
+                                Values(-1),
+                                Values(IMGPROC_FLUID),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_obj()),
+                                Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128),
+                                       cv::Size(64, 64),
+                                       cv::Size(30, 30))));
+
+INSTANTIATE_TEST_CASE_P(ResizeTestFxFyFluid, ResizeTestFxFy,
+                        Combine(Values(CV_8UC3/*CV_8UC1, CV_16UC1, CV_16SC1*/),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128),
+                                       cv::Size(64, 64),
+                                       cv::Size(30, 30)),
+                                Values(-1),
+                                Values(IMGPROC_FLUID),
+                                Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_obj()),
+                                Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
+                                Values(0.5, 1, 2),
+                                Values(0.5, 1, 2)));
+
 INSTANTIATE_TEST_CASE_P(RGB2GrayTestFluid, RGB2GrayTest,
                         Combine(Values(CV_8UC3),
                                 Values(cv::Size(1280, 720),

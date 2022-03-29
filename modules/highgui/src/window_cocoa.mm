@@ -795,18 +795,18 @@ void cvSetPropTopmost_COCOA( const char* name, const bool topmost )
     __END__;
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)
 {
     CVWindow *window = cvGetWindow(winname.c_str());
 
     if (window == NULL)
     {
-        namedWindow(winname);
+        cv::namedWindow(winname);
         window = cvGetWindow(winname.c_str());
     }
 
     if (window == NULL)
-        CV_Error(Error::StsNullPtr, "NULL window");
+        CV_Error(cv::Error::StsNullPtr, "NULL window");
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
@@ -944,8 +944,6 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [[slider name] setStringValue:cvname];
     [[slider slider] setMaxValue:max];
     [[slider slider] setMinValue:0];
-    [[slider slider] setNumberOfTickMarks:(max+1)];
-    [[slider slider] setAllowsTickMarkValuesOnly:YES];
     if(value)
     {
         [[slider slider] setIntValue:*value];

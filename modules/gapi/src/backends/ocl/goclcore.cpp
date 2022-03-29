@@ -458,14 +458,6 @@ GAPI_OCL_KERNEL(GOCLMerge4, cv::gapi::core::GMerge4)
     }
 };
 
-GAPI_OCL_KERNEL(GOCLResize, cv::gapi::core::GResize)
-{
-    static void run(const cv::UMat& in, cv::Size sz, double fx, double fy, int interp, cv::UMat &out)
-    {
-        cv::resize(in, out, sz, fx, fy, interp);
-    }
-};
-
 GAPI_OCL_KERNEL(GOCLRemap, cv::gapi::core::GRemap)
 {
     static void run(const cv::UMat& in, const cv::Mat& x, const cv::Mat& y, int a, int b, cv::Scalar s, cv::UMat& out)
@@ -531,7 +523,7 @@ GAPI_OCL_KERNEL(GOCLTranspose, cv::gapi::core::GTranspose)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
+cv::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <  GOCLAdd
@@ -585,7 +577,6 @@ cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
          , GOCLInRange
          , GOCLSplit3
          , GOCLSplit4
-         , GOCLResize
          , GOCLMerge3
          , GOCLMerge4
          , GOCLRemap

@@ -26,7 +26,7 @@ class GAPI_EXPORTS GCompiler
     GCompileArgs             m_args;
     ade::ExecutionEngine     m_e;
 
-    cv::gapi::GKernelPackage m_all_kernels;
+    cv::GKernelPackage       m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
     // Patterns built from transformations

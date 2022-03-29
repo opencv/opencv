@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -70,6 +71,7 @@ public:
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
         padding = params.get<bool>("padding", false);
+        paddingValue = params.get<int>("padding_value", 0);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -111,21 +113,25 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !padding) ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_WEBNN && !padding) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
+    template <class T>
     class ChannelConcatInvoker : public ParallelLoopBody
     {
     public:
         std::vector<Mat>* inputs;
         Mat* output;
         int nstripes;
-        std::vector<const float*> chptrs;
+        std::vector<const T*> chptrs;
 
         static void run(std::vector<Mat>& inputs, Mat& output, int nstripes)
         {
@@ -139,14 +145,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -157,7 +163,7 @@ public:
                 for( int j = 0; j < batchsz; j++ )
                     for( int k = 0; k < inp.size[1]; k++ )
                     {
-                        const float* ptr = inp.ptr<float>(j, k);
+                        const T* ptr = inp.ptr<T>(j, k);
                         cc.chptrs[ofs + j*nchannels + k] = ptr;
                     }
                 ofs += inp.size[1];
@@ -176,8 +182,8 @@ public:
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(total, r.end*stripeSize);
-            const float** ptrs = (const float**)&chptrs[0];
-            float* outptr = output->ptr<float>();
+            const T** ptrs = (const T**)&chptrs[0];
+            T* outptr = output->ptr<T>();
             size_t blockSize0 = 1 << 16;
 
             for( size_t ofs0 = stripeStart; ofs0 < stripeEnd; )
@@ -248,7 +254,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   inputs_arr.depth() != CV_8S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -259,12 +266,15 @@ public:
         Mat& outMat = outputs[0];
 
         if (padding)
-            outMat.setTo(0);
+            outMat.setTo(paddingValue);
 
         if( cAxis == 1 && outMat.dims == 4 && !padding)
         {
             int nstripes = getNumThreads();
-            ChannelConcatInvoker::run(inputs, outMat, nstripes);
+            if (outMat.type() == CV_8S)
+                ChannelConcatInvoker<int8_t>::run(inputs, outMat, nstripes);
+            else
+                ChannelConcatInvoker<float>::run(inputs, outMat, nstripes);
         }
         else
         {
@@ -335,18 +345,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-
-        InferenceEngine::Builder::ConcatLayer ieLayer(name);
-        ieLayer.setAxis(normalize_axis(axis, input->getDims().size()));
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(inputs.size()));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -394,6 +392,30 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        if (padding)
+            params.set("padding_value", zeropoints[1][0]);
+        return true;
+    }
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<ml::Operand> inputsOperand;
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            inputsOperand.push_back(nodes[i].dynamicCast<WebnnBackendNode>()->operand);
+        }
+        auto operand = webnnGraphBuilder.Concat(inputsOperand.size(), inputsOperand.data(), axis);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
+
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

@@ -580,6 +580,11 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
             {
                 WorkerThread& thread = *(threads[i].get());
                 if (
+#if defined(__clang__) && defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+                        1 ||  // Robust workaround to avoid data race warning of `thread.job`
+#endif
+#endif
 #if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR)
                         thread.isActive ||
 #endif

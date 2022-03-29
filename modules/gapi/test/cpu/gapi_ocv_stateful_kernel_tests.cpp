@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2022 Intel Corporation
 
 #include "gapi_ocv_stateful_kernel_test_utils.hpp"
 #include <opencv2/gapi/cpu/core.hpp>
@@ -43,22 +43,6 @@ namespace opencv_test
 //----------------------------------------------- Simple tests ------------------------------------------------
 namespace
 {
-    inline void initTestDataPath()
-    {
-#ifndef WINRT
-        static bool initialized = false;
-        if (!initialized)
-        {
-            // Since G-API has no own test data (yet), it is taken from the common space
-            const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-            if (testDataPath) {
-                cvtest::addDataSearchPath(testDataPath);
-            }
-            initialized = true;
-        }
-#endif // WINRT
-    }
-
     G_TYPED_KERNEL(GCountCalls, <cv::GOpaque<int>(GMat)>, "org.opencv.test.count_calls")
     {
         static GOpaqueDesc outMeta(GMatDesc /* in */) { return empty_gopaque_desc(); }
@@ -181,8 +165,6 @@ TEST(StatefulKernel, StateIsMutableInRuntime)
 
 TEST(StatefulKernel, StateIsAutoResetForNewStream)
 {
-    initTestDataPath();
-
     cv::GMat in;
     cv::GOpaque<bool> out = GIsStateUpToDate::on(in);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
@@ -329,8 +311,6 @@ namespace
 
 TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
 {
-    initTestDataPath();
-
     // G-API graph declaration
     cv::GMat in;
     cv::GMat out = GBackSub::on(in);
@@ -362,7 +342,79 @@ TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
     // Allowing 5% difference of all pixels between G-API and reference OpenCV results
     testBackSubInStreaming(gapiBackSub, 5);
 }
+
+TEST(StatefulKernel, StateIsChangedViaCompArgsOnReshape)
+{
+    cv::GMat in;
+    cv::GComputation comp(in, GBackSub::on(in));
+
+    const auto pkg = cv::gapi::kernels<GOCVBackSub>();
+
+    // OpenCV reference substractor
+    auto pOCVBackSubKNN = createBackgroundSubtractorKNN();
+    auto pOCVBackSubMOG2 = createBackgroundSubtractorMOG2();
+
+    const auto run = [&](const std::string& videoPath, const std::string& method) {
+        auto path = findDataFile(videoPath);
+        cv::gapi::wip::IStreamSource::Ptr source;
+        try {
+            source = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path);
+        } catch(...) {
+            throw SkipTestException("Video file can not be opened");
+        }
+        cv::Mat inMat, gapiForeground, ocvForeground;
+
+        for (int i = 0; i < 10; i++) {
+            cv::gapi::wip::Data inData;
+            source->pull(inData);
+            inMat = cv::util::get<cv::Mat>(inData);
+            comp.apply(inMat, gapiForeground,
+                       cv::compile_args(pkg, BackSubStateParams{method}));
+
+            if (method == "knn") {
+                pOCVBackSubKNN->apply(inMat, ocvForeground, -1);
+                // Allowing 1% difference among all pixels
+                compareBackSubResults(gapiForeground, ocvForeground, 1);
+            } else if (method == "mog2") {
+                pOCVBackSubMOG2->apply(inMat, ocvForeground, -1);
+                compareBackSubResults(gapiForeground, ocvForeground, 5);
+            } else {
+                CV_Assert(false && "Unknown BackSub method");
+            }
+        }
+    };
+
+    run("cv/video/768x576.avi", "knn");
+    run("cv/video/1920x1080.avi", "mog2");
+}
 #endif
+
+TEST(StatefulKernel, StateIsAutoResetOnReshape)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> up_to_date = GIsStateUpToDate::on(in);
+    cv::GOpaque<int>  calls_count = GCountCalls::on(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(up_to_date, calls_count));
+
+    auto run = [&comp](const cv::Mat& in_mat) {
+        const auto pkg = cv::gapi::kernels<GOCVIsStateUpToDate, GOCVCountCalls>();
+        bool stateIsUpToDate = false;
+        int callsCount = 0;
+        for (int i = 0; i < 3; i++) {
+            comp.apply(cv::gin(in_mat), cv::gout(stateIsUpToDate, callsCount),
+                       cv::compile_args(pkg));
+            EXPECT_TRUE(stateIsUpToDate);
+            EXPECT_EQ(i+1, callsCount);
+        }
+    };
+
+    cv::Mat in_mat1(32, 32, CV_8UC1);
+    run(in_mat1);
+
+    cv::Mat in_mat2(16, 16, CV_8UC1);
+    run(in_mat2);
+}
+
 //-------------------------------------------------------------------------------------------------------------
 
 

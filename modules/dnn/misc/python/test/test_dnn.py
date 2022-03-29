@@ -62,6 +62,12 @@ def printParams(backend, target):
     }
     print('%s/%s' % (backendNames[backend], targetNames[target]))
 
+def getDefaultThreshold(target):
+    if target == cv.dnn.DNN_TARGET_OPENCL_FP16 or target == cv.dnn.DNN_TARGET_MYRIAD:
+        return 4e-3
+    else:
+        return 1e-5
+
 testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
 
 g_dnnBackendsAndTargets = None
@@ -212,7 +218,7 @@ class dnn_test(NewOpenCVTests):
         model.setInputParams(scale, size, mean)
         out, _ = model.detect(frame)
 
-        self.assertTrue(type(out) == list)
+        self.assertTrue(type(out) == tuple, msg='actual type {}'.format(str(type(out))))
         self.assertTrue(np.array(out).shape == (2, 4, 2))
 
 
@@ -372,6 +378,38 @@ class dnn_test(NewOpenCVTests):
             normAssert(self, out, ref)
 
         cv.dnn_unregisterLayer('CropCaffe')
+
+    # check that dnn module can work with 3D tensor as input for network
+    def test_input_3d(self):
+        model = self.find_dnn_file('dnn/onnx/models/hidden_lstm.onnx')
+        input_file = self.find_dnn_file('dnn/onnx/data/input_hidden_lstm.npy')
+        output_file = self.find_dnn_file('dnn/onnx/data/output_hidden_lstm.npy')
+        if model is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/onnx/models/hidden_lstm.onnx). "
+                                    "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+        if input_file is None or output_file is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/onnx/data/{input/output}_hidden_lstm.npy). "
+                                    "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+
+        input = np.load(input_file)
+        # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
+        # it should be fixed in future. see : https://github.com/opencv/opencv/issues/19091
+        # please remove `expand_dims` after that
+        input = np.expand_dims(input, axis=3)
+        gold_output = np.load(output_file)
+
+        for backend, target in self.dnnBackendsAndTargets:
+            printParams(backend, target)
+
+            net = cv.dnn.readNet(model)
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+
+            net.setInput(input)
+            real_output = net.forward()
+
+            normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

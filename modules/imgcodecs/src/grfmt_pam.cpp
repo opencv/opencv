@@ -111,12 +111,12 @@ static bool rgb_convert (void *src, void *target, int width, int target_channels
     int target_depth);
 
 const static struct pam_format formats[] = {
-    {CV_IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_RGB, "RGB", rgb_convert, {0, 1, 2, 0} },
-    {CV_IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", NULL, {0, 1, 2, 0} },
+    {IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_RGB, "RGB", rgb_convert, {0, 1, 2, 0} },
+    {IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", NULL, {0, 1, 2, 0} },
 };
 #define PAM_FORMATS_NO (sizeof (fields) / sizeof ((fields)[0]))
 
@@ -341,7 +341,7 @@ PAMDecoder::PAMDecoder()
     m_offset = -1;
     m_buf_supported = true;
     bit_mode = false;
-    selected_fmt = CV_IMWRITE_PAM_FORMAT_NULL;
+    selected_fmt = IMWRITE_PAM_FORMAT_NULL;
     m_maxval = 0;
     m_channels = 0;
     m_sampledepth = 0;
@@ -462,15 +462,19 @@ bool PAMDecoder::readHeader()
 
         if (flds_endhdr && flds_height && flds_width && flds_depth && flds_maxval)
         {
-            if (selected_fmt == CV_IMWRITE_PAM_FORMAT_NULL)
+            if (selected_fmt == IMWRITE_PAM_FORMAT_NULL)
             {
                 if (m_channels == 1 && m_maxval == 1)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE;
+                    selected_fmt = IMWRITE_PAM_FORMAT_BLACKANDWHITE;
                 else if (m_channels == 1 && m_maxval < 256)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_GRAYSCALE;
+                    selected_fmt = IMWRITE_PAM_FORMAT_GRAYSCALE;
                 else if (m_channels == 3 && m_maxval < 256)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_RGB;
+                    selected_fmt = IMWRITE_PAM_FORMAT_RGB;
+                else
+                    CV_Error(Error::StsError, "Can't determine selected_fmt (IMWRITE_PAM_FORMAT_NULL)");
             }
+            CV_CheckDepth(m_sampledepth, m_sampledepth == CV_8U || m_sampledepth == CV_16U, "");
+            CV_Check(m_channels, m_channels >= 1 && m_channels <= 4, "Unsupported number of channels");
             m_type = CV_MAKETYPE(m_sampledepth, m_channels);
             m_offset = m_strm.getPos();
 
@@ -512,7 +516,7 @@ bool PAMDecoder::readData(Mat& img)
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    if (selected_fmt != CV_IMWRITE_PAM_FORMAT_NULL)
+    if (selected_fmt != IMWRITE_PAM_FORMAT_NULL)
         fmt = &formats[selected_fmt];
     else {
         /* default layout handling */
@@ -566,6 +570,10 @@ bool PAMDecoder::readData(Mat& img)
                         m_strm.getBytes( src, src_stride );
                         FillColorRow1( data, src, m_width, palette );
                     }
+                }
+                else
+                {
+                    CV_Error(Error::StsError, cv::format("Unsupported value of target_channels: %d", target_channels));
                 }
             } else {
                 for (int y = 0; y < m_height; y++, data += imp_stride)
@@ -662,8 +670,8 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     /* parse save file type */
     for( size_t i = 0; i < params.size(); i += 2 )
-        if( params[i] == CV_IMWRITE_PAM_TUPLETYPE ) {
-            if ( params[i+1] > CV_IMWRITE_PAM_FORMAT_NULL &&
+        if( params[i] == IMWRITE_PAM_TUPLETYPE ) {
+            if ( params[i+1] > IMWRITE_PAM_FORMAT_NULL &&
                  params[i+1] < (int) PAM_FORMATS_NO)
                 fmt = &formats[params[i+1]];
         }

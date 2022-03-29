@@ -14,7 +14,6 @@
 
 #include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"
-#include "logger.hpp"
 
 // FIXME: it should be a visitor!
 // FIXME: Reimplement with traits?
@@ -277,13 +276,9 @@ void cv::validate_input_arg(const GRunArg& arg)
 
 void cv::validate_input_args(const GRunArgs& args)
 {
-    GAPI_LOG_DEBUG(nullptr, "Total count: " << args.size());
-    size_t index = 0;
     for (const auto& arg : args)
     {
-        GAPI_LOG_DEBUG(nullptr, "Process index: " << index);
         validate_input_arg(arg);
-        index ++;
     }
 }
 

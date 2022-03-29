@@ -23,7 +23,7 @@ public:
 
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
 
         if( type_name && *type_name == '\0' )
@@ -53,29 +53,26 @@ public:
     void endWriteStruct(const FStructData& current_struct)
     {
         int struct_flags = current_struct.flags;
-        CV_Assert( FileNode::isCollection(struct_flags) );
 
-        if( !FileNode::isFlow(struct_flags) )
-        {
-#if 0
-            if ( fs->bufferPtr() <= fs->bufferStart() + fs->space )
-            {
-                /* some bad code for base64_writer... */
-                ptr = fs->bufferPtr();
-                *ptr++ = '\n';
-                *ptr++ = '\0';
-                fs->puts( fs->bufferStart() );
-                fs->setBufferPtr(fs->bufferStart());
+        if (FileNode::isCollection(struct_flags)) {
+            if (!FileNode::isFlow(struct_flags)) {
+                if (fs->bufferPtr() <= fs->bufferStart() + fs->get_space()) {
+                    /* some bad code for base64_writer... */
+                    char *ptr = fs->bufferPtr();
+                    *ptr++ = '\n';
+                    *ptr++ = '\0';
+                    fs->puts(fs->bufferStart());
+                    fs->setBufferPtr(fs->bufferStart());
+                }
+                fs->flush();
             }
-#endif
-            fs->flush();
-        }
 
-        char* ptr = fs->bufferPtr();
-        if( ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags) )
-            *ptr++ = ' ';
-        *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
-        fs->setBufferPtr(ptr);
+            char *ptr = fs->bufferPtr();
+            if (ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags))
+                *ptr++ = ' ';
+            *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
+            fs->setBufferPtr(ptr);
+        }
     }
 
     void write(const char* key, int value)
@@ -97,11 +94,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
         {
@@ -136,6 +133,20 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        /* check write_struct */
+
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
+        /* check parameters */
+
         size_t key_len = 0u;
         if( key && *key == '\0' )
             key = 0;
@@ -143,9 +154,9 @@ public:
         {
             key_len = strlen(key);
             if ( key_len == 0u )
-                CV_Error( CV_StsBadArg, "The key is an empty" );
+                CV_Error( cv::Error::StsBadArg, "The key is an empty" );
             else if ( static_cast<int>(key_len) > CV_FS_MAX_LEN )
-                CV_Error( CV_StsBadArg, "The key is too long" );
+                CV_Error( cv::Error::StsBadArg, "The key is too long" );
         }
 
         size_t data_len = 0u;
@@ -157,7 +168,7 @@ public:
         if( FileNode::isCollection(struct_flags) )
         {
             if ( (FileNode::isMap(struct_flags) ^ (key != 0)) )
-                CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                          "or add element with key to sequence" );
         } else {
             fs->setNonEmpty();
@@ -199,7 +210,7 @@ public:
         if( key )
         {
             if( !cv_isalpha(key[0]) && key[0] != '_' )
-                CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
+                CV_Error( cv::Error::StsBadArg, "Key must start with a letter or _" );
 
             ptr = fs->resizeWriteBuffer( ptr, static_cast<int>(key_len) );
             *ptr++ = '\"';
@@ -210,7 +221,7 @@ public:
 
                 ptr[i] = c;
                 if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
-                    CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+                    CV_Error( cv::Error::StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
             }
 
             ptr += key_len;
@@ -233,7 +244,7 @@ public:
     void writeComment(const char* comment, bool eol_comment)
     {
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         int len = static_cast<int>(strlen(comment));
         char* ptr = fs->bufferPtr();

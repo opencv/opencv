@@ -358,9 +358,9 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
                 {
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
-                            Gray.at<float>(i,j)=Gray.at<float>(i,j) +
+                            Gray.at<float>(i,j)=static_cast<float>(Gray.at<float>(i,j) +
                                 static_cast<float>(wei[kk])*pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
-                                pow(rgb_channel[0].at<float>(i,j),b);
+                                pow(rgb_channel[0].at<float>(i,j),b));
 
                     kk=kk+1;
                 }

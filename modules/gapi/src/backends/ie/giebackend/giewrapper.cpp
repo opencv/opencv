@@ -18,27 +18,11 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 namespace IE = InferenceEngine;
 namespace giewrap = cv::gimpl::ie::wrap;
 using GIEParam = cv::gapi::ie::detail::ParamDesc;
-
-IE::InputsDataMap giewrap::toInputsDataMap (const IE::ConstInputsDataMap& inputs) {
-    IE::InputsDataMap transformed;
-    auto convert = [](const std::pair<std::string, IE::InputInfo::CPtr>& p) {
-        return std::make_pair(p.first, std::const_pointer_cast<IE::InputInfo>(p.second));
-    };
-    std::transform(inputs.begin(), inputs.end(), std::inserter(transformed, transformed.end()), convert);
-    return transformed;
-}
-
-IE::OutputsDataMap giewrap::toOutputsDataMap (const IE::ConstOutputsDataMap& outputs) {
-    IE::OutputsDataMap transformed;
-    auto convert = [](const std::pair<std::string, IE::CDataPtr>& p) {
-        return std::make_pair(p.first, std::const_pointer_cast<IE::Data>(p.second));
-    };
-    std::transform(outputs.begin(), outputs.end(), std::inserter(transformed, transformed.end()), convert);
-    return transformed;
-}
 
 #if INF_ENGINE_RELEASE < 2020000000  // < 2020.1
 // Load extensions (taken from DNN module)
@@ -111,9 +95,36 @@ IE::InferencePlugin giewrap::getPlugin(const GIEParam& params) {
     return plugin;
 }
 #else // >= 2019.R2
-IE::Core giewrap::getCore() {
+
+// NB: Some of IE plugins fail during IE::Core destroying in specific cases.
+// Solution is allocate IE::Core in heap and doesn't destroy it, which cause
+// leak, but fixes tests on CI. This behaviour is configurable by using
+// OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+static IE::Core create_IE_Core_pointer() {
+    // NB: 'delete' is never called
+    static IE::Core* core = new IE::Core();
+    return *core;
+}
+
+static IE::Core create_IE_Core_instance() {
     static IE::Core core;
     return core;
+}
+
+IE::Core giewrap::getCore() {
+    // NB: to make happy memory leak tools use:
+    // - OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+    static bool param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
+        utils::getConfigurationParameterBool(
+                "OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
+#if defined(_WIN32) || defined(__APPLE__)
+                true
+#else
+                false
+#endif
+                );
+    return param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+        ? create_IE_Core_pointer() : create_IE_Core_instance();
 }
 
 IE::Core giewrap::getPlugin(const GIEParam& params) {
@@ -124,7 +135,11 @@ IE::Core giewrap::getPlugin(const GIEParam& params) {
         {
             try
             {
+#if INF_ENGINE_RELEASE >= 2021040000
+                plugin.AddExtension(std::make_shared<IE::Extension>(extlib), params.device_id);
+#else
                 plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib), params.device_id);
+#endif
                 CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
                 break;
             }

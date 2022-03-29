@@ -249,4 +249,15 @@ TEST(GaussianBlur_Bitexact, regression_9863)
     checkGaussianBlur_8Uvs32F(src8u, src32f, 151, 30);
 }
 
+TEST(GaussianBlur_Bitexact, overflow_20792)
+{
+    Mat src(128, 128, CV_16UC1, Scalar(255));
+    Mat dst;
+    double sigma = theRNG().uniform(0.0, 0.2);        // a peaky kernel
+    GaussianBlur(src, dst, Size(7, 7), sigma, 0.9);
+    int count = (int)countNonZero(dst);
+    int nintyPercent = (int)(src.rows*src.cols * 0.9);
+    EXPECT_GT(count, nintyPercent);
+}
+
 }} // namespace

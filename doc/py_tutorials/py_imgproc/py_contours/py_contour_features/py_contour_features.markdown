@@ -1,6 +1,9 @@
 Contour Features {#tutorial_py_contour_features}
 ================
 
+@prev_tutorial{tutorial_py_contours_begin}
+@next_tutorial{tutorial_py_contour_properties}
+
 Goal
 ----
 
@@ -91,7 +94,7 @@ convexity defects, which are the local maximum deviations of hull from contours.
 
 There is a little bit things to discuss about it its syntax:
 @code{.py}
-hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]
+hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]])
 @endcode
 Arguments details:
 

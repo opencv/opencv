@@ -72,7 +72,9 @@
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 #else
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 # include <dirent.h>
+#endif
 # include <sys/stat.h>
 #endif
 
@@ -377,7 +379,7 @@ void BaseTest::run( int start_from )
 
 void BaseTest::run_func(void)
 {
-    assert(0);
+    CV_Assert(0);
 }
 
 

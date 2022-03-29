@@ -1958,7 +1958,10 @@ public:
         }
         else if (kxlen % 2 == 1)
         {
-            hlineSmoothFunc = hlineSmoothONa_yzy_a;
+            if (kx[(kxlen - 1)/ 2] == FT::one())
+                hlineSmoothFunc = hlineSmooth1N1;
+            else
+                hlineSmoothFunc = hlineSmoothONa_yzy_a;
             for (int i = 0; i < kxlen / 2; i++)
                 if (!(kx[i] == kx[kxlen - 1 - i]))
                 {

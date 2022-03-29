@@ -86,6 +86,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
 
     if status is None:
         status = np.ones(len(kp_pairs), np.bool_)
+        status = status.reshape((len(kp_pairs), 1))
     p1, p2 = [], []  # python 2 / python 3 change of zip unpacking
     for kpp in kp_pairs:
         p1.append(np.int32(kpp[0].pt))

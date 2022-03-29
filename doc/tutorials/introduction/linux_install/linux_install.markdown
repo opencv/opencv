@@ -1,7 +1,7 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
-@next_tutorial{tutorial_linux_gcc_cmake}
+@next_tutorial{tutorial_linux_gdb_pretty_printer}
 
 |    |    |
 | -: | :- |

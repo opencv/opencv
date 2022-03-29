@@ -161,7 +161,7 @@ TEST(GOpaque, TestOpaqueBetween)
     c.apply(cv::gin(mat_in), cv::gout(mat_out), cv::compile_args(cv::gapi::kernels<OCVGeneratePoint, OCVPaintPoint>()));
 
     int painted = mat_out.at<uint8_t>(42, 42);
-    EXPECT_EQ(painted, 77);
+    EXPECT_EQ(77, painted);
 }
 
 TEST(GOpaque, TestOpaqueBetweenIslands)
@@ -181,7 +181,7 @@ TEST(GOpaque, TestOpaqueBetweenIslands)
     c.apply(cv::gin(mat_in), cv::gout(mat_out), cv::compile_args(cv::gapi::kernels<OCVGeneratePoint, OCVPaintPoint>()));
 
     int painted = mat_out.at<uint8_t>(42, 42);
-    EXPECT_EQ(painted, 77);
+    EXPECT_EQ(77, painted);
 }
 
 TEST(GOpaque, TestOpaqueCustomOut2)
@@ -200,11 +200,11 @@ TEST(GOpaque, TestOpaqueCustomOut2)
     cv::GComputation c(cv::GIn(in1, in2), cv::GOut(std::get<0>(out), std::get<1>(out)));
     c.apply(cv::gin(input1, input2), cv::gout(out1, out2), cv::compile_args(cv::gapi::kernels<OCVGenerateOpaque>()));
 
-    EXPECT_EQ(out1.num, input1.size().width * input1.size().height);
-    EXPECT_EQ(out1.s, str);
+    EXPECT_EQ(input1.size().width * input1.size().height, out1.num);
+    EXPECT_EQ(str, out1.s);
 
-    EXPECT_EQ(out2.num, input2.size().width * input2.size().height);
-    EXPECT_EQ(out2.s, str2);
+    EXPECT_EQ(input2.size().width * input2.size().height, out2.num);
+    EXPECT_EQ(str2, out2.s);
 }
 
 TEST(GOpaque, TestOpaqueOCLBackendIn)
@@ -220,7 +220,7 @@ TEST(GOpaque, TestOpaqueOCLBackendIn)
             cv::compile_args(cv::gapi::kernels<OCLPaintPoint>()));
 
     int painted = mat_out.at<uint8_t>(42, 42);
-    EXPECT_EQ(painted, 77);
+    EXPECT_EQ(77, painted);
 }
 
 TEST(GOpaque, TestOpaqueOCLBackendBetween)
@@ -240,7 +240,7 @@ TEST(GOpaque, TestOpaqueOCLBackendBetween)
             cv::compile_args(cv::gapi::kernels<OCLGeneratePoint, OCLPaintPoint>()));
 
     int painted = mat_out.at<uint8_t>(42, 42);
-    EXPECT_EQ(painted, 77);
+    EXPECT_EQ(77, painted);
 }
 
 TEST(GOpaque, TestOpaqueOCLBackendOut)

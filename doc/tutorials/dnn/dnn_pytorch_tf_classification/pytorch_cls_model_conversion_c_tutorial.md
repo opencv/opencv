@@ -30,7 +30,7 @@ source <env_dir_path>/bin/activate
 
 For OpenCV-Python building from source, follow the corresponding instructions from the @ref tutorial_py_table_of_contents_setup.
 
-Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/master/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
+Before you start the installation of the libraries, you can customize the [requirements.txt](https://github.com/opencv/opencv/tree/4.x/samples/dnn/dnn_model_runner/dnn_conversion/requirements.txt), excluding or including (for example, ``opencv-python``) some dependencies.
 The below line initiates requirements installation into the previously activated virtual environment:
 
 ```console
@@ -140,7 +140,7 @@ class CommonConfig:
 Thus, the converted ResNet-50 will be saved in ``dnn_model_runner/dnn_conversion/models``.
 
 ### Inference Pipeline
-Now we can use ```models/resnet50.onnx``` for the inference pipeline using OpenCV C/C++ API. The implemented pipeline can be found in [samples/dnn/classification.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.cpp).
+Now we can use ```models/resnet50.onnx``` for the inference pipeline using OpenCV C/C++ API. The implemented pipeline can be found in [samples/dnn/classification.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/classification.cpp).
 After the build of samples (``BUILD_EXAMPLES`` flag value should be ``ON``), the appropriate ``example_dnn_classification`` executable file will be provided.
 
 To provide model inference we will use the below [squirrel photo](https://www.pexels.com/photo/brown-squirrel-eating-1564292) (under [CC0](https://www.pexels.com/terms-of-service/) license) corresponding to ImageNet class ID 335:

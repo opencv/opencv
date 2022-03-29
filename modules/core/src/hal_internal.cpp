@@ -64,6 +64,16 @@
 #define HAL_LU_SMALL_MATRIX_THRESH 100
 #define HAL_CHOLESKY_SMALL_MATRIX_THRESH 100
 
+#if defined(__clang__) && defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
+__msan_unpoison(adresse, size)
+#endif
+#endif
+#ifndef CV_ANNOTATE_MEMORY_IS_INITIALIZED
+#define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) do { } while(0)
+#endif
+
 //lapack stores matrices in column-major order so transposing is needed everywhere
 template <typename fptype> static inline void
 transpose_square_inplace(fptype *src, size_t src_ld, size_t m)
@@ -163,9 +173,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
         if(n == 1 && b_step == sizeof(fptype))
         {
             if(typeid(fptype) == typeid(float))
-                sposv_(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(sposv)(L, &m, &n, (float*)a, &lda, (float*)b, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                dposv_(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(dposv)(L, &m, &n, (double*)a, &lda, (double*)b, &m, &lapackStatus);
         }
         else
         {
@@ -174,9 +184,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
             transpose(b, ldb, tmpB, m, m, n);
 
             if(typeid(fptype) == typeid(float))
-                sposv_(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(sposv)(L, &m, &n, (float*)a, &lda, (float*)tmpB, &m, &lapackStatus);
             else if(typeid(fptype) == typeid(double))
-                dposv_(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
+                OCV_LAPACK_FUNC(dposv)(L, &m, &n, (double*)a, &lda, (double*)tmpB, &m, &lapackStatus);
 
             transpose(tmpB, m, b, ldb, n, m);
             delete[] tmpB;
@@ -185,9 +195,9 @@ lapack_Cholesky(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n
     else
     {
         if(typeid(fptype) == typeid(float))
-            spotrf_(L, &m, (float*)a, &lda, &lapackStatus);
+            OCV_LAPACK_FUNC(spotrf)(L, &m, (float*)a, &lda, &lapackStatus);
         else if(typeid(fptype) == typeid(double))
-            dpotrf_(L, &m, (double*)a, &lda, &lapackStatus);
+            OCV_LAPACK_FUNC(dpotrf)(L, &m, (double*)a, &lda, &lapackStatus);
     }
 
     if(lapackStatus == 0) *info = true;
@@ -227,17 +237,28 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     }
 
     if(typeid(fptype) == typeid(float))
-        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, info);
+        OCV_LAPACK_FUNC(sgesdd)(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)&work1, &lwork, iworkBuf, info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
+        OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)&work1, &lwork, iworkBuf, info);
 
     lwork = (int)round(work1); //optimal buffer size
     fptype* buffer = new fptype[lwork + 1];
 
     if(typeid(fptype) == typeid(float))
-        sgesdd_(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
+        OCV_LAPACK_FUNC(sgesdd)(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
     else if(typeid(fptype) == typeid(double))
-        dgesdd_(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
+        OCV_LAPACK_FUNC(dgesdd)(mode, &m, &n, (double*)a, &lda, (double*)w, (double*)u, &ldu, (double*)vt, &ldv, (double*)buffer, &lwork, iworkBuf, info);
+
+    // Make sure MSAN sees the memory as having been written.
+    // MSAN does not think it has been written because a different language was called.
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(a, a_step * n);
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(buffer, sizeof(fptype) * (lwork + 1));
+    if (u)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(u, u_step * m);
+    if (vt)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(vt, v_step * n);
+    if (w)
+      CV_ANNOTATE_MEMORY_IS_INITIALIZED(w, sizeof(fptype) * std::min(m, n));
 
     if(!(flags & CV_HAL_SVD_NO_UV))
         transpose_square_inplace(vt, ldv, n);
@@ -288,18 +309,18 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
         if (k == 1 && b_step == sizeof(fptype))
         {
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)&work1, &lwork, info);
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)b, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)b, &m, (double*)buffer, &lwork, info);
         }
         else
         {
@@ -309,18 +330,18 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             transpose(b, ldb, tmpB, m, m, k);
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)&work1, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)&work1, &lwork, info);
 
             lwork = cvRound(work1); //optimal buffer size
             std::vector<fptype> workBufMemHolder(lwork + 1);
             fptype* buffer = &workBufMemHolder.front();
 
             if (typeid(fptype) == typeid(float))
-                sgels_(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(sgels)(mode, &m, &n, &k, (float*)tmpA, &ldtmpA, (float*)tmpB, &m, (float*)buffer, &lwork, info);
             else if (typeid(fptype) == typeid(double))
-                dgels_(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
+                OCV_LAPACK_FUNC(dgels)(mode, &m, &n, &k, (double*)tmpA, &ldtmpA, (double*)tmpB, &m, (double*)buffer, &lwork, info);
 
             transpose(tmpB, m, b, ldb, k, m);
         }
@@ -342,6 +363,7 @@ lapack_QR(fptype* a, size_t a_step, int m, int n, int k, fptype* b, size_t b_ste
             dgeqrf_(&m, &n, (double*)tmpA, &ldtmpA, (double*)dst, (double*)buffer, &lwork, info);
     }
 
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(info, sizeof(int));
     if (m == n)
         transpose_square_inplace(a, lda, m);
     else

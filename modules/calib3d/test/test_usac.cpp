@@ -452,5 +452,32 @@ TEST(usac_testUsacParams, accuracy) {
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 }
 
+TEST(usac_solvePnPRansac, regression_21105) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 100;
+    double inl_ratio = 0.1;
+    cv::Mat img_pts, obj_pts, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    generatePoints(rng, img_pts, obj_pts, K1, K2, false /*two calib*/,
+                   pts_size, TestSolver ::PnP, inl_ratio, 0.15 /*noise std*/, gt_inliers);
+    const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                log(1 - pow(inl_ratio, 3 /* sample size */));
+    const int flag = USAC_DEFAULT;
+    std::vector<int> inliers;
+    cv::Matx31d rvec, tvec;
+    CV_Assert(cv::solvePnPRansac(obj_pts, img_pts, K1, cv::noArray(), rvec, tvec,
+            false, (int)max_iters, (float)thr, conf, inliers, flag));
+
+    cv::Mat zero_column = cv::Mat::zeros(3, 1, K1.type());
+    cv::hconcat(K1, zero_column, K1);
+    cv::Mat K1_copy = K1.colRange(0, 3);
+    std::vector<int> inliers_copy;
+    cv::Matx31d rvec_copy, tvec_copy;
+    CV_Assert(cv::solvePnPRansac(obj_pts, img_pts, K1_copy, cv::noArray(), rvec_copy, tvec_copy,
+              false, (int)max_iters, (float)thr, conf, inliers_copy, flag));
+    EXPECT_EQ(rvec, rvec_copy);
+    EXPECT_EQ(tvec, tvec_copy);
+    EXPECT_EQ(inliers, inliers_copy);
+}
 
 }}  // namespace

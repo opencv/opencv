@@ -11,19 +11,14 @@
 
 namespace cv
 {
-void parseSSDBL(const cv::Mat&  in_ssd_result,
-                const cv::Size& in_size,
-                const float     confidence_threshold,
-                const int       filter_label,
-                std::vector<cv::Rect>& out_boxes,
-                std::vector<int>&      out_labels);
-
-void parseSSD(const cv::Mat&  in_ssd_result,
+void ParseSSD(const cv::Mat&  in_ssd_result,
               const cv::Size& in_size,
               const float     confidence_threshold,
+              const int       filter_label,
               const bool      alignment_to_square,
               const bool      filter_out_of_bounds,
-              std::vector<cv::Rect>& out_boxes);
+              std::vector<cv::Rect>& out_boxes,
+              std::vector<int>&      out_labels);
 
 void parseYolo(const cv::Mat&  in_yolo_result,
                const cv::Size& in_size,

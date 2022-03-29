@@ -3,7 +3,7 @@
 @tableofcontents
 
 @prev_tutorial{tutorial_dnn_OCR}
-@next_tutorial{pytorch_cls_tutorial_dnn_conversion}
+@next_tutorial{tutorial_dnn_face}
 
 |    |    |
 | -: | :- |
@@ -26,6 +26,11 @@ Before recognition, you should `setVocabulary` and `setDecodeType`.
     - `T` is the sequence length
     - `B` is the batch size (only support `B=1` in inference)
     - and `Dim` is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
+- "CTC-prefix-beam-search", the output of the text recognition model should be a probability matrix same with "CTC-greedy".
+    - The algorithm is proposed at Hannun's [paper](https://arxiv.org/abs/1408.2873).
+    - `setDecodeOptsCTCPrefixBeamSearch` could be used to control the beam size in search step.
+    - To further optimize for big vocabulary, a new option `vocPruneSize` is introduced to avoid iterate the whole vocbulary
+       but only the number of `vocPruneSize` tokens with top probability.
 
 @ref cv::dnn::TextRecognitionModel::recognize() is the main function for text recognition.
 - The input image should be a cropped text image or an image with `roiRects`
@@ -97,7 +102,7 @@ recommended parameter setting: -inputHeight=736, -inputWidth=1280;
 description: This model is trained on ICDAR2015, so it can only detect English text instances.
 
 - DB_IC15_resnet18.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1sZszH3pEt8hliyBlTmB-iulxHP1dCQWV
+url: https://drive.google.com/uc?export=dowload&id=1vY_KsDZZZb_svd5RT6pjyI8BS1nPbBSX
 sha: 19543ce09b2efd35f49705c235cc46d0e22df30b
 recommended parameter setting: -inputHeight=736, -inputWidth=1280;
 description: This model is trained on ICDAR2015, so it can only detect English text instances.
@@ -109,7 +114,7 @@ recommended parameter setting: -inputHeight=736, -inputWidth=736;
 description: This model is trained on MSRA-TD500, so it can detect both English and Chinese text instances.
 
 - DB_TD500_resnet18.onnx:
-url: https://drive.google.com/uc?export=dowload&id=1vY_KsDZZZb_svd5RT6pjyI8BS1nPbBSX
+url: https://drive.google.com/uc?export=dowload&id=1sZszH3pEt8hliyBlTmB-iulxHP1dCQWV
 sha: 8a3700bdc13e00336a815fc7afff5dcc1ce08546
 recommended parameter setting: -inputHeight=736, -inputWidth=736;
 description: This model is trained on MSRA-TD500, so it can detect both English and Chinese text instances.
@@ -282,15 +287,15 @@ Output Examples:
 ![Picture example](detect_test2.jpg)
 
 ## Source Code
-The [source code](https://github.com/opencv/opencv/blob/master/modules/dnn/src/model.cpp)
+The [source code](https://github.com/opencv/opencv/blob/4.x/modules/dnn/src/model.cpp)
 of these APIs can be found in the DNN module.
 
 ## Detailed Sample
 For more information, please refer to:
-- [samples/dnn/scene_text_recognition.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_recognition.cpp)
-- [samples/dnn/scene_text_detection.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_detection.cpp)
-- [samples/dnn/text_detection.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.cpp)
-- [samples/dnn/scene_text_spotting.cpp](https://github.com/opencv/opencv/blob/master/samples/dnn/scene_text_spotting.cpp)
+- [samples/dnn/scene_text_recognition.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_recognition.cpp)
+- [samples/dnn/scene_text_detection.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_detection.cpp)
+- [samples/dnn/text_detection.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/text_detection.cpp)
+- [samples/dnn/scene_text_spotting.cpp](https://github.com/opencv/opencv/blob/4.x/samples/dnn/scene_text_spotting.cpp)
 
 #### Test with an image
 Examples:

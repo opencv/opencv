@@ -28,11 +28,11 @@ def make_gaussians(cluster_n, img_size):
     return points, ref_distrs
 
 def draw_gaussain(img, mean, cov, color):
-    x, y = np.int32(mean)
+    x, y = mean
     w, u, _vt = cv.SVDecomp(cov)
     ang = np.arctan2(u[1, 0], u[0, 0])*(180/np.pi)
     s1, s2 = np.sqrt(w)*3.0
-    cv.ellipse(img, (x, y), (s1, s2), ang, 0, 360, color, 1, cv.LINE_AA)
+    cv.ellipse(img, (int(x), int(y)), (int(s1), int(s2)), ang, 0, 360, color, 1, cv.LINE_AA)
 
 
 def main():

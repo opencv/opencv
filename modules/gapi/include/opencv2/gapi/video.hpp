@@ -42,6 +42,10 @@ struct GAPI_EXPORTS KalmanParams
     Mat controlMatrix;
 };
 
+/**
+ * @brief This namespace contains G-API Operations and functions for
+ * video-oriented algorithms, like optical flow and background subtraction.
+ */
 namespace  video
 {
 using GBuildPyrOutput  = std::tuple<GArray<GMat>, GScalar>;
