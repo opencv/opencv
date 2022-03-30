@@ -42,9 +42,13 @@
 
 #include "../precomp.hpp"
 #include <iostream>
-#include <iterator>
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/recurrent_cells.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 #include "layers_common.hpp"
 
@@ -119,6 +123,7 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     ActivationFunction f_activation;
     ActivationFunction g_activation;
     ActivationFunction h_activation;
+    bool isDefaultActivations{true};
 
 #if CV_TRY_AVX
     bool useAVX;
@@ -202,11 +207,15 @@ public:
             f_activation = sigmoid;
             g_activation = tanh;
             h_activation = tanh;
+            isDefaultActivations = true;
         } else {
             CV_Assert(activations.size() == 3);
             f_activation = get_activation_function(activations.getStringValue(0));
             g_activation = get_activation_function(activations.getStringValue(1));
             h_activation = get_activation_function(activations.getStringValue(2));
+            isDefaultActivations = activations.getStringValue(0) == "Sigmoid"
+                                   && activations.getStringValue(1) == "Tanh"
+                                   && activations.getStringValue(2) == "Tanh";
         }
 
         allocated = false;
@@ -243,6 +252,12 @@ public:
         blobs[0] = Mat(Wh.clone());
         blobs[1] = Mat(Wx.clone());
         blobs[2] = Mat(bias.clone()).reshape(1, 1);
+    }
+
+    bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV
+               || (backendId == DNN_BACKEND_CUDA && isDefaultActivations && !reverse && !usePeephole);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -582,29 +597,8 @@ public:
         cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
 
         // permute to {0, 2, 1, 3};
-        std::vector<int> newShape = shape(cOut);
-        std::swap(newShape[1], newShape[2]);
-        cv::Mat newCellState(newShape, CV_32FC1);
-        const float* src = cOut.ptr<const float>();
-        float* dst = newCellState.ptr<float>();
-        size_t sj = newCellState.size[3];
-        size_t sk = newCellState.size[2] * sj;
-        size_t si = newCellState.size[1] * sk;
-        for (size_t i = 0; i < newCellState.size[0]; i++)
-        {
-            for (size_t j = 0; j < newCellState.size[2]; j++)
-            {
-                for (size_t k = 0; k < newCellState.size[1]; k++)
-                {
-                    std::memcpy(dst, src, sizeof(float) * newCellState.size[3]);
-                    src += cOut.size[3];
-                    dst += sk;
-                }
-                dst = dst + sj - si;
-            }
-            dst = dst + si - sk;
-        }
-
+        cv::Mat newCellState;
+        cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
         cOut = newCellState;
 
         if (numDirs == 1)
@@ -637,6 +631,77 @@ public:
             cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_, const std::vector<Ptr<BackendWrapper>> &inputs,
+                              const std::vector<Ptr<BackendWrapper>> &outputs) override
+    {
+        const int numDirs = 1 + static_cast<int>(bidirectional);
+        auto toIFCO = [numDirs] (Mat& in) {
+            int first = in.size[0];
+            int rest = in.total() / first / 4;
+            // every weight blob contains weights for Input, Output, Forget and Cell gates
+            Mat m = in.reshape(1, {first, 4, rest});
+            Mat outputGate = m.col(1);
+            Mat forgetGate = m.col(2);
+            Mat cellGate = m.col(3);
+            // IOFC -> IFOC
+            std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), forgetGate.begin<float>());
+            std::swap(outputGate, forgetGate);
+            // IFOC -> IFCO
+            std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), cellGate.begin<float>());
+            in = in.reshape(1, numDirs);
+        };
+
+        Mat& b = originalBlobs[2];
+        // B is a concatenation of biases for Wh and Wx
+        b = b.reshape(1, originalBlobs[2].size[0]*2);
+
+        for (auto& m : originalBlobs)
+        {
+            toIFCO(m);
+        }
+
+        b = b.reshape(1, static_cast<int>(b.total()));
+
+        Mat ordered_weights;
+        // Wx_f, Wh_f, [Wx_b, Wh_b,] b
+        for (int i = 0; i < numDirs; ++i)
+        {
+            for (size_t j = 0; j < 2; ++j) // Wx, Wh
+            {
+                Mat oneDirection = originalBlobs[j].row(i);
+                ordered_weights.push_back(oneDirection.reshape(1, static_cast<int>(oneDirection.total())));
+            }
+        }
+        ordered_weights.push_back(b);
+
+        // Pass hidden states as is
+        Mat h0 = blobs[3];
+        Mat c0 = blobs[4];
+
+        CV_Assert(!inputs.empty());
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        RNNConfiguration config
+        {
+            input_shape[0],      // seqLength;
+            1,                   // numLayers;
+            numHidden,           // hiddenSize;
+            input_shape[2],      // inputSize;
+            input_shape[1],      // miniBatch;
+            bidirectional
+        };
+
+
+        auto *context = reinterpret_cast<cuda4dnn::csl::CSLContext *>(context_);
+        return make_cuda_node<cuda4dnn::LSTMOp>(preferableTarget, std::move(context->stream),
+                                                std::move(context->cudnn_handle),
+                                                ordered_weights, h0, c0,
+                                                config);
+    }
+#endif
 };
 
 Ptr<LSTMLayer> LSTMLayer::create(const LayerParams& params)
