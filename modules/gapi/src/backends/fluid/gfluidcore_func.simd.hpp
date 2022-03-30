@@ -2943,6 +2943,8 @@ CV_ALWAYS_INLINE void convertto_simd_nocoeff_impl(const SRC* inx, float* outx)
 int convertto_simd(const SRC in[], DST out[], const int length)    \
 {                                                                  \
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;          \
+    if (length < nlanes)                                           \
+        return 0;                                                  \
                                                                    \
     int x = 0;                                                     \
     for (;;)                                                       \
@@ -3110,6 +3112,9 @@ int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
                           const float beta, const int length)               \
 {                                                                           \
     constexpr int nlanes = vector_type_of_t<DST>::nlanes;                   \
+    if (length < nlanes)                                                    \
+        return 0;                                                           \
+                                                                            \
     v_float32 v_alpha = vx_setall_f32(alpha);                               \
     v_float32 v_beta = vx_setall_f32(beta);                                 \
                                                                             \
