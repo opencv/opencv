@@ -457,7 +457,7 @@ The function returns the aligned pointer of the same type as the input pointer:
 template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_Tp))
 {
     CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
-    return (_Tp*)(((size_t)ptr + n-1) & -n);
+    return (_Tp*)(((uintptr_t)ptr + n-1) & -n);
 }
 
 /** @brief Aligns a buffer size to the specified number of bytes.

@@ -229,7 +229,7 @@ CV_IMPL float cvCalcEMD2( const CvArr* signature_arr1,
         if( dims == 0 )
             CV_Error( CV_StsBadSize,
             "Number of dimensions can be 0 only if a user-defined metric is used" );
-        user_param = (void *) (size_t)dims;
+        user_param = (void *) (uintptr_t)dims;
         switch (dist_type)
         {
         case CV_DIST_L1:
