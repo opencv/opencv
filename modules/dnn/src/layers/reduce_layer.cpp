@@ -25,6 +25,7 @@ class ReduceLayerImpl CV_FINAL : public ReduceLayer
 public:
     ReduceLayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
         // set reduce type
         CV_Assert(params.has("reduce"));
         String typeString = toLowerCase(params.get<String>("reduce"));
