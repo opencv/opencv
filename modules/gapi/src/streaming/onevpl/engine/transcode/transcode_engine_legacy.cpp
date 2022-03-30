@@ -366,6 +366,8 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     VPLAccelerationPolicy::pool_key_t vpp_out_pool_key =
                 acceleration_policy->create_surface_pool(vppRequests[1], mfxVPPParams.vpp.Out);
 
+    GAPI_LOG_INFO(nullptr, "Initialize VPP for session: " << mfx_session <<
+                           ", out frame info: " << mfx_frame_info_to_string(mfxVPPParams.vpp.Out));
     sts = MFXVideoVPP_Init(mfx_session, &mfxVPPParams);
     if (MFX_ERR_NONE != sts) {
         GAPI_LOG_WARNING(nullptr, "cannot Init VPP");

@@ -175,6 +175,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     // Prepare video param
     mfxVideoParam mfxDecParams {};
+    memset(&mfxDecParams, 0 ,sizeof(mfxDecParams));
     mfxDecParams.mfx.CodecId = decoder_id_name;
 
     // set memory stream direction accroding to accelearion policy device type

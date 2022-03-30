@@ -56,8 +56,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
     switch(accel_mode.Data.U32) {
         case MFX_ACCEL_MODE_VIA_D3D11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             ID3D11Device *hw_handle = nullptr;
             ID3D11DeviceContext* device_context = nullptr;
 
@@ -126,14 +125,13 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
             suggested_device = IDeviceSelector::create<Device>(hw_handle, "GPU", AccelType::DX11);
             suggested_context = IDeviceSelector::create<Context>(device_context, AccelType::DX11);
-#else
+#else  // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() << ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
                                    CfgParam::acceleration_mode_name() +
                                    ": MFX_ACCEL_MODE_VIA_D3D11\"");
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
         }
         case MFX_IMPL_VIA_VAAPI : {
@@ -187,10 +185,10 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
     }
     mfxVariant accel_mode = cfg_param_to_mfx_variant(*accel_mode_it);
 
+    cv::util::suppress_unused_warning(device_id);
     switch(accel_mode.Data.U32) {
         case MFX_ACCEL_MODE_VIA_D3D11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             suggested_device = IDeviceSelector::create<Device>(device_ptr, device_id, AccelType::DX11);
             ID3D11Device* dx_device_ptr =
                 reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
@@ -209,14 +207,13 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             }
 
             dx_ctx_ptr->AddRef();
-#else
+#else  // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
                                       ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
                                    CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
         }
         case MFX_ACCEL_MODE_NA: {
