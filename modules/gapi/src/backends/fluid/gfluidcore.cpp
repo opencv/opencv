@@ -2372,31 +2372,43 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
     }
 };
 
+template<typename T>
+CV_ALWAYS_INLINE void run_merge3(Buffer& dst, const View& src1, const View& src2, const View& src3)
+{
+    const auto* in1 = src1.InLine<T>(0);
+    const auto* in2 = src2.InLine<T>(0);
+    const auto* in3 = src3.InLine<T>(0);
+    auto* out = dst.OutLine<T>();
+
+    GAPI_Assert(3 == dst.meta().chan);
+    int width = dst.length();
+    int w = 0;
+
+#if CV_SIMD
+        w = merge3_simd(in1, in2, in3, out, width);
+#endif
+
+    for (; w < width; w++)
+    {
+        out[3 * w] = in1[w];
+        out[3 * w + 1] = in2[w];
+        out[3 * w + 2] = in3[w];
+    }
+}
+
 GAPI_FLUID_KERNEL(GFluidMerge3, cv::gapi::core::GMerge3, false)
 {
     static const int Window = 1;
 
-    static void run(const View &src1, const View &src2, const View &src3, Buffer &dst)
+    static void run(const View& src1, const View& src2, const View& src3, Buffer& dst)
     {
-        const auto *in1 = src1.InLine<uchar>(0);
-        const auto *in2 = src2.InLine<uchar>(0);
-        const auto *in3 = src3.InLine<uchar>(0);
-              auto *out = dst.OutLine<uchar>();
+        //     DST     SRC     OP             __VA_ARGS__
+        MERGE3_(uchar,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(ushort, run_merge3, dst, src1, src2, src3);
+        MERGE3_(short,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(float,  run_merge3, dst, src1, src2, src3);
 
-        GAPI_Assert(3 == dst.meta().chan);
-        int width = dst.length();
-        int w = 0;
-
-    #if CV_SIMD
-        w = merge3_simd(in1, in2, in3, out, width);
-    #endif
-
-        for (; w < width; w++)
-        {
-            out[3*w    ] = in1[w];
-            out[3*w + 1] = in2[w];
-            out[3*w + 2] = in3[w];
-        }
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 };
 
