@@ -1724,7 +1724,7 @@ endmacro()
 
 
 function(ocv_add_test_from_target test_name test_kind the_target)
-  if(CMAKE_VERSION VERSION_GREATER "2.8" AND NOT CMAKE_CROSSCOMPILING)
+  if(CMAKE_VERSION VERSION_GREATER "2.8")
     if(NOT "${test_kind}" MATCHES "^(Accuracy|Performance|Sanity)$")
       message(FATAL_ERROR "Unknown test kind : ${test_kind}")
     endif()
@@ -1754,7 +1754,7 @@ endfunction()
 
 macro(ocv_add_testdata basedir dest_subdir)
   if(BUILD_TESTS)
-    if(NOT CMAKE_CROSSCOMPILING AND NOT INSTALL_TESTS)
+    if(NOT INSTALL_TESTS)
       file(COPY ${basedir}/
            DESTINATION ${CMAKE_BINARY_DIR}/${OPENCV_TEST_DATA_INSTALL_PATH}/${dest_subdir}
            ${ARGN}
