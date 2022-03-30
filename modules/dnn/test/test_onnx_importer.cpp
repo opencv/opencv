@@ -358,7 +358,18 @@ TEST_P(Test_ONNX_layers, ReduceSum)
 TEST_P(Test_ONNX_layers, ReduceMax)
 {
     testONNXModels("reduce_max");
+}
+TEST_P(Test_ONNX_layers, ReduceMax_axis_0)
+{
     testONNXModels("reduce_max_axis_0");
+}
+TEST_P(Test_ONNX_layers, ReduceMax_axis_1)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // [ GENERAL_ERROR ]  AssertionFailed: !out.networkInputs.empty()
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("reduce_max_axis_1");
 }
 
@@ -378,10 +389,28 @@ TEST_P(Test_ONNX_layers, ArgLayer)
 
 TEST_P(Test_ONNX_layers, Scale)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // Ngraph operation Reshape with name ReduceMean_0 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // accuracy
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("scale");
+}
+
+TEST_P(Test_ONNX_layers, Scale_broadcast)
+{
     testONNXModels("scale_broadcast", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, Scale_broadcast_mid)
+{
     testONNXModels("scale_broadcast_mid", npy, 0, 0, false, true, 2);
 }
 
