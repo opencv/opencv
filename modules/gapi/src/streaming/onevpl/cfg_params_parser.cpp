@@ -186,7 +186,7 @@ unsigned long strtoul_or_throw(const char* str) {
     errno = 0;
     unsigned long ret = strtoul(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == ULONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoul failed for: " << str);
         GAPI_Assert(false && "strtoul_or_throw");
@@ -199,7 +199,7 @@ size_t strtoull_or_throw(const char* str) {
     errno = 0;
     size_t ret = strtoull(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULLONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoull failed for: " << str);
         GAPI_Assert(false && "strtoull_or_throw");

@@ -22,7 +22,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 namespace utils {
-mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
+static mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     mfxU32 nbytes = 0;
 
     mfxU32 half_width = width / 2;
@@ -47,7 +47,7 @@ mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     return nbytes;
 }
 
-surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
+static surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
                                    std::shared_ptr<void> out_buf_ptr,
                                    size_t out_buf_ptr_offset,
                                    size_t out_buf_size)
@@ -80,7 +80,7 @@ surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
     return Surface::create_surface(std::move(handle), out_buf_ptr);
 }
 
-surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
+static surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
                                     std::shared_ptr<void> out_buf_ptr,
                                     size_t out_buf_ptr_offset,
                                     size_t out_buf_size)

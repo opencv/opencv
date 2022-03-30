@@ -47,7 +47,7 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
     VAStatus status {};
     status = vaInitialize(va_handle, &major_version, &minor_version);
     if (VA_STATUS_SUCCESS != status) {
-        GAPI_LOG_WARNING(nullptr, "Cannot initialize VA_API device, VAStatus: " << status);
+        GAPI_LOG_WARNING(nullptr, "Cannot initialize VA_API device, error: " << vaErrorStr(status));
         close(device_fd);
         throw std::runtime_error("vaInitialize failed");
     }
@@ -58,6 +58,7 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
 }
 
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() {
+    vaTerminate(va_handle);
     close(device_fd);
     GAPI_LOG_INFO(nullptr, "destroyed");
 }
