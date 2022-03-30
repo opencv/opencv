@@ -287,6 +287,51 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         cudnnTensorDescriptor_t descriptor;
     };
 
+    /** An array of number fully packed tensor descriptors
+     *
+     * @tparam  T   type of elements in the tensor
+     */
+    template<class T>
+    class TensorDescriptorsArray
+    {
+    public:
+        TensorDescriptorsArray() noexcept = default;
+        TensorDescriptorsArray(const TensorDescriptorsArray&) = delete;
+        TensorDescriptorsArray(TensorDescriptorsArray&& other) noexcept
+            : descriptors{std::move(other.descriptors)} {}
+
+        TensorDescriptorsArray(int seqLength, std::array<int, 3> dims)
+        {
+            for (int i = 0; i < seqLength; ++i)
+            {
+                descriptors.emplace_back(dims);
+            }
+        }
+
+        ~TensorDescriptorsArray() noexcept = default;
+
+        TensorDescriptorsArray& operator=(const TensorDescriptorsArray&) = delete;
+        TensorDescriptorsArray& operator=(TensorDescriptorsArray&& other) noexcept
+        {
+            descriptors = std::move(other.descriptors);
+            return *this;
+        };
+
+        std::vector<cudnnTensorDescriptor_t> get() const noexcept
+        {
+            std::vector<cudnnTensorDescriptor_t> descPtrs;
+            descPtrs.reserve(descriptors.size());
+            for (auto& desc : descriptors)
+            {
+                descPtrs.push_back(desc.get());
+            }
+            return descPtrs;
+        }
+
+    private:
+        std::vector<TensorDescriptor<T>> descriptors;
+    };
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 
 #endif /* OPENCV_DNN_CUDA4DNN_CSL_CUDNN_HPP */
