@@ -787,10 +787,30 @@ TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
     testONNXModels("hidden_lstm_bi", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, LSTM_cell)
+TEST_P(Test_ONNX_layers, LSTM_cell_forward)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // Ngraph operation Reshape with name LSTM_16/lstm_y/reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
+}
+TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // Ngraph operation Reshape with name LSTM_16/lstm_y/reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("lstm_cell_bidirectional", npy, 0, 0, false, false);
+}
+TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
+{
     testONNXModels("lstm_cell_with_peepholes", npy, 0, 0, false, false);
 }
 
