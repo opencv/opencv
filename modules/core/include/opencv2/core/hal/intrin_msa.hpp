@@ -1037,12 +1037,12 @@ inline scalartype v_reduce_sum(const _Tpvec& a) \
     return (scalartype)msa_sum_##suffix(a.val); \
 }
 
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint8x16, unsigned char, u8)
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int8x16, char, s8)
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint16x8, unsigned short, u16)
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int16x8, short, s16)
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint32x4, unsigned, u32)
-OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint8x16, unsigned short, u8)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int8x16, short, s8)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint16x8, unsigned, u16)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int16x8, int, s16)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_uint32x4, uint64_t, u32)
+OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_int32x4, int64_t, s32)
 OPENCV_HAL_IMPL_MSA_REDUCE_SUM(v_float32x4, float, f32)
 
 inline uint64 v_reduce_sum(const v_uint64x2& a)
