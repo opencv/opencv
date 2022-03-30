@@ -248,7 +248,7 @@ static __itt_api_info api_list[] = {
 /* Define functions with static implementation */
 #undef ITT_STUB
 #undef ITT_STUBV
-#define ITT_STUB(api,type,name,args,params,nameindll,group,format) { ITT_TO_STR(ITT_JOIN(__itt_,nameindll)), (void**)(void*)&ITTNOTIFY_NAME(name), (void*)(size_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), (void*)(size_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), (__itt_group_id)(group)},
+#define ITT_STUB(api,type,name,args,params,nameindll,group,format) { ITT_TO_STR(ITT_JOIN(__itt_,nameindll)), (void**)(void*)&ITTNOTIFY_NAME(name), (void*)(uintptr_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), (void*)(uintptr_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), (__itt_group_id)(group)},
 #define ITT_STUBV ITT_STUB
 #define __ITT_INTERNAL_INIT
 #include "ittnotify_static.h"
@@ -256,7 +256,7 @@ static __itt_api_info api_list[] = {
 /* Define functions without static implementation */
 #undef ITT_STUB
 #undef ITT_STUBV
-#define ITT_STUB(api,type,name,args,params,nameindll,group,format) {ITT_TO_STR(ITT_JOIN(__itt_,nameindll)), (void**)(void*)&ITTNOTIFY_NAME(name), (void*)(size_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), NULL, (__itt_group_id)(group)},
+#define ITT_STUB(api,type,name,args,params,nameindll,group,format) {ITT_TO_STR(ITT_JOIN(__itt_,nameindll)), (void**)(void*)&ITTNOTIFY_NAME(name), (void*)(uintptr_t)&ITT_VERSIONIZE(ITT_JOIN(_N_(name),_init)), NULL, (__itt_group_id)(group)},
 #define ITT_STUBV ITT_STUB
 #include "ittnotify_static.h"
     {NULL, NULL, NULL, NULL, __itt_group_none}
@@ -308,7 +308,7 @@ static void __itt_report_error(__itt_error_code code, ...)
     va_start(args, code);
     if (_N_(_ittapi_global).error_handler != NULL)
     {
-        __itt_error_handler_t* handler = (__itt_error_handler_t*)(size_t)_N_(_ittapi_global).error_handler;
+        __itt_error_handler_t* handler = (__itt_error_handler_t*)(uintptr_t)_N_(_ittapi_global).error_handler;
         handler(code, args);
     }
 #ifdef ITT_NOTIFY_EXT_REPORT
@@ -1073,7 +1073,7 @@ ITT_EXTERN_C void _N_(fini_ittlib)(void)
                 if (PTHREAD_SYMBOLS) current_thread = __itt_thread_id();
                 if (_N_(_ittapi_global).lib != NULL)
                 {
-                    __itt_api_fini_ptr = (__itt_api_fini_t*)(size_t)__itt_get_proc(_N_(_ittapi_global).lib, "__itt_api_fini");
+                    __itt_api_fini_ptr = (__itt_api_fini_t*)(uintptr_t)__itt_get_proc(_N_(_ittapi_global).lib, "__itt_api_fini");
                 }
                 if (__itt_api_fini_ptr)
                 {
@@ -1176,7 +1176,7 @@ ITT_EXTERN_C int _N_(init_ittlib)(const char* lib_name, __itt_group_id init_grou
 #endif /* ITT_COMPLETE_GROUP */
                             break;
                         case 2:
-                            __itt_api_init_ptr = (__itt_api_init_t*)(size_t)__itt_get_proc(_N_(_ittapi_global).lib, "__itt_api_init");
+                            __itt_api_init_ptr = (__itt_api_init_t*)(uintptr_t)__itt_get_proc(_N_(_ittapi_global).lib, "__itt_api_init");
                             if (__itt_api_init_ptr)
                                 __itt_api_init_ptr(&_N_(_ittapi_global), init_groups);
                             break;
@@ -1225,8 +1225,8 @@ ITT_EXTERN_C int _N_(init_ittlib)(const char* lib_name, __itt_group_id init_grou
 
 ITT_EXTERN_C __itt_error_handler_t* _N_(set_error_handler)(__itt_error_handler_t* handler)
 {
-    __itt_error_handler_t* prev = (__itt_error_handler_t*)(size_t)_N_(_ittapi_global).error_handler;
-    _N_(_ittapi_global).error_handler = (void*)(size_t)handler;
+    __itt_error_handler_t* prev = (__itt_error_handler_t*)(uintptr_t)_N_(_ittapi_global).error_handler;
+    _N_(_ittapi_global).error_handler = (void*)(uintptr_t)handler;
     return prev;
 }
 
