@@ -24,7 +24,7 @@ class Surface;
 struct VPLAccelerationPolicy;
 class VPLLegacyDecodeEngine;
 
-class LegacyDecodeSession : public EngineSession {
+class GAPI_EXPORTS LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;
     friend class VPLLegacyTranscodeEngine; //TODO: remove friend add method

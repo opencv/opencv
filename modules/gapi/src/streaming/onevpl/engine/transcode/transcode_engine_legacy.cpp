@@ -269,7 +269,8 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     const auto& mfxDecParams = decode_params.decoder_params.param;
 
     // NB: create transcode params: Out = In by default, In = initially decoded
-    mfxVideoParam mfxVPPParams{0};
+    mfxVideoParam mfxVPPParams{};
+    memset(&mfxVPPParams, 0, sizeof(mfxVPPParams));
     mfxVPPParams.vpp.In = mfxDecParams.mfx.FrameInfo;
     mfxVPPParams.vpp.Out = mfxVPPParams.vpp.In;
 
