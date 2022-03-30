@@ -230,6 +230,7 @@ inline vint16mf2_t vwcvt_x_x_v_i16mf2 (vint8mf4_t src, size_t vl)
 
 //////////// Types ////////////
 
+#ifndef __clang__
 struct v_uint8x16
 {
     typedef uchar lane_type;
@@ -531,7 +532,358 @@ struct v_float64x2
     double val[2];
 };
 #endif
+#else
+struct v_uint8x16
+{
+    typedef uchar lane_type;
+    enum { nlanes = 16 };
 
+    v_uint8x16() {}
+    explicit v_uint8x16(vuint8m1_t v)
+    {
+        *pval = v;
+    }
+    v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
+               uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
+    {
+        uchar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
+        *pval = vle8_v_u8m1(v, nlanes);
+    }
+    operator vuint8m1_t() const
+    {
+        return *pval;
+    }
+    uchar get0() const
+    {
+        return vmv_x(*pval);
+    }
+    inline v_uint8x16& operator=(const v_uint8x16& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_uint8x16(const v_uint8x16& vec) {
+        *pval = *(vec.pval);
+    }
+    uchar val[16];
+    vuint8m1_t* pval = (vuint8m1_t*)val;
+};
+
+struct v_int8x16
+{
+    typedef schar lane_type;
+    enum { nlanes = 16 };
+
+    v_int8x16() {}
+    explicit v_int8x16(vint8m1_t v)
+    {
+        *pval = v;
+    }
+    v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
+               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
+    {
+        schar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
+        *pval = vle8_v_i8m1(v, nlanes);
+    }
+    operator vint8m1_t() const
+    {
+        return *pval;
+    }
+    schar get0() const
+    {
+        return vmv_x(*pval);
+    }
+    inline v_int8x16& operator=(const v_int8x16& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_int8x16(const v_int8x16& vec) {
+        *pval = *(vec.pval);
+    }
+    schar val[16];
+    vint8m1_t* pval = (vint8m1_t*)val;
+};
+
+struct v_uint16x8
+{
+    typedef ushort lane_type;
+    enum { nlanes = 8 };
+
+    v_uint16x8() {}
+    explicit v_uint16x8(vuint16m1_t v)
+    {
+        *pval = v;
+    }
+    v_uint16x8(ushort v0, ushort v1, ushort v2, ushort v3, ushort v4, ushort v5, ushort v6, ushort v7)
+    {
+        ushort v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
+        *pval = vle16_v_u16m1(v, nlanes);
+    }
+    operator vuint16m1_t() const
+    {
+        return *pval;
+    }
+    ushort get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_uint16x8& operator=(const v_uint16x8& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_uint16x8(const v_uint16x8& vec) {
+        *pval = *(vec.pval);
+    }
+    ushort val[8];
+    vuint16m1_t* pval = (vuint16m1_t*)val;
+};
+
+struct v_int16x8
+{
+    typedef short lane_type;
+    enum { nlanes = 8 };
+
+    v_int16x8() {}
+    explicit v_int16x8(vint16m1_t v)
+    {
+        *pval = v;
+    }
+    v_int16x8(short v0, short v1, short v2, short v3, short v4, short v5, short v6, short v7)
+    {
+        short v[] = {v0, v1, v2, v3, v4, v5, v6, v7};
+        *pval = vle16_v_i16m1(v, nlanes);
+    }
+    operator vint16m1_t() const
+    {
+        return *pval;
+    }
+    short get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_int16x8& operator=(const v_int16x8& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_int16x8(const v_int16x8& vec) {
+        *pval = *(vec.pval);
+    }
+    short val[8];
+    vint16m1_t* pval = (vint16m1_t*)val;
+};
+
+struct v_uint32x4
+{
+    typedef unsigned lane_type;
+    enum { nlanes = 4 };
+
+    v_uint32x4() {}
+    explicit v_uint32x4(vuint32m1_t v)
+    {
+        *pval = v;
+    }
+    v_uint32x4(unsigned v0, unsigned v1, unsigned v2, unsigned v3)
+    {
+        unsigned v[] = {v0, v1, v2, v3};
+        *pval = vle32_v_u32m1(v, nlanes);
+    }
+    operator vuint32m1_t() const
+    {
+        return *pval;
+    }
+    unsigned get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_uint32x4& operator=(const v_uint32x4& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_uint32x4(const v_uint32x4& vec) {
+        *pval = *(vec.pval);
+    }
+    unsigned val[4];
+    vuint32m1_t* pval = (vuint32m1_t*)val;
+};
+
+struct v_int32x4
+{
+    typedef int lane_type;
+    enum { nlanes = 4 };
+
+    v_int32x4() {}
+    explicit v_int32x4(vint32m1_t v)
+    {
+        *pval = v;
+    }
+    v_int32x4(int v0, int v1, int v2, int v3)
+    {
+        int v[] = {v0, v1, v2, v3};
+        *pval = vle32_v_i32m1(v, nlanes);
+    }
+    operator vint32m1_t() const
+    {
+        return *pval;
+    }
+    int get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_int32x4& operator=(const v_int32x4& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_int32x4(const v_int32x4& vec) {
+        *pval = *(vec.pval);
+    }
+    int val[4];
+    vint32m1_t* pval = (vint32m1_t*)val;
+};
+
+struct v_float32x4
+{
+    typedef float lane_type;
+    enum { nlanes = 4 };
+
+    v_float32x4() {}
+    explicit v_float32x4(vfloat32m1_t v)
+    {
+        *pval = v;
+    }
+    v_float32x4(float v0, float v1, float v2, float v3)
+    {
+        float v[] = {v0, v1, v2, v3};
+        *pval = vle32_v_f32m1(v, nlanes);
+    }
+    operator vfloat32m1_t() const
+    {
+        return *pval;
+    }
+    float get0() const
+    {
+        return vfmv_f(*pval);
+    }
+    inline v_float32x4& operator=(const v_float32x4& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_float32x4(const v_float32x4& vec) {
+        *pval = *(vec.pval);
+    }
+    float val[4];
+    vfloat32m1_t* pval = (vfloat32m1_t*)val;
+};
+
+struct v_uint64x2
+{
+    typedef uint64 lane_type;
+    enum { nlanes = 2 };
+
+    v_uint64x2() {}
+    explicit v_uint64x2(vuint64m1_t v)
+    {
+        *pval = v;
+    }
+    v_uint64x2(uint64 v0, uint64 v1)
+    {
+        uint64 v[] = {v0, v1};
+        *pval = vle64_v_u64m1(v, nlanes);
+    }
+    operator vuint64m1_t() const
+    {
+        return *pval;
+    }
+    uint64 get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_uint64x2& operator=(const v_uint64x2& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_uint64x2(const v_uint64x2& vec) {
+        *pval = *(vec.pval);
+    }
+    uint64 val[2];
+    vuint64m1_t* pval = (vuint64m1_t*)val;
+};
+
+struct v_int64x2
+{
+    typedef int64 lane_type;
+    enum { nlanes = 2 };
+
+    v_int64x2() {}
+    explicit v_int64x2(vint64m1_t v)
+    {
+        *pval = v;
+    }
+    v_int64x2(int64 v0, int64 v1)
+    {
+        int64 v[] = {v0, v1};
+        *pval = vle64_v_i64m1(v, nlanes);
+    }
+    operator vint64m1_t() const
+    {
+        return *pval;
+    }
+    int64 get0() const
+    {
+        return vmv_x(*pval);
+    }
+
+    inline v_int64x2& operator=(const v_int64x2& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_int64x2(const v_int64x2& vec) {
+        *pval = *(vec.pval);
+    }
+    int64 val[2];
+    vint64m1_t* pval = (vint64m1_t*)val;
+};
+
+#if CV_SIMD128_64F
+struct v_float64x2
+{
+    typedef double lane_type;
+    enum { nlanes = 2 };
+
+    v_float64x2() {}
+    explicit v_float64x2(vfloat64m1_t v)
+    {
+        *pval = v;
+    }
+    v_float64x2(double v0, double v1)
+    {
+        double v[] = {v0, v1};
+        *pval = vle64_v_f64m1(v, nlanes);
+    }
+    operator vfloat64m1_t() const
+    {
+        return *pval;
+    }
+    double get0() const
+    {
+        return vfmv_f(*pval);
+    }
+
+    inline v_float64x2& operator=(const v_float64x2& vec) {
+        *pval = *(vec.pval);
+        return *this;
+    }
+    inline v_float64x2(const v_float64x2& vec) {
+        *pval = *(vec.pval);
+    }
+    double val[2];
+    vfloat64m1_t* pval = (vfloat64m1_t*)val;
+};
+#endif // CV_SIMD128_64F
+#endif // __clang__
 
 //////////// Initial ////////////
 
@@ -1819,6 +2171,7 @@ inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 }
 
 #if CV_SIMD128_64F
+#ifndef __clang__
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 {
     double arr[4] = {a.val[0], a.val[1], 0, 0};
@@ -1832,6 +2185,18 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
     vfloat64m2_t tmp = vle64_v_f64m2(arr, 4);
     return v_float32x4(vfncvt_f_f_w_f32m1(tmp, 4));
 }
+#else
+inline v_float32x4 v_cvt_f32(const v_float64x2& a)
+{
+    vfloat64m2_t zero = vfmv_v_f_f64m2(0, 4);
+    return v_float32x4(vfncvt_f_f_w_f32m1(vset_v_f64m1_f64m2(zero, 0, a), 4));
+}
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{
+    vfloat64m2_t dst = vlmul_ext_v_f64m1_f64m2(a);
+    return v_float32x4(vfncvt_f_f_w_f32m1(vset_v_f64m1_f64m2(dst, 1, b), 4));
+}
+#endif
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
@@ -2351,6 +2716,7 @@ OPENCV_HAL_IMPL_RVV_POPCOUNT_OP(v_uint64x2, v_int64x2, uint64, int64, u64)
 
 //////////// SignMask ////////////
 
+#ifndef __clang__
 #define OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(_Tpvec, _Tp, suffix, vl, shift) \
 inline int v_signmask(const _Tpvec& a) \
 { \
@@ -2381,6 +2747,36 @@ inline int v_signmask(const v_float64x2& a)
 { return v_signmask(v_reinterpret_as_u64(a)); }
 #endif
 
+#else
+#define OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(_Tpvec, width, vl) \
+inline int v_signmask(const _Tpvec& a) \
+{ \
+    uint8_t ans[16] = {0};\
+    vsm(ans, vmslt(a, 0, vl), vl);\
+    return reinterpret_cast<int*>(ans)[0];\
+}
+
+OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(v_int8x16, 8, 16)
+OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(v_int16x8, 16, 8)
+OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(v_int32x4, 32, 4)
+OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(v_int64x2, 64, 2)
+
+inline int v_signmask(const v_uint8x16& a)
+{ return v_signmask(v_reinterpret_as_s8(a)); }
+inline int v_signmask(const v_uint16x8& a)
+{ return v_signmask(v_reinterpret_as_s16(a)); }
+inline int v_signmask(const v_uint32x4& a)
+{ return v_signmask(v_reinterpret_as_s32(a)); }
+inline int v_signmask(const v_float32x4& a)
+{ return v_signmask(v_reinterpret_as_s32(a)); }
+inline int v_signmask(const v_uint64x2& a)
+{ return v_signmask(v_reinterpret_as_s64(a)); }
+#if CV_SIMD128_64F
+inline int v_signmask(const v_float64x2& a)
+{ return v_signmask(v_reinterpret_as_s64(a)); }
+#endif
+
+#endif
 
 //////////// Scan forward ////////////
 
@@ -2520,6 +2916,7 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
     return v_int32x4(vfcvt_rtz_x_f_v_i32m1(a, 4));
 }
 #if CV_SIMD128_64F
+#ifndef __clang__
 inline v_int32x4 v_round(const v_float64x2& a)
 {
     double arr[4] = {a.val[0], a.val[1], 0, 0};
@@ -2554,6 +2951,42 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
     vfloat64m2_t tmp = vle64_v_f64m2(arr, 4);
     return v_int32x4(vfncvt_rtz_x_f_w_i32m1(tmp, 4));
 }
+
+#else
+inline v_int32x4 v_round(const v_float64x2& a)
+{
+    vfloat64m2_t zero = vfmv_v_f_f64m2(0, 4);
+    return v_int32x4(vfncvt_x_f_w_i32m1(vset_v_f64m1_f64m2(zero, 0, a), 4));
+}
+
+inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
+{
+    vfloat64m2_t dst = vlmul_ext_v_f64m1_f64m2(a);
+    return v_int32x4(vfncvt_x_f_w_i32m1(vset_v_f64m1_f64m2(dst, 1, b), 4));
+}
+
+inline v_int32x4 v_floor(const v_float64x2& a)
+{
+    vfloat64m2_t dst = vfmv_v_f_f64m2(0, 4);
+    dst = vset_v_f64m1_f64m2(dst, 0, a);
+    dst = vfsub_vf_f64m2(dst, 0.5, 2);
+    return v_int32x4(vfncvt_x_f_w_i32m1(dst, 4));
+}
+
+inline v_int32x4 v_ceil(const v_float64x2& a)
+{
+    vfloat64m2_t dst = vfmv_v_f_f64m2(0, 4);
+    dst = vset_v_f64m1_f64m2(dst, 0, a);
+    dst = vfadd_vf_f64m2(dst, 0.5, 2);
+    return v_int32x4(vfncvt_x_f_w_i32m1(dst, 4));
+}
+
+inline v_int32x4 v_trunc(const v_float64x2& a)
+{
+    vfloat64m2_t zero = vfmv_v_f_f64m2(0, 4);
+    return v_int32x4(vfncvt_rtz_x_f_w_i32m1(vset_v_f64m1_f64m2(zero, 0, a), 4));
+}
+#endif
 #endif
 
 
