@@ -89,7 +89,7 @@ ptrdiff_t borderInterpolate(ptrdiff_t _p, size_t _len, BORDER_MODE borderType, s
  */
 template<typename T> inline T* alignPtr(T* ptr, size_t n=sizeof(T))
 {
-    return (T*)(((size_t)ptr + n-1) & -n);
+    return (T*)(((uintptr_t)ptr + n-1) & -n);
 }
 
 }}
