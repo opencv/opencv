@@ -664,6 +664,8 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
     {
+        if ( dims == 1 && (d == 1 && _sizes[0] == size[0]) )
+            return;
         if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
             return;
         for( i = 0; i < d; i++ )
