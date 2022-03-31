@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_timvx.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #include <float.h>
@@ -26,8 +27,11 @@ public:
         globalPooling = false;
         isGlobalPooling = std::vector<bool>(3, false);
         output_zp = params.get<int>("zeropoints");
-        input_zp = params.get<int>("input_zeropoint", 0);
+        input_zp = params.get<int>("input_zeropoint", output_zp);
         multiplier = params.get<float>("multiplier", 1.f);
+
+        output_sc = params.get<float>("scales");
+        input_sc =  multiplier * output_sc;
 
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
@@ -103,6 +107,24 @@ public:
             else
                 return false;
         }
+        else if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
+        {
+            // Only pool 2d and pool 1d were supported.
+            if (kernel_size.size() == 3)
+            {
+                // fallback to CPU implementation.
+                preferableTarget = DNN_TARGET_CPU;
+                return false;
+            }
+            if (!avePoolPaddedArea) // TimVX does not support exclude padding.
+                return false;
+            if (globalPooling) // TODO support globalPooling in TimVX backend.
+                return false;
+            if (kernel_size.size() == 2)
+                return type == MAX || type == AVE;
+            return false;
+        }
+
         return false;
     }
 
@@ -114,6 +136,139 @@ public:
             return activ_int8->blobs.empty();
         }
         return false;
+    }
+
+
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        tim::vx::PoolType tvPoolType;
+        tim::vx::RoundType tvRoundType;
+        size_t ksize = kernel_size.size();
+        if (ksize != 2)
+            return Ptr<BackendNode>();
+
+        // type Change from OpenCV to TimVX only MAX and AVG are supported.
+        switch (type) {
+            case MAX: {
+                tvPoolType = tim::vx::PoolType::MAX;
+                break;
+            }
+            case AVE:{
+                tvPoolType = tim::vx::PoolType::AVG;
+                break;
+            }
+            default:
+                CV_Error(Error::StsNotImplemented, "Not implemented Pooling type in TimVX Backend.");
+        }
+
+        // Padding Type
+        tim::vx::PadType tvPadType;
+        if (padMode.empty())
+        {
+            tvPadType = tim::vx::PadType::AUTO; // TODO! check the padding type.
+        }
+        else if(padMode == "VALID")
+        {
+            tvPadType = tim::vx::PadType::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            tvPadType = tim::vx::PadType::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsError, "Unsupported padding mode in TimVXBackend!");
+        }
+
+        if (ceilMode)
+            tvRoundType = tim::vx::RoundType::CEILING;
+        else
+            tvRoundType = tim::vx::RoundType::FLOOR;
+
+        auto input = inputsWrapper[0];
+        std::vector<int> inputsIndex;
+        std::vector<int> outputsIndex;
+
+        // input Tensor
+        auto inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        int input_index, output_index;
+
+        if (inputWrapper->isTensor())
+        {
+            input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+            if (input_index == -1)
+            {
+                // Copy To New inputWrapper
+                Mat tmp = inputWrapper->getMat();
+                inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+            }
+        }
+
+        if (!inputWrapper->isTensor())
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, input_sc, input_zp));
+            inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT, tvInputQuant);
+            input_index = tvGraph->addWrapper(inputWrapper);
+        }
+        inputsIndex.push_back(input_index);
+
+        // Output tensor
+        CV_Assert(outputsWrapper.size() == 1);
+        auto outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        Ptr<tim::vx::Quantization> outputQuant = Ptr<tim::vx::Quantization>(
+                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, output_sc, output_zp));
+
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+        std::shared_ptr<tim::vx::Operation> tvPool;
+
+        if (tvPadType == tim::vx::PadType::AUTO)
+        {
+            tvPool = graph->CreateOperation<tim::vx::ops::Pool2d>( tvPoolType,
+                       std::array<uint32_t, 4>({(uint32_t) pads_begin[1], (uint32_t) pads_end[1],
+                                                (uint32_t) pads_begin[0], (uint32_t) pads_end[0]}),
+                       std::array<uint32_t, 2>({(uint32_t)kernel_size[1], (uint32_t)kernel_size[0]}),
+                       std::array<uint32_t, 2>({(uint32_t)strides[1], (uint32_t)strides[0]}),
+                       tvRoundType);
+        }
+        else
+        {
+            tvPool = graph->CreateOperation<tim::vx::ops::Pool2d>(
+                    tvPoolType, tvPadType,
+                    std::array<uint32_t, 2>({(uint32_t)kernel_size[1], (uint32_t)kernel_size[0]}),
+                    std::array<uint32_t, 2>({(uint32_t)strides[1], (uint32_t)strides[0]}),
+                    tvRoundType);
+        }
+
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvPool, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE

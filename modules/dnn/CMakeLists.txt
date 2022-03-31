@@ -23,6 +23,10 @@ if(WITH_WEBNN AND HAVE_WEBNN)
   add_definitions(-DHAVE_WEBNN=1)
 endif()
 
+if(HAVE_TIMVX)
+  add_definitions(-DHAVE_TIMVX=1)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
@@ -144,6 +148,11 @@ endif()
 if(HAVE_TENGINE)
 	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
 	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
+endif()
+
+if(HAVE_TIMVX)
+    list(APPEND include_dirs ${TIMVX_INCLUDE_DIR})
+    list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
 endif()
 
 set(webnn_srcs "")

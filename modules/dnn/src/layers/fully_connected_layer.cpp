@@ -642,6 +642,8 @@ public:
         params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
         params.blobs.push_back(biasQuantized);
         params.blobs.push_back(outputMultiplier);
+        params.set("input_scale", inputScale);
+        params.set("input_zeropoint", inputZp);
         return true;
     }
 

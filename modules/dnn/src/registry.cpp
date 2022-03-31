@@ -10,6 +10,7 @@
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
+#include "op_timvx.hpp"
 
 #include "halide_scheduler.hpp"
 
@@ -107,6 +108,13 @@ private:
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+        }
+#endif
+
+#ifdef HAVE_TIMVX
+        if (haveTimVX())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
         }
 #endif
     }

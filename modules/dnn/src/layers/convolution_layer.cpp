@@ -2168,6 +2168,7 @@ public:
         float inputScale = scales[0][0], outputScale = scales[1][0];
         int inputZp = zeropoints[0][0];
         params.set("input_zeropoint", inputZp);
+        params.set("input_scale", inputScale);
 
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);

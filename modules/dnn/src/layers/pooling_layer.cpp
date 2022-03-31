@@ -272,6 +272,17 @@ public:
                 return true;
             }
         }
+        else if (backendId == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            if (kernel_size.size() == 3)
+            {
+                // fallback to CPU implementation.
+                preferableTarget = DNN_TARGET_CPU;
+            }
+#endif
+            return false;
+        }
         return false;
     }
 
