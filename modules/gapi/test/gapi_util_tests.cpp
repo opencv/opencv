@@ -72,4 +72,4 @@ TEST(GAPIUtil, GTypeList)
     static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn>::value, "ConvertibleToOwn is not in empty denial list");
     static_assert(!cv::detail::contains<cv::gapi::own::ConvertibleToOwn, GAPI_OWN_TYPES_LIST, DISALLOWED_LIST>::value, "ConvertibleToOwn is not in denial list");
 }
-}
+} // namespace opencv_test
