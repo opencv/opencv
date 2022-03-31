@@ -1,4 +1,4 @@
-set(TIMVX_COMMIT_HASH "bb164d7d95610b0ab40f120fb248443ae60d5f87")
+set(TIMVX_COMMIT_HASH "1d9c7ab941b3d8d9c4d28d80058402725731e3d6")
 set(OCV_TIMVX_DIR "${OpenCV_BINARY_DIR}/3rdparty/libtim-vx")
 set(OCV_TIMVX_SOURCE_PATH "${OCV_TIMVX_DIR}/TIM-VX-${TIMVX_COMMIT_HASH}")
 
@@ -8,8 +8,8 @@ if(EXISTS "${OCV_TIMVX_SOURCE_PATH}")
     set(TIMVX_FOUND ON)
 else()
     set(OCV_TIMVX_FILENAME "${TIMVX_COMMIT_HASH}.zip")
-    set(OCV_TIMVX_URL "https://github.com/fengyuentau/TIM-VX/archive/")
-    set(timvx_zip_md5sum 677de725f75dd9f98ca0ce2a421d0ba1)
+    set(OCV_TIMVX_URL "https://github.com/VeriSilicon/TIM-VX/archive/")
+    set(timvx_zip_md5sum 92619cc4498014ac7a09834d5e33ebd5)
 
     ocv_download(FILENAME ${OCV_TIMVX_FILENAME}
                  HASH ${timvx_zip_md5sum}
@@ -30,9 +30,18 @@ endif()
 
 # set VIVANTE SDK especially for x86_64 which comes along with TIM-VX source code
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64)
-    set(TIMVX_VIV_FOUND ON)
     set(VIVANTE_SDK_DIR "${OCV_TIMVX_SOURCE_PATH}/prebuilt-sdk/x86_64_linux")
     message(STATUS "TIM-VX: Build from source using prebuilt x86_64 VIVANTE SDK.")
+endif()
+
+# Verify if requested VIVANTE SDK libraries are all found
+find_vivante_sdk_libs(missing ${VIVANTE_SDK_DIR})
+if(missing)
+    message(STATUS "TIM-VX: Failed to find ${missing} in ${VIVANTE_SDK_DIR}/lib. Turning off TIMVX_VIV_FOUND")
+    set(TIMVX_VIV_FOUND OFF)
+else()
+    message(STATUS "TIM-VX: dependent VIVANTE SDK libraries are found at ${VIVANTE_SDK_DIR}/lib.")
+    set(TIMVX_VIV_FOUND ON)
 endif()
 
 if(TIMVX_VIV_FOUND)
