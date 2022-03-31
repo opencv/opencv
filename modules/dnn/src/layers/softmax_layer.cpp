@@ -390,6 +390,8 @@ public:
         }
         params.blobs.clear();
         params.blobs.push_back(lookUpTable);
+        params.set("input_scale", inpScale);
+        params.set("input_zeropoint", zeropoints[0][0]);
         return true;
     }
 

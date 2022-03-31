@@ -12,6 +12,7 @@
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
+#include "op_timvx.hpp"
 
 namespace cv {
 namespace dnn {
@@ -110,6 +111,13 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
             CV_Assert(IS_DNN_CUDA_TARGET(targetId));
         }
 #endif
+    }
+    else if (backendId == DNN_BACKEND_TIMVX)
+    {
+        CV_Assert(haveTimVX());
+#ifdef HAVE_TIMVX
+        return Ptr<BackendWrapper>(new TimVXBackendWrapper(m));
+#endif  // HAVE_TIMVX
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");

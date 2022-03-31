@@ -74,6 +74,16 @@ Ptr<BackendNode> Layer::initWebnn(const std::vector<Ptr<BackendWrapper>>& inputs
     return Ptr<BackendNode>();
 }
 
+Ptr<BackendNode> Layer::initTimVX(void* timVxInfo,
+                                  const std::vector<Ptr<BackendWrapper> > & inputsWrapper,
+                                  const std::vector<Ptr<BackendWrapper> > & outputsWrapper,
+                                  bool isLast)
+{
+    CV_Error(Error::StsNotImplemented, "TimVX pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
 Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 {
     return Ptr<BackendNode>();

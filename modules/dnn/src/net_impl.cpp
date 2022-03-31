@@ -133,6 +133,9 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
               preferableTarget == DNN_TARGET_VULKAN);
     CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
               IS_DNN_CUDA_TARGET(preferableTarget));
+    CV_Assert(preferableBackend != DNN_BACKEND_TIMVX ||
+              preferableTarget == DNN_TARGET_NPU);
+
     if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
     {
         if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
@@ -175,6 +178,12 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 #else
             CV_LOG_WARNING(NULL, "DNN module was not built with CUDA backend; switching to CPU");
 #endif
+            preferableBackend = DNN_BACKEND_OPENCV;
+            preferableTarget = DNN_TARGET_CPU;
+        }
+
+        if (preferableBackend == DNN_BACKEND_TIMVX && !haveTimVX())
+        {
             preferableBackend = DNN_BACKEND_OPENCV;
             preferableTarget = DNN_TARGET_CPU;
         }
@@ -515,7 +524,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
         ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
 
     /* CUDA backend has its own system for internal blobs; we don't need these */
-    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA) ? 0 : ld.internals.size());
+    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA || preferableBackend == DNN_BACKEND_TIMVX) ? 0 : ld.internals.size());
     for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
 
@@ -813,6 +822,10 @@ void Net::Impl::forwardLayer(LayerData& ld)
             else if (preferableBackend == DNN_BACKEND_WEBNN)
             {
                 forwardWebnn(ld.outputBlobsWrappers, node, isAsync);
+            }
+            else if (preferableBackend == DNN_BACKEND_TIMVX)
+            {
+                forwardTimVX(ld.outputBlobsWrappers, node);
             }
 #ifdef HAVE_VULKAN
             else if (preferableBackend == DNN_BACKEND_VKCOM)
@@ -1568,7 +1581,7 @@ string Net::Impl::dump(bool forceAllocation) const
             prevNode = itBackend->second;
         }
     }
-    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff" };
+    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371"};
     string backend;
     switch (prefBackend)
     {
@@ -1580,9 +1593,8 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
     case DNN_BACKEND_VKCOM: backend = "VULKAN/"; break;
     case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
-    case DNN_BACKEND_WEBNN:
-        backend = "WEBNN/";
-        break;
+    case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
+    case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -1766,6 +1778,10 @@ string Net::Impl::dump(bool forceAllocation) const
         case DNN_TARGET_CUDA_FP16:
             out << "CUDA_FP16";
             colorId = 6;
+            break;
+        case DNN_TARGET_NPU:
+            out << "NPU";
+            colorId = 9;
             break;
             // don't use default:
         }
