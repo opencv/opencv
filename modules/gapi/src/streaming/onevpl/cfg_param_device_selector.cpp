@@ -9,6 +9,7 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/utils.hpp"
@@ -277,7 +278,7 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
 }
 
 CfgParamDeviceSelector::DeviceScoreTable CfgParamDeviceSelector::select_devices() const {
-    return {std::make_pair(Score::MaxActivePriority, suggested_device)};
+    return {std::make_pair(Score::Type(Score::MaxActivePriority), suggested_device)};
 }
 
 CfgParamDeviceSelector::DeviceContexts CfgParamDeviceSelector::select_context() {

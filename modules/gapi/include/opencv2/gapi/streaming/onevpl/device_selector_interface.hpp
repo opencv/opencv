@@ -65,10 +65,10 @@ struct GAPI_EXPORTS IDeviceSelector {
     struct GAPI_EXPORTS Score {
         friend struct IDeviceSelector;
         using Type = int16_t;
-        static const Type MaxActivePriority;
-        static const Type MinActivePriority;
-        static const Type MaxPassivePriority;
-        static const Type MinPassivePriority;
+        static constexpr Type MaxActivePriority = std::numeric_limits<Type>::max();
+        static constexpr Type MinActivePriority = 0;
+        static constexpr Type MaxPassivePriority = MinActivePriority - 1;
+        static constexpr Type MinPassivePriority = std::numeric_limits<Type>::min();
 
         Score(Type val);
         ~Score();
