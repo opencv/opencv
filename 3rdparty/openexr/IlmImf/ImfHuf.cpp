@@ -41,7 +41,7 @@
 //
 //	The source code in this file is derived from the 8-bit
 //	Huffman compression and decompression routines written
-//	by Christian Rouet for his PIZ image file format.
+//	by Christian Rouet for their PIZ image file format.
 //
 //-----------------------------------------------------------------------------
 

@@ -20,7 +20,7 @@ requirement has led to the following architecture:
 There are three layers in this architecture:
 * **API Layer** -- this is the top layer, which implements G-API
   public interface, its building blocks and semantics.
-  When user constructs a pipeline with G-API, he interacts with this
+  When user constructs a pipeline with G-API, they interacts with this
   layer directly, and the entities the user operates on (like cv::GMat
   or cv::GComputation) are provided by this layer.
 * **Graph Compiler Layer** -- this is the intermediate layer which

@@ -509,7 +509,7 @@ slerp (const Quat<T> &q1, const Quat<T> &q2, T t)
     // that interpolates as is, without the automatic
     // flipping.
     //
-    // Don Hatch explains the method we use here on his
+    // Don Hatch explains the method we use here on their
     // web page, The Right Way to Calculate Stuff, at
     // http://www.plunk.org/~hatch/rightway.php
     //

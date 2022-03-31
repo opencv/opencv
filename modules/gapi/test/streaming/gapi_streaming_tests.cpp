@@ -942,7 +942,7 @@ TEST(GAPI_Streaming_Types, XChangeScalar)
     // - selected kernels (which were removed from the fluid package) remain in OCV
     //   (ConvertTo + some others)
     // FIXME: This is completely awful. User should easily pick up specific kernels
-    // to an empty kernel package to craft his own but not do it via exclusion.
+    // to an empty kernel package to craft their own but not do it via exclusion.
     // Need to expose kernel declarations to public headers to enable kernels<..>()
     // on user side.
     auto kernels = cv::gapi::combine(ocv_kernels, fluid_kernels);

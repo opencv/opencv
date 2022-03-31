@@ -546,7 +546,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 // The first parameter is the name of the test case, and the second
 // parameter is the name of the test within the test case.
 //
-// The user should put his test code between braces after using this
+// The user should put their test code between braces after using this
 // macro.  Example:
 //
 //   PERF_TEST(FooTest, InitializesCorrectly) {
@@ -563,7 +563,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 // name of the test within the test case.
 //
 // A test fixture class must be declared earlier.  The user should put
-// his test code between braces after using this macro.  Example:
+// their test code between braces after using this macro.  Example:
 //
 //   class FooTest : public ::perf::TestBase {
 //    protected:
@@ -608,7 +608,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 // also doubles as the test case name.  The second parameter is the
 // name of the test within the test case.
 //
-// The user should put his test code between braces after using this
+// The user should put their test code between braces after using this
 // macro.  Example:
 //
 //   typedef ::perf::TestBaseWithParam<cv::Size> FooTest;

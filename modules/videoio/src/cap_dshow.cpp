@@ -2496,7 +2496,7 @@ static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightI
 
             if (SUCCEEDED(hr)){
 
-                //his is how many diff sizes are available for the format
+                //their is how many diff sizes are available for the format
                 int stepX = scc.OutputGranularityX;
                 int stepY = scc.OutputGranularityY;
 

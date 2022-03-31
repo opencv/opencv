@@ -1597,7 +1597,7 @@ message V0LayerParameter {
 }
 
 message PReLUParameter {
-  // Parametric ReLU described in K. He et al, Delving Deep into Rectifiers:
+  // Parametric ReLU described in K. They et al, Delving Deep into Rectifiers:
   // Surpassing Human-Level Performance on ImageNet Classification, 2015.
 
   // Initial value of a_i. Default is a_i=0.25 for all i.

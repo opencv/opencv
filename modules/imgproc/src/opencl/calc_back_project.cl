@@ -10,7 +10,7 @@
 //    Niko Li, newlife20080214@gmail.com
 //    Jia Haipeng, jiahaipeng95@gmail.com
 //    Xu Pang, pangxu010@163.com
-//    Wenju He, wenju@multicorewareinc.com
+//    Wenju They, wenju@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //

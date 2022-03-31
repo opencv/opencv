@@ -71,7 +71,7 @@ cv::Size cv::gapi::wip::draw::FTTextRender::Priv::getTextSize(const std::wstring
     //      if we print first letter 'J' or any other letter with negative 'left'
     //      We want to render glyph in pen position + left, so we must't allow it to be negative
     //
-    //   2) If width == 0 we must to skip this symbol and don't save parameters for him.
+    //   2) If width == 0 we must to skip this symbol and don't save parameters for them.
     //      For example width == 0 for space sometimes
     //
     //   3) Also we compute max top and max bottom it's required for compute baseline

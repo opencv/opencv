@@ -97,7 +97,7 @@ try:
         def run(img, sc, dtype):
             # NB: dtype is just ignored in this implementation.
             # Moreover from G-API kernel got scalar as tuples with 4 elements
-            # where the last element is equal to zero, just cut him for broadcasting.
+            # where the last element is equal to zero, just cut them for broadcasting.
             return img + np.array(sc, dtype=np.uint8)[:-1]
 
 

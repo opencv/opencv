@@ -42,7 +42,7 @@ namespace detail {
 // Parameter holder class for a node
 // Depending on platform capabilities, can either support arbitrary types
 // (as `boost::any`) or a limited number of types (as `boot::variant`).
-// FIXME: put into "details" as a user shouldn't use it in his code
+// FIXME: put into "details" as a user shouldn't use it in their code
 class GAPI_EXPORTS GArg
 {
 public:

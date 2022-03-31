@@ -585,7 +585,7 @@ VSX_IMPL_CONV_ODD_2_4(vec_uint4,  vec_double2, vec_ctuo, vec_ctu)
 #   define VSX_UNUSED(Tvec) Tvec
 #endif
 
-// gcc can find his way in casting log int and XLC, CLANG ambiguous
+// gcc can find their way in casting log int and XLC, CLANG ambiguous
 #if defined(__clang__) || defined(__IBMCPP__)
     VSX_FINLINE(vec_udword2) vec_splats(uint64 v)
     { return vec_splats((unsigned long long) v); }
