@@ -64,6 +64,11 @@ AccelType Context::get_type() const {
     return type;
 }
 
+const IDeviceSelector::Score::Type IDeviceSelector::Score::MaxActivePriority = std::numeric_limits<Type>::max();
+const IDeviceSelector::Score::Type IDeviceSelector::Score::MinActivePriority = 0;
+const IDeviceSelector::Score::Type IDeviceSelector::Score::MaxPassivePriority = MinActivePriority - 1;
+const IDeviceSelector::Score::Type IDeviceSelector::Score::MinPassivePriority = std::numeric_limits<Type>::min();
+
 IDeviceSelector::Score::Score(Type val) :
     value(val) {
 }

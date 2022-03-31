@@ -11,6 +11,7 @@
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
+#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 #ifdef _WIN32
@@ -224,10 +225,8 @@ VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_
                                                       info.Width,
                                                       info.Height);
     if (!singleSurfaceSize) {
-        throw std::runtime_error("Cannot determine surface size for: fourCC: " +
-                                 std::to_string(info.FourCC) +
-                                 ", width: " + std::to_string(info.Width) +
-                                 ", height: " + std::to_string(info.Height));
+        throw std::runtime_error("Cannot determine surface size from frame: " +
+                                 mfx_frame_info_to_string(info));
     }
 
     auto surface_creator =
