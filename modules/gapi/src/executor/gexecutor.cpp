@@ -30,7 +30,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
     // 2. Put input/output GComputation arguments to the storage
     // 3. For every Island, prepare vectors of input/output parameter descs
-    // 4. Ask every GIslandExecutable to prepate its internal states for a new stream
+    // 4. Ask every GIslandExecutable to prepare its internal states for a new stream
     // 5. Iterate over a list of operations (sorted in the topological order)
     // 6. For every operation, form a list of input/output data objects
     // 7. Run GIslandExecutable

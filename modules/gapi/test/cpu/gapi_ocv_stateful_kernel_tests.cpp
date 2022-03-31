@@ -14,6 +14,7 @@
 #include <opencv2/video.hpp>
 #endif
 
+#include <memory> // required by std::shared_ptr
 
 namespace opencv_test
 {
@@ -24,7 +25,7 @@ namespace opencv_test
 
     struct CountStateSetupsParams
     {
-        int* pSetupsCount = nullptr;
+        std::shared_ptr<int> pSetupsCount;
     };
 } // namespace opencv_test
 
@@ -178,7 +179,7 @@ TEST(StatefulKernel, StateInitOnceInRegularMode)
 
     // variable to update when state is initialized in the kernel
     CountStateSetupsParams params;
-    params.pSetupsCount = new int(0);
+    params.pSetupsCount.reset(new int(0));
 
     // Testing for 100 frames
     bool result { };
@@ -204,7 +205,7 @@ TEST_P(StateInitOnce, StreamingMode)
 
     // variable to update when state is initialized in the kernel
     CountStateSetupsParams params;
-    params.pSetupsCount = new int(0);
+    params.pSetupsCount.reset(new int(0));
 
     // Compilation & testing
     auto ccomp = (compileWithMeta)
@@ -267,6 +268,7 @@ TEST(StatefulKernel, StateIsMutableInRuntime)
     EXPECT_EQ(1, actualCallsCount);
 
 }
+
 TEST(StateIsResetOnNewStream, RegularMode)
 {
     cv::GMat in;
@@ -279,7 +281,7 @@ TEST(StateIsResetOnNewStream, RegularMode)
 
     // variable to update when state is initialized in the kernel
     CountStateSetupsParams params;
-    params.pSetupsCount = new int(0);
+    params.pSetupsCount.reset(new int(0));
 
     auto setupsCounter = c.compile(cv::descr_of(inputData),
                                    cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
@@ -295,9 +297,6 @@ TEST(StateIsResetOnNewStream, RegularMode)
     EXPECT_TRUE(params.pSetupsCount != nullptr);
     EXPECT_EQ(1, *params.pSetupsCount);
     setupsCounter.prepareForNewStream();
-    EXPECT_TRUE(params.pSetupsCount != nullptr);
-    // States re-initialization will be called upon their kernels executions only
-    EXPECT_EQ(1, *params.pSetupsCount);
 
     for (int i = 0; i < 2; ++i) {
         setupsCounter(cv::gin(inputData), cv::gout(result));
