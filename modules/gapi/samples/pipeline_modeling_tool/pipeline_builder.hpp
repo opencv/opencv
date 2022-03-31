@@ -133,7 +133,8 @@ struct DummyCall {
             if (output.dims.size() == 2) {
                 return cv::GMatDesc(output.precision,
                                     1,
-                                    cv::Size(output.dims[0], output.dims[1]));
+                                    // NB: Dims[H, W] -> Size(W, H)
+                                    cv::Size(output.dims[1], output.dims[0]));
             }
             return cv::GMatDesc(output.precision, output.dims);
         }

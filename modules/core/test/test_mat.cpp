@@ -2461,5 +2461,16 @@ TEST(Mat, reverse_iterator_19967)
 
 }
 
+TEST(Mat, Recreate1DMatWithSameMeta)
+{
+    std::vector<int> dims = {100};
+    auto depth = CV_8U;
+    cv::Mat m(dims, depth);
+
+    // By default m has dims: [1, 100]
+    m.dims = 1;
+
+    EXPECT_NO_THROW(m.create(dims, depth));
+}
 
 }} // namespace
