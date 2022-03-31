@@ -52,10 +52,6 @@
 #ifndef GTEST_INCLUDE_GTEST_GTEST_H_
 #define GTEST_INCLUDE_GTEST_GTEST_H_
 
-#include <limits>
-#include <ostream>
-#include <vector>
-
 // Copyright 2005, Google Inc.
 // All rights reserved.
 //
@@ -2577,12 +2573,6 @@ class scoped_ptr {
 
   GTEST_DISALLOW_COPY_AND_ASSIGN_(scoped_ptr);
 };
-
-template <typename T>
-static void swap(scoped_ptr<T>& a, scoped_ptr<T>& b) {
-  using std::swap;
-  swap(a.ptr_, b.ptr_);
-}
 
 // Defines RE.
 

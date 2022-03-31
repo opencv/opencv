@@ -116,6 +116,7 @@
 #ifndef GTEST_INCLUDE_GTEST_GTEST_SPI_H_
 #define GTEST_INCLUDE_GTEST_GTEST_SPI_H_
 
+#include <vector>
 
 GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
 /* class A needs to have dll-interface to be used by clients of class B */)
@@ -170,6 +171,12 @@ class GTEST_API_ ScopedFakeTestPartResultReporter
 };
 
 namespace internal {
+
+template <typename T>
+void swap(scoped_ptr<T>& a, scoped_ptr<T>& b) {
+ using std::swap;
+ swap(a.ptr_, b.ptr_);
+}
 
 // A helper class for implementing EXPECT_FATAL_FAILURE() and
 // EXPECT_NONFATAL_FAILURE().  Its destructor verifies that the given
