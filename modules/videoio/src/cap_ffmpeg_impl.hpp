@@ -2210,17 +2210,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 /// close video output stream and free associated memory
 void CvVideoWriter_FFMPEG::close()
 {
-    // nothing to do if already released
-    if ( !picture )
-        return;
-
     /* no more frame to compress. The codec has a latency of a few
        frames if using B frames, so we get the last frames by
        passing the same picture again */
     // TODO -- do we need to account for latency here?
 
     /* write the trailer, if any */
-    if(ok && oc)
+    if (picture && ok && oc)
     {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
         if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
@@ -2244,32 +2240,34 @@ void CvVideoWriter_FFMPEG::close()
 
     // free pictures
 #if LIBAVFORMAT_BUILD > 4628
-    if( video_st->codec->pix_fmt != input_pix_fmt)
+    if (picture && video_st && video_st->codec->pix_fmt != input_pix_fmt)
 #else
-    if( video_st->codec.pix_fmt != input_pix_fmt)
+    if (picture && video_st && video_st->codec.pix_fmt != input_pix_fmt)
 #endif
     {
         if(picture->data[0])
             free(picture->data[0]);
         picture->data[0] = 0;
     }
-    av_free(picture);
+    av_freep(&picture);
 
-    if (input_picture)
-        av_free(input_picture);
+    av_freep(&input_picture);
 
-    /* close codec */
+    if (video_st && video_st->codec)
+    {
+        /* close codec */
 #if LIBAVFORMAT_BUILD > 4628
-    avcodec_close(video_st->codec);
+        avcodec_close(video_st->codec);
 #else
-    avcodec_close(&(video_st->codec));
+        avcodec_close(&(video_st->codec));
 #endif
+    }
 
-    av_free(outbuf);
+    av_freep(&outbuf);
 
     if (oc)
     {
-        if (!(fmt->flags & AVFMT_NOFILE))
+        if (fmt && !(fmt->flags & AVFMT_NOFILE))
         {
             /* close the output file */
 
