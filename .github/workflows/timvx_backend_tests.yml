@@ -1,0 +1,104 @@
+name: TIM-VX Backend
+
+on:
+  pull_request:
+    branches: [ 4.x ]
+    types: [ labeled, opened, synchronize, reopened ]
+
+
+jobs:
+  x86-simulator-build-test:
+    runs-on: ubuntu-20.04
+    # Docker image from https://hub.docker.com/r/yuentau/ocv_ubuntu
+    container: docker.io/yuentau/ocv_ubuntu:20.04
+    env:
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+      SOURCE_BRANCH_NAME: ${{ github.head_ref }}
+      TARGET_BRANCH_NAME: ${{ github.base_ref }}
+    steps:
+      - name: info
+        run: |
+          echo "PR Author: ${{ env.PR_AUTHOR }}"
+          echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+          echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+      - name: clean
+        shell: bash
+        run: find . -mindepth 1 -delete
+      - name: fetch opencv
+        uses: actions/checkout@v3
+        with:
+          repository: opencv/opencv
+          ref: ${{ env.TARGET_BRANCH_NAME }}
+          fetch-depth: 0
+          path: opencv
+      - name: merge opencv with test branch
+        shell: bash
+        run: |
+          cd opencv
+          git config user.email "opencv.ci"
+          git config user.name "opencv.ci"
+          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+      - name: configure
+        run: |
+          cmake -B build -DWITH_TIMVX=ON -DCMAKE_INSTALL_PREFIX=./install -DBUILD_SHARED_LIBS=ON -DBUILD_PERF_TESTS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_DOCS=OFF -DWITH_OPENCL=OFF opencv
+      - name: build
+        run: cmake --build build --target install -j $(nproc)
+
+  khadas-vim3-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'category:dnn_timvx')
+    concurrency:
+      group: khadas-vim3
+      cancel-in-progress: false
+    runs-on: [self-hosted, Linux, ARM64, khadas-vim3]
+    env:
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+      SOURCE_BRANCH_NAME: ${{ github.head_ref }}
+      TARGET_BRANCH_NAME: ${{ github.base_ref }}
+    steps:
+      - name: info
+        run: |
+          echo "PR Author: ${{ env.PR_AUTHOR }}"
+          echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+          echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+      - name: clean
+        shell: bash
+        run: find . -mindepth 1 -delete
+      - name: fetch opencv
+        uses: actions/checkout@v3
+        with:
+          repository: opencv/opencv
+          ref: ${{ env.TARGET_BRANCH_NAME }}
+          fetch-depth: 0
+          path: opencv
+      - name: merge opencv with test branch
+        shell: bash
+        run: |
+          cd opencv
+          git config user.email "opencv.ci"
+          git config user.name "opencv.ci"
+          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+      - name: fetch opencv_extra
+        uses: actions/checkout@v3
+        with:
+          repository: opencv/opencv_extra
+          path: opencv_extra
+      - name: merge opencv_extra with test branch
+        shell: bash
+        run: |
+          RET=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}")
+          if [[ ! -z "$RET" ]]; then
+            cd opencv_extra
+            git config user.email "opencv.ci"
+            git config user.name "opencv.ci"
+            git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+          else
+            echo "no merge since ${{ env.PR_AUTHOR }}/opencv_extra does not have branch ${{ env.SOURCE_BRANCH_NAME }}"
+          fi
+      - name: configure
+        run: |
+          cmake -B build -D CMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=./install -DWITH_TIMVX=ON -DWITH_OPENCL=OFF -DWITH_EIGEN=OFF opencv
+      - name: build
+        run: cmake --build build --target opencv_test_dnn -j 4
+      - name: unit tests for int8 layers
+        run: |
+          OPENCV_TEST_DATA_PATH=./opencv_extra/testdata ./build/bin/opencv_test_dnn --gtest_filter="Test_Int8_layers.*/1"
