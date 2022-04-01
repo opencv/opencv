@@ -88,9 +88,7 @@ using cv::gapi::own::rintd;
 
 #define MERGE3_(T, OP, ...)                                \
     if (cv::DataType<T>::depth == dst.meta().depth &&      \
-        cv::DataType<T>::depth == src1.meta().depth &&     \
-        cv::DataType<T>::depth == src2.meta().depth &&     \
-        cv::DataType<T>::depth == src3.meta().depth)       \
+        cv::DataType<T>::depth == src1.meta().depth)       \
     {                                                      \
         GAPI_DbgAssert(dst.length() == src1.length());     \
         GAPI_DbgAssert(dst.length() == src2.length());     \

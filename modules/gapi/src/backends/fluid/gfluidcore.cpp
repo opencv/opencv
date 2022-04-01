@@ -2407,7 +2407,9 @@ GAPI_FLUID_KERNEL(GFluidMerge3, cv::gapi::core::GMerge3, false)
 
     static void run(const View& src1, const View& src2, const View& src3, Buffer& dst)
     {
-        GAPI_Assert(3 == dst.meta().chan);
+        GAPI_Assert((src1.meta().depth == dst.meta().depth) &&
+                    (src1.meta().depth == src2.meta().depth) &&
+                    (src1.meta().depth == src3.meta().depth));
 
         // SRC/DST TYPE      OP          __VA_ARGS__
         MERGE3_(uchar,  run_merge3, dst, src1, src2, src3);
