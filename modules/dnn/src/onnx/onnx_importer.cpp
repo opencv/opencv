@@ -1574,8 +1574,6 @@ void transformBlobs(std::vector<Mat>& blobs)
     cudaWorkaround.push_back(b.clone());
 
     const int numHidden = Wh.size[2];
-    const int numDirs = Wx.size[0];  // Is 1 for forward only and 2 for bidirectional LSTM.
-    const int numFeatures = Wx.size[2];
 
     Mat h0 = blobs[3];
     h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
@@ -1587,30 +1585,20 @@ void transformBlobs(std::vector<Mat>& blobs)
     Mat bh = b.colRange(b.cols / 2, b.cols);
     b = bx + bh;
 
-    // b is numDirs X numHidden*3
-    CV_CheckLE(numHidden * 3, b.cols, "Bias data should have at least 3x hidden_size columns");
+    auto toIFOC = [] (Mat& in) {
+        int first = in.size[0];
+        int rest = in.total() / first / 4;
+        // every weight blob contains weights for Input, Output, Forget and Cell gates
+        Mat m = in.reshape(1, {first, 4, rest});
+        Mat outputGate = m.col(1);
+        Mat forgetGate = m.col(2);
+        std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), forgetGate.begin<float>());
+    };
 
-    // IFGO->IGFO
-    for (int k = 0; k < numDirs; ++k)
-    {
-        float* WxData = Wx.ptr<float>(k);
-        float* WhData = Wh.ptr<float>(k);
-        float* biasData = b.ptr<float>(k);
-        for (int j = 0; j < numHidden; ++j)
-        {
-            for (int i = 0; i < numFeatures; ++i)
-            {
-                std::swap(WxData[(numHidden + j) * numFeatures + i],
-                          WxData[(numHidden * 2 + j) * numFeatures + i]);
-            }
-            for (int i = 0; i < numHidden; ++i)
-            {
-                std::swap(WhData[(numHidden + j) * numHidden + i],
-                          WhData[(numHidden * 2 + j) * numHidden + i]);
-            }
-            std::swap(biasData[numHidden + j], biasData[numHidden * 2 + j]);
-        }
-    }
+    toIFOC(Wx);
+    toIFOC(Wh);
+    toIFOC(b);
+
     Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
     Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
 
