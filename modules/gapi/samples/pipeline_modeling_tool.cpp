@@ -10,7 +10,9 @@
 #include <opencv2/core/utils/filesystem.hpp>
 
 #if defined(_WIN32)
+#define NOMINMAX
 #include <windows.h>
+#undef NOMINMAX
 #endif
 
 #include "pipeline_modeling_tool/dummy_source.hpp"

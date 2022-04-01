@@ -7,13 +7,13 @@
 #ifndef GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 #define GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 
-#ifdef HAVE_ONEVPL
-
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
+
+#ifdef HAVE_ONEVPL
 
 namespace cv {
 namespace gapi {
@@ -26,6 +26,9 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
                            const std::string& device_id,
                            Context::Ptr ctx_ptr,
                            const CfgParams& params);
+    CfgParamDeviceSelector(const Device &device_ptr,
+                           const Context &ctx_ptr,
+                           CfgParams params);
     ~CfgParamDeviceSelector();
 
     DeviceScoreTable select_devices() const override;

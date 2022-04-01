@@ -29,6 +29,16 @@ struct IPreprocEngine {
     virtual cv::MediaFrame
         run_sync(const pp_session &sess, const cv::MediaFrame& in_frame,
                  const cv::util::optional<cv::Rect> &opt_roi = {}) = 0;
+
+    template<typename SpecificPreprocEngine, typename ...PreprocEngineArgs >
+    static std::unique_ptr<IPreprocEngine> create_preproc_engine(const PreprocEngineArgs& ...args) {
+        static_assert(std::is_base_of<IPreprocEngine, SpecificPreprocEngine>::value,
+                      "SpecificPreprocEngine must have reachable ancessor IPreprocEngine");
+        return create_preproc_engine_impl<SpecificPreprocEngine, PreprocEngineArgs...>(args...);
+    }
+private:
+    template<typename SpecificPreprocEngine, typename ...PreprocEngineArgs >
+    static std::unique_ptr<SpecificPreprocEngine> create_preproc_engine_impl(const PreprocEngineArgs &...args);
 };
 } // namespace wip
 } // namespace gapi

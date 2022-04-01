@@ -51,7 +51,7 @@ void apply_roi(mfxFrameSurface1* surface_handle,
 
 VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
     ProcessingEngineBase(std::move(accel)) {
-    GAPI_LOG_INFO(nullptr, "Create VPP preprocessing engine");
+    GAPI_LOG_DEBUG(nullptr, "Create VPP preprocessing engine");
     preprocessed_frames_count = 0;
     create_pipeline(
         // 0) preproc decoded surface with VPP params
@@ -455,7 +455,7 @@ ProcessingEngineBase::ExecutionStatus VPPPreprocEngine::process_error(mfxStatus 
                                     "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
         case MFX_WRN_IN_EXECUTION:
-            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_IN_EXECUTION");
+            GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "] got MFX_WRN_IN_EXECUTION");
             return ExecutionStatus::Continue;
         default:
             GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status) <<

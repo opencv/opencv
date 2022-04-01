@@ -48,6 +48,10 @@ public:
 
     GSource(const std::string& filePath,
             const CfgParams& cfg_params,
+            const Device &device, const Context &ctx);
+
+    GSource(const std::string& filePath,
+            const CfgParams& cfg_params,
             std::shared_ptr<IDeviceSelector> selector);
 
 

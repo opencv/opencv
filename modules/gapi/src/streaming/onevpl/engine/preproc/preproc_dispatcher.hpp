@@ -11,10 +11,6 @@
 #include <vector>
 
 #include "streaming/onevpl/engine/preproc_engine_interface.hpp"
-#include "streaming/onevpl/engine/preproc_defines.hpp"
-
-#ifdef HAVE_ONEVPL
-#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
@@ -49,5 +45,4 @@ private:
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_PREPROC_DISPATCHER_HPP

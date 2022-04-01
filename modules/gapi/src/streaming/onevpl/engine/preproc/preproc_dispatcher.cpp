@@ -4,30 +4,33 @@
 //
 // Copyright (C) 2022 Intel Corporation
 
-#ifdef HAVE_ONEVPL
-
 #include <algorithm>
 #include <exception>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
 
+#ifdef HAVE_ONEVPL
+#include "streaming/onevpl/onevpl_export.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_engine.hpp"
 #include "streaming/onevpl/engine/preproc/preproc_session.hpp"
-#include "streaming/onevpl/engine/preproc/preproc_dispatcher.hpp"
 
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
-#include "logger.hpp"
+#endif // HAVE_ONEVPL
 
+#include "logger.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+#ifdef HAVE_ONEVPL
 cv::util::optional<pp_params> VPPPreprocDispatcher::is_applicable(const cv::MediaFrame& in_frame) {
     cv::util::optional<pp_params> param;
     GAPI_LOG_DEBUG(nullptr, "workers: " << workers.size());
+    bool worker_found = false;
     for (const auto &w : workers) {
         param = w->is_applicable(in_frame);
         if (param.has_value()) {
@@ -42,11 +45,12 @@ cv::util::optional<pp_params> VPPPreprocDispatcher::is_applicable(const cv::Medi
             if (worker_accel_type == adapter->accel_type()){
                 vpp_param.reserved = reinterpret_cast<void *>(w.get());
                 GAPI_LOG_DEBUG(nullptr, "selected worker: " << vpp_param.reserved);
+                worker_found = true;
                 break;
             }
         }
     }
-    return param;
+    return worker_found ? param : cv::util::optional<pp_params>{};
 }
 
 pp_session VPPPreprocDispatcher::initialize_preproc(const pp_params& initial_frame_param,
@@ -78,8 +82,24 @@ cv::MediaFrame VPPPreprocDispatcher::run_sync(const pp_session &session_handle,
     }
     GAPI_Assert(false && "Cannot invoke VPP preproc in dispatcher, no suitable worker");
 }
+
+#else // HAVE_ONEVPL
+cv::util::optional<pp_params> VPPPreprocDispatcher::is_applicable(const cv::MediaFrame&) {
+    return cv::util::optional<pp_params>{};
+}
+
+pp_session VPPPreprocDispatcher::initialize_preproc(const pp_params&,
+                                                    const GFrameDesc&) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+
+cv::MediaFrame VPPPreprocDispatcher::run_sync(const pp_session &,
+                                              const cv::MediaFrame&,
+                                              const cv::util::optional<cv::Rect> &) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+#endif // HAVE_ONEVPL
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_ONEVPL

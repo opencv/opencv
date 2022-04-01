@@ -23,8 +23,8 @@ namespace wip {
 #else // VPP_PREPROC_ENGINE
 struct empty_pp_params {};
 struct empty_pp_session {};
-#define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::empty_pp_params;
-#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::empty_pp_session;
+#define GAPI_BACKEND_PP_PARAMS          cv::gapi::wip::empty_pp_params
+#define GAPI_BACKEND_PP_SESSIONS        cv::gapi::wip::empty_pp_session
 #endif // VPP_PREPROC_ENGINE
 
 struct pp_params {
