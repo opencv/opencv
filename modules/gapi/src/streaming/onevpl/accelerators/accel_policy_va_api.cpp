@@ -7,7 +7,8 @@
 #ifdef HAVE_ONEVPL
 #include <cstdlib>
 #include <exception>
-sss
+#include <stdint.h>
+
 #ifdef __linux__
 #include <unistd.h>
 #include <sys/types.h>
