@@ -51,6 +51,10 @@ const std::string keys =
     "{ preproc_device               | CPU                                       | choose device for preprocessing }";
 
 namespace {
+bool is_gpu(const std::string &device_name) {
+    return device_name.find("GPU") != std::string::npos;
+}
+
 std::string get_weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
@@ -320,23 +324,53 @@ int main(int argc, char *argv[]) {
         device_id
     };
 
-    // Create device_ptr & context_ptr using graphic API
-    // InferenceEngine requires such device & context to create its own
-    // remote shared context through InferenceEngine::ParamMap in
-    // GAPI InferenceEngine backend to provide interoperability with onevpl::GSource
-    // So GAPI InferenceEngine backend and onevpl::GSource MUST share the same
-    // device and context
-    cv::util::optional<cv::gapi::wip::onevpl::Device> accel_device;
-    cv::util::optional<cv::gapi::wip::onevpl::Context> accel_ctx;
+    // It is allowed to reuse predefined device_ptr & context_ptr received
+    // from user application. Current sample demonstrate how to deal with this situation.
+    //
+    // But if you do not need this fine-grained acceleration devices configuration then
+    // just use default constructors for onevpl::GSource, IE and preprocessing module.
+    // But please pay attention that default pipeline construction in this case would be
+    // very inefficient and carries out multiple CPU-GPU memory copies
+    //
+    // If you want to reach max performance and apply copy-less approach for specific
+    // device & context selection then follow the steps below.
+    // The situation is complicated a little bit:
+    //
+    // - all component-participants (Source, Preprocessing, Inference)
+    // must share the same Device & Context
+    //
+    // - wrap you available device & context into `cv::gapi::wip::Device` &
+    // `cv::gapi::wip::Context`
+    //
+    // - pass such wrappers as constructor arguments for each component in pipeline:
+    //      a) use special constructor for `onevpl::GSource`
+    //      b) use `cfgContextParams` method of `cv::gapi::ie::Params` to charge PreprocesingEngine
+    //      c) use `InferenceEngine::ParamMap` to activate remote ctx in Inference Engine
+    //
+    //
+    //// P.S. the current sample supports heterogenous pipeline construction also.
+    //// It is possible to make up mixed device approach.
+    //// Please feel free to explore different configurations!
 
+    cv::util::optional<cv::gapi::wip::onevpl::Device> gpu_accel_device;
+    cv::util::optional<cv::gapi::wip::onevpl::Context> gpu_accel_ctx;
+    cv::gapi::wip::onevpl::Device cpu_accel_device = cv::gapi::wip::onevpl::create_host_device();
+    cv::gapi::wip::onevpl::Context cpu_accel_ctx = cv::gapi::wip::onevpl::create_host_context();
 #ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
+    // create DX11 resource owner handles.
+    // wip::Device & wip::Context do not owns any kind of resources and act
+    // as weak references API wrappers in order to carry type-erased resources type
+    // into appropriate modules: onevpl::GSource, PreprocEngine and InferenceEngine
+    // Until modules are not created owner handles must stay alive
     auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
     auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
-    // choose accelerating device
-    if (device_id.find("GPU") != std::string::npos) {
+    // create GPU device if requested
+    if (device_id.find("GPU") != std::string::npos
+        || source_device.find("GPU") != std::string::npos
+        || preproc_device.find("GPU") != std::string::npos) {
         auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
             IDXGIFactory* out_factory = nullptr;
@@ -370,30 +404,21 @@ int main(int argc, char *argv[]) {
         }
 
         std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
-        accel_device = cv::util::make_optional(
+        gpu_accel_device = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_dx11_device(
                                                         reinterpret_cast<void*>(dx11_dev.get()),
-                                                        device_id));
-        accel_ctx = cv::util::make_optional(
+                                                        "GPU"));
+        gpu_accel_ctx = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_dx11_context(
                                                         reinterpret_cast<void*>(dx11_ctx.get())));
-
-        // put accel type description for VPL source
-        source_cfgs.push_back(cfg::create_from_string(
-                                        "mfxImplDescription.AccelerationMode"
-                                        ":"
-                                        "MFX_ACCEL_MODE_VIA_D3D11"));
     }
 
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
-    // set ctx_config for GPU device only - no need in case of CPU device type
-    if (accel_device.has_value() &&
-        accel_device.value().get_name().find("GPU") != std::string::npos &&
-        device_id.find("GPU") != std::string::npos) {
-        /* NB: no need to create rctx for cpu device in OV */
+    // activate remote ctx in Inference Engine for GPU device
+    if (is_gpu(device_id)) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
-                                              {"VA_DEVICE", accel_device.value().get_ptr()} });
+                                              {"VA_DEVICE", gpu_accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
 
         // NB: consider NV12 surface because it's one of native GPU image format
@@ -401,11 +426,20 @@ int main(int argc, char *argv[]) {
     }
 #endif // HAVE_INF_ENGINE
 
-    // Turn on VPP preproc if available & required
-    if (accel_device.has_value() && accel_ctx.has_value() && !preproc_device.empty()) {
-        face_net.cfgPreprocessingParams(accel_device.value(),
-                                        accel_ctx.value());
-        std::cout << "enforce VPP preprocessing on " << device_id << std::endl;
+    // Turn on VPP PreprocesingEngine if available & requested
+    if (!preproc_device.empty()) {
+        if (is_gpu(preproc_device)) {
+            // activate VPP PreprocesingEngine on GPU
+            face_net.cfgPreprocessingParams(gpu_accel_device.value(),
+                                            gpu_accel_ctx.value());
+        } else {
+            // activate VPP PreprocesingEngine on CPU
+            face_net.cfgPreprocessingParams(cpu_accel_device,
+                                            cpu_accel_ctx);
+        }
+        std::cout << "enforce VPP preprocessing on " << preproc_device << std::endl;
+    } else {
+        std::cout << "use InferenceEngine preprocessing" << std::endl;
     }
 
     auto kernels = cv::gapi::kernels
@@ -421,10 +455,16 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::gapi::wip::IStreamSource::Ptr cap;
     try {
-        if (accel_device.has_value() && accel_ctx.has_value()) {
+        if (is_gpu(source_device)) {
+            // use special 'Device' constructor for `onevpl::GSource`
+            // put accel type description for VPL source
+            source_cfgs.push_back(cfg::create_from_string(
+                                        "mfxImplDescription.AccelerationMode"
+                                        ":"
+                                        "MFX_ACCEL_MODE_VIA_D3D11"));
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
-                                                 accel_device.value(),
-                                                 accel_ctx.value());
+                                                 gpu_accel_device.value(),
+                                                 gpu_accel_ctx.value());
         } else {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         }
