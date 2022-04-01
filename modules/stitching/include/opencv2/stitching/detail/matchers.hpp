@@ -104,8 +104,8 @@ struct CV_EXPORTS_W_SIMPLE MatchesInfo
 
     CV_PROP_RW int src_img_idx;
     CV_PROP_RW int dst_img_idx;       //!< Images indices (optional)
-    std::vector<DMatch> matches;
-    std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
+    CV_PROP_RW std::vector<DMatch> matches;
+    CV_PROP_RW std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
     CV_PROP_RW int num_inliers;                    //!< Number of geometrically consistent matches
     CV_PROP_RW Mat H;                              //!< Estimated transformation
     CV_PROP_RW double confidence;                  //!< Confidence two images are from the same panorama
