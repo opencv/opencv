@@ -91,7 +91,6 @@ public:
     * @param cameraPose the pose of camera in global coordinates.
     * @param points image to store rendered points.
     * @param normals image to store rendered normals corresponding to points.
-    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
     CV_WRAP_AS(raycast) void raycast(InputArray cameraPose, OutputArray points, OutputArray normals) const;
 
