@@ -701,8 +701,6 @@ inline Point3f getColorVoxel(const Mat& volume,
 void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    //std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
-
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 

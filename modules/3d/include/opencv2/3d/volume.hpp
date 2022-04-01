@@ -50,7 +50,7 @@ public:
     * @param depth the depth image.
     * @param pose the pose of camera in global coordinates.
     */
-    CV_WRAP void integrate(InputArray depth, InputArray pose);
+    CV_WRAP_AS(integrate) void integrate(InputArray depth, InputArray pose);
 
     /** @brief Integrates the input data to the volume.
 
@@ -62,7 +62,7 @@ public:
       This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
-    CV_WRAP void integrate(InputArray depth, InputArray image, InputArray pose);
+    CV_WRAP_AS(integrateColor) void integrate(InputArray depth, InputArray image, InputArray pose);
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
@@ -82,7 +82,18 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    CV_WRAP void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP_AS(raycastColor) void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
+    */
+    CV_WRAP_AS(raycast) void raycast(InputArray cameraPose, OutputArray points, OutputArray normals) const;
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
@@ -106,7 +117,19 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    CV_WRAP void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP_AS(raycastColor) void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param height the height of result image.
+    * @param width the width of result image.
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    */
+    CV_WRAP_AS(raycast) void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.

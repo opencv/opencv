@@ -68,15 +68,15 @@ class volume_test(NewOpenCVTests):
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
         volume = cv.Volume(cv.ColorTSDF)
-        volume.integrate(depth, rgb, Rt)
+        volume.integrateColor(depth, rgb, Rt)
 
         size = (480, 640, 4)
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
         colors = np.zeros(size, np.float32)
 
-        volume.raycast(Rt, size[0], size[1], points, normals, colors)
-        volume.raycast(Rt, points, normals, colors)
+        volume.raycastColor(Rt, size[0], size[1], points, normals, colors)
+        volume.raycastColor(Rt, points, normals, colors)
 
 
 if __name__ == '__main__':
