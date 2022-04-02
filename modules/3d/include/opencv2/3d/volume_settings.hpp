@@ -13,7 +13,7 @@
 namespace cv
 {
 
-enum VolumeType
+enum class VolumeType
 {
     TSDF = 0,
     HashTSDF = 1,

@@ -30,7 +30,7 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.TSDF)
+        volume = cv.Volume(cv.VolumeType_TSDF)
         volume.integrate(depth, Rt)
 
         size = (480, 640, 4)
@@ -48,7 +48,7 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.HashTSDF)
+        volume = cv.Volume(cv.VolumeType_HashTSDF)
         volume.integrate(depth, Rt)
 
         size = (480, 640, 4)
@@ -67,7 +67,7 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.ColorTSDF)
+        volume = cv.Volume(cv.VolumeType_ColorTSDF)
         volume.integrateColor(depth, rgb, Rt)
 
         size = (480, 640, 4)

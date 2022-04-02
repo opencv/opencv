@@ -72,11 +72,11 @@ def main():
     rgb_info = get_image_info(path, False)
     groundtruth_info = get_groundtruth_info(path)
 
-    volume_type = cv.TSDF
+    volume_type = cv.VolumeType_TSDF
     if args.algo == "HashTSDF":
-        volume_type = cv.HashTSDF
+        volume_type = cv.VolumeType_HashTSDF
     elif args.algo == "ColorTSDF":
-        volume_type = cv.ColorTSDF
+        volume_type = cv.VolumeType_ColorTSDF
 
     volume = cv.Volume(volume_type)
 
@@ -101,10 +101,10 @@ def main():
         depth = cv.imread(path + depth_info[key], cv.IMREAD_ANYDEPTH).astype(np.float32)
         rgb = cv.imread(rgb_path, cv.IMREAD_COLOR).astype(np.float32)
 
-        if volume_type != cv.ColorTSDF:
+        if volume_type != cv.VolumeType_ColorTSDF:
             volume.integrate(depth, Rt)
         else:
-            volume.integrate(depth, rgb, Rt)
+            volume.integrateColor(depth, rgb, Rt)
 
         size = (480, 640, 4)
 
@@ -112,10 +112,10 @@ def main():
         normals = np.zeros(size, np.float32)
         colors = np.zeros(size, np.float32)
 
-        if volume_type != cv.ColorTSDF:
+        if volume_type != cv.VolumeType_ColorTSDF:
             volume.raycast(Rt, points, normals)
         else:
-            volume.raycast(Rt, size[0], size[1], points, normals, colors)
+            volume.raycastColor(Rt, size[0], size[1], points, normals, colors)
 
         channels = list(cv.split(points))
 
@@ -123,7 +123,7 @@ def main():
         cv.imshow("Y", np.absolute(channels[1]))
         cv.imshow("Z", channels[2])
 
-        if volume_type == cv.ColorTSDF:
+        if volume_type == cv.VolumeType_ColorTSDF:
             cv.imshow("Color", colors.astype(np.uint8))
 
         cv.waitKey(10)
