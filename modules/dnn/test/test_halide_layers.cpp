@@ -170,6 +170,23 @@ TEST_P(Deconvolution, Accuracy)
     Backend backendId = get<0>(get<7>(GetParam()));
     Target targetId = get<1>(get<7>(GetParam()));
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+            && inChannels == 6 && outChannels == 4 && group == 1
+            && kernel == Size(3, 1) && pad == Size(0, 1)
+            && stride == Size(1, 1) && dilation == Size(1, 1))
+        applyTestTag(targetId == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+            && inChannels == 6 && outChannels == 4 && group == 1
+            && kernel == Size(1, 3) && pad == Size(1, 0)
+            && stride == Size(1, 1) && dilation == Size(1, 1))
+        applyTestTag(targetId == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
             && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
@@ -624,9 +641,16 @@ TEST_P(NoParamActivation, Accuracy)
 {
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
+    std::string layer_type = get<0>(GetParam());
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // Cannot get memory!
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_CPU && layer_type == "BNLL")
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
 
     LayerParams lp;
-    lp.type = get<0>(GetParam());
+    lp.type = layer_type;
     lp.name = "testLayer";
     testInPlaceActivation(lp, backendId, targetId);
 }
