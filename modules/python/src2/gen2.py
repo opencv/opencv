@@ -1192,10 +1192,25 @@ class PythonWrapperGenerator(object):
         classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]
         classlist1.sort()
 
+        published_types = set()  # ensure toposort with base classes
         for decl_idx, name, classinfo in classlist1:
             if classinfo.ismap:
                 continue
-            self.code_type_publish.write(classinfo.gen_def(self))
+            def _registerType(classinfo):
+                if classinfo.decl_idx in published_types:
+                    #print(classinfo.decl_idx, classinfo.name, ' - already published')
+                    return
+                published_types.add(classinfo.decl_idx)
+
+                if classinfo.base and classinfo.base in self.classes:
+                    base_classinfo = self.classes[classinfo.base]
+                    #print(classinfo.decl_idx, classinfo.name, ' - request publishing of base type ', base_classinfo.decl_idx, base_classinfo.name)
+                    _registerType(base_classinfo)
+
+                #print(classinfo.decl_idx, classinfo.name, ' - published!')
+                self.code_type_publish.write(classinfo.gen_def(self))
+
+            _registerType(classinfo)
 
 
         # step 3: generate the code for all the global functions
