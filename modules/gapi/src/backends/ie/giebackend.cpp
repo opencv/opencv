@@ -618,6 +618,7 @@ size_t IECallContext::releaseKeepAliveFrame(req_key_t key) {
         }
         elapsed_count = keep_alive_pp_frames.size();
     }
+    cv::util::suppress_unused_warning(prev_slot);
     GAPI_LOG_DEBUG(nullptr, "Release keep alive frame, slot: " << prev_slot <<
                             ", reserved frames count: " << elapsed_count);
     return elapsed_count;
