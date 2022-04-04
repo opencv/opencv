@@ -266,6 +266,75 @@ GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
 
 namespace cfg {
 typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line);
+
+struct flow {
+    flow(bool preproc, bool rctx) :
+        ie_preproc_enable(preproc),
+        ie_remote_ctx_enable(rctx) {
+    }
+    bool ie_preproc_enable = false;
+    bool ie_remote_ctx_enable = false;
+};
+
+using support_matrix =
+        std::map <std::string/*source_dev_id*/,
+                  std::map<std::string/*preproc_device_id*/,
+                           std::map <std::string/*rctx device_id*/, std::shared_ptr<flow>>>>;
+support_matrix resolved_conf{{
+                            {"GPU", {{
+                                        {"",    {{ "CPU", std::make_shared<flow>(false, false)},
+                                                 { "GPU", {/* unsupported:
+                                                           * ie GPU preproc isn't available */}}
+                                                }},
+
+                                        {"CPU", {{ "CPU", {/* unsupported: preproc mix */}},
+                                                 { "GPU", {/* unsupported: preproc mix */}}
+                                                }},
+
+                                        {"GPU", {{ "CPU", std::make_shared<flow>(true, false)},
+                                                 { "GPU", std::make_shared<flow>(true, true)}}}
+                                    }}
+                            },
+                            {"CPU", {{
+                                        {"",    {{ "CPU", std::make_shared<flow>(false, false)},
+                                                 { "GPU", std::make_shared<flow>(false, false)}
+                                                }},
+
+                                        {"CPU", {{ "CPU", std::make_shared<flow>(true, false)},
+                                                 { "GPU", std::make_shared<flow>(true, false)}
+                                                }},
+
+                                        {"GPU", {{ "CPU", {/* unsupported: preproc mix */}},
+                                                 { "GPU", {/* unsupported: preproc mix */}}}}
+                                    }}
+                            }
+    }};
+
+void print_available_cfg(std::ostream &out,
+                         const std::string &source_device,
+                         const std::string &preproc_device,
+                         const std::string &ie_device_id) {
+    const std::string source_device_cfg_name("--source_device=");
+    const std::string preproc_device_cfg_name("--preproc_device=");
+    const std::string ie_cfg_name("--faced=");
+    out << "unsupported acceleration param combinations:\n"
+                     << source_device_cfg_name << source_device << " "
+                     << preproc_device_cfg_name << preproc_device << " "
+                     << ie_cfg_name << ie_device_id <<
+                     "\n\nSupported matrix:\n\n" << std::endl;
+    for (const auto &s_d : cfg::resolved_conf) {
+        std::string prefix = source_device_cfg_name + s_d.first;
+        for (const auto &p_d : s_d.second) {
+            std::string mid_prefix = prefix + +"\t" + preproc_device_cfg_name +
+                                    (p_d.first.empty() ? "" : p_d.first);
+            for (const auto &i_d : p_d.second) {
+                if (i_d.second) {
+                    std::cerr << mid_prefix << "\t" << ie_cfg_name <<i_d.first << std::endl;
+                }
+            }
+        }
+    }
+}
 }
 
 int main(int argc, char *argv[]) {
@@ -289,6 +358,13 @@ int main(int argc, char *argv[]) {
     const auto source_device = cmd.get<std::string>("source_device");
     const auto preproc_device = cmd.get<std::string>("preproc_device");
 
+    // validate support matrix
+    std::shared_ptr<cfg::flow> flow_settings = cfg::resolved_conf[source_device][preproc_device][device_id];
+    if (!flow_settings) {
+        cfg::print_available_cfg(std::cerr, source_device, preproc_device, device_id);
+        return -1;
+    }
+
     // check ouput file extension
     if (!output.empty()) {
         auto ext = output.find_last_of(".");
@@ -311,6 +387,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    // apply VPL source optimization params
     if (source_decode_queue_capacity != 0) {
         source_cfgs.push_back(cv::gapi::wip::onevpl::CfgParam::create_frames_pool_size(source_decode_queue_capacity));
     }
@@ -368,9 +445,9 @@ int main(int argc, char *argv[]) {
     auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
     // create GPU device if requested
-    if (device_id.find("GPU") != std::string::npos
-        || source_device.find("GPU") != std::string::npos
-        || preproc_device.find("GPU") != std::string::npos) {
+    if (is_gpu(device_id)
+        || is_gpu(source_device)
+        || is_gpu(preproc_device)) {
         auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
             IDXGIFactory* out_factory = nullptr;
@@ -416,18 +493,21 @@ int main(int argc, char *argv[]) {
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
     // activate remote ctx in Inference Engine for GPU device
-    if (is_gpu(device_id)) {
+    // when other pipeline component use the GPU device too
+    if (flow_settings->ie_remote_ctx_enable) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
                                               {"VA_DEVICE", gpu_accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
+        std::cout << "enfore InferenceEngine remote context on device: " << device_id << std::endl;
 
         // NB: consider NV12 surface because it's one of native GPU image format
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
+        std::cout << "enfore InferenceEngine NV12 blob" << std::endl;
     }
 #endif // HAVE_INF_ENGINE
 
     // Turn on VPP PreprocesingEngine if available & requested
-    if (!preproc_device.empty()) {
+    if (flow_settings->ie_preproc_enable) {
         if (is_gpu(preproc_device)) {
             // activate VPP PreprocesingEngine on GPU
             face_net.cfgPreprocessingParams(gpu_accel_device.value(),
@@ -437,9 +517,9 @@ int main(int argc, char *argv[]) {
             face_net.cfgPreprocessingParams(cpu_accel_device,
                                             cpu_accel_ctx);
         }
-        std::cout << "enforce VPP preprocessing on " << preproc_device << std::endl;
+        std::cout << "enforce VPP preprocessing on device: " << preproc_device << std::endl;
     } else {
-        std::cout << "use InferenceEngine preprocessing" << std::endl;
+        std::cout << "use InferenceEngine default preprocessing" << std::endl;
     }
 
     auto kernels = cv::gapi::kernels
@@ -456,6 +536,7 @@ int main(int argc, char *argv[]) {
     cv::gapi::wip::IStreamSource::Ptr cap;
     try {
         if (is_gpu(source_device)) {
+            std::cout << "enforce VPL Source deconding on device: " << source_device << std::endl;
             // use special 'Device' constructor for `onevpl::GSource`
             // put accel type description for VPL source
             source_cfgs.push_back(cfg::create_from_string(
