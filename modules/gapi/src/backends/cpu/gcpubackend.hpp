@@ -56,8 +56,8 @@ class GCPUExecutable final: public GIslandExecutable
     // Actual data of all resources in graph (both internal and external)
     Mag m_res;
 
-    // Flag which identifies if new stream was started
-    bool m_newStreamStarted = false;
+    // A flag for call_once() (used for log warnings)
+    std::once_flag m_warnFlag;
 
     GArg packArg(const GArg &arg);
     void setupKernelStates();
