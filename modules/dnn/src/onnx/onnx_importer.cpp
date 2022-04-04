@@ -721,11 +721,12 @@ void ONNXImporter::populateNet()
 }
 
 static
-const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
+const std::string extractNodeName(const opencv_onnx::NodeProto& node_proto)
 {
+    // We need to rework DNN outputs API, this is a workaround for #21698
     if (node_proto.has_name() && !node_proto.name().empty())
     {
-        return node_proto.name();
+        return cv::format("onnx_node!%s", node_proto.name().c_str());
     }
     for (int i = 0; i < node_proto.output_size(); ++i)
     {
@@ -735,7 +736,7 @@ const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
         // the second method is to use an empty string in place of an input or output name.
         if (!name.empty())
         {
-            return name;
+            return cv::format("onnx_node_output_%d!%s", i, name.c_str());
         }
     }
     CV_Error(Error::StsAssert, "Couldn't deduce Node name.");
