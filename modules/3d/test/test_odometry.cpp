@@ -148,6 +148,7 @@ public:
 
     void run();
     void checkUMats();
+    void prepareFrameCheck();
 
     OdometryType otype;
     OdometryAlgoType algtype;
@@ -348,6 +349,41 @@ void OdometryTest::run()
     }
 }
 
+void OdometryTest::prepareFrameCheck()
+{
+    Mat K = getCameraMatrix();
+
+    Mat image, depth;
+    readData(image, depth);
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry = Odometry(otype, ods, algtype);
+    OdometryFrame odf = odometry.createOdometryFrame();
+    odf.setImage(image);
+    odf.setDepth(depth);
+
+    odometry.prepareFrame(odf);
+
+    Mat points, mask;
+    odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    odf.getPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
+
+    OdometryFrame todf = odometry.createOdometryFrame();
+    if (otype != OdometryType::DEPTH)
+    {
+        Mat img;
+        odf.getPyramidAt(img, OdometryFramePyramidType::PYR_IMAGE, 0);
+        todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_IMAGE);
+        todf.setPyramidAt(img, OdometryFramePyramidType::PYR_IMAGE, 0);
+    }
+    todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+    todf.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
+    todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_MASK);
+    todf.setPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
+
+    odometry.prepareFrame(todf);
+}
+
 /****************************************************************************************\
 *                                Tests registrations                                     *
 \****************************************************************************************/
@@ -399,6 +435,31 @@ TEST(RGBD_Odometry_FastICP, UMats)
 {
     OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
     test.checkUMats();
+}
+
+
+TEST(RGBD_Odometry_Rgbd, prepareFrame)
+{
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    test.prepareFrameCheck();
+}
+
+TEST(RGBD_Odometry_ICP, prepareFrame)
+{
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
+    test.prepareFrameCheck();
+}
+
+TEST(RGBD_Odometry_RgbdICP, prepareFrame)
+{
+    OdometryTest test(OdometryType::RGB_DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
+    test.prepareFrameCheck();
+}
+
+TEST(RGBD_Odometry_FastICP, prepareFrame)
+{
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    test.prepareFrameCheck();
 }
 
 }} // namespace

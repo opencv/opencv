@@ -64,6 +64,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
             TMat pyr0;
             frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_IMAGE, 0);
             frame.setImage(pyr0);
+            frame.getGrayImage(image);
         }
         else
             CV_Error(Error::StsBadSize, "Image or pyramidImage have to be set.");
@@ -71,10 +72,9 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
     checkImage(image);
 
     TMat depth;
-
     if (useDepth)
     {
-        frame.getDepth(depth);
+        frame.getScaledDepth(depth);
         if (depth.empty())
         {
             if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
@@ -90,6 +90,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
                 std::vector<TMat> xyz;
                 split(cloud, xyz);
                 frame.setDepth(xyz[2]);
+                frame.getScaledDepth(depth);
             }
             else
                 CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
@@ -106,6 +107,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool u
         TMat pyr0;
         frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
         frame.setMask(pyr0);
+        frame.getMask(mask);
     }
     checkMask(mask, image.size());
 
@@ -186,6 +188,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
             TMat pyr0;
             frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
             frame.setDepth(pyr0);
+            frame.getScaledDepth(depth);
         }
         else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
         {
@@ -194,10 +197,12 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
             std::vector<TMat> xyz;
             split(cloud, xyz);
             frame.setDepth(xyz[2]);
+            frame.getScaledDepth(depth);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
+
     checkDepth(depth, depth.size());
 
     TMat mask;
@@ -207,6 +212,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
         TMat pyr0;
         frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
         frame.setMask(pyr0);
+        frame.getMask(mask);
     }
     checkMask(mask, depth.size());
 
@@ -268,6 +274,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             TMat n0;
             frame.getPyramidAt(n0, OdometryFramePyramidType::PYR_NORM, 0);
             frame.setNormals(n0);
+            frame.getNormals(normals);
         }
         else
         {
@@ -288,8 +295,8 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             frame.getPyramidAt(c0, OdometryFramePyramidType::PYR_CLOUD, 0);
             normalsComputer->apply(c0, normals);
             frame.setNormals(normals);
+            frame.getNormals(normals);
         }
-
     }
 
     std::vector<TMat> npyramids;
