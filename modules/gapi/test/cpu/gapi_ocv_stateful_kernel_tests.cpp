@@ -186,13 +186,14 @@ TEST(StatefulKernel, StateInitOnceInRegularMode)
     for (int i = 0; i < 100; ++i) {
         c.apply(cv::gin(inputData), cv::gout(result),
                 cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(), params));
+        EXPECT_TRUE(result);
         EXPECT_TRUE(params.pSetupsCount != nullptr);
         EXPECT_EQ(1, *params.pSetupsCount);
     }
 };
 
 struct StateInitOnce : public ::testing::TestWithParam<bool>{};
-TEST_P(StateInitOnce, StreamingMode)
+TEST_P(StateInitOnce, StreamingCompiledWithMeta)
 {
     bool compileWithMeta = GetParam();
     cv::GMat in;
@@ -528,6 +529,45 @@ TEST(StatefulKernel, StateIsChangedViaCompArgsOnReshape)
 
     run("cv/video/768x576.avi", "knn");
     run("cv/video/1920x1080.avi", "mog2");
+}
+
+TEST(StatefulKernel, StateIsResetOnceOnReshapeInStreaming)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount.reset(new int(0));
+
+    auto ccomp = c.compileStreaming(
+        cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(), params));
+
+    auto run = [&ccomp, &params](const std::string& videoPath, int expectedSetupsCount) {
+        auto path = findDataFile(videoPath);
+        try {
+            ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
+        } catch(...) {
+            throw SkipTestException("Video file can not be opened");
+        }
+        ccomp.start();
+
+        int frames = 0;
+        bool result = false;
+        while (ccomp.pull(cv::gout(result)) && (frames++ < 10)) {
+            EXPECT_TRUE(result);
+            EXPECT_TRUE(params.pSetupsCount != nullptr);
+            EXPECT_EQ(expectedSetupsCount, *params.pSetupsCount);
+        }
+        ccomp.stop();
+    };
+
+    run("cv/video/768x576.avi", 1);
+    // FIXME: it should be 2, not 3 for expectedSetupsCount here.
+    // With current implemention both GCPUExecutable reshape() and
+    // handleNewStream() call setupKernelStates()
+    run("cv/video/1920x1080.avi", 3);
 }
 #endif
 
