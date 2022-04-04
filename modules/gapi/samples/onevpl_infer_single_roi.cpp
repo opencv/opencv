@@ -414,6 +414,7 @@ int main(int argc, char *argv[]) {
                   << std::endl;
         graph_inputs += cv::GIn(in_roi);
         inputs += cv::gin(opt_roi.value());
+    }
     auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
     auto temp_rcs = cv::gapi::parseSSD(blob, size, 0.5f, false, true);
     auto rcs = custom::RescaleByROI::on(temp_rcs, in_roi, size);
