@@ -116,6 +116,7 @@ set(gapi_srcs
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp
+    src/executor/gtbbstreamingexecutor.cpp
     src/executor/gasync.cpp
 
     # CPU Backend (currently built-in)

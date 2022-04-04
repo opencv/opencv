@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2022 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -14,6 +14,7 @@
 #include <opencv2/gapi/gcompiled.hpp>
 
 #include "compiler/gstreaming_priv.hpp"
+#include "executor/gtbbstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
 
 // GStreamingCompiled private implementation ///////////////////////////////////
@@ -72,12 +73,16 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GRunArgsP &&outs)
 
 bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
 {
-    return m_exec->pull(std::move(outs));
+    auto* exec = dynamic_cast<cv::gimpl::GTBBStreamingExecutor*>(m_exec.get());
+    GAPI_Assert(exec != nullptr);
+    return exec->pull(std::move(outs));
 }
 
 std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::Priv::pull()
 {
-    return m_exec->pull();
+    auto* exec = dynamic_cast<cv::gimpl::GTBBStreamingExecutor*>(m_exec.get());
+    GAPI_Assert(exec != nullptr);
+    return exec->pull();
 }
 
 bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
