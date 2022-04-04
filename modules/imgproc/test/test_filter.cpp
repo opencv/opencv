@@ -2363,7 +2363,7 @@ TEST(Imgproc_GaussianBlur, regression_11303)
     double sigma = 8.64421;
     cv::Mat src(cv::Size(width, height), CV_32F, 1);
     cv::GaussianBlur(src, dst, cv::Size(), sigma, sigma);
-    EXPECT_EQ(0, cv::norm(src, dst, NORM_L2));
+    EXPECT_LE(cv::norm(src, dst, NORM_L2), 1e-3);
 }
 
 
