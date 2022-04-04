@@ -1564,7 +1564,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             }
         }
     };
-    bool islandsRecompiled = false;
+
     const auto new_meta = cv::descr_of(ins); // 0
     if (gm.metadata().contains<OriginalInputMeta>()) // (1)
     {
@@ -1586,8 +1586,6 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             }
             update_int_metas(); // (7)
             m_reshapable = util::make_optional(is_reshapable);
-
-            islandsRecompiled = true;
         }
         else // (8)
         {
@@ -1709,14 +1707,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         island_meta_info = GIslandModel::traceIslandName(op.nh, m_gim);
 #endif // OPENCV_WITH_ITT
 
-        // If Island Executable is recompiled, all its stuff including internal kernel states
-        // are recreated and re-initialized automatically.
-        // But if not, we should notify Island Executable about new started stream to let it update
-        // its internal variables.
-        if (!islandsRecompiled)
-        {
-            op.isl_exec->handleNewStream();
-        }
+        // Notify island executable about a new stream to let it update its internal variables.
+        op.isl_exec->handleNewStream();
 
         m_threads.emplace_back(islandActorThread,
                                op.in_objects,
