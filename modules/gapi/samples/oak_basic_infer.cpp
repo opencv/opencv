@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    const auto det_name           = cmd.get<std::string>("detector");
-    const auto duration           = cmd.get<int>("duration");
+    const auto det_name = cmd.get<std::string>("detector");
+    const auto duration = cmd.get<int>("duration");
 
     if (det_name.empty()) {
         std::cerr << "FATAL: path to detection model is not provided for the sample."
