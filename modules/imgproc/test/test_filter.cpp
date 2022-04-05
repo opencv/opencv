@@ -2355,5 +2355,16 @@ TEST(Imgproc, filter_empty_src_16857)
     EXPECT_TRUE(dst2.empty());
 }
 
+TEST(Imgproc_GaussianBlur, regression_11303)
+{
+    cv::Mat dst;
+    int width = 2115;
+    int height = 211;
+    double sigma = 8.64421;
+    cv::Mat src(cv::Size(width, height), CV_32F, 1);
+    cv::GaussianBlur(src, dst, cv::Size(), sigma, sigma);
+    EXPECT_LE(cv::norm(src, dst, NORM_L2), 1e-3);
+}
+
 
 }} // namespace
