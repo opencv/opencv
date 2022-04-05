@@ -1650,3 +1650,19 @@ models_files = os.path.join("models", name + ".onnx")
 onnx.save(model, models_files)
 
 ########################## const / x ##########################
+
+class OutputRegistration(nn.Module):
+    def __init__(self):
+        super(OutputRegistration, self).__init__()
+        self.c = torch.randn(2, 2)
+
+    def forward(self, a, b):
+        return (a + b) + self.c
+
+a = Variable(torch.randn(2, 2))
+b = Variable(torch.randn(2, 2))
+model = OutputRegistration()
+save_data_and_model_multy_inputs('output_registration', model, a, b)
+model = onnx.load('models/output_registration.onnx')
+model.graph.node[0].name = model.graph.output[0].name
+onnx.save(model, 'models/output_registration.onnx')
