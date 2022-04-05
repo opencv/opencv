@@ -41,13 +41,13 @@ const std::string keys =
     "{ input                        |                                           | Path to the input demultiplexed video file }"
     "{ output                       |                                           | Path to the output RAW video file. Use .avi extension }"
     "{ facem                        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
-    "{ faced                        | AUTO                                      | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
-    "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
+    "{ faced                        | GPU                                       | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
+    "{ cfg_params                   |                                           | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
     "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
     "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }"
-    "{ source_device                | GPU                                       | choose device for decoding }"
+    "{ source_device                | CPU                                       | choose device for decoding }"
     "{ preproc_device               | CPU                                       | choose device for preprocessing }";
 
 namespace {

@@ -314,11 +314,16 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
 
 const std::vector<CfgParam>& GSource::Priv::getDefaultCfgParams()
 {
+#ifdef __WIN32__
     static const std::vector<CfgParam> def_params =
         get_params_from_string<CfgParam>(
                     "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n"
                     "mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\n");
-
+#else
+    static const std::vector<CfgParam> def_params =
+        get_params_from_string<CfgParam>(
+                    "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n");
+#endif
     return def_params;
 }
 
