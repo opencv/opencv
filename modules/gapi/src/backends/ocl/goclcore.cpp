@@ -10,6 +10,23 @@
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/ocl/core.hpp>
 #include "backends/ocl/goclcore.hpp"
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+#pragma comment(lib,"d3d11.lib")
+
+// get rid of generate macro max/min/etc from DX side
+#define D3D11_NO_HELPERS
+#define NOMINMAX
+#include <d3d11.h>
+#pragma comment(lib, "dxgi")
+#undef NOMINMAX
+#undef D3D11_NO_HELPERS
+#include "opencv2/core/directx.hpp"
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+
+#include "opencv2/core/ocl.hpp"
+#include "streaming/onevpl/accelerators/surface/dx11_frame_adapter.hpp"
 
 GAPI_OCL_KERNEL(GOCLAdd, cv::gapi::core::GAdd)
 {
@@ -523,6 +540,52 @@ GAPI_OCL_KERNEL(GOCLTranspose, cv::gapi::core::GTranspose)
     }
 };
 
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+bool initializeContext(ID3D11Device* pD3D11Device) {
+    const static auto context_is_initialized = [&]() -> bool {
+        cv::ocl::Context& ctx = cv::directx::ocl::initializeContextFromD3D11Device(pD3D11Device);
+        return ctx.ptr() != nullptr;
+    }();
+    return context_is_initialized;
+}
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+
+GAPI_OCL_KERNEL(GOCLBGR, cv::gapi::streaming::GBGR)
+{
+    static void run(const cv::MediaFrame& in, cv::UMat& out)
+    {
+        (void)in; (void)out;
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+#ifdef HAVE_ONEVPL
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::NV12);
+
+        auto params = in.get<cv::gapi::wip::onevpl::VPLMediaFrameDX11Adapter>()->blobParams();
+        auto handle = cv::util::any_cast<mfxHDLPair>(params);
+        ID3D11Texture2D* texture = reinterpret_cast<ID3D11Texture2D*>(handle.first);
+        GAPI_Assert(texture != nullptr && "mfxHDLPair contains ID3D11Texture2D that is nullptr");
+
+        ID3D11Device* pD3D11Device = nullptr;
+        texture->GetDevice(&pD3D11Device);
+        GAPI_Assert(pD3D11Device != nullptr && "D3D11Texture2D::GetDevice returns pD3D11Device that is nullptr");
+
+        auto is_initialized = initializeContext(pD3D11Device);
+        GAPI_Assert(is_initialized && "initializeContext returns false. Built without D3D11 support?");
+
+        cv::directx::convertFromD3D11Texture2D(texture, out);
+#else
+        GAPI_Assert(false && "Assembled without VPL support");
+#endif // HAVE_ONEVPL
+#else
+        GAPI_Assert(false && "Assembled without D3D11 support");
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+    }
+};
+
 cv::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -587,6 +650,7 @@ cv::GKernelPackage cv::gapi::core::ocl::kernels()
          , GOCLLUT
          , GOCLConvertTo
          , GOCLTranspose
+         , GOCLBGR
          >();
     return pkg;
 }

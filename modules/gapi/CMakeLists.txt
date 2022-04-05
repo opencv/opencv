@@ -356,6 +356,12 @@ if(TARGET example_gapi_onevpl_infer_single_roi)
   endif()
 endif()
 
+if(TARGET example_gapi_one_vpl_source_to_bgr_conv)
+  if(HAVE_D3D11 AND HAVE_OPENCL)
+    ocv_target_include_directories(example_gapi_one_vpl_source_to_bgr_conv SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
+
 if(TARGET example_gapi_pipeline_modeling_tool)
   if(WIN32)
     ocv_target_link_libraries(example_gapi_pipeline_modeling_tool winmm.lib)

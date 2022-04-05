@@ -153,7 +153,8 @@ cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
     return std::make_pair(std::make_pair(y_tdesc, y_params),
                           std::make_pair(uv_tdesc, uv_params));
 #else
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
+    // GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
+    return handle;
 #endif // HAVE_INF_ENGINE
 }
 
