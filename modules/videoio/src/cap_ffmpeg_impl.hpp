@@ -2496,17 +2496,13 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
 /// close video output stream and free associated memory
 void CvVideoWriter_FFMPEG::close()
 {
-    // nothing to do if already released
-    if ( !picture )
-        return;
-
     /* no more frame to compress. The codec has a latency of a few
        frames if using B frames, so we get the last frames by
        passing the same picture again */
     // TODO -- do we need to account for latency here?
 
     /* write the trailer, if any */
-    if(ok && oc)
+    if (picture && ok && oc)
     {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
         if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
@@ -2529,7 +2525,7 @@ void CvVideoWriter_FFMPEG::close()
     }
 
     // free pictures
-    if( context->pix_fmt != input_pix_fmt)
+    if (picture && context && context->pix_fmt != input_pix_fmt)
     {
         if(picture->data[0])
             free(picture->data[0]);
@@ -2540,8 +2536,14 @@ void CvVideoWriter_FFMPEG::close()
     if (input_picture)
         av_free(input_picture);
 
+#ifdef CV_FFMPEG_CODECPAR
+    avcodec_free_context(&context);
+#else
     /* close codec */
-    avcodec_close(context);
+    if (context)  // fixed after https://github.com/FFmpeg/FFmpeg/commit/3e1f507f3e8f16b716aa115552d243b48ae809bd
+        avcodec_close(context);
+    context = NULL;
+#endif
 
     av_free(outbuf);
 
@@ -2935,10 +2937,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
 
 #ifdef CV_FFMPEG_CODECPAR
-        if (context)
-        {
-            avcodec_free_context(&context);
-        }
+        avcodec_free_context(&context);
 #endif
         context = icv_configure_video_stream_FFMPEG(oc, video_st, codec,
                                               width, height, (int) (bitrate + 0.5),
