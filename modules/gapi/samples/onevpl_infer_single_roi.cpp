@@ -310,10 +310,10 @@ support_matrix resolved_conf{{
                             }
     }};
 
-void print_available_cfg(std::ostream &out,
-                         const std::string &source_device,
-                         const std::string &preproc_device,
-                         const std::string &ie_device_id) {
+static void print_available_cfg(std::ostream &out,
+                                const std::string &source_device,
+                                const std::string &preproc_device,
+                                const std::string &ie_device_id) {
     const std::string source_device_cfg_name("--source_device=");
     const std::string preproc_device_cfg_name("--preproc_device=");
     const std::string ie_cfg_name("--faced=");
