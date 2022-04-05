@@ -179,6 +179,10 @@ void FeatherBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     normalizeUsingWeightMap(dst_weight_map_, dst_);
     compare(dst_weight_map_, WEIGHT_EPS, dst_mask_, CMP_GT);
     Blender::blend(dst, dst_mask);
+    
+    dst_mask_.release();
+    weight_map_.release();
+    dst_weight_map_.release();
 }
 
 
