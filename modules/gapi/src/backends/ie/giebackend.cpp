@@ -703,49 +703,6 @@ cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::strin
     return std::move(in_frame);
 }
 
-inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i,
-                                       const std::string &layer_name,
-                                       const cv::util::optional<cv::Rect> &opt_roi,
-                                       cv::MediaFrame* out_keep_alive_frame,
-                                       bool* out_is_preprocessed) {
-    GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
-                "Remote blob is supported for MediaFrame only");
-    cv::MediaFrame frame = ctx.inFrame(i);
-    if (ctx.uu.preproc_engine_impl) {
-        GAPI_LOG_DEBUG(nullptr, "Try to use preprocessing for decoded remote frame in remote ctx");
-
-        //TODO
-        frame.blobParams();
-
-        frame = preprocess_frame_impl(std::move(frame), layer_name, ctx, opt_roi,
-                                      out_keep_alive_frame, out_is_preprocessed);
-    }
-
-    // Request params for result frame whatever it got preprocessed or not
-    cv::util::any any_blob_params = frame.blobParams();
-
-    using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
-    using NV12ParamType = std::pair<ParamType, ParamType>;
-
-    NV12ParamType* blob_params = cv::util::any_cast<NV12ParamType>(&any_blob_params);
-    if (blob_params == nullptr) {
-        GAPI_Assert(false && "Incorrect type of blobParams:"
-                             "expected std::pair<ParamType, ParamType>,"
-                             "with ParamType std::pair<InferenceEngine::TensorDesc,"
-                                                      "InferenceEngine::ParamMap >>");
-    }
-
-    //The parameters are TensorDesc and ParamMap for both y and uv blobs
-    auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
-    auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
-
-#if INF_ENGINE_RELEASE >= 2021010000
-    return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
-#else
-    return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
-#endif
-}
-
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
                                  cv::gapi::ie::TraitAs hint,
@@ -753,17 +710,6 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
                                  bool* out_is_preprocessed = nullptr) {
-    try {
-        if (ctx.uu.rctx != nullptr) {
-            return extractRemoteBlob(ctx, i, layer_name, opt_roi,
-                                     out_keep_alive_frame, out_is_preprocessed);
-        }
-    } catch(const std::exception &ex) {
-        //TODO VPL only
-        GAPI_LOG_DEBUG(nullptr, "Try to fallback to GIE streaming CPU use-case");
-        GAPI_DbgAssert(ctx.uu.preproc_engine_impl && "VPL only scenario");
-    }
-
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             auto frame = ctx.inFrame(i);
@@ -772,6 +718,37 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                 frame = preprocess_frame_impl(std::move(frame), layer_name, ctx, opt_roi,
                                               out_keep_alive_frame, out_is_preprocessed);
             }
+
+            // NB: check OV remote device context availability.
+            // if it exist and MediaFrame shares the same device context
+            // then we create a remote blob without memory copy
+            if (ctx.uu.rctx != nullptr) {
+                // Request params for result frame whatever it got preprocessed or not
+                cv::util::any any_blob_params = frame.blobParams();
+                using ParamType = std::pair<InferenceEngine::TensorDesc, InferenceEngine::ParamMap>;
+                using NV12ParamType = std::pair<ParamType, ParamType>;
+
+                NV12ParamType* blob_params = cv::util::any_cast<NV12ParamType>(&any_blob_params);
+                if (blob_params == nullptr) {
+                    GAPI_Assert(false && "Incorrect type of blobParams:"
+                                         "expected std::pair<ParamType, ParamType>,"
+                                         "with ParamType std::pair<InferenceEngine::TensorDesc,"
+                                         "InferenceEngine::ParamMap >>");
+                }
+
+                //The parameters are TensorDesc and ParamMap for both y and uv blobs
+                auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
+                auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
+
+#if INF_ENGINE_RELEASE >= 2021010000
+                return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
+#else
+                return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
+#endif
+            }
+
+            // NB: If no OV remote context created then use default MediaFrame accessor approach:
+            // it invokes memory copying operation If GPU MediaFrame come
             ctx.views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
             return wrapIE(*(ctx.views.back()), frame.desc());
         }

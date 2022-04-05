@@ -269,10 +269,10 @@ typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &l
 
 struct flow {
     flow(bool preproc, bool rctx) :
-        ie_preproc_enable(preproc),
+        vpl_preproc_enable(preproc),
         ie_remote_ctx_enable(rctx) {
     }
-    bool ie_preproc_enable = false;
+    bool vpl_preproc_enable = false;
     bool ie_remote_ctx_enable = false;
 };
 
@@ -409,15 +409,17 @@ int main(int argc, char *argv[]) {
     // But please pay attention that default pipeline construction in this case would be
     // very inefficient and carries out multiple CPU-GPU memory copies
     //
-    // If you want to reach max performance and apply copy-less approach for specific
+    // If you want to reach max performance and seize copy-free approach for specific
     // device & context selection then follow the steps below.
     // The situation is complicated a little bit:
     //
     // - all component-participants (Source, Preprocessing, Inference)
-    // must share the same Device & Context
+    // must share the same device & dontext instances
     //
-    // - wrap you available device & context into `cv::gapi::wip::Device` &
-    // `cv::gapi::wip::Context`
+    // - wrap your available device & context instancs into
+    // `cv::gapi::wip::Device` & `cv::gapi::wip::Context`.
+    // !!! Please pay attention that both objects are weak wrapper so you must ensure
+    // that device & context would be alived before full pipeline created !!!
     //
     // - pass such wrappers as constructor arguments for each component in pipeline:
     //      a) use special constructor for `onevpl::GSource`
@@ -436,8 +438,8 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-    // create DX11 resource owner handles.
-    // wip::Device & wip::Context do not owns any kind of resources and act
+    // create DX11 device & context owning handles.
+    // wip::Device & wip::Context provide non-owning semantic of resources and act
     // as weak references API wrappers in order to carry type-erased resources type
     // into appropriate modules: onevpl::GSource, PreprocEngine and InferenceEngine
     // Until modules are not created owner handles must stay alive
@@ -498,16 +500,16 @@ int main(int argc, char *argv[]) {
         InferenceEngine::ParamMap ctx_config({{"CONTEXT_TYPE", "VA_SHARED"},
                                               {"VA_DEVICE", gpu_accel_device.value().get_ptr()} });
         face_net.cfgContextParams(ctx_config);
-        std::cout << "enfore InferenceEngine remote context on device: " << device_id << std::endl;
+        std::cout << "enforce InferenceEngine remote context on device: " << device_id << std::endl;
 
         // NB: consider NV12 surface because it's one of native GPU image format
         face_net.pluginConfig({{"GPU_NV12_TWO_INPUTS", "YES" }});
-        std::cout << "enfore InferenceEngine NV12 blob" << std::endl;
+        std::cout << "enforce InferenceEngine NV12 blob" << std::endl;
     }
 #endif // HAVE_INF_ENGINE
 
     // Turn on VPP PreprocesingEngine if available & requested
-    if (flow_settings->ie_preproc_enable) {
+    if (flow_settings->vpl_preproc_enable) {
         if (is_gpu(preproc_device)) {
             // activate VPP PreprocesingEngine on GPU
             face_net.cfgPreprocessingParams(gpu_accel_device.value(),
