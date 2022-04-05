@@ -70,7 +70,7 @@ struct Data
 
     // FIXME: This is a _pure_ duplication of RcDesc now! (except storage)
     GShape   shape; // FIXME: Probably to be replaced by GMetaArg?
-    int      rc;
+    int      rc;    // rc is unique but local to shape
     GMetaArg meta;
     HostCtor ctor;  // T-specific helper to deal with unknown types in our code
     cv::detail::OpaqueKind kind; // FIXME: is needed to store GArray/GOpaque type
