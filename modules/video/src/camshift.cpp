@@ -172,7 +172,7 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
     double length = std::sqrt( rotate_a * inv_m00 ) * 4;
     double width = std::sqrt( rotate_c * inv_m00 ) * 4;
 
-    // In case, when tetta is 0 or 1.57... the Length & Width may be exchanged
+    // In case, when theta is 0 or 1.57... the Length & Width may be exchanged
     if( length < width )
     {
         std::swap( length, width );
