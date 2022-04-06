@@ -39,7 +39,7 @@ function(download_ippicv root_var)
                URL
                  "${OPENCV_IPPICV_URL}"
                  "$ENV{OPENCV_IPPICV_URL}"
-                 "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${IPPICV_COMMIT}/ippicv/"
+                 "/home/robot/software/kimera/"
                DESTINATION_DIR "${THE_ROOT}"
                ID IPPICV
                STATUS res
