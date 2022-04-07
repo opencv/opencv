@@ -47,51 +47,52 @@
 //
 // */
 
-#ifndef OPENCV_IMGPROC_IMGWARP_HPP
-#define OPENCV_IMGPROC_IMGWARP_HPP
 #include "precomp.hpp"
+#include "imgwarp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
-namespace opt_AVX2
-{
-#if CV_TRY_AVX2
-int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw);
-#endif
-}
-
 namespace opt_LASX
 {
-#if CV_TRY_LASX
-int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw);
-#endif
-}
 
-namespace opt_SSE4_1
+int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw)
 {
-#if CV_TRY_SSE4_1
-void convertMaps_nninterpolate32f1c16s_SSE41(const float* src1f, const float* src2f, short* dst1, int width);
-void convertMaps_32f1c16s_SSE41(const float* src1f, const float* src2f, short* dst1, ushort* dst2, int width);
-void convertMaps_32f2c16s_SSE41(const float* src1f, short* dst1, ushort* dst2, int width);
-void WarpAffineInvoker_Blockline_SSE41(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw);
+    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    int x1 = 0;
+    __m256i fxy_mask = _v256_setall_w(INTER_TAB_SIZE - 1);
+    __m256i XX = _v256_setall_w(X0), YY = _v256_setall_w(Y0);
+    for (; x1 <= bw - 16; x1 += 16)
+    {
+        __m256i tx0, tx1, ty0, ty1;
+        tx0 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(adelta + x1), 0), XX);
+        ty0 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(bdelta + x1), 0), YY);
+        tx1 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(adelta + x1), 8*4), XX);
+        ty1 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(bdelta + x1), 8*4), YY);
 
-class WarpPerspectiveLine_SSE4
-{
-public:
-    static Ptr<WarpPerspectiveLine_SSE4> getImpl(const double *M);
-    virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) = 0;
-    virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) = 0;
-    virtual ~WarpPerspectiveLine_SSE4() {};
-};
-#endif
+        tx0 = __lasx_xvsrai_w(tx0, AB_BITS - INTER_BITS);
+        ty0 = __lasx_xvsrai_w(ty0, AB_BITS - INTER_BITS);
+        tx1 = __lasx_xvsrai_w(tx1, AB_BITS - INTER_BITS);
+        ty1 = __lasx_xvsrai_w(ty1, AB_BITS - INTER_BITS);
+
+        __m256i fx_ = _lasx_packs_w(__lasx_xvand_v(tx0, fxy_mask),
+            __lasx_xvand_v(tx1, fxy_mask));
+        __m256i fy_ = _lasx_packs_w(__lasx_xvand_v(ty0, fxy_mask),
+            __lasx_xvand_v(ty1, fxy_mask));
+        tx0 = _lasx_packs_w(__lasx_xvsrai_w(tx0, INTER_BITS),
+            __lasx_xvsrai_w(tx1, INTER_BITS));
+        ty0 = _lasx_packs_w(__lasx_xvsrai_w(ty0, INTER_BITS),
+            __lasx_xvsrai_w(ty1, INTER_BITS));
+        fx_ = __lasx_xvsadd_h(fx_, __lasx_xvslli_h(fy_, INTER_BITS));
+        fx_ = __lasx_xvpermi_d(fx_, (3 << 6) + (1 << 4) + (2 << 2) + 0);
+
+        __lasx_xvst(__lasx_xvilvl_h(ty0, tx0), (__m256i*)(xy + x1 * 2), 0);
+        __lasx_xvst(__lasx_xvilvh_h(ty0, tx0), (__m256i*)(xy + x1 * 2), 16*2);
+        __lasx_xvst(fx_, (__m256i*)(alpha + x1), 0);
+    }
+    return x1;
 }
 
-#if CV_SIMD128_64F
-void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0, double Y0, double W0, int bw);
-void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw);
-#endif
-
 }
-#endif
+}
 /* End of file. */
