@@ -1099,6 +1099,16 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     }
     else
 #endif
+#if CV_TRY_LASX
+    if(CV_CPU_HAS_SUPPORT_LASX && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+            opt_LASX::resizeNN2_LASX(range, src, dst, x_ofs, ify);
+        else
+            opt_LASX::resizeNN4_LASX(range, src, dst, x_ofs, ify);
+    }
+    else
+#endif
     {
         resizeNNInvoker invoker(src, dst, x_ofs, ify);
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
