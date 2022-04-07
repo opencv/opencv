@@ -318,7 +318,8 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
+void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D,
+                                   InputArray R, InputArray P, TermCriteria criteria)
 {
     CV_INSTRUMENT_REGION();
 
@@ -329,6 +330,8 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
     CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
     CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
     CV_Assert(D.total() == 4 && K.size() == Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
+
+    CV_Assert(criteria.isValid());
 
     cv::Vec2d f, c;
     if (K.depth() == CV_32F)
@@ -389,13 +392,11 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 
         double scale = 0.0;
 
-        if (fabs(theta_d) > 1e-8)
+        if (fabs(theta_d) > criteria.epsilon)
         {
             // compensate distortion iteratively
 
-            const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
-
-            for (int j = 0; j < 10; j++)
+            for (int j = 0; j < criteria.maxCount; j++)
             {
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
                 double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
@@ -403,7 +404,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
                 double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
                                    (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
                 theta = theta - theta_fix;
-                if (fabs(theta_fix) < EPS)
+                if (fabs(theta_fix) < criteria.epsilon)
                 {
                     converged = true;
                     break;
