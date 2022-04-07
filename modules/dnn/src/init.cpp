@@ -130,6 +130,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(HardSwish,      HardSwishLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sin,            SinLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sinh,           SinhLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Sign,           SignLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Shrink,         ShrinkLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softplus,       SoftplusLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softsign,       SoftsignLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Tan,            TanLayer);
@@ -144,6 +146,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Silence,        BlankLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Const,          ConstLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Arg,            ArgLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Reciprocal,     ReciprocalLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);

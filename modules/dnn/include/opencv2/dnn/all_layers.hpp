@@ -794,6 +794,26 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ActivationLayerInt8> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS SignLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SignLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ShrinkLayer : public ActivationLayer
+    {
+    public:
+        float bias;
+        float lambd;
+        static Ptr<ShrinkLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ReciprocalLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<ReciprocalLayer> create(const LayerParams &params);
+    };
+
     /* Layers used in semantic segmentation */
 
     class CV_EXPORTS CropLayer : public Layer
