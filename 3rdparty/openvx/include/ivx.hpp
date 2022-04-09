@@ -1535,7 +1535,7 @@ public:
         return prevPtr;
     }
 
-    /// vxSwapImageHandle() wrapper for the case when no new pointers provided and previous ones are not needed (retrive memory back)
+    /// vxSwapImageHandle() wrapper for the case when no new pointers provided and previous ones are not needed (retrieve memory back)
     void swapHandle()
     { IVX_CHECK_STATUS( vxSwapImageHandle(ref, 0, 0, 0) ); }
 
