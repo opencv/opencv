@@ -122,11 +122,14 @@ imgElement.onload = function() {
   mat.delete();
 };
 
-function onOpenCvReady() {
-  document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
-}
+var Module = {
+  // https://emscripten.org/docs/api_reference/module.html#Module.onRuntimeInitialized
+  onRuntimeInitialized() {
+    document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+  }
+};
 </script>
-<script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+<script async src="opencv.js" type="text/javascript"></script>
 </body>
 </html>
 @endcode
