@@ -67,7 +67,7 @@ class LIBPROTOBUF_EXPORT DescriptorDatabase {
   inline DescriptorDatabase() {}
   virtual ~DescriptorDatabase();
 
-  // Find a file by file name.  Fills in in *output and returns true if found.
+  // Find a file by file name.  Fills in *output and returns true if found.
   // Otherwise, returns false, leaving the contents of *output undefined.
   virtual bool FindFileByName(const string& filename,
                               FileDescriptorProto* output) = 0;

@@ -44,7 +44,7 @@
 //	Rational numbers
 //
 //	A rational number is represented as pair of integers, n and d.
-//	The value of of the rational number is
+//	The value of the rational number is
 // 
 //		n/d			for d > 0
 //		positive infinity	for n > 0, d == 0

@@ -2291,6 +2291,15 @@ public:
     const_iterator end() const;
 
     //! template methods for for operation over all matrix elements.
+
+    //reverse iterators
+    std::reverse_iterator<iterator> rbegin();
+    std::reverse_iterator<iterator> rend();
+    std::reverse_iterator<const_iterator> rbegin() const;
+    std::reverse_iterator<const_iterator> rend() const;
+
+    //! template methods for operation over all matrix elements.
+
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename Functor> void forEach(const Functor& operation);
     template<typename Functor> void forEach(const Functor& operation) const;
