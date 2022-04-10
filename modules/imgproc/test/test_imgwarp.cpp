@@ -1139,8 +1139,8 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
 
 TEST(Imgproc_cvWarpAffine, regression)
 {
-    Mat src(Size(100, 100), CV_8UC1);
-    Mat dst(Size(100, 100), CV_8UC1);
+    Mat src(Size(100, 100), CV_8UC1, cv::Scalar::all(0));
+    Mat dst(Size(100, 100), CV_8UC1, cv::Scalar::all(0));
 
     int w = src.cols;
     int h = src.rows;
