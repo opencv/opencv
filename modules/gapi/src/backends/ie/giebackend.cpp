@@ -460,7 +460,7 @@ public:
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
 
-    // NB: Need to gurantee that MediaFrame::View doesn't die until request is over.
+    // NB: Need to guarantee that MediaFrame::View doesn't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
 
