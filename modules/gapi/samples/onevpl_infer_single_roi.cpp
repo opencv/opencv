@@ -421,7 +421,7 @@ int main(int argc, char *argv[]) {
         } else {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         }
-        std::cout << "oneVPL source desrciption: " << cap->descr_of() << std::endl;
+        std::cout << "oneVPL source description: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
         return -1;
