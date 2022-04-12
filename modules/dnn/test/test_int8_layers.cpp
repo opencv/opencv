@@ -906,7 +906,7 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
 
-    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.21;
+    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.4;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 
