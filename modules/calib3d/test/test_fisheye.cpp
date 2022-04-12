@@ -105,7 +105,6 @@ TEST_F(fisheyeTest, distortUndistortPoints)
 {
     int width = imageSize.width;
     int height = imageSize.height;
-    cv::Mat matD = cv::Mat(D);
 
     /* Create test points */
     std::vector<cv::Point2d> points0Vector;
@@ -130,17 +129,25 @@ TEST_F(fisheyeTest, distortUndistortPoints)
     cv::Mat points0;
     cv::vconcat(principalPoints.reshape(2), randomPoints, points0);
 
-    cv::Mat distortedPoints;
-    cv::fisheye::distortPoints(points0, distortedPoints, K, matD);
-    cv::Mat undistortedPoints;
-    cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, matD);
+    /* Test with random D set */
+    for (size_t i = 0; i < 10; ++i) {
+        cv::Mat D(1, 4, CV_64F);
+        theRNG().fill(D, cv::RNG::UNIFORM, -0.00001, 0.00001);
 
-    EXPECT_MAT_NEAR(points0, undistortedPoints, 1e-8);
+        /* Distort -> Undistort */
+        cv::Mat distortedPoints;
+        cv::fisheye::distortPoints(points0, distortedPoints, K, D);
+        cv::Mat undistortedPoints;
+        cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, D);
 
-    cv::fisheye::undistortPoints(points0, undistortedPoints, K, matD);
-    cv::fisheye::distortPoints(undistortedPoints, distortedPoints, K, matD);
+        EXPECT_MAT_NEAR(points0, undistortedPoints, 1e-8);
 
-    EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
+        /* Undistort -> Distort */
+        cv::fisheye::undistortPoints(points0, undistortedPoints, K, D);
+        cv::fisheye::distortPoints(undistortedPoints, distortedPoints, K, D);
+
+        EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
+    }
 }
 
 TEST_F(fisheyeTest, undistortImage)
