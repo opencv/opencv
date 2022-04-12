@@ -46,7 +46,7 @@ void UndistortPointsTest::generateDistCoeffs(Mat& distCoeffs, int count)
 {
     distCoeffs = Mat::zeros(count, 1, CV_64FC1);
     for (int i = 0; i < count; i++)
-        distCoeffs.at<double>(i,0) = rng.uniform(0.0, 1.0e-3);
+        distCoeffs.at<double>(i,0) = rng.uniform(-0.1, 0.1);
 }
 
 TEST_F(UndistortPointsTest, accuracy)
