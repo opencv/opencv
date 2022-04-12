@@ -27,4 +27,30 @@ PERF_TEST(Undistort, DISABLED_InitInverseRectificationMap)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST(Undistort, fisheye_undistortPoints)
+{
+
+    const cv::Size imageSize(1280, 800);
+
+    const cv::Matx33d K(558.478087865323,  0, 620.458515360843,
+                         0, 560.506767351568, 381.939424848348,
+                         0,               0,                1);
+
+    Mat D(1, 4, CV_64F);
+    theRNG().fill(D, RNG::UNIFORM, -1.e-5, 1.e-5);
+
+    cv::Mat xy[2] = {};
+    xy[0].create(1000, 1, CV_64F);
+    theRNG().fill(xy[0], cv::RNG::UNIFORM, 0, imageSize.width); // x
+    xy[1].create(1000, 1, CV_64F);
+    theRNG().fill(xy[1], cv::RNG::UNIFORM, 0, imageSize.height); // y
+
+    cv::Mat points;
+    merge(xy, 2, points);
+
+    Mat undistortedPoints;
+    TEST_CYCLE() fisheye::undistortPoints(points, undistortedPoints, K, D);
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
