@@ -101,7 +101,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         MatShape outShape = findCommonShape(inputs);
-        outputs.assign(inputs.size(), outShape);
+        outputs.assign(1, outShape);
         return false;
     }
 
@@ -142,18 +142,28 @@ public:
                 if (foldFull)
                 {
                     shp[i] *= shp[j];
-                    output_shape[i] *= output_shape[j];
                 }
                 else if (foldOnes)
                 {
                     shp[i] = shp[j - 1];
-                    output_shape[i] = output_shape[j - 1];
                 }
                 else
                 {
                     shp[i] = shp[j];
-                    output_shape[i] = output_shape[j];
                 }
+            }
+            // TODO: save output_shape in the same array maybe?
+            if (foldFull)
+            {
+                output_shape[i] *= output_shape[j];
+            }
+            else if (foldOnes)
+            {
+                output_shape[i] = output_shape[j - 1];
+            }
+            else
+            {
+                output_shape[i] = output_shape[j];
             }
         }
         for (auto& shp : input_shapes)
@@ -166,14 +176,13 @@ public:
     void setStrides()
     {
         input_steps.resize(input_shapes.size(), std::vector<size_t>(output_shape.size()));
-        output_steps.resize(input_shapes.size());
 
         for (size_t i = 0; i < input_steps.size(); ++i)
         {
             input_steps[i].back() = 1;
             for (ptrdiff_t j = static_cast<ptrdiff_t>(output_shape.size()) - 2; j >= 0; --j)
             {
-                input_steps[i][j] = input_steps[i][j + 1] + input_shapes[i][j];
+                input_steps[i][j] = input_steps[i][j + 1] * input_shapes[i][j + 1];
             }
             for (size_t j = 0; j < output_shape.size(); ++j)
             {
@@ -181,10 +190,15 @@ public:
                     input_steps[i][j] = 0;
             }
         }
-
-        output_steps.back() = 1;
-        std::copy(output_shape.begin(), output_shape.end() - 1, output_steps.begin());
-        std::partial_sum(output_steps.rbegin(), output_steps.rend(), output_steps.rbegin());
+        std::vector<std::vector<size_t>> steps_transposed(input_steps[0].size(), std::vector<size_t>(input_steps.size()));
+        for (size_t i = 0; i < input_shapes.size(); ++i)
+        {
+            for (size_t j = 0; j < input_shapes[0].size(); ++j)
+            {
+                steps_transposed[j][i] = input_steps[i][j];
+            }
+        }
+        input_steps = std::move(steps_transposed);
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -220,37 +234,50 @@ public:
         CV_Assert(inputs.size() >= 2 && outputs.size() == 1);
 
         auto dstptr = outputs[0].ptr<float>();
+
         const size_t n = output_shape.back();
         const size_t total = outputs[0].total() / n;
+
         const ptrdiff_t dims = output_shape.size();
+        const size_t ninputs = inputs.size();
+
         std::vector<int> indices(output_shape.size());
+        const auto& last_steps = input_steps.back();
 
         for (size_t i = 0; i < total; ++i) {
             for (size_t j = 0; j < n; ++j)
             {
-                std::vector<float> v;
-                for (size_t k = 0; k < input_shapes.size(); ++k)
+                float tmp = 0.f;
+                for (size_t k = 0; k < ninputs; ++k)
                 {
-                    v.push_back(inputs[k].ptr<float>()[offsets[k]]);
-                    offsets[k] += input_steps[k].back();
+                    tmp += inputs[k].ptr<float>()[offsets[k] + last_steps[k] * j];
                 }
                 // TODO: template functor
-                *dstptr++ = std::accumulate(v.begin(), v.end(), 0., std::plus<float>{});
+                *dstptr++ = tmp;
             }
 
             for (ptrdiff_t j = dims - 2; j >= 0; --j) {
-                if (++indices[j] != output_shape[j]) break;
+                auto& steps = input_steps[j];
+                auto dim = output_shape[j];
+
+                std::transform(offsets.begin(), offsets.end(), steps.begin(), offsets.begin(), std::plus<size_t>{});
+
+                if (++indices[j] != dim) break;
+
+                std::transform (offsets.begin(), offsets.end(), steps.begin(), offsets.begin(),
+                    [dim] (auto& a, auto& b) { return a - dim * b; });
+
                 indices[j] = 0;
             }
 
-            std::fill(offsets.begin(), offsets.end(), 0);
-            for (ptrdiff_t j = 0; j < dims - 1; ++j)
-            {
-                for (size_t k = 0; k < input_shapes.size(); ++k)
-                {
-                    offsets[k] += input_steps[k][j] * indices[j];
-                }
-            }
+//            std::fill(offsets.begin(), offsets.end(), 0);
+//            for (size_t k = 0; k < input_shapes.size(); ++k)
+//            {
+//                for (ptrdiff_t j = 0; j < dims - 1; ++j)
+//                {
+//                    offsets[k] += input_steps[k][j] * indices[j];
+//                }
+//            }
         }
     }
 
@@ -268,9 +295,8 @@ public:
     }
 
 private:
-    // TODO: flat index
+    // TODO: flat index, transpose (INPUTS, DIMS) to (DIMS, INPUTS)
     std::vector<std::vector<size_t>> input_steps;
-    std::vector<size_t> output_steps;
 
     std::vector<std::vector<int>> input_shapes;
     std::vector<int> output_shape;

@@ -1504,24 +1504,28 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             }
         }
     }
-    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
-    {
-        layerParams.type = "Eltwise";
-        if (isSub)
-        {
-            static float subCoeffs[] = {1.f, -1.f};
-            layerParams.set("coeff", DictValue::arrayReal<float*>(subCoeffs, 2));
-        }
-    }
     else
     {
-        if (isSub)
-        {
-            addNegation(layerParams, node_proto, 1);
-        }
-        layerParams.type = "Scale";
-        layerParams.set("bias_term", true);
+        layerParams.type = "NaryEltwise"; // TODO: set op
     }
+//    else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
+//    {
+//        layerParams.type = "Eltwise";
+//        if (isSub)
+//        {
+//            static float subCoeffs[] = {1.f, -1.f};
+//            layerParams.set("coeff", DictValue::arrayReal<float*>(subCoeffs, 2));
+//        }
+//    }
+//    else
+//    {
+//        if (isSub)
+//        {
+//            addNegation(layerParams, node_proto, 1);
+//        }
+//        layerParams.type = "Scale";
+//        layerParams.set("bias_term", true);
+//    }
     addLayer(layerParams, node_proto);
 }
 
@@ -2167,7 +2171,7 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
         else
             haveVariables = true;
     }
-    if (constId != -1 && haveVariables)
+    if (constId != -1 && haveVariables) // create Constant node and connect as second input
     {
         Mat blob = getBlob(node_proto, constId);
         blob = blob.reshape(1, 1);
@@ -2193,7 +2197,7 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
             layerParams.type = "Scale";
         }
     }
-    else if (!haveVariables)
+    else if (!haveVariables) // simple runLayer
     {
         Mat inp0 = getBlob(node_proto, 0);
         Mat inp1 = getBlob(node_proto, 1);
@@ -2242,6 +2246,7 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
         addConstant(output_name, out);
         return;
     }
+    // Workaround below will be dropped
     else if (outShapes[node_proto.input(0)] == outShapes[node_proto.input(1)])
     {
         layerParams.type = "Eltwise";
