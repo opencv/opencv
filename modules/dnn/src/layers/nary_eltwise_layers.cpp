@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "small_vector.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -14,6 +15,9 @@ namespace cv
 {
 namespace dnn
 {
+
+template <typename T>
+using VectorType = itlib::small_vector<T, 5, 5>;
 
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
@@ -175,7 +179,7 @@ public:
 
     void setStrides()
     {
-        input_steps.resize(input_shapes.size(), std::vector<size_t>(output_shape.size()));
+        input_steps.resize(input_shapes.size(), VectorType<size_t>(output_shape.size()));
 
         for (size_t i = 0; i < input_steps.size(); ++i)
         {
@@ -190,10 +194,12 @@ public:
                     input_steps[i][j] = 0;
             }
         }
-        std::vector<std::vector<size_t>> steps_transposed(input_steps[0].size(), std::vector<size_t>(input_steps.size()));
-        for (size_t i = 0; i < input_shapes.size(); ++i)
+
+        // TODO: transpose
+        VectorType<VectorType<size_t>> steps_transposed(output_shape.size(), VectorType<size_t>(input_steps.size()));
+        for (size_t i = 0; i < input_steps.size(); ++i)
         {
-            for (size_t j = 0; j < input_shapes[0].size(); ++j)
+            for (size_t j = 0; j < output_shape.size(); ++j)
             {
                 steps_transposed[j][i] = input_steps[i][j];
             }
@@ -207,7 +213,10 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        auto shapeGetter = [] (const auto& m) { return shape(m); };
+        auto shapeGetter = [] (const auto& m) {
+            auto v = shape(m);
+            return VectorType<int>(v.begin(), v.end());
+        };
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(input_shapes), shapeGetter);
         output_shape = shapeGetter(outputs[0]);
         foldShapes();
@@ -229,20 +238,20 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        std::vector<size_t> offsets(inputs.size(), 0);
+        VectorType<size_t> offsets(inputs.size(), 0);
 
         CV_Assert(inputs.size() >= 2 && outputs.size() == 1);
 
         auto dstptr = outputs[0].ptr<float>();
 
-        const size_t n = output_shape.back();
+        const size_t n = output_shape[output_shape.size() - 1];
         const size_t total = outputs[0].total() / n;
 
         const ptrdiff_t dims = output_shape.size();
         const size_t ninputs = inputs.size();
 
-        std::vector<int> indices(output_shape.size());
-        const auto& last_steps = input_steps.back();
+        VectorType<int> indices(output_shape.size(), 0);
+        auto& last_steps = input_steps[input_steps.size() - 1];
 
         for (size_t i = 0; i < total; ++i) {
             for (size_t j = 0; j < n; ++j)
@@ -296,10 +305,10 @@ public:
 
 private:
     // TODO: flat index, transpose (INPUTS, DIMS) to (DIMS, INPUTS)
-    std::vector<std::vector<size_t>> input_steps;
+    VectorType<VectorType<size_t>> input_steps;
 
-    std::vector<std::vector<int>> input_shapes;
-    std::vector<int> output_shape;
+    VectorType<VectorType<int>> input_shapes;
+    VectorType<int> output_shape;
 };
 
 Ptr<NaryEltwiseLayer> NaryEltwiseLayer::create(const LayerParams& params)
