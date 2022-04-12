@@ -633,6 +633,9 @@ TEST_P(opencv_face_detector, Accuracy)
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
@@ -660,6 +663,9 @@ TEST_P(opencv_face_detector, issue_15106)
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("cv/shared/lena.png"));
     img = img.rowRange(img.rows / 4, 3 * img.rows / 4).colRange(img.cols / 4, 3 * img.cols / 4);
@@ -673,13 +679,13 @@ TEST_P(opencv_face_detector, issue_15106)
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
     Mat ref = (Mat_<float>(1, 7) << 0, 1, 0.9149431, 0.30424616, 0.26964942, 0.88733053, 0.99815309);
-    normAssertDetections(ref, out, "", 0.2, 6e-5, 1e-4);
+    normAssertDetections(ref, out, "", 0.89, 6e-5, 1e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
         Values("dnn/opencv_face_detector.caffemodel",
                "dnn/opencv_face_detector_fp16.caffemodel"),
-        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))
     )
 );
 
