@@ -126,7 +126,7 @@ public:
 
      The function is used to associate data of graph outputs with output layers of
     network topology. If a network has only one output layer, there is no need to call it
-    as the layer is associated with ouput automatically but this doesn't prevent
+    as the layer is associated with output automatically but this doesn't prevent
     you from doing it yourself. Count of names has to match to number of network
     outputs or you can set your own output but for this case you have to
     additionally use @ref cfgPostProc function.

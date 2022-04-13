@@ -225,7 +225,7 @@ public:
      * setSource() to run the graph on a new video stream.
      *
      * @overload
-     * @param args arguments used to contruct and initialize a stream
+     * @param args arguments used to construct and initialize a stream
      * source.
      */
     template<typename T, typename... Args>

@@ -701,7 +701,7 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
             PyErr_Clear();
             throw std::logic_error("Python kernel failed with error!");
         }
-        // NB: In fact it's impossible situation, becase errors were handled above.
+        // NB: In fact it's impossible situation, because errors were handled above.
         GAPI_Assert(result.get() && "Python kernel returned NULL!");
 
         if (out_info.size() == 1)
@@ -811,7 +811,7 @@ static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
             PyErr_Clear();
             throw std::logic_error("Python outMeta failed with error!");
         }
-        // NB: In fact it's impossible situation, becase errors were handled above.
+        // NB: In fact it's impossible situation, because errors were handled above.
         GAPI_Assert(result.get() && "Python outMeta returned NULL!");
 
         out_metas = PyTuple_Check(result.get()) ? get_meta_args(result.get())

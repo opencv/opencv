@@ -415,7 +415,7 @@ TEST(StatefulKernel, StateIsInitViaCompArgs)
     // Allowing 1% difference of all pixels between G-API and OpenCV results
     compareBackSubResults(gapiForeground, ocvForeground, 1);
 
-    // Additionally, test the case where state is resetted
+    // Additionally, test the case where state is reset
     gapiBackSub.prepareForNewStream();
     gapiBackSub(cv::gin(frame), cv::gout(gapiForeground));
     pOcvBackSub->apply(frame, ocvForeground);

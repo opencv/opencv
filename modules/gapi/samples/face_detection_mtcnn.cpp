@@ -33,7 +33,7 @@ const std::string keys =
 "{ thrr             | 0.7                       | MTCNN R confidence threshold}"
 "{ thro             | 0.7                       | MTCNN O confidence threshold}"
 "{ half_scale       | false                     | MTCNN P use half scale pyramid}"
-"{ queue_capacity   | 1                         | Streaming executor queue capacity. Calculated automaticaly if 0}"
+"{ queue_capacity   | 1                         | Streaming executor queue capacity. Calculated automatically if 0}"
 ;
 
 namespace {
@@ -488,8 +488,8 @@ static inline std::string get_pnet_level_name(const cv::Size &in_size) {
 }
 
 int calculate_scales(const cv::Size &input_size, std::vector<double> &out_scales, std::vector<cv::Size> &out_sizes ) {
-    //calculate multi - scale and limit the maxinum side to 1000
-    //pr_scale: limit the maxinum side to 1000, < 1.0
+    //calculate multi - scale and limit the maximum side to 1000
+    //pr_scale: limit the maximum side to 1000, < 1.0
     double pr_scale = 1.0;
     double h = static_cast<double>(input_size.height);
     double w = static_cast<double>(input_size.width);
@@ -602,7 +602,7 @@ int main(int argc, char* argv[]) {
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(faces0, true);
     cv::GArray<custom::Face> final_faces_pnet0 = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
     total_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
-    //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
+    //The rest PNet pyramid layers to accumulate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
     {
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposedRGB, get_pnet_level_name(level_size[i]));

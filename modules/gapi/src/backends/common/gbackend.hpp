@@ -173,7 +173,7 @@ namespace magazine
     // without utilizing magazine at all
     void GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, HandleRMat handleRMat = HandleRMat::BIND);
 
-    // Extracts a memory object reference fro GRunArgP, stores it in appropriate slot in a magazine
+    // Extracts a memory object reference from GRunArgP, stores it in appropriate slot in a magazine
     // Note on RMat handling from bindInArg above is also applied here
     void GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, HandleRMat handleRMat = HandleRMat::BIND);
 

@@ -39,7 +39,7 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
     //
     // At the same time, generally, every island in the streaming
     // graph gets its individual input as a queue (so normally, a
-    // writer pushes the same output MULTIPLE TIMES if it has mutliple
+    // writer pushes the same output MULTIPLE TIMES if it has multiple
     // readers):
     //
     //                         LWV

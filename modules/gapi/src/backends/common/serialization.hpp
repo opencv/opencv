@@ -164,7 +164,7 @@ GAPI_EXPORTS void serialize( IOStream& os
 GAPI_EXPORTS GSerialized deserialize(IIStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
-// FIXME: Basic Stream implementaions //////////////////////////////////////////
+// FIXME: Basic Stream implementations /////////////////////////////////////////
 
 // Basic in-memory stream implementations.
 class GAPI_EXPORTS ByteMemoryOutStream final: public IOStream {

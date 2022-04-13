@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
     auto networks = cv::gapi::networks(face_net);
 
     // Now build the graph. The graph structure may vary
-    // pased on the input parameters
+    // passed on the input parameters
     cv::GStreamingCompiled pipeline;
     auto inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
 

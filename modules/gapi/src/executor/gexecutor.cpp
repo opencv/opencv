@@ -153,7 +153,7 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     {
     case GRunArgP::index_of<cv::Mat*>() : {
         // If there is a copy intrinsic at the end of the graph
-        // we need to actualy copy the data to the user buffer
+        // we need to actually copy the data to the user buffer
         // since output runarg was optimized to simply point
         // to the input of the copy kernel
         // FIXME:

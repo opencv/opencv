@@ -254,7 +254,7 @@ void apply(cv::gimpl::GModel::Graph &g) {
 }
 
 // Probably the simplest case: desync makes no sense in the regular
-// compilation process, so just drop all its occurences in the graph,
+// compilation process, so just drop all its occurrences in the graph,
 // reconnecting nodes properly.
 void drop(cv::gimpl::GModel::Graph &g) {
     // FIXME: LOG here that we're dropping the desync operations as

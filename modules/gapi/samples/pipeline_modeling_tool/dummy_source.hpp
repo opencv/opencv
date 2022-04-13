@@ -70,7 +70,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          *  update current seq_id correspondingly.
          *
          *  if drop_frames is enabled, wait for the next tick, otherwise
-         *  return last writen frame (+2 at the picture above) immediately.
+         *  return last written frame (+2 at the picture above) immediately.
          */
         int64_t num_frames =
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);

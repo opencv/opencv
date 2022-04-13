@@ -27,7 +27,7 @@ private:
 };
 
 struct GAPI_EXPORTS DataProviderSystemErrorException final : public DataProviderException {
-    DataProviderSystemErrorException(int error_code, const std::string& desription = std::string());
+    DataProviderSystemErrorException(int error_code, const std::string& description = std::string());
     ~DataProviderSystemErrorException() = default;
 };
 

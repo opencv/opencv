@@ -1520,7 +1520,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
 cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
 {
-    // FIXME: this is a temporary try-catch exception hadling.
+    // FIXME: this is a temporary try-catch exception handling.
     // Need to eliminate throwings from stop()
     try {
         if (state == State::READY || state == State::RUNNING)
@@ -1619,7 +1619,7 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
         case T::index_of<cv::gapi::wip::IStreamSource::Ptr>():
 #if !defined(GAPI_STANDALONE)
             emitter.reset(new VideoEmitter{emit_arg});
-            // Currently all video inputs are syncronized if sync policy is to drop,
+            // Currently all video inputs are synchronized if sync policy is to drop,
             // there is no different fps branches etc, so all video emitters are registered
             video_emitters.emplace_back(emit_nh);
 #else

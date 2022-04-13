@@ -163,7 +163,7 @@ private:
                              * deinitialization called off in `on_unlock`
                              * because new `incoming` request had appeared at here before
                              * `on_unlock` started deinit procedure in another thread.
-                             * So no reinit required because no deinit had happended
+                             * So no reinit required because no deinit had happened
                              *
                              * main `busy-wait` request must break busy-wait state
                              * and become `outgoing` request.

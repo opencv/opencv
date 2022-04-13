@@ -95,7 +95,7 @@ GAPI_EXPORTS_W GArray<Rect> parseSSD(const GMat& in,
 /** @brief Parses output of Yolo network.
 
 Extracts detection information (box, confidence, label) from Yolo output,
-filters it by given confidence and performs non-maximum supression for overlapping boxes.
+filters it by given confidence and performs non-maximum suppression for overlapping boxes.
 
 @note Function textual ID is "org.opencv.nn.parsers.parseYolo"
 
@@ -105,7 +105,7 @@ where num_classes - a number of classes Yolo network was trained with.
 @param inSz Size to project detected boxes to (size of the input image).
 @param confidenceThreshold If confidence of the
 detection is smaller than confidence threshold, detection is rejected.
-@param nmsThreshold Non-maximum supression threshold which controls minimum
+@param nmsThreshold Non-maximum suppression threshold which controls minimum
 relative box intersection area required for rejecting the box with a smaller confidence.
 If 1.f, nms is not performed and no boxes are rejected.
 @param anchors Anchors Yolo network was trained with.

@@ -67,7 +67,7 @@ G desync(const G &g) {
  * always produce their full output vectors.
  *
  * This operation only makes sense when a GComputation is compiled in
- * straming mode with cv::GComputation::compileStreaming(). If this
+ * streaming mode with cv::GComputation::compileStreaming(). If this
  * operation is used and there are desynchronized outputs, the user
  * should use a special version of cv::GStreamingCompiled::pull()
  * which produces an array of cv::util::optional<> objects.

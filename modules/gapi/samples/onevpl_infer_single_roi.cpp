@@ -43,7 +43,7 @@ const std::string keys =
     "{ facem                        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
     "{ faced                        | AUTO                                      | Target device for face detection model (e.g. AUTO, GPU, VPU, ...) }"
     "{ cfg_params                   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
-    "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automaticaly if 0 }"
+    "{ streaming_queue_capacity     | 1                                         | Streaming executor queue capacity. Calculated automatically if 0 }"
     "{ frames_pool_size             | 0                                         | OneVPL source applies this parameter as preallocated frames pool size}"
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
     "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }";
@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
     const auto source_vpp_queue_capacity = cmd.get<uint32_t>("vpp_frames_pool_size");
     const auto device_id = cmd.get<std::string>("faced");
 
-    // check ouput file extension
+    // check output file extension
     if (!output.empty()) {
         auto ext = output.find_last_of(".");
         if (ext == std::string::npos || (output.substr(ext + 1) != "avi")) {
@@ -421,7 +421,7 @@ int main(int argc, char *argv[]) {
         } else {
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         }
-        std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
+        std::cout << "oneVPL source description: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
         return -1;
