@@ -218,7 +218,7 @@ def op(op_id, in_types, out_types):
 
         for i, t in enumerate(out_types):
             if t not in [cv.GMat, cv.GScalar, *garray_types, *gopaque_types]:
-                   raise Exception('{} unsupported output type: {} in possition: {}'
+                   raise Exception('{} unsupported output type: {} in position: {}'
                            .format(cls.__name__, t.__name__, i))
 
         def on(*args):

@@ -147,7 +147,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_out_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 2) Falls back on generic status procesing
+        // 2) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<session_type&>(sess));
@@ -273,7 +273,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
                 throw std::runtime_error("Cannot execute MFXVideoVPP_QueryIOSurf");
             }
 
-            // NB: Assing ID as upper limit descendant to distinguish specific VPP allocation
+            // NB: Assign ID as upper limit descendant to distinguish specific VPP allocation
             // from decode allocations witch started from 0: by local module convention
 
             static uint16_t request_id = 0;

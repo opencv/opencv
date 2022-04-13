@@ -460,7 +460,7 @@ public:
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
 
-    // NB: Need to gurantee that MediaFrame::View doesn't die until request is over.
+    // NB: Need to guarantee that MediaFrame::View doesn't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
 
@@ -963,7 +963,7 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
 
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
-    // General alghoritm:
+    // General algorithm:
     //     1. Collect island inputs/outputs.
     //     2. Create kernel context. (Every kernel has his own context).
     //     3. If the EndOfStream message is recieved, wait until all passed task are done.

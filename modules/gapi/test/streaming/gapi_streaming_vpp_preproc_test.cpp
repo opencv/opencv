@@ -346,9 +346,9 @@ void preproc_function(cv::gapi::wip::IPreprocEngine &preproc_engine, SafeQueue&q
     // launch pipeline
     bool in_progress = false;
     // let's allow counting of preprocessed frames to check this value later:
-    // Currently, it looks redundant to implement any kind of gracefull shutdown logic
+    // Currently, it looks redundant to implement any kind of graceful shutdown logic
     // in this test - so let's apply agreement that media source is processed
-    // succesfully when preproc_number != 1 in result.
+    // successfully when preproc_number != 1 in result.
     // Specific validation logic which adhere to explicit counter value may be implemented
     // in particular test scope
     preproc_number = 1;
