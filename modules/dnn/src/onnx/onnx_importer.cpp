@@ -3675,8 +3675,8 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-                                          "Identity", "Log", "Round", "Selu", "Sigmoid", "Sin", "Sinh", "Softmax",
-                                          "Softplus", "Softsign", "Sqrt", "Tan", "ThresholdedRelu"};
+                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
+                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu"};
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;
