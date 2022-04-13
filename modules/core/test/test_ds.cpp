@@ -356,7 +356,8 @@ Core_DynStructBaseTest::Core_DynStructBaseTest()
 {
     struct_count = 2;
     max_struct_size = 2000;
-    min_log_storage_block_size = 7;
+    // CvSeq is 192 bytes with CHERI - storage block size must be at least sizeof(CvSeq) + sizeof(CvMemBlock) (192 + 32).
+    min_log_storage_block_size = 8;
     max_log_storage_block_size = 12;
     min_log_elem_size = 0;
     max_log_elem_size = 8;
@@ -566,6 +567,10 @@ int Core_SeqBaseTest::test_multi_create()
             {
                 int hdr_size = (cvtest::randInt(rng) % 10)*4 + sizeof(CvSeq);
                 hdr_size = MIN( hdr_size, (int)(storage->block_size - sizeof(CvMemBlock)) );
+
+		// FIXME(ben): I'm not sure what the intent of the min() above is, but hdr_size cannot be less than sizeof(CvSeq) and, in Morello at least, it can be after that min()
+		hdr_size = MAX( hdr_size, (int)sizeof(CvSeq) );
+	    
                 elem_size = sseq->elem_size;
 
                 if( cvtest::randInt(rng) % 2 )
@@ -1404,7 +1409,7 @@ void Core_SetTest::run( int )
                 t = cvtest::randReal(rng)*(max_log_elem_size - min_log_elem_size) + min_log_elem_size;
                 int pure_elem_size = cvRound( exp(t * CV_LOG2) );
                 int elem_size = pure_elem_size + sizeof(int);
-                elem_size = (elem_size + sizeof(size_t) - 1) & ~(sizeof(size_t)-1);
+                elem_size = (elem_size + sizeof(uintptr_t) - 1) & ~(sizeof(uintptr_t)-1);
                 elem_size = MAX( elem_size, (int)sizeof(CvSetElem) );
                 elem_size = MIN( elem_size, (int)(storage->block_size - sizeof(void*) - sizeof(CvMemBlock) - sizeof(CvSeqBlock)) );
                 pure_elem_size = MIN( pure_elem_size, elem_size-(int)sizeof(CvSetElem) );
@@ -1841,7 +1846,7 @@ void Core_GraphTest::run( int )
                     int pe = cvRound( exp(t * CV_LOG2) ) - 1; // pure_elem_size==0 does also make sense
                     int delta = k == 0 ? sizeof(CvGraphVtx) : sizeof(CvGraphEdge);
                     int e = pe + delta;
-                    e = (e + sizeof(size_t) - 1) & ~(sizeof(size_t)-1);
+                    e = (e + sizeof(uintptr_t) - 1) & ~(sizeof(uintptr_t)-1);
                     e = MIN( e, (int)(storage->block_size - sizeof(CvMemBlock) -
                                       sizeof(CvSeqBlock) - sizeof(void*)) );
                     pe = MIN(pe, e - delta);
