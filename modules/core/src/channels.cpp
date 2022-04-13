@@ -103,8 +103,11 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     size_t i, j, k, esz1 = dst[0].elemSize1();
     int depth = dst[0].depth();
 
-    AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6));
-    const Mat** arrays = (const Mat**)(uchar*)buf.data();
+    AutoBuffer<uchar> buf((nsrcs + ndsts + 1)*(sizeof(Mat*) + sizeof(uchar*)) + npairs*(sizeof(uchar*)*2 + sizeof(int)*6) + sizeof(uintptr_t));
+    // Align for pointers
+    // FIXME: use alignPtr
+    uintptr_t off = sizeof(uintptr_t) - (uintptr_t)buf.data() % sizeof(uintptr_t);
+    const Mat** arrays = (const Mat**)((uchar*)buf.data() + off);
     uchar** ptrs = (uchar**)(arrays + nsrcs + ndsts);
     const uchar** srcs = (const uchar**)(ptrs + nsrcs + ndsts + 1);
     uchar** dsts = (uchar**)(srcs + npairs);

@@ -139,8 +139,8 @@ void split(const Mat& src, Mat* mv)
 
     size_t esz = src.elemSize(), esz1 = src.elemSize1();
     size_t blocksize0 = (BLOCK_SIZE + esz-1)/esz;
-    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
-    const Mat** arrays = (const Mat**)_buf.data();
+    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16 + sizeof(uintptr_t));
+    const Mat** arrays = (const Mat**)alignPtr(_buf.data(), sizeof(uintptr_t));
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
 
     arrays[0] = &src;

@@ -222,7 +222,7 @@ ITT_EXTERN_C_BEGIN ITT_JOIN(_N_(name),_t)* ITTNOTIFY_NAME(name) = ITT_VERSIONIZE
 
 ITT_GROUP_LIST(group_list);
 
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_group_alias
 {

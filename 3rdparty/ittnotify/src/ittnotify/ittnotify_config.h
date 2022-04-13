@@ -404,7 +404,7 @@ typedef enum {
     __itt_thread_ignored = 1
 } __itt_thread_state;
 
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_thread_info
 {

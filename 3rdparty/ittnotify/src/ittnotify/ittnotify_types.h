@@ -82,7 +82,7 @@ typedef enum ___itt_group_id
     __itt_group_all       = -1
 } __itt_group_id;
 
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_group_list
 {

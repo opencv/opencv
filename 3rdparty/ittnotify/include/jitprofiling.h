@@ -334,7 +334,7 @@ typedef enum _iJIT_CodeArchitecture
 
 } iJIT_CodeArchitecture;
 
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 /**
  * @brief Description of a JIT-compiled method

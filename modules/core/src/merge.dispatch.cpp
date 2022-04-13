@@ -166,8 +166,9 @@ void merge(const Mat* mv, size_t n, OutputArray _dst)
 
     size_t esz = dst.elemSize(), esz1 = dst.elemSize1();
     size_t blocksize0 = (int)((BLOCK_SIZE + esz-1)/esz);
-    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16);
-    const Mat** arrays = (const Mat**)_buf.data();
+    // FIXME(ben): why combine two arrays in one buffer?
+    AutoBuffer<uchar> _buf((cn+1)*(sizeof(Mat*) + sizeof(uchar*)) + 16 + 16);
+    const Mat** arrays = (const Mat**)alignPtr(_buf.data(), sizeof(Mat **));
     uchar** ptrs = (uchar**)alignPtr(arrays + cn + 1, 16);
 
     arrays[0] = &dst;

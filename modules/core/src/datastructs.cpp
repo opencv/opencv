@@ -43,7 +43,7 @@
 #ifndef OPENCV_EXCLUDE_C_API
 
 /* default alignment for dynamic data strucutures, resided in storages. */
-#define  CV_STRUCT_ALIGN    ((int)sizeof(double))
+#define  CV_STRUCT_ALIGN    ((int)MAX(sizeof(double), sizeof(void *)))
 
 /* default storage block size */
 #define  CV_STORAGE_BLOCK_SIZE   ((1<<16) - 128)
