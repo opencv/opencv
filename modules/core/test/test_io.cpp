@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 
+#include <fstream>
+
 namespace opencv_test { namespace {
 
 static SparseMat cvTsGetRandomSparseMat(int dims, const int* sz, int type,
@@ -799,6 +801,25 @@ TEST(Core_InputOutput, filestorage_base64_basic_memory_JSON)
     test_filestorage_basic(cv::FileStorage::WRITE_BASE64, ".json", true, true);
 }
 
+// issue #21851
+TEST(Core_InputOutput, filestorage_heap_overflow)
+{
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    CV_Assert(test_info);
+
+    std::string name = std::string(test_info->test_case_name()) + "--" + test_info->name();
+    const char data[] = {0x00, 0x2f, 0x4a, 0x4a, 0x50, 0x4a, 0x4a };
+
+    std::ofstream file;
+    file.open(name, std::ios_base::binary);
+    assert(file.is_open());
+
+    file.write(data, sizeof(data));
+    file.close();
+
+    // This just shouldn't segfault, otherwise it's fine
+    EXPECT_ANY_THROW(FileStorage(name, FileStorage::READ));
+}
 
 TEST(Core_InputOutput, filestorage_base64_valid_call)
 {
