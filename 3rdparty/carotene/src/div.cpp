@@ -157,8 +157,11 @@ void div(const Size2D &size,
 
     if (scale == 0.0f ||
         (std::numeric_limits<T>::is_integer &&
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicit-const-int-float-conversion"
          (scale * std::numeric_limits<T>::max()) <  1.0f &&
          (scale * std::numeric_limits<T>::max()) > -1.0f))
+#pragma clang diagnostic pop
     {
         for (size_t y = 0; y < size.height; ++y)
         {
