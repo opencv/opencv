@@ -1711,7 +1711,7 @@ ITT_STUBV(ITTAPI, void, heap_record, (unsigned int record_mask))
  */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_domain
 {
@@ -1802,7 +1802,7 @@ ITT_STUB(ITTAPI, __itt_domain*, domain_create,  (const char    *name))
  */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_id
 {
@@ -1900,7 +1900,7 @@ ITT_STUBV(ITTAPI, void, id_destroy, (const __itt_domain *domain, __itt_id id))
  */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_string_handle
 {
@@ -2629,7 +2629,7 @@ ITT_STUBV(ITTAPI, void, relation_add,            (const __itt_domain *domain, __
 /** @} relations group */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_clock_info
 {
@@ -2645,7 +2645,7 @@ typedef void (ITTAPI *__itt_get_clock_info_fn)(__itt_clock_info* clock_info, voi
 /** @endcond */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_clock_domain
 {
@@ -3263,7 +3263,7 @@ typedef enum ___itt_track_group_type
 /** @endcond */
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_track_group
 {
@@ -3291,7 +3291,7 @@ typedef enum ___itt_track_type
 } __itt_track_type;
 
 /** @cond exclude_from_documentation */
-#pragma pack(push, 8)
+#pragma pack(push, 16)
 
 typedef struct ___itt_track
 {
