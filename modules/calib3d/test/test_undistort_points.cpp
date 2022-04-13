@@ -14,7 +14,6 @@ protected:
     void generateDistCoeffs(Mat& distCoeffs, int count);
 
     double thresh = 1.0e-2;
-    RNG rng;
 };
 
 void UndistortPointsTest::generate3DPointCloud(vector<Point3f>& points, Point3f pmin, Point3f pmax)
@@ -35,10 +34,10 @@ void UndistortPointsTest::generateCameraMatrix(Mat& cameraMatrix)
     const double fcMaxVal = 100;
     cameraMatrix.create(3, 3, CV_64FC1);
     cameraMatrix.setTo(Scalar(0));
-    cameraMatrix.at<double>(0,0) = rng.uniform(fcMinVal, fcMaxVal);
-    cameraMatrix.at<double>(1,1) = rng.uniform(fcMinVal, fcMaxVal);
-    cameraMatrix.at<double>(0,2) = rng.uniform(fcMinVal, fcMaxVal);
-    cameraMatrix.at<double>(1,2) = rng.uniform(fcMinVal, fcMaxVal);
+    cameraMatrix.at<double>(0,0) = theRNG().uniform(fcMinVal, fcMaxVal);
+    cameraMatrix.at<double>(1,1) = theRNG().uniform(fcMinVal, fcMaxVal);
+    cameraMatrix.at<double>(0,2) = theRNG().uniform(fcMinVal, fcMaxVal);
+    cameraMatrix.at<double>(1,2) = theRNG().uniform(fcMinVal, fcMaxVal);
     cameraMatrix.at<double>(2,2) = 1;
 }
 
@@ -46,7 +45,7 @@ void UndistortPointsTest::generateDistCoeffs(Mat& distCoeffs, int count)
 {
     distCoeffs = Mat::zeros(count, 1, CV_64FC1);
     for (int i = 0; i < count; i++)
-        distCoeffs.at<double>(i,0) = rng.uniform(-0.1, 0.1);
+        distCoeffs.at<double>(i,0) = theRNG().uniform(-0.1, 0.1);
 }
 
 TEST_F(UndistortPointsTest, accuracy)
@@ -94,8 +93,7 @@ TEST_F(UndistortPointsTest, stop_criteria)
     Mat distCoeffs = (Mat_<double>(5,1,CV_64F) <<
                       -2.57614020e-01, 8.77086999e-02, -2.56970803e-04, -5.93390389e-04, -1.52194091e-02);
 
-    RNG rng(2);
-    Point2d pt_distorted(rng.uniform(0.0, 1920.0), rng.uniform(0.0, 1080.0));
+    Point2d pt_distorted(theRNG().uniform(0.0, 1920.0), theRNG().uniform(0.0, 1080.0));
 
     std::vector<Point2d> pt_distorted_vec;
     pt_distorted_vec.push_back(pt_distorted);
