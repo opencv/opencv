@@ -1,6 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
@@ -79,9 +81,8 @@ TEST_F(UndistortPointsTest, accuracy)
         Mat p;
         perspectiveTransform(undistortedPoints, p, intrinsics);
         undistortedPoints = p;
-        double diff = cvtest::norm(Mat(realUndistortedPoints), undistortedPoints, NORM_L2);
 
-        EXPECT_LE(diff, thresh);
+        EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
     }
 }
 
