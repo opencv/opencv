@@ -1035,7 +1035,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
         nodesToAdd.pop_back();
 
         permIds.push_back(nodeToAdd);
-
+        CV_Assert(nodeToAdd < edges.size());
         for (int i = 0; i < edges[nodeToAdd].size(); ++i)
         {
             int consumerId = edges[nodeToAdd][i];
