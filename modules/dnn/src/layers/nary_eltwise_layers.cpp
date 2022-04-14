@@ -52,16 +52,25 @@ public:
         setParamsFrom(params);
 
         String operation = toLowerCase(params.get<String>("operation", "sum"));
+
         if (operation == "prod")
             op = OPERATION::PROD;
         else if (operation == "sum")
             op = OPERATION::SUM;
+        else if (operation == "add")
+            op = OPERATION::SUM; // add
         else if (operation == "max")
             op = OPERATION::MAX;
         else if (operation == "min")
             op = OPERATION::MIN;
+        else if (operation == "mul")
+            op = OPERATION::PROD;
         else if (operation == "div")
             op = OPERATION::DIV;
+        else if (operation == "sub")
+            op = OPERATION::SUB;
+        else if (operation == "pow")
+            op = OPERATION::POW;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
@@ -99,6 +108,73 @@ public:
         return outShape;
     }
 
+    static bool prepare_for_broadcast_op(
+        int narrays, int max_ndims, const size_t* elemsize,
+        const int* ndims, const int** shape_, const size_t** step_,
+        int** shape, size_t** step)
+    {
+        int i, j, k;
+
+        // step 1.
+        // * make all inputs and the output max_ndims-dimensional.
+        // * compute proper step's
+        for (i = max_ndims-1; i >= 0; i-- ) {
+            for (k = 0; k < narrays; k++) {
+                j = ndims[k] - (max_ndims - i);
+                int sz_i = j >= 0 ? shape_[k][j] : 1;
+                size_t st_i = j >= 0 && step_ && step_[k] && step_[k][j] > 0 ? step_[k][j] :
+                    i == max_ndims-1 ? elemsize[k] : step[k][i+1]*shape[k][i+1];
+                assert(st_i % elemsize[k] == 0);
+                shape[k][i] = sz_i;
+                step[k][i] = st_i;
+                if (shape[k][i] == 0)
+                    return false;
+            }
+        }
+
+        // step 3. Let's do the flattening first,
+        // since we'd need proper values of steps to check continuity.
+        // this loop is probably the most tricky part
+        // in the whole implementation of broadcasting.
+        j = max_ndims-1;
+        for (i = j - 1; i >= 0; i--) {
+            bool all_contiguous = true, all_scalars = true, all_consistent = true;
+            for(k = 0; k < narrays; k++) {
+                size_t st = step[k][j]*shape[k][j];
+                bool prev_scalar = shape[k][j] == 1;
+                bool scalar = shape[k][i] == 1;
+                all_contiguous = all_contiguous && (st == step[k][i]);
+                all_scalars = all_scalars && scalar;
+                all_consistent = all_consistent && (scalar == prev_scalar);
+            }
+            if (all_contiguous && (all_consistent || all_scalars)) {
+                for(k = 0; k < narrays; k++)
+                    shape[k][j] *= shape[k][i];
+            } else {
+                j--;
+                if (i < j) {
+                    for(k = 0; k < narrays; k++) {
+                        shape[k][j] = shape[k][i];
+                        step[k][j] = step[k][i];
+                    }
+                }
+            }
+        }
+
+        // step 2. Set some step's to 0's.
+        for (i = max_ndims-1; i >= j; i--) {
+            for (k = 0; k < narrays; k++)
+                step[k][i] = shape[k][i] == 1 ? 0 : step[k][i];
+        }
+        for (; i >= 0; i--) {
+            for (k = 0; k < narrays; k++) {
+                step[k][i] = 0;
+                shape[k][i] = 1;
+            }
+        }
+        return true;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -109,118 +185,87 @@ public:
         return false;
     }
 
-    // doesn't take into account non-continuous matrices, because we're in DNN
-    void foldShapes()
+    template <typename T, typename Functor>
+    void do_broadcast_op(
+            int ndims, const int* shape,
+            const char* data1, const size_t* step1,
+            const char* data2, const size_t* step2,
+            char* data, const size_t* step,
+            const Functor& op)
     {
-        // pad shapes
-        for (auto& shape : input_shapes)
-        {
-            shape.insert(shape.begin(), output_shape.size() - shape.size(), 1);
-        }
+        assert(ndims >= 2);
+        size_t dp1 = step1[ndims-1]/sizeof(T);
+        size_t dp2 = step2[ndims-1]/sizeof(T);
+        size_t dp = step[ndims-1]/sizeof(T);
+        int k, n1 = shape[ndims-1], n2 = shape[ndims-2];
+        size_t plane_idx, nplanes = 1;
+        for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
 
-        size_t i = 0;
-        for (size_t j = 1; j < output_shape.size(); ++j)
-        {
-            bool foldFull = true;
-            bool foldOnes = true;
-            for (size_t k = 1; k < input_shapes.size(); ++k)
-            {
-                const auto& shape_a = input_shapes[k - 1];
-                const auto& dim_a = shape_a[j];
-                const auto& prev_dim_a = shape_a[j - 1];
-
-                const auto& shape_b = input_shapes[k];
-                const auto& dim_b = shape_b[j];
-                const auto& prev_dim_b = shape_b[j - 1];
-
-                foldFull &= ((prev_dim_a == prev_dim_b && dim_a == dim_b) ||
-                           (std::min(prev_dim_a, dim_a) != 1 && std::max(prev_dim_b, dim_b) == 1) ||
-                           (std::min(prev_dim_b, dim_b) != 1 && std::max(prev_dim_a, dim_a) == 1));
-
-                foldOnes &= ((std::max(dim_a, dim_b) == 1) && (prev_dim_a == 1 || prev_dim_b == 1));
+        for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
+            const char* ptr1_ = data1;
+            const char* ptr2_ = data2;
+            char* ptr_ = data;
+            size_t idx = plane_idx;
+            for (k = ndims-3; k >= 0; k--) {
+                size_t next_idx = idx/shape[k];
+                int i_k = (int)(idx - next_idx*shape[k]);
+                ptr1_ += i_k*step1[k];
+                ptr2_ += i_k*step2[k];
+                ptr_ += i_k*step[k];
+                idx = next_idx;
             }
-
-            if (!foldFull && !foldOnes) ++i;
-            for (auto& shp : input_shapes)
+            for (int i2 = 0; i2 < n2; i2++, ptr1_ += step1[ndims-2],
+                                            ptr2_ += step2[ndims-2],
+                                            ptr_ += step[ndims-2])
             {
-                if (foldFull)
-                {
-                    shp[i] *= shp[j];
+                const T* ptr1 = (const T*)ptr1_;
+                const T* ptr2 = (const T*)ptr2_;
+                T* ptr = (T*)ptr_;
+                if (dp1 == 1 && dp2 == 1 && dp == 1) {
+                    for(int i1 = 0; i1 < n1; i1++)
+                        ptr[i1] = op(ptr1[i1], ptr2[i1]);
+                } else if (dp1 == 1 && dp2 == 0 && dp == 1){
+                    T x2 = *ptr2;
+                    for(int i1 = 0; i1 < n1; i1++)
+                        ptr[i1] = op(ptr1[i1], x2);
+                } else if (dp1 == 0 && dp2 == 1 && dp == 1){
+                    T x1 = *ptr1;
+                    for(int i1 = 0; i1 < n1; i1++)
+                        ptr[i1] = op(x1, ptr2[i1]);
+                } else {
+                    for(int i1 = 0; i1 < n1; i1++, ptr1 += dp1, ptr2 += dp2, ptr += dp)
+                        *ptr = op(*ptr1, *ptr2);
                 }
-                else if (foldOnes)
-                {
-                    shp[i] = shp[j - 1];
-                }
-                else
-                {
-                    shp[i] = shp[j];
-                }
-            }
-            // TODO: save output_shape in the same array maybe?
-            if (foldFull)
-            {
-                output_shape[i] *= output_shape[j];
-            }
-            else if (foldOnes)
-            {
-                output_shape[i] = output_shape[j - 1];
-            }
-            else
-            {
-                output_shape[i] = output_shape[j];
             }
         }
-        for (auto& shp : input_shapes)
-        {
-            shp.resize(i + 1);
-        }
-        output_shape.resize(i + 1);
     }
 
-    void setStrides()
+    template <typename T, typename Functor>
+    void forward_impl(const Functor& f, const Mat& a, const Mat& b, Mat& out)
     {
-        input_steps.resize(input_shapes.size(), VectorType<size_t>(output_shape.size()));
+        int *shape_buf;
+        size_t *step_buf;
+        int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        for (size_t i = 0; i < input_steps.size(); ++i)
-        {
-            input_steps[i].back() = 1;
-            for (ptrdiff_t j = static_cast<ptrdiff_t>(output_shape.size()) - 2; j >= 0; --j)
-            {
-                input_steps[i][j] = input_steps[i][j + 1] * input_shapes[i][j + 1];
-            }
-            for (size_t j = 0; j < output_shape.size(); ++j)
-            {
-                if (input_shapes[i][j] != output_shape[j])
-                    input_steps[i][j] = 0;
-            }
-        }
+        // TODO: SmallVec instead of alloca as we might run out of stack
+        step_buf = (size_t*)alloca(3*max_ndims*(sizeof(size_t) + sizeof(int)));
+        shape_buf = (int*)(step_buf + max_ndims*3);
+        size_t all_type_sizes[] = {sizeof(T), sizeof(T), sizeof(T)};
+        int all_ndims[] = {out.dims, a.dims, b.dims};
+        const int* orig_shapes[] = {out.size.p, a.size.p, b.size.p};
+        const size_t* orig_steps[] = {out.step.p, a.step.p, b.step.p};
+        int* shapes[] = {shape_buf, shape_buf + max_ndims, shape_buf + max_ndims*2};
+        size_t* steps[] = {step_buf, step_buf + max_ndims, step_buf + max_ndims*2};
 
-        // TODO: transpose
-        VectorType<VectorType<size_t>> steps_transposed(output_shape.size(), VectorType<size_t>(input_steps.size()));
-        for (size_t i = 0; i < input_steps.size(); ++i)
-        {
-            for (size_t j = 0; j < output_shape.size(); ++j)
-            {
-                steps_transposed[j][i] = input_steps[i][j];
-            }
-        }
-        input_steps = std::move(steps_transposed);
-    }
+        if (!prepare_for_broadcast_op(3, max_ndims, all_type_sizes,
+                                      all_ndims, orig_shapes, orig_steps,
+                                      shapes, steps))
+            return;
 
-    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
-    {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        auto shapeGetter = [] (const auto& m) {
-            auto v = shape(m);
-            return VectorType<int>(v.begin(), v.end());
-        };
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(input_shapes), shapeGetter);
-        output_shape = shapeGetter(outputs[0]);
-        foldShapes();
-        setStrides();
+        do_broadcast_op<T, Functor>(
+                    max_ndims, shapes[0], a.ptr<char>(), steps[1],
+                    b.ptr<char>(), steps[2], out.ptr<char>(), steps[0],
+                    f);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -238,56 +283,129 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        VectorType<size_t> offsets(inputs.size(), 0);
+        Mat& a = inputs[0];
+        Mat& b = inputs[1];
+        Mat& out = outputs[0];
+        CV_Assert(a.type() == b.type() && b.type() == out.type());
 
-        CV_Assert(inputs.size() >= 2 && outputs.size() == 1);
+        typeDispatch(a.type(), a, b, out);
+    }
 
-        auto dstptr = outputs[0].ptr<float>();
-
-        const size_t n = output_shape[output_shape.size() - 1];
-        const size_t total = outputs[0].total() / n;
-
-        const ptrdiff_t dims = output_shape.size();
-        const size_t ninputs = inputs.size();
-
-        VectorType<int> indices(output_shape.size(), 0);
-        auto& last_steps = input_steps[input_steps.size() - 1];
-
-        for (size_t i = 0; i < total; ++i) {
-            for (size_t j = 0; j < n; ++j)
+    template<typename T, typename... Args>
+    inline void opDispatch(Args&&... args)
+    {
+        switch (op)
+        {
+            case OPERATION::EQUAL:
             {
-                float tmp = 0.f;
-                for (size_t k = 0; k < ninputs; ++k)
-                {
-                    tmp += inputs[k].ptr<float>()[offsets[k] + last_steps[k] * j];
-                }
-                // TODO: template functor
-                *dstptr++ = tmp;
+                auto equal = [](const T &a, const T &b) { return a == b; };
+                forward_impl<T>(equal, std::forward<Args>(args)...);
+                break;
             }
-
-            for (ptrdiff_t j = dims - 2; j >= 0; --j) {
-                auto& steps = input_steps[j];
-                auto dim = output_shape[j];
-
-                std::transform(offsets.begin(), offsets.end(), steps.begin(), offsets.begin(), std::plus<size_t>{});
-
-                if (++indices[j] != dim) break;
-
-                std::transform (offsets.begin(), offsets.end(), steps.begin(), offsets.begin(),
-                    [dim] (auto& a, auto& b) { return a - dim * b; });
-
-                indices[j] = 0;
+            case OPERATION::GREATER:
+            {
+                auto greater = [](const T &a, const T &b) { return a > b; };
+                forward_impl<T>(greater, std::forward<Args>(args)...);
+                break;
             }
+            case OPERATION::GREATER_EQUAL:
+            {
+                auto greater_equal = [](const T &a, const T &b) { return a >= b; };
+                forward_impl<T>(greater_equal, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::LESS:
+            {
+                auto less = [](const T &a, const T &b) { return a < b; };
+                forward_impl<T>(less, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::LESS_EQUAL:
+            {
+                auto less_equal = [](const T &a, const T &b) { return a <= b; };
+                forward_impl<T>(less_equal, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::POW:
+            {
+                auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
+                forward_impl<T>(pow, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::BITSHIFT:
+            {
+                auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
+                forward_impl<T>(bitshift, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::MAX:
+            {
+                auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                forward_impl<T>(max, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::MEAN:
+            {
+                auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                forward_impl<T>(mean, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::MIN:
+            {
+                auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                forward_impl<T>(min, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::MOD:
+            {
+                auto mod = [](const uint8_t &a, const uint8_t &b) { return a % b; };
+                forward_impl<T>(mod, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::PROD:
+            {
+                auto prod = [](const T &a, const T &b) { return a * b; };
+                forward_impl<T>(prod, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::SUB:
+            {
+                auto sub = [](const T &a, const T &b) { return a - b; };
+                forward_impl<T>(sub, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::SUM:
+            {
+                auto sum = [](const T &a, const T &b) { return a + b; };
+                forward_impl<T>(sum, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::DIV:
+            {
+                auto div = [](const T &a, const T &b) { return a / b; };
+                forward_impl<T>(div, std::forward<Args>(args)...);
+                break;
+            }
+            default:
+                CV_Error(Error::StsBadArg, "Unsupported operation.");
+        };
+    }
 
-//            std::fill(offsets.begin(), offsets.end(), 0);
-//            for (size_t k = 0; k < input_shapes.size(); ++k)
-//            {
-//                for (ptrdiff_t j = 0; j < dims - 1; ++j)
-//                {
-//                    offsets[k] += input_steps[k][j] * indices[j];
-//                }
-//            }
-        }
+    template<typename... Args>
+    inline void typeDispatch(const int type, Args&&... args)
+    {
+        switch (type)
+        {
+            case CV_8U:
+                opDispatch<uint8_t>(std::forward<Args>(args)...);
+                break;
+            case CV_32F:
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::MOD);
+                opDispatch<float>(std::forward<Args>(args)...);
+                break;
+            default:
+                CV_Error(cv::Error::BadDepth, "Unsupported type.");
+        };
     }
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
