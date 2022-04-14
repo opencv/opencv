@@ -5,7 +5,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
-#include "small_vector.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -15,9 +14,6 @@ namespace cv
 {
 namespace dnn
 {
-
-template <typename T>
-using VectorType = itlib::small_vector<T, 5, 5>;
 
 class NaryEltwiseLayerImpl CV_FINAL : public NaryEltwiseLayer
 {
@@ -420,13 +416,6 @@ public:
         CV_Assert(inputs.size());
         return inputs.size() * total(outputs[0]);
     }
-
-private:
-    // TODO: flat index, transpose (INPUTS, DIMS) to (DIMS, INPUTS)
-    VectorType<VectorType<size_t>> input_steps;
-
-    VectorType<VectorType<int>> input_shapes;
-    VectorType<int> output_shape;
 };
 
 Ptr<NaryEltwiseLayer> NaryEltwiseLayer::create(const LayerParams& params)
