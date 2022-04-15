@@ -276,7 +276,7 @@ ZEXTERN int ZEXPORT deflate OF((z_streamp strm, int flush));
   == 0), or after each call of deflate().  If deflate returns Z_OK and with
   zero avail_out, it must be called again after making room in the output
   buffer because there might be more output pending. See deflatePending(),
-  which can be used if desired to determine whether or not there is more ouput
+  which can be used if desired to determine whether or not there is more output
   in that case.
 
     Normally the parameter flush is set to Z_NO_FLUSH, which allows deflate to

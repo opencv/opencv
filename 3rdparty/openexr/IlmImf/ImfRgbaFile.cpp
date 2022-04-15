@@ -453,7 +453,7 @@ RgbaOutputFile::ToYca::writePixels (int numScanLines)
 	    ++_linesConverted;
 
 	    //
-	    // If we have have converted at least N2 scan lines from
+	    // If we have converted at least N2 scan lines from
 	    // RGBA to luminance/chroma, then we can start to filter
 	    // and subsample vertically, and store pixels in the
 	    // output file.

@@ -876,7 +876,7 @@ B44Compressor::uncompress (const char *inPtr,
     // verbatim; HALF channels are uncompressed in blocks of
     // 4x4 pixels.  Then the pixels in _tmpBuffer are copied
     // into the output buffer and rearranged such that the data
-    // for for each scan line form a contiguous block.
+    // for each scan line form a contiguous block.
     //
 
     outPtr = _outBuffer;
