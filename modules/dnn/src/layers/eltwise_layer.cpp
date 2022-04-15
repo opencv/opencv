@@ -693,8 +693,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert(outputs.size() == 1);
-        // used as a reference implementation without multithreading
-        const int nstripes = 1; //getNumThreads();
+        const int nstripes = getNumThreads();
 
         if (channelsModeInput == ELTWISE_CHANNNELS_SAME && inputs[0].dims > 2)
         {

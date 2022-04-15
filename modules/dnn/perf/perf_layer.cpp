@@ -75,6 +75,7 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
         LayerParams lp;
         lp.type = "NaryEltwise";
         lp.name = "testLayer";
+        lp.set("operation", "min");
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
         net.connect(0, 1, id, 1);
 
@@ -118,6 +119,7 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
         LayerParams lp;
         lp.type = "Eltwise";
         lp.name = "testLayer";
+        lp.set("operation", "min");
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
         net.connect(0, 1, id, 1);
 
