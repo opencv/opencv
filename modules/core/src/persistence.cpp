@@ -817,7 +817,7 @@ char *FileStorage::Impl::gets(size_t maxCount) {
         int delta = (int) strlen(ptr);
         ofs += delta;
         maxCount -= delta;
-        if (ptr[delta - 1] == '\n' || maxCount == 0)
+        if (delta == 0 || ptr[delta - 1] == '\n' || maxCount == 0)
             break;
         if (delta == count)
             buffer.resize((size_t) (buffer.size() * 1.5));
