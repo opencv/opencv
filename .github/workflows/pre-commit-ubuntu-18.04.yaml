@@ -1,0 +1,275 @@
+name: Build OpenCV on Pull Requests
+
+on:
+  pull_request:
+    branches:
+      - 4.x
+
+env:
+  EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_opencv_xfeatures2d=OFF'
+  OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
+
+jobs:
+  build-opencv:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Build OpenCV
+      run: |
+        cd /opencv-build
+        cmake -G  Ninja $EXTRA_CMAKE_OPTIONS /opencv
+        ninja
+
+    - name: Save artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: opencv-build
+        path: /opencv-build
+
+
+  build-opencv-contrib:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Clone opencv_contrib
+      run: git clone --single-branch --branch ${{ github.base_ref }} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
+
+    - name: Build OpenCV Contrib
+      run: |
+        cd /opencv-contrib-build
+        cmake -G Ninja $EXTRA_CMAKE_OPTIONS -DOPENCV_EXTRA_MODULES_PATH=/opencv_contrib/modules /opencv
+        ninja
+
+
+  opencv-test:
+    needs: [build-opencv]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+        test-name:
+          [
+            "opencv_test_calib3d",
+            "opencv_test_core",
+            "opencv_test_dnn",
+            "opencv_test_features2d",
+            "opencv_test_flann",
+            "opencv_test_gapi",
+            "opencv_test_highgui",
+            "opencv_test_imgcodecs",
+            "opencv_test_imgproc",
+            "opencv_test_ml",
+            "opencv_test_objdetect",
+            "opencv_test_photo",
+            "opencv_test_stitching",
+            "opencv_test_video",
+            "opencv_test_videoio",
+            "opencv_perf_calib3d",
+            "opencv_perf_core",
+            "opencv_perf_dnn",
+            "opencv_perf_features2d",
+            "opencv_perf_gapi",
+            "opencv_perf_imgcodecs",
+            "opencv_perf_imgproc",
+            "opencv_perf_objdetect",
+            "opencv_perf_photo",
+            "opencv_perf_stitching",
+            "opencv_perf_video",
+            "opencv_perf_videoio",
+          ]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Clone opencv_extra
+      run: git clone --single-branch --branch ${{ github.base_ref }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: opencv-build
+        path: /opencv-build
+
+    - name: Test OpenCV - ${{ matrix.test-name }}
+      run: |
+        cd /opencv-build
+        # in case of issue: https://github.com/actions/upload-artifact/issues/38
+        chmod +x ./bin/*
+        xvfb-run -a ./bin/${{ matrix.test-name }}
+
+
+  python-test:
+    needs: [build-opencv]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      env:
+        PYTHONPATH: /opencv-build/lib/python3:$PYTHONPATH
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Clone opencv_extra
+      run: git clone --single-branch --branch ${{ github.base_ref }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: opencv-build
+        path: /opencv-build
+
+    - name: Python3 test OpenCV
+      run: |
+        cd /opencv/modules/python/test
+        python3 ./test.py --repo ../../../
+
+
+  java-test:
+    needs: [build-opencv]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Clone opencv_extra
+      run: git clone --single-branch --branch ${{ github.base_ref }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: opencv-build
+        path: /opencv-build
+
+    - name: Java test OpenCV
+      run: |
+        cd /opencv-build
+        xvfb-run -a python3 ../opencv/modules/ts/misc/run.py . -a -t java
+
+
+  pylint-test:
+    needs: [build-opencv]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        platform: [x64]
+
+    container:
+      image: quay.io/asenyaev/opencv-ubuntu:18.04
+      volumes:
+        - ${{ github.workspace }}:/opencv
+
+    steps:
+    - name: Checkout opencv
+      uses: actions/checkout@v3
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Clone opencv_extra
+      run: git clone --single-branch --branch ${{ github.base_ref }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: opencv-build
+        path: /opencv-build
+
+    - name: Pylint test OpenCV
+      run: |
+        cd /opencv-build
+        cmake --build . --config release --target check_pylint -- -j4
