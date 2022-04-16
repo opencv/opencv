@@ -137,7 +137,7 @@ const char * ZEXPORT zError(err)
 }
 
 #if defined(_WIN32_WCE) && _WIN32_WCE < 0x800
-    /* The Microsoft C Run-Time Library for Windows CE doesn't have
+    /* The older Microsoft C Run-Time Library for Windows CE doesn't have
      * errno.  We define it as a global variable to simplify porting.
      * Its value is always 0 and should not be used.
      */

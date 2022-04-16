@@ -566,7 +566,7 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         if (IPP_DISABLE_GAUSSIAN_BLUR_32FC4_1TH && (threads == 1 && src.type() == CV_32FC4))
             return false;
 
-        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
+        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1 && iwSrc.m_size.height/(threads * 4) >= ksize.height/2) {
             bool ok;
             ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
 

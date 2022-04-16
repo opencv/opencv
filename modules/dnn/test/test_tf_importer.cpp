@@ -1719,6 +1719,13 @@ TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)
     runTensorFlowNet("tf2_permute_nhwc_ncwh");
 }
 
+// issue #21852
+TEST_P(Test_TensorFlow_layers, tf_graph_simplifier_buffer_overflow)
+{
+    // This just shouldn't segfault, otherwise it's fine
+    EXPECT_ANY_THROW(readNetFromTensorflow(path("tf_graph_simplifier_buffer_overflow_net.pb")));
+}
+
 TEST_P(Test_TensorFlow_layers, squeeze)
 {
 #if defined(INF_ENGINE_RELEASE)
