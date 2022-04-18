@@ -516,7 +516,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
     else if (target == DNN_TARGET_CUDA_FP16)
     {
         l1 = 0.008;
-        lInf = 0.05;
+        lInf = 0.06;
     }
     processNet("dnn/DenseNet_121.caffemodel", "dnn/DenseNet_121.prototxt", Size(224, 224), "", "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)

@@ -2282,7 +2282,7 @@ struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
 
     inline float calculate(float x) const
     {
-        return x > 0 ? 1 : (x < 0 ? -1 : 0);
+        return x > 0.f ? 1.f : (x < 0.f ? -1.f : 0.f);
     }
 
 #ifdef HAVE_CUDA
@@ -2315,13 +2315,13 @@ struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
 
     inline float calculate(float x) const
     {
-        return x > lambd ? x - bias : (x < -lambd ? x + bias : 0);
+        return x > lambd ? x - bias : (x < -lambd ? x + bias : 0.f);
     }
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
-        return make_cuda_node<cuda4dnn::ShrinkOp>(target, stream);
+        return make_cuda_node<cuda4dnn::ShrinkOp>(target, stream, bias, lambd);
     }
 #endif
 
@@ -2343,7 +2343,7 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 
     inline float calculate(float x) const
     {
-        return 1.0/x;
+        return 1.f/x;
     }
 
 #ifdef HAVE_CUDA

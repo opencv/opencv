@@ -2080,6 +2080,7 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
+        // TODO: extract bias from inputs and pass it
         CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
