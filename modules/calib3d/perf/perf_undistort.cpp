@@ -29,7 +29,6 @@ PERF_TEST(Undistort, DISABLED_InitInverseRectificationMap)
 
 PERF_TEST(Undistort, fisheye_undistortPoints)
 {
-
     const cv::Size imageSize(1280, 800);
 
     const cv::Matx33d K(558.478087865323,  0, 620.458515360843,
