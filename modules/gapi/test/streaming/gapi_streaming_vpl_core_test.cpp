@@ -36,6 +36,7 @@
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 #include "streaming/onevpl/accelerators/dx11_alloc_resource.hpp"
 #include "streaming/onevpl/accelerators/utils/shared_lock.hpp"
 #define private public
@@ -79,7 +80,7 @@ struct TestProcessingSession : public cv::gapi::wip::onevpl::EngineSession {
 
 struct TestProcessingEngine: public cv::gapi::wip::onevpl::ProcessingEngineBase {
 
-    size_t pipeline_stage_num = 0;
+    int pipeline_stage_num = 0;
 
     TestProcessingEngine(std::unique_ptr<cv::gapi::wip::onevpl::VPLAccelerationPolicy>&& accel) :
         cv::gapi::wip::onevpl::ProcessingEngineBase(std::move(accel)) {
@@ -154,7 +155,7 @@ private:
     mfxFrameAllocator m_allocator;
 };
 template <class LockProcessor, class UnlockProcessor>
-std::map<mfxMemId, UnlockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::lock_processor_table {};
+std::map<mfxMemId, LockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::lock_processor_table {};
 
 template <class LockProcessor, class UnlockProcessor>
 std::map<mfxMemId, UnlockProcessor> TestLockableAllocator<LockProcessor, UnlockProcessor>::unlock_processor_table {};
@@ -194,11 +195,11 @@ TEST(OneVPL_Source_Surface, InitSurface)
     // check self consistency
     EXPECT_EQ(reinterpret_cast<void*>(surf->get_handle()),
               reinterpret_cast<void*>(mfx_core_handle));
-    EXPECT_EQ(0, surf->get_locks_count());
-    EXPECT_EQ(0, surf->obtain_lock());
-    EXPECT_EQ(1, surf->get_locks_count());
-    EXPECT_EQ(1, surf->release_lock());
-    EXPECT_EQ(0, surf->get_locks_count());
+    EXPECT_TRUE(0 == surf->get_locks_count());
+    EXPECT_TRUE(0 == surf->obtain_lock());
+    EXPECT_TRUE(1 == surf->get_locks_count());
+    EXPECT_TRUE(1 == surf->release_lock());
+    EXPECT_TRUE(0 == surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_Surface, ConcurrentLock)
@@ -213,7 +214,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check self consistency
-    EXPECT_EQ(0, surf->get_locks_count());
+    EXPECT_TRUE(0 == surf->get_locks_count());
 
     // MFX internal limitation: do not exceede U16 range
     // so I16 is using here
@@ -238,7 +239,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     }
 
     worker_thread.join();
-    EXPECT_EQ(lock_counter * 2, surf->get_locks_count());
+    EXPECT_TRUE(static_cast<size_t>(lock_counter * 2) == surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_Surface, MemoryLifeTime)
@@ -271,7 +272,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     }
 
     // workspace memory must be alive
-    EXPECT_EQ(0, surfaces.size());
+    EXPECT_TRUE(0 == surfaces.size());
     EXPECT_TRUE(associated_memory != nullptr);
     EXPECT_TRUE(preallocated_memory_ptr.get() != nullptr);
 
@@ -293,7 +294,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     associated_memory.reset();
 
     // workspace memory must be still alive
-    EXPECT_EQ(0, surfaces.size());
+    EXPECT_TRUE(0 == surfaces.size());
     EXPECT_TRUE(associated_memory == nullptr);
     EXPECT_TRUE(preallocated_memory_ptr.get() != nullptr);
 
@@ -316,14 +317,14 @@ TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
     auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check consistency
-    EXPECT_EQ(0, surf->get_locks_count());
+    EXPECT_TRUE(0 == surf->get_locks_count());
 
     {
         mfxSession stub_session = reinterpret_cast<mfxSession>(0x1);
         VPLMediaFrameCPUAdapter adapter(surf, stub_session);
-        EXPECT_EQ(1, surf->get_locks_count());
+        EXPECT_TRUE(1 == surf->get_locks_count());
     }
-    EXPECT_EQ(0, surf->get_locks_count());
+    EXPECT_TRUE(0 == surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
@@ -385,13 +386,13 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(0, surf->obtain_lock());
+        EXPECT_TRUE(0 == surf->obtain_lock());
         surfaces.push_back(std::move(surf));
     }
 
     // check consistency (no free surfaces)
     EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-    EXPECT_EQ(0, acceleration_policy->get_free_surface_count(key));
+    EXPECT_TRUE(0 == acceleration_policy->get_free_surface_count(key));
 
     // fail consume non-free surfaces
     for (size_t i = 0; i < surface_count; i++) {
@@ -400,7 +401,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
 
     // release surfaces
     for (auto& surf : surfaces) {
-        EXPECT_EQ(1, surf->release_lock());
+        EXPECT_TRUE(1 == surf->release_lock());
     }
     surfaces.clear();
 
@@ -412,7 +413,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(0, surf->obtain_lock());
+        EXPECT_TRUE(0 == surf->obtain_lock());
     }
 }
 
@@ -444,7 +445,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(0, surf->obtain_lock());
+        EXPECT_TRUE(0 == surf->obtain_lock());
         surfaces.push_back(std::move(surf));
     }
 
@@ -458,7 +459,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
         // concurrent release surfaces
         size_t surfaces_count = surfaces.size();
         for (auto& surf : surfaces) {
-            EXPECT_EQ(1, surf->release_lock());
+            EXPECT_TRUE(1 == surf->release_lock());
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         surfaces.clear();
@@ -492,7 +493,7 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     mfxSession mfx_session{};
     engine.initialize_session(mfx_session, {}, std::shared_ptr<IDataProvider>{});
 
-    EXPECT_EQ(0, engine.get_ready_frames_count());
+    EXPECT_TRUE(0 == engine.get_ready_frames_count());
     ProcessingEngineBase::ExecutionStatus ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
     EXPECT_EQ(0, engine.pipeline_stage_num);
@@ -508,12 +509,12 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Processed);
     EXPECT_EQ(3, engine.pipeline_stage_num);
-    EXPECT_EQ(1, engine.get_ready_frames_count());
+    EXPECT_TRUE(1 == engine.get_ready_frames_count());
 
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::SessionNotFound);
     EXPECT_EQ(3, engine.pipeline_stage_num);
-    EXPECT_EQ(1, engine.get_ready_frames_count());
+    EXPECT_TRUE(1 == engine.get_ready_frames_count());
 
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);
@@ -603,7 +604,98 @@ TEST(OneVPL_Source_DX11_Accel, Init)
     MFXClose(mfx_session);
     MFXUnload(test_mfx_handle);
 }
+#endif // HAVE_DIRECTX
+#endif // HAVE_D3D11
 
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+TEST(OneVPL_Source_VAAPI_Accel, Init)
+{
+    using namespace cv::gapi::wip::onevpl;
+
+    std::vector<CfgParam> cfg_params_w_vaapi;
+    cfg_params_w_vaapi.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_VAAPI));
+    VPLVAAPIAccelerationPolicy accel(std::make_shared<CfgParamDeviceSelector>(cfg_params_w_vaapi));
+
+    mfxLoader test_mfx_handle = MFXLoad();
+
+    mfxConfig cfg_inst_0 = MFXCreateConfig(test_mfx_handle);
+    EXPECT_TRUE(cfg_inst_0);
+    mfxVariant mfx_param_0;
+    mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_0.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)CfgParam::implementation_name(),
+                                                    mfx_param_0), MFX_ERR_NONE);
+
+    mfxConfig cfg_inst_1 = MFXCreateConfig(test_mfx_handle);
+    EXPECT_TRUE(cfg_inst_1);
+    mfxVariant mfx_param_1;
+    mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_1.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)CfgParam::acceleration_mode_name(),
+                                                    mfx_param_1), MFX_ERR_NONE);
+
+    mfxConfig cfg_inst_2 = MFXCreateConfig(test_mfx_handle);
+    EXPECT_TRUE(cfg_inst_2);
+    mfxVariant mfx_param_2;
+    mfx_param_2.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_2.Data.U32 = MFX_CODEC_HEVC;
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_2,(mfxU8 *)CfgParam::decoder_id_name(),
+                                                    mfx_param_2), MFX_ERR_NONE);
+
+    // create session
+    mfxSession mfx_session{};
+    mfxStatus sts = MFXCreateSession(test_mfx_handle, 0, &mfx_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // assign acceleration
+    EXPECT_NO_THROW(accel.init(mfx_session));
+
+    // create proper bitstream
+    mfxBitstream bitstream{};
+    const int BITSTREAM_BUFFER_SIZE = 2000000;
+    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
+    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
+    EXPECT_TRUE(bitstream.Data);
+
+    // simulate read stream
+    bitstream.DataOffset = 0;
+    bitstream.DataLength = sizeof(streaming::onevpl::hevc_header) * sizeof(streaming::onevpl::hevc_header[0]);
+    memcpy(bitstream.Data, streaming::onevpl::hevc_header, bitstream.DataLength);
+    bitstream.CodecId = MFX_CODEC_HEVC;
+
+    // prepare dec params
+    mfxVideoParam mfxDecParams {};
+    mfxDecParams.mfx.CodecId = bitstream.CodecId;
+    mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    mfxFrameAllocRequest request{};
+    memset(&request, 0, sizeof(request));
+    sts = MFXVideoDECODE_QueryIOSurf(mfx_session, &mfxDecParams, &request);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // Allocate surfaces for decoder
+    VPLAccelerationPolicy::pool_key_t key = accel.create_surface_pool(request,
+                                                                      mfxDecParams.mfx.FrameInfo);
+    auto cand_surface = accel.get_free_surface(key).lock();
+
+    sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    MFXVideoDECODE_Close(mfx_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    EXPECT_NO_THROW(accel.deinit(mfx_session));
+    MFXClose(mfx_session);
+    MFXUnload(test_mfx_handle);
+}
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // __linux__
+
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
 TEST(OneVPL_Source_DX11_Accel_VPL, Init)
 {
     using namespace cv::gapi::wip::onevpl;
@@ -1024,8 +1116,6 @@ TEST(OneVPL_Source_DX11_Accel_VPL, preproc)
         }
     } while(frame_num < min_available_frames_count);
 }
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
 
 TEST(OneVPL_Source_DX11_FrameLockable, LockUnlock_without_Adaptee)
 {
@@ -1114,6 +1204,8 @@ TEST(OneVPL_Source_DX11_FrameLockable, LockUnlock_with_Adaptee)
     EXPECT_EQ(w_lock_counter, exec_count);
     EXPECT_EQ(w_unlock_counter, exec_count);
 }
+#endif // HAVE_DIRECTX
+#endif // HAVE_D3D11
 }
 } // namespace opencv_test
 #endif // HAVE_ONEVPL

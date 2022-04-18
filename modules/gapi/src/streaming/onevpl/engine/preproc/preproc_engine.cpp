@@ -34,8 +34,8 @@ bool FrameInfoComparator::equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& 
     return lhs == rhs;
 }
 
-void apply_roi(mfxFrameSurface1* surface_handle,
-               const cv::util::optional<cv::Rect> &opt_roi) {
+static void apply_roi(mfxFrameSurface1* surface_handle,
+                      const cv::util::optional<cv::Rect> &opt_roi) {
     if (opt_roi.has_value()) {
         const cv::Rect &roi = opt_roi.value();
         surface_handle->Info.CropX = static_cast<mfxU16>(roi.x);
@@ -176,7 +176,8 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     const vpp_pp_params &params = initial_frame_param.get<vpp_pp_params>();
 
     // adjust preprocessing settings
-    mfxVideoParam mfxVPPParams{0};
+    mfxVideoParam mfxVPPParams{};
+    memset(&mfxVPPParams, 0, sizeof(mfxVideoParam));
     // NB: IN params for VPP session must be equal to decoded surface params
     mfxVPPParams.vpp.In = params.info;
 
