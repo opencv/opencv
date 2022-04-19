@@ -954,7 +954,7 @@ public:
 
         if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
-            default_l1 = 4e-3;
+            default_l1 = 7e-3;
             default_lInf = 2e-2;
         }
         else

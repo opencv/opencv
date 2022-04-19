@@ -732,7 +732,8 @@ struct SignFunctor {
         CUDA4DNN_HOST_DEVICE Params() {}
     };
 
-    CUDA4DNN_DEVICE SignFunctor() : SignFunctor(Params{}) { }
+    CUDA4DNN_DEVICE SignFunctor() { }
+    CUDA4DNN_DEVICE SignFunctor(const Params& params) { }
 
     CUDA4DNN_DEVICE T operator()(T value) {
         return value > T(0) ? T(1) : (value < T(0) ? T(-1) : T(0));
@@ -747,7 +748,7 @@ struct ShrinkFunctor {
         T bias, lambd;
     };
 
-    CUDA4DNN_DEVICE ShrinkFunctor() : bias(0), lambd(0.5) { }
+    CUDA4DNN_DEVICE ShrinkFunctor() : ShrinkFunctor(Params{}) { }
     CUDA4DNN_DEVICE ShrinkFunctor(const Params& params) : bias{params.bias}, lambd{params.lambd} { }
 
     CUDA4DNN_DEVICE T operator()(T value) {
@@ -763,10 +764,11 @@ struct ReciprocalFunctor {
         CUDA4DNN_HOST_DEVICE Params() {}
     };
 
-    CUDA4DNN_DEVICE ReciprocalFunctor() : ReciprocalFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ReciprocalFunctor() { }
+    CUDA4DNN_DEVICE ReciprocalFunctor(const Params& params) { }
 
     CUDA4DNN_DEVICE T operator()(T value) {
-        return T(1.0f)/value;
+        return T(1.f)/value;
     }
 };
 

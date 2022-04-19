@@ -169,15 +169,16 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
-    if (backend == DNN_BACKEND_VKCOM)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
-
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU &&
         getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
+
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // supports only <= 2 inputs
+
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
 
     String basename = "conv_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
@@ -464,11 +465,15 @@ TEST_P(Test_ONNX_layers, Scale)
 
 TEST_P(Test_ONNX_layers, Scale_broadcast)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // doesn't support broadcasting
     testONNXModels("scale_broadcast", npy, 0, 0, false, true, 3);
 }
 
 TEST_P(Test_ONNX_layers, Scale_broadcast_mid)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // doesn't support broadcasting
     testONNXModels("scale_broadcast_mid", npy, 0, 0, false, true, 2);
 }
 
@@ -2131,7 +2136,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     double lInf = default_lInf;
 
     // Output values are in range [-2.011, 2.111]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) || (target == DNN_TARGET_CUDA_FP16))
         l1 = 0.007;
     else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_OPENCL_FP16)
     {

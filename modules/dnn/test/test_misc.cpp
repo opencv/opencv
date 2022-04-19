@@ -844,8 +844,9 @@ TEST_P(Test_two_inputs, basic)
     Mat ref;
     addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
 
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.06 : 1e-6;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.3 : 1e-5;
+
     normAssert(out, ref, "", l1, lInf);
 
     if (cvtest::debugLevel > 0 || HasFailure())

@@ -512,7 +512,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.002;
+        scoreDiff = 0.0021;
         iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
@@ -661,7 +661,8 @@ TEST_P(Test_Model, Segmentation)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        || (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16))
     {
         norm = 2.0f;  // l1 = 0.01 lInf = 2
     }
