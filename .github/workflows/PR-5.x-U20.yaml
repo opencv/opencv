@@ -1,14 +1,12 @@
-name: OpenCV U20
+name: PR:5.x U20
 
 on:
   pull_request:
     branches:
-      - 3.4
-      - 4.x
       - 5.x
 
 env:
-  EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_opencv_xfeatures2d=OFF -DENABLE_CCACHE=OFF'
+  EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_CCACHE=OFF'
   OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
   OPENCV_DOCKER_WORKDIR: '/__w/opencv/opencv'
   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
@@ -18,7 +16,7 @@ env:
   PYTHONPATH: /opencv-build/python_loader:$PYTHONPATH
 
 jobs:
-  B:
+  BuildAndTest:
     runs-on: ubuntu-20.04
     defaults:
       run:
@@ -45,7 +43,7 @@ jobs:
         git config --global --add safe.directory ${{ env.OPENCV_DOCKER_WORKDIR }}
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_extra
       run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
     - name: Configure OpenCV
@@ -77,17 +75,23 @@ jobs:
     - name: Python3
       run: |
         cd ${{ env.OPENCV_DOCKER_WORKDIR }}/modules/python/test
-        python3 ./test.py --repo ../../../
+        python3 ./test.py --repo ../../../ -v
     - name: Java
       run: |
         cd /opencv-build
         xvfb-run -a python3 ${{ env.OPENCV_DOCKER_WORKDIR }}/modules/ts/misc/run.py . -a -t java
+    - name: Save Unit Test Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: junit-html
+        path: /opencv-build/java_test/testResults/junit-noframes.html
     - name: Pylint
       run: |
         cd /opencv-build
         cmake --build . --config release --target check_pylint -- -j4
 
-  B-Contrib:
+  BuildContrib:
     runs-on: ubuntu-20.04
     defaults:
       run:
@@ -114,7 +118,7 @@ jobs:
         git config --global --add safe.directory ${{ env.OPENCV_DOCKER_WORKDIR }}
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_contrib
       run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
     - name: Configure OpenCV Contrib
