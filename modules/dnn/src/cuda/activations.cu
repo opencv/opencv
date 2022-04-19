@@ -260,7 +260,7 @@ void shrink(const Stream& stream, Span<T> output, View<T> input, T bias, T lambd
 
 template <class T>
 void reciprocal(const Stream& stream, Span<T> output, View<T> input) {
-    generic_op<T, SignFunctor<T>>(stream, output, input);
+    generic_op<T, ReciprocalFunctor<T>>(stream, output, input);
 }
 
 template <class T>

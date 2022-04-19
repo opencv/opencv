@@ -66,6 +66,15 @@
 "test_maxunpool_export_with_output_shape",
 "test_mul_bcast",
 "test_mul_uint8",
+"test_reduce_prod_default_axes_keepdims_example", // FP16 only
+"test_reduce_prod_default_axes_keepdims_random", // FP16 only
+"test_reduce_prod_do_not_keepdims_random", // FP16 only
+"test_reduce_prod_keepdims_random", // FP16 only
+"test_reduce_prod_negative_axes_keepdims_random", // FP16 only
+"test_reduce_sum_square_default_axes_keepdims_random", // FP16 only
+"test_reduce_sum_square_do_not_keepdims_random", // FP16 only
+"test_reduce_sum_square_keepdims_random", // FP16 only
+"test_reduce_sum_square_negative_axes_keepdims_random", // FP16 only
 "test_softmax_default_axis",
 "test_softmax_large_number",  // FP16 only
 "test_softmax_large_number_expanded",  // FP16 only
