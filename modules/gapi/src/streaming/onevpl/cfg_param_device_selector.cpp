@@ -45,7 +45,7 @@ static std::vector<CfgParam> insertCfgparam(std::vector<CfgParam> &&param_array,
         case AccelType::DX11:
             param_array.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
             break;
-        case AccelType::VA_API:
+        case AccelType::VAAPI:
             param_array.push_back(CfgParam::create_acceleration_mode(MFX_IMPL_VIA_VAAPI));
             break;
         default:
@@ -283,7 +283,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const Device &device,
                                    CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
         }
-        case AccelType::VA_API:
+        case AccelType::VAAPI:
             GAPI_LOG_WARNING(nullptr, "TODO MFX_IMPL_VIA_VAAPI falls back to CPU case")
             break;
         case AccelType::HOST:

@@ -133,7 +133,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
-      src/backends/fluid/gfluidcore_func.dispatch.cpp
+    src/backends/fluid/gfluidcore_func.dispatch.cpp
 
     # OAK Backend (optional)
     src/backends/oak/goak.cpp

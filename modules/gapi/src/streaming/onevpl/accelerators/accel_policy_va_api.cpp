@@ -35,12 +35,12 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
     // TODO Move it out in device selector
     device_fd = open("/dev/dri/renderD128", O_RDWR);
     if (device_fd < 0) {
-        GAPI_LOG_WARNING(nullptr, "VA_API device descriptor \"/dev/dri/renderD128\" has not found");
-        throw std::runtime_error("cannot open VA_API device");
+        GAPI_LOG_WARNING(nullptr, "VAAPI device descriptor \"/dev/dri/renderD128\" has not found");
+        throw std::runtime_error("cannot open VAAPI device");
     }
     va_handle = vaGetDisplayDRM(device_fd);
     if (!va_handle) {
-        GAPI_LOG_WARNING(nullptr, "VA_API device vaGetDisplayDRM failed, error: " << strerror(errno));
+        GAPI_LOG_WARNING(nullptr, "VAAPI device vaGetDisplayDRM failed, error: " << strerror(errno));
         close(device_fd);
         throw std::runtime_error("vaGetDisplayDRM failed");
     }
@@ -48,7 +48,7 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
     VAStatus status {};
     status = vaInitialize(va_handle, &major_version, &minor_version);
     if (VA_STATUS_SUCCESS != status) {
-        GAPI_LOG_WARNING(nullptr, "Cannot initialize VA_API device, error: " << vaErrorStr(status));
+        GAPI_LOG_WARNING(nullptr, "Cannot initialize VAAPI device, error: " << vaErrorStr(status));
         close(device_fd);
         throw std::runtime_error("vaInitialize failed");
     }
