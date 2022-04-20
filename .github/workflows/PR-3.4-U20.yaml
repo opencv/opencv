@@ -54,32 +54,70 @@ jobs:
       run: |
         cd /opencv-build
         ninja
-    - name: Accuracy
-      run: |
-        cd /opencv-build
-        accuracy_tests=($(ls bin/opencv_test*))
-        for test_name in "${accuracy_tests[@]}"; do
-          if [[ $(basename ${test_name}) != 'opencv_test_viz' ]]; then
-            xvfb-run -a ${test_name}
-          fi
-        done
-    - name: Performance
-      run: |
-        cd /opencv-build
-        performance_tests=($(ls bin/opencv_perf*))
-        for test_name in "${performance_tests[@]}"; do
-          if [[ $(basename ${test_name}) != 'opencv_perf_viz' ]]; then
-            xvfb-run -a ${test_name} --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
-          fi
-        done
+    - name: Accuracy:calib3d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_calib3d
+    - name: Accuracy:core
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_core
+    - name: Accuracy:dnn
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_dnn
+    - name: Accuracy:features2d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_features2d
+    - name: Accuracy:flann
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_flann
+    - name: Accuracy:highgui
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_highgui
+    - name: Accuracy:imgcodecs
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_imgcodecs
+    - name: Accuracy:imgproc
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_imgproc
+    - name: Accuracy:ml
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_ml
+    - name: Accuracy:objdetect
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_objdetect
+    - name: Accuracy:photo
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_photo
+    - name: Accuracy:shape
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_shape
+    - name: Accuracy:stitching
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_stitching
+    - name: Accuracy:superres
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_superres
+    - name: Accuracy:video
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_video
+    - name: Accuracy:videoio
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_videoio
+    - name: Accuracy:videostab
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_videostab
+    - name: Performance:calib3d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_calib3d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:core
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_core --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:dnn
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_dnn --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:features2d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_features2d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:imgcodecs
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_imgcodecs --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:imgproc
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_imgproc --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:objdetect
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_objdetect --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:photo
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_photo --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:stitching
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_stitching --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:superres
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_superres --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:video
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_video --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:videoio
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_videoio --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Python3
       run: |
         cd ${{ env.OPENCV_DOCKER_WORKDIR }}/modules/python/test
         python3 ./test.py --repo ../../../ -v
     - name: Java
-      run: |
-        cd /opencv-build
-        xvfb-run -a python3 ${{ env.OPENCV_DOCKER_WORKDIR }}/modules/ts/misc/run.py . -a -t java
+      run: cd /opencv-build && xvfb-run -a python3 ${{ env.OPENCV_DOCKER_WORKDIR }}/modules/ts/misc/run.py . -a -t java
     - name: Save Unit Test Results
       uses: actions/upload-artifact@v3
       if: always()
@@ -87,9 +125,7 @@ jobs:
         name: junit-html
         path: /opencv-build/java_test/testResults/junit-noframes.html
     - name: Pylint
-      run: |
-        cd /opencv-build
-        cmake --build . --config release --target check_pylint -- -j4
+      run: cd /opencv-build && cmake --build . --config release --target check_pylint -- -j4
 
   BuildContrib:
     runs-on: ubuntu-20.04
