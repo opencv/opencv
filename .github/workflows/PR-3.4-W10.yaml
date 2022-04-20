@@ -1,0 +1,191 @@
+name: PR:3.4 W10
+
+on:
+  pull_request:
+    branches:
+      - 3.4
+
+env:
+  EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
+  OPENCV_TEST_DATA_PATH: ${{ github.workspace }}\opencv_extra\testdata
+  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  SOURCE_BRANCH_NAME: ${{ github.head_ref }}
+  TARGET_BRANCH_NAME: ${{ github.base_ref }}
+
+jobs:
+  BuildAndTest:
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: PR info
+      run: |
+        echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+        echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+    - name: Clean
+      run: |
+        rm -rf ${{ github.workspace }}\*
+    - name: Fetch opencv
+      uses: actions/checkout@v3
+      with:
+        repository: opencv/opencv
+        ref: ${{ env.TARGET_BRANCH_NAME }}
+        fetch-depth: 0
+        path: opencv
+    - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
+      run: |
+        cd ${{ github.workspace }}\opencv
+        git config user.email "opencv.ci"
+        git config user.name "opencv.ci"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+    - name: Fetch opencv_extra
+      uses: actions/checkout@v3
+      with:
+        repository: opencv/opencv_extra
+        ref: ${{ env.TARGET_BRANCH_NAME }}
+        fetch-depth: 1
+        path: opencv_extra
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+        architecture: x64
+    - name: Setup numpy
+      run: python3 -m pip install numpy
+    - name: Setup ninja
+      run: choco install ninja
+    - name: Configure OpenCV
+      run: |
+        mkdir ${{ github.workspace }}\opencv-build && cd ${{ github.workspace }}\opencv-build
+        cmake -G Ninja ${{ env.EXTRA_CMAKE_OPTIONS }} ${{ github.workspace }}\opencv
+    - name: Build OpenCV
+      run: |
+        cd ${{ github.workspace }}\opencv-build
+        ninja
+    - name: Accuracy
+      run: |
+        cd ${{ github.workspace }}\opencv-build
+        FOR %%i IN (bin\opencv_test*) DO %%i --skip_unstable
+    - name: Performance
+      run: |
+        cd ${{ github.workspace }}\opencv-build
+        FOR %%i IN (bin\opencv_perf*) DO %%i --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Accuracy:calib3d
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_calib3d --skip_unstable
+    # - name: Accuracy:core
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_core --skip_unstable
+    # - name: Accuracy:dnn
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_dnn --skip_unstable
+    # - name: Accuracy:features2d
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_features2d --skip_unstable
+    # - name: Accuracy:flann
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_flann --skip_unstable
+    # - name: Accuracy:highgui
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_highgui --skip_unstable
+    # - name: Accuracy:imgcodecs
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_imgcodecs --skip_unstable
+    # - name: Accuracy:imgproc
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_imgproc --skip_unstable
+    # - name: Accuracy:ml
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_ml --skip_unstable
+    # - name: Accuracy:objdetect
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_objdetect --skip_unstable
+    # - name: Accuracy:photo
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_photo --skip_unstable
+    # - name: Accuracy:shape
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_shape --skip_unstable
+    # - name: Accuracy:stitching
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_stitching --skip_unstable
+    # - name: Accuracy:superres
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_superres --skip_unstable
+    # - name: Accuracy:video
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_video --skip_unstable
+    # - name: Accuracy:videoio
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videoio --skip_unstable
+    # - name: Accuracy:videostab
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videostab --skip_unstable
+    # - name: Performance:calib3d
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_calib3d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:core
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_core --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:dnn
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_dnn --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:features2d
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_features2d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:imgcodecs
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_imgcodecs --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:imgproc
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_imgproc --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:objdetect
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_objdetect --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:photo
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_photo --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:stitching
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_stitching --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:superres
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_superres --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:video
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_video --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    # - name: Performance:videoio
+    #   run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_videoio --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Python3
+      run: |
+        cd ${{ github.workspace }}\opencv\modules\python\test
+        set PYTHONPATH=%PYTHONPATH%;${{ github.workspace }}\opencv-build\python_loader;${{ github.workspace }}\opencv-build\lib\python3
+        set PATH=%PATH%;${{ github.workspace }}\opencv-build\bin;${{ github.workspace }}\opencv-build\lib\python3
+        python3 test.py --repo ..\..\..\ -v
+
+
+  BuildContrib:
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: PR info
+      run: |
+        echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+        echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+    - name: Clean
+      run: |
+        rm -rf ${{ github.workspace }}\*
+    - name: Fetch opencv
+      uses: actions/checkout@v3
+      with:
+        repository: opencv/opencv
+        ref: ${{ env.TARGET_BRANCH_NAME }}
+        fetch-depth: 0
+        path: opencv
+    - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
+      run: |
+        cd ${{ github.workspace }}\opencv
+        git config user.email "opencv.ci"
+        git config user.name "opencv.ci"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+    - name: Fetch opencv_contrib
+      uses: actions/checkout@v3
+      with:
+        repository: opencv/opencv_contrib
+        ref: ${{ env.TARGET_BRANCH_NAME }}
+        fetch-depth: 0
+        path: opencv_contrib
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+        architecture: x64
+    - name: Setup numpy
+      run: python3 -m pip install numpy
+    - name: Setup ninja
+      run: choco install ninja
+    - name: Configure OpenCV Contrib
+      run: |
+        mkdir ${{ github.workspace }}\opencv-contrib-build && cd ${{ github.workspace }}\opencv-contrib-build
+        cmake -G Ninja ${{ env.EXTRA_CMAKE_OPTIONS }} -DOPENCV_EXTRA_MODULES_PATH=${{ github.workspace }}\opencv_contrib\modules ${{ github.workspace }}\opencv
+    - name: Build OpenCV Contrib
+      run: |
+        cd ${{ github.workspace }}\opencv-contrib-build
+        ninja
