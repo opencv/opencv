@@ -128,8 +128,12 @@
     #define CV_INLINE_ISNAN_FLT(value) CV_INLINE_ISNAN_DBL(value)
   #endif
 
-  #if !defined(OPENCV_USE_FASTMATH_BUILTINS) && \
-      (defined __GNUC__ || defined __clang__ || defined _MSC_VER)
+  #if !defined(OPENCV_USE_FASTMATH_BUILTINS) \
+    && ( \
+        defined(__x86_64__) || defined(__i686__) \
+        || defined(__arm__) \
+        || defined(__PPC64__) \
+    )
     /* Let builtin C math functions when available. Dedicated hardware is available to
        round and convert FP values. */
     #define OPENCV_USE_FASTMATH_BUILTINS 1
@@ -229,6 +233,15 @@ CV_INLINE int cvFloor( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floor(value);
+#elif defined __loongarch64
+    int i;
+    double tmp;
+    __asm__ ("ftintrm.l.d     %[tmp],    %[in]       \n\t"
+             "movfr2gr.d      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
 #else
     int i = (int)value;
     return i - (i > value);
@@ -247,6 +260,15 @@ CV_INLINE int cvCeil( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceil(value);
+#elif defined __loongarch64
+    int i;
+    double tmp;
+    __asm__ ("ftintrp.l.d     %[tmp],    %[in]       \n\t"
+             "movfr2gr.d      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
 #else
     int i = (int)value;
     return i + (i < value);
@@ -281,7 +303,7 @@ CV_INLINE int cvIsInf( double value )
 {
 #if defined CV_INLINE_ISINF_DBL
     CV_INLINE_ISINF_DBL(value);
-#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__PPC64__)
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__PPC64__) || defined(__loongarch64)
     Cv64suf ieee754;
     ieee754.f = value;
     return (ieee754.u & 0x7fffffff00000000) ==
@@ -332,6 +354,15 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
+#elif defined __loongarch
+    int i;
+    float tmp;
+    __asm__ ("ftintrm.w.s     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
 #else
     int i = (int)value;
     return i - (i > value);
@@ -350,6 +381,15 @@ CV_INLINE int cvCeil( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceilf(value);
+#elif defined __loongarch
+    int i;
+    float tmp;
+    __asm__ ("ftintrp.w.s     %[tmp],    %[in]       \n\t"
+             "movfr2gr.s      %[i],      %[tmp]      \n\t"
+             : [i] "=r" (i), [tmp] "=f" (tmp)
+             : [in] "f" (value)
+             :);
+    return i;
 #else
     int i = (int)value;
     return i + (i < value);
