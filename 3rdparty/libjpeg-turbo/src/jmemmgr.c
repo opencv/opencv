@@ -87,7 +87,7 @@ round_up_pow2(size_t a, size_t b)
 
 #ifndef ALIGN_SIZE              /* so can override from jconfig.h */
 #ifndef WITH_SIMD
-#define ALIGN_SIZE  sizeof(double)
+#define ALIGN_SIZE  MAX(sizeof(double), sizeof(void *))
 #else
 #define ALIGN_SIZE  32 /* Most of the SIMD instructions we support require
                           16-byte (128-bit) alignment, but AVX2 requires
