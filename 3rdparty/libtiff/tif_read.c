@@ -84,7 +84,7 @@ static int TIFFReadAndRealloc( TIFF* tif, tmsize_t size,
         /* on 32 bit processes where virtual memory is scarce.  */
         while( already_read < size )
         {
-            tmsize_t bytes_read;
+	    tmsize_t bytes_read;
             tmsize_t to_read = size - already_read;
 #if SIZEOF_SIZE_T == 8
             if( to_read >= threshold && threshold < MAX_THRESHOLD &&
