@@ -436,16 +436,49 @@ model = Slice()
 save_data_and_model("slice", input, model)
 save_data_and_model("slice_opset_11", input, model, version=11)
 
-class SliceStarts(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super(SliceStarts, self).__init__()
+def generate_slice_neg_starts():
+    x = np.random.randn(2, 3, 4, 3).astype(np.float32)
+    y = x[-1:2, -3:-1, 2:3, 1:-1]
 
-    def forward(self, x):
-        return x[-1:]
+    starts = np.array([-1, -3, 2,  1], dtype=np.int64)
+    starts = onnx.numpy_helper.from_array(starts, name='starts')
+    ends =   np.array([ 2, -1, 3, -1], dtype=np.int64)
+    ends =   onnx.numpy_helper.from_array(ends, name='ends')
 
-model = SliceStarts()
-input_ = Variable(torch.randn(1, 10, dtype=torch.float32))
-save_data_and_model("slice_neg_starts", input_, model)
+    node = onnx.helper.make_node(
+        'Slice',
+        inputs=['X', 'starts', 'ends'],
+        outputs=['Y'],
+    )
+
+    X = onnx.helper.make_tensor_value_info('X', onnx.TensorProto.FLOAT, list(x.shape))
+    Y = onnx.helper.make_tensor_value_info('Y', onnx.TensorProto.FLOAT, list(y.shape))
+
+    graph = onnx.helper.make_graph(
+        [node],             # nodes
+        'slice_neg_starts', # name
+        [X],                # inputs
+        [Y],                # outputs
+    )
+
+    graph.initializer.append(starts)
+    graph.initializer.append(ends)
+
+    model = onnx.helper.make_model(graph, producer_name='onnx')
+    onnx.checker.check_model(model)
+
+    name = 'slice_neg_starts'
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, x.data)
+
+    output_files =  os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(y.data))
+
+    models_files = os.path.join("models", name + ".onnx")
+    onnx.save(model, models_files)
+
+generate_slice_neg_starts()
 
 input_2 = Variable(torch.randn(6, 6))
 custom_slice_list = [
@@ -896,6 +929,39 @@ save_data_and_model("gru", input, hidden_lstm, version=11, export_params=True)
 input = torch.randn(seq_len, batch, features)
 hidden_lstm = GRU(features, hidden, num_layers=3, is_bidirectional=True)
 save_data_and_model("gru_bi", input, hidden_lstm, version=11, export_params=True)
+
+
+batch = 5
+features = 4
+hidden = 3
+seq_len = 2
+num_layers=1
+bidirectional=True
+
+class LSTM(nn.Module):
+
+    def __init__(self):
+        super(LSTM, self).__init__()
+        self.lstm = nn.LSTM(features, hidden, num_layers, bidirectional=bidirectional)
+        self.h0 = torch.from_numpy(np.ones((num_layers + int(bidirectional), batch, hidden), dtype=np.float32))
+        self.c0 = torch.from_numpy(np.ones((num_layers + int(bidirectional), batch, hidden), dtype=np.float32))
+
+    def forward(self, x):
+        a, (b, c) = self.lstm(x, (self.h0, self.c0))
+        if bidirectional:
+            return torch.cat((a, b, c), dim=2)
+        else:
+            return torch.cat((a, b, c), dim=0)
+
+
+input_ = Variable(torch.randn(seq_len, batch, features))
+lstm = LSTM()
+save_data_and_model("lstm_cell_bidirectional", input_, lstm, export_params=True)
+
+bidirectional = False
+input_ = Variable(torch.randn(seq_len, batch, features))
+lstm = LSTM()
+save_data_and_model("lstm_cell_forward", input_, lstm, export_params=True)
 
 
 class MatMul(nn.Module):
