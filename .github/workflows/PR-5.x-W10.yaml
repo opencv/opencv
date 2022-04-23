@@ -9,6 +9,7 @@ env:
   EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DOPENCV_DOWNLOAD_PATH=c:\Slave\workspace\binaries_cache -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
   OPENCV_TEST_DATA_PATH: ${{ github.workspace }}\opencv_extra\testdata
   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
   GTEST_FILTER_STRING: '-Samples.findFile:ExposureCompensate.SimilarityThreshold:DNNTestNetwork.MobileNet_SSD_v2_TensorFlow*:DNNTestNetwork.Inception_v2_SSD_TensorFlow*:Test_TensorFlow_nets.Inception_v2_SSD*:Test_Darknet_nets.YOLOv4_tiny*:videoio/videocapture_acceleration.read/61:videoio/videocapture_acceleration.read/122:videoio/videocapture_acceleration.read/126:Drawing.ttf_text'
@@ -35,7 +36,7 @@ jobs:
         cd ${{ github.workspace }}\opencv
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Fetch opencv_extra
       run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_extra.git --depth 1 https://github.com/opencv/opencv_extra.git
     - name: Configure OpenCV
@@ -174,7 +175,7 @@ jobs:
         cd ${{ github.workspace }}\opencv
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Fetch opencv_contrib
       run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_contrib.git --depth 1 https://github.com/opencv/opencv_contrib.git
     - name: Configure OpenCV Contrib
