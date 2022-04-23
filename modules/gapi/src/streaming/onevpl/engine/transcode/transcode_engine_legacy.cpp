@@ -26,34 +26,29 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+using vpp_param_storage = const std::map<std::string, mfxVariant>;
+using vpp_param_storage_cit = typename vpp_param_storage::const_iterator;
 
 template<typename Type>
-bool set_vpp_param(const char* name, Type& out_vpp_param,
-                   const std::map<std::string, mfxVariant> &params_storage,
-                   mfxSession session);
+Type get_mfx_value(const vpp_param_storage_cit &cit);
 
 template<>
-bool set_vpp_param<uint32_t>(const char* name, uint32_t& out_vpp_param,
-                             const std::map<std::string, mfxVariant> &params_storage,
-                             mfxSession session) {
-    auto it = params_storage.find(name);
-    if (it != params_storage.end()) {
-        auto value = it->second.Data.U32;
-        GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
-                               "\": " << value);
-        out_vpp_param = value;
-        return true;
-    }
-    return false;
+uint16_t get_mfx_value<uint16_t>(const vpp_param_storage_cit& cit) {
+    return cit->second.Data.U16;
 }
 
 template<>
-bool set_vpp_param<uint16_t>(const char* name, uint16_t& out_vpp_param,
-                             const std::map<std::string, mfxVariant> &params_storage,
-                             mfxSession session) {
+uint32_t get_mfx_value<uint32_t>(const vpp_param_storage_cit& cit) {
+    return cit->second.Data.U32;
+}
+
+template<typename Type>
+bool set_vpp_param(const char* name, Type& out_vpp_param,
+                   const vpp_param_storage &params_storage,
+                   mfxSession session) {
     auto it = params_storage.find(name);
     if (it != params_storage.end()) {
-        auto value = it->second.Data.U16;
+        auto value = get_mfx_value<Type>(it);
         GAPI_LOG_INFO(nullptr, "[" << session << "] set \"" << name <<
                                "\": " << value);
         out_vpp_param = value;
@@ -81,7 +76,6 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
  : VPLLegacyDecodeEngine(std::move(accel)) {
 
     GAPI_LOG_INFO(nullptr, "Create Legacy Transcode Engine");
-    //inject_pipeline_operations(2,
     create_pipeline(
         // 1) Read File
         [this] (EngineSession& sess) -> ExecutionStatus
@@ -110,11 +104,8 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -122,7 +113,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                                     ", sync id:  " <<
                                     sync_pair.first <<
                                     ", dec in surface:  " <<
-                                    my_sess.procesing_surface_ptr.lock()->get_handle() <<
+                                    my_sess.processing_surface_ptr.lock()->get_handle() <<
                                     ", dec out surface: " << sync_pair.second <<
                                     ", status: " <<
                                     mfxstatus_to_string(my_sess.last_status));
@@ -134,12 +125,12 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(*this);
+                        my_sess.swap_decode_surface(*this);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -257,7 +248,7 @@ VPLLegacyTranscodeEngine::VPLLegacyTranscodeEngine(std::unique_ptr<VPLAccelerati
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 5) Falls back on generic status procesing
+        // 5) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<LegacyDecodeSession&>(sess));
@@ -287,11 +278,11 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
 
     // override some in-params
     if (set_vpp_param(CfgParam::vpp_in_width_name(), mfxVPPParams.vpp.In.Width,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.In.Width = ALIGN16(mfxVPPParams.vpp.In.Width);
     }
     if (set_vpp_param(CfgParam::vpp_in_height_name(), mfxVPPParams.vpp.In.Height,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.In.Height = ALIGN16(mfxVPPParams.vpp.In.Height);
     }
     set_vpp_param(CfgParam::vpp_in_crop_x_name(), mfxVPPParams.vpp.In.CropX,
@@ -309,11 +300,11 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     set_vpp_param(CfgParam::vpp_out_chroma_format_name(), mfxVPPParams.vpp.Out.ChromaFormat,
                   cfg_vpp_params, mfx_session);
     if (set_vpp_param(CfgParam::vpp_out_width_name(), mfxVPPParams.vpp.Out.Width,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.Out.Width = ALIGN16(mfxVPPParams.vpp.Out.Width);
     }
     if (set_vpp_param(CfgParam::vpp_out_height_name(), mfxVPPParams.vpp.Out.Height,
-                  cfg_vpp_params, mfx_session)) {
+                      cfg_vpp_params, mfx_session)) {
         mfxVPPParams.vpp.Out.Height = ALIGN16(mfxVPPParams.vpp.Out.Height);
     }
     set_vpp_param(CfgParam::vpp_out_crop_x_name(), mfxVPPParams.vpp.Out.CropX,
@@ -367,7 +358,7 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
 
     }
 
-    // NB: Assing ID as upper limit descendant to distinguish specific VPP allocation
+    // NB: Assign ID as upper limit descendant to distinguish specific VPP allocation
     // from decode allocations witch started from 0: by local module convention
     vppRequests[1].AllocId = std::numeric_limits<uint16_t>::max();
 
@@ -394,7 +385,7 @@ VPLLegacyTranscodeEngine::initialize_session(mfxSession mfx_session,
     sess_ptr->init_transcode_surface_pool(vpp_out_pool_key);
 
     // prepare working surfaces
-    sess_ptr->swap_surface(*this);
+    sess_ptr->swap_decode_surface(*this);
     sess_ptr->swap_transcode_surface(*this);
     return sess_ptr;
 }
@@ -452,10 +443,6 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
     GAPI_LOG_INFO(nullptr, "Finished VPP param validation");
 }
 
-ProcessingEngineBase::ExecutionStatus VPLLegacyTranscodeEngine::execute_op(operation_t& op, EngineSession& sess) {
-    return op(sess);
-}
-
 void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
                                               mfxFrameSurface1* ready_surface)
 {
@@ -463,8 +450,10 @@ void VPLLegacyTranscodeEngine::on_frame_ready(LegacyTranscodeSession& sess,
 
     // manage memory ownership rely on acceleration policy
     ready_surface->Data.Locked--;  // TODO -S- workaround
+
+    VPLAccelerationPolicy::FrameConstructorArgs args{ready_surface, sess.session};
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.vpp_out_pool_id,
-                                                                   ready_surface);
+                                                                   args);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object

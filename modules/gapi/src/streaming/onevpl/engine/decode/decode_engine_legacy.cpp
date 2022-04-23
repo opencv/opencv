@@ -44,7 +44,7 @@ void VPLLegacyDecodeEngine::try_modify_pool_size_request_param(const char* param
                                      param_name + ", overflow");
         }
         request.NumFrameSuggested = static_cast<mfxU16>(new_frames_count);
-        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input: " <<
+        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overridden by user input: " <<
                                 ", mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin <<
                                 ", mfxFrameAllocRequest.NumFrameSuggested: " << request.NumFrameSuggested <<
                                 ", mfxFrameAllocRequest.Type: " << request.Type);
@@ -83,11 +83,8 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -98,12 +95,12 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(*this);
+                        my_sess.swap_decode_surface(*this);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -155,7 +152,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.sync_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 4) Falls back on generic status procesing
+        // 4) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<LegacyDecodeSession&>(sess));
@@ -180,7 +177,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder_id_name;
 
-    // set memory stream direction accroding to accelearion policy device type
+    // set memory stream direction according to acceleration policy device type
     IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
     GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
     AccelType accel_type = devices.begin()->second.get_type();
@@ -255,7 +252,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
                 acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 
     // Input parameters finished, now initialize decode
-    // create decoder for session accoring to header recovered from source file
+    // create decoder for session according to header recovered from source file
 
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
@@ -282,12 +279,8 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
 
     sess_ptr->init_surface_pool(param.decode_pool_key);
     // prepare working decode surface
-    sess_ptr->swap_surface(*this);
+    sess_ptr->swap_decode_surface(*this);
     return sess_ptr;
-}
-
-ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
-    return op(sess);
 }
 
 void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
@@ -296,8 +289,9 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
+    VPLAccelerationPolicy::FrameConstructorArgs args{ready_surface, sess.session};
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
-                                                                   ready_surface);
+                                                                   args);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object
@@ -313,7 +307,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
         {
             // prepare sync object for new surface
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -334,7 +328,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -358,9 +352,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
-                                    "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
-            */
+            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_VIDEO_PARAM_CHANGED");
             return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
@@ -380,7 +372,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             break;
         case MFX_WRN_IN_EXECUTION:
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());

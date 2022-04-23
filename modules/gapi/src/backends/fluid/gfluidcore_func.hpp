@@ -187,6 +187,29 @@ ABSDIFFC_SIMD(float)
 
 #undef ABSDIFFC_SIMD
 
+#define DIVRC_SIMD(SRC, DST)                                           \
+int divrc_simd(const float scalar[], const SRC in[], DST out[],        \
+               const int length, const int chan, const float scale);
+
+DIVRC_SIMD(uchar, uchar)
+DIVRC_SIMD(ushort, uchar)
+DIVRC_SIMD(short, uchar)
+DIVRC_SIMD(float, uchar)
+DIVRC_SIMD(short, short)
+DIVRC_SIMD(ushort, short)
+DIVRC_SIMD(uchar, short)
+DIVRC_SIMD(float, short)
+DIVRC_SIMD(ushort, ushort)
+DIVRC_SIMD(uchar, ushort)
+DIVRC_SIMD(short, ushort)
+DIVRC_SIMD(float, ushort)
+DIVRC_SIMD(uchar, float)
+DIVRC_SIMD(ushort, float)
+DIVRC_SIMD(short, float)
+DIVRC_SIMD(float, float)
+
+#undef DIVRC_SIMD
+
 int split3_simd(const uchar in[], uchar out1[], uchar out2[],
                 uchar out3[], const int width);
 
@@ -198,6 +221,91 @@ int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
 
 int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width);
+
+#define ADD_SIMD(SRC, DST)                                                     \
+int add_simd(const SRC in1[], const SRC in2[], DST out[], const int length);
+
+ADD_SIMD(uchar, uchar)
+ADD_SIMD(ushort, uchar)
+ADD_SIMD(short, uchar)
+ADD_SIMD(float, uchar)
+ADD_SIMD(short, short)
+ADD_SIMD(ushort, short)
+ADD_SIMD(uchar, short)
+ADD_SIMD(float, short)
+ADD_SIMD(ushort, ushort)
+ADD_SIMD(uchar, ushort)
+ADD_SIMD(short, ushort)
+ADD_SIMD(float, ushort)
+ADD_SIMD(uchar, float)
+ADD_SIMD(ushort, float)
+ADD_SIMD(short, float)
+ADD_SIMD(float, float)
+
+#undef ADD_SIMD
+
+#define SUB_SIMD(SRC, DST)                                                     \
+int sub_simd(const SRC in1[], const SRC in2[], DST out[], const int length);
+
+SUB_SIMD(uchar, uchar)
+SUB_SIMD(ushort, uchar)
+SUB_SIMD(short, uchar)
+SUB_SIMD(float, uchar)
+SUB_SIMD(short, short)
+SUB_SIMD(ushort, short)
+SUB_SIMD(uchar, short)
+SUB_SIMD(float, short)
+SUB_SIMD(ushort, ushort)
+SUB_SIMD(uchar, ushort)
+SUB_SIMD(short, ushort)
+SUB_SIMD(float, ushort)
+SUB_SIMD(uchar, float)
+SUB_SIMD(ushort, float)
+SUB_SIMD(short, float)
+SUB_SIMD(float, float)
+
+#undef SUB_SIMD
+
+#define CONVERTTO_NOCOEF_SIMD(SRC, DST)                                                    \
+int convertto_simd(const SRC in[], DST out[], const int length);
+
+CONVERTTO_NOCOEF_SIMD(ushort, uchar)
+CONVERTTO_NOCOEF_SIMD(short, uchar)
+CONVERTTO_NOCOEF_SIMD(float, uchar)
+CONVERTTO_NOCOEF_SIMD(ushort, short)
+CONVERTTO_NOCOEF_SIMD(uchar, short)
+CONVERTTO_NOCOEF_SIMD(float, short)
+CONVERTTO_NOCOEF_SIMD(uchar, ushort)
+CONVERTTO_NOCOEF_SIMD(short, ushort)
+CONVERTTO_NOCOEF_SIMD(float, ushort)
+CONVERTTO_NOCOEF_SIMD(uchar, float)
+CONVERTTO_NOCOEF_SIMD(ushort, float)
+CONVERTTO_NOCOEF_SIMD(short, float)
+
+#undef CONVERTTO_NOCOEF_SIMD
+
+#define CONVERTTO_SCALED_SIMD(SRC, DST)                                     \
+int convertto_scaled_simd(const SRC in[], DST out[], const float alpha,     \
+                          const float beta, const int length);
+
+CONVERTTO_SCALED_SIMD(uchar, uchar)
+CONVERTTO_SCALED_SIMD(ushort, uchar)
+CONVERTTO_SCALED_SIMD(short, uchar)
+CONVERTTO_SCALED_SIMD(float, uchar)
+CONVERTTO_SCALED_SIMD(short, short)
+CONVERTTO_SCALED_SIMD(ushort, short)
+CONVERTTO_SCALED_SIMD(uchar, short)
+CONVERTTO_SCALED_SIMD(float, short)
+CONVERTTO_SCALED_SIMD(ushort, ushort)
+CONVERTTO_SCALED_SIMD(uchar, ushort)
+CONVERTTO_SCALED_SIMD(short, ushort)
+CONVERTTO_SCALED_SIMD(float, ushort)
+CONVERTTO_SCALED_SIMD(uchar, float)
+CONVERTTO_SCALED_SIMD(ushort, float)
+CONVERTTO_SCALED_SIMD(short, float)
+CONVERTTO_SCALED_SIMD(float, float)
+
+#undef CONVERTTO_SCALED_SIMD
 
 }  // namespace fluid
 }  // namespace gapi

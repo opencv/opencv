@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_timvx.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -167,6 +168,9 @@ public:
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
 
+        zeropoint = params.get<int>("zeropoints", 0);
+        scale = params.get<float>("scales", 1.0f);
+
         CV_Assert(numAxes >= -1);
         newShapeRange = (numAxes == -1) ? Range(axis, INT_MAX) : Range(axis, axis + numAxes);
 
@@ -202,6 +206,18 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
+        {
+            int len = this->type.length();
+            if (len <= 4)
+                return false;
+
+            if (this->type.substr(len - 4) == "Int8")
+                return true;
+            else
+                return false;
+        }
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
@@ -348,6 +364,99 @@ public:
     }
 #endif
 
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        std::vector<int> inputsIndex, outputsIndex;
+        int input_index = -1, output_index = -1;
+
+        int reshapeNum = 0;
+        Ptr<TimVXBackendWrapper> tmpWrapper, inputWrapper, outputWrapper;
+        for (size_t i = 0; i < outputsWrapper.size(); i++)
+        {
+            tmpWrapper = inputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
+            Mat srcBlob = tmpWrapper->getMat();
+
+            tmpWrapper = outputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
+            Mat dstBlob = tmpWrapper->getMat();
+            if (dstBlob.data != srcBlob.data)
+            {
+                reshapeNum++;
+                inputWrapper = inputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
+                outputWrapper = outputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
+            }
+        }
+
+        // Only work for single reshape Mat
+        if (reshapeNum != 1)
+        {
+          return Ptr<BackendNode>();
+        }
+
+        // Input
+        if (inputWrapper->isTensor())
+        {
+          input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+          if (input_index == -1)
+          {
+              // Copy To New inputWrapper
+              Mat tmp = inputWrapper->getMat();
+              inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+          }
+        }
+
+        if (!inputWrapper->isTensor() || input_index == -1)
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, scale, zeropoint));
+          inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT,tvInputQuant);
+          input_index = tvGraph->addWrapper(inputWrapper);
+        }
+        inputsIndex.push_back(input_index);
+
+        //Output
+        // Output Tensor has the same quantized attrib as Input Tesor.
+        Ptr<tim::vx::Quantization> outputQuant = inputWrapper->getTensorQuantization();
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        // generate output shape.
+        MatShape outputShape = shape(outputWrapper->getMat());
+        // reverse shape, from NCHW to WHCN
+        std::reverse(outputShape.begin(), outputShape.end());
+        std::vector<uint32_t> tvShape(outputShape.begin(), outputShape.end());
+
+        std::shared_ptr<tim::vx::Operation> tvReshape = graph->CreateOperation<tim::vx::ops::Reshape>(tvShape);
+
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvReshape, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
+    }
+
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
     {
@@ -360,6 +469,8 @@ private:
     std::vector<int> inputIndices; // Which axes from input are needed to compute correct output shape
     bool hasDynamicShapes;
     bool shapesInitialized;
+    float scale;
+    int zeropoint;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

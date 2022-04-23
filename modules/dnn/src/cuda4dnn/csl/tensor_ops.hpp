@@ -18,6 +18,7 @@
 #include "cudnn/softmax.hpp"
 #include "cudnn/transform.hpp"
 #include "cudnn/transpose_convolution.hpp"
+#include "cudnn/recurrent.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -470,6 +471,90 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     private:
         cudnn::Handle cudnnHandle;
         TensorTransformDescriptor transDesc;
+    };
+
+    template<class T>
+    class LSTM
+    {
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        using DropoutDescriptor = cudnn::DropoutDescriptor;
+        using RNNDescriptor = cudnn::RNNDescriptor<T>;
+        using FilterDescriptor = cudnn::FilterDescriptor<T>;
+        using TensorDescriptorsArray = cudnn::TensorDescriptorsArray<T>;
+
+    public:
+        using RNNMode = typename RNNDescriptor::RNNMode;
+
+        struct params_type
+        {
+            std::vector<std::size_t> weights_shape;
+
+            int seqLength;
+            int numLayers;
+            int hiddenSize;
+            int inputSize;
+            int miniBatch;
+            bool bidirectional;
+
+            float dropout;
+            RNNMode type;
+        };
+
+        LSTM() = default;
+        LSTM(const LSTM&) = delete;
+        LSTM(LSTM&&) = default;
+        LSTM(cudnn::Handle handle, const params_type& params)
+            : cudnnHandle(std::move(handle)), seqLength{params.seqLength},
+              inputDesc(seqLength, {params.miniBatch, params.inputSize, 1}),
+              outputDesc(seqLength,
+                         {params.miniBatch,
+                          params.bidirectional ? params.hiddenSize * 2 : params.hiddenSize,
+                          1})
+        {
+            dropoutDesc = DropoutDescriptor(cudnnHandle, params.dropout);
+            filterDesc = FilterDescriptor(params.weights_shape);
+            rnnDesc = RNNDescriptor(cudnnHandle, params.type, params.hiddenSize,
+                                    params.numLayers, params.bidirectional, dropoutDesc);
+
+            int num_direction = params.bidirectional ? 2 : 1;
+            h0TensorDesc = TensorDescriptor(
+                    {num_direction, params.miniBatch, params.hiddenSize});
+            c0TensorDesc = TensorDescriptor(
+                    {num_direction, params.miniBatch, params.hiddenSize});
+
+            // Get amount of work space required to execute the RNN described by rnnDesc
+            // with input dimensions defined by inputDesc
+            csl::WorkspaceBuilder builder;
+            builder.require(cudnn::getRNNWorkspaceSize<T>(cudnnHandle, rnnDesc, seqLength, inputDesc));
+            scratch_mem_in_bytes = builder.required_workspace_size();
+        }
+
+        LSTM& operator=(const LSTM&) = delete;
+        LSTM& operator=(LSTM&&) = default;
+
+        void inference(TensorView<T> input, TensorSpan<T> y_output, TensorSpan<T> yc_output, TensorView<T> filters,
+                       TensorView<T> h0, TensorView<T> c0, WorkspaceInstance workspace)
+        {
+            cudnn::LSTMForward<T>(cudnnHandle, rnnDesc, filterDesc, filters.get(), inputDesc,
+                                  input.get(), h0TensorDesc, h0.get(), c0TensorDesc, c0.get(),
+                                  seqLength, outputDesc, y_output.get(), yc_output.get(), workspace);
+        }
+
+        std::size_t get_workspace_memory_in_bytes() const noexcept { return scratch_mem_in_bytes; }
+
+    private:
+        cudnn::Handle cudnnHandle;
+        std::size_t scratch_mem_in_bytes{0};
+        int seqLength;
+
+        RNNDescriptor rnnDesc;
+        DropoutDescriptor dropoutDesc;
+
+        FilterDescriptor filterDesc;
+        TensorDescriptor h0TensorDesc, c0TensorDesc;
+
+        TensorDescriptorsArray inputDesc;
+        TensorDescriptorsArray outputDesc;
     };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */

@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_timvx.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -16,14 +17,45 @@ namespace dnn
 class ActivationLayerInt8Impl CV_FINAL : public ActivationLayerInt8
 {
 public:
+    int input_zp, output_zp;
+    float input_sc, output_sc;
+    float slope = 0.0f;
+
+#ifdef HAVE_TIMVX
+    tvActivationType tvActType;
+#endif
     ActivationLayerInt8Impl(const LayerParams &params)
     {
         setParamsFrom(params);
         activationLUT = !blobs.empty() ? blobs[0] : Mat();
+
+        input_zp = params.get<int>("input_zeropoint");
+        input_sc = params.get<float>("input_scale");
+        output_zp = params.get<int>("zeropoints");
+        output_sc = params.get<float>("scales");
+
+        if (params.has("slope"))
+        {
+            slope = params.get<float>("slope");
+        }
+
+#ifdef HAVE_TIMVX
+        tvActType = getTimVXActType(type);
+#endif
+
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_TIMVX
+        if (backendId == DNN_BACKEND_TIMVX)
+        {
+            // TODO!: Leaky ReLU will be supported in future.
+            if (tvActType == tvActReLU && slope != 0.f)
+                return false;
+            return tvActType != tvActNotSupported;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -105,6 +137,112 @@ public:
             }
         }
     };
+
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        std::vector<int> inputsIndex, outputsIndex;
+        int input_index, output_index;
+        CV_Assert(inputsWrapper.size() == 1);
+
+        // input Tensor
+        Ptr<TimVXBackendWrapper> inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+
+        if (inputWrapper->isTensor())
+        {
+            input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+            if(input_index == -1)
+            {
+                // Copy To New inputWrapper
+                Mat tmp = inputWrapper->getMat();
+                inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+            }
+        }
+
+        if (!inputWrapper->isTensor())
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, input_sc, input_zp));
+            inputWrapper->createTensor(graph, tim::vx::TensorAttribute::INPUT, tvInputQuant);
+            input_index = tvGraph->addWrapper(inputWrapper);
+        }
+
+        inputsIndex.push_back(input_index);
+
+        // output tensor
+        CV_Assert(outputsWrapper.size() == 1);
+        Ptr<TimVXBackendWrapper> outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        Ptr<tim::vx::Quantization> outputQuant = Ptr<tim::vx::Quantization>(
+                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, output_sc, output_zp));
+
+        Ptr<tim::vx::Tensor> outputTensor;
+
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        std::shared_ptr<tim::vx::Operation> tvAct;
+
+        switch(tvActType) {
+            case tvActReLU:
+            {
+                if (slope != 0.f)
+                    tvAct = graph->CreateOperation<tim::vx::ops::LeakyRelu>(slope);
+                else
+                    tvAct = graph->CreateOperation<tim::vx::ops::Relu>();
+                break;
+            }
+            case tvActReLU6:
+                tvAct = graph->CreateOperation<tim::vx::ops::Relu6>();
+                break;
+            case tvActTanH:
+                tvAct = graph->CreateOperation<tim::vx::ops::Tanh>();
+                break;
+            case tvActSwish:
+                tvAct = graph->CreateOperation<tim::vx::ops::Swish>();
+                break;
+            case tvActMish:
+                tvAct = graph->CreateOperation<tim::vx::ops::Mish>();
+                break;
+            case tvActSigmoid:
+                tvAct = graph->CreateOperation<tim::vx::ops::Sigmoid>();
+                break;
+            case tvActELU:
+                tvAct = graph->CreateOperation<tim::vx::ops::Elu>();
+                break;
+            default:
+                // TODO! check the default function.
+                tvAct = graph->CreateOperation<tim::vx::ops::Relu>();
+                break;
+        }
+
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvAct, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
+    }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {

@@ -1267,7 +1267,10 @@ CASE(test_reduce_l1_negative_axes_keep_dims_example)
 CASE(test_reduce_l1_negative_axes_keep_dims_random)
     // no filter
 CASE(test_reduce_l2_default_axes_keepdims_example)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00490189 vs 0.004)
+#endif
 CASE(test_reduce_l2_default_axes_keepdims_random)
     // no filter
 CASE(test_reduce_l2_do_not_keepdims_example)
@@ -1291,7 +1294,10 @@ CASE(test_reduce_log_sum_default)
 CASE(test_reduce_log_sum_desc_axes)
     // no filter
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_example)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00671387 vs 0.004
+#endif
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_random)
     // no filter
 CASE(test_reduce_log_sum_exp_do_not_keepdims_example)
@@ -1357,21 +1363,61 @@ CASE(test_reduce_min_negative_axes_keepdims_example)
 CASE(test_reduce_min_negative_axes_keepdims_random)
     // no filter
 CASE(test_reduce_prod_default_axes_keepdims_example)
-    // no filter
+#if SKIP_SET_1
+    SKIP_MYRIAD;  // accuracy (Expected: (normL1) <= (l1), actual: inf vs 0.004)
+#endif
 CASE(test_reduce_prod_default_axes_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 5;  // Expected: (normL1) <= (l1), actual: 2.66211 vs 0.004  |ref| = 24621.337890625
+        default_lInf = 5;  // Expected: (normInf) <= (lInf), actual: 2.66211 vs 0.02  |ref| = 24621.337890625
+    }
+#endif
 CASE(test_reduce_prod_do_not_keepdims_example)
     // no filter
 CASE(test_reduce_prod_do_not_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+    }
+#endif
 CASE(test_reduce_prod_keepdims_example)
     // no filter
 CASE(test_reduce_prod_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+    }
+#endif
+#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+    }
+#endif
 CASE(test_reduce_prod_negative_axes_keepdims_example)
     // no filter
 CASE(test_reduce_prod_negative_axes_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+    }
+#endif
+#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
+    }
+#endif
 CASE(test_reduce_sum_default_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_default_axes_keepdims_random)
@@ -1395,19 +1441,61 @@ CASE(test_reduce_sum_negative_axes_keepdims_random)
 CASE(test_reduce_sum_square_default_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_default_axes_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.0183411 vs 0.004
+#endif
 CASE(test_reduce_sum_square_do_not_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_do_not_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+    }
+#endif
+#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00723048 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201416 vs 0.02
+    }
+#endif
 CASE(test_reduce_sum_square_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+    }
+#endif
+#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+    }
+#endif
 CASE(test_reduce_sum_square_negative_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_negative_axes_keepdims_random)
-    // no filter
+#if SKIP_SET_1
+    if (target == DNN_TARGET_MYRIAD)
+    {
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+    }
+#endif
+#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
+        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+    }
+#endif
 CASE(test_reflect_pad)
     // no filter
 CASE(test_relu)

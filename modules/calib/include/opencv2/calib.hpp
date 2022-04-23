@@ -1469,10 +1469,13 @@ number of points in the view.
 @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
 1-channel or 1x1 3-channel
 @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+@param criteria Termination criteria
 @param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
  */
 CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
-    InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray());
+    InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray(),
+    TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8));
+
 
 /** @brief Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero
 distortion is used, if R or P is empty identity matrixes are used.

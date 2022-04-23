@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_timvx.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -22,6 +23,10 @@ public:
     } op;
     std::vector<float> coeffs;
     std::vector<int> zeropoints;
+    std::vector<float> scales;
+
+    int output_zp;
+    float output_sc;
 
     enum OutputChannelsMode
     {
@@ -84,6 +89,20 @@ public:
             }
         }
 
+        if (params.has("input_scales"))
+        {
+            DictValue sc = params.get("input_scales");
+            int i, n = sc.size();
+            scales.resize(n);
+            for (i = 0; i < n; i++)
+            {
+                scales[i] = sc.get<float>(i);
+            }
+        }
+
+        output_zp = params.get<int>("zeropoints");
+        output_sc = params.get<float>("scales");
+
         channelsModeInput = ELTWISE_CHANNNELS_SAME;
         if (params.has("output_channels_mode"))
         {
@@ -116,6 +135,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        // For TimVX Backend, only ELTWISE_CHANNNELS_SAME was supported.
+        if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
+            return channelsModeInput == ELTWISE_CHANNNELS_SAME;
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -217,6 +239,134 @@ public:
                 return;
             }
         }
+    }
+
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        // tvGraph Initialization.
+        if (inputsWrapper.size() != 2)
+            return Ptr<BackendNode>();
+
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        bool isSub = false;
+        // TODO: support variable coeffs.
+        if (op == SUM)
+        {
+            CV_Assert(coeffs.size() == scales.size());
+            std::vector<float> originalCoeffs;
+
+            for (int i = 0; i < coeffs.size(); i++)
+            {
+                originalCoeffs.push_back(coeffs[i] * output_sc / scales[i]);
+            }
+
+            float eps = std::numeric_limits<float>::epsilon();
+            if (std::fabs(originalCoeffs[0] - 1.0f) <= eps * std::fabs(originalCoeffs[0] + 1.0f) &&
+                std::fabs(originalCoeffs[1] + 1.0f) <= eps * std::fabs(originalCoeffs[1] - 1.0f))
+            {
+                // Sub, if coeffs = {1., -1.}, isSub = true.
+                isSub = true;
+            }
+            else if (std::fabs(originalCoeffs[0] - 1.0f) <= eps * std::fabs(originalCoeffs[0] + 1.0f) &&
+                std::abs(originalCoeffs[1] - 1.0f) <= eps * std::abs(originalCoeffs[1] + 1.0f))
+            {
+                // Sum, if coeff = {1., 1.}, isSub = false.
+                isSub = false;
+            }
+            else
+            {
+                return Ptr<BackendNode>();
+            }
+        }
+
+        std::vector<int> inputsIndex, outputsIndex;
+        int input_index = -1, output_index = -1;
+        CV_Assert(channelsModeInput == ELTWISE_CHANNNELS_SAME);
+
+        // Input
+        Ptr<TimVXBackendWrapper> inputWrapper;
+
+        CV_Assert(!scales.empty() && !zeropoints.empty());
+
+        for (int i = 0; i<inputsWrapper.size(); i++){
+            inputWrapper = inputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
+
+            if (inputWrapper->isTensor())
+            {
+                input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+                if (input_index == -1)
+                {
+                    // Copy To New inputWrapper
+                    Mat tmp = inputWrapper->getMat();
+                    inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+                }
+            }
+
+            if (!inputWrapper->isTensor())
+            {
+                Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                        new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, scales[i], zeropoints[i]));
+                inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT, tvInputQuant);
+                input_index = tvGraph->addWrapper(inputWrapper);
+            }
+
+            inputsIndex.push_back(input_index);
+        }
+
+        // Output
+        CV_Assert(outputsWrapper.size() == 1);
+        Ptr<TimVXBackendWrapper> outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        Ptr<tim::vx::Quantization> outputQuant = Ptr<tim::vx::Quantization>(
+                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, output_sc, output_zp));
+
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        std::shared_ptr<tim::vx::Operation> tvEltwise;
+
+        switch (op) {
+            case SUM:
+                if (isSub)
+                    tvEltwise = graph->CreateOperation<tim::vx::ops::Sub>();
+                else
+                    tvEltwise = graph->CreateOperation<tim::vx::ops::Add>();
+                break;
+            case PROD:
+                tvEltwise = graph->CreateOperation<tim::vx::ops::Multiply>();
+                break;
+            case MAX:
+                tvEltwise = graph->CreateOperation<tim::vx::ops::Maximum>();
+                break;
+            default:
+                CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        }
+
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvEltwise, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
     }
 
     class EltwiseInvoker : public ParallelLoopBody

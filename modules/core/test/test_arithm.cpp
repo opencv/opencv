@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
+#include <algorithm>
 
 namespace opencv_test { namespace {
 
@@ -2128,6 +2129,79 @@ TEST(Core_minMaxIdx, regression_9207_1)
 }
 
 
+class TransposeND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
+{
+public:
+    std::vector<int> m_shape;
+    int m_type;
+
+    void SetUp()
+    {
+        std::tie(m_shape, m_type) = GetParam();
+    }
+};
+
+
+TEST_P(TransposeND, basic)
+{
+    Mat inp(m_shape, m_type);
+    randu(inp, 0, 255);
+
+    std::vector<int> order(m_shape.size());
+    std::iota(order.begin(), order.end(), 0);
+    auto transposer = [&order] (const std::vector<int>& id)
+    {
+        std::vector<int> ret(id.size());
+        for (size_t i = 0; i < id.size(); ++i)
+        {
+            ret[i] = id[order[i]];
+        }
+        return ret;
+    };
+    auto advancer = [&inp] (std::vector<int>& id)
+    {
+        for (int j = static_cast<int>(id.size() - 1); j >= 0; --j)
+        {
+            ++id[j];
+            if (id[j] != inp.size[j])
+            {
+                break;
+            }
+            id[j] = 0;
+        }
+    };
+
+    do
+    {
+        Mat out;
+        cv::transposeND(inp, order, out);
+        std::vector<int> id(order.size());
+        for (size_t i = 0; i < inp.total(); ++i)
+        {
+            auto new_id = transposer(id);
+            switch (inp.type())
+            {
+            case CV_8UC1:
+                ASSERT_EQ(inp.at<uint8_t>(id.data()), out.at<uint8_t>(new_id.data()));
+                break;
+            case CV_32FC1:
+                ASSERT_EQ(inp.at<float>(id.data()), out.at<float>(new_id.data()));
+                break;
+            default:
+                FAIL() << "Unsupported type: " << inp.type();
+            }
+            advancer(id);
+        }
+    } while (std::next_permutation(order.begin(), order.end()));
+}
+
+
+INSTANTIATE_TEST_CASE_P(Arithm, TransposeND, testing::Combine(
+    testing::Values(std::vector<int>{2, 3, 4}, std::vector<int>{5, 10}),
+    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
+));
+
+
 TEST(Core_minMaxIdx, regression_9207_2)
 {
     const int rows = 13;
@@ -2546,5 +2620,36 @@ TEST(Core_Magnitude, regression_19506)
     }
 }
 
+TEST(Core_CartPolar, inplace)
+{
+    RNG& rng = TS::ptr()->get_rng();
+    cv::Mat1d A[2] = {cv::Mat1d(10, 10), cv::Mat1d(10, 10)};
+    cv::Mat1d B[2], C[2];
+    cv::UMat uA[2];
+
+    for(int i = 0; i < 2; ++i)
+    {
+        cvtest::randUni(rng, A[i], Scalar::all(-1000), Scalar::all(1000));
+        A[i].copyTo(uA[i]);
+    }
+
+    // Reverse
+    cv::cartToPolar(A[0], A[1], B[0], B[1], false);
+    cv::polarToCart(B[0], B[1], C[0], C[1], false);
+    EXPECT_MAT_NEAR(A[0], C[0], 2);
+    EXPECT_MAT_NEAR(A[1], C[1], 2);
+
+    // Inplace
+    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[0], B[1], false), cv::Exception);
+    EXPECT_THROW(cv::polarToCart(B[0], B[1], B[1], B[0], false), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[0], A[1], false), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(A[0], A[1], A[1], A[0], false), cv::Exception);
+    // Inplace OCL
+    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+    EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[1], uA[0]), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+    EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
+
+}
 
 }} // namespace

@@ -496,6 +496,9 @@ struct ReLUFunctor : public BaseFunctor
             params.blobs.clear();
             params.blobs.push_back(lookUpTable);
         }
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
+        params.set("slope", slope);
         return true;
     }
 
@@ -635,6 +638,8 @@ struct ReLU6Functor : public BaseFunctor
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
     {
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
         return true;
     }
 
@@ -704,6 +709,8 @@ struct BaseDefaultFunctor : public BaseFunctor
         }
         params.blobs.clear();
         params.blobs.push_back(lookUpTable);
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
         return true;
     }
 
@@ -2263,6 +2270,96 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
+struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
+{
+    typedef SignLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return x > 0.f ? 1.f : (x < 0.f ? -1.f : 0.f);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::SignOp>(target, stream);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const SignFunctor::BaseDefaultFunctor<SignFunctor>::ocl_kernel_name = "SignForward";
+
+
+struct ShrinkFunctor : public BaseDefaultFunctor<ShrinkFunctor>
+{
+    typedef ShrinkLayer Layer;
+    float bias;
+    float lambd;
+
+    explicit ShrinkFunctor(float bias_ = 0.0f, float lambd_ = 0.5f) : bias(bias_), lambd(lambd_) {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return x > lambd ? x - bias : (x < -lambd ? x + bias : 0.f);
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ShrinkOp>(target, stream, bias, lambd);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const ShrinkFunctor::BaseDefaultFunctor<ShrinkFunctor>::ocl_kernel_name = "ShrinkForward";
+
+struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
+{
+    typedef ReciprocalLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
+    }
+
+    inline float calculate(float x) const
+    {
+        return 1.f/x;
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::ReciprocalOp>(target, stream);
+    }
+#endif
+
+    int64 getFLOPSPerElement() const { return 1; }
+};
+
+template<>
+const char* const ReciprocalFunctor::BaseDefaultFunctor<ReciprocalFunctor>::ocl_kernel_name = "ReciprocalForward";
+
+
 #define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
 Ptr<_Layer> _Layer::create() { \
     return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
@@ -2604,5 +2701,32 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
     return l;
 }
 
+Ptr<SignLayer> SignLayer::create(const LayerParams& params)
+{
+    Ptr<SignLayer> l(new ElementWiseLayer<SignFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<ReciprocalLayer> ReciprocalLayer::create(const LayerParams& params)
+{
+    Ptr<ReciprocalLayer> l(new ElementWiseLayer<ReciprocalFunctor>());
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<ShrinkLayer> ShrinkLayer::create(const LayerParams& params)
+{
+    float bias = params.get<float>("bias", 0.f);
+    float lambd = params.get<float>("lambd", 0.5f);
+    Ptr<ShrinkLayer> l(new ElementWiseLayer<ShrinkFunctor>(ShrinkFunctor(bias, lambd)));
+    l->setParamsFrom(params);
+    l->bias = bias;
+    l->lambd = lambd;
+
+    return l;
+}
 }
 }

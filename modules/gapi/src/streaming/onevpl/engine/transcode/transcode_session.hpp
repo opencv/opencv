@@ -14,10 +14,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-
-struct IDataProvider;
 class Surface;
-struct VPLAccelerationPolicy;
 
 class GAPI_EXPORTS LegacyTranscodeSession : public LegacyDecodeSession {
 public:
@@ -33,8 +30,8 @@ public:
     const mfxFrameInfo& get_video_param() const override;
 private:
     mfxVideoParam mfx_transcoder_param;
-
     VPLAccelerationPolicy::pool_key_t vpp_out_pool_id;
+
     std::weak_ptr<Surface> vpp_surface_ptr;
     std::queue<op_handle_t> vpp_queue;
 };

@@ -12,6 +12,9 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 {
     std::vector< tuple<Backend, Target> > targets;
     targets.push_back(make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+#ifdef HAVE_TIMVX
+    targets.push_back(make_tuple(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
+#endif
     return testing::ValuesIn(targets);
 }
 
@@ -104,14 +107,29 @@ TEST_P(Test_Int8_layers, Convolution1D)
 
 TEST_P(Test_Int8_layers, Convolution2D)
 {
-    testLayer("layer_convolution", "Caffe", 0.0174, 0.0758, 1, 1, true);
-    testLayer("single_conv", "TensorFlow", 0.00413, 0.02201);
-    testLayer("depthwise_conv2d", "TensorFlow", 0.0388, 0.169);
+    if(backend == DNN_BACKEND_TIMVX)
+        testLayer("single_conv", "TensorFlow", 0.00424, 0.02201);
+    else
+        testLayer("single_conv", "TensorFlow", 0.00413, 0.02201);
+
     testLayer("atrous_conv2d_valid", "TensorFlow", 0.0193, 0.0633);
     testLayer("atrous_conv2d_same", "TensorFlow", 0.0185, 0.1322);
     testLayer("keras_atrous_conv2d_same", "TensorFlow", 0.0056, 0.0244);
-    testLayer("convolution", "ONNX", 0.0052, 0.01516);
-    testLayer("two_convolution", "ONNX", 0.00295, 0.00840);
+
+    if(backend == DNN_BACKEND_TIMVX)
+        testLayer("convolution", "ONNX", 0.00534, 0.01516);
+    else
+        testLayer("convolution", "ONNX", 0.0052, 0.01516);
+
+    if(backend == DNN_BACKEND_TIMVX)
+        testLayer("two_convolution", "ONNX", 0.0033, 0.01);
+    else
+        testLayer("two_convolution", "ONNX", 0.00295, 0.00840);
+
+    if(backend == DNN_BACKEND_TIMVX)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
+    testLayer("layer_convolution", "Caffe", 0.0174, 0.0758, 1, 1, true);
+    testLayer("depthwise_conv2d", "TensorFlow", 0.0388, 0.169);
 }
 
 TEST_P(Test_Int8_layers, Convolution3D)
@@ -130,9 +148,21 @@ TEST_P(Test_Int8_layers, Flatten)
 
 TEST_P(Test_Int8_layers, Padding)
 {
-    testLayer("padding_valid", "TensorFlow", 0.0026, 0.0064);
-    testLayer("padding_same", "TensorFlow", 0.0081, 0.032);
-    testLayer("spatial_padding", "TensorFlow", 0.0078, 0.028);
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("padding_valid", "TensorFlow", 0.0292, 0.0105);
+    else
+        testLayer("padding_valid", "TensorFlow", 0.0026, 0.0064);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("padding_same", "TensorFlow", 0.0085, 0.032);
+    else
+        testLayer("padding_same", "TensorFlow", 0.0081, 0.032);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("spatial_padding", "TensorFlow", 0.0079, 0.028);
+    else
+        testLayer("spatial_padding", "TensorFlow", 0.0078, 0.028);
+
     testLayer("mirror_pad", "TensorFlow", 0.0064, 0.013);
     testLayer("pad_and_concat", "TensorFlow", 0.0021, 0.0098);
     testLayer("padding", "ONNX", 0.0005, 0.0069);
@@ -283,20 +313,35 @@ TEST_P(Test_Int8_layers, InnerProduct)
 {
     testLayer("layer_inner_product", "Caffe", 0.005, 0.02, 1, 1, true);
     testLayer("matmul", "TensorFlow", 0.0061, 0.019);
-    testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0009, 0.0091);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0018, 0.0175);
+    else
+        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0009, 0.0091);
+
     testLayer("nhwc_reshape_matmul", "TensorFlow", 0.03, 0.071);
     testLayer("matmul_layout", "TensorFlow", 0.035, 0.06);
     testLayer("tf2_dense", "TensorFlow", 0, 0);
     testLayer("matmul_add", "ONNX", 0.041, 0.082);
     testLayer("linear", "ONNX", 0.0018, 0.0029);
-    testLayer("constant", "ONNX", 0.00021, 0.0006);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("constant", "ONNX", 0.00048, 0.0013);
+    else
+        testLayer("constant", "ONNX", 0.00021, 0.0006);
+
     testLayer("lin_with_constant", "ONNX", 0.0011, 0.0016);
 }
 
 TEST_P(Test_Int8_layers, Reshape)
 {
     testLayer("reshape_layer", "TensorFlow", 0.0032, 0.0082);
-    testLayer("reshape_nchw", "TensorFlow", 0.0089, 0.029);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("reshape_nchw", "TensorFlow", 0.0092, 0.0495);
+    else
+        testLayer("reshape_nchw", "TensorFlow", 0.0089, 0.029);
+
     testLayer("reshape_conv", "TensorFlow", 0.035, 0.054);
     testLayer("reshape_reduce", "TensorFlow", 0.0042, 0.0078);
     testLayer("reshape_as_shape", "TensorFlow", 0.0014, 0.0028);
@@ -307,7 +352,12 @@ TEST_P(Test_Int8_layers, Reshape)
     testLayer("flatten_by_prod", "ONNX", 0.0048, 0.0081);
     testLayer("squeeze", "ONNX", 0.0048, 0.0081);
     testLayer("unsqueeze", "ONNX", 0.0033, 0.0053);
-    testLayer("squeeze_and_conv_dynamic_axes", "ONNX", 0.0054, 0.0154);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        testLayer("squeeze_and_conv_dynamic_axes", "ONNX", 0.006, 0.0212);
+    else
+        testLayer("squeeze_and_conv_dynamic_axes", "ONNX", 0.0054, 0.0154);
+
     testLayer("unsqueeze_and_conv_dynamic_axes", "ONNX", 0.0037, 0.0151);
 }
 
@@ -378,6 +428,10 @@ TEST_P(Test_Int8_layers, Dropout)
 TEST_P(Test_Int8_layers, Eltwise)
 {
     testLayer("layer_eltwise", "Caffe", 0.062, 0.15);
+
+    if (backend == DNN_BACKEND_TIMVX)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
+
     testLayer("conv_2_inps", "Caffe", 0.0086, 0.0232, 2, 1, true, false);
     testLayer("eltwise_sub", "TensorFlow", 0.015, 0.047);
     testLayer("eltwise_add_vec", "TensorFlow", 0.037, 0.21); // tflite 0.0095, 0.0365
@@ -852,7 +906,7 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
 
-    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.21;
+    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.4;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -862,6 +916,8 @@ TEST_P(Test_Int8_nets, EfficientDet)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_TIMVX)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
 
     if (target != DNN_TARGET_CPU)
     {

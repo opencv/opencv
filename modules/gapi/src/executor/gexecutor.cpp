@@ -30,10 +30,11 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
     // 2. Put input/output GComputation arguments to the storage
     // 3. For every Island, prepare vectors of input/output parameter descs
-    // 4. Iterate over a list of operations (sorted in the topological order)
-    // 5. For every operation, form a list of input/output data objects
-    // 6. Run GIslandExecutable
-    // 7. writeBack
+    // 4. Ask every GIslandExecutable to prepare its internal states for a new stream
+    // 5. Iterate over a list of operations (sorted in the topological order)
+    // 6. For every operation, form a list of input/output data objects
+    // 7. Run GIslandExecutable
+    // 8. writeBack
 
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
@@ -82,6 +83,9 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
         } // switch(kind)
     } // for(gim nodes)
+
+    // (4)
+    prepareForNewStream();
 }
 
 namespace cv {
@@ -149,7 +153,7 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     {
     case GRunArgP::index_of<cv::Mat*>() : {
         // If there is a copy intrinsic at the end of the graph
-        // we need to actualy copy the data to the user buffer
+        // we need to actually copy the data to the user buffer
         // since output runarg was optimized to simply point
         // to the input of the copy kernel
         // FIXME:
@@ -270,6 +274,7 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
 {
     cv::gimpl::Mag &mag;
     std::unordered_map<const void*, int> out_idx;
+    std::exception_ptr eptr;
 
     GRunArgP get(int idx) override
     {
@@ -278,8 +283,18 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
         out_idx[cv::gimpl::proto::ptr(r)] = idx;
         return r;
     }
-    void post(GRunArgP&&) override { } // Do nothing here
+    void post(GRunArgP&&, const std::exception_ptr& e) override
+    {
+        if (e)
+        {
+            eptr = e;
+        }
+    }
     void post(EndOfStream&&) override {} // Do nothing here too
+    void post(Exception&& ex) override
+    {
+        eptr = std::move(ex.eptr);
+    }
     void meta(const GRunArgP &out, const GRunArg::Meta &m) override
     {
         const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
@@ -290,6 +305,14 @@ public:
         : mag(m)
     {
         set(rcs);
+    }
+
+    void verify()
+    {
+        if (eptr)
+        {
+            std::rethrow_exception(eptr);
+        }
     }
 };
 
@@ -382,16 +405,18 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         magazine::resetInternalData(m_res, data);
     }
 
-    // Run the script
+    // Run the script (5)
     for (auto &op : m_ops)
     {
-        // (5), (6)
+        // (6), (7)
         Input i{m_res, op.in_objects};
         Output o{m_res, op.out_objects};
         op.isl_exec->run(i, o);
+        // NB: Check if execution finished without exception.
+        o.verify();
     }
 
-    // (7)
+    // (8)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {

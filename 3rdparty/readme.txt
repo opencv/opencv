@@ -37,7 +37,7 @@ libtiff               Tag Image File Format (TIFF) Software
                       WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.
 ------------------------------------------------------------------------------------
 zlib                  General purpose LZ77 compression library
-                      Copyright (C) 1995-2012 Jean-loup Gailly and Mark Adler.
+                      Copyright (C) 1995-2022 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
 ------------------------------------------------------------------------------------

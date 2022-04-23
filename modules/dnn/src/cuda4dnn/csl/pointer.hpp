@@ -147,7 +147,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         /* host const void pointer to const void device pointer */
         CUDA4DNN_HOST_DEVICE explicit DevicePtr(pointer ptr_) noexcept : ptr{ ptr_ } { }
 
-        /* allow any device pointer to be implicitly convereted to void device pointer */
+        /* allow any device pointer to be implicitly converted to void device pointer */
         template <class T>
         CUDA4DNN_HOST_DEVICE DevicePtr(DevicePtr<T> ptr_) noexcept : ptr{ ptr_.get() } { }
 
@@ -199,7 +199,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         /* host pointer to device pointer */
         CUDA4DNN_HOST_DEVICE explicit DevicePtr(pointer ptr_) noexcept : ptr{ ptr_ } { }
 
-        /* allow any device pointer to mutable memory to be implicitly convereted to void device pointer */
+        /* allow any device pointer to mutable memory to be implicitly converted to void device pointer */
         template <class T, typename std::enable_if<!std::is_const<T>::value, bool>::type = false>
         CUDA4DNN_HOST_DEVICE DevicePtr(DevicePtr<T> ptr_) noexcept : ptr { ptr_.get() } { }
 

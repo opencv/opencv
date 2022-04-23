@@ -38,6 +38,20 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+std::vector<CfgParam> insertCfgparam(std::vector<CfgParam> &&param_array, AccelType type) {
+    switch (type) {
+        case AccelType::HOST:
+            break;
+        case AccelType::DX11:
+            param_array.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+            break;
+        default:
+            GAPI_DbgAssert(false && "Unexpected AccelType");
+            break;
+    }
+    return std::move(param_array);
+}
+
 CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
     suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
@@ -227,6 +241,52 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode_name() +
                                    "\" requested: " +
                                    std::to_string(accel_mode.Data.U32));
+            break;
+    }
+}
+
+CfgParamDeviceSelector::CfgParamDeviceSelector(const Device &device,
+                                               const Context &ctx,
+                                               CfgParams) :
+    suggested_device(device),
+    suggested_context(ctx) {
+
+    switch(device.get_type()) {
+        case AccelType::DX11: {
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+            ID3D11Device* dx_device_ptr =
+                reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
+            dx_device_ptr->AddRef();
+
+            ID3D11DeviceContext* dx_ctx_ptr =
+                reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
+
+            // oneVPL recommendation
+            {
+                ID3D11Multithread *pD11Multithread = nullptr;
+                dx_ctx_ptr->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
+                pD11Multithread->SetMultithreadProtected(true);
+                pD11Multithread->Release();
+            }
+
+            dx_ctx_ptr->AddRef();
+            break;
+#else
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
+                                      ": MFX_ACCEL_MODE_VIA_D3D11\""
+                                      "was chosen for current project configuration");
+            throw std::logic_error(std::string("Unsupported \"") +
+                                   CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
+#endif // HAVE_DIRECTX
+#endif // HAVE_D3D11
+        }
+        case AccelType::HOST:
+            break;
+        default:
+            throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode_name() +
+                                   "\" requested: " +
+                                   to_cstring(device.get_type()));
             break;
     }
 }

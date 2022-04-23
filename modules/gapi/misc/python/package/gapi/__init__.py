@@ -218,7 +218,7 @@ def op(op_id, in_types, out_types):
 
         for i, t in enumerate(out_types):
             if t not in [cv.GMat, cv.GScalar, *garray_types, *gopaque_types]:
-                   raise Exception('{} unsupported output type: {} in possition: {}'
+                   raise Exception('{} unsupported output type: {} in position: {}'
                            .format(cls.__name__, t.__name__, i))
 
         def on(*args):
@@ -286,16 +286,5 @@ def kernel(op_cls):
 
     return kernel_with_params
 
-
-# FIXME: On the c++ side every class is placed in cv2 module.
-cv.gapi.wip.draw.Rect = cv.gapi_wip_draw_Rect
-cv.gapi.wip.draw.Text = cv.gapi_wip_draw_Text
-cv.gapi.wip.draw.Circle = cv.gapi_wip_draw_Circle
-cv.gapi.wip.draw.Line = cv.gapi_wip_draw_Line
-cv.gapi.wip.draw.Mosaic = cv.gapi_wip_draw_Mosaic
-cv.gapi.wip.draw.Image = cv.gapi_wip_draw_Image
-cv.gapi.wip.draw.Poly = cv.gapi_wip_draw_Poly
-
-cv.gapi.streaming.queue_capacity = cv.gapi_streaming_queue_capacity
 
 cv.gapi.wip.GStreamerPipeline = cv.gapi_wip_gst_GStreamerPipeline

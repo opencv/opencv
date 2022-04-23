@@ -28,8 +28,8 @@ INSTANTIATE_TEST_CASE_P(SqrtPerfTestFluid, SqrtPerfTest,
 INSTANTIATE_TEST_CASE_P(AddPerfTestFluid, AddPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
-            Values(-1, CV_8U, CV_32F),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(AddCPerfTestFluid, AddCPerfTest,
@@ -40,10 +40,10 @@ INSTANTIATE_TEST_CASE_P(AddCPerfTestFluid, AddCPerfTest,
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(SubPerfTestFluid, SubPerfTest,
-    Combine(Values(AbsExact().to_compare_f()),
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-6, 0).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_16SC1, CV_32FC1),
-            Values(-1, CV_8U, CV_32F),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(SubCPerfTestFluid, SubCPerfTest,
@@ -101,8 +101,8 @@ INSTANTIATE_TEST_CASE_P(DivCPerfTestFluid, DivCPerfTest,
 INSTANTIATE_TEST_CASE_P(DivRCPerfTestFluid, DivRCPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_32FC1),
-            Values(-1, CV_8U, CV_32F),
+            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
+            Values(-1, CV_8U, CV_16U, CV_16S, CV_32F),
             Values(1.0),
             Values(cv::compile_args(CORE_FLUID))));
 
@@ -324,7 +324,7 @@ INSTANTIATE_TEST_CASE_P(ConvertToPerfTestFluid, ConvertToPerfTest,
             Values(CV_8UC3, CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1),
             Values(CV_8U, CV_16U, CV_16S, CV_32F),
             Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(2.5, 1.0),
+            Values(1.0, 2.5),
             Values(0.0),
             Values(cv::compile_args(CORE_FLUID))));
 

@@ -591,28 +591,26 @@ inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b,
 
 inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
 {
+#if CV_NEON_AARCH64
+    int32x4_t c = vmull_high_s16(a.val, b.val);
+#else // #if CV_NEON_AARCH64
+    int32x4_t c = vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val));
+#endif // #if CV_NEON_AARCH64
     return v_int16x8(vcombine_s16(
                                   vshrn_n_s32(vmull_s16( vget_low_s16(a.val),  vget_low_s16(b.val)), 16),
-                                  vshrn_n_s32(
-#if CV_NEON_AARCH64
-                                    vmull_high_s16(a.val, b.val)
-#else // #if CV_NEON_AARCH64
-                                    vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val))
-#endif // #if CV_NEON_AARCH64
-                                    , 16)
+                                  vshrn_n_s32(c, 16)
                                  ));
 }
 inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
 {
+#if CV_NEON_AARCH64
+    uint32x4_t c = vmull_high_u16(a.val, b.val);
+#else // #if CV_NEON_AARCH64
+    uint32x4_t c = vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val));
+#endif // #if CV_NEON_AARCH64
     return v_uint16x8(vcombine_u16(
                                    vshrn_n_u32(vmull_u16( vget_low_u16(a.val),  vget_low_u16(b.val)), 16),
-                                   vshrn_n_u32(
-#if CV_NEON_AARCH64
-                                    vmull_high_u16(a.val, b.val)
-#else // #if CV_NEON_AARCH64
-                                    vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val))
-#endif // #if CV_NEON_AARCH64
-                                    , 16)
+                                   vshrn_n_u32(c, 16)
                                   ));
 }
 
@@ -1937,10 +1935,14 @@ inline v_int32x4 v_round(const v_float32x4& a)
 {
     float32x4_t a_ = a.val;
     int32x4_t result;
+#if defined _MSC_VER
+    result = vcvtnq_s32_f32(a_);
+#else
     __asm__ ("fcvtns %0.4s, %1.4s"
              : "=w"(result)
              : "w"(a_)
              : /* No clobbers */);
+#endif
     return v_int32x4(result);
 }
 #else

@@ -14,21 +14,23 @@ class DummySource final: public cv::gapi::wip::IStreamSource {
 public:
     using Ptr = std::shared_ptr<DummySource>;
     DummySource(const double       latency,
-                const OutputDescr& output);
+                const OutputDescr& output,
+                const bool         drop_frames);
     bool pull(cv::gapi::wip::Data& data) override;
     cv::GMetaArg descr_of() const override;
 
 private:
     double  m_latency;
     cv::Mat m_mat;
-    using TimePoint =
-        std::chrono::time_point<std::chrono::high_resolution_clock>;
-    cv::optional<TimePoint> m_prev_pull_tp;
+    bool    m_drop_frames;
+    double  m_next_tick_ts = -1;
+    int64_t m_curr_seq_id  = 0;
 };
 
 DummySource::DummySource(const double       latency,
-                         const OutputDescr& output)
-    : m_latency(latency) {
+                         const OutputDescr& output,
+                         const bool         drop_frames)
+    : m_latency(latency), m_drop_frames(drop_frames) {
     utils::createNDMat(m_mat, output.dims, output.precision);
     utils::generateRandom(m_mat);
 }
@@ -36,23 +38,60 @@ DummySource::DummySource(const double       latency,
 bool DummySource::pull(cv::gapi::wip::Data& data) {
     using namespace std::chrono;
     using namespace cv::gapi::streaming;
-    // NB: In case it's the first pull.
-    if (!m_prev_pull_tp) {
-        m_prev_pull_tp = cv::util::make_optional(high_resolution_clock::now());
+
+    // NB: Wait m_latency before return the first frame.
+    if (m_next_tick_ts == -1) {
+        m_next_tick_ts = utils::timestamp<milliseconds>() + m_latency;
     }
+
+    int64_t curr_ts = utils::timestamp<milliseconds>();
+    if (curr_ts < m_next_tick_ts) {
+        /*
+         *            curr_ts
+         *               |
+         *    ------|----*-----|------->
+         *                     ^
+         *               m_next_tick_ts
+         *
+         *
+         * NB: New frame will be produced at the m_next_tick_ts point.
+         */
+        utils::sleep(m_next_tick_ts - curr_ts);
+    } else {
+        /*
+         *                                       curr_ts
+         *                         +1         +2    |
+         *    |----------|----------|----------|----*-----|------->
+         *               ^                     ^
+         *         m_next_tick_ts ------------->
+         *
+         *
+         *  NB: Shift m_next_tick_ts to the nearest tick before curr_ts and
+         *  update current seq_id correspondingly.
+         *
+         *  if drop_frames is enabled, wait for the next tick, otherwise
+         *  return last written frame (+2 at the picture above) immediately.
+         */
+        int64_t num_frames =
+            static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
+        m_curr_seq_id  += num_frames;
+        m_next_tick_ts += num_frames * m_latency;
+        if (m_drop_frames) {
+            m_next_tick_ts += m_latency;
+            ++m_curr_seq_id;
+            utils::sleep(m_next_tick_ts - curr_ts);
+        }
+    }
+
     // NB: Just increase reference counter not to release mat memory
     // after assigning it to the data.
     cv::Mat mat = m_mat;
-    auto end = high_resolution_clock::now();
-    auto elapsed =
-        duration_cast<duration<double, std::milli>>(end - *m_prev_pull_tp).count();
-    auto delta = m_latency - elapsed;
-    if (delta > 0) {
-        utils::sleep(delta);
-    }
-    data.meta[meta_tag::timestamp] = int64_t{utils::timestamp<milliseconds>()};
+
+    data.meta[meta_tag::timestamp] = utils::timestamp<milliseconds>();
+    data.meta[meta_tag::seq_id] = m_curr_seq_id++;
     data = mat;
-    m_prev_pull_tp = cv::util::make_optional(high_resolution_clock::now());
+    m_next_tick_ts += m_latency;
+
     return true;
 }
 

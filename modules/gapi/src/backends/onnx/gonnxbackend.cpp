@@ -1102,7 +1102,7 @@ struct InferList2: public cv::detail::KernelTag {
                 } else {
                     GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
                 }
-                // }}} (Preapre input)
+                // }}} (Prepare input)
             } // }}} (For every input of the net)
 
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());

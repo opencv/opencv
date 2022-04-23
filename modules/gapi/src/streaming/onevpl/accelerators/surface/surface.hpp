@@ -59,7 +59,7 @@ public:
     /**
      * Extract value thread-safe lock counter (see @ref Surface description).
      * It's usual situation that counter may be instantly decreased in other thread after this method called.
-     * We need instantaneous value. This method syncronized in inter-threading way with @ref Surface::release_lock()
+     * We need instantaneous value. This method synchronized in inter-threading way with @ref Surface::release_lock()
      *
      * @return fetched locks count.
      */

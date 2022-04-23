@@ -378,271 +378,11 @@ CV_ALWAYS_INLINE int absdiff_simd(const T in1[], const T in2[], T out[], int len
 
     return 0;
 }
-
-template<typename T, typename VT>
-CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], int length)
-{
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
-
-    if (length < nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            VT a = vx_load(&in1[x]);
-            VT b = vx_load(&in2[x]);
-            vx_store(&out[x], a + b);
-        }
-
-        if (x < length && (in1 != out) && (in2 != out))
-        {
-            x = length - nlanes;
-            continue;  // process one more time (unaligned tail)
-        }
-        break;
-    }
-
-    return x;
-}
-
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int length)
-{
-    if (std::is_same<DST, float>::value && !std::is_same<SRC, float>::value)
-        return 0;
-
-    if (std::is_same<DST, SRC>::value)
-    {
-        if (std::is_same<DST, uchar>::value)
-        {
-            return add_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
-                                                     reinterpret_cast<const uchar*>(in2),
-                                                     reinterpret_cast<uchar*>(out), length);
-        }
-        else if (std::is_same<DST, short>::value)
-        {
-            return add_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
-                                                     reinterpret_cast<const short*>(in2),
-                                                     reinterpret_cast<short*>(out), length);
-        }
-        else if (std::is_same<DST, float>::value)
-        {
-            return add_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
-                                                       reinterpret_cast<const float*>(in2),
-                                                       reinterpret_cast<float*>(out), length);
-        }
-    }
-    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
-                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
-                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
-                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(a1 + b1, a2 + b2));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
-                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
-                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
-                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
-                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
-
-                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
-                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
-                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
-                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(v_round(a1 + b1), v_round(a2 + b2)),
-                                                                     v_pack(v_round(a3 + b3), v_round(a4 + b4))));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
-                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-
-    return 0;
-}
-
-template<typename T, typename VT>
-CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], int length)
-{
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
-
-    if (length < nlanes)
-        return 0;
-
-    int x = 0;
-    for (;;)
-    {
-        for (; x <= length - nlanes; x += nlanes)
-        {
-            VT a = vx_load(&in1[x]);
-            VT b = vx_load(&in2[x]);
-            vx_store(&out[x], a - b);
-        }
-
-        if (x < length && (in1 != out) && (in2 != out))
-        {
-            x = length - nlanes;
-            continue;  // process one more time (unaligned tail)
-        }
-        break;
-    }
-
-    return x;
-}
-
-template<typename SRC, typename DST>
-CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int length)
-{
-    if (std::is_same<DST, float>::value && !std::is_same<SRC, float>::value)
-        return 0;
-
-    if (std::is_same<DST, SRC>::value)
-    {
-        if (std::is_same<DST, uchar>::value)
-        {
-            return sub_simd_sametype<uchar, v_uint8>(reinterpret_cast<const uchar*>(in1),
-                                                     reinterpret_cast<const uchar*>(in2),
-                                                     reinterpret_cast<uchar*>(out), length);
-        }
-        else if (std::is_same<DST, short>::value)
-        {
-            return sub_simd_sametype<short, v_int16>(reinterpret_cast<const short*>(in1),
-                                                     reinterpret_cast<const short*>(in2),
-                                                     reinterpret_cast<short*>(out), length);
-        }
-        else if (std::is_same<DST, float>::value)
-        {
-            return sub_simd_sametype<float, v_float32>(reinterpret_cast<const float*>(in1),
-                                                       reinterpret_cast<const float*>(in2),
-                                                       reinterpret_cast<float*>(out), length);
-        }
-    }
-    else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_int16 a1 = vx_load(reinterpret_cast<const short*>(&in1[x]));
-                v_int16 a2 = vx_load(reinterpret_cast<const short*>(&in1[x + nlanes / 2]));
-                v_int16 b1 = vx_load(reinterpret_cast<const short*>(&in2[x]));
-                v_int16 b2 = vx_load(reinterpret_cast<const short*>(&in2[x + nlanes / 2]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(a1 - b1, a2 - b2));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const short*>(in1) != reinterpret_cast<const short*>(out)) &&
-                             (reinterpret_cast<const short*>(in2) != reinterpret_cast<const short*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-    else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
-    {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-
-        if (length < nlanes)
-            return 0;
-
-        int x = 0;
-        for (;;)
-        {
-            for (; x <= length - nlanes; x += nlanes)
-            {
-                v_float32 a1 = vx_load(reinterpret_cast<const float*>(&in1[x]));
-                v_float32 a2 = vx_load(reinterpret_cast<const float*>(&in1[x + nlanes / 4]));
-                v_float32 a3 = vx_load(reinterpret_cast<const float*>(&in1[x + 2 * nlanes / 4]));
-                v_float32 a4 = vx_load(reinterpret_cast<const float*>(&in1[x + 3 * nlanes / 4]));
-
-                v_float32 b1 = vx_load(reinterpret_cast<const float*>(&in2[x]));
-                v_float32 b2 = vx_load(reinterpret_cast<const float*>(&in2[x + nlanes / 4]));
-                v_float32 b3 = vx_load(reinterpret_cast<const float*>(&in2[x + 2 * nlanes / 4]));
-                v_float32 b4 = vx_load(reinterpret_cast<const float*>(&in2[x + 3 * nlanes / 4]));
-
-                vx_store(reinterpret_cast<uchar*>(&out[x]), v_pack_u(v_pack(v_round(a1 - b1), v_round(a2 - b2)),
-                                                                     v_pack(v_round(a3 - b3), v_round(a4 - b4))));
-            }
-
-            if (x < length)
-            {
-                CV_DbgAssert((reinterpret_cast<const float*>(in1) != reinterpret_cast<const float*>(out)) &&
-                             (reinterpret_cast<const float*>(in2) != reinterpret_cast<const float*>(out)));
-                x = length - nlanes;
-                continue;  // process one more time (unaligned tail)
-            }
-            break;
-        }
-
-        return x;
-    }
-
-    return 0;
-}
 #endif // CV_SIMD
 
 template<typename DST, typename SRC1, typename SRC2>
-static CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2,
-                                        Arithm arithm, double scale=1)
+CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const View &src2,
+                                 Arithm arithm, double scale=1)
 {
     static_assert(std::is_same<SRC1, SRC2>::value, "wrong types");
 
@@ -652,7 +392,7 @@ static CV_ALWAYS_INLINE void run_arithm(Buffer &dst, const View &src1, const Vie
 
     int width  = dst.length();
     int chan   = dst.meta().chan;
-    int length = width * chan;
+    const int length = width * chan;
 
     // NB: assume in/out types are not 64-bits
     float _scale = static_cast<float>( scale );
@@ -708,13 +448,22 @@ GAPI_FLUID_KERNEL(GFluidAdd, cv::gapi::core::GAdd, false)
     static void run(const View &src1, const View &src2, int /*dtype*/, Buffer &dst)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
-        BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_ADD);
-        BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(uchar,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(short,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(ushort, float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  short,  short,  run_arithm, dst, src1, src2, ARITHM_ADD);
+        BINARY_(float,  float,  float,  run_arithm, dst, src1, src2, ARITHM_ADD);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
@@ -728,10 +477,19 @@ GAPI_FLUID_KERNEL(GFluidSub, cv::gapi::core::GSub, false)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
         BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
-        BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
-        BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
-        BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
-        BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(uchar,  short,  short,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(uchar,  float,  float,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(short,  short,  short,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(short,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(short,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(short,  float,  float,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(ushort, uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(ushort, short,  short,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(ushort, float,  float,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(float,  uchar,  uchar,  run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
+        BINARY_(float,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
         BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
         BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_SUBTRACT);
 
@@ -936,8 +694,8 @@ CV_ALWAYS_INLINE void run_arithm_s(Buffer &dst, const View &src, const float sca
 }
 
 template<typename DST, typename SRC>
-static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], Arithm arithm,
-                          float scale=1)
+CV_ALWAYS_INLINE void run_arithm_rs(Buffer &dst, const View &src, const float scalar[],
+                                    Arithm arithm, float scale=1)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -955,15 +713,23 @@ static void run_arithm_rs(Buffer &dst, const View &src, const float scalar[4], A
         w = subrc_simd(scalar, in, out, length, chan);
 #endif
         for (; w < length; ++w)
+        {
             out[w] = subr<DST>(in[w], scalar[w % chan]);
+        }
         break;
     }
-    // TODO: optimize division
     case ARITHM_DIVIDE:
-        for (int w=0; w < width; w++)
-            for (int c=0; c < chan; c++)
-                out[chan*w + c] = div<DST>(scalar[c], in[chan*w + c], scale);
+    {
+        int w = 0;
+#if CV_SIMD
+        w = divrc_simd(scalar, in, out, length, chan, scale);
+#endif
+        for (; w < length; ++w)
+        {
+            out[w] = div<DST>(scalar[w % chan], in[w], scale);
+        }
         break;
+    }
     default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -1319,7 +1085,9 @@ CV_ALWAYS_INLINE void run_divc(Buffer& dst, const View& src, Buffer& scratch,
 #endif
 
     for (; w < length; ++w)
+    {
         out[w] = div<DST>(in[w], scalar[w % chan], scale);
+    }
 }
 
 GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
@@ -1402,31 +1170,54 @@ GAPI_FLUID_KERNEL(GFluidDivC, cv::gapi::core::GDivC, true)
     }
 };
 
-GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, false)
+GAPI_FLUID_KERNEL(GFluidDivRC, cv::gapi::core::GDivRC, true)
 {
     static const int Window = 1;
 
-    static void run(const cv::Scalar &_scalar, const View &src, double _scale, int /*dtype*/,
-                    Buffer &dst)
+    static void run(const cv::Scalar& _scalar, const View& src, double _scale, int /*dtype*/,
+                    Buffer& dst, Buffer& scratch)
     {
-        const float scalar[4] = {
-            static_cast<float>(_scalar[0]),
-            static_cast<float>(_scalar[1]),
-            static_cast<float>(_scalar[2]),
-            static_cast<float>(_scalar[3])
-        };
+        GAPI_Assert(src.meta().chan <= 4);
+
+        if (dst.y() == 0)
+        {
+            const int chan = src.meta().chan;
+            float* _scratch = scratch.OutLine<float>();
+
+            scalar_to_scratch(_scalar, _scratch, scratch.length(), chan);
+        }
+
+        const float* scalar = scratch.OutLine<float>();
         const float scale = static_cast<float>(_scale);
 
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_(uchar ,  float, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( short,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float, uchar , run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  short, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
-        UNARY_( float,  float, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(uchar,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(ushort, float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(short,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  uchar,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  ushort, run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  short,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
+        UNARY_(float,  float,  run_arithm_rs, dst, src, scalar, ARITHM_DIVIDE, scale);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
+    }
+
+    static void initScratch(const GScalarDesc&, const GMatDesc&, double, int, Buffer& scratch)
+    {
+        initScratchBuffer(scratch);
+    }
+
+    static void resetScratch(Buffer& /*scratch*/)
+    {
     }
 };
 
@@ -1764,102 +1555,43 @@ GAPI_FLUID_KERNEL(GFluidLUT, cv::gapi::core::GLUT, false)
 //
 //-------------------------
 
-#if CV_SIMD128
-template<typename DST, typename SRC>
-CV_ALWAYS_INLINE int run_convertto_simd(DST*, const SRC*, int)
+template<typename T>
+CV_ALWAYS_INLINE void convertto_impl(const T in[], T out[], const int length)
 {
-    return 0;
+    memcpy(out, in, length * sizeof(T));
 }
-CV_ALWAYS_INLINE int run_convertto_simd(uchar *out, const float *in, const int length)
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE void convertto_impl(const SRC in[], DST out[], const int length)
 {
-    int l = 0;
-    for (; l <= length - 16; l += 16)
-    {
-        v_int32x4 i0, i1, i2, i3;
-        i0 = v_round( v_load( (float*)& in[l     ] ) );
-        i1 = v_round( v_load( (float*)& in[l +  4] ) );
-        i2 = v_round( v_load( (float*)& in[l +  8] ) );
-        i3 = v_round( v_load( (float*)& in[l + 12] ) );
-
-        v_uint16x8 us0, us1;
-        us0 = v_pack_u(i0, i1);
-        us1 = v_pack_u(i2, i3);
-
-        v_uint8x16 uc;
-        uc = v_pack(us0, us1);
-        v_store((uchar*)& out[l], uc);
-    }
-    return l;
-}
-CV_ALWAYS_INLINE int run_convertto_simd(ushort *out, const float *in, const int length)
-{
-    int l = 0;
-    for (; l <= length - 8; l += 8)
-    {
-        v_int32x4 i0, i1;
-        i0 = v_round( v_load( (float*)& in[l     ] ) );
-        i1 = v_round( v_load( (float*)& in[l +  4] ) );
-
-        v_uint16x8 us;
-        us = v_pack_u(i0, i1);
-        v_store((ushort*)& out[l], us);
-    }
-    return l;
-}
-#endif
-
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_integral<DST>::value &&
-                               std::is_floating_point<SRC>::value, bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
-{
-    // manual SIMD if need rounding
-    static_assert(std::is_same<SRC,float>::value, "64-bit floating-point source is not supported");
-    int l = 0; // cycle index
-#if CV_SIMD128
-    l = run_convertto_simd(out, in, length);
+    int x = 0;
+#if CV_SIMD
+    x = convertto_simd(in, out, length);
 #endif
     // tail of SIMD cycle
-    for (; l < length; l++)
+    for (; x < length; ++x)
     {
-        out[l] = saturate<DST>(in[l], rintf);
+        out[x] = saturate<DST>(in[x], rintf);
     }
 }
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_integral<DST>::value &&
-                               std::is_integral<SRC>::value   , bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE void convertto_impl(const SRC *in, DST* out, const float alpha, const float beta,
+                                     const int length)
 {
-    for (int l = 0; l < length; l++)
+    int x = 0;
+#if CV_SIMD
+    x = convertto_scaled_simd(in, out, alpha, beta, length);
+#endif
+
+    for (; x < length; ++x)
     {
-        out[l] = saturate<DST>(in[l]);
-    }
-}
-template<typename DST, typename SRC,
-         cv::util::enable_if_t<std::is_floating_point<DST>::value, bool> = true >
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const int length)
-{
-    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
-    for (int l = 0; l < length; l++)
-    {
-        out[l] = static_cast<DST>(in[l]);
+        out[x] = saturate<DST>(in[x] * alpha + beta, rintf);
     }
 }
 
 template<typename DST, typename SRC>
-CV_ALWAYS_INLINE void run_convertto(DST *out, const SRC *in, const float alpha, const float beta,
-                                    const int length)
-{
-    static_assert(!std::is_same<SRC,double>::value, "64-bit floating-point source is not supported");
-    // TODO: optimize if alpha and beta and data are integral
-    for (int l = 0; l < length; l++)
-    {
-        out[l] = saturate<DST>(in[l] * alpha + beta, rintf);
-    }
-}
-
-template<typename DST, typename SRC>
-static void run_convertto(Buffer &dst, const View &src, double _alpha, double _beta)
+CV_ALWAYS_INLINE void run_convertto(Buffer &dst, const View &src, double _alpha, double _beta)
 {
     const auto *in  = src.InLine<SRC>(0);
           auto *out = dst.OutLine<DST>();
@@ -1873,13 +1605,13 @@ static void run_convertto(Buffer &dst, const View &src, double _alpha, double _b
     const auto beta  = static_cast<float>( _beta  );
 
     // compute faster if no alpha no beta
-    if (1.f == alpha && 0.f == beta)
+    if ((std::fabs(alpha - 1.f) < FLT_EPSILON) && (std::fabs(beta) < FLT_EPSILON))
     {
-        run_convertto(out, in, length);
+        convertto_impl(in, out, length);
     }
     else // if alpha or beta is non-trivial
     {
-        run_convertto(out, in, alpha, beta, length);
+        convertto_impl(in, out, alpha, beta, length);
     }
 }
 
@@ -1890,22 +1622,22 @@ GAPI_FLUID_KERNEL(GFluidConvertTo, cv::gapi::core::GConvertTo, false)
     static void run(const View &src, int /*rtype*/, double alpha, double beta, Buffer &dst)
     {
         //     DST     SRC     OP             __VA_ARGS__
-        UNARY_(uchar , uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar , ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar ,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_(uchar ,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(uchar,  float, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, uchar , run_convertto, dst, src, alpha, beta);
         UNARY_(ushort, ushort, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  short, run_convertto, dst, src, alpha, beta);
         UNARY_(ushort,  float, run_convertto, dst, src, alpha, beta);
-        UNARY_( short, uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_( short, ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_( short,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_( short,  float, run_convertto, dst, src, alpha, beta);
-        UNARY_( float, uchar , run_convertto, dst, src, alpha, beta);
-        UNARY_( float, ushort, run_convertto, dst, src, alpha, beta);
-        UNARY_( float,  short, run_convertto, dst, src, alpha, beta);
-        UNARY_( float,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(short, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(short, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(short,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(short,  float, run_convertto, dst, src, alpha, beta);
+        UNARY_(float, uchar , run_convertto, dst, src, alpha, beta);
+        UNARY_(float, ushort, run_convertto, dst, src, alpha, beta);
+        UNARY_(float,  short, run_convertto, dst, src, alpha, beta);
+        UNARY_(float,  float, run_convertto, dst, src, alpha, beta);
 
         CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }

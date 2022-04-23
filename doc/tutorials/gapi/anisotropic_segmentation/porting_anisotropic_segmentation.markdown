@@ -142,7 +142,7 @@ being a Graph API, doesn't force its users to do that.
 However, a graph is still built implicitly when a cv::GComputation
 object is defined. It may be useful to inspect how the resulting graph
 looks like to check if it is generated correctly and if it really
-represents our alrogithm. It is also useful to learn the structure of
+represents our algorithm. It is also useful to learn the structure of
 the graph to see if it has any redundancies.
 
 G-API allows to dump generated graphs to `.dot` files which then

@@ -66,6 +66,15 @@
 #undef HAVE_CUDA
 #endif
 
+#include <numeric>
+#include <memory>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <set>
+#include <iterator>
+
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 

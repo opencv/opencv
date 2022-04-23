@@ -36,6 +36,10 @@ GMetaArg GSource::Priv::descr_of() const {
 
 #else // HAVE_ONEVPL
 
+// TODO global variable move it into Source after CloneSession issue resolving
+mfxLoader mfx_handle = MFXLoad();
+int impl_number = 0;
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -47,7 +51,7 @@ enum {
 };
 
 GSource::Priv::Priv() :
-    mfx_handle(MFXLoad()),
+//    mfx_handle(MFXLoad()),
     mfx_impl_description(),
     mfx_handle_configs(),
     cfg_params(),
@@ -125,7 +129,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     }
 
     // collect optional-preferred input parameters from input params
-    // which may (optionally) or may not be used to choose the most preferrable
+    // which may (optionally) or may not be used to choose the most preferable
     // VPL implementation (for example, specific API version or Debug/Release VPL build)
     std::vector<CfgParam> preferred_params;
     std::copy_if(cfg_params.begin(), cfg_params.end(), std::back_inserter(preferred_params),
@@ -133,7 +137,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     std::sort(preferred_params.begin(), preferred_params.end());
 
     GAPI_LOG_DEBUG(nullptr, "Find MFX better implementation from handle: " << mfx_handle <<
-                            " is satisfying preferrable params count: " << preferred_params.size());
+                            " is satisfying preferable params count: " << preferred_params.size());
     int i = 0;
     mfxImplDescription *idesc = nullptr;
     std::vector<mfxImplDescription*> available_impl_descriptions;
@@ -158,7 +162,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
         GAPI_LOG_INFO(nullptr, "Implementation index: " << i << "\n" << ss.str());
 
         // Only one VPL implementation is required for GSource here.
-        // Let's find intersection params from available impl with preferrable input params
+        // Let's find intersection params from available impl with preferable input params
         // to find best match.
         // An available VPL implementation with max matching count
         std::vector<CfgParam> impl_params = get_params_from_string<CfgParam>(ss.str());
@@ -174,7 +178,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             // in case of no input preferrance we consider all params are matched
             // for the first available VPL implementation. It will be a chosen one
             matches_count.emplace(impl_params.size(), i++);
-            GAPI_LOG_DEBUG(nullptr, "No preferrable params, use the first one implementation");
+            GAPI_LOG_DEBUG(nullptr, "No preferable params, use the first one implementation");
             break;
         } else {
             GAPI_LOG_DEBUG(nullptr, "Equal param intersection count: " << matched_params.size());
@@ -187,7 +191,8 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     GAPI_Assert(max_match_it != matches_count.rend() &&
                 "Cannot find matched MFX implementation for requested configuration");
 
-    int impl_number = max_match_it->second;
+    // TODO impl_number is global for now
+    impl_number = max_match_it->second;
     GAPI_LOG_INFO(nullptr, "Chosen implementation index: " << impl_number);
 
     // release unusable impl available_impl_descriptions
@@ -261,7 +266,7 @@ GSource::Priv::~Priv() {
     GAPI_LOG_INFO(nullptr, "Unload MFX implementation description: " << mfx_impl_description);
     MFXDispReleaseImplDescription(mfx_handle, mfx_impl_description);
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
-    MFXUnload(mfx_handle);
+    //MFXUnload(mfx_handle);
 }
 
 std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::shared_ptr<IDeviceSelector> selector)

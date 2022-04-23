@@ -20,6 +20,7 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+#include <opencv2/gapi/streaming/onevpl/accel_types.hpp> // Preproc Dev & Ctx
 
 namespace cv {
 namespace gapi {
@@ -84,6 +85,9 @@ struct ParamDesc {
     // have 2D (Layout::NC) input and if the first dimension not equal to 1
     // net.setBatchSize(1) will overwrite it.
     cv::optional<size_t> batch_size;
+
+    cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
+    cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 };
 } // namespace detail
 
@@ -126,6 +130,8 @@ public:
               , {}
               , 1u
               , {}
+              , {}
+              , {}
               , {}} {
     };
 
@@ -147,6 +153,8 @@ public:
               , {}
               , {}
               , 1u
+              , {}
+              , {}
               , {}
               , {}} {
     };
@@ -336,6 +344,13 @@ public:
         return *this;
     }
 
+    Params<Net>& cfgPreprocessingParams(const cv::gapi::wip::onevpl::Device &device,
+                                        const cv::gapi::wip::onevpl::Context &ctx) {
+        desc.vpl_preproc_device = cv::util::make_optional(device);
+        desc.vpl_preproc_ctx = cv::util::make_optional(ctx);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -370,7 +385,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -388,7 +403,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 

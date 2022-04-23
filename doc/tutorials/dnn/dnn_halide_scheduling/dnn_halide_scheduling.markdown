@@ -70,7 +70,7 @@ Sometimes networks built using blocked structure that means some layer are
 identical or quite similar. If you want to apply the same scheduling for
 different layers accurate to tiling or vectorization factors, define scheduling
 patterns in section `patterns` at the beginning of scheduling file.
-Also, your patters may use some parametric variables.
+Also, your patterns may use some parametric variables.
 @code
 # At the beginning of the file
 patterns:

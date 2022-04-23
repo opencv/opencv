@@ -92,6 +92,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pooling,        PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ROIPooling,     PoolingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(PSROIPooling,   PoolingLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Reduce,         ReduceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LRN,            LRNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
@@ -129,6 +130,8 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(HardSwish,      HardSwishLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sin,            SinLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Sinh,           SinhLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Sign,           SignLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Shrink,         ShrinkLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softplus,       SoftplusLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softsign,       SoftsignLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Tan,            TanLayer);
@@ -143,6 +146,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Silence,        BlankLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Const,          ConstLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Arg,            ArgLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Reciprocal,     ReciprocalLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
@@ -175,6 +179,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(ConvolutionInt8,  ConvolutionLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProductInt8, InnerProductLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(ReduceInt8,       ReduceLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(EltwiseInt8,      EltwiseLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNormInt8,    BatchNormLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(ScaleInt8,        ScaleLayerInt8);

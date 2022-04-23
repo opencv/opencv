@@ -78,6 +78,26 @@
             "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
         }
     },
+    "header_fix" : {
+        "Core": {
+            "pow" : {
+                "prolog" : "#pragma push_macro(\"pow\")\n#undef pow",
+                "epilog" : "#pragma pop_macro(\"pow\")"
+            },
+            "sqrt" : {
+                "prolog" : "#pragma push_macro(\"sqrt\")\n#undef sqrt",
+                "epilog" : "#pragma pop_macro(\"sqrt\")"
+            },
+            "exp" : {
+                "prolog" : "#pragma push_macro(\"exp\")\n#undef exp",
+                "epilog" : "#pragma pop_macro(\"exp\")"
+            },
+            "log" : {
+                "prolog" : "#pragma push_macro(\"log\")\n#undef log",
+                "epilog" : "#pragma pop_macro(\"log\")"
+            }
+        }
+    },
     "type_dict" : {
         "Algorithm": {
             "objc_type": "Algorithm*"

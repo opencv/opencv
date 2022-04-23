@@ -80,7 +80,7 @@ cv::Size cv::gapi::wip::draw::FTTextRender::Priv::getTextSize(const std::wstring
     //      See (1) on picture.
     //
     //   4) As we can see the last pen position is isn't horizontal size yet.
-    //      We need to check if the glyph goes beyound the last position of the pen
+    //      We need to check if the glyph goes beyond the last position of the pen
     //      To do this we can:
     //      a) Return to the previous position -advance
     //      b) Shift on left value +left

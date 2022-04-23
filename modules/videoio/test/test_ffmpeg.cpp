@@ -235,8 +235,8 @@ static void generateFrame(Mat &frame, unsigned int i, const Point &center, const
     frame = Scalar::all(i % 255);
     stringstream buf(ios::out);
     buf << "frame #" << i;
-    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, CV_AA);
-    circle(frame, center, i + 2, color, 2, CV_AA);
+    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, LINE_AA);
+    circle(frame, center, i + 2, color, 2, LINE_AA);
 }
 
 TEST(videoio_ffmpeg, parallel)
@@ -536,5 +536,17 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
     EXPECT_FALSE(cap.isOpened());
 }
 
+// related issue: https://github.com/opencv/opencv/issues/16821
+TEST(videoio_ffmpeg, DISABLED_open_from_web)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    VideoCapture cap(video_file, CAP_FFMPEG);
+    int n_frames = -1;
+    EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
+    EXPECT_EQ((int)14315, n_frames);
+}
 
 }} // namespace

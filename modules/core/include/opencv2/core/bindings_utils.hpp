@@ -223,6 +223,53 @@ namespace nested {
 CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
     return flag;
 }
+
+class CV_EXPORTS_W CV_WRAP_AS(ExportClassName) OriginalClassName
+{
+public:
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_PROP_RW int int_value;
+        CV_PROP_RW float float_value;
+
+        CV_WRAP explicit Params(int int_param = 123, float float_param = 3.5f)
+        {
+            int_value = int_param;
+            float_value = float_param;
+        }
+    };
+
+    explicit OriginalClassName(const OriginalClassName::Params& params = OriginalClassName::Params())
+    {
+        params_ = params;
+    }
+
+    CV_WRAP int getIntParam() const
+    {
+        return params_.int_value;
+    }
+
+    CV_WRAP float getFloatParam() const
+    {
+        return params_.float_value;
+    }
+
+    CV_WRAP static std::string originalName()
+    {
+        return "OriginalClassName";
+    }
+
+    CV_WRAP static Ptr<OriginalClassName>
+    create(const OriginalClassName::Params& params = OriginalClassName::Params())
+    {
+        return makePtr<OriginalClassName>(params);
+    }
+
+private:
+    OriginalClassName::Params params_;
+};
+
+typedef OriginalClassName::Params OriginalClassName_Params;
 } // namespace nested
 
 namespace fs {

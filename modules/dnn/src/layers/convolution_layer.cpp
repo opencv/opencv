@@ -2080,6 +2080,7 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
+        // TODO: extract bias from inputs and pass it
         CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
@@ -2168,6 +2169,7 @@ public:
         float inputScale = scales[0][0], outputScale = scales[1][0];
         int inputZp = zeropoints[0][0];
         params.set("input_zeropoint", inputZp);
+        params.set("input_scale", inputScale);
 
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);

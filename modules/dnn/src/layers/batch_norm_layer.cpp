@@ -409,6 +409,7 @@ public:
     {
         params.set("input_scale", scales[0][0]);
         params.set("input_zeropoint", zeropoints[0][0]);
+        params.set("eps", epsilon);
 
         params.blobs.clear();
         params.blobs.push_back(origin_weights);
