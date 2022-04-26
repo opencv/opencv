@@ -5,16 +5,17 @@ on:
     branches: [ 4.x ]
     types: [ labeled, opened, synchronize, reopened ]
 
+env:
+  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
+  SOURCE_BRANCH_NAME: ${{ github.head_ref }}
+  TARGET_BRANCH_NAME: ${{ github.base_ref }}
 
 jobs:
   x86-simulator-build-test:
     runs-on: ubuntu-20.04
     # Docker image from https://hub.docker.com/r/yuentau/ocv_ubuntu
     container: docker.io/yuentau/ocv_ubuntu:20.04
-    env:
-      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-      SOURCE_BRANCH_NAME: ${{ github.head_ref }}
-      TARGET_BRANCH_NAME: ${{ github.base_ref }}
     steps:
       - name: info
         run: |
@@ -37,7 +38,7 @@ jobs:
           cd opencv
           git config user.email "opencv.ci"
           git config user.name "opencv.ci"
-          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+          git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
       - name: configure
         run: |
           cmake -B build -DWITH_TIMVX=ON -DCMAKE_INSTALL_PREFIX=./install -DBUILD_SHARED_LIBS=ON -DBUILD_PERF_TESTS=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DBUILD_DOCS=OFF -DWITH_OPENCL=OFF opencv
@@ -50,10 +51,6 @@ jobs:
       group: khadas-vim3
       cancel-in-progress: false
     runs-on: [self-hosted, Linux, ARM64, khadas-vim3]
-    env:
-      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-      SOURCE_BRANCH_NAME: ${{ github.head_ref }}
-      TARGET_BRANCH_NAME: ${{ github.base_ref }}
     steps:
       - name: info
         run: |
@@ -76,7 +73,7 @@ jobs:
           cd opencv
           git config user.email "opencv.ci"
           git config user.name "opencv.ci"
-          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}" --allow-unrelated-histories
+          git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
       - name: fetch opencv_extra
         uses: actions/checkout@v3
         with:
