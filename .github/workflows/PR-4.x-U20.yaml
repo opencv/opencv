@@ -46,7 +46,19 @@ jobs:
         git config user.name "opencv.ci"
         git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_extra
-      run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
+      run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} https://github.com/opencv/opencv_extra.git /opencv_extra
+    - name: Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch
+      run: |
+        RET=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
+        if [[ ! -z "$RET" ]]; then
+          echo "Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch"
+          cd /opencv_extra
+          git config user.email "opencv.ci"
+          git config user.name "opencv.ci"
+          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}"
+        else
+          echo "No merge since ${{ env.PR_AUTHOR }}/opencv_extra does not have branch ${{ env.SOURCE_BRANCH_NAME }}"
+        fi
     - name: Configure OpenCV
       run: |
         cd /opencv-build
