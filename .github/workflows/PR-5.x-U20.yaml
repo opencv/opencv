@@ -1,9 +1,9 @@
-name: PR:4.x U20
+name: PR:5.x U20
 
 on:
   pull_request:
     branches:
-      - 4.x
+      - 5.x
 
 env:
   EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_CCACHE=OFF'
@@ -54,8 +54,10 @@ jobs:
       run: |
         cd /opencv-build
         ninja
-    - name: Accuracy:calib3d
-      run: cd /opencv-build && xvfb-run -a bin/opencv_test_calib3d
+    - name: Accuracy:3d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_3d
+    - name: Accuracy:calib
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_calib
     - name: Accuracy:core
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_core
     - name: Accuracy:dnn
@@ -78,14 +80,18 @@ jobs:
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_objdetect
     - name: Accuracy:photo
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_photo
+    - name: Accuracy:stereo
+      run: cd /opencv-build && xvfb-run -a bin/opencv_test_stereo
     - name: Accuracy:stitching
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_stitching
     - name: Accuracy:video
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_video
     - name: Accuracy:videoio
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_videoio
-    - name: Performance:calib3d
-      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_calib3d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:3d
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_3d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:calib
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_calib --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:core
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_core --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:dnn
@@ -102,6 +108,8 @@ jobs:
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_objdetect --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:photo
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_photo --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
+    - name: Performance:stereo
+      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_stereo --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:stitching
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_stitching --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:video
