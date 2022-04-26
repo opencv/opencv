@@ -10,6 +10,7 @@ env:
   OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
   OPENCV_DOCKER_WORKDIR: '/__w/opencv/opencv'
   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
   ANT_HOME: '/usr/share/ant'
@@ -43,7 +44,7 @@ jobs:
         git config --global --add safe.directory ${{ env.OPENCV_DOCKER_WORKDIR }}
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_extra
       run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --depth 1 https://github.com/opencv/opencv_extra.git /opencv_extra
     - name: Configure OpenCV
@@ -150,7 +151,7 @@ jobs:
         git config --global --add safe.directory ${{ env.OPENCV_DOCKER_WORKDIR }}
         git config user.email "opencv.ci"
         git config user.name "opencv.ci"
-        git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv" "${{ env.SOURCE_BRANCH_NAME }}"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_contrib
       run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --depth 1 https://github.com/opencv/opencv_contrib.git /opencv_contrib
     - name: Configure OpenCV Contrib
