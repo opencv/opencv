@@ -1137,17 +1137,6 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
 
 ///////////////////////////////////////////////////////////////////////////
 
-TEST(Imgproc_cvWarpAffine, regression)
-{
-    Mat src(Size(100, 100), CV_8UC1);
-    Mat dst(Size(100, 100), CV_8UC1);
-
-    int w = src.cols;
-    int h = src.rows;
-    Mat M = getRotationMatrix2D(Point2f(w*0.5f, h*0.5f), 45.0, 1.0);
-    warpAffine(src, dst, M, Size(w, h));
-}
-
 TEST(Imgproc_fitLine_vector_3d, regression)
 {
     std::vector<Point3f> points_vector;
