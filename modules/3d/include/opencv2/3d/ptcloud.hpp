@@ -8,6 +8,8 @@
 #ifndef OPENCV_3D_PTCLOUD_HPP
 #define OPENCV_3D_PTCLOUD_HPP
 
+#include "opencv2/flann.hpp"
+
 namespace cv {
 
 //! @addtogroup _3d
@@ -259,6 +261,133 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
 CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         float sampled_scale, float dist_lower_limit = 0, RNG *rng = nullptr);
 
+/**
+ * @brief Estimate the normal and curvature of each point in point cloud from KNN results.
+ *
+ * Estimate Algorithm:
+ * + Input: K nearest neighbor of a specific point: \f$pt_set\f$
+ * + Step:
+ *     1. Calculate the \f$ mean \f$ in pt_set;
+ *     2. A 3x3 covariance matrix \f$ cov \f$ is obtained by \f$ mean^T \cdot mean \f$;
+ *     3. Calculate the eigenvalues(\f$ λ_2 \ge λ_1 \ge λ_0 \f$) and corresponding
+ *        eigenvectors(\f$ v_2, v_1, v_0 \f$) of \f$ cov \f$;
+ *     4. \f$ v0 \f$ is the normal of the specific point,
+ *        \f$ \frac{λ_0}{λ_0 + λ_1 + λ_2} \f$ is the curvature of the specific point;
+ * + Output: Normal and curvature of the specific point.
+ *
+ * @param[out] normals Normal of each point, vector of Point3f or Mat of size Nx3.
+ * @param[out] curvatures Curvature of each point, vector or Mat.
+ * @param input_pts Original point cloud, vector of Point3f or Mat of size Nx3/3xN.
+ * @param knn_idx Index of K nearest neighbors of all points. The first nearest point of each point
+ *                is itself. Support Mat or vector of vector with layout NxK/KxN in memory space.
+ * @param k The number of neighbors including itself. setting 0 will use the K obtained from knn_idx.
+ */
+
+CV_EXPORTS void
+normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts,
+        InputArray knn_idx, int k = 0);
+
+/**
+ * @brief KNN search in point cloud by KDTree.
+ *
+ * Get the index and distance result of KNN search in point cloud by using the KDTree in flann library.
+ *
+ * @param[out] knn_idx Index of K nearest neighbors of all points. The first nearest point of each
+ *                     point is itself. Support Mat or vector of vector with layout NxK in memory
+ *                     space. If this result is not needed, it is recommended to pass noArray(),
+ *                     which will not cause the corresponding memory consumption.
+ * @param[out] knn_dist Distance of K nearest neighbors of all points. Support Mat or vector of
+ *                      vector with layout NxK in memory space. If this result is not needed, it is
+ *                      recommended to pass noArray(), which will not cause the corresponding
+ *                      memory consumption.
+ * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
+ * @param k The number of neighbors including itself, default value is 30.
+ * @param kdtree_params Optional flann::KDTreeIndexParams() used for building KDTree;
+ *                      if it is nullptr, default is used instead.
+ * @param search_params Optional flann::SearchParams() used for searching the K nearest neighbors;
+ *                      if it is nullptr, default is used instead.
+ */
+CV_EXPORTS void
+getKNNSearchResultsByKDTree(OutputArray knn_idx, OutputArray knn_dist, InputArray input_pts,
+        int k = 30, flann::KDTreeIndexParams *kdtree_params = nullptr,
+        flann::SearchParams *search_params = nullptr);
+
+
+class CV_EXPORTS RegionGrowing3D : public Algorithm
+{
+public:
+    //-------------------------- CREATE -----------------------
+
+    static Ptr<RegionGrowing3D>
+    create(float smoothness_thr = 30.f / 180.f * 3.1415926f, float curvature_thr = 0.05f);
+
+    //-------------------------- SEGMENT -----------------------
+
+    /**
+     */
+    virtual int
+    segment(OutputArray labels) = 0;
+
+    //-------------------------- Getter and Setter -----------------------
+
+    //! Set
+    virtual void setMinSize(int min_size) = 0;
+
+    //! Get
+    virtual int getMinSize() const = 0;
+
+    //! Set
+    virtual void setMaxSize(int max_size) = 0;
+
+    //! Get
+    virtual int getMaxSize() const = 0;
+
+    //! Set
+    virtual void setSmoothModeFlag(bool smooth_mode) = 0;
+
+    //! Get
+    virtual bool getSmoothModeFlag() const = 0;
+
+    //! Set
+    virtual void setSmoothnessThreshold(float smoothness_thr) = 0;
+
+    //! Get
+    virtual float getSmoothnessThreshold() const = 0;
+
+    //! Set
+    virtual void setCurvatureThreshold(float curvature_thr) = 0;
+
+    //! Get
+    virtual float getCurvatureThreshold() const = 0;
+
+    //! Set
+    virtual void setNumberOfNeighbors(int k) = 0;
+
+    //! Get
+    virtual int getNumberOfNeighbors() const = 0;
+
+    //! Set
+    virtual void setNumberOfRegions(int region_num) = 0;
+
+    //! Get
+    virtual int getNumberOfRegions() const = 0;
+
+    //! Set
+    virtual void setPtcloud(InputArray input_pts) = 0;
+
+    //! Set
+    virtual void setKnnIdx(InputArray knn_idx) = 0;
+
+    //! Set
+    virtual void setSeeds(InputArray seeds) = 0;
+
+    //! Set
+    virtual void setNormals(InputArray normals) = 0;
+
+    //! Set
+    virtual void setCurvatures(InputArray curvatures) = 0;
+
+};
 //! @} _3d
 } //end namespace cv
 #endif //OPENCV_3D_PTCLOUD_HPP
