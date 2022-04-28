@@ -3868,7 +3868,7 @@ namespace fisheye
     CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
         OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
-    /** @brief Performs camera calibaration
+    /** @brief Performs camera calibration
 
     @param objectPoints vector of vectors of calibration pattern points in the calibration pattern
     coordinate space.
