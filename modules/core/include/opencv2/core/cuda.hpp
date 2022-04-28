@@ -689,7 +689,7 @@ class CV_EXPORTS_W BufferPool
 public:
 
     //! Gets the BufferPool for the given stream.
-    explicit BufferPool(Stream& stream);
+    CV_WRAP explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
