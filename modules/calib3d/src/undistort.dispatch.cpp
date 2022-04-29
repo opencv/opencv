@@ -607,6 +607,11 @@ void undistortPoints(InputArray _src, OutputArray _dst,
     cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
 }
 
+void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs)
+{
+    undistortPoints(src, dst, cameraMatrix, distCoeffs, noArray(), cameraMatrix);
+}
+
 static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum UndistortTypes projType)
 {
     double x = p.x, y = p.y;
