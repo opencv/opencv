@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2022, Wanli Zhong <zhongwl2018@mail.sustech.edu.cn>
+
 #ifndef OPENCV_REGION_ROWING_3D_HPP
 #define OPENCV_REGION_ROWING_3D_HPP
 
@@ -12,34 +18,29 @@ namespace cv {
 class RegionGrowing3DImpl : public RegionGrowing3D
 {
 private:
+    //! The
+    double smoothness_thr;
+
+    double curvature_thr;
+
+    int k;
+
     int min_size;
 
     int max_size;
 
     bool smooth_mode;
 
-    float smoothness_thr;
-
-    float curvature_thr;
-
-    int k;
-
     int region_num;
-
-    Mat input_pts;
-
-    Mat knn_idx;
-
-    Mat seeds;
-
-    Mat normals;
 
     Mat curvatures;
 
+    Mat seeds;
+
 public:
 
-    RegionGrowing3DImpl(float smoothness_thr_, float curvature_thr_)
-            : smoothness_thr(smoothness_thr_), curvature_thr(curvature_thr_), k(0), min_size(1),
+    RegionGrowing3DImpl()
+            : smoothness_thr(0.5235987756 /* 30*π/180 */ ), curvature_thr(0.05), k(0), min_size(1),
               max_size(INT_MAX), smooth_mode(true), region_num(INT_MAX)
     {
 
@@ -47,7 +48,7 @@ public:
 
     ~RegionGrowing3DImpl() override = default;
 
-    int segment(OutputArray labels) override;
+    int segment(OutputArray labels, InputArray input_pts, InputArray normals, InputArray knn_idx) override;
 
     //-------------------------- Getter and Setter -----------------------
     //! Set
@@ -83,25 +84,25 @@ public:
     }
 
     //! Set
-    void setSmoothnessThreshold(float smoothness_thr_) override{
-        CV_CheckGE(smoothness_thr_, 0.f, "The smoothness threshold angle should be greater than or equal to 0 degrees.");
-        CV_CheckLT(smoothness_thr_, 3.1415927f / 2, "The smoothness threshold angle should be less than 90 degrees.");
+    void setSmoothnessThreshold(double smoothness_thr_) override{
+        CV_CheckGE(smoothness_thr_, 0.0, "The smoothness threshold angle should be greater than or equal to 0 degrees.");
+        CV_CheckLT(smoothness_thr_, 1.5707963268 /* 90*π/180 */, "The smoothness threshold angle should be less than 90 degrees.");
         smoothness_thr = smoothness_thr_;
     }
 
     //! Get
-    float getSmoothnessThreshold() const override{
+    double getSmoothnessThreshold() const override{
         return smoothness_thr;
     }
 
     //! Set
-    void setCurvatureThreshold(float curvature_thr_) override{
-        CV_CheckGE(curvature_thr_, 0.f, "The curvature threshold should be greater than or equal to 0.");
+    void setCurvatureThreshold(double curvature_thr_) override{
+        CV_CheckGE(curvature_thr_, 0.0, "The curvature threshold should be greater than or equal to 0.");
         curvature_thr = curvature_thr_;
     }
 
     //! Get
-    float getCurvatureThreshold() const override{
+    double getCurvatureThreshold() const override{
         return curvature_thr;
     }
 
@@ -128,39 +129,30 @@ public:
     }
 
     //! Set
-    void setPtcloud(InputArray input_pts_) override{
-        getPointsMatFromInputArray(input_pts_, input_pts, 0);
-    }
-
-    //! Set
-    void setKnnIdx(InputArray knn_idx_) override{
-        if(knn_idx_.rows() < knn_idx_.cols()){
-            transpose(knn_idx_.getMat(), knn_idx);
-        }else{
-            knn_idx = knn_idx_.getMat();
-        }
-    }
-
-    //! Set
     void setSeeds(InputArray seeds_) override{
         seeds = seeds_.getMat();
     }
 
-    //! Set
-    void setNormals(InputArray normals_) override{
-        getPointsMatFromInputArray(normals_, normals, 0);
+    //! Get
+    void getSeeds(OutputArray seeds_) const override{
+        seeds.copyTo(seeds_);
     }
 
     //! Set
     void setCurvatures(InputArray curvatures_) override{
-        curvatures = curvatures_.getMat();
+        curvatures = abs(curvatures_.getMat());
+    }
+
+    //! Get
+    void getCurvatures(OutputArray curvatures_) const override{
+        curvatures.copyTo(curvatures_);
     }
 
 };
 
-Ptr<RegionGrowing3D> RegionGrowing3D::create(float smoothness_thr_, float curvature_thr_)
+Ptr<RegionGrowing3D> RegionGrowing3D::create()
 {
-    return makePtr<RegionGrowing3DImpl>(smoothness_thr_, curvature_thr_);
+    return makePtr<RegionGrowing3DImpl>();
 }
 
 //! @} _3d

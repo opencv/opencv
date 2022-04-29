@@ -264,7 +264,7 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
 /**
  * @brief Estimate the normal and curvature of each point in point cloud from KNN results.
  *
- * Estimate Algorithm:
+ * Normal Estimation Algorithm:
  * + Input: K nearest neighbor of a specific point: \f$pt_set\f$
  * + Step:
  *     1. Calculate the \f$ mean \f$ in pt_set;
@@ -277,10 +277,10 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
  *
  * @param[out] normals Normal of each point, vector of Point3f or Mat of size Nx3.
  * @param[out] curvatures Curvature of each point, vector or Mat.
- * @param input_pts Original point cloud, vector of Point3f or Mat of size Nx3/3xN.
- * @param knn_idx Index of K nearest neighbors of all points. The first nearest point of each point
- *                is itself. Support Mat or vector of vector with layout NxK/KxN in memory space.
- * @param k The number of neighbors including itself. setting 0 will use the K obtained from knn_idx.
+ * @param input_pts_ Original point cloud, vector of Point3f or Mat of size Nx3/3xN.
+ * @param knn_idx_ Index of K nearest neighbors of all points. The first nearest point of each point
+ *                is itself. Only support Mat with layout NxK/KxN in memory space.
+ * @param k The number of neighbors including itself. Setting 0 will use the number from knn_idx_.
  */
 
 CV_EXPORTS void
@@ -293,14 +293,13 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
  * Get the index and distance result of KNN search in point cloud by using the KDTree in flann library.
  *
  * @param[out] knn_idx Index of K nearest neighbors of all points. The first nearest point of each
- *                     point is itself. Support Mat or vector of vector with layout NxK in memory
- *                     space. If this result is not needed, it is recommended to pass noArray(),
- *                     which will not cause the corresponding memory consumption.
- * @param[out] knn_dist Distance of K nearest neighbors of all points. Support Mat or vector of
- *                      vector with layout NxK in memory space. If this result is not needed, it is
- *                      recommended to pass noArray(), which will not cause the corresponding
- *                      memory consumption.
- * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN.
+ *                     point is itself. Only support Mat with layout NxK in memory space. If this
+ *                     result is not needed, it is recommended to pass noArray(), which will not
+ *                     cause the corresponding memory consumption.
+ * @param[out] knn_dist Distance of K nearest neighbors of all points. Only support Mat with layout
+ *                      NxK in memory space. If this result is not needed, it is recommended to pass
+ *                      noArray(), which will not cause the corresponding memory consumption.
+ * @param input_pts_  Original point cloud, vector of Point3f or Mat of size Nx3/3xN.
  * @param k The number of neighbors including itself, default value is 30.
  * @param kdtree_params Optional flann::KDTreeIndexParams() used for building KDTree;
  *                      if it is nullptr, default is used instead.
@@ -318,15 +317,13 @@ class CV_EXPORTS RegionGrowing3D : public Algorithm
 public:
     //-------------------------- CREATE -----------------------
 
-    static Ptr<RegionGrowing3D>
-    create(float smoothness_thr = 30.f / 180.f * 3.1415926f, float curvature_thr = 0.05f);
+    static Ptr<RegionGrowing3D> create();
 
     //-------------------------- SEGMENT -----------------------
 
     /**
      */
-    virtual int
-    segment(OutputArray labels) = 0;
+    virtual int segment(OutputArray labels, InputArray input_pts, InputArray normals, InputArray knn_idx) = 0;
 
     //-------------------------- Getter and Setter -----------------------
 
@@ -349,16 +346,16 @@ public:
     virtual bool getSmoothModeFlag() const = 0;
 
     //! Set
-    virtual void setSmoothnessThreshold(float smoothness_thr) = 0;
+    virtual void setSmoothnessThreshold(double smoothness_thr) = 0;
 
     //! Get
-    virtual float getSmoothnessThreshold() const = 0;
+    virtual double getSmoothnessThreshold() const = 0;
 
     //! Set
-    virtual void setCurvatureThreshold(float curvature_thr) = 0;
+    virtual void setCurvatureThreshold(double curvature_thr) = 0;
 
     //! Get
-    virtual float getCurvatureThreshold() const = 0;
+    virtual double getCurvatureThreshold() const = 0;
 
     //! Set
     virtual void setNumberOfNeighbors(int k) = 0;
@@ -373,20 +370,16 @@ public:
     virtual int getNumberOfRegions() const = 0;
 
     //! Set
-    virtual void setPtcloud(InputArray input_pts) = 0;
-
-    //! Set
-    virtual void setKnnIdx(InputArray knn_idx) = 0;
-
-    //! Set
     virtual void setSeeds(InputArray seeds) = 0;
 
-    //! Set
-    virtual void setNormals(InputArray normals) = 0;
+    //! Get
+    virtual void getSeeds(OutputArray seeds) const = 0;
 
     //! Set
     virtual void setCurvatures(InputArray curvatures) = 0;
 
+    //! Get
+    virtual void getCurvatures(OutputArray curvatures) const = 0;
 };
 //! @} _3d
 } //end namespace cv
