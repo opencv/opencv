@@ -18,7 +18,7 @@ is sufficient to find the object exactly on the trainImage.
 
 For that, we can use a function from calib3d module, ie **cv.findHomography()**. If we pass the set
 of points from both the images, it will find the perspective transformation of that object. Then we
-can use **cv.perspectiveTransform()** to find the object. It needs atleast four correct points to
+can use **cv.perspectiveTransform()** to find the object. It needs at least four correct points to
 find the transformation.
 
 We have seen that there can be some possible errors while matching which may affect the result. To
@@ -64,7 +64,7 @@ for m,n in matches:
     if m.distance < 0.7*n.distance:
         good.append(m)
 @endcode
-Now we set a condition that atleast 10 matches (defined by MIN_MATCH_COUNT) are to be there to
+Now we set a condition that at least 10 matches (defined by MIN_MATCH_COUNT) are to be there to
 find the object. Otherwise simply show a message saying not enough matches are present.
 
 If enough matches are found, we extract the locations of matched keypoints in both the images. They
