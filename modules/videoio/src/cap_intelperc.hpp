@@ -85,7 +85,7 @@ public:
 protected:
     virtual bool validProfile(const PXCCapture::VideoStream::ProfileInfo& pinfo);
 protected:
-    bool retriveFrame(int type, int planeIdx, OutputArray frame);
+    bool retrieveFrame(int type, int planeIdx, OutputArray frame);
 };
 
 class VideoCapture_IntelPerC : public IVideoCapture

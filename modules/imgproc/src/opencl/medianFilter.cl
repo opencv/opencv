@@ -43,7 +43,7 @@
 
 #ifdef USE_4OPT
 
-//Utility macros for for 1,2,4 channel images:
+//Utility macros for 1,2,4 channel images:
 //  - LOAD4/STORE4 - load/store 4-pixel groups from/to global memory
 
 //  - SHUFFLE4_3/SHUFFLE4_5 - rearrange scattered border/central pixels into regular 4-pixel variables
