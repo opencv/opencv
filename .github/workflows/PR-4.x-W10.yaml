@@ -1,0 +1,164 @@
+name: PR:4.x W10
+
+# TODO: enable pipeline after 4.x update
+on: workflow_dispatch
+
+env:
+  EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DOPENCV_DOWNLOAD_PATH=c:\Slave\workspace\binaries_cache -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
+  OPENCV_TEST_DATA_PATH: ${{ github.workspace }}\opencv_extra\testdata
+  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
+  SOURCE_BRANCH_NAME: ${{ github.head_ref }}
+  TARGET_BRANCH_NAME: ${{ github.base_ref }}
+  GTEST_FILTER_STRING: '-Samples.findFile:ExposureCompensate.SimilarityThreshold:DNNTestNetwork.MobileNet_SSD_v2_TensorFlow*:DNNTestNetwork.Inception_v2_SSD_TensorFlow*:Test_TensorFlow_nets.Inception_v2_SSD*:Test_Darknet_nets.YOLOv4_tiny*:videoio/videocapture_acceleration.read/61:Drawing.ttf_text'
+  GIT_CACHE: c:\Slave\git_cache
+
+jobs:
+  BuildAndTest:
+    runs-on: opencv-cn-win
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: PR info
+      run: |
+        echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+        echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+    - name: Clean
+      run: cd ${{ github.workspace }} && rm -rf *
+    - name: Fetch opencv
+      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv.git https://github.com/opencv/opencv.git
+    - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
+      run: |
+        cd ${{ github.workspace }}\opencv
+        git config user.email "opencv.ci"
+        git config user.name "opencv.ci"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
+    - name: Fetch opencv_extra
+      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_extra.git https://github.com/opencv/opencv_extra.git
+    - name: Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch
+      shell: bash
+      run: |
+        RET=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
+        if [[ ! -z "$RET" ]]; then
+          echo "Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch"
+          cd opencv_extra
+          git config user.email "opencv.ci"
+          git config user.name "opencv.ci"
+          git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}"
+        else
+          echo "No merge since ${{ env.PR_AUTHOR }}/opencv_extra does not have branch ${{ env.SOURCE_BRANCH_NAME }}"
+        fi
+    - name: Configure OpenCV
+      run: |
+        mkdir ${{ github.workspace }}\opencv-build && cd ${{ github.workspace }}\opencv-build
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+        cmake -G Ninja ${{ env.EXTRA_CMAKE_OPTIONS }} ${{ github.workspace }}\opencv
+    - name: Build OpenCV
+      run: |
+        cd ${{ github.workspace }}\opencv-build
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+        ninja
+    - name: Accuracy:calib3d
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_calib3d.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:core
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_core.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:dnn
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_dnn.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:features2d
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_features2d.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:flann
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_flann.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:highgui
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_highgui.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:imgcodecs
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_imgcodecs.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:imgproc
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_imgproc.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:ml
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_ml.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:objdetect
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_objdetect.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:photo
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_photo.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:shape
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_shape.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:stitching
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_stitching.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:superres
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_superres.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:video
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_video.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:videoio
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videoio.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:videostab
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videostab.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:calib3d
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_calib3d.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:core
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_core.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:dnn
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_dnn.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:features2d
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_features2d.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:imgcodecs
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_imgcodecs.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:imgproc
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_imgproc.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:objdetect
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_objdetect.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:photo
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_photo.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:stitching
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_stitching.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:superres
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_superres.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:video
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_video.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:videoio
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_videoio.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Python3
+      run: |
+        cd ${{ github.workspace }}\opencv\modules\python\test
+        set PYTHONPATH=%PYTHONPATH%;${{ github.workspace }}\opencv-build\python_loader;${{ github.workspace }}\opencv-build\lib\python3
+        set PATH=%PATH%;${{ github.workspace }}\opencv-build\bin;${{ github.workspace }}\opencv-build\lib\python3
+        python test.py --repo ..\..\..\ -v
+    - name: Java
+      run: |
+        cd ${{ github.workspace }}\opencv-build
+        set PATH=%PATH%;${{ github.workspace }}\opencv-build\bin
+        ${{ github.workspace }}\opencv\modules\ts\misc\run.py . -a -t java
+  BuildContrib:
+    runs-on: opencv-cn-win
+    defaults:
+      run:
+        shell: cmd
+    steps:
+    - name: PR info
+      run: |
+        echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
+        echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
+    - name: Clean
+      run: cd ${{ github.workspace }} && rm -rf *
+    - name: Fetch opencv
+      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv.git https://github.com/opencv/opencv.git
+    - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
+      run: |
+        cd ${{ github.workspace }}\opencv
+        git config user.email "opencv.ci"
+        git config user.name "opencv.ci"
+        git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
+    - name: Fetch opencv_contrib
+      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_contrib.git --depth 1 https://github.com/opencv/opencv_contrib.git
+    - name: Configure OpenCV Contrib
+      run: |
+        mkdir ${{ github.workspace }}\opencv-contrib-build && cd ${{ github.workspace }}\opencv-contrib-build
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+        cmake -G Ninja ${{ env.EXTRA_CMAKE_OPTIONS }} -DOPENCV_EXTRA_MODULES_PATH=${{ github.workspace }}\opencv_contrib\modules ${{ github.workspace }}\opencv
+    - name: Build OpenCV Contrib
+      run: |
+        cd ${{ github.workspace }}\opencv-contrib-build
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+        ninja
