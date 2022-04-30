@@ -235,7 +235,7 @@ namespace cv { namespace cuda { namespace device
         }
         __syncthreads();
 
-        // For all remaining rows in the median filter, add the values to the the histogram
+        // For all remaining rows in the median filter, add the values to the histogram
         for (int j=threadIdx.x; j<cols; j+=blockDim.x){
             for(int i=initStartRow; i<initStopRow; i++){
                     int pos=::min(i,rows-1);
