@@ -253,10 +253,11 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 }
 
 static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
-    int count=0;
+    // int count=0;
+
     for(;;){
-        dprintf(("iteration #%d\n",count));
-        count++;
+        // dprintf(("iteration #%d\n",count));
+        // count++;
 
         static MatIterator_<double> pos_ptr;
         int e=-1,pos_ctr=0,min_var=INT_MAX;

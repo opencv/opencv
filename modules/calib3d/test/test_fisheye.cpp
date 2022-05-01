@@ -227,7 +227,7 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
     cv::Mat undPointsGt(imageHeight, imageWidth, CV_32FC2);
     cv::Mat imageGt(imageHeight, imageWidth, CV_8UC3);
 
-    for(int y = 0, k = 0; y < imageHeight; ++y)
+    for(int y = 0; y < imageHeight; ++y)
     {
         for(int x = 0; x < imageWidth; ++x)
         {
@@ -261,7 +261,6 @@ TEST_F(fisheyeTest, undistortAndDistortImage)
                 pixel_gt[2] = pixel[2];
             }
 
-            k++;
         }
     }
 

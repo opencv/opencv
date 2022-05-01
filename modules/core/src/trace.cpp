@@ -1012,6 +1012,8 @@ void parallelForFinalize(const Region& rootRegion)
             }
         }
     }
+    (void) threads; // To avoid -Wunused-but-set-variable
+
     float parallel_coeff = std::min(1.0f, duration / (float)(parallel_for_stat.duration));
     CV_LOG_PARALLEL(NULL, "parallel_coeff=" << 1.0f / parallel_coeff);
     CV_LOG_PARALLEL(NULL, parallel_for_stat);

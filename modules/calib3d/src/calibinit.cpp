@@ -1469,7 +1469,7 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
     first = below; // remember the first corner in the next row
 
     // find and store the first row (or column)
-    for (int j = 1; ; ++j)
+    while( 1 )
     {
         right->row = 0;
         out_corners.push_back(right);
