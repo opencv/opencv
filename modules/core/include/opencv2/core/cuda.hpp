@@ -155,7 +155,7 @@ public:
     CV_WRAP void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
-    void release();
+    CV_WRAP void release();
 
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
