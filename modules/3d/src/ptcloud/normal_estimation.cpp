@@ -44,7 +44,10 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         knn_idx = knn_idx_.getMat();
     }
 
-    if (k == 0) k = knn_idx.cols;
+    if (k == 0)
+    {
+        k = knn_idx.cols;
+    }
 
     CV_CheckGE(k, 2, "The number of neighbors should be greater than 2.");
     CV_CheckGE(knn_idx.cols, k,
@@ -113,8 +116,15 @@ getKNNSearchResultsByKDTree(OutputArray knn_idx, OutputArray knn_dist, InputArra
     bool need_knn_idx = &knn_idx != &noArray();
     bool need_knn_dist = &knn_dist != &noArray();
     // Create knn_idx or knn_dist to save the results of KNN search
-    if (need_knn_idx) knn_idx.create(pts_size, k, CV_32S);
-    if (need_knn_dist) knn_dist.create(pts_size, k, CV_32F);
+    if (need_knn_idx)
+    {
+        knn_idx.create(pts_size, k, CV_32S);
+    }
+
+    if (need_knn_dist)
+    {
+        knn_dist.create(pts_size, k, CV_32F);
+    }
 
     int *knn_idx_ptr = (int *) knn_idx.getMat().data;
     float *knn_dist_ptr = (float *) knn_dist.getMat().data;
@@ -128,12 +138,15 @@ getKNNSearchResultsByKDTree(OutputArray knn_idx, OutputArray knn_dist, InputArra
         const float *dist_set_ptr = (float *) dist_set.data;
         long ik = (long) i * k;
 
-        if (need_knn_idx)
+        if (need_knn_idx){
             // Copy result of knn search to _knn_idx
             for (int j = 0; j < k; ++j) knn_idx_ptr[ik + j] = idx_set_ptr[j];
-        if (need_knn_dist)
+        }
+
+        if (need_knn_dist){
             // Copy result of knn search to _knn_dist
             for (int j = 0; j < k; ++j) knn_dist_ptr[ik + j] = dist_set_ptr[j];
+        }
     });
 }
 

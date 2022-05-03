@@ -17,7 +17,8 @@ namespace cv {
 /////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////  RegionGrowing3DImpl  //////////////////////////////////////
 
-int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, InputArray normals_,
+int
+RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, InputArray normals_,
         InputArray knn_idx_)
 {
     Mat ori_pts, normals, knn_idx;
@@ -33,7 +34,10 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
         knn_idx = knn_idx_.getMat();
     }
 
-    if (k == 0) k = knn_idx.cols;
+    if (k == 0)
+    {
+        k = knn_idx.cols;
+    }
 
     int pts_size = ori_pts.rows;
     bool has_curvatures = !curvatures.empty();
@@ -48,11 +52,15 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
     CV_CheckEQ(pts_size, max(normals.rows, normals.cols),
             "The number of points in the normals should be equal to that in the point cloud.");
     if (has_curvatures)
+    {
         CV_CheckEQ(pts_size, max(curvatures.rows, curvatures.cols),
                 "The number of points in the curvatures should be equal to that in the point cloud.");
+    }
     if (has_seeds)
+    {
         CV_CheckGE(pts_size, max(seeds.rows, seeds.cols),
                 "The number of seed should be less than or equal to the number of points in the point cloud.");
+    }
 
     std::vector<int> natural_order_seeds;
     if (!has_seeds && !has_curvatures)
@@ -85,14 +93,33 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
         int region_size = 1;
 
         // If the number of regions is satisfied then stop running
-        if (flag > region_num) break;
+        if (flag > region_num)
+        {
+            break;
+        }
         // If current seed has been grown then grow the next one
-        if (_labels_ptr[cur_seed] != 0) continue;
+        if (_labels_ptr[cur_seed] != 0)
+        {
+            continue;
+        }
+        // Filter out seeds with curvature greater than the threshold.
+        if (has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr)
+        {
+            continue;
+        }
         // Filter out seeds with curvature greater than the threshold
-        if (has_curvatures && curvatures_ptr[cur_seed] > curvature_thr) break;
+        // If no seed points have been set, it will use seeds sorted in ascending order of curvatures.
+        // When the curvature doesn't satisfy the threshold, the seed points that follow will not satisfy the threshold either.
+        if (!has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr)
+        {
+            break;
+        }
 
         Mat base_normal;
-        if (!smooth_mode) base_normal = normals.row(cur_seed);
+        if (!smooth_mode)
+        {
+            base_normal = normals.row(cur_seed);
+        }
 
         Mat labels_tmp;
         _labels.copyTo(labels_tmp);
@@ -105,7 +132,10 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
         {
             int cur_idx = grow_list.front();
             grow_list.pop();
-            if (smooth_mode) base_normal = normals.row(cur_idx);
+            if (smooth_mode)
+            {
+                base_normal = normals.row(cur_idx);
+            }
 
             const int *pt_knn_ptr = (int *) knn_idx.row(cur_idx).data;
             // Start from index 1 because the first one of knn_idx is itself
@@ -113,9 +143,15 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
             {
                 int cur_neighbor_idx = pt_knn_ptr[j];
                 // If current point has been grown then grow the next one
-                if (labels_tmp_ptr[cur_neighbor_idx] != 0) continue;
+                if (labels_tmp_ptr[cur_neighbor_idx] != 0)
+                {
+                    continue;
+                }
                 // Filter out points with curvature greater than the threshold
-                if (has_curvatures && curvatures_ptr[cur_neighbor_idx] > curvature_thr) continue;
+                if (has_curvatures && curvatures_ptr[cur_neighbor_idx] > curvature_thr)
+                {
+                    continue;
+                }
 
                 Mat cur_normal = normals.row(cur_neighbor_idx);
                 double n12 = base_normal.dot(cur_normal);
@@ -130,7 +166,10 @@ int RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, Inpu
                 }
             }
             // Check if the current region size are less than the maximum size
-            if (region_size > max_size) break;
+            if (region_size > max_size)
+            {
+                break;
+            }
         }
 
         // Check if the current region size are within the range
