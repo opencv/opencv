@@ -55,5 +55,14 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(cuMat.size(), (1024, 1024))
         self.assertEqual(cuMat.type(), cv.CV_8UC3)
 
+    def test_cuda_release(self):
+        npMat = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(npMat)
+        cuMat.release()
+        self.assertTrue(cuMat.cudaPtr() == 0)
+        self.assertTrue(cuMat.step == 0)
+        self.assertTrue(cuMat.size() == (0, 0))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
