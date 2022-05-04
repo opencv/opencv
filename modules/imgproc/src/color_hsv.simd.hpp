@@ -35,8 +35,8 @@ struct RGB2HSV_b
 {
     typedef uchar channel_type;
 
-    RGB2HSV_b(int _srccn, int _blueIdx, int _hrange)
-    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange)
+    RGB2HSV_b(int _srccn, int _blueIdx, int _hrange, Mutex* _mutex)
+    : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange), mutex(_mutex)
     {
         CV_Assert( hrange == 180 || hrange == 256 );
     }
@@ -56,6 +56,7 @@ struct RGB2HSV_b
         int hr = hrange;
         const int* hdiv_table = hr == 180 ? hdiv_table180 : hdiv_table256;
 
+        cv::AutoLock lock(*mutex);
         if( !initialized )
         {
             sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
@@ -231,6 +232,8 @@ struct RGB2HSV_b
     }
 
     int srccn, blueIdx, hrange;
+  private:
+    Mutex* mutex;
 };
 
 
@@ -1158,9 +1161,10 @@ void cvtBGRtoHSV(const uchar * src_data, size_t src_step,
     int blueIdx = swapBlue ? 2 : 0;
     if(isHSV)
     {
-        if(depth == CV_8U)
-            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_b(scn, blueIdx, hrange));
-        else
+        if(depth == CV_8U) {
+            Mutex cvtColorLockInstance;
+            CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_b(scn, blueIdx, hrange, &cvtColorLockInstance));
+        } else
             CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, RGB2HSV_f(scn, blueIdx, static_cast<float>(hrange)));
     }
     else
