@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
+#include "opencv2/core/types.hpp"
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
@@ -125,7 +126,8 @@ TEST_F(UndistortPointsTest, undistortImagePointsAccuracy)
 
         /* Undistort points */
         Mat undistortedPoints;
-        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs);
+		TermCriteria termCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, thresh / 2);
+        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs, termCriteria);
 
         EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
     }

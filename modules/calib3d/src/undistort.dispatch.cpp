@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "opencv2/core/types.hpp"
 #include "precomp.hpp"
 #include "distortion_model.hpp"
 
@@ -607,9 +608,9 @@ void undistortPoints(InputArray _src, OutputArray _dst,
     cvUndistortPointsInternal(&_csrc, &_cdst, &_ccameraMatrix, pD, pR, pP, criteria);
 }
 
-void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs)
+void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix, InputArray distCoeffs, TermCriteria termCriteria)
 {
-    undistortPoints(src, dst, cameraMatrix, distCoeffs, noArray(), cameraMatrix);
+    undistortPoints(src, dst, cameraMatrix, distCoeffs, noArray(), cameraMatrix, termCriteria);
 }
 
 static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum UndistortTypes projType)
