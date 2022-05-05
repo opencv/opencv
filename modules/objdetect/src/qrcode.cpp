@@ -2380,13 +2380,10 @@ bool QRDecode::samplingForVersion()
     const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
 
     vector<double> listFrequencyElem;
-    for (int i = 0; i < version_size; i++)
+    for (int i = 0, r = 0; i < version_size; i++, r+= delta_rows)
     {
-        const int r = cvRound(static_cast<double>(postIntermediate.rows) * i / version_size);
-
-        for (int j = 0; j < version_size; j++)
+        for (int j = 0, c = 0; j < version_size; j++, c+= delta_cols)
         {
-            const int c = cvRound(static_cast<double>(postIntermediate.cols) * j / version_size);
             Mat tile = postIntermediate(
                            Range(r, min(r + delta_rows, postIntermediate.rows)),
                            Range(c, min(c + delta_cols, postIntermediate.cols)));
