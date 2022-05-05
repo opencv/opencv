@@ -1,7 +1,9 @@
 name: PR:4.x W10
 
-# TODO: enable pipeline after 4.x update
-on: workflow_dispatch
+on:
+  pull_request:
+    branches:
+      - 4.x
 
 env:
   EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DOPENCV_DOWNLOAD_PATH=c:\Slave\workspace\binaries_cache -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
@@ -10,7 +12,7 @@ env:
   PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
-  GTEST_FILTER_STRING: '-Samples.findFile:ExposureCompensate.SimilarityThreshold:DNNTestNetwork.MobileNet_SSD_v2_TensorFlow*:DNNTestNetwork.Inception_v2_SSD_TensorFlow*:Test_TensorFlow_nets.Inception_v2_SSD*:Test_Darknet_nets.YOLOv4_tiny*:videoio/videocapture_acceleration.read/61:Drawing.ttf_text'
+  GTEST_FILTER_STRING: '-Samples.findFile:ExposureCompensate.SimilarityThreshold:DNNTestNetwork.MobileNet_SSD_v2_TensorFlow*:DNNTestNetwork.Inception_v2_SSD_TensorFlow*:Test_TensorFlow_nets.Inception_v2_SSD*:Test_Darknet_nets.YOLOv4_tiny*:videoio/videocapture_acceleration.read/61:videoio/videocapture_acceleration.read/122:videoio/videocapture_acceleration.read/126:Drawing.ttf_text'
   GIT_CACHE: c:\Slave\git_cache
 
 jobs:
@@ -70,6 +72,8 @@ jobs:
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_features2d.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:flann
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_flann.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Accuracy:gapi
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_gapi.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:highgui
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_highgui.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:imgcodecs
@@ -82,18 +86,12 @@ jobs:
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_objdetect.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:photo
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_photo.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
-    - name: Accuracy:shape
-      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_shape.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:stitching
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_stitching.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
-    - name: Accuracy:superres
-      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_superres.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:video
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_video.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Accuracy:videoio
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videoio.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
-    - name: Accuracy:videostab
-      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_test_videostab.exe --skip_unstable --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:calib3d
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_calib3d.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:core
@@ -102,6 +100,8 @@ jobs:
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_dnn.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:features2d
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_features2d.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
+    - name: Performance:gapi
+      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_gapi.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:imgcodecs
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_imgcodecs.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:imgproc
@@ -112,8 +112,6 @@ jobs:
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_photo.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:stitching
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_stitching.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
-    - name: Performance:superres
-      run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_superres.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:video
       run: cd ${{ github.workspace }}\opencv-build && bin\opencv_perf_video.exe --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1 --gtest_filter=${{ env.GTEST_FILTER_STRING }}
     - name: Performance:videoio
@@ -129,6 +127,8 @@ jobs:
         cd ${{ github.workspace }}\opencv-build
         set PATH=%PATH%;${{ github.workspace }}\opencv-build\bin
         ${{ github.workspace }}\opencv\modules\ts\misc\run.py . -a -t java
+
+
   BuildContrib:
     runs-on: opencv-cn-win
     defaults:
