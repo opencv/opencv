@@ -11,6 +11,7 @@
 namespace
 {
 #define CORE_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::gpu::kernels()}); }
+    const std::vector <cv::Size> in_sizes{ cv::Size(1280, 720), cv::Size(128, 128) };
 }  // anonymous namespace
 
 namespace opencv_test
@@ -18,8 +19,7 @@ namespace opencv_test
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
                     Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
-                            Values(cv::Size(1280, 720),
-                                   cv::Size(128, 128)),
+                            ValuesIn(in_sizes),
                             Values(-1),
                             Values(CORE_GPU),
                             Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),
@@ -28,8 +28,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatMatTest,
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
                         Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-4, 2).to_compare_obj()),
@@ -40,8 +39,7 @@ INSTANTIATE_TEST_CASE_P(MathOperatorTestGPU, MathOperatorMatScalarTest,
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatMatTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsExact().to_compare_obj()),
@@ -49,8 +47,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatMatTest,
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsExact().to_compare_obj()),
@@ -59,8 +56,7 @@ INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestGPU, MathOperatorMatScalarTest,
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestGPU, NotOperatorTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 }

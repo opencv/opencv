@@ -13,6 +13,7 @@
 namespace
 {
 #define IMGPROC_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::cpu::kernels()}); }
+    const std::vector <cv::Size> in_sizes{ cv::Size(1280, 720), cv::Size(128, 128) };
 }  // anonymous namespace
 
 namespace opencv_test
@@ -20,8 +21,7 @@ namespace opencv_test
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
@@ -31,8 +31,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTest,
 
 INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
@@ -42,8 +41,7 @@ INSTANTIATE_TEST_CASE_P(ResizePTestCPU, ResizePTest,
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
@@ -53,8 +51,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFxFy,
 
 INSTANTIATE_TEST_CASE_P(Filter2DTestCPU, Filter2DTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                        cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1, CV_32F),
                                 Values(IMGPROC_CPU),
                                 Values(AbsExact().to_compare_obj()),
@@ -311,8 +308,7 @@ INSTANTIATE_TEST_CASE_P(FindContoursHOffsetTestCPU, FindContoursHOffsetTest,
 
 INSTANTIATE_TEST_CASE_P(BoundingRectMatTestCPU, BoundingRectMatTest,
                         Combine(Values( CV_8UC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_CPU),
                                 Values(IoUToleranceRect(0).to_compare_obj()),

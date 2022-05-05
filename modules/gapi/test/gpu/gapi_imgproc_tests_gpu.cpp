@@ -12,6 +12,7 @@
 namespace
 {
 #define IMGPROC_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::imgproc::gpu::kernels()}); }
+    const std::vector <cv::Size> in_sizes{ cv::Size(1280, 720), cv::Size(128, 128) };
 }  // anonymous namespace
 
 namespace opencv_test
@@ -19,8 +20,7 @@ namespace opencv_test
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_GPU),
                                 Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
@@ -30,8 +30,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTest,
 
 INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(IMGPROC_GPU),
                                 Values(AbsSimilarPoints(2, 0.05).to_compare_obj()),
@@ -41,8 +40,7 @@ INSTANTIATE_TEST_CASE_P(ResizeTestGPU, ResizeTestFxFy,
 
 INSTANTIATE_TEST_CASE_P(Filter2DTestGPU, Filter2DTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1, CV_32F),
                                 Values(IMGPROC_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-5, 2).to_compare_obj()),

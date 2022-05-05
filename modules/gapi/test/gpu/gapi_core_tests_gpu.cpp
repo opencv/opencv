@@ -11,6 +11,7 @@
 namespace
 {
 #define CORE_GPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::gpu::kernels()}); }
+    const std::vector <cv::Size> in_sizes{ cv::Size(1280, 720), cv::Size(128, 128) };
 }  // anonymous namespace
 
 namespace opencv_test
@@ -19,8 +20,7 @@ namespace opencv_test
 // FIXME: Wut? See MulTestGPU/MathOpTest below (duplicate?)
 INSTANTIATE_TEST_CASE_P(AddTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU),
                                 Values(ADD, MUL),
@@ -30,8 +30,7 @@ INSTANTIATE_TEST_CASE_P(AddTestGPU, MathOpTest,
 
 INSTANTIATE_TEST_CASE_P(MulTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU),
                                 Values(MUL),
@@ -41,8 +40,7 @@ INSTANTIATE_TEST_CASE_P(MulTestGPU, MathOpTest,
 
 INSTANTIATE_TEST_CASE_P(SubTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU),
                                 Values(SUB),
@@ -62,8 +60,7 @@ INSTANTIATE_TEST_CASE_P(SubTestGPU, MathOpTest,
 //        Github ticket: https://github.com/opencv/opencv/issues/18373.
 INSTANTIATE_TEST_CASE_P(DISABLED_DivTestGPU, MathOpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU),
                                 Values(DIV),
@@ -73,65 +70,56 @@ INSTANTIATE_TEST_CASE_P(DISABLED_DivTestGPU, MathOpTest,
 
 INSTANTIATE_TEST_CASE_P(MulTestGPU, MulDoubleTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(DivTestGPU, DivTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(DivCTestGPU, DivCTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(MeanTestGPU, MeanTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 //TODO: mask test doesn't work
 INSTANTIATE_TEST_CASE_P(DISABLED_MaskTestGPU, MaskTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(SelectTestGPU, SelectTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Polar2CartGPU, Polar2CartTest,
                         Combine(Values(CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_32FC1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Cart2PolarGPU, Cart2PolarTest,
                         Combine(Values(CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_32FC1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(CompareTestGPU, CmpTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8U),
                                 Values(CORE_GPU),
                                 Values(CMP_EQ, CMP_GE, CMP_NE, CMP_GT, CMP_LT, CMP_LE),
@@ -140,8 +128,7 @@ INSTANTIATE_TEST_CASE_P(CompareTestGPU, CmpTest,
 
 INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AND, OR, XOR),
@@ -149,67 +136,58 @@ INSTANTIATE_TEST_CASE_P(BitwiseTestGPU, BitwiseTest,
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotTestGPU, NotTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(DISABLED_MinTestGPU, MinTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(DISABLED_MaxTestGPU, MaxTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(SumTestGPU, SumTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(CountNonZeroTestGPU, CountNonZeroTest,
                         Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsToleranceScalar(1e-5).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffTestGPU, AbsDiffTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCTestGPU, AbsDiffCTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(AddWeightedTestGPU, AddWeightedTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values( -1, CV_8U, CV_16U, CV_32F ),
                                 Values(CORE_GPU),
                                 Values(Tolerance_FloatRel_IntAbs(1e-6, 1).to_compare_obj())));
 
 INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsToleranceScalar(1e-3).to_compare_obj()), //TODO: too relaxed?
@@ -217,15 +195,13 @@ INSTANTIATE_TEST_CASE_P(NormTestGPU, NormTest,
 
 INSTANTIATE_TEST_CASE_P(IntegralTestGPU, IntegralTest,
                         Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC,
@@ -236,8 +212,7 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdTest,
 
 INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdOTTest,
                         Combine(Values(CV_8UC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(cv::THRESH_OTSU, cv::THRESH_TRIANGLE)));
@@ -245,80 +220,69 @@ INSTANTIATE_TEST_CASE_P(ThresholdTestGPU, ThresholdOTTest,
 
 INSTANTIATE_TEST_CASE_P(InRangeTestGPU, InRangeTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Split3TestGPU, Split3Test,
                         Combine(Values(CV_8UC3),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Split4TestGPU, Split4Test,
                         Combine(Values(CV_8UC4),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Merge3TestGPU, Merge3Test,
                         Combine(Values(CV_8UC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC3),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(Merge4TestGPU, Merge4Test,
                         Combine(Values(CV_8UC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC4),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(RemapTestGPU, RemapTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(FlipTestGPU, FlipTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(0,1,-1)));
 
 INSTANTIATE_TEST_CASE_P(CropTestGPU, CropTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(cv::Rect(10, 8, 20, 35), cv::Rect(4, 10, 37, 50))));
 
 INSTANTIATE_TEST_CASE_P(LUTTestGPU, LUTTest,
                         Combine(Values(CV_8UC1, CV_8UC3),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(LUTTestCustomGPU, LUTTest,
                         Combine(Values(CV_8UC3),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8UC3),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(ConvertToGPU, ConvertToTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(CV_8U, CV_16U, CV_16S, CV_32F),
                                 Values(CORE_GPU),
                                 Values(AbsExact().to_compare_obj()),
@@ -327,15 +291,13 @@ INSTANTIATE_TEST_CASE_P(ConvertToGPU, ConvertToTest,
 
 INSTANTIATE_TEST_CASE_P(ConcatHorTestGPU, ConcatHorTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(ConcatVertTestGPU, ConcatVertTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
@@ -343,8 +305,7 @@ INSTANTIATE_TEST_CASE_P(TransposeTestGPU, TransposeTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1,
                                        CV_8UC2, CV_16UC2, CV_16SC2, CV_32FC2,
                                        CV_8UC3, CV_16UC3, CV_16SC3, CV_32FC3),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsExact().to_compare_obj())));
@@ -375,15 +336,13 @@ INSTANTIATE_TEST_CASE_P(ReInitOutTestGPU, ReInitOutTest,
 //TODO: fix this backend to allow ConcatVertVec ConcatHorVec
 INSTANTIATE_TEST_CASE_P(DISABLED_ConcatVertVecTestGPU, ConcatVertVecTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 
 INSTANTIATE_TEST_CASE_P(DISABLED_ConcatHorVecTestGPU, ConcatHorVecTest,
                         Combine(Values( CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1, CV_32FC1 ),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_GPU)));
 }
