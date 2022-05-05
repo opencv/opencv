@@ -126,8 +126,9 @@ TEST_F(UndistortPointsTest, undistortImagePointsAccuracy)
 
         /* Undistort points */
         Mat undistortedPoints;
-		TermCriteria termCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, thresh / 2);
-        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs, termCriteria);
+        TermCriteria termCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, thresh / 2);
+        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs,
+                             termCriteria);
 
         EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
     }
