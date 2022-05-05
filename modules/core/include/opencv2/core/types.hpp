@@ -919,7 +919,6 @@ public:
     int getIterationTolerance();
     double getEpsilonTolerance();
 
-
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
     double epsilon; //!< the desired accuracy
@@ -2456,62 +2455,48 @@ inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
 
-TermCriteria::TermCriteria(int count, double epsilon) : maxIterationNumber(count), maxEpsilon(epsilon)
+TermCriteria::TermCriteria(int count, double epsilon)
+    : maxIterationNumber(count), maxEpsilon(epsilon)
 {
-  if (maxIterationNumber < 0) {
-    maxIterationNumber = std::numeric_limits<int>::max();
-  }
+    if (maxIterationNumber < 0) {
+        maxIterationNumber = std::numeric_limits<int>::max();
+    }
 }
 
 bool TermCriteria::checkEpsilonTolerance(double epsilon)
 {
-  if ((maxEpsilon >= 0) and (epsilon > maxEpsilon)) {
-    return false;
-  } else {
-    return true;
-  }
+    if ((maxEpsilon >= 0) and (epsilon > maxEpsilon)) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 bool TermCriteria::checkIterationTolerance(int count)
 {
-  if (count > maxIterationNumber) {
-    return false;
-  } else {
-    return true;
-  }
+    if (count > maxIterationNumber) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
-void TermCriteria::setEpsilonTolerance(double epsilon)
-{
-  maxEpsilon = epsilon;
-}
+void TermCriteria::setEpsilonTolerance(double epsilon) { maxEpsilon = epsilon; }
 
-void TermCriteria::setIterationTolerance(int count)
-{
-  maxIterationNumber = count;
-}
+void TermCriteria::setIterationTolerance(int count) { maxIterationNumber = count; }
 
-double TermCriteria::getEpsilonTolerance()
-{
-  return maxEpsilon;
-}
+double TermCriteria::getEpsilonTolerance() { return maxEpsilon; }
 
-int TermCriteria::getIterationTolerance()
-{
-  return maxIterationNumber;
-}
+int TermCriteria::getIterationTolerance() { return maxIterationNumber; }
 
 bool TermCriteria::isEpsilonToleranceSet()
 {
-  if (maxEpsilon < 0) {
-    return false;
-  } else {
-    return true;
-  }
+    if (maxEpsilon < 0) {
+        return false;
+    } else {
+        return true;
+    }
 }
-
-
-
 
 //! @endcond
 

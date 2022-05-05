@@ -1,11 +1,12 @@
 #include "opencv2/core/base.hpp"
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace {
+namespace opencv_test {
+namespace {
 
 TEST(Core_TermCriteria, EmptyConstructorIsNotValid)
 {
-    TermCriteria termCriteria;  
+    TermCriteria termCriteria;
 
     EXPECT_FALSE(termCriteria.isValid());
 }
@@ -45,4 +46,5 @@ TEST(Core_TermCriteria, IncompletEpsilonConstructorIsNotValid)
     EXPECT_FALSE(termCriteria.isValid());
 }
 
-}} // namespace opencv_test, namespace
+} // namespace
+} // namespace opencv_test
