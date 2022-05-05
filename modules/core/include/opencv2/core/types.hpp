@@ -886,12 +886,19 @@ public:
 
     //! default constructor
     TermCriteria();
+
     /**
     @param type The type of termination criteria, one of TermCriteria::Type
     @param maxCount The maximum number of iterations or elements to compute.
     @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
     */
     TermCriteria(int type, int maxCount, double epsilon);
+
+    /**
+     * @param type
+     * @param epsilon
+     */
+    TermCriteria(int count, double epsilon);
 
     inline bool isValid() const
     {
@@ -900,9 +907,26 @@ public:
         return isCount || isEps;
     }
 
+    bool checkEpsilonTolerance(double epsilon);
+    bool checkIterationTolerance(int count);
+
+    void setEpsilonTolerance(double epsilon);
+    void setIterationTolerance(int count);
+
+    bool isEpsilonToleranceSet();
+    bool isIterationToleranceSet();
+
+    int getIterationTolerance();
+    double getEpsilonTolerance();
+
+
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
     double epsilon; //!< the desired accuracy
+
+    protected:
+    int maxIterationNumber;
+    double maxEpsilon;
 };
 
 
@@ -2431,6 +2455,63 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+TermCriteria::TermCriteria(int count, double epsilon) : maxIterationNumber(count), maxEpsilon(epsilon)
+{
+  if (maxIterationNumber < 0) {
+    maxIterationNumber = std::numeric_limits<int>::max();
+  }
+}
+
+bool TermCriteria::checkEpsilonTolerance(double epsilon)
+{
+  if ((maxEpsilon >= 0) and (epsilon > maxEpsilon)) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+bool TermCriteria::checkIterationTolerance(int count)
+{
+  if (count > maxIterationNumber) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+void TermCriteria::setEpsilonTolerance(double epsilon)
+{
+  maxEpsilon = epsilon;
+}
+
+void TermCriteria::setIterationTolerance(int count)
+{
+  maxIterationNumber = count;
+}
+
+double TermCriteria::getEpsilonTolerance()
+{
+  return maxEpsilon;
+}
+
+int TermCriteria::getIterationTolerance()
+{
+  return maxIterationNumber;
+}
+
+bool TermCriteria::isEpsilonToleranceSet()
+{
+  if (maxEpsilon < 0) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+
+
 
 //! @endcond
 
