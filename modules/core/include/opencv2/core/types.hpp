@@ -898,7 +898,7 @@ public:
      * @param type
      * @param epsilon
      */
-    TermCriteria(int count, double epsilon);
+    TermCriteria(int count, double _epsilon);
 
     inline bool isValid() const
     {
@@ -907,17 +907,17 @@ public:
         return isCount || isEps;
     }
 
-    bool checkEpsilonTolerance(double epsilon);
-    bool checkIterationTolerance(int count);
+    bool checkEpsilonTolerance(double _epsilon) const;
+    bool checkIterationTolerance(int count) const;
 
-    void setEpsilonTolerance(double epsilon);
+    void setEpsilonTolerance(double _epsilon);
     void setIterationTolerance(int count);
 
-    bool isEpsilonToleranceSet();
-    bool isIterationToleranceSet();
+    bool isEpsilonToleranceSet() const;
+    // bool isIterationToleranceSet();
 
-    int getIterationTolerance();
-    double getEpsilonTolerance();
+    int getIterationTolerance() const;
+    double getEpsilonTolerance() const;
 
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
@@ -2455,24 +2455,24 @@ inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
 
-TermCriteria::TermCriteria(int count, double epsilon)
-    : maxIterationNumber(count), maxEpsilon(epsilon)
+inline TermCriteria::TermCriteria(int count, double _epsilon)
+    : maxIterationNumber(count), maxEpsilon(_epsilon)
 {
     if (maxIterationNumber < 0) {
         maxIterationNumber = std::numeric_limits<int>::max();
     }
 }
 
-bool TermCriteria::checkEpsilonTolerance(double epsilon)
+inline bool TermCriteria::checkEpsilonTolerance(double _epsilon) const
 {
-    if ((maxEpsilon >= 0) and (epsilon > maxEpsilon)) {
+    if ((maxEpsilon >= 0) and (_epsilon > maxEpsilon)) {
         return false;
     } else {
         return true;
     }
 }
 
-bool TermCriteria::checkIterationTolerance(int count)
+inline bool TermCriteria::checkIterationTolerance(int count) const
 {
     if (count > maxIterationNumber) {
         return false;
@@ -2481,15 +2481,15 @@ bool TermCriteria::checkIterationTolerance(int count)
     }
 }
 
-void TermCriteria::setEpsilonTolerance(double epsilon) { maxEpsilon = epsilon; }
+inline void TermCriteria::setEpsilonTolerance(double _epsilon) { maxEpsilon = _epsilon; }
 
-void TermCriteria::setIterationTolerance(int count) { maxIterationNumber = count; }
+inline void TermCriteria::setIterationTolerance(int count) { maxIterationNumber = count; }
 
-double TermCriteria::getEpsilonTolerance() { return maxEpsilon; }
+inline double TermCriteria::getEpsilonTolerance() const { return maxEpsilon; }
 
-int TermCriteria::getIterationTolerance() { return maxIterationNumber; }
+inline int TermCriteria::getIterationTolerance() const { return maxIterationNumber; }
 
-bool TermCriteria::isEpsilonToleranceSet()
+inline bool TermCriteria::isEpsilonToleranceSet() const
 {
     if (maxEpsilon < 0) {
         return false;
