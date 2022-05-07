@@ -919,6 +919,9 @@ public:
     int getIterationTolerance() const;
     double getEpsilonTolerance() const;
 
+    static TermCriteria epsilonToleranceOnly(double _epsilon);
+    static TermCriteria iterationToleraneOnly(int count);
+
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
     double epsilon; //!< the desired accuracy
@@ -2497,6 +2500,10 @@ inline bool TermCriteria::isEpsilonToleranceSet() const
         return true;
     }
 }
+
+inline TermCriteria TermCriteria::epsilonToleranceOnly(double _epsilon) { return {-1, _epsilon}; }
+
+inline TermCriteria TermCriteria::iterationToleraneOnly(int count) { return {count, -1}; }
 
 //! @endcond
 

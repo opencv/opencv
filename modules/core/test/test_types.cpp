@@ -46,5 +46,38 @@ TEST(Core_TermCriteria, IncompletEpsilonConstructorIsNotValid)
     EXPECT_FALSE(termCriteria.isValid());
 }
 
+TEST(Core_TermCriteria, c)
+{
+    TermCriteria termCriteria(5, 0.1);
+
+    EXPECT_TRUE(termCriteria.isEpsilonToleranceSet());
+
+    EXPECT_EQ(termCriteria.getEpsilonTolerance(), 0.1);
+    EXPECT_EQ(termCriteria.getIterationTolerance(), 5);
+}
+
+TEST(Core_TermCriteria, ToleranceCheckers)
+{
+    TermCriteria termCriteria(5, 0.1);
+
+    EXPECT_TRUE(termCriteria.checkIterationTolerance(4));
+    EXPECT_TRUE(termCriteria.checkIterationTolerance(5));
+    EXPECT_FALSE(termCriteria.checkIterationTolerance(6));
+
+    EXPECT_TRUE(termCriteria.checkEpsilonTolerance(0.005));
+    EXPECT_FALSE(termCriteria.checkEpsilonTolerance(0.2));
+}
+
+TEST(Core_TermCriteria, GettersSetters)
+{
+    TermCriteria termCriteria;
+
+    termCriteria.setEpsilonTolerance(0.1);
+    termCriteria.setIterationTolerance(5);
+
+    EXPECT_EQ(termCriteria.getIterationTolerance(), 0.1);
+    EXPECT_EQ(termCriteria.getIterationTolerance(), 5);
+}
+
 } // namespace
 } // namespace opencv_test
