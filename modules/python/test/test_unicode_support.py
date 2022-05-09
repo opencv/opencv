@@ -5,6 +5,7 @@ import numpy as np
 import cv2 as cv
 import os
 import tempfile
+import sys
 
 from tests_common import NewOpenCVTests
 
@@ -24,15 +25,15 @@ class unicode_support_test(NewOpenCVTests):
     tmp_path = None
 
     def setUp(self):
+        if os.name != 'nt' and sys.getfilesystemencoding() != "utf-8":
+            self.skipTest("environment variable `LANG` is not utf8")
+            return
         self.tmp_path = tempfile.mkdtemp(str_unicode)
 
     def tearDown(self):
         rmdir(self.tmp_path)
 
     def test_fs_get_cache_dir(self):
-        if os.name != 'nt':
-            self.skipTest("only windows")
-
         tmp_bak = os.environ["TMP"]
         os.environ["TMP"] = self.tmp_path
 
