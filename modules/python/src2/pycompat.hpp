@@ -57,9 +57,19 @@
 #define PyInt_FromLong PyLong_FromLong
 #define PyNumber_Int PyNumber_Long
 
-
+#if defined(_WIN32)
+static inline PyObject* PyString_FromString(const char* u)
+{
+    return PyUnicode_DecodeMBCS(u, strlen(u), nullptr);
+}
+static inline PyObject* PyString_FromStringAndSize(const char* u, Py_ssize_t size)
+{
+    return PyUnicode_DecodeMBCS(u, size, nullptr);
+}
+#else
 #define PyString_FromString PyUnicode_FromString
 #define PyString_FromStringAndSize PyUnicode_FromStringAndSize
+#endif
 
 #endif // PY_MAJOR >=3
 
@@ -72,7 +82,11 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
     bool res = false;
     if (PyUnicode_Check(obj))
     {
-        PyObject * bytes = PyUnicode_AsUTF8String(obj);
+#if defined(_WIN32)
+        PyObject* bytes = PyUnicode_AsMBCSString(obj);
+#else
+        PyObject* bytes = PyUnicode_AsUTF8String(obj);
+#endif
         if (PyBytes_Check(bytes))
         {
             const char * raw = PyBytes_AsString(bytes);
