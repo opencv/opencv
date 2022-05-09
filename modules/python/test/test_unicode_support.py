@@ -21,34 +21,38 @@ def rmdir(directory):
 
 
 class unicode_support_test(NewOpenCVTests):
-    tmp_new = None
-    tmp_old = None
+    tmp_path = None
 
     def setUp(self):
-        self.tmp_old = os.environ["TMP"]
-        self.tmp_new = tempfile.mkdtemp(str_unicode)
-        os.environ["TMP"] = self.tmp_new
+        self.tmp_path = tempfile.mkdtemp(str_unicode)
 
     def tearDown(self):
-        rmdir(self.tmp_new)
-        os.environ["TMP"] = self.tmp_old
+        rmdir(self.tmp_path)
 
     def test_fs_get_cache_dir(self):
+        if os.name != 'nt':
+            self.skipTest("only windows")
+
+        tmp_bak = os.environ["TMP"]
+        os.environ["TMP"] = self.tmp_path
+
         path = cv.utils.fs.getCacheDirectoryForDownloads()
         self.assertTrue(os.path.exists(path))
         self.assertTrue(os.path.isdir(path))
-        self.assertIn(self.tmp_new, path)
+        self.assertIn(self.tmp_path, path)
+
+        os.environ["TMP"] = tmp_bak
 
     def test_im_rw(self):
         data_write = np.random.randint(0, 255, (4, 4, 3))
-        file_path = os.path.join(self.tmp_new, str_unicode + ".png")
+        file_path = os.path.join(self.tmp_path, str_unicode + ".png")
         cv.imwrite(file_path, data_write)
         self.assertTrue(os.path.exists(file_path))
         data_read = cv.imread(file_path, cv.IMREAD_UNCHANGED)
         self.assertTrue(np.array_equal(data_write, data_read))
 
     def test_video_write(self):
-        file_path = os.path.join(self.tmp_new, str_unicode + ".mp4")
+        file_path = os.path.join(self.tmp_path, str_unicode + ".mp4")
         cv.VideoWriter(file_path, cv.VideoWriter_fourcc('P', 'I', 'M', '1'), 1, (1, 1))
         self.assertTrue(os.path.exists(file_path))
 
