@@ -92,27 +92,21 @@ RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, InputArr
         int cur_seed = seeds_ptr[i];
         int region_size = 1;
 
-        // If the number of regions is satisfied then stop running
-        if (flag > region_num)
+        // 1. If the number of regions is satisfied then stop running.
+        // 2. Filter out seeds with curvature greater than the threshold.
+        //    If no seed points have been set, it will use seeds sorted in ascending order of curvatures.
+        //    When the curvature doesn't satisfy the threshold, the seed points that follow will not satisfy the threshold either.
+        if (flag > region_num ||
+            (!has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr))
         {
             break;
         }
-        // If current seed has been grown then grow the next one
-        if (_labels_ptr[cur_seed] != 0)
+        // 1. If current seed has been grown then grow the next one.
+        // 2. Filter out seeds with curvature greater than the threshold.
+        if (_labels_ptr[cur_seed] != 0 ||
+            (has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr))
         {
             continue;
-        }
-        // Filter out seeds with curvature greater than the threshold.
-        if (has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr)
-        {
-            continue;
-        }
-        // Filter out seeds with curvature greater than the threshold
-        // If no seed points have been set, it will use seeds sorted in ascending order of curvatures.
-        // When the curvature doesn't satisfy the threshold, the seed points that follow will not satisfy the threshold either.
-        if (!has_seeds && has_curvatures && curvatures_ptr[cur_seed] > curvature_thr)
-        {
-            break;
         }
 
         Mat base_normal;
