@@ -152,7 +152,7 @@ RegionGrowing3DImpl::segment(OutputArray labels, InputArray input_pts_, InputArr
                 double n1m = base_normal.dot(base_normal);
                 double n2m = cur_normal.dot(cur_normal);
                 // If the smoothness threshold is satisfied, this neighbor will be pushed to the growth list
-                if (n12 * n12 / (n1m * n2m) > cos_smoothness_thr_square)
+                if (n12 * n12 / (n1m * n2m) >= cos_smoothness_thr_square)
                 {
                     labels_tmp_ptr[cur_neighbor_idx] = flag;
                     grow_list.push(cur_neighbor_idx);

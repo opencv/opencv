@@ -139,12 +139,12 @@ getKNNSearchResultsByKDTree(OutputArray knn_idx, OutputArray knn_dist, InputArra
         long ik = (long) i * k;
 
         if (need_knn_idx){
-            // Copy result of knn search to _knn_idx
+            // Copy result of knn search to knn_idx
             for (int j = 0; j < k; ++j) knn_idx_ptr[ik + j] = idx_set_ptr[j];
         }
 
         if (need_knn_dist){
-            // Copy result of knn search to _knn_dist
+            // Copy result of knn search to knn_dist
             for (int j = 0; j < k; ++j) knn_dist_ptr[ik + j] = dist_set_ptr[j];
         }
     });
