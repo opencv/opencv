@@ -22,7 +22,8 @@ TEST(NormalEstimationTest, PlaneNormalEstimation)
     // get knn search result
     Mat knn_idx;
     int k = 10;
-    getKNNSearchResultsByKDTree(knn_idx, noArray(), plane_pts, k);
+    auto *search_params = new flann::SearchParams(128);
+    getKNNSearchResultsByKDTree(knn_idx, noArray(), plane_pts, k, nullptr, search_params);
 
     // estimate normal and curvature
     vector<Point3f> normals;
@@ -30,20 +31,22 @@ TEST(NormalEstimationTest, PlaneNormalEstimation)
     normalEstimate(normals, curvatures, plane_pts, knn_idx, k);
 
     // check each normal
-    Point3f plane_norm(model[0], model[1], model[2]);
+    Point3f n1(model[0], model[1], model[2]);
+    n1 *= 10; // expand the number to avoid too small numbers
     float theta = 1.f; // degree of angle between normal of plane and normal of point
-    float cos_theta = cos(theta);
-    for (Point3f norm: normals)
+    float cos_theta = cos(theta * 3.1415926f / 180.f);
+    for (Point3f n2: normals)
     {
-        float n12 = norm.dot(plane_norm);
-        float n1m = norm.dot(norm);
-        float n2m = plane_norm.dot(plane_norm);
+        n2 *= 10; // expand the number to avoid too small numbers
+        float n12 = n1.dot(n2);
+        float n1m = n1.dot(n1);
+        float n2m = n2.dot(n2);
         ASSERT_GE(n12 * n12 / (n1m * n2m), cos_theta * cos_theta);
     }
 
     // check each curvature
-    float actual_curvature = 0;
-    float curvature_thr = 0.0001; // threshold for curvature and actual curvature of the point
+    float actual_curvature = 0.f;
+    float curvature_thr = 0.0001f; // threshold for curvature and actual curvature of the point
     for (float cur: curvatures)
     {
         ASSERT_LE(abs(cur - actual_curvature), curvature_thr);
@@ -63,7 +66,8 @@ TEST(NormalEstimationTest, SphereNormalEstimation)
     // get knn search result
     Mat knn_idx;
     int k = 10;
-    getKNNSearchResultsByKDTree(knn_idx, noArray(), sphere_pts, k);
+    auto *search_params = new flann::SearchParams(128);
+    getKNNSearchResultsByKDTree(knn_idx, noArray(), sphere_pts, k, nullptr, search_params);
 
     // estimate normal and curvature
     vector<Point3f> normals;
@@ -72,20 +76,22 @@ TEST(NormalEstimationTest, SphereNormalEstimation)
 
     // check each normal
     float theta = 1; // degree of angle between normal of plane and normal of point
-    float cos_theta = cos(theta);
+    float cos_theta = cos(theta * 3.1415926f / 180.f);
     for (int i = 0; i < num; ++i)
     {
-        Point3f norm = normals[i];
-        Point3f actual_norm(sphere_pts[i]);
-        float n12 = norm.dot(actual_norm);
-        float n1m = norm.dot(norm);
-        float n2m = actual_norm.dot(actual_norm);
+        Point3f n1(sphere_pts[i]);
+        n1 *= 10; // expand the number to avoid too small numbers
+        Point3f n2 = normals[i];
+        n2 *= 10; // expand the number to avoid too small numbers
+        float n12 = n1.dot(n2);
+        float n1m = n1.dot(n1);
+        float n2m = n2.dot(n2);
         ASSERT_GE(n12 * n12 / (n1m * n2m), cos_theta * cos_theta);
     }
 
     // check each curvature
-    float actual_curvature = 0;
-    float curvature_thr = 0.01; // threshold for curvature and actual curvature of the point
+    float actual_curvature = 0.f;
+    float curvature_thr = 0.01f; // threshold for curvature and actual curvature of the point
     for (float cur: curvatures)
     {
         ASSERT_LE(abs(cur - actual_curvature), curvature_thr);
