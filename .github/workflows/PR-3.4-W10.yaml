@@ -12,7 +12,7 @@ env:
   PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
-  GTEST_FILTER_STRING: '-Samples.findFile:ExposureCompensate.SimilarityThreshold:DNNTestNetwork.MobileNet_SSD_v2_TensorFlow*:DNNTestNetwork.Inception_v2_SSD_TensorFlow*:Test_TensorFlow_nets.Inception_v2_SSD*:Test_Darknet_nets.YOLOv4_tiny*:videoio/videocapture_acceleration.read/61:Drawing.ttf_text'
+  GTEST_FILTER_STRING: '-Samples.findFile'
   GIT_CACHE: c:\Slave\git_cache
 
 jobs:
