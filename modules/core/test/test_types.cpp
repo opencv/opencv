@@ -4,6 +4,7 @@
 
 #include "opencv2/core/base.hpp"
 #include "test_precomp.hpp"
+#include <limits>
 
 namespace opencv_test {
 namespace {
@@ -79,8 +80,36 @@ TEST(Core_TermCriteria, GettersSetters)
     termCriteria.setEpsilonTolerance(0.1);
     termCriteria.setIterationTolerance(5);
 
-    EXPECT_EQ(termCriteria.getIterationTolerance(), 0.1);
+    EXPECT_EQ(termCriteria.getEpsilonTolerance(), 0.1);
     EXPECT_EQ(termCriteria.getIterationTolerance(), 5);
+
+    termCriteria.setIterationTolerance(-1);
+    EXPECT_EQ(termCriteria.getIterationTolerance(), std::numeric_limits<int>::max());
+}
+
+TEST(Core_termCriteria, NewOld)
+{
+    TermCriteria termCriteria(5, 0.1);
+
+    EXPECT_TRUE(termCriteria.isValid());
+    EXPECT_EQ(termCriteria.type, TermCriteria::MAX_ITER + TermCriteria::EPS);
+    EXPECT_EQ(termCriteria.epsilon, 0.1);
+    EXPECT_EQ(termCriteria.maxCount, 5);
+}
+
+TEST(Core_termCriteria, NewOldAllDisabled)
+{
+    TermCriteria termCriteria(-1, -1);
+
+    EXPECT_TRUE(termCriteria.isValid());
+    EXPECT_EQ(termCriteria.type, TermCriteria::MAX_ITER);
+    EXPECT_EQ(termCriteria.maxCount, std::numeric_limits<int>::max());
+
+    termCriteria.setEpsilonTolerance(0.1);
+    EXPECT_TRUE(termCriteria.isValid());
+    EXPECT_EQ(termCriteria.type, TermCriteria::MAX_ITER + TermCriteria::EPS);
+    EXPECT_EQ(termCriteria.maxCount, std::numeric_limits<int>::max());
+    EXPECT_EQ(termCriteria.epsilon, 0.1);
 }
 
 } // namespace

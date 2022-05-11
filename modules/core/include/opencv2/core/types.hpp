@@ -900,6 +900,9 @@ public:
      */
     TermCriteria(int count, double _epsilon);
 
+    /**
+     * Check if flag with according value is set
+     */
     inline bool isValid() const
     {
         const bool isCount = (type & COUNT) && maxCount > 0;
@@ -925,10 +928,6 @@ public:
     int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
     int maxCount; //!< the maximum number of iterations/elements
     double epsilon; //!< the desired accuracy
-
-    protected:
-    int maxIterationNumber;
-    double maxEpsilon;
 };
 
 
@@ -2459,16 +2458,20 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
 
 inline TermCriteria::TermCriteria(int count, double _epsilon)
-    : maxIterationNumber(count), maxEpsilon(_epsilon)
+    : type(TermCriteria::MAX_ITER), maxCount(count), epsilon(_epsilon)
 {
-    if (maxIterationNumber < 0) {
-        maxIterationNumber = std::numeric_limits<int>::max();
+    if (maxCount < 0) {
+        maxCount = std::numeric_limits<int>::max();
+    }
+
+    if (epsilon > 0) {
+        type += TermCriteria::EPS;
     }
 }
 
 inline bool TermCriteria::checkEpsilonTolerance(double _epsilon) const
 {
-    if ((maxEpsilon >= 0) and (_epsilon > maxEpsilon)) {
+    if ((epsilon >= 0) and (_epsilon > epsilon)) {
         return false;
     } else {
         return true;
@@ -2477,24 +2480,39 @@ inline bool TermCriteria::checkEpsilonTolerance(double _epsilon) const
 
 inline bool TermCriteria::checkIterationTolerance(int count) const
 {
-    if (count > maxIterationNumber) {
+    if (count > maxCount) {
         return false;
     } else {
         return true;
     }
 }
 
-inline void TermCriteria::setEpsilonTolerance(double _epsilon) { maxEpsilon = _epsilon; }
+inline void TermCriteria::setEpsilonTolerance(double _epsilon)
+{
+    epsilon = _epsilon;
+    if (epsilon < 0) {
+        type &= ~TermCriteria::EPS;
+    } else {
+        type |= TermCriteria::EPS;
+    }
+}
 
-inline void TermCriteria::setIterationTolerance(int count) { maxIterationNumber = count; }
+inline void TermCriteria::setIterationTolerance(int count)
+{ 
+    maxCount = count; 
+    if (maxCount < 0) {
+        maxCount = std::numeric_limits<int>::max();
+    }
 
-inline double TermCriteria::getEpsilonTolerance() const { return maxEpsilon; }
+}
 
-inline int TermCriteria::getIterationTolerance() const { return maxIterationNumber; }
+inline double TermCriteria::getEpsilonTolerance() const { return epsilon; }
+
+inline int TermCriteria::getIterationTolerance() const { return maxCount; }
 
 inline bool TermCriteria::isEpsilonToleranceSet() const
 {
-    if (maxEpsilon < 0) {
+    if (epsilon < 0) {
         return false;
     } else {
         return true;
