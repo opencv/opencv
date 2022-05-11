@@ -163,7 +163,7 @@ randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sampled_
     for (int i = 0; i < ori_pts_size; ++i) pts_idxs[i] = i;
     randShuffle(pts_idxs, 1, rng);
 
-    int channels = input_pts.channels();
+    int channels = sampled_pts.channels();
     if (channels == 3 && sampled_pts.isVector())
     {
         // std::vector<cv::Point3f>
