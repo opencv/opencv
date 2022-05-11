@@ -948,7 +948,7 @@ QUnit.test('test_filter', function(assert) {
 
         cv.rotate(src, dst, cv.ROTATE_90_CLOCKWISE);
 
-        size = dst.size();
+        let size = dst.size();
         assert.equal(size.height, 2, "ROTATE_HEIGHT");
         assert.equal(size.width, 3, "ROTATE_WIGTH");
 
