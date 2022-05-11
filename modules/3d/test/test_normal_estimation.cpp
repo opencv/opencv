@@ -30,7 +30,7 @@ TEST(NormalEstimationTest, PlaneNormalEstimation)
     normalEstimate(normals, curvatures, plane_pts, knn_idx, k);
 
     float theta_thr = 1.f; // degree of angle between normal of plane and normal of point
-    float curvature_thr = 0.0001f; // threshold for curvature and actual curvature of the point
+    float curvature_thr = 0.01f; // threshold for curvature and actual curvature of the point
     float actual_curvature = 0.f;
 
     Point3f n1(model[0], model[1], model[2]);

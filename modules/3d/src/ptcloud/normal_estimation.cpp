@@ -44,6 +44,11 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
         knn_idx = knn_idx_.getMat();
     }
 
+    if (!knn_idx.isContinuous())
+    {
+        knn_idx = knn_idx.clone();
+    }
+
     if (k == 0)
     {
         k = knn_idx.cols;
@@ -61,36 +66,37 @@ normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts
     float *curvatures_ptr = (float *) curvatures.getMat().data;
 
     parallel_for_(Range(0, pts_size), [&](const Range &range) {
-        int i = range.start;
-        Mat pt_set(k, 3, CV_32F);
-        // Copy the nearest k points to pt_set
-        float *pt_set_ptr = (float *) pt_set.data;
-        long ik = (long) i * k;
-        for (int j = 0; j < k; ++j)
+        for (int i = range.start; i < range.end; i++)
         {
-            int idx = knn_idx_ptr[ik + j];
-            const float *ori_pts_ptr_base = ori_pts_ptr + 3 * idx;
-            float *pt_set_ptr_base = pt_set_ptr + 3 * j;
-            pt_set_ptr_base[0] = ori_pts_ptr_base[0];
-            pt_set_ptr_base[1] = ori_pts_ptr_base[1];
-            pt_set_ptr_base[2] = ori_pts_ptr_base[2];
+            const int *knn_idx_ptr_base = knn_idx_ptr + i * k;
+            Mat pt_set(k, 3, CV_32F);
+            // Copy the nearest k points to pt_set
+            float *pt_set_ptr = (float *) pt_set.data;
+            for (int j = 0; j < k; ++j)
+            {
+                const float *ori_pts_ptr_base = ori_pts_ptr + 3 * knn_idx_ptr_base[j];
+                float *pt_set_ptr_base = pt_set_ptr + 3 * j;
+                pt_set_ptr_base[0] = ori_pts_ptr_base[0];
+                pt_set_ptr_base[1] = ori_pts_ptr_base[1];
+                pt_set_ptr_base[2] = ori_pts_ptr_base[2];
+            }
+
+            Mat mean;
+            // Calculate the mean of point set, use "reduce" is faster than default method in PCA
+            reduce(pt_set, mean, 0, REDUCE_AVG);
+            // Use PCA to get eigenvalues and eigenvectors of pt_set
+            PCA pca(pt_set, mean, PCA::DATA_AS_ROW);
+
+            const float *eigenvectors_ptr = (float *) pca.eigenvectors.data;
+            float *normals_ptr_base = normals_ptr + 3 * i;
+            normals_ptr_base[0] = eigenvectors_ptr[6];
+            normals_ptr_base[1] = eigenvectors_ptr[7];
+            normals_ptr_base[2] = eigenvectors_ptr[8];
+
+            const float *eigenvalues_ptr = (float *) pca.eigenvalues.data;
+            curvatures_ptr[i] = eigenvalues_ptr[2] /
+                                (eigenvalues_ptr[0] + eigenvalues_ptr[1] + eigenvalues_ptr[2]);
         }
-
-        Mat mean;
-        // Calculate the mean of point set
-        reduce(pt_set, mean, 0, REDUCE_AVG);
-        // Use PCA to get eigenvalues and eigenvectors of pt_set
-        PCA pca(pt_set, mean, PCA::DATA_AS_ROW);
-
-        const float *eigenvectors_ptr = (float *) pca.eigenvectors.data;
-        float *normals_ptr_base = normals_ptr + 3 * i;
-        normals_ptr_base[0] = eigenvectors_ptr[6];
-        normals_ptr_base[1] = eigenvectors_ptr[7];
-        normals_ptr_base[2] = eigenvectors_ptr[8];
-
-        const float *eigenvalues_ptr = (float *) pca.eigenvalues.data;
-        curvatures_ptr[i] =
-                eigenvalues_ptr[2] / (eigenvalues_ptr[0] + eigenvalues_ptr[1] + eigenvalues_ptr[2]);
     });
 }
 
@@ -130,22 +136,26 @@ getKNNSearchResultsByKDTree(OutputArray knn_idx, OutputArray knn_dist, InputArra
     float *knn_dist_ptr = (float *) knn_dist.getMat().data;
 
     parallel_for_(Range(0, pts_size), [&](const Range &range) {
-        int i = range.start;
-        Mat idx_set(1, k, CV_32S), dist_set(1, k, CV_32F);
-        tree.knnSearch(ori_pts.row(i), idx_set, dist_set, k, *search_params);
+        for (int i = range.start; i < range.end; ++i)
+        {
+            Mat idx_set(1, k, CV_32S), dist_set(1, k, CV_32F);
+            tree.knnSearch(ori_pts.row(i), idx_set, dist_set, k, *search_params);
 
-        const int *idx_set_ptr = (int *) idx_set.data;
-        const float *dist_set_ptr = (float *) dist_set.data;
-        long ik = (long) i * k;
+            if (need_knn_idx)
+            {
+                const int *idx_set_ptr = (int *) idx_set.data;
+                int *knn_idx_ptr_base = knn_idx_ptr + i * k;
+                // Copy result of knn search to knn_idx
+                for (int j = 0; j < k; ++j) knn_idx_ptr_base[j] = idx_set_ptr[j];
+            }
 
-        if (need_knn_idx){
-            // Copy result of knn search to knn_idx
-            for (int j = 0; j < k; ++j) knn_idx_ptr[ik + j] = idx_set_ptr[j];
-        }
-
-        if (need_knn_dist){
-            // Copy result of knn search to knn_dist
-            for (int j = 0; j < k; ++j) knn_dist_ptr[ik + j] = dist_set_ptr[j];
+            if (need_knn_dist)
+            {
+                const float *dist_set_ptr = (float *) dist_set.data;
+                float *knn_dist_ptr_base = knn_dist_ptr + i * k;
+                // Copy result of knn search to knn_dist
+                for (int j = 0; j < k; ++j) knn_dist_ptr_base[j] = dist_set_ptr[j];
+            }
         }
     });
 }
