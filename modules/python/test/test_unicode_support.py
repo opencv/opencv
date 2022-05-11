@@ -34,6 +34,9 @@ class unicode_support_test(NewOpenCVTests):
         rmdir(self.tmp_path)
 
     def test_fs_get_cache_dir(self):
+        if os.name != 'nt':
+            self.skipTest("only windows")
+            return
         tmp_bak = os.environ["TMP"]
         os.environ["TMP"] = self.tmp_path
 
