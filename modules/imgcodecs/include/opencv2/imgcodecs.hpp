@@ -306,6 +306,20 @@ reallocations when the function is called repeatedly for images of the same size
 */
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 
+/** @brief Reads a multi-page image from a buffer in memory.
+
+The function imdecodemulti reads a multi-page image from the specified buffer in the memory. If the buffer is too short or
+contains invalid data, the function returns false.
+
+See cv::imreadmulti for the list of supported formats and flags description.
+
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
+@param buf Input array or vector of bytes.
+@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param mats A vector of Mat objects holding each page, if more than one.
+*/
+CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats);
+
 /** @brief Encodes an image into a memory buffer.
 
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
