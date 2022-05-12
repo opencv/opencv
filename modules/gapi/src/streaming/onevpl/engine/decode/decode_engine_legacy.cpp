@@ -175,6 +175,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     // Prepare video param
     mfxVideoParam mfxDecParams {};
+    memset(&mfxDecParams, 0, sizeof(mfxDecParams));
     mfxDecParams.mfx.CodecId = decoder_id_name;
 
     // set memory stream direction according to acceleration policy device type
@@ -253,7 +254,8 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     // Input parameters finished, now initialize decode
     // create decoder for session according to header recovered from source file
-
+    GAPI_LOG_INFO(nullptr, "Initialize decoder for session: " << mfx_session <<
+                           ", frame info: " << mfx_frame_info_to_string(mfxDecParams.mfx.FrameInfo));
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error initializing Decode, error: " +

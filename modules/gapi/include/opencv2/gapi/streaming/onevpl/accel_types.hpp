@@ -20,6 +20,7 @@ namespace onevpl {
 enum class AccelType: uint8_t {
     HOST,
     DX11,
+    VAAPI,
 
     LAST_VALUE = std::numeric_limits<uint8_t>::max()
 };
