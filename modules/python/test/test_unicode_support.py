@@ -6,37 +6,25 @@ import cv2 as cv
 import os
 import tempfile
 import sys
+import shutil
 
-from tests_common import NewOpenCVTests
+from tests_common import NewOpenCVTests, unittest
 
 str_unicode = u"测试tést"
 
 
-def rmdir(directory):
-    for root, dirs, files in os.walk(directory, topdown=False):
-        for name in files:
-            os.remove(os.path.join(root, name))
-        for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    os.rmdir(directory)
-
-
-class unicode_support_test(NewOpenCVTests):
+@unittest.skipIf(os.name != 'nt' and sys.getfilesystemencoding() != "utf-8", "environment variable `LANG` must be `utf8` in linux")
+class UnicodeSupportTest(NewOpenCVTests):
     tmp_path = None
 
     def setUp(self):
-        if os.name != 'nt' and sys.getfilesystemencoding() != "utf-8":
-            self.skipTest("environment variable `LANG` is not utf8")
-            return
         self.tmp_path = tempfile.mkdtemp(str_unicode)
 
     def tearDown(self):
-        rmdir(self.tmp_path)
+        shutil.rmtree(self.tmp_path)
 
+    @unittest.skipIf(os.name != 'nt', "only windows")
     def test_fs_get_cache_dir(self):
-        if os.name != 'nt':
-            self.skipTest("only windows")
-            return
         tmp_bak = os.environ["TMP"]
         os.environ["TMP"] = self.tmp_path
 

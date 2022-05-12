@@ -60,11 +60,11 @@
 #if defined(_WIN32)
 static inline PyObject* PyString_FromString(const char* u)
 {
-    return PyUnicode_DecodeMBCS(u, strlen(u), nullptr);
+    return PyUnicode_DecodeMBCS(u, strlen(u), NULL);
 }
 static inline PyObject* PyString_FromStringAndSize(const char* u, Py_ssize_t size)
 {
-    return PyUnicode_DecodeMBCS(u, size, nullptr);
+    return PyUnicode_DecodeMBCS(u, size, NULL);
 }
 #else
 #define PyString_FromString PyUnicode_FromString
