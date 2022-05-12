@@ -96,7 +96,7 @@ const Mat& KalmanFilter::predict(const Mat& control)
     // P'(k) = temp1*At + Q
     gemm(temp1, transitionMatrix, 1, processNoiseCov, 1, errorCovPre, GEMM_2_T);
 
-    // handle the case when there will be measurement before the next predict.
+    // handle the case when there will be no measurement before the next predict.
     statePre.copyTo(statePost);
     errorCovPre.copyTo(errorCovPost);
 
