@@ -15,7 +15,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 class Surface;
-
+class VPLLegacyTranscodeEngine;
 class GAPI_EXPORTS LegacyTranscodeSession : public LegacyDecodeSession {
 public:
     friend class VPLLegacyTranscodeEngine;

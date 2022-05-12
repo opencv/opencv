@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "opencv2/gapi/util/optional.hpp"
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include "streaming/onevpl/data_provider_defines.hpp"
@@ -31,7 +32,7 @@ namespace onevpl {
 struct GAPI_EXPORTS DecoderParams {
     std::shared_ptr<IDataProvider::mfx_bitstream> stream;
     mfxVideoParam param;
-    cv::optional<size_t> preallocated_frames_count;
+    cv::util::optional<size_t> preallocated_frames_count;
 };
 
 struct GAPI_EXPORTS TranscoderParams {

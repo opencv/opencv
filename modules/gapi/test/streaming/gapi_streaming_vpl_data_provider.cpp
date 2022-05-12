@@ -16,6 +16,7 @@
 #include "streaming/onevpl/demux/async_mfp_demux_data_provider.hpp"
 #include "streaming/onevpl/source_priv.hpp"
 
+#ifdef _WIN32
 namespace opencv_test
 {
 namespace
@@ -299,4 +300,5 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
 }
 } // namespace opencv_test
 
+#endif // _WIN32
 #endif // HAVE_ONEVPL

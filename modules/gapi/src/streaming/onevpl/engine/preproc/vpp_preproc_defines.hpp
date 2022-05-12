@@ -16,12 +16,18 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 struct vpp_pp_params {
+    vpp_pp_params() : handle(), info(), reserved() {}
+    vpp_pp_params(mfxSession s, mfxFrameInfo i, void *r = nullptr) :
+        handle(s), info(i), reserved(r) {}
     mfxSession handle;
     mfxFrameInfo info;
     void *reserved = nullptr;
 };
 
 struct vpp_pp_session {
+    vpp_pp_session() : handle(), reserved() {}
+    vpp_pp_session(std::shared_ptr<EngineSession> h, void *r = nullptr) :
+        handle(h), reserved(r) {}
     std::shared_ptr<EngineSession> handle;
     void *reserved = nullptr;
 };

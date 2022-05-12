@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <opencv2/gapi/own/assert.hpp>
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "logger.hpp"
 
@@ -20,12 +21,12 @@ Surface::Surface(std::unique_ptr<handle_t>&& surf, std::shared_ptr<void> associa
     mirrored_locked_count() {
 
     GAPI_Assert(mfx_surface && "Surface is nullptr");
-    GAPI_LOG_DEBUG(nullptr, "create surface: " << mfx_surface <<
+    GAPI_LOG_DEBUG(nullptr, "create surface: " << get_handle() <<
                             ", locked count: " << mfx_surface->Data.Locked);
 }
 
 Surface::~Surface() {
-    GAPI_LOG_DEBUG(nullptr, "destroy surface: " << mfx_surface <<
+    GAPI_LOG_DEBUG(nullptr, "destroy surface: " << get_handle() <<
                             ", worspace memory counter: " <<
                             workspace_memory_ptr.use_count());
 }
@@ -60,7 +61,7 @@ size_t Surface::get_locks_count() const {
 
 size_t Surface::obtain_lock() {
     size_t locked_count = mirrored_locked_count.fetch_add(1);
-    GAPI_LOG_DEBUG(nullptr, "surface: " << mfx_surface.get() <<
+    GAPI_LOG_DEBUG(nullptr, "surface: " << get_handle() <<
                             ", locked times: " << locked_count + 1);
     return locked_count; // return preceding value
 }
@@ -68,7 +69,7 @@ size_t Surface::obtain_lock() {
 size_t Surface::release_lock() {
     size_t locked_count = mirrored_locked_count.fetch_sub(1);
     GAPI_Assert(locked_count && "Surface lock counter is invalid");
-    GAPI_LOG_DEBUG(nullptr, "surface: " << mfx_surface.get() <<
+    GAPI_LOG_DEBUG(nullptr, "surface: " << get_handle() <<
                             ", locked times: " << locked_count - 1);
     return locked_count; // return preceding value
 }

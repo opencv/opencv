@@ -357,7 +357,7 @@ std::string mfxstatus_to_string(mfxStatus err) {
     }
 
     std::string ret("<unknown ");
-    ret += std::to_string(err) + ">";
+    ret += std::to_string(static_cast<size_t>(err)) + ">";
     return ret;
 }
 
@@ -384,7 +384,7 @@ std::string mfx_frame_info_to_string(const mfxFrameInfo &info) {
     return ss.str();
 }
 
-int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+static int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
     //NB: mfxFrameInfo is a `packed` struct declared in VPL
     return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo));
 }

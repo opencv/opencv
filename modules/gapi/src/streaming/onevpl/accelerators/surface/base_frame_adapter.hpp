@@ -23,7 +23,7 @@ public:
     using SessionHandle = mfxSession;
 
     const std::shared_ptr<Surface>& get_surface() const;
-    const SessionHandle get_session_handle() const;
+    SessionHandle get_session_handle() const;
 
     cv::GFrameDesc meta() const override;
     AccelType accel_type() const;

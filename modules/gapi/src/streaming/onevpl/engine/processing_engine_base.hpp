@@ -9,6 +9,7 @@
 
 #include <queue>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
+#include <opencv2/gapi/garg.hpp>
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 

@@ -21,6 +21,9 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 class Surface;
+struct VPLAccelerationPolicy;
+class VPLLegacyDecodeEngine;
+
 class GAPI_EXPORTS LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;

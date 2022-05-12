@@ -11,6 +11,7 @@
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
+#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 #ifdef _WIN32
@@ -22,7 +23,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 namespace utils {
-mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
+static mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     mfxU32 nbytes = 0;
 
     mfxU32 half_width = width / 2;
@@ -47,10 +48,10 @@ mfxU32 GetSurfaceSize_(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     return nbytes;
 }
 
-surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
-                                   std::shared_ptr<void> out_buf_ptr,
-                                   size_t out_buf_ptr_offset,
-                                   size_t out_buf_size)
+static surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
+                                          std::shared_ptr<void> out_buf_ptr,
+                                          size_t out_buf_ptr_offset,
+                                          size_t out_buf_size)
 {
     mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfW = frameInfo.Width * 4;
@@ -80,10 +81,10 @@ surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
     return Surface::create_surface(std::move(handle), out_buf_ptr);
 }
 
-surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
-                                    std::shared_ptr<void> out_buf_ptr,
-                                    size_t out_buf_ptr_offset,
-                                    size_t out_buf_size)
+static surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
+                                           std::shared_ptr<void> out_buf_ptr,
+                                           size_t out_buf_ptr_offset,
+                                           size_t out_buf_size)
 {
     mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfH = frameInfo.Height;
@@ -155,8 +156,12 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     GAPI_LOG_DEBUG(nullptr, "page size: " << page_size_bytes << ", preallocated_raw_bytes: " << preallocated_raw_bytes);
     preallocated_pool_memory_ptr = _aligned_malloc(preallocated_raw_bytes, page_size_bytes);
 #else
-    GAPI_Assert(false && "Compatibility is not tested for systems differ than \"_WIN32\". "
-                         "Please feel free to set it up under OPENCV contribution policy");
+    int err = posix_memalign(&preallocated_pool_memory_ptr, page_size_bytes, preallocated_raw_bytes);
+    if (err) {
+        GAPI_LOG_WARNING(nullptr, "Cannot allocate aligned memory, size: " << preallocated_raw_bytes <<
+                                  ", alignment: " << page_size_bytes << ", error: " <<
+                                  strerror(err));
+    }
 #endif
 
     if (!preallocated_pool_memory_ptr) {
@@ -173,8 +178,9 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
         GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
         ptr = nullptr;
 #else
-        GAPI_Assert(false && "Not implemented for systems differ than \"_WIN32\". "
-                             "Please feel free to set it up under OPENCV contribution policy");
+        free(ptr);
+        GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
+        ptr = nullptr;
 #endif
 
         });
@@ -220,10 +226,8 @@ VPLCPUAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_
                                                       info.Width,
                                                       info.Height);
     if (!singleSurfaceSize) {
-        throw std::runtime_error("Cannot determine surface size for: fourCC: " +
-                                 std::to_string(info.FourCC) +
-                                 ", width: " + std::to_string(info.Width) +
-                                 ", height: " + std::to_string(info.Height));
+        throw std::runtime_error("Cannot determine surface size from frame: " +
+                                 mfx_frame_info_to_string(info));
     }
 
     auto surface_creator =

@@ -1,3 +1,4 @@
+#include <opencv2/gapi/own/assert.hpp>
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "logger.hpp"

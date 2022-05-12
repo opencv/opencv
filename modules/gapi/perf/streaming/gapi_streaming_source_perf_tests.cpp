@@ -17,6 +17,7 @@
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 
 namespace opencv_test
 {
@@ -89,6 +90,7 @@ PERF_TEST_P_(VideoCapSourcePerf_Test, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
+#ifdef __WIN32__
 INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerf_Test,
                         Values(source_description_t(files[0], codec[0], ""),
                                source_description_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11"),
@@ -96,6 +98,11 @@ INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerf_Test,
                                source_description_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11"),
                                source_description_t(files[2], codec[2], ""),
                                source_description_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11")));
+#elif __linux__
+INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerf_Test,
+                        Values(source_description_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI"),
+                               source_description_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI")));
+#endif
 
 INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerf_Test,
                         Values(files[0],
@@ -152,6 +159,8 @@ static pp_out_param_t full_hd = pp_out_param_t {cv::MediaFormat::NV12,
 static pp_out_param_t cif = pp_out_param_t {cv::MediaFormat::NV12,
                                             {352, 288}};
 
+
+#ifdef __WIN32__
 INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
                         Values(source_description_preproc_t(files[0], codec[0], "", full_hd),
                                source_description_preproc_t(files[0], codec[0], "", cif),
@@ -165,6 +174,13 @@ INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
                                source_description_preproc_t(files[2], codec[2], "", cif),
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", cif)));
+#elif __linux__
+INSTANTIATE_TEST_CASE_P(Streaming_Source_PP, OneVPLSourcePerf_PP_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI", cif),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI",full_hd),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI",cif)));
+#endif
 
 class OneVPLSourcePerf_PP_Engine_Test : public TestPerfParams<source_description_preproc_t> {};
 
@@ -198,6 +214,8 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
+    } else if (mode == "MFX_ACCEL_MODE_VIA_VAAPI") {
+        policy.reset(new VPLVAAPIAccelerationPolicy(device_selector));
     } else if (mode.empty()){
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
     } else {
@@ -219,6 +237,7 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Test, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
+#ifdef __WIN32__
 INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP, OneVPLSourcePerf_PP_Engine_Test,
                         Values(source_description_preproc_t(files[0], codec[0], "", full_hd),
                                source_description_preproc_t(files[0], codec[0], "", cif),
@@ -232,6 +251,13 @@ INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP, OneVPLSourcePerf_PP_Engine_Test,
                                source_description_preproc_t(files[2], codec[2], "", cif),
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", full_hd),
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", cif)));
+#elif __linux__
+INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP, OneVPLSourcePerf_PP_Engine_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI", full_hd),
+                               source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI", cif),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI",full_hd),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI",cif)));
+#endif
 
 class OneVPLSourcePerf_PP_Engine_Bypass_Test : public TestPerfParams<source_description_preproc_t> {};
 
@@ -265,8 +291,12 @@ PERF_TEST_P_(OneVPLSourcePerf_PP_Engine_Bypass_Test, TestPerformance)
     std::unique_ptr<VPLAccelerationPolicy> policy;
     if (mode == "MFX_ACCEL_MODE_VIA_D3D11") {
         policy.reset(new VPLDX11AccelerationPolicy(device_selector));
-    } else {
+    } else if (mode == "MFX_ACCEL_MODE_VIA_VAAPI") {
+        policy.reset(new VPLVAAPIAccelerationPolicy(device_selector));
+    } else if (mode.empty()){
         policy.reset(new VPLCPUAccelerationPolicy(device_selector));
+    } else {
+        ASSERT_TRUE(false && "Unsupported acceleration policy type");
     }
     VPPPreprocEngine preproc_engine(std::move(policy));
     cv::gapi::wip::Data out;
@@ -288,6 +318,8 @@ static pp_out_param_t res_672x384 = pp_out_param_t {cv::MediaFormat::NV12,
                                                     {672, 384}};
 static pp_out_param_t res_336x256 = pp_out_param_t {cv::MediaFormat::NV12,
                                                     {336, 256}};
+
+#ifdef __WIN32__
 INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_Bypass_Test,
                         Values(source_description_preproc_t(files[0], codec[0], "", res_672x384),
                                source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_D3D11", res_672x384),
@@ -295,6 +327,11 @@ INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_B
                                source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_D3D11", res_672x384),
                                source_description_preproc_t(files[2], codec[2], "", res_336x256),
                                source_description_preproc_t(files[2], codec[2], "MFX_ACCEL_MODE_VIA_D3D11", res_336x256)));
+#elif __linux__
+INSTANTIATE_TEST_CASE_P(Streaming_Engine_PP_Bypass, OneVPLSourcePerf_PP_Engine_Bypass_Test,
+                        Values(source_description_preproc_t(files[0], codec[0], "MFX_ACCEL_MODE_VIA_VAAPI", res_672x384),
+                               source_description_preproc_t(files[1], codec[1], "MFX_ACCEL_MODE_VIA_VAAPI", res_672x384)));
+#endif
 } // namespace opencv_test
 
 #endif // HAVE_ONEVPL

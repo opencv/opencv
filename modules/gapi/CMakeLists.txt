@@ -133,7 +133,7 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
-	  src/backends/fluid/gfluidcore_func.dispatch.cpp
+    src/backends/fluid/gfluidcore_func.dispatch.cpp
 
     # OAK Backend (optional)
     src/backends/oak/goak.cpp
@@ -194,6 +194,7 @@ set(gapi_srcs
     src/streaming/onevpl/accelerators/utils/shared_lock.cpp
     src/streaming/onevpl/accelerators/accel_policy_cpu.cpp
     src/streaming/onevpl/accelerators/accel_policy_dx11.cpp
+    src/streaming/onevpl/accelerators/accel_policy_va_api.cpp
     src/streaming/onevpl/accelerators/dx11_alloc_resource.cpp
     src/streaming/onevpl/engine/engine_session.cpp
     src/streaming/onevpl/engine/processing_engine_base.cpp
@@ -310,11 +311,29 @@ if(HAVE_GAPI_ONEVPL)
         ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
     endif()
   endif()
+
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
 
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+
+  if(UNIX)
+    find_package(PkgConfig)
+    if(PkgConfig_FOUND)
+      pkg_check_modules(PKG_LIBVA libva>=1.2 libva-drm>=1.2)
+      if(PKG_LIBVA_FOUND)
+        set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+        set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+        find_package(Threads REQUIRED)
+      else()
+        message(FATAL_ERROR "libva not found: building HAVE_GAPI_ONEVPL without libVA support is impossible on UNIX systems")
+      endif()
+    else()
+      message(FATAL_ERROR "PkgConfig not found: building HAVE_GAPI_ONEVPL without libVA support is impossible on UNIX systems")
+    endif()
+    ocv_target_link_libraries(${the_module} PRIVATE ${PKG_LIBVA_LIBRARIES} ${PKG_THREAD_LIBRARIES})
   endif()
 endif()
 

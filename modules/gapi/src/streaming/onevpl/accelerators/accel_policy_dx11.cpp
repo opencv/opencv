@@ -13,8 +13,7 @@
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
 #pragma comment(lib,"d3d11.lib")
 
 #define D3D11_NO_HELPERS
@@ -441,6 +440,52 @@ mfxStatus VPLDX11AccelerationPolicy::on_free(mfxFrameAllocResponse *response) {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
+
+#else // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+
+namespace cv {
+namespace gapi {
+namespace wip {
+namespace onevpl {
+VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy() = default;
+
+void VPLDX11AccelerationPolicy::init(session_t ) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+void VPLDX11AccelerationPolicy::deinit(session_t) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::pool_key_t VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest&,
+                                                                                     mfxFrameInfo&) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t,
+                                                                          const FrameConstructorArgs &) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+} // namespace onevpl
+} // namespace wip
+} // namespace gapi
+} // namespace cv
+#endif // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
 #endif // HAVE_ONEVPL
