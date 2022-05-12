@@ -602,9 +602,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
     JpegErrorMgr jerr;
     JpegDestination dest;
 
-    jpeg_create_compress(&cinfo);
     cinfo.err = jpeg_std_error(&jerr.pub);
     jerr.pub.error_exit = error_exit;
+    jpeg_create_compress(&cinfo);
 
     if( !m_buf )
     {
