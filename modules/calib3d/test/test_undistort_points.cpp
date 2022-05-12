@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
+#include "opencv2/core/types.hpp"
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
@@ -96,6 +97,43 @@ TEST_F(UndistortPointsTest, accuracy)
         EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
     }
 }
+
+TEST_F(UndistortPointsTest, undistortImagePointsAccuracy)
+{
+    Mat intrinsics, distCoeffs;
+    generateCameraMatrix(intrinsics);
+
+    vector<Point3f> points(500);
+    generate3DPointCloud(points);
+
+
+    int modelMembersCount[] = {4,5,8};
+    for (int idx = 0; idx < 3; idx++)
+    {
+        generateDistCoeffs(distCoeffs, modelMembersCount[idx]);
+
+        /* Project points with distortion */
+        vector<Point2f> projectedPoints;
+        projectPoints(Mat(points), Mat::zeros(3,1,CV_64FC1),
+                      Mat::zeros(3,1,CV_64FC1), intrinsics,
+                      distCoeffs, projectedPoints);
+
+        /* Project points without distortion */
+        vector<Point2f> realUndistortedPoints;
+        projectPoints(Mat(points), Mat::zeros(3, 1, CV_64FC1),
+                      Mat::zeros(3,1,CV_64FC1), intrinsics,
+                      Mat::zeros(4,1,CV_64FC1), realUndistortedPoints);
+
+        /* Undistort points */
+        Mat undistortedPoints;
+        TermCriteria termCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, thresh / 2);
+        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs,
+                             termCriteria);
+
+        EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
+    }
+}
+
 
 TEST_F(UndistortPointsTest, stop_criteria)
 {
