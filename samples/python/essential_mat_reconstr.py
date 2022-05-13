@@ -1,5 +1,4 @@
-import numpy as np, cv2 as cv, matplotlib.pyplot as plt, time, sys, os
-from mpl_toolkits.mplot3d import axes3d, Axes3D
+import numpy as np, cv2 as cv, time, sys, os
 
 def getEpipolarError(F, pts1_, pts2_, inliers):
     pts1 = np.concatenate((pts1_.T, np.ones((1, pts1_.shape[0]))))[:,inliers]
@@ -119,19 +118,16 @@ if __name__ == '__main__':
                                  int(np.sqrt (image1.shape[0] * new_img_size / image1.shape[1]))))
 
     # plot object points
-    fig = plt.figure(figsize=(13.0, 11.0))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_aspect('equal')
-    ax.scatter(obj_pts[:,0], obj_pts[:,1], obj_pts[:,2], c='r', marker='o', s=3)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('depth')
-    ax.view_init(azim=-80, elev=110)
+    color = [1.0, 0.0, 0.0]
+    colors = np.tile(color, (obj_pts.shape[0], 1))
+    obj_pts = np.concatenate((obj_pts, colors), axis=1)
+    obj_pts= np.float32(obj_pts)
+
+    cv.viz3d.showPoints("window", "points", obj_pts)
+    cv.viz3d.setGridVisible("window", True)
 
     # save figures
     cv.imshow("matches", image1)
     cv.imwrite('matches_E.png', image1)
-    plt.savefig('reconstruction_3D.png')
 
     cv.waitKey(0)
-    plt.show()

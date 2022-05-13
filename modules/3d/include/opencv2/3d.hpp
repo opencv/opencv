@@ -2608,6 +2608,60 @@ protected:
     Ptr<Impl> p;
 };
 
+
+/** @brief Loads a point cloud from a file.
+*
+* The function loads point cloud from the specified file and returns it.
+* If the cloud cannot be read, throws an error
+*
+* Currently, the following file formats are supported:
+* -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file)
+* -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
+*
+* @param filename Name of the file.
+* @param vertices (vector of Point3f) Point coordinates of a point cloud
+* @param normals (vector of Point3f) Point normals of a point cloud
+*/
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray());
+
+/** @brief Saves a point cloud to a specified file.
+*
+* The function saves point cloud to the specified file.
+* File format is chosen based on the filename extension.
+*
+* @param filename Name of the file.
+* @param vertices (vector of Point3f) Point coordinates of a point cloud
+* @param normals (vector of Point3f) Point normals of a point cloud
+*/
+CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray());
+
+/** @brief Loads a mesh from a file.
+*
+* The function loads mesh from the specified file and returns it.
+* If the mesh cannot be read, throws an error
+*
+* Currently, the following file formats are supported:
+* -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
+* @param filename Name of the file.
+* @param vertices (vector of Point3f) vertex coordinates of a mesh
+* @param normals (vector of Point3f) vertex normals of a mesh
+* @param indices (vector of vectors of int) vertex normals of a mesh
+*/
+CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices);
+
+/** @brief Saves a mesh to a specified file.
+*
+* The function saves mesh to the specified file.
+* File format is chosen based on the filename extension.
+*
+* @param filename Name of the file.
+* @param vertices (vector of Point3f) vertex coordinates of a mesh
+* @param normals (vector of Point3f) vertex normals of a mesh
+* @param indices (vector of vectors of int) vertex normals of a mesh
+*/
+CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
+
+
 //! @} _3d
 } //end namespace cv
 
