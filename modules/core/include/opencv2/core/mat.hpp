@@ -2290,7 +2290,7 @@ public:
     const_iterator begin() const;
     const_iterator end() const;
 
-    //! template methods for for operation over all matrix elements.
+    //! template methods for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename Functor> void forEach(const Functor& operation);
     template<typename Functor> void forEach(const Functor& operation) const;

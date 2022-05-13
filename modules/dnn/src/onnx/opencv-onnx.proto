@@ -61,7 +61,7 @@ enum Version {
   // The version field is always serialized and we will use it to store the
   // version that the  graph is generated from. This helps us set up version
   // control.
-  // For the IR, we are using simple numbers starting with with 0x00000001,
+  // For the IR, we are using simple numbers starting with 0x00000001,
   // which was the version we published on Oct 10, 2017.
   IR_VERSION_2017_10_10 = 0x0000000000000001;
 
