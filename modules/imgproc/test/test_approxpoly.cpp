@@ -220,6 +220,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
 
     *_j = j;
 
+    (void) TotalErrors; // To avoid -Wunused-but-set-variable warning
     //return TotalErrors;
     return 0;
 }

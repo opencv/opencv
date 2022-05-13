@@ -54,6 +54,7 @@ set_target_properties(${ITT_LIBRARY} PROPERTIES
     )
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wundef -Wsign-compare)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes) # clang15
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${ITT_LIBRARY} PROPERTIES FOLDER "3rdparty")

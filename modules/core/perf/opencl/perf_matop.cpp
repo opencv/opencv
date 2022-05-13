@@ -233,6 +233,7 @@ PERF_TEST_P_(OpenCLBuffer, cpu_read)
             for (size_t x_bytes = 0; x_bytes < width_bytes; x_bytes++)
                 counter += (unsigned)(ptr[x_bytes]);
         }
+        (void)counter; // To avoid -Wunused-but-set-variable
     }
 
     SANITY_CHECK_NOTHING();

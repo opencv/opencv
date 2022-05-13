@@ -606,7 +606,9 @@ namespace
         MergeContext mc;
 
         bool there_was_a_merge = false;
+#ifdef DEBUG_MERGE
         std::size_t iteration = 0u;
+#endif
         do
         {
             there_was_a_merge = false;
@@ -615,8 +617,8 @@ namespace
 #ifdef DEBUG_MERGE
             GAPI_LOG_INFO(NULL, "Before next merge attempt " << iteration << "...");
             merge_debug(g, iteration);
-#endif
             iteration++;
+#endif
             auto sorted = pass_helpers::topoSort(im);
             for (auto nh : sorted)
             {

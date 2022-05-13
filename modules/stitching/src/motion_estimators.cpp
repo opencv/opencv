@@ -262,7 +262,9 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     CvMat matParams = cvMat(cam_params_);
     cvCopy(&matParams, solver.param);
 
+#if ENABLE_LOG
     int iter = 0;
+#endif
     for(;;)
     {
         const CvMat* _param = 0;
@@ -287,7 +289,9 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         {
             calcError(err);
             LOG_CHAT(".");
+#if ENABLE_LOG
             iter++;
+#endif
             CvMat tmp = cvMat(err);
             cvCopy(&tmp, _err);
         }

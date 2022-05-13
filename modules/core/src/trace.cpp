@@ -988,7 +988,6 @@ void parallelForFinalize(const Region& rootRegion)
     std::vector<TraceManagerThreadLocal*> threads_ctx;
     getTraceManager().tls.gather(threads_ctx);
     RegionStatistics parallel_for_stat;
-    int threads = 0;
     for (size_t i = 0; i < threads_ctx.size(); i++)
     {
         TraceManagerThreadLocal* child_ctx = threads_ctx[i];
@@ -996,7 +995,6 @@ void parallelForFinalize(const Region& rootRegion)
         if (child_ctx && child_ctx->stackTopRegion() == &rootRegion)
         {
             CV_LOG_PARALLEL(NULL, "Thread=" << child_ctx->threadID << " " << child_ctx->stat);
-            threads++;
             RegionStatistics child_stat;
             child_ctx->stat.grab(child_stat);
             parallel_for_stat.append(child_stat);
@@ -1012,6 +1010,7 @@ void parallelForFinalize(const Region& rootRegion)
             }
         }
     }
+
     float parallel_coeff = std::min(1.0f, duration / (float)(parallel_for_stat.duration));
     CV_LOG_PARALLEL(NULL, "parallel_coeff=" << 1.0f / parallel_coeff);
     CV_LOG_PARALLEL(NULL, parallel_for_stat);

@@ -312,7 +312,7 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
 {
     int level = 0;
     float smax = 3.0;
-    int npoints = 0, id_repeated = 0;
+    int id_repeated = 0;
     int left_x = 0, right_x = 0, up_y = 0, down_y = 0;
     bool is_extremum = false, is_repeated = false, is_out = false;
 
@@ -383,7 +383,6 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
                 if (is_out == false) {
                     if (is_repeated == false) {
                         kpts.push_back(kpts_par_ij);
-                        npoints++;
                     }
                     else {
                         kpts[id_repeated] = kpts_par_ij;

@@ -148,10 +148,12 @@ public:
     {
         return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
     }
+    MaskPredicate& operator=(const MaskPredicate&) = delete;
+    // To avoid -Wdeprecated-copy warning, copy constructor is needed.
+    MaskPredicate(const MaskPredicate&) = default;
 
 private:
     const Mat mask;
-    MaskPredicate& operator=(const MaskPredicate&) = delete;
 };
 
 void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask )
