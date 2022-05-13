@@ -507,21 +507,21 @@ bool IntelPerCStreamDepth::setProperty(int propIdx, double propVal)
 }
 bool IntelPerCStreamDepth::retrieveDepthAsOutputArray(cv::OutputArray image)
 {
-    return retriveFrame(CV_16SC1, 0, image);
+    return retrieveFrame(CV_16SC1, 0, image);
 }
 bool IntelPerCStreamDepth::retrieveIRAsOutputArray(cv::OutputArray image)
 {
-    return retriveFrame(CV_16SC1, 1, image);
+    return retrieveFrame(CV_16SC1, 1, image);
 }
 bool IntelPerCStreamDepth::retrieveUVAsOutputArray(cv::OutputArray image)
 {
-    return retriveFrame(CV_32FC2, 2, image);
+    return retrieveFrame(CV_32FC2, 2, image);
 }
 bool IntelPerCStreamDepth::validProfile(const PXCCapture::VideoStream::ProfileInfo& pinfo)
 {
     return (PXCImage::COLOR_FORMAT_DEPTH == pinfo.imageInfo.format);
 }
-bool IntelPerCStreamDepth::retriveFrame(int type, int planeIdx, cv::OutputArray frame)
+bool IntelPerCStreamDepth::retrieveFrame(int type, int planeIdx, cv::OutputArray frame)
 {
     if (!m_pxcImage.IsValid())
         return false;

@@ -1858,7 +1858,7 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L* capture, int property_id, dou
         retval = icvSetControl(capture, property_id, value);
     }
 
-    /* return the the status */
+    /* return the status */
     return retval;
 }
 

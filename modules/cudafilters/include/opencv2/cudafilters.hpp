@@ -318,7 +318,7 @@ CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize
 
 /** @brief Performs median filtering for each point of the source image.
 
-@param srcType type of of source image. Only CV_8UC1 images are supported for now.
+@param srcType type of source image. Only CV_8UC1 images are supported for now.
 @param windowSize Size of the kernerl used for the filtering. Uses a (windowSize x windowSize) filter.
 @param partition Specifies the parallel granularity of the workload. This parameter should be used GPU experts when optimizing performance.
 
