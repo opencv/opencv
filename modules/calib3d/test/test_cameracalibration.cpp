@@ -568,12 +568,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         /* ----- Compute reprojection error ----- */
         double dx,dy;
         double rx,ry;
-        double meanDx,meanDy;
-        double maxDx = 0.0;
-        double maxDy = 0.0;
 
-        meanDx = 0;
-        meanDy = 0;
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             double imageMeanDx = 0;
@@ -585,20 +580,8 @@ void CV_CameraCalibrationTest::run( int start_from )
                 dx = rx - imagePoints[currImage][currPoint].x;
                 dy = ry - imagePoints[currImage][currPoint].y;
 
-                meanDx += dx;
-                meanDy += dy;
-
                 imageMeanDx += dx*dx;
                 imageMeanDy += dy*dy;
-
-                dx = fabs(dx);
-                dy = fabs(dy);
-
-                if( dx > maxDx )
-                    maxDx = dx;
-
-                if( dy > maxDy )
-                    maxDy = dy;
             }
             goodPerViewErrors[currImage] = sqrt( (imageMeanDx + imageMeanDy) /
                                            (etalonSize.width * etalonSize.height));
@@ -608,9 +591,6 @@ void CV_CameraCalibrationTest::run( int start_from )
             if(perViewErrors[currImage] == 0.0)
                 perViewErrors[currImage] = goodPerViewErrors[currImage];
         }
-
-        meanDx /= numImages * etalonSize.width * etalonSize.height;
-        meanDy /= numImages * etalonSize.width * etalonSize.height;
 
         /* ========= Compare parameters ========= */
         CV_Assert(cameraMatrix.type() == CV_64F && cameraMatrix.size() == Size(3, 3));
