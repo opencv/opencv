@@ -50,8 +50,8 @@ jobs:
       run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} https://github.com/opencv/opencv_extra.git /opencv_extra
     - name: Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch
       run: |
-        RET=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
-        if [[ ! -z "$RET" ]]; then
+        OPENCV_EXTRA_FORK=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
+        if [[ ! -z "$OPENCV_EXTRA_FORK" ]]; then
           echo "Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch"
           cd /opencv_extra
           git config user.email "opencv.ci"
