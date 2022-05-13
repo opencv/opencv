@@ -118,7 +118,7 @@ void PoseSolver::solve(InputArray objectPoints, InputArray imagePoints, OutputAr
     num_solutions_ = 0;
 
     computeOmega(_objectPoints, _imagePoints);
-    solveInternal();
+    solveInternal(_objectPoints);
 
     int depthRot = rvecs.fixedType() ? rvecs.depth() : CV_64F;
     int depthTrans = tvecs.fixedType() ? tvecs.depth() : CV_64F;
@@ -194,37 +194,41 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
         omega_(7, 7) += sq_norm * Y2; omega_(7, 8) += sq_norm * YZ;
         omega_(8, 8) += sq_norm * Z2;
 
-        //Compute qa_sum
+        //Compute qa_sum. Certain pairs of elements are equal, so filling them outside the loop saves some operations
         qa_sum(0, 0) += X; qa_sum(0, 1) += Y; qa_sum(0, 2) += Z;
-        qa_sum(1, 3) += X; qa_sum(1, 4) += Y; qa_sum(1, 5) += Z;
 
         qa_sum(0, 6) += -x * X; qa_sum(0, 7) += -x * Y; qa_sum(0, 8) += -x * Z;
         qa_sum(1, 6) += -y * X; qa_sum(1, 7) += -y * Y; qa_sum(1, 8) += -y * Z;
 
-        qa_sum(2, 0) += -x * X; qa_sum(2, 1) += -x * Y; qa_sum(2, 2) += -x * Z;
-        qa_sum(2, 3) += -y * X; qa_sum(2, 4) += -y * Y; qa_sum(2, 5) += -y * Z;
-
         qa_sum(2, 6) += sq_norm * X; qa_sum(2, 7) += sq_norm * Y; qa_sum(2, 8) += sq_norm * Z;
     }
 
+    //Complete qa_sum
+    qa_sum(1, 3) = qa_sum(0, 0); qa_sum(1, 4) = qa_sum(0, 1); qa_sum(1, 5) = qa_sum(0, 2);
+    qa_sum(2, 0) = qa_sum(0, 6); qa_sum(2, 1) = qa_sum(0, 7); qa_sum(2, 2) = qa_sum(0, 8);
+    qa_sum(2, 3) = qa_sum(1, 6); qa_sum(2, 4) = qa_sum(1, 7); qa_sum(2, 5) = qa_sum(1, 8);
 
+
+    //lower triangles of omega_'s off-diagonal blocks (0:2, 6:8), (3:5, 6:8) and (6:8, 6:8)
     omega_(1, 6) = omega_(0, 7); omega_(2, 6) = omega_(0, 8); omega_(2, 7) = omega_(1, 8);
     omega_(4, 6) = omega_(3, 7); omega_(5, 6) = omega_(3, 8); omega_(5, 7) = omega_(4, 8);
     omega_(7, 6) = omega_(6, 7); omega_(8, 6) = omega_(6, 8); omega_(8, 7) = omega_(7, 8);
 
-
+    //upper triangle of omega_'s block (3:5, 3:5)
     omega_(3, 3) = omega_(0, 0); omega_(3, 4) = omega_(0, 1); omega_(3, 5) = omega_(0, 2);
-    omega_(4, 4) = omega_(1, 1); omega_(4, 5) = omega_(1, 2);
-    omega_(5, 5) = omega_(2, 2);
+                                 omega_(4, 4) = omega_(1, 1); omega_(4, 5) = omega_(1, 2);
+                                                              omega_(5, 5) = omega_(2, 2);
 
-    //Mirror upper triangle to lower triangle
-    for (int r = 0; r < 9; r++)
-    {
-        for (int c = 0; c < r; c++)
-        {
-            omega_(r, c) = omega_(c, r);
-        }
-    }
+    //Mirror omega_'s upper triangle to lower triangle
+    //Note that elements (7, 6), (8, 6) & (8, 7) have already been assigned above
+    omega_(1, 0) = omega_(0, 1);
+    omega_(2, 0) = omega_(0, 2); omega_(2, 1) = omega_(1, 2);
+    omega_(3, 0) = omega_(0, 3); omega_(3, 1) = omega_(1, 3); omega_(3, 2) = omega_(2, 3);
+    omega_(4, 0) = omega_(0, 4); omega_(4, 1) = omega_(1, 4); omega_(4, 2) = omega_(2, 4); omega_(4, 3) = omega_(3, 4);
+    omega_(5, 0) = omega_(0, 5); omega_(5, 1) = omega_(1, 5); omega_(5, 2) = omega_(2, 5); omega_(5, 3) = omega_(3, 5); omega_(5, 4) = omega_(4, 5);
+    omega_(6, 0) = omega_(0, 6); omega_(6, 1) = omega_(1, 6); omega_(6, 2) = omega_(2, 6); omega_(6, 3) = omega_(3, 6); omega_(6, 4) = omega_(4, 6); omega_(6, 5) = omega_(5, 6);
+    omega_(7, 0) = omega_(0, 7); omega_(7, 1) = omega_(1, 7); omega_(7, 2) = omega_(2, 7); omega_(7, 3) = omega_(3, 7); omega_(7, 4) = omega_(4, 7); omega_(7, 5) = omega_(5, 7);
+    omega_(8, 0) = omega_(0, 8); omega_(8, 1) = omega_(1, 8); omega_(8, 2) = omega_(2, 8); omega_(8, 3) = omega_(3, 8); omega_(8, 4) = omega_(4, 8); omega_(8, 5) = omega_(5, 8);
 
     cv::Matx<double, 3, 3> q;
     q(0, 0) = n; q(0, 1) = 0; q(0, 2) = -sum_img.x;
@@ -247,6 +251,11 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
     cv::SVD omega_svd(omega_, cv::SVD::FULL_UV);
     s_ = omega_svd.w;
     u_ = cv::Mat(omega_svd.vt.t());
+#if 0
+    // EVD equivalent of the SVD; less accurate
+    cv::eigen(omega_, s_, u_);
+    u_ = u_.t(); // eigenvectors were returned as rows
+#endif
 
     CV_Assert(s_(0) >= 1e-7);
 
@@ -257,7 +266,7 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
     point_mean_ = cv::Vec3d(sum_obj.x / n, sum_obj.y / n, sum_obj.z / n);
 }
 
-void PoseSolver::solveInternal()
+void PoseSolver::solveInternal(InputArray objectPoints)
 {
     double min_sq_err = std::numeric_limits<double>::max();
     int num_eigen_points = num_null_vectors_ > 0 ? num_null_vectors_ : 1;
@@ -274,42 +283,39 @@ void PoseSolver::solveInternal()
         {
             solutions[0].r_hat = det3x3(e) * e;
             solutions[0].t = p_ * solutions[0].r_hat;
-            checkSolution(solutions[0], min_sq_err);
+            checkSolution(solutions[0], objectPoints, min_sq_err);
         }
         else
         {
             Matx<double, 9, 1> r;
-            nearestRotationMatrix(e, r);
+            nearestRotationMatrixFOAM(e, r);
             solutions[0] = runSQP(r);
             solutions[0].t = p_ * solutions[0].r_hat;
-            checkSolution(solutions[0], min_sq_err);
+            checkSolution(solutions[0], objectPoints, min_sq_err);
 
-            nearestRotationMatrix(-e, r);
+            nearestRotationMatrixFOAM(-e, r);
             solutions[1] = runSQP(r);
             solutions[1].t = p_ * solutions[1].r_hat;
-            checkSolution(solutions[1], min_sq_err);
+            checkSolution(solutions[1], objectPoints, min_sq_err);
         }
     }
 
-    int c = 1;
-
-    while (min_sq_err > 3 * s_[9 - num_eigen_points - c] && 9 - num_eigen_points - c > 0)
+    int index, c = 1;
+    while ((index = 9 - num_eigen_points - c) > 0 && min_sq_err > 3 * s_[index])
     {
-        int index = 9 - num_eigen_points - c;
-
         const cv::Matx<double, 9, 1> e = u_.col(index);
         SQPSolution solutions[2];
 
         Matx<double, 9, 1> r;
-        nearestRotationMatrix(e, r);
+        nearestRotationMatrixFOAM(e, r);
         solutions[0] = runSQP(r);
         solutions[0].t = p_ * solutions[0].r_hat;
-        checkSolution(solutions[0], min_sq_err);
+        checkSolution(solutions[0], objectPoints, min_sq_err);
 
-        nearestRotationMatrix(-e, r);
+        nearestRotationMatrixFOAM(-e, r);
         solutions[1] = runSQP(r);
         solutions[1].t = p_ * solutions[1].r_hat;
-        checkSolution(solutions[1], min_sq_err);
+        checkSolution(solutions[1], objectPoints, min_sq_err);
 
         c++;
     }
@@ -341,7 +347,7 @@ PoseSolver::SQPSolution PoseSolver::runSQP(const cv::Matx<double, 9, 1>& r0)
 
     if (det_r > SQP_DET_THRESHOLD)
     {
-        nearestRotationMatrix(r, solution.r_hat);
+        nearestRotationMatrixFOAM(r, solution.r_hat);
     }
     else
     {
@@ -615,12 +621,26 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
 
 }
 
-// faster nearest rotation computation based on FOAM (see: http://users.ics.forth.gr/~lourakis/publ/2018_iros.pdf )
+// if e = u*w*vt then r=u*diag([1, 1, det(u)*det(v)])*vt
+void PoseSolver::nearestRotationMatrixSVD(const cv::Matx<double, 9, 1>& e,
+    cv::Matx<double, 9, 1>& r)
+{
+    cv::Matx<double, 3, 3> e33 = e.reshape<3, 3>();
+    cv::SVD e33_svd(e33, cv::SVD::FULL_UV);
+    double detuv = cv::determinant(e33_svd.u)*cv::determinant(e33_svd.vt);
+    cv::Matx<double, 3, 3> diag = cv::Matx33d::eye();
+    diag(2, 2) = detuv;
+    cv::Matx<double, 3, 3> r33 = cv::Mat(e33_svd.u*diag*e33_svd.vt);
+    r = r33.reshape<9, 1>();
+}
+
+// Faster nearest rotation computation based on FOAM. See M. Lourakis: "An Efficient Solution to Absolute Orientation", ICPR 2016
+// and M. Lourakis, G. Terzakis: "Efficient Absolute Orientation Revisited", IROS 2018.
 /* Solve the nearest orthogonal approximation problem
     * i.e., given e, find R minimizing ||R-e||_F
     *
     * The computation borrows from Markley's FOAM algorithm
-    * "Attitude Determination Using Vector Observations: A Fast Optimal Matrix Algorithm", J. Astronaut. Sci.
+    * "Attitude Determination Using Vector Observations: A Fast Optimal Matrix Algorithm", J. Astronaut. Sci. 1993.
     *
     * See also M. Lourakis: "An Efficient Solution to Absolute Orientation", ICPR 2016
     *
@@ -628,24 +648,32 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     *  Institute of Computer Science, Foundation for Research & Technology - Hellas
     *  Heraklion, Crete, Greece.
     */
-void PoseSolver::nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
+void PoseSolver::nearestRotationMatrixFOAM(const cv::Matx<double, 9, 1>& e,
     cv::Matx<double, 9, 1>& r)
 {
     int i;
     double l, lprev, det_e, e_sq, adj_e_sq, adj_e[9];
+
+    // det(e)
+    det_e = e(0) * e(4) * e(8) - e(0) * e(5) * e(7) - e(1) * e(3) * e(8) + e(2) * e(3) * e(7) + e(1) * e(6) * e(5) - e(2) * e(6) * e(4);
+    if (fabs(det_e) < 1E-04) { // singular, handle it with SVD
+        PoseSolver::nearestRotationMatrixSVD(e, r);
+        return;
+    }
 
     // e's adjoint
     adj_e[0] = e(4) * e(8) - e(5) * e(7); adj_e[1] = e(2) * e(7) - e(1) * e(8); adj_e[2] = e(1) * e(5) - e(2) * e(4);
     adj_e[3] = e(5) * e(6) - e(3) * e(8); adj_e[4] = e(0) * e(8) - e(2) * e(6); adj_e[5] = e(2) * e(3) - e(0) * e(5);
     adj_e[6] = e(3) * e(7) - e(4) * e(6); adj_e[7] = e(1) * e(6) - e(0) * e(7); adj_e[8] = e(0) * e(4) - e(1) * e(3);
 
-    // det(e), ||e||^2, ||adj(e)||^2
-    det_e = e(0) * e(4) * e(8) - e(0) * e(5) * e(7) - e(1) * e(3) * e(8) + e(2) * e(3) * e(7) + e(1) * e(6) * e(5) - e(2) * e(6) * e(4);
+    // ||e||^2, ||adj(e)||^2
     e_sq = e(0) * e(0) + e(1) * e(1) + e(2) * e(2) + e(3) * e(3) + e(4) * e(4) + e(5) * e(5) + e(6) * e(6) + e(7) * e(7) + e(8) * e(8);
     adj_e_sq = adj_e[0] * adj_e[0] + adj_e[1] * adj_e[1] + adj_e[2] * adj_e[2] + adj_e[3] * adj_e[3] + adj_e[4] * adj_e[4] + adj_e[5] * adj_e[5] + adj_e[6] * adj_e[6] + adj_e[7] * adj_e[7] + adj_e[8] * adj_e[8];
 
     // compute l_max with Newton-Raphson from FOAM's characteristic polynomial, i.e. eq.(23) - (26)
-    for (i = 200, l = 2.0, lprev = 0.0; fabs(l - lprev) > 1E-12 * fabs(lprev) && i > 0; --i) {
+    l = 0.5*(e_sq + 3.0); // 1/2*(trace(mat(e)*mat(e)') + trace(eye(3)))
+    if (det_e < 0.0) l = -l;
+    for (i = 15, lprev = 0.0; fabs(l - lprev) > 1E-12 * fabs(lprev) && i > 0; --i) {
         double tmp, p, pp;
 
         tmp = (l * l - e_sq);
@@ -719,9 +747,31 @@ inline bool PoseSolver::positiveDepth(const SQPSolution& solution) const
     return (r(6) * mean(0) + r(7) * mean(1) + r(8) * mean(2) + t(2) > 0);
 }
 
-void PoseSolver::checkSolution(SQPSolution& solution, double& min_error)
+inline bool PoseSolver::positiveMajorityDepths(const SQPSolution& solution, InputArray objectPoints) const
 {
-    if (positiveDepth(solution))
+    const cv::Matx<double, 9, 1>& r = solution.r_hat;
+    const cv::Matx<double, 3, 1>& t = solution.t;
+    int npos = 0, nneg = 0;
+
+    Mat _objectPoints = objectPoints.getMat();
+
+    int n = _objectPoints.cols * _objectPoints.rows;
+
+    for (int i = 0; i < n; i++)
+    {
+        const cv::Point3d& obj_pt = _objectPoints.at<cv::Point3d>(i);
+        if (r(6) * obj_pt.x + r(7) * obj_pt.y + r(8) * obj_pt.z + t(2) > 0) ++npos;
+        else ++nneg;
+    }
+
+    return npos >= nneg;
+}
+
+
+void PoseSolver::checkSolution(SQPSolution& solution, InputArray objectPoints, double& min_error)
+{
+    bool cheirok = positiveDepth(solution) || positiveMajorityDepths(solution, objectPoints); // check the majority if the check with centroid fails
+    if (cheirok)
     {
         solution.sq_error = (omega_ * solution.r_hat).ddot(solution.r_hat);
         if (fabs(min_error - solution.sq_error) > EQUAL_SQUARED_ERRORS_DIFF)
