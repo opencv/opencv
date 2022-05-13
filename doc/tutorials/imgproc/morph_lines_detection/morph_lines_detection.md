@@ -123,7 +123,7 @@ Get image from [here](https://raw.githubusercontent.com/opencv/opencv/3.4/doc/tu
 
 #### Output images
 
-Now we are ready to apply morphological operations in order to extract the horizontal and vertical lines and as a consequence to separate the the music notes from the music sheet, but first let's initialize the output images that we will use for that reason:
+Now we are ready to apply morphological operations in order to extract the horizontal and vertical lines and as a consequence to separate the music notes from the music sheet, but first let's initialize the output images that we will use for that reason:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp init
