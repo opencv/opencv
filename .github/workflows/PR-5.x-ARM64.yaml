@@ -23,7 +23,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
     steps:
     - name: PR info
       run: |
