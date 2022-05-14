@@ -301,7 +301,7 @@ CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
 result. See cv::imwrite for the list of supported formats and flags description.
 
-@param ext File extension that defines the output format.
+@param ext File extension that defines the output format. Must include a leading period.
 @param img Image to be written.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.

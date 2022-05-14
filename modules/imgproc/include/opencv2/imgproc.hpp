@@ -118,7 +118,7 @@ sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_
 where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
 f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-resize for details.
+#resize for details.
 
 @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
@@ -1576,7 +1576,7 @@ CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
 For every pixel \f$ (x, y) \f$ in the source image, the function calculates the sum of squares of those neighboring
 pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
 
-The unnormalized square box filter can be useful in computing local image statistics such as the the local
+The unnormalized square box filter can be useful in computing local image statistics such as the local
 variance and standard deviation around the neighborhood of a pixel.
 
 @param src input image
@@ -2345,7 +2345,7 @@ way:
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
 @endcode
 To shrink an image, it will generally look best with #INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with c#INTER_CUBIC (slow) or #INTER_LINEAR
+enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
 @param src input image.
@@ -2437,7 +2437,7 @@ The function remap transforms the source image using the specified map:
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using convertMaps. The reason you might want to
+\f$map_1\f$, or fixed-point maps created by using #convertMaps. The reason you might want to
 convert from floating to fixed-point representations of a map is that they can yield much faster
 (\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
@@ -2447,7 +2447,7 @@ This function cannot operate in-place.
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
-CV_32FC1, or CV_32FC2. See convertMaps for details on converting a floating point
+CV_32FC1, or CV_32FC2. See #convertMaps for details on converting a floating point
 representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
@@ -2472,7 +2472,7 @@ options ( (map1.type(), map2.type()) \f$\rightarrow\f$ (dstmap1.type(), dstmap2.
 supported:
 
 - \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. This is the
-most frequently used conversion operation, in which the original floating-point maps (see remap )
+most frequently used conversion operation, in which the original floating-point maps (see #remap)
 are converted to a more compact and much faster fixed-point representation. The first output array
 contains the rounded coordinates and the second array (created only when nninterpolation=false )
 contains indices in the interpolation tables.

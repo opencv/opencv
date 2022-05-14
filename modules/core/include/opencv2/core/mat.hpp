@@ -1018,7 +1018,7 @@ public:
     @param copyData Flag to specify whether the underlying data of the STL vector should be copied
     to (true) or shared with (false) the newly constructed matrix. When the data is copied, the
     allocated buffer is managed using Mat reference counting mechanism. While the data is shared,
-    the reference counter is NULL, and you should not deallocate the data until the matrix is not
+    the reference counter is NULL, and you should not deallocate the data until the matrix is
     destructed.
     */
     template<typename _Tp> explicit Mat(const std::vector<_Tp>& vec, bool copyData=false);
@@ -2276,7 +2276,7 @@ public:
     std::reverse_iterator<const_iterator> rbegin() const;
     std::reverse_iterator<const_iterator> rend() const;
 
-    //! template methods for for operation over all matrix elements.
+    //! template methods for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename Functor> void forEach(const Functor& operation);
     template<typename Functor> void forEach(const Functor& operation) const;

@@ -1015,7 +1015,7 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     if( point_count >= 2 && (j < 2 || (j == 2 && cvTsDist(v[0],v[1]) < (radius-1)*2/eps)) )
     {
         ts->printf( cvtest::TS::LOG,
-            "There should be at at least 3 points near the circle boundary or 2 points on the diameter\n" );
+            "There should be at least 3 points near the circle boundary or 2 points on the diameter\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
         goto _exit_;
     }

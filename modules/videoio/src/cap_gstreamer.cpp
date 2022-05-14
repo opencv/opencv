@@ -475,7 +475,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
 /*!
  * \brief CvCapture_GStreamer::grabFrame
  * \return
- * Grabs a sample from the pipeline, awaiting consumation by retreiveFrame.
+ * Grabs a sample from the pipeline, awaiting consumation by retrieveFrame.
  * The pipeline is started if it was not running yet
  */
 bool GStreamerCapture::grabFrame()
