@@ -6,14 +6,13 @@ on:
       - 3.4
 
 env:
-  EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DOPENCV_DOWNLOAD_PATH=c:\Slave\workspace\binaries_cache -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
+  EXTRA_CMAKE_OPTIONS: '-DCL_Z_OPTION=/Z7 -DOPENCV_DOWNLOAD_PATH=%BINARIES_CACHE% -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DCMAKE_BUILD_TYPE=Release'
   OPENCV_TEST_DATA_PATH: ${{ github.workspace }}\opencv_extra\testdata
   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
   PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
   GTEST_FILTER_STRING: '-Samples.findFile'
-  GIT_CACHE: c:\Slave\git_cache
 
 jobs:
   BuildAndTest:
@@ -30,7 +29,7 @@ jobs:
     - name: Clean
       run: cd ${{ github.workspace }} && rm -rf *
     - name: Fetch opencv
-      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv.git git@github.com:opencv/opencv.git
+      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference %GIT_CACHE%\opencv.git git@github.com:opencv/opencv.git
     - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
       run: |
         cd ${{ github.workspace }}\opencv
@@ -38,7 +37,7 @@ jobs:
         git config user.name "opencv.ci"
         git pull -v "git@github.com:${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Fetch opencv_extra
-      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_extra.git git@github.com:opencv/opencv_extra.git
+      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference %GIT_CACHE%\opencv_extra.git git@github.com:opencv/opencv_extra.git
     - name: Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch
       shell: bash
       run: |
@@ -145,7 +144,7 @@ jobs:
     - name: Clean
       run: cd ${{ github.workspace }} && rm -rf *
     - name: Fetch opencv
-      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv.git git@github.com:opencv/opencv.git
+      run: cd ${{ github.workspace }} && git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference %GIT_CACHE%\opencv.git git@github.com:opencv/opencv.git
     - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
       run: |
         cd ${{ github.workspace }}\opencv
@@ -153,7 +152,7 @@ jobs:
         git config user.name "opencv.ci"
         git pull -v "git@github.com:${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Fetch opencv_contrib
-      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE }}\opencv_contrib.git --depth 1 git@github.com:opencv/opencv_contrib.git
+      run: cd ${{ github.workspace }} && git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference %GIT_CACHE%\opencv_contrib.git --depth 1 git@github.com:opencv/opencv_contrib.git
     - name: Merge opencv_contrib with ${{ env.SOURCE_BRANCH_NAME }} branch
       shell: bash
       run: |
