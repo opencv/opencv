@@ -119,6 +119,12 @@ GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string&
     return make_src<GCaptureSource>(path);
 }
 
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const int id)
+{
+    return make_src<GCaptureSource>(id);
+}
+
 } // namespace wip
 } // namespace gapi
 } // namespace cv
