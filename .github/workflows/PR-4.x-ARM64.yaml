@@ -1,7 +1,9 @@
 name: PR:4.x ARM64
 
-# TODO: enable pipeline after 4.x update
-on: workflow_dispatch
+on:
+  pull_request:
+    branches:
+      - 4.x
 
 env:
   EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_opencv_xfeatures2d=OFF -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_CCACHE=OFF'
@@ -21,7 +23,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
     steps:
     - name: PR info
       run: |
@@ -87,18 +89,12 @@ jobs:
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_objdetect --gtest_filter="-Objdetect_QRCode_Close.regression/0:Objdetect_QRCode_Close.regression/4"
     - name: Accuracy:photo
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_photo --gtest_filter="-Photo_CalibrateDebevec.regression"
-    - name: Accuracy:shape
-      run: cd /opencv-build && xvfb-run -a bin/opencv_test_shape
     - name: Accuracy:stitching
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_stitching
-    - name: Accuracy:superres
-      run: cd /opencv-build && xvfb-run -a bin/opencv_test_superres
     - name: Accuracy:video
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_video
     - name: Accuracy:videoio
       run: cd /opencv-build && xvfb-run -a bin/opencv_test_videoio
-    - name: Accuracy:videostab
-      run: cd /opencv-build && xvfb-run -a bin/opencv_test_videostab
     - name: Performance:calib3d
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_calib3d --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:core
@@ -117,8 +113,6 @@ jobs:
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_photo --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:stitching
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_stitching --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
-    - name: Performance:superres
-      run: cd /opencv-build && xvfb-run -a bin/opencv_perf_superres --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:video
       run: cd /opencv-build && xvfb-run -a bin/opencv_perf_video --perf_impl=plain --perf_min_samples=1 --perf_force_samples=1 --perf_verify_sanity --skip_unstable=1
     - name: Performance:videoio
