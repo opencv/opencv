@@ -568,8 +568,8 @@ int Core_SeqBaseTest::test_multi_create()
                 int hdr_size = (cvtest::randInt(rng) % 10)*4 + sizeof(CvSeq);
                 hdr_size = MIN( hdr_size, (int)(storage->block_size - sizeof(CvMemBlock)) );
 
-		// FIXME(ben): I'm not sure what the intent of the min() above is, but hdr_size cannot be less than sizeof(CvSeq) and, in Morello at least, it can be after that min()
-		hdr_size = MAX( hdr_size, (int)sizeof(CvSeq) );
+                // FIXME(ben): I'm not sure what the intent of the min() above is, but hdr_size cannot be less than sizeof(CvSeq) and, in Morello at least, it can be after that min()
+                hdr_size = MAX( hdr_size, (int)sizeof(CvSeq) );
 	    
                 elem_size = sseq->elem_size;
 
