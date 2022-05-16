@@ -1,0 +1,30 @@
+ply
+format ascii 1.0
+comment Created by Blender 2.69 (sub 0) - www.blender.org, source file: ''
+element vertex 8
+property float x
+property float y
+property float z
+element face 12
+property list uchar uint vertex_indices
+end_header
+-1.000000 -1.000000 1.000000
+-1.000000 1.000000 1.000000
+-1.000000 1.000000 -1.000000
+1.000000 1.000000 1.000000
+1.000000 1.000000 -1.000000
+1.000000 -1.000000 1.000000
+1.000000 -1.000000 -1.000000
+-1.000000 -1.000000 -1.000000
+3 0 1 2
+3 1 3 4
+3 3 5 6
+3 0 7 5
+3 7 2 4
+3 5 3 1
+3 7 0 2
+3 2 1 4
+3 4 3 6
+3 5 7 6
+3 6 7 4
+3 0 5 1
