@@ -25,7 +25,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
@@ -163,7 +163,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache

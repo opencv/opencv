@@ -25,7 +25,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: quay.io/asenyaev/opencv-ubuntu:20.04
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
@@ -166,7 +166,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: quay.io/asenyaev/opencv-ubuntu:20.04
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
