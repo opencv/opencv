@@ -6,15 +6,17 @@ on:
       - 3.4
 
 env:
-  EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DBUILD_opencv_xfeatures2d=OFF -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON -DENABLE_CCACHE=OFF'
-  OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
-  OPENCV_DOCKER_WORKDIR: '/__w/opencv/opencv'
+  EXTRA_CMAKE_OPTIONS: '-DBUILD_DOCS=ON -DPYTHON_DEFAULT_EXECUTABLE=/usr/bin/python3 -DOPENCV_DOWNLOAD_PATH=/home/ci/binaries_cache -DBUILD_opencv_xfeatures2d=OFF -DBUILD_EXAMPLES=ON -DOPENCV_ENABLE_NONFREE=ON'
   PR_AUTHOR: ${{ github.event.pull_request.user.login }}
   PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
   ANT_HOME: '/usr/share/ant'
+  GIT_CACHE_DOCKER: '/home/ci/git_cache'
   PYTHONPATH: /opencv-build/python_loader:$PYTHONPATH
+  OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
+  OPENCV_DOCKER_WORKDIR: '/opencv'
+  DNN_MODELS: '/home/ci/dnn-models'
 
 jobs:
   BuildAndTest:
@@ -23,7 +25,12 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
+      volumes:
+        - /home/opencv-cn/git_cache:/home/ci/git_cache
+        - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
+        - /home/opencv-cn/binaries_cache:/home/ci/binaries_cache
+        - /home/opencv-cn/dnn-models:/home/ci/dnn-models
     steps:
     - name: PR info
       run: |
@@ -32,13 +39,9 @@ jobs:
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean
-      run: find . -mindepth 1 -delete
+      run: find ${{ env.OPENCV_DOCKER_WORKDIR }} -mindepth 1 -delete
     - name: Fetch opencv
-      uses: actions/checkout@v3
-      with:
-        repository: opencv/opencv
-        ref: ${{ env.TARGET_BRANCH_NAME }}
-        fetch-depth: 0
+      run: git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE_DOCKER }}/opencv.git https://github.com/opencv/opencv.git ${{ env.OPENCV_DOCKER_WORKDIR }}
     - name: Merge opencv with ${{ env.SOURCE_BRANCH_NAME }} branch
       run: |
         cd ${{ env.OPENCV_DOCKER_WORKDIR }}
@@ -47,7 +50,7 @@ jobs:
         git config user.name "opencv.ci"
         git pull -v "https://github.com/${{ env.PR_AUTHOR_FORK }}" "${{ env.SOURCE_BRANCH_NAME }}"
     - name: Clone opencv_extra
-      run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} https://github.com/opencv/opencv_extra.git /opencv_extra
+      run: git clone --single-branch --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE_DOCKER }}/opencv_extra.git https://github.com/opencv/opencv_extra.git /opencv_extra
     - name: Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch
       run: |
         OPENCV_EXTRA_FORK=$(git ls-remote --heads "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
@@ -59,6 +62,22 @@ jobs:
           git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}"
         else
           echo "No merge since ${{ env.PR_AUTHOR }}/opencv_extra does not have branch ${{ env.SOURCE_BRANCH_NAME }}"
+        fi
+    - name: Extra DNN models update
+      run: |
+        DOWNLOAD_MODELS_FILE='download_models.py'
+        LATEST_SAVED_HASH=$(cat ${{ env.DNN_MODELS }}/dnn/latest-hash-${{ env.TARGET_BRANCH_NAME }}.txt)
+        LATEST_HASH=$(sha256sum /opencv_extra/testdata/dnn/$DOWNLOAD_MODELS_FILE | awk '{print $1}')
+        if [[ $LATEST_HASH == $LATEST_SAVED_HASH ]]; then
+          echo "DNN models are up to date"
+          echo "OPENCV_DNN_TEST_DATA_PATH=${{ env.DNN_MODELS }}" >> $GITHUB_ENV
+        else
+          echo "Updating DNN models list"
+          echo "OPENCV_DNN_TEST_DATA_PATH=/home/ci/new-dnn-models" >> $GITHUB_ENV && OPENCV_DNN_TEST_DATA_PATH='/home/ci/new-dnn-models'
+          mkdir -p "$OPENCV_DNN_TEST_DATA_PATH"
+          rsync -a --exclude=$DOWNLOAD_MODELS_FILE ${{ env.DNN_MODELS }}/* $OPENCV_DNN_TEST_DATA_PATH
+          cp /opencv_extra/testdata/dnn/download_models.py $OPENCV_DNN_TEST_DATA_PATH/dnn
+          cd $OPENCV_DNN_TEST_DATA_PATH/dnn && python3 download_models.py
         fi
     - name: Configure OpenCV
       run: |
@@ -144,21 +163,22 @@ jobs:
       run:
         shell: bash
     container:
-      image: docker.io/yuentau/ocv_ubuntu:20.04-arm64
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04-arm64
+      volumes:
+        - /home/opencv-cn/git_cache:/home/ci/git_cache
+        - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
+        - /home/opencv-cn/binaries_cache:/home/ci/binaries_cache
     steps:
     - name: PR info
       run: |
         echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "PR Author fork: ${{ env.PR_AUTHOR_FORK }}"
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean
-      run: find . -mindepth 1 -delete
+      run: find ${{ env.OPENCV_DOCKER_WORKDIR }} -mindepth 1 -delete
     - name: Fetch opencv
-      uses: actions/checkout@v3
-      with:
-        repository: opencv/opencv
-        ref: ${{ env.TARGET_BRANCH_NAME }}
-        fetch-depth: 0
+      run: git clone --branch ${{ env.TARGET_BRANCH_NAME }} --reference ${{ env.GIT_CACHE_DOCKER }}/opencv.git https://github.com/opencv/opencv.git ${{ env.OPENCV_DOCKER_WORKDIR }}
     - name: Merge opencv with a test branch
       run: |
         cd ${{ env.OPENCV_DOCKER_WORKDIR }}
