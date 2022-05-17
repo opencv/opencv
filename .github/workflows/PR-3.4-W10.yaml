@@ -44,7 +44,7 @@ jobs:
         OPENCV_EXTRA_FORK=$(git ls-remote --heads "git@github.com:/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}") || true
         if [[ ! -z "$OPENCV_EXTRA_FORK" ]]; then
           echo "Merge opencv_extra with ${{ env.SOURCE_BRANCH_NAME }} branch"
-          cd ${{ github.workspace }}\opencv_extra
+          cd opencv_extra
           git config user.email "opencv.ci"
           git config user.name "opencv.ci"
           git pull -v "git@github.com:${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}"
@@ -159,7 +159,7 @@ jobs:
         OPENCV_CONTRIB_FORK=$(git ls-remote --heads "git@github.com:${{ env.PR_AUTHOR }}/opencv_contrib" "${{ env.SOURCE_BRANCH_NAME }}") || true
         if [[ ! -z "$OPENCV_CONTRIB_FORK" ]]; then
           echo "Merge opencv_contrib with ${{ env.SOURCE_BRANCH_NAME }} branch"
-          cd ${{ github.workspace }}\opencv_contrib
+          cd opencv_contrib
           git config user.email "opencv.ci"
           git config user.name "opencv.ci"
           git pull -v "git@github.com:${{ env.PR_AUTHOR }}/opencv_contrib" "${{ env.SOURCE_BRANCH_NAME }}"
