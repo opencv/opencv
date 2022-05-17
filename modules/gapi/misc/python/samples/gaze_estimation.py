@@ -27,7 +27,7 @@ def build_argparser():
     parser = argparse.ArgumentParser(description='This is an OpenCV-based version of Gaze Estimation example')
 
     parser.add_argument('--input',
-                        help='Path to the input video file')
+                        help='Path to the input video file or camera device number')
     parser.add_argument('--out',
                         help='Path to the output video file')
     parser.add_argument('--facem',
@@ -323,7 +323,11 @@ if __name__ == '__main__':
 
     # ------------------------Execution part------------------------
     ccomp = comp.compileStreaming(args=cv.gapi.compile_args(kernels, nets))
-    source = cv.gapi.wip.make_capture_src(ARGUMENTS.input)
+    if ARGUMENTS.input.isdigit():
+        source = cv.gapi.wip.make_capture_src(int(ARGUMENTS.input))
+    else:
+        source = cv.gapi.wip.make_capture_src(ARGUMENTS.input)
+
     ccomp.setSource(cv.gin(source))
     ccomp.start()
 
