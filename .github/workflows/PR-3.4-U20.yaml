@@ -11,11 +11,12 @@ env:
   PR_AUTHOR_FORK: ${{ github.event.pull_request.head.repo.full_name }}
   SOURCE_BRANCH_NAME: ${{ github.head_ref }}
   TARGET_BRANCH_NAME: ${{ github.base_ref }}
-  ANT_HOME: /usr/share/ant
-  GIT_CACHE_DOCKER: /home/ci/git_cache
+  ANT_HOME: '/usr/share/ant'
+  GIT_CACHE_DOCKER: '/home/ci/git_cache'
   PYTHONPATH: /opencv-build/python_loader:$PYTHONPATH
-  OPENCV_TEST_DATA_PATH: /opencv_extra/testdata
-  OPENCV_DOCKER_WORKDIR: /opencv
+  OPENCV_TEST_DATA_PATH: '/opencv_extra/testdata'
+  OPENCV_DOCKER_WORKDIR: '/opencv'
+  DNN_MODELS: '/home/ci/dnn-models'
 
 jobs:
   BuildAndTest:
@@ -24,15 +25,17 @@ jobs:
       run:
         shell: bash
     container:
-      image: quay.io/asenyaev/opencv-ubuntu:20.04
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
         - /home/opencv-cn/binaries_cache:/home/ci/binaries_cache
+        - /home/opencv-cn/dnn-models:/home/ci/dnn-models
     steps:
     - name: PR info
       run: |
         echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "PR Author fork: ${{ env.PR_AUTHOR_FORK }}"
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean
@@ -59,6 +62,22 @@ jobs:
           git pull -v "https://github.com/${{ env.PR_AUTHOR }}/opencv_extra" "${{ env.SOURCE_BRANCH_NAME }}"
         else
           echo "No merge since ${{ env.PR_AUTHOR }}/opencv_extra does not have branch ${{ env.SOURCE_BRANCH_NAME }}"
+        fi
+    - name: Extra DNN models update
+      run: |
+        DOWNLOAD_MODELS_FILE='download_models.py'
+        LATEST_SAVED_HASH=$(cat ${{ env.DNN_MODELS }}/dnn/latest-hash-${{ env.TARGET_BRANCH_NAME }}.txt)
+        LATEST_HASH=$(sha256sum /opencv_extra/testdata/dnn/$DOWNLOAD_MODELS_FILE | awk '{print $1}')
+        if [[ $LATEST_HASH == $LATEST_SAVED_HASH ]]; then
+          echo "DNN models are up to date"
+          echo "OPENCV_DNN_TEST_DATA_PATH=${{ env.DNN_MODELS }}" >> $GITHUB_ENV
+        else
+          echo "Updating DNN models list"
+          echo "OPENCV_DNN_TEST_DATA_PATH=/home/ci/new-dnn-models" >> $GITHUB_ENV && OPENCV_DNN_TEST_DATA_PATH='/home/ci/new-dnn-models'
+          mkdir -p "$OPENCV_DNN_TEST_DATA_PATH"
+          rsync -a --exclude=$DOWNLOAD_MODELS_FILE ${{ env.DNN_MODELS }}/* $OPENCV_DNN_TEST_DATA_PATH
+          cp /opencv_extra/testdata/dnn/download_models.py $OPENCV_DNN_TEST_DATA_PATH/dnn
+          cd $OPENCV_DNN_TEST_DATA_PATH/dnn && python3 download_models.py
         fi
     - name: Configure OpenCV
       run: |
@@ -147,7 +166,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: quay.io/asenyaev/opencv-ubuntu:20.04
+      image: quay.io/opencv-ci/opencv-ubuntu:20.04
       volumes:
         - /home/opencv-cn/git_cache:/home/ci/git_cache
         - /home/opencv-cn/ci_cache/opencv:/home/ci/.ccache
@@ -156,6 +175,7 @@ jobs:
     - name: PR info
       run: |
         echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "PR Author fork: ${{ env.PR_AUTHOR_FORK }}"
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean

@@ -24,6 +24,7 @@ jobs:
     - name: PR info
       run: |
         echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "PR Author fork: ${{ env.PR_AUTHOR_FORK }}"
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean
@@ -139,6 +140,7 @@ jobs:
     - name: PR info
       run: |
         echo "PR Author: ${{ env.PR_AUTHOR }}"
+        echo "PR Author fork: ${{ env.PR_AUTHOR_FORK }}"
         echo "Source branch name: ${{ env.SOURCE_BRANCH_NAME }}"
         echo "Target branch name: ${{ env.TARGET_BRANCH_NAME }}"
     - name: Clean
