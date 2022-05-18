@@ -669,6 +669,33 @@ TEST(Objdetect_QRCode_detect, detect_regression_20882)
 #endif
 }
 
+// for https://github.com/opencv/opencv/issues/21929
+TEST(Objdetect_QRCode_decode, decode_regression_21929)
+{
+    const cv::String expect_msg = "OpenCV";
+    Mat qrimg;
+    QRCodeEncoder::Params params;
+    params.version = 8; // 49x49
+    Ptr<QRCodeEncoder> qrcode_enc = cv::QRCodeEncoder::create(params);;
+    qrcode_enc->encode(expect_msg, qrimg);
+
+    Mat src;
+    cv::resize( qrimg, src, Size(200,200), 1.0, 1.0, INTER_NEAREST );
+
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    Mat straight_barcode;
+
+    EXPECT_TRUE(qrcode.detect(src, corners));
+    EXPECT_TRUE(!corners.empty());
+#ifdef HAVE_QUIRC
+    cv::String decoded_msg;
+    EXPECT_NO_THROW(decoded_msg = qrcode.decode(src, corners, straight_barcode));
+    ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage.";
+    EXPECT_EQ(expect_msg, decoded_msg);
+#endif
+}
+
 TEST(Objdetect_QRCode_basic, not_found_qrcode)
 {
     std::vector<Point> corners;
