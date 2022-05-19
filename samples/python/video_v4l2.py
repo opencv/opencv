@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''
+"""
 VideoCapture sample showcasing  some features of the Video4Linux2 backend
 
 Sample shows how VideoCapture class can be used to control parameters
@@ -12,7 +12,7 @@ Keys:
     ESC    - exit
     g      - toggle optimized grayscale conversion
 
-'''
+"""
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -20,8 +20,8 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-def main():
 
+def main():
     def decode_fourcc(v):
         v = int(v)
         return "".join([chr((v >> 8 * i) & 0xFF) for i in range(4)])
@@ -30,49 +30,57 @@ def main():
     color = (0, 255, 0)
 
     cap = cv.VideoCapture(0)
-    cap.set(cv.CAP_PROP_AUTOFOCUS, 0)  # Known bug: https://github.com/opencv/opencv/pull/5474
+    cap.set(
+        cv.CAP_PROP_AUTOFOCUS, 0
+    )  # Known bug: https://github.com/opencv/opencv/pull/5474
 
     cv.namedWindow("Video")
 
     convert_rgb = True
     fps = int(cap.get(cv.CAP_PROP_FPS))
-    focus = int(min(cap.get(cv.CAP_PROP_FOCUS) * 100, 2**31-1))  # ceil focus to C_LONG as Python3 int can go to +inf
+    focus = int(
+        min(cap.get(cv.CAP_PROP_FOCUS) * 100, 2**31 - 1)
+    )  # ceil focus to C_LONG as Python3 int can go to +inf
 
     cv.createTrackbar("FPS", "Video", fps, 30, lambda v: cap.set(cv.CAP_PROP_FPS, v))
-    cv.createTrackbar("Focus", "Video", focus, 100, lambda v: cap.set(cv.CAP_PROP_FOCUS, v / 100))
+    cv.createTrackbar(
+        "Focus", "Video", focus, 100, lambda v: cap.set(cv.CAP_PROP_FOCUS, v / 100)
+    )
 
     while True:
         _status, img = cap.read()
+        if _status:
 
-        fourcc = decode_fourcc(cap.get(cv.CAP_PROP_FOURCC))
+            fourcc = decode_fourcc(cap.get(cv.CAP_PROP_FOURCC))
 
-        fps = cap.get(cv.CAP_PROP_FPS)
+            fps = cap.get(cv.CAP_PROP_FPS)
 
-        if not bool(cap.get(cv.CAP_PROP_CONVERT_RGB)):
-            if fourcc == "MJPG":
-                img = cv.imdecode(img, cv.IMREAD_GRAYSCALE)
-            elif fourcc == "YUYV":
-                img = cv.cvtColor(img, cv.COLOR_YUV2GRAY_YUYV)
-            else:
-                print("unsupported format")
+            if not bool(cap.get(cv.CAP_PROP_CONVERT_RGB)):
+                if fourcc == "MJPG":
+                    img = cv.imdecode(img, cv.IMREAD_GRAYSCALE)
+                elif fourcc == "YUYV":
+                    img = cv.cvtColor(img, cv.COLOR_YUV2GRAY_YUYV)
+                else:
+                    print("unsupported format")
+                    break
+
+            cv.putText(img, "Mode: {}".format(fourcc), (15, 40), font, 1.0, color)
+            cv.putText(img, "FPS: {}".format(fps), (15, 80), font, 1.0, color)
+            cv.imshow("Video", img)
+
+            k = cv.waitKey(1)
+
+            if k == 27:
                 break
-
-        cv.putText(img, "Mode: {}".format(fourcc), (15, 40), font, 1.0, color)
-        cv.putText(img, "FPS: {}".format(fps), (15, 80), font, 1.0, color)
-        cv.imshow("Video", img)
-
-        k = cv.waitKey(1)
-
-        if k == 27:
+            elif k == ord("g"):
+                convert_rgb = not convert_rgb
+                cap.set(cv.CAP_PROP_CONVERT_RGB, 1 if convert_rgb else 0)
+        else:
             break
-        elif k == ord('g'):
-            convert_rgb = not convert_rgb
-            cap.set(cv.CAP_PROP_CONVERT_RGB, 1 if convert_rgb else 0)
-
-    print('Done')
+    print("Done")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(__doc__)
     main()
     cv.destroyAllWindows()
