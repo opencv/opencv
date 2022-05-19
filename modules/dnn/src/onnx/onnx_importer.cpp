@@ -3310,13 +3310,53 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    opencv_onnx::NodeProto node_proto = node_proto_;
     int ninputs = node_proto.input_size();
     CV_Assert(ninputs == 8 || ninputs == 9);
 
     Mat inp_sc = getBlob(node_proto, 1);
     Mat inp_zp = getBlob(node_proto, 2);
+
+    if (layerParams.has("pad"))
+    {
+        bool asymmetricPadding = false;
+        DictValue pads = layerParams.get("pad");
+        const int dims = pads.size() / 2;
+
+        for (int i = 0; i < dims; ++i)
+        {
+            if (pads.get<int>(i) != pads.get<int>(i + dims))
+            {
+                asymmetricPadding = true;
+                break;
+            }
+        }
+        if (asymmetricPadding && pads.size() == 4)
+        {
+            layerParams.erase("pad");
+            std::vector<int> paddings(4, 0);
+            for (int i = 0; i < dims; ++i)
+            {
+                paddings.push_back(pads.get<int>(i));
+                paddings.push_back(pads.get<int>(dims + i));
+            }
+            LayerParams padLp;
+            padLp.name = layerParams.name + "/pad";
+            padLp.type = "PaddingInt8";
+            padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+            padLp.set("depth", CV_8S);
+            padLp.set("value", inp_zp.at<int8_t>(0));
+
+            opencv_onnx::NodeProto proto;
+            proto.add_input(node_proto.input(0));
+            proto.add_output(padLp.name);
+
+            addLayer(padLp, proto);
+            node_proto.set_input(0, padLp.name);
+        }
+    }
 
     Mat weights = getBlob(node_proto, 3);
     int outCn = weights.size[0];
