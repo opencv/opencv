@@ -21,8 +21,8 @@ private:
     //! Threshold of curvature.
     double curvature_thr;
 
-    //! The number of neighbors including itself.
-    int k;
+    //! The maximum number of neighbors want to use including itself.
+    int max_neighbor_num;
 
     //! The minimum size of region.
     int min_size;
@@ -36,6 +36,9 @@ private:
     //! The maximum number of regions you want.
     int region_num;
 
+    //! Whether the results need to be sorted in descending order by the number of points.
+    bool need_sort;
+
     //! The curvature of each point.
     Mat curvatures;
 
@@ -45,19 +48,20 @@ private:
 public:
     //! No-argument constructor using default configuration.
     RegionGrowing3DImpl()
-            : smoothness_thr(0.5235987756 /* 30*PI/180 */ ), curvature_thr(0.05), k(0), min_size(1),
-              max_size(INT_MAX), smooth_mode(true), region_num(INT_MAX)
+            : smoothness_thr(0.5235987756 /* 30*PI/180 */ ), curvature_thr(0.05),
+              max_neighbor_num(INT_MAX), min_size(1), max_size(INT_MAX), smooth_mode(true),
+              region_num(INT_MAX), need_sort(true)
     {
     }
 
-    int segment(OutputArray labels, InputArray input_pts, InputArray normals, InputArray knn_idx) override;
+    int segment(OutputArrayOfArrays regions_idx, OutputArray labels, InputArray input_pts,
+            InputArray normals, InputArrayOfArrays nn_idx) override;
 
     //-------------------------- Getter and Setter -----------------------
 
     void setMinSize(int min_size_) override
     {
-        CV_CheckGE(min_size_, 1, "The minimum size of segments should be grater than 0.");
-        min_size = min_size_;
+        min_size = min_size_ <= 0 ? 1 : min_size_;
     }
 
     int getMinSize() const override
@@ -67,8 +71,7 @@ public:
 
     void setMaxSize(int max_size_) override
     {
-        CV_CheckGE(max_size_, 1, "The maximum size of segments should be grater than 0.");
-        max_size = max_size_;
+        max_size = max_size_ <= 0 ? INT_MAX : max_size_;
     }
 
     int getMaxSize() const override
@@ -88,8 +91,10 @@ public:
 
     void setSmoothnessThreshold(double smoothness_thr_) override
     {
-        CV_CheckGE(smoothness_thr_, 0.0, "The smoothness threshold angle should be greater than or equal to 0 degrees.");
-        CV_CheckLT(smoothness_thr_, 1.5707963268 /* 90*PI/180 */, "The smoothness threshold angle should be less than 90 degrees.");
+        CV_CheckGE(smoothness_thr_, 0.0,
+                "The smoothness threshold angle should be greater than or equal to 0.");
+        CV_CheckLT(smoothness_thr_, 1.5707963268 /* 90*PI/180 */,
+                "The smoothness threshold angle should be less than 90 degrees.");
         smoothness_thr = smoothness_thr_;
     }
 
@@ -100,7 +105,8 @@ public:
 
     void setCurvatureThreshold(double curvature_thr_) override
     {
-        CV_CheckGE(curvature_thr_, 0.0, "The curvature threshold should be greater than or equal to 0.");
+        CV_CheckGE(curvature_thr_, 0.0,
+                "The curvature threshold should be greater than or equal to 0.");
         curvature_thr = curvature_thr_;
     }
 
@@ -109,21 +115,19 @@ public:
         return curvature_thr;
     }
 
-    void setNumberOfNeighbors(int k_) override
+    void setMaxNumberOfNeighbors(int max_neighbor_num_) override
     {
-        CV_CheckGE(k_, 2, "The number of neighbors should be grater than 1.");
-        k = k_;
+        max_neighbor_num = max_neighbor_num_ <= 0 ? INT_MAX : max_neighbor_num_;
     }
 
-    int getNumberOfNeighbors() const override
+    int getMaxNumberOfNeighbors() const override
     {
-        return k;
+        return max_neighbor_num;
     }
 
     void setNumberOfRegions(int region_num_) override
     {
-        CV_CheckGE(region_num_, 1, "The number of region should be grater than 0.");
-        region_num = region_num_;
+        region_num = region_num_ <= 0 ? INT_MAX : region_num_;
     }
 
     int getNumberOfRegions() const override
@@ -131,9 +135,19 @@ public:
         return region_num;
     }
 
+    void setNeedSort(bool need_sort_) override
+    {
+        need_sort = need_sort_;
+    }
+
+    bool getNeedSort() const override
+    {
+        return need_sort;
+    }
+
     void setSeeds(InputArray seeds_) override
     {
-        seeds = seeds_.getMat();
+        seeds = seeds_.getMat().reshape(1, 1);
     }
 
     void getSeeds(OutputArray seeds_) const override
@@ -143,7 +157,7 @@ public:
 
     void setCurvatures(InputArray curvatures_) override
     {
-        curvatures = abs(curvatures_.getMat());
+        curvatures = abs(curvatures_.getMat().reshape(1, 1));
     }
 
     void getCurvatures(OutputArray curvatures_) const override
