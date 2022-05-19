@@ -268,6 +268,13 @@ typedef uint32_t __u32;
 #define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
 #endif
 
+#ifndef V4L2_PIX_FMT_ABGR32
+#define V4L2_PIX_FMT_ABGR32  v4l2_fourcc('A', 'R', '2', '4')
+#endif
+#ifndef V4L2_PIX_FMT_XBGR32
+#define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
+#endif
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
