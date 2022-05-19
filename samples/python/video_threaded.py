@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''
+"""
 Multithreaded video processing sample.
 Usage:
    video_threaded.py {<video device number>|<video file name>}
@@ -13,7 +13,7 @@ Keyboard shortcuts:
 
    ESC - exit
    space - switch between multi and single threaded processing
-'''
+"""
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -31,10 +31,13 @@ import video
 class DummyTask:
     def __init__(self, data):
         self.data = data
+
     def ready(self):
         return True
+
     def get(self):
         return self.data
+
 
 def main():
     import sys
@@ -45,7 +48,6 @@ def main():
         fn = 0
     cap = video.create_capture(fn)
 
-
     def process_frame(frame, t0):
         # some intensive computation...
         frame = cv.medianBlur(frame, 19)
@@ -53,7 +55,7 @@ def main():
         return frame, t0
 
     threadn = cv.getNumberOfCPUs()
-    pool = ThreadPool(processes = threadn)
+    pool = ThreadPool(processes=threadn)
     pending = deque()
 
     threaded_mode = True
@@ -66,29 +68,38 @@ def main():
             res, t0 = pending.popleft().get()
             latency.update(clock() - t0)
             draw_str(res, (20, 20), "threaded      :  " + str(threaded_mode))
-            draw_str(res, (20, 40), "latency        :  %.1f ms" % (latency.value*1000))
-            draw_str(res, (20, 60), "frame interval :  %.1f ms" % (frame_interval.value*1000))
-            cv.imshow('threaded video', res)
+            draw_str(
+                res, (20, 40), "latency        :  %.1f ms" % (latency.value * 1000)
+            )
+            draw_str(
+                res,
+                (20, 60),
+                "frame interval :  %.1f ms" % (frame_interval.value * 1000),
+            )
+            cv.imshow("threaded video", res)
         if len(pending) < threadn:
             _ret, frame = cap.read()
-            t = clock()
-            frame_interval.update(t - last_frame_time)
-            last_frame_time = t
-            if threaded_mode:
-                task = pool.apply_async(process_frame, (frame.copy(), t))
+            if _ret:
+                t = clock()
+                frame_interval.update(t - last_frame_time)
+                last_frame_time = t
+                if threaded_mode:
+                    task = pool.apply_async(process_frame, (frame.copy(), t))
+                else:
+                    task = DummyTask(process_frame(frame, t))
+                pending.append(task)
             else:
-                task = DummyTask(process_frame(frame, t))
-            pending.append(task)
+                break
         ch = cv.waitKey(1)
-        if ch == ord(' '):
+        if ch == ord(" "):
             threaded_mode = not threaded_mode
         if ch == 27:
             break
 
-    print('Done')
+    print("Done")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(__doc__)
     main()
     cv.destroyAllWindows()
