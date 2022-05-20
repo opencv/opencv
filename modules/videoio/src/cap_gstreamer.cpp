@@ -83,6 +83,7 @@ namespace cv {
 
 static void toFraction(double decimal, CV_OUT int& numerator, CV_OUT int& denominator);
 static void handleMessage(GstElement * pipeline);
+static MatAllocator* getGStreamerAllocator();
 
 
 namespace {
@@ -2422,6 +2423,87 @@ void handleMessage(GstElement * pipeline)
             }
         }
     }
+}
+
+//==================================================================================================
+
+class GStreamerAllocator CV_FINAL : public MatAllocator
+{
+public:
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data0, size_t* step, AccessFlag flags,
+                       UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    UMatData* allocate(GstSample *s) const;
+    void deallocate(UMatData* u) const CV_OVERRIDE;
+
+private:
+    struct GStreamerAllocatorData
+    {
+        GSafePtr<GstSample> sample;
+        GstBuffer * buffer;
+        GstMapInfo info;
+    };
+};
+
+UMatData* GStreamerAllocator::allocate(int /*dims*/, const int* /*sizes*/,
+                                       int /*type*/, void* /*data0*/,
+                                       size_t* /*step*/, AccessFlag /*flags*/,
+                                       UMatUsageFlags /*usageFlags*/) const
+{
+    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
+    return nullptr;
+}
+
+bool GStreamerAllocator::allocate(UMatData* /*u*/, AccessFlag /*accessFlags*/,
+                                  UMatUsageFlags /*usageFlags*/) const
+{
+    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
+    return false;
+}
+
+UMatData* GStreamerAllocator::allocate(GstSample *s) const
+{
+    CV_Assert(s);
+
+    GStreamerAllocatorData *gstdata = new GStreamerAllocatorData;
+    CV_Assert(gstdata);
+
+    gstdata->sample.attach (gst_sample_ref (s));
+    gstdata->buffer = gst_sample_get_buffer (s);
+
+    if (false == gst_buffer_map (gstdata->buffer, &(gstdata->info), GST_MAP_READ)) {
+        CV_Error(Error::Code::StsUnsupportedFormat, ("Unable to map GstBuffer"));
+    }
+
+    UMatData* u = new UMatData(this);
+    u->data = u->origdata = gstdata->info.data;
+    u->size = gstdata->info.size;
+    u->userdata = gstdata;
+
+    return u;
+}
+
+void GStreamerAllocator::deallocate(UMatData* u) const
+{
+    CV_Assert(u);
+    CV_Assert(u->urefcount == 0);
+    CV_Assert(u->refcount == 0);
+
+    GStreamerAllocatorData *gstdata = static_cast<GStreamerAllocatorData *>(u->userdata);
+    CV_Assert (GST_IS_BUFFER (gstdata->buffer));
+
+    gst_buffer_unmap (gstdata->buffer, &(gstdata->info));
+    gstdata->sample.release();
+
+    delete gstdata;
+    delete u;
+}
+
+static MatAllocator* getGStreamerAllocator()
+{
+    static MatAllocator *const instance = new GStreamerAllocator();
+    return instance;
 }
 
 }  // namespace cv
