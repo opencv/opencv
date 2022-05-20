@@ -17,6 +17,7 @@
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
+#include <opencv2/gapi/infer.hpp>   // Generic
 
 namespace cv {
 namespace gapi {
@@ -67,6 +68,8 @@ struct ParamDesc {
     std::vector<bool> normalize; //!< Vector of bool values that enabled or disabled normalize of input data.
 
     std::vector<std::string> names_to_remap; //!< Names of output layers that will be processed in PostProc function.
+
+    bool is_generic;
 };
 } // namespace detail
 
@@ -103,6 +106,7 @@ public:
         desc.model_path = model;
         desc.num_in  = std::tuple_size<typename Net::InArgs>::value;
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
+        desc.is_generic = false;
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -275,6 +279,35 @@ public:
 
 protected:
     detail::ParamDesc desc;
+};
+
+/*
+* @brief This structure provides functions for generic network type that
+* fill inference parameters.
+* @see struct Generic
+*/
+template<>
+class Params<cv::gapi::Generic> {
+public:
+    /** @brief Class constructor.
+
+    Constructs Params based on input information and sets default values for other
+    inference description parameters.
+
+    @param tag string tag of the network for which these parameters are intended.
+    @param model_path path to model file (.onnx file).
+    */
+    Params(const std::string& tag, const std::string& model_path)
+         : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true}, m_tag(tag) {}
+
+    // BEGIN(G-API's network parametrization API)
+    GBackend      backend() const { return cv::gapi::onnx::backend(); }
+    std::string   tag()     const { return m_tag; }
+    cv::util::any params()  const { return { desc }; }
+    // END(G-API's network parametrization API)
+protected:
+    detail::ParamDesc desc;
+    std::string m_tag;
 };
 
 } // namespace onnx
