@@ -1,0 +1,16 @@
+name: PR:3.4
+
+on:
+  pull_request:
+    branches:
+      - 3.4
+
+jobs:
+  ARM64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-ARM64.yaml@main
+
+  U20:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-U20.yaml@main
+
+  W10:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-W10.yaml@main
