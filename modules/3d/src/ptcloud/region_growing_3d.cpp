@@ -6,19 +6,12 @@
 
 #include "../precomp.hpp"
 #include "region_growing_3d.hpp"
-#include "opencv2/3d/ptcloud.hpp"
 
 #include <queue>
 #include <numeric>
 
 namespace cv {
 //    namespace _3d {
-
-// Compare the size of two regions in descending order
-bool compareRegionSize(const std::vector<int> &r1, const std::vector<int> &r2)
-{
-    return r1.size() > r2.size();
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////  RegionGrowing3DImpl  //////////////////////////////////////
@@ -79,7 +72,7 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
     std::vector<bool> has_grown(pts_size, false);
     // Store the indexes of the points in each region
     std::vector<std::vector<int>> regions_idx;
-    for (int i = 0; i < seeds_num; i++)
+    for (int i = 0; i < seeds_num; ++i)
     {
         int cur_seed = seeds_ptr[i];
 
@@ -118,7 +111,7 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
                                                                 : max_neighbor_num;
             const int *nn_idx_ptr_base = (int *) nn_idx[cur_idx].data;
             // Start from index 1 because the first one of knn_idx is itself
-            for (int j = 1; j < bound; j++)
+            for (int j = 1; j < bound; ++j)
             {
                 int cur_nei_idx = nn_idx_ptr_base[j];
                 // If the index is less than 0,
@@ -146,12 +139,13 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
             }
         }
 
-        if (min_size <= region.size() && region.size() <= max_size)
+        int region_size = (int) region.size();
+        if (min_size <= region_size && region_size <= max_size)
         {
             regions_idx.emplace_back(Mat(region));
             flag++;
         }
-        else if (region.size() > max_size)
+        else if (region_size > max_size)
         {
             break;
         }
@@ -159,6 +153,12 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
 
     if (need_sort)
     {
+        // Compare the size of two regions in descending order
+        auto compareRegionSize = [](const std::vector<int> &r1,
+                const std::vector<int> &r2) -> bool
+        {
+            return r1.size() > r2.size();
+        };
         sort(regions_idx.begin(), regions_idx.end(), compareRegionSize);
     }
 
@@ -166,7 +166,7 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
     _regions_idx.resize(regions_idx.size());
     Mat labels = Mat::zeros(pts_size, 1, CV_32S);
     int *labels_ptr = (int *) labels.data;
-    for (int i = 0; i < regions_idx.size(); ++i)
+    for (int i = 0; i < (int) regions_idx.size(); ++i)
     {
         Mat(1, (int) regions_idx[i].size(), CV_32S, regions_idx[i].data()).copyTo(_regions_idx[i]);
         for (int j: regions_idx[i])

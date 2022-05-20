@@ -388,7 +388,7 @@ public:
     virtual int getNumberOfRegions() const = 0;
 
     //! Set whether the results need to be sorted in descending order by the number of points.
-    virtual void setNeedSort(bool need_sort_) = 0;
+    virtual void setNeedSort(bool need_sort) = 0;
 
     //! Get whether the results need to be sorted you have set.
     virtual bool getNeedSort() const = 0;
