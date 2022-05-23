@@ -314,6 +314,386 @@ static void find_hw_element(const GValue *item, gpointer va_type)
 
 //==================================================================================================
 
+class GStreamerAllocator CV_FINAL : public MatAllocator
+{
+public:
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data0, size_t* step, AccessFlag flags,
+                       UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
+    UMatData* allocate(GstSample *s) const;
+    void deallocate(UMatData* u) const CV_OVERRIDE;
+
+private:
+    struct GStreamerAllocatorData
+    {
+        GSafePtr<GstSample> sample;
+        GstBuffer * buffer;
+        GstMapInfo info;
+    };
+};
+
+UMatData* GStreamerAllocator::allocate(int /*dims*/, const int* /*sizes*/,
+                                       int /*type*/, void* /*data0*/,
+                                       size_t* /*step*/, AccessFlag /*flags*/,
+                                       UMatUsageFlags /*usageFlags*/) const
+{
+    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
+    return nullptr;
+}
+
+bool GStreamerAllocator::allocate(UMatData* /*u*/, AccessFlag /*accessFlags*/,
+                                  UMatUsageFlags /*usageFlags*/) const
+{
+    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
+    return false;
+}
+
+UMatData* GStreamerAllocator::allocate(GstSample *s) const
+{
+    CV_Assert(s);
+
+    GStreamerAllocatorData *gstdata = new GStreamerAllocatorData;
+    CV_Assert(gstdata);
+
+    gstdata->sample.attach (gst_sample_ref (s));
+    gstdata->buffer = gst_sample_get_buffer (s);
+
+    if (false == gst_buffer_map (gstdata->buffer, &(gstdata->info), GST_MAP_READ)) {
+        CV_Error(Error::Code::StsUnsupportedFormat, ("Unable to map GstBuffer"));
+    }
+
+    UMatData* u = new UMatData(this);
+    u->data = u->origdata = gstdata->info.data;
+    u->size = gstdata->info.size;
+    u->userdata = gstdata;
+
+    return u;
+}
+
+void GStreamerAllocator::deallocate(UMatData* u) const
+{
+    CV_Assert(u);
+    CV_Assert(u->urefcount == 0);
+    CV_Assert(u->refcount == 0);
+
+    GStreamerAllocatorData *gstdata = static_cast<GStreamerAllocatorData *>(u->userdata);
+    CV_Assert (GST_IS_BUFFER (gstdata->buffer));
+
+    gst_buffer_unmap (gstdata->buffer, &(gstdata->info));
+    gstdata->sample.release();
+
+    delete gstdata;
+    delete u;
+}
+
+static MatAllocator* getGStreamerAllocator()
+{
+    static MatAllocator *const instance = new GStreamerAllocator();
+    return instance;
+}
+
+//==================================================================================================
+
+class GStreamerMat CV_FINAL : public Mat
+{
+private:
+    void fillMat(int _rows, int _cols, int _type, uchar* _data);
+    bool determineFrameDims(GstSample* sample, CV_OUT Size& sz, CV_OUT gint& type,
+                            CV_OUT gsize& step, CV_OUT GstSample*& out_sample);
+
+public:
+    GStreamerMat(GstSample* sample);
+};
+
+GStreamerMat::GStreamerMat(GstSample* s) : Mat()
+{
+    CV_Assert(s);
+
+    Size sz;
+    int type = 0;
+    size_t step = 0;
+    GstSample* sout = NULL;
+
+    if (false == determineFrameDims(s, sz, type, step, sout))
+    {
+        CV_Error(Error::Code::StsUnsupportedFormat, ("Unable to wrap GstBuffer in a Mat"));
+    }
+
+    allocator = getGStreamerAllocator();
+    u = dynamic_cast<GStreamerAllocator*>(allocator)->allocate(sout);
+    CV_Assert(u != 0);
+    gst_sample_unref(sout);
+
+    fillMat(sz.height, sz.width, type, u->data);
+    addref();
+}
+
+void GStreamerMat::fillMat(int _rows, int _cols, int _type, uchar* _data)
+{
+    flags += CV_MAT_TYPE(_type);
+    rows = _rows;
+    cols = _cols;
+    datastart = data = _data;
+    dims = 2;
+
+    size_t esz = CV_ELEM_SIZE(_type);
+    size_t minstep = cols * esz;
+
+    step[0] = minstep;
+    step[1] = esz;
+
+    dataend = datalimit = datastart + minstep * rows;
+
+    updateContinuityFlag();
+}
+
+bool GStreamerMat::determineFrameDims(GstSample* sample, CV_OUT Size& sz, CV_OUT gint& type,
+                                      CV_OUT gsize& step, CV_OUT GstSample*& out_sample)
+{
+    GstCaps* frame_caps = gst_sample_get_caps(sample); // no lifetime transfer
+    if (!frame_caps)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
+        return false;
+    }
+
+    if (!GST_CAPS_IS_SIMPLE(frame_caps))
+    {
+        // bail out in no caps
+        CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
+        return false;
+    }
+
+    GstVideoInfo info = {};
+    gboolean video_info_res = gst_video_info_from_caps(&info, frame_caps);
+    if (!video_info_res)
+    {
+        CV_Error(Error::StsError,
+                 "GStreamer: gst_video_info_from_caps() is failed. Can't handle unknown layout");
+    }
+
+    // gstreamer expects us to handle the memory at this point
+    // so we can just wrap the raw buffer and be done with it
+    GstBuffer* buf = gst_sample_get_buffer(sample); // no lifetime transfer
+    if (!buf)
+        return false;
+
+    // at this point, the gstreamer buffer may contain a video meta with special
+    // stride and plane locations. We __must__ consider in order to correctly parse
+    // the data. The gst_video_frame_map will parse the meta for us, or default to
+    // regular strides/offsets if no meta is present.
+    GstVideoFrame frame = {};
+    GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF);
+    if (!gst_video_frame_map(&frame, &info, buf, flags))
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
+        return false;
+    }
+
+    ScopeGuardGstVideoFrame frame_guard(
+        &frame); // call gst_video_frame_unmap(&frame) on scope leave
+
+    int frame_width = GST_VIDEO_FRAME_COMP_WIDTH(&frame, 0);
+    int frame_height = GST_VIDEO_FRAME_COMP_HEIGHT(&frame, 0);
+    if (frame_width <= 0 || frame_height <= 0)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Can't query frame size from GStreamer sample");
+        return false;
+    }
+
+    // we support these types of data:
+    //     video/x-raw, format=BGR   -> 8bit, 3 channels
+    //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
+    //     video/x-raw, format=UYVY  -> 8bit, 2 channel
+    //     video/x-raw, format=YUY2  -> 8bit, 2 channel
+    //     video/x-raw, format=YVYU  -> 8bit, 2 channel
+    //     video/x-raw, format=NV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
+    //     video/x-raw, format=NV21  -> 8bit, 1 channel (height is 1.5x larger than true height)
+    //     video/x-raw, format=YV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
+    //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
+    //     video/x-bayer             -> 8bit, 1 channel
+    //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
+    //     video/x-raw, format=GRAY16_LE (BE) -> 16 bit, 1 channel
+    //     video/x-raw, format={BGRA, RGBA, BGRx, RGBx} -> 8bit, 4 channels
+    // bayer data is never decoded, the user is responsible for that
+    sz = Size(frame_width, frame_height);
+    guint n_planes = GST_VIDEO_FRAME_N_PLANES(&frame);
+
+    // The input sample reference is no longer valid, now it belongs to the output
+    out_sample = gst_sample_ref(sample);
+
+    GstVideoFormat format = GST_VIDEO_FRAME_FORMAT(&frame);
+    switch (format)
+    {
+        case GST_VIDEO_FORMAT_BGR:
+            CV_CheckEQ((int)n_planes, 1, "");
+            step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width * 3, "");
+            type = CV_8UC3;
+            return true;
+
+        case GST_VIDEO_FORMAT_GRAY8:
+            CV_CheckEQ((int)n_planes, 1, "");
+            step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            type = CV_8UC1;
+            return true;
+
+        case GST_VIDEO_FORMAT_GRAY16_LE:
+        case GST_VIDEO_FORMAT_GRAY16_BE:
+            CV_CheckEQ((int)n_planes, 1, "");
+            step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            type = CV_16UC1;
+            return true;
+
+        case GST_VIDEO_FORMAT_BGRA:
+        case GST_VIDEO_FORMAT_RGBA:
+        case GST_VIDEO_FORMAT_BGRx:
+        case GST_VIDEO_FORMAT_RGBx:
+            CV_CheckEQ((int)n_planes, 1, "");
+            step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            type = CV_8UC4;
+            return true;
+
+        case GST_VIDEO_FORMAT_UYVY:
+        case GST_VIDEO_FORMAT_YUY2:
+        case GST_VIDEO_FORMAT_YVYU:
+            CV_CheckEQ((int)n_planes, 1, "");
+            step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step, (size_t)frame_width * 2, "");
+            type = CV_8UC2;
+            return true;
+
+        case GST_VIDEO_FORMAT_NV12:
+        case GST_VIDEO_FORMAT_NV21:
+        {
+            // Multiplane formats need to be handled with care on
+            // GStreamer, because each plane may come in a separate,
+            // non-contiguous, chunk of memory. In order to be able to
+            // reuse the GStreamer allocator and avoid having two
+            // different types of matrices, we create a contiguous
+            // GstSample and follow the same path as the other
+            // formats.
+            GstBuffer* merged =
+                gst_buffer_new_allocate(NULL, frame_width * frame_height * 3 / 2, NULL);
+
+            // Wrap the newly created buffer info a Mat to ease copying
+            GstMapInfo info = {0};
+            gst_buffer_map(merged, &info, GST_MAP_READWRITE);
+            ScopeGuardGstMapInfo map_guard(merged, &info);
+            type = CV_8UC1;
+            Mat dst(Size(frame_width, frame_height * 3 / 2), type, info.data, frame_width);
+
+            CV_CheckEQ((int)n_planes, 2, "");
+            size_t stepY = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(stepY, (size_t)frame_width, "");
+            size_t stepUV = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
+            CV_CheckGE(stepUV, (size_t)frame_width, "");
+
+            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), stepY);
+            Mat srcUV(Size(frame_width, frame_height / 2), CV_8UC1,
+                      GST_VIDEO_FRAME_PLANE_DATA(&frame, 1), stepUV);
+
+            step = frame_width;
+            srcY.copyTo(dst(Rect(0, 0, frame_width, frame_height)));
+            srcUV.copyTo(dst(Rect(0, frame_height, frame_width, frame_height / 2)));
+
+            // Reference to merged is not tranferrerd
+            // The output sample does not need to have any other field than the buffer
+            gst_sample_unref(out_sample);
+            out_sample = gst_sample_new(merged, NULL, NULL, NULL);
+            gst_buffer_unref(merged);
+
+            return true;
+        }
+        case GST_VIDEO_FORMAT_YV12:
+        case GST_VIDEO_FORMAT_I420:
+        {
+            GstBuffer* merged =
+                gst_buffer_new_allocate(NULL, frame_width * frame_height * 3 / 2, NULL);
+
+            // Wrap the newly created buffer info a Mat to ease copying
+            GstMapInfo info = {0};
+            gst_buffer_map(merged, &info, GST_MAP_READWRITE);
+            ScopeGuardGstMapInfo map_guard(merged, &info);
+            type = CV_8UC1;
+            Mat dst(Size(frame_width, frame_height * 3 / 2), type, info.data, frame_width);
+
+            CV_CheckEQ((int)n_planes, 3, "");
+            size_t step0 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
+            CV_CheckGE(step0, (size_t)frame_width, "");
+            size_t step1 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
+            CV_CheckGE(step1, (size_t)frame_width / 2, "");
+            size_t step2 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 2);
+            CV_CheckGE(step2, (size_t)frame_width / 2, "");
+
+            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step0);
+            Size sz2(frame_width / 2, frame_height / 2);
+            Mat src1(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 1), step1);
+            Mat src2(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 2), step2);
+
+            step = frame_width;
+            srcY.copyTo(dst(Rect(0, 0, frame_width, frame_height)));
+            src1.copyTo(Mat(sz2, CV_8UC1, dst.ptr<uchar>(frame_height)));
+            src2.copyTo(Mat(sz2, CV_8UC1, dst.ptr<uchar>(frame_height) + src1.total()));
+
+            // Reference to merged is not tranferrerd
+            // The output sample does not need to have any other field than the buffer
+            gst_sample_unref(out_sample);
+            out_sample = gst_sample_new(merged, NULL, NULL, NULL);
+            gst_buffer_unref(merged);
+            return true;
+        }
+        case GST_VIDEO_FORMAT_UNKNOWN:
+        case GST_VIDEO_FORMAT_ENCODED:
+        {
+            GstStructure* structure = gst_caps_get_structure(frame_caps, 0); // no lifetime transfer
+            if (!structure)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
+                return false;
+            }
+
+            const gchar* name_ = gst_structure_get_name(structure);
+            if (!name_)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
+                return false;
+            }
+            std::string name = toLowerCase(std::string(name_));
+
+            if (name == "video/x-bayer")
+            {
+                CV_CheckEQ((int)n_planes, 0, "");
+                step = frame_width;
+                type = CV_8UC1;
+                return true;
+            }
+            else if (name == "image/jpeg")
+            {
+                CV_CheckEQ((int)n_planes, 0, "");
+                step = frame_width * frame_height;
+                CV_CheckGE(step, (size_t)frame.map[0].size, "");
+                sz = Size(step, 1);
+                type = CV_8UC1;
+                return true;
+            }
+
+            CV_Error_(Error::StsNotImplemented,
+                      ("Unsupported GStreamer layer type: %s", name.c_str()));
+        }
+        default:
+            CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer 'video/x-raw' format: %s",
+                                                 gst_video_format_to_string(format)));
+            return false;
+    }
+}
+
+//==================================================================================================
+
 class GStreamerCapture CV_FINAL : public IVideoCapture
 {
 private:
@@ -644,201 +1024,22 @@ bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 
 bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
 {
-    GstCaps* frame_caps = gst_sample_get_caps(sample);  // no lifetime transfer
-    if (!frame_caps)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
-        return false;
+  if (!sample)
+    return false;
+
+  try {
+    GStreamerMat gst(sample.get());
+    if ( cv::_InputArray::KindFlag::MAT == dst.kind()) {
+      dst.getMatRef() = gst;
+    } else {
+      gst.copyTo (dst);
     }
+  } catch (cv::Exception &e) {
+    CV_WARN(e.err);
+    return false;
+  }
 
-    if (!GST_CAPS_IS_SIMPLE(frame_caps))
-    {
-        // bail out in no caps
-        CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
-        return false;
-    }
-
-    GstVideoInfo info = {};
-    gboolean video_info_res = gst_video_info_from_caps(&info, frame_caps);
-    if (!video_info_res)
-    {
-        CV_Error(Error::StsError, "GStreamer: gst_video_info_from_caps() is failed. Can't handle unknown layout");
-    }
-
-    // gstreamer expects us to handle the memory at this point
-    // so we can just wrap the raw buffer and be done with it
-    GstBuffer* buf = gst_sample_get_buffer(sample);  // no lifetime transfer
-    if (!buf)
-        return false;
-
-    // at this point, the gstreamer buffer may contain a video meta with special
-    // stride and plane locations. We __must__ consider in order to correctly parse
-    // the data. The gst_video_frame_map will parse the meta for us, or default to
-    // regular strides/offsets if no meta is present.
-    GstVideoFrame frame = {};
-    GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF);
-    if (!gst_video_frame_map(&frame, &info, buf, flags))
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
-        return false;
-    }
-
-    ScopeGuardGstVideoFrame frame_guard(&frame);  // call gst_video_frame_unmap(&frame) on scope leave
-
-    int frame_width = GST_VIDEO_FRAME_COMP_WIDTH(&frame, 0);
-    int frame_height = GST_VIDEO_FRAME_COMP_HEIGHT(&frame, 0);
-    if (frame_width <= 0 || frame_height <= 0)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Can't query frame size from GStreamer sample");
-        return false;
-    }
-
-    GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
-    if (!structure)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
-        return false;
-    }
-
-    const gchar* name_ = gst_structure_get_name(structure);
-    if (!name_)
-    {
-        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
-        return false;
-    }
-    std::string name = toLowerCase(std::string(name_));
-
-    // we support these types of data:
-    //     video/x-raw, format=BGR   -> 8bit, 3 channels
-    //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
-    //     video/x-raw, format=UYVY  -> 8bit, 2 channel
-    //     video/x-raw, format=YUY2  -> 8bit, 2 channel
-    //     video/x-raw, format=YVYU  -> 8bit, 2 channel
-    //     video/x-raw, format=NV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
-    //     video/x-raw, format=NV21  -> 8bit, 1 channel (height is 1.5x larger than true height)
-    //     video/x-raw, format=YV12  -> 8bit, 1 channel (height is 1.5x larger than true height)
-    //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
-    //     video/x-bayer             -> 8bit, 1 channel
-    //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
-    //     video/x-raw, format=GRAY16_LE (BE) -> 16 bit, 1 channel
-    //     video/x-raw, format={BGRA, RGBA, BGRx, RGBx} -> 8bit, 4 channels
-    // bayer data is never decoded, the user is responsible for that
-    Size sz = Size(frame_width, frame_height);
-    guint n_planes = GST_VIDEO_FRAME_N_PLANES(&frame);
-
-    if (name == "video/x-raw")
-    {
-        const gchar* format_ = frame.info.finfo->name;
-        if (!format_)
-        {
-            CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'video/x-raw'");
-            return false;
-        }
-        std::string format = toUpperCase(std::string(format_));
-
-        if (format == "BGR")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width * 3, "");
-            Mat src(sz, CV_8UC3, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "GRAY8")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "GRAY16_LE" || format == "GRAY16_BE")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_16UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "BGRA" || format == "RGBA" || format == "BGRX" || format == "RGBX")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width, "");
-            Mat src(sz, CV_8UC4, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "UYVY" || format == "YUY2" || format == "YVYU")
-        {
-            CV_CheckEQ((int)n_planes, 1, "");
-            size_t step = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step, (size_t)frame_width * 2, "");
-            Mat src(sz, CV_8UC2, GST_VIDEO_FRAME_PLANE_DATA(&frame, 0), step);
-            src.copyTo(dst);
-            return true;
-        }
-        else if (format == "NV12" || format == "NV21")
-        {
-            CV_CheckEQ((int)n_planes, 2, "");
-            size_t stepY = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(stepY, (size_t)frame_width, "");
-            size_t stepUV = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
-            CV_CheckGE(stepUV, (size_t)frame_width, "");
-
-            dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
-            Mat dst_ = dst.getMat();
-            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,0), stepY);
-            Mat srcUV(Size(frame_width, frame_height / 2), CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,1), stepUV);
-            srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
-            srcUV.copyTo(dst_(Rect(0, frame_height, frame_width, frame_height / 2)));
-            return true;
-        }
-        else if (format == "YV12" || format == "I420")
-        {
-            CV_CheckEQ((int)n_planes, 3, "");
-            size_t step0 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 0);
-            CV_CheckGE(step0, (size_t)frame_width, "");
-            size_t step1 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 1);
-            CV_CheckGE(step1, (size_t)frame_width / 2, "");
-            size_t step2 = GST_VIDEO_FRAME_PLANE_STRIDE(&frame, 2);
-            CV_CheckGE(step2, (size_t)frame_width / 2, "");
-
-            dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
-            Mat dst_ = dst.getMat();
-            Mat srcY(sz, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,0), step0);
-            Size sz2(frame_width / 2, frame_height / 2);
-            Mat src1(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,1), step1);
-            Mat src2(sz2, CV_8UC1, GST_VIDEO_FRAME_PLANE_DATA(&frame,2), step2);
-            srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
-            src1.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height)));
-            src2.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height) + src1.total()));
-            return true;
-        }
-        else
-        {
-            CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer 'video/x-raw' format: %s", format.c_str()));
-        }
-    }
-    else if (name == "video/x-bayer")
-    {
-        CV_CheckEQ((int)n_planes, 0, "");
-        Mat src = Mat(sz, CV_8UC1, frame.map[0].data);
-        src.copyTo(dst);
-        return true;
-    }
-    else if (name == "image/jpeg")
-    {
-        CV_CheckEQ((int)n_planes, 0, "");
-        Mat src = Mat(Size(frame.map[0].size, 1), CV_8UC1, frame.map[0].data);
-        src.copyTo(dst);
-        return true;
-    }
-
-    CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
+  return true;
 }
 
 bool GStreamerCapture::retrieveFrame(int index, OutputArray dst)
@@ -2423,87 +2624,6 @@ void handleMessage(GstElement * pipeline)
             }
         }
     }
-}
-
-//==================================================================================================
-
-class GStreamerAllocator CV_FINAL : public MatAllocator
-{
-public:
-    UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data0, size_t* step, AccessFlag flags,
-                       UMatUsageFlags usageFlags) const CV_OVERRIDE;
-    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE;
-    UMatData* allocate(GstSample *s) const;
-    void deallocate(UMatData* u) const CV_OVERRIDE;
-
-private:
-    struct GStreamerAllocatorData
-    {
-        GSafePtr<GstSample> sample;
-        GstBuffer * buffer;
-        GstMapInfo info;
-    };
-};
-
-UMatData* GStreamerAllocator::allocate(int /*dims*/, const int* /*sizes*/,
-                                       int /*type*/, void* /*data0*/,
-                                       size_t* /*step*/, AccessFlag /*flags*/,
-                                       UMatUsageFlags /*usageFlags*/) const
-{
-    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
-    return nullptr;
-}
-
-bool GStreamerAllocator::allocate(UMatData* /*u*/, AccessFlag /*accessFlags*/,
-                                  UMatUsageFlags /*usageFlags*/) const
-{
-    CV_Error(Error::Code::StsBadFunc, ("GStreamer allocator may not alloc raw data"));
-    return false;
-}
-
-UMatData* GStreamerAllocator::allocate(GstSample *s) const
-{
-    CV_Assert(s);
-
-    GStreamerAllocatorData *gstdata = new GStreamerAllocatorData;
-    CV_Assert(gstdata);
-
-    gstdata->sample.attach (gst_sample_ref (s));
-    gstdata->buffer = gst_sample_get_buffer (s);
-
-    if (false == gst_buffer_map (gstdata->buffer, &(gstdata->info), GST_MAP_READ)) {
-        CV_Error(Error::Code::StsUnsupportedFormat, ("Unable to map GstBuffer"));
-    }
-
-    UMatData* u = new UMatData(this);
-    u->data = u->origdata = gstdata->info.data;
-    u->size = gstdata->info.size;
-    u->userdata = gstdata;
-
-    return u;
-}
-
-void GStreamerAllocator::deallocate(UMatData* u) const
-{
-    CV_Assert(u);
-    CV_Assert(u->urefcount == 0);
-    CV_Assert(u->refcount == 0);
-
-    GStreamerAllocatorData *gstdata = static_cast<GStreamerAllocatorData *>(u->userdata);
-    CV_Assert (GST_IS_BUFFER (gstdata->buffer));
-
-    gst_buffer_unmap (gstdata->buffer, &(gstdata->info));
-    gstdata->sample.release();
-
-    delete gstdata;
-    delete u;
-}
-
-static MatAllocator* getGStreamerAllocator()
-{
-    static MatAllocator *const instance = new GStreamerAllocator();
-    return instance;
 }
 
 }  // namespace cv
