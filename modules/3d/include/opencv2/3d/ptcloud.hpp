@@ -8,8 +8,6 @@
 #ifndef OPENCV_3D_PTCLOUD_HPP
 #define OPENCV_3D_PTCLOUD_HPP
 
-#include "opencv2/flann.hpp"
-
 namespace cv {
 
 //! @addtogroup _3d
