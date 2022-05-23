@@ -3799,8 +3799,7 @@ namespace fisheye
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
     Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-    This means if you want to transform back points undistorted with #fisheye::undistortPoints you have to
-    multiply them with \f$P^{-1}\f$.
+    This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
      */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
