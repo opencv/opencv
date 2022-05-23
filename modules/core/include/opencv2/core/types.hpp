@@ -895,8 +895,8 @@ public:
     TermCriteria(int type, int maxCount, double epsilon);
 
     /**
-     * @param type
-     * @param epsilon
+     * @param count
+     * @param _epsilon
      */
     TermCriteria(int count, double _epsilon);
 
