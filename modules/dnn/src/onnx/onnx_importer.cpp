@@ -197,7 +197,17 @@ private:
     void parseOperatorSet();
 
     const std::string str_domain_ai_onnx = "ai.onnx";
+
+
+    bool useLegacyNames;
+    bool getParamUseLegacyNames()
+    {
+        bool param = utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_USE_LEGACY_NAMES", false);
+        return param;
+    }
+    const std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
 };
+
 
 class ONNXLayerHandler : public detail::LayerHandler
 {
@@ -233,6 +243,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
+    , useLegacyNames(getParamUseLegacyNames())
 {
     hasDynamicShapes = false;
     CV_Assert(onnxFile);
@@ -256,6 +267,7 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
     : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
+    , useLegacyNames(getParamUseLegacyNames())
 {
     hasDynamicShapes = false;
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
@@ -277,6 +289,7 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
 
     populateNet();
 }
+
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
 {
@@ -909,11 +922,14 @@ const ONNXImporter::DispatchMap& ONNXImporter::getDispatchMap(const opencv_onnx:
     return it->second;
 }
 
-const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
+const std::string ONNXImporter::extractNodeName(const opencv_onnx::NodeProto& node_proto)
 {
+    // We need to rework DNN outputs API, this is a workaround for #21698
     if (node_proto.has_name() && !node_proto.name().empty())
     {
-        return node_proto.name();
+        if (useLegacyNames)
+            return node_proto.name();
+        return cv::format("onnx_node!%s", node_proto.name().c_str());
     }
     for (int i = 0; i < node_proto.output_size(); ++i)
     {
@@ -923,7 +939,9 @@ const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
         // the second method is to use an empty string in place of an input or output name.
         if (!name.empty())
         {
-            return name;
+            if (useLegacyNames)
+                return name.c_str();
+            return cv::format("onnx_node_output_%d!%s", i, name.c_str());
         }
     }
     CV_Error(Error::StsAssert, "Couldn't deduce Node name.");

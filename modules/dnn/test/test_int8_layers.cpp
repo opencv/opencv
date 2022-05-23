@@ -265,14 +265,32 @@ TEST_P(Test_Int8_layers, Mish)
     testLayer("mish", "ONNX", 0.0015, 0.0025);
 }
 
-TEST_P(Test_Int8_layers, Softmax)
+TEST_P(Test_Int8_layers, Softmax_Caffe)
 {
     testLayer("layer_softmax", "Caffe", 0.0011, 0.0036);
+}
+TEST_P(Test_Int8_layers, Softmax_keras_TF)
+{
     testLayer("keras_softmax", "TensorFlow", 0.00093, 0.0027);
+}
+TEST_P(Test_Int8_layers, Softmax_slim_TF)
+{
     testLayer("slim_softmax", "TensorFlow", 0.0016, 0.0034);
+}
+TEST_P(Test_Int8_layers, Softmax_slim_v2_TF)
+{
     testLayer("slim_softmax_v2", "TensorFlow", 0.0029, 0.017);
+}
+TEST_P(Test_Int8_layers, Softmax_ONNX)
+{
     testLayer("softmax", "ONNX", 0.0016, 0.0028);
+}
+TEST_P(Test_Int8_layers, Softmax_log_ONNX)
+{
     testLayer("log_softmax", "ONNX", 0.014, 0.025);
+}
+TEST_P(Test_Int8_layers, DISABLED_Softmax_unfused_ONNX)  // FIXIT Support 'Identity' layer for outputs (#22022)
+{
     testLayer("softmax_unfused", "ONNX", 0.0009, 0.0021);
 }
 
@@ -389,7 +407,7 @@ TEST_P(Test_Int8_layers, Slice_strided_tf)
     testLayer("strided_slice", "TensorFlow", 0.008, 0.0142);
 }
 
-TEST_P(Test_Int8_layers, Slice_onnx)
+TEST_P(Test_Int8_layers, DISABLED_Slice_onnx)  // FIXIT Support 'Identity' layer for outputs (#22022)
 {
     testLayer("slice", "ONNX", 0.0046, 0.0077);
 }

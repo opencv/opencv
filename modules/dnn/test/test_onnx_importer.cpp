@@ -1855,6 +1855,11 @@ TEST_P(Test_ONNX_layers, Quantized_Constant)
     testONNXModels("quantized_constant", npy, 0.002, 0.008);
 }
 
+TEST_P(Test_ONNX_layers, OutputRegistration)
+{
+    testONNXModels("output_registration", npy, 0, 0, false, true, 2);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
