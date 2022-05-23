@@ -5,6 +5,7 @@
 // Copyright (C) 2021, Wanli Zhong <zhongwl2018@mail.sustech.edu.cn>
 
 #include "test_precomp.hpp"
+#include "test_ptcloud_utils.hpp"
 
 namespace opencv_test { namespace {
 
@@ -171,63 +172,6 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
     };
     models_num = (int) models.size();
 
-    /**
-    * Used to generate a specific plane with random points
-    * model: plane coefficient [a,b,c,d] means ax+by+cz+d=0
-    * thr: generate the maximum distance from the point to the plane
-    * limit: the range of xyz coordinates of the generated plane
-    **/
-    auto generatePlane = [](Mat &plane_pts, const vector<float> &model, float thr, int num,
-            const vector<float> &limit) {
-        plane_pts = Mat(num, 3, CV_32F);
-        cv::RNG rng(0);
-        auto *plane_pts_ptr = (float *) plane_pts.data;
-
-        // Part of the points are generated for the specific model
-        // The other part of the points are used to increase the thickness of the plane
-        int std_num = (int) (num / 2);
-        // Difference of maximum d between two parallel planes
-        float d_thr = thr * sqrt(model[0] * model[0] + model[1] * model[1] + model[2] * model[2]);
-
-        for (int i = 0; i < num; i++)
-        {
-            // Let d change then generate thickness
-            float d = i < std_num ? model[3] : rng.uniform(model[3] - d_thr, model[3] + d_thr);
-            float x, y, z;
-            // c is 0 means the plane is vertical
-            if (model[2] == 0)
-            {
-                z = rng.uniform(limit[4], limit[5]);
-                if (model[0] == 0)
-                {
-                    x = rng.uniform(limit[0], limit[1]);
-                    y = -d / model[1];
-                }
-                else if (model[1] == 0)
-                {
-                    x = -d / model[0];
-                    y = rng.uniform(limit[2], limit[3]);
-                }
-                else
-                {
-                    x = rng.uniform(limit[0], limit[1]);
-                    y = -(model[0] * x + d) / model[1];
-                }
-            }
-                // c is not 0
-            else
-            {
-                x = rng.uniform(limit[0], limit[1]);
-                y = rng.uniform(limit[2], limit[3]);
-                z = -(model[0] * x + model[1] * y + d) / model[2];
-            }
-
-            plane_pts_ptr[3 * i] = x;
-            plane_pts_ptr[3 * i + 1] = y;
-            plane_pts_ptr[3 * i + 2] = z;
-        }
-    };
-
     // 1 * 3.1415926f / 180
     float vector_radian_tolerance = 0.0174533f, ratio_tolerance = 0.1f;
     CheckDiffFunction planeCheckDiff = [vector_radian_tolerance, ratio_tolerance](const Mat &a,
@@ -315,38 +259,6 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
             {-1, 1, -1, 1, -1, 0},
     };
     models_num = (int) models.size();
-
-    /**
-    * Used to generate a specific sphere with random points
-    * model: sphere coefficient [x,y,z,r] means x^2+y^2+z^2=r^2
-    * thr: generate the maximum distance from the point to the surface of sphere
-    * limit: the range of vector to make the generated sphere incomplete
-    **/
-    auto generateSphere = [](Mat &sphere_pts, const vector<float> &model, float thr, int num,
-            const vector<float> &limit) {
-        sphere_pts = cv::Mat(num, 3, CV_32F);
-        cv::RNG rng(0);
-        auto *sphere_pts_ptr = (float *) sphere_pts.data;
-
-        // Part of the points are generated for the specific model
-        // The other part of the points are used to increase the thickness of the sphere
-        int sphere_num = (int) (num / 1.5);
-        for (int i = 0; i < num; i++)
-        {
-            // Let r change then generate thickness
-            float r = i < sphere_num ? model[3] : rng.uniform(model[3] - thr, model[3] + thr);
-            // Generate a random vector and normalize it.
-            Vec3f vec(rng.uniform(limit[0], limit[1]), rng.uniform(limit[2], limit[3]),
-                    rng.uniform(limit[4], limit[5]));
-            float l = sqrt(vec.dot(vec));
-            // Normalizes it to have a magnitude of r
-            vec /= l / r;
-
-            sphere_pts_ptr[3 * i] = model[0] + vec[0];
-            sphere_pts_ptr[3 * i + 1] = model[1] + vec[1];
-            sphere_pts_ptr[3 * i + 2] = model[2] + vec[2];
-        }
-    };
 
     float distance_tolerance = 0.1f, radius_tolerance = 0.1f;
     CheckDiffFunction sphereCheckDiff = [distance_tolerance, radius_tolerance](const Mat &a,

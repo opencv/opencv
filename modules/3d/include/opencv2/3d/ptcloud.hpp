@@ -259,6 +259,153 @@ CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray
 CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         float sampled_scale, float dist_lower_limit = 0, RNG *rng = nullptr);
 
+/**
+ * @brief Estimate the normal and curvature of each point in point cloud from NN results.
+ *
+ * Normal estimation by PCA:
+ * + Input: Nearest neighbor points of a specific point: \f$ pt\_set \f$
+ * + Step:
+ *     1. Calculate the \f$ mean(\bar{x},\bar{y},\bar{z}) \f$ of \f$ pt\_set \f$;
+ *     2. A 3x3 covariance matrix \f$ cov \f$ is obtained by \f$ mean^T \cdot mean \f$;
+ *     3. Calculate the eigenvalues(\f$ λ_2 \ge λ_1 \ge λ_0 \f$) and corresponding
+ *        eigenvectors(\f$ v_2, v_1, v_0 \f$) of \f$ cov \f$;
+ *     4. \f$ v0 \f$ is the normal of the specific point,
+ *        \f$ \frac{λ_0}{λ_0 + λ_1 + λ_2} \f$ is the curvature of the specific point;
+ * + Output: Normal and curvature of the specific point.
+ *
+ * @param[out] normals Normal of each point, support vector<Point3f> and Mat of size Nx3.
+ * @param[out] curvatures Curvature of each point, support vector<float> and Mat.
+ * @param input_pts Original point cloud, support vector<Point3f> and Mat of size Nx3/3xN.
+ * @param nn_idx Index information of nearest neighbors of all points. The first nearest neighbor of
+ *               each point is itself. Support vector<vector<int>>, vector<Mat> and Mat of size NxK.
+ *               If the information in a row is [0, 2, 1, -5, -1, 4, 7 ... negative number], it will
+ *               use only non-negative indexes until it meets a negative number or bound of this row
+ *               i.e. [0, 2, 1].
+ * @param max_neighbor_num The maximum number of neighbors want to use including itself. Setting to
+ *               a non-positive number or default will use the information from nn_idx.
+ */
+
+CV_EXPORTS void normalEstimate(OutputArray normals, OutputArray curvatures, InputArray input_pts,
+        InputArrayOfArrays nn_idx, int max_neighbor_num = 0);
+
+/**
+ * @brief Region Growing algorithm in 3D point cloud.
+ *
+ * The key idea of region growing is to merge the nearest neighbor points that satisfy a certain
+ * angle threshold into the same region according to the normal between the two points, so as to
+ * achieve the purpose of segmentation. For more details, please refer to @cite Rabbani2006SegmentationOP.
+ */
+class CV_EXPORTS RegionGrowing3D
+{
+public:
+    //-------------------------- CREATE -----------------------
+
+    static Ptr<RegionGrowing3D> create();
+
+    // -------------------------- CONSTRUCTOR, DESTRUCTOR --------------------------
+
+    RegionGrowing3D() = default;
+
+    virtual ~RegionGrowing3D() = default;
+
+    //-------------------------- SEGMENT -----------------------
+
+    /**
+     * @brief Execute segmentation using the Region Growing algorithm.
+     *
+     * @param[out] regions_idx Index information of all points in each region, support
+     *               vector<vector<int>>, vector<Mat>.
+     * @param[out] labels The label corresponds to the model number, 0 means it does not belong to
+     *               any model, range [0, Number of final resultant models obtained]. Support
+     *               vector<int> and Mat.
+     * @param input_pts Original point cloud, support vector<Point3f> and Mat of size Nx3/3xN.
+     * @param normals Normal of each point, support vector<Point3f> and Mat of size Nx3.
+     * @param nn_idx Index information of nearest neighbors of all points. The first nearest
+     *               neighbor of each point is itself. Support vector<vector<int>>, vector<Mat> and
+     *               Mat of size NxK. If the information in a row is
+     *               [0, 2, 1, -5, -1, 4, 7 ... negative number]
+     *               it will use only non-negative indexes until it meets a negative number or bound
+     *               of this row i.e. [0, 2, 1].
+     * @return Number of final resultant regions obtained by segmentation.
+     */
+    virtual int
+    segment(OutputArrayOfArrays regions_idx, OutputArray labels, InputArray input_pts,
+            InputArray normals, InputArrayOfArrays nn_idx) = 0;
+
+    //-------------------------- Getter and Setter -----------------------
+
+    //! Set the minimum size of region.
+    //！Setting to a non-positive number or default will be unlimited.
+    virtual void setMinSize(int min_size) = 0;
+
+    //! Get the minimum size of region.
+    virtual int getMinSize() const = 0;
+
+    //! Set the maximum size of region.
+    //！Setting to a non-positive number or default will be unlimited.
+    virtual void setMaxSize(int max_size) = 0;
+
+    //! Get the maximum size of region.
+    virtual int getMaxSize() const = 0;
+
+    //! Set whether to use the smoothness mode. Default will be true.
+    //! If true it will check the angle between the normal of the current point and the normal of its neighbor.
+    //! Otherwise, it will check the angle between the normal of the seed point and the normal of current neighbor.
+    virtual void setSmoothModeFlag(bool smooth_mode) = 0;
+
+    //! Get whether to use the smoothness mode.
+    virtual bool getSmoothModeFlag() const = 0;
+
+    //! Set threshold value of the angle between normals, the input value is in radian.
+    //！Default will be 30(degree)*PI/180.
+    virtual void setSmoothnessThreshold(double smoothness_thr) = 0;
+
+    //! Get threshold value of the angle between normals.
+    virtual double getSmoothnessThreshold() const = 0;
+
+    //! Set threshold value of curvature. Default will be 0.05.
+    //! Only points with curvature less than the threshold will be considered to belong to the same region.
+    //! If the curvature of each point is not set, this option will not work.
+    virtual void setCurvatureThreshold(double curvature_thr) = 0;
+
+    //! Get threshold value of curvature.
+    virtual double getCurvatureThreshold() const = 0;
+
+    //! Set the maximum number of neighbors want to use including itself.
+    //! Setting to a non-positive number or default will use the information from nn_idx.
+    virtual void setMaxNumberOfNeighbors(int max_neighbor_num) = 0;
+
+    //! Get the maximum number of neighbors including itself.
+    virtual int getMaxNumberOfNeighbors() const = 0;
+
+    //! Set the maximum number of regions you want.
+    //！Setting to a non-positive number or default will be unlimited.
+    virtual void setNumberOfRegions(int region_num) = 0;
+
+    //! Get the maximum number of regions you want.
+    virtual int getNumberOfRegions() const = 0;
+
+    //! Set whether the results need to be sorted in descending order by the number of points.
+    virtual void setNeedSort(bool need_sort) = 0;
+
+    //! Get whether the results need to be sorted you have set.
+    virtual bool getNeedSort() const = 0;
+
+    //! Set the seed points, it will grow according to the seeds.
+    //! If noArray() is set, the default method will be used:
+    //! 1. If the curvature of each point is set, the seeds will be sorted in ascending order of curvatures.
+    //! 2. Otherwise, the natural order of the point cloud will be used.
+    virtual void setSeeds(InputArray seeds) = 0;
+
+    //! Get the seed points.
+    virtual void getSeeds(OutputArray seeds) const = 0;
+
+    //! Set the curvature of each point, support vector<float> and Mat. If not, you can set it to noArray().
+    virtual void setCurvatures(InputArray curvatures) = 0;
+
+    //! Get the curvature of each point if you have set.
+    virtual void getCurvatures(OutputArray curvatures) const = 0;
+};
 //! @} _3d
 } //end namespace cv
 #endif //OPENCV_3D_PTCLOUD_HPP
