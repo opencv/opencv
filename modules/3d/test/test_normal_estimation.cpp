@@ -6,6 +6,7 @@
 
 #include "test_precomp.hpp"
 #include "test_ptcloud_utils.hpp"
+#include "opencv2/flann.hpp"
 
 namespace opencv_test { namespace {
 
