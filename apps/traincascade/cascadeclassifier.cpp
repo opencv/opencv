@@ -252,7 +252,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
             fs << "}";
         }
         // save current stage
-        char buf[10];
+        char buf[32];
         sprintf(buf, "%s%d", "stage", i );
         string stageFilename = dirName + buf + ".xml";
         FileStorage fs( stageFilename, FileStorage::WRITE );
