@@ -207,7 +207,7 @@ Net readNetFromDarknet(const String &cfgFile, const String &darknetModel /*= Str
     std::ifstream cfgStream(cfgFile.c_str());
     if (!cfgStream.is_open())
     {
-        CV_Error(cv::Error::StsParseError, "Failed to parse NetParameter file: " + std::string(cfgFile));
+        CV_Error(cv::Error::StsParseError, "Failed to open NetParameter file: " + std::string(cfgFile));
     }
     if (darknetModel != String())
     {
