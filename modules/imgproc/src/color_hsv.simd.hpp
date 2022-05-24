@@ -5,6 +5,10 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#ifdef CV_CXX11
+#include <atomic>
+#endif
+
 namespace cv {
 namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -39,36 +43,58 @@ struct RGB2HSV_b
     : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange)
     {
         CV_Assert( hrange == 180 || hrange == 256 );
+        initTables_();
+    }
+
+    void initTables_()
+    {
+        const int hsv_shift = 12;
+
+        static int sdiv_table[256];
+        static int hdiv_table180[256];
+        static int hdiv_table256[256];
+#ifdef CV_CXX11
+        static std::atomic<bool> initialized(false);
+#else
+        static volatile bool initialized = false;
+#endif
+
+        hdiv_table_ = hrange == 180 ? hdiv_table180 : hdiv_table256;
+        sdiv_table_ = sdiv_table;
+
+#ifdef CV_CXX11
+        if (!initialized.load(std::memory_order_acquire))
+#else
+        if (!initialized)
+#endif
+        {
+            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+            for (int i = 1; i < 256; i++)
+            {
+                sdiv_table[i] = saturate_cast<int>((255 << hsv_shift)/(1.*i));
+                hdiv_table180[i] = saturate_cast<int>((180 << hsv_shift)/(6.*i));
+                hdiv_table256[i] = saturate_cast<int>((256 << hsv_shift)/(6.*i));
+            }
+#ifdef CV_CXX11
+            initialized.store(true, std::memory_order_release);
+#else
+            initialized = true;
+#endif
+        }
     }
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
 
-        int i, bidx = blueIdx, scn = srccn;
+        int bidx = blueIdx, scn = srccn;
         const int hsv_shift = 12;
 
-        static int sdiv_table[256];
-        static int hdiv_table180[256];
-        static int hdiv_table256[256];
-        static volatile bool initialized = false;
-
         int hr = hrange;
-        const int* hdiv_table = hr == 180 ? hdiv_table180 : hdiv_table256;
+        const int* hdiv_table/*[256]*/ = hdiv_table_;
+        const int* sdiv_table/*[256]*/ = sdiv_table_;
 
-        if( !initialized )
-        {
-            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
-            for( i = 1; i < 256; i++ )
-            {
-                sdiv_table[i] = saturate_cast<int>((255 << hsv_shift)/(1.*i));
-                hdiv_table180[i] = saturate_cast<int>((180 << hsv_shift)/(6.*i));
-                hdiv_table256[i] = saturate_cast<int>((256 << hsv_shift)/(6.*i));
-            }
-            initialized = true;
-        }
-
-        i = 0;
+        int i = 0;
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
@@ -231,6 +257,9 @@ struct RGB2HSV_b
     }
 
     int srccn, blueIdx, hrange;
+
+    const int* hdiv_table_/*[256]*/;
+    const int* sdiv_table_/*[256]*/;
 };
 
 
