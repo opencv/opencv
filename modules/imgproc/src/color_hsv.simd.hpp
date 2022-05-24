@@ -56,17 +56,19 @@ struct RGB2HSV_b
         int hr = hrange;
         const int* hdiv_table = hr == 180 ? hdiv_table180 : hdiv_table256;
 
-        cv::AutoLock lock(*mutex);
-        if( !initialized )
         {
-            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
-            for( i = 1; i < 256; i++ )
+            cv::AutoLock lock(*mutex);
+            if( !initialized )
             {
-                sdiv_table[i] = saturate_cast<int>((255 << hsv_shift)/(1.*i));
-                hdiv_table180[i] = saturate_cast<int>((180 << hsv_shift)/(6.*i));
-                hdiv_table256[i] = saturate_cast<int>((256 << hsv_shift)/(6.*i));
+                sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+                for( i = 1; i < 256; i++ )
+                {
+                    sdiv_table[i] = saturate_cast<int>((255 << hsv_shift)/(1.*i));
+                    hdiv_table180[i] = saturate_cast<int>((180 << hsv_shift)/(6.*i));
+                    hdiv_table256[i] = saturate_cast<int>((256 << hsv_shift)/(6.*i));
+                }
+                initialized = true;
             }
-            initialized = true;
         }
 
         i = 0;
