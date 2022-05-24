@@ -713,6 +713,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_umat_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_umat_result);
             ASSERT_FALSE(umat.empty());
             umat.copyTo(frame);
@@ -728,6 +735,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_result);
         }
         ASSERT_FALSE(frame.empty());
