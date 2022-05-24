@@ -430,4 +430,80 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
 
 #endif // UPDATE_QRCODE_TEST_DATA
 
+TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
+{
+    const cv::String expect_msg = "OpenCV";
+    const int min_version = 1;
+    const int max_version = 40;
+
+    for ( int v = min_version ; v <= max_version ; v++ )
+    {
+        Mat qrimg;
+        QRCodeEncoder::Params params;
+        params.version = v;
+        Ptr<QRCodeEncoder> qrcode_enc = cv::QRCodeEncoder::create(params);
+        qrcode_enc->encode(expect_msg, qrimg);
+
+        const int white_margin = 2;
+        const int finder_width = 7;
+
+        const int timing_pos = white_margin + 6;
+        int i;
+
+        // Horizontal Check
+        // (1) White margin(Left)
+        for(i = 0; i < white_margin ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(i, timing_pos) == 255 ) ;
+        }
+        // (2) Finder pattern(Left)
+        for(     ; i < white_margin + finder_width ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(i, timing_pos) == 0 ) ;
+        }
+        // (3) Timing pattern
+        for(     ; i < qrimg.rows - finder_width - white_margin; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(i, timing_pos) == ((i % 2 == 0)?0:255) ) ;
+        }
+        // (4) Finder pattern(Right)
+        for(     ; i < qrimg.rows - white_margin; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(i, timing_pos) == 0 );
+        }
+        // (5) White margin(Right)
+        for(     ; i < qrimg.rows ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(i, timing_pos) == 255 );
+        }
+
+        // Vertical Check
+        // (1) White margin(Top)
+        for(i = 0; i < white_margin ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(timing_pos, i) == 255 ) ;
+        }
+        // (2) Finder pattern(Top)
+        for(     ; i < white_margin + finder_width ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(timing_pos, i) == 0 ) ;
+        }
+        // (3) Timing pattern
+        for(     ; i < qrimg.rows - finder_width - white_margin; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(timing_pos, i) == ((i % 2 == 0)?0:255) ) ;
+        }
+        // (4) Finder pattern(Bottom)
+        for(     ; i < qrimg.rows - white_margin; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(timing_pos, i) == 0 );
+        }
+        // (5) White margin(Bottom)
+        for(     ; i < qrimg.rows ; i++ )
+        {
+            CV_Assert( qrimg.at<uint8_t>(timing_pos, i) == 255 );
+        }
+    }
+}
+
 }} // namespace
