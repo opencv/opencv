@@ -6,15 +6,19 @@
 
 #include <ade/util/zip_range.hpp> // zip_range, indexed
 
+#include "compiler/gmodel.hpp"
+#include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/util/throw.hpp> // throw_error
 #include <opencv2/gapi/python/python.hpp>
 
 #include "api/gbackend_priv.hpp"
 #include "backends/common/gbackend.hpp"
 
-cv::gapi::python::GPythonKernel::GPythonKernel(cv::gapi::python::Impl run)
-    : m_run(run)
+cv::gapi::python::GPythonKernel::GPythonKernel(cv::gapi::python::Impl run,
+                                               cv::gapi::python::Setup setup)
+    : m_run(run), m_setup(setup)
 {
+    m_isStateful = (setup != nullptr);
 }
 
 cv::GRunArgs cv::gapi::python::GPythonKernel::operator()(const cv::gapi::python::GPythonContext& ctx)
@@ -23,9 +27,10 @@ cv::GRunArgs cv::gapi::python::GPythonKernel::operator()(const cv::gapi::python:
 }
 
 cv::gapi::python::GPythonFunctor::GPythonFunctor(const char* id,
-                                                 const cv::gapi::python::GPythonFunctor::Meta &meta,
-                                                 const cv::gapi::python::Impl& impl)
-    : gapi::GFunctor(id), impl_{GPythonKernel{impl}, meta}
+                                                 const cv::gapi::python::GPythonFunctor::Meta& meta,
+                                                 const cv::gapi::python::Impl& impl,
+                                                 const cv::gapi::python::Setup& setup)
+    : gapi::GFunctor(id), impl_{GPythonKernel{impl, setup}, meta}
 {
 }
 
@@ -68,6 +73,7 @@ class GPythonExecutable final: public cv::gimpl::GIslandExecutable
     virtual cv::RMat allocate(const cv::GMatDesc&) const override { return {}; }
 
     virtual bool canReshape() const override { return true; }
+    virtual void handleNewStream() override;
     virtual void reshape(ade::Graph&, const cv::GCompileArgs&) override {
         // Do nothing here
     }
@@ -80,6 +86,7 @@ public:
     cv::gimpl::GModel::ConstGraph m_gm;
     cv::gapi::python::GPythonKernel m_kernel;
     ade::NodeHandle m_op;
+    cv::GArg m_node_state;
 
     cv::GTypesInfo m_out_info;
     cv::GMetaArgs  m_in_metas;
@@ -153,6 +160,15 @@ static void writeBack(cv::GRunArg& arg, cv::GRunArgP& out)
     }
 }
 
+void GPythonExecutable::handleNewStream()
+{
+    if (!m_kernel.m_isStateful)
+        return;
+
+    m_node_state = m_kernel.m_setup(cv::gimpl::GModel::collectInputMeta(m_gm, m_op),
+                                    m_gm.metadata(m_op).get<cv::gimpl::Op>().args);
+}
+
 void GPythonExecutable::run(std::vector<InObj>  &&input_objs,
                             std::vector<OutObj> &&output_objs)
 {
@@ -165,8 +181,15 @@ void GPythonExecutable::run(std::vector<InObj>  &&input_objs,
                          std::back_inserter(inputs),
                          std::bind(&packArg, std::ref(m_res), _1));
 
+    cv::gapi::python::GPythonContext ctx{inputs, m_in_metas, m_out_info, false};
 
-    cv::gapi::python::GPythonContext ctx{inputs, m_in_metas, m_out_info};
+    // For stateful kernel add state to its execution context
+    if (m_kernel.m_isStateful)
+    {
+        ctx.m_state = m_node_state;
+        ctx.m_isStateful = true;
+    }
+
     auto outs = m_kernel(ctx);
 
     for (auto&& it : ade::util::zip(outs, output_objs))
@@ -224,6 +247,12 @@ GPythonExecutable::GPythonExecutable(const ade::Graph& g,
 
     m_op = *it;
     m_kernel = cag.metadata(m_op).get<PythonUnit>().kernel;
+
+    // If kernel is stateful then prepare storage for its state.
+    if (m_kernel.m_isStateful)
+    {
+        m_node_state = cv::GArg{ };
+    }
 
     // Ensure this the only op in the graph
     if (std::any_of(it+1, nodes.end(), is_op))
