@@ -375,7 +375,7 @@ struct MinkowskiDistance
     MinkowskiDistance(int order_) : order(order_) {}
 
     /**
-     *  Compute the Minkowsky (L_p) distance between two vectors.
+     *  Compute the Minkowski (L_p) distance between two vectors.
      *
      *	This is highly optimised, with loop unrolling, as it is one
      *	of the most expensive inner loops.
