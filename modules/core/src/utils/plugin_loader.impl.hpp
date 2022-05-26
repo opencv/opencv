@@ -56,7 +56,7 @@ void* DynamicLib::getSymbol(const char* symbolName) const
     return res;
 }
 
-const std::string DynamicLib::getName() const
+std::string DynamicLib::getName() const
 {
     return toPrintablePath(fname);
 }

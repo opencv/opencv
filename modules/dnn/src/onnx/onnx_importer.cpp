@@ -205,7 +205,7 @@ private:
         bool param = utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_USE_LEGACY_NAMES", false);
         return param;
     }
-    const std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
+    std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
 };
 
 
@@ -922,7 +922,7 @@ const ONNXImporter::DispatchMap& ONNXImporter::getDispatchMap(const opencv_onnx:
     return it->second;
 }
 
-const std::string ONNXImporter::extractNodeName(const opencv_onnx::NodeProto& node_proto)
+std::string ONNXImporter::extractNodeName(const opencv_onnx::NodeProto& node_proto)
 {
     // We need to rework DNN outputs API, this is a workaround for #21698
     if (node_proto.has_name() && !node_proto.name().empty())
