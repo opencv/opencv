@@ -205,12 +205,12 @@ public:
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
     Ptr<Feature2D> featuresFinder() { return features_finder_; }
-    const Ptr<Feature2D> featuresFinder() const { return features_finder_; }
+    Ptr<Feature2D> featuresFinder() const { return features_finder_; }
     void setFeaturesFinder(Ptr<Feature2D> features_finder)
         { features_finder_ = features_finder; }
 
     Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher_; }
-    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
+    Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 

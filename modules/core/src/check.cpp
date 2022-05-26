@@ -14,7 +14,7 @@ const char* depthToString(int depth)
     return s ? s : "<invalid depth>";
 }
 
-const cv::String typeToString(int type)
+cv::String typeToString(int type)
 {
     cv::String s = detail::typeToString_(type);
     if (s.empty())
@@ -47,7 +47,7 @@ const char* depthToString_(int depth)
     return (depth <= CV_16F && depth >= 0) ? depthNames[depth] : NULL;
 }
 
-const cv::String typeToString_(int type)
+cv::String typeToString_(int type)
 {
     int depth = CV_MAT_DEPTH(type);
     int cn = CV_MAT_CN(type);
