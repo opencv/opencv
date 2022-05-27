@@ -74,16 +74,15 @@ as \f$K\f$) projects 3D points given in the camera coordinate system to 2D pixel
 
 \f[p = A P_c.\f]
 
-The camera intrinsic matrix \f$A\f$ is composed of the focal lengths \f$f_x\f$ and \f$f_y\f$, which
-are expressed in pixel units, and the principal point \f$(c_x, c_y)\f$, that is usually close to the
+The camera intrinsic matrix \f$A\f$ is composed of the focal lengths \f$f_x\f$ and \f$f_y\f$, which are
+expressed in pixel units, and the principal point \f$(c_x, c_y)\f$, that is usually close to the
 image center:
 
 \f[A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1},\f]
 
 and thus
 
-\f[s \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
-\vecthree{X_c}{Y_c}{Z_c}.\f]
+\f[s \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1} \vecthree{X_c}{Y_c}{Z_c}.\f]
 
 The matrix of intrinsic parameters does not depend on the scene viewed. So, once estimated, it can
 be re-used as long as the focal length is fixed (in case of a zoom lens). Thus, if an image from the
@@ -180,8 +179,8 @@ Z_w \\
 1
 \end{bmatrix},\f]
 
-with \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$. Putting the equations for instrincs and
-extrinsics together, we can write out \f$s \; p = A \begin{bmatrix} R|t \end{bmatrix} P_w\f$ as
+with \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$. Putting the equations for instrincs and extrinsics together, we can write out
+\f$s \; p = A \begin{bmatrix} R|t \end{bmatrix} P_w\f$ as
 
 \f[s \vecthree{u}{v}{1} = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}
 \begin{bmatrix}
@@ -221,8 +220,8 @@ The following figure illustrates the pinhole camera model.
 
 ![Pinhole camera model](pics/pinhole_camera_model.png)
 
-Real lenses usually have some distortion, mostly radial distortion, and slight tangential
-distortion. So, the above model is extended as:
+Real lenses usually have some distortion, mostly radial distortion, and slight tangential distortion.
+So, the above model is extended as:
 
 \f[\begin{bmatrix}
 u \\
@@ -238,10 +237,9 @@ where
 x'' \\
 y''
 \end{bmatrix} = \begin{bmatrix}
-x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 +
-2 x'^2) + s_1 r^2 + s_2 r^4 \\
-y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2
-p_2 x' y' + s_3 r^2 + s_4 r^4 \\ \end{bmatrix}\f]
+x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + 2 p_1 x' y' + p_2(r^2 + 2 x'^2) + s_1 r^2 + s_2 r^4 \\
+y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6} + p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
+\end{bmatrix}\f]
 
 with
 
@@ -259,11 +257,9 @@ Y_c/Z_c
 
 if \f$Z_c \ne 0\f$.
 
-The distortion parameters are the radial coefficients \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$,
-\f$k_5\f$, and \f$k_6\f$
-,\f$p_1\f$ and \f$p_2\f$ are the tangential distortion coefficients, and \f$s_1\f$, \f$s_2\f$,
-\f$s_3\f$, and \f$s_4\f$, are the thin prism distortion coefficients. Higher-order coefficients are
-not considered in OpenCV.
+The distortion parameters are the radial coefficients \f$k_1\f$, \f$k_2\f$, \f$k_3\f$, \f$k_4\f$, \f$k_5\f$, and \f$k_6\f$
+,\f$p_1\f$ and \f$p_2\f$ are the tangential distortion coefficients, and \f$s_1\f$, \f$s_2\f$, \f$s_3\f$, and \f$s_4\f$,
+are the thin prism distortion coefficients. Higher-order coefficients are not considered in OpenCV.
 
 The next figures show two common types of radial distortion: barrel distortion
 (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically decreasing)
@@ -386,10 +382,10 @@ R & t \\
 \end{bmatrix} P_{h_0}.\f]
 
 @note
-    -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although
-all functions assume the same structure of this parameter, they may name it differently. The
-        parameter's description, however, will be clear in that a camera intrinsic matrix with the
-structure shown above is required.
+    -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
+        functions assume the same structure of this parameter, they may name it differently. The
+        parameter's description, however, will be clear in that a camera intrinsic matrix with the structure
+        shown above is required.
     -   A calibration sample for 3 cameras in a horizontal position can be found at
         opencv_source_code/samples/cpp/3calibration.cpp
     -   A calibration sample based on a sequence of images can be found at
@@ -411,8 +407,8 @@ structure shown above is required.
 
     \f[Xc = R X + T\f]
 
-    where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om); call
-x, y and z the 3 coordinates of Xc:
+    where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om); call x, y
+    and z the 3 coordinates of Xc:
 
     \f[x = Xc_1 \\ y = Xc_2 \\ z = Xc_3\f]
 
