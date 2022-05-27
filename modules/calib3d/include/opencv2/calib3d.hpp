@@ -430,11 +430,7 @@ R & t \\
     v = f_y y' + c_y\f]
 
     Summary:
-    Generic camera model with perspective projection and without distortion correction
-
-    Kannala, Juho & Brandt, Sami. (2006). A Generic Camera Model and Calibration Method for
-    Conventional, Wide-Angle, and Fish-Eye Lenses. IEEE transactions on pattern analysis and machine
-    intelligence. 28. 1335-40. 10.1109/TPAMI.2006.153.
+    Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
 
     @defgroup calib3d_c C API
 
