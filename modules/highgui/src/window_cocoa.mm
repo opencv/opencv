@@ -107,6 +107,7 @@ static bool wasInitialized = false;
 
 @interface CVWindow : NSWindow {
     NSMutableDictionary *sliders;
+    NSMutableArray *slidersKeys;
     CvMouseCallback mouseCallback;
     void *mouseParam;
     BOOL autosize;
@@ -121,6 +122,7 @@ static bool wasInitialized = false;
 @property(assign) int x0;
 @property(assign) int y0;
 @property(retain) NSMutableDictionary *sliders;
+@property(retain) NSMutableArray *slidersKeys;
 @property(readwrite) int status;
 - (CVView *)contentView;
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags;
@@ -842,6 +844,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 @synthesize x0;
 @synthesize y0;
 @synthesize sliders;
+@synthesize slidersKeys;
 @synthesize status;
 
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
@@ -933,6 +936,9 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if(sliders == nil)
         sliders = [[NSMutableDictionary alloc] init];
 
+    if(slidersKeys == nil)
+        slidersKeys = [[NSMutableArray alloc] init];
+    
     NSString *cvname = [NSString stringWithFormat:@"%s", name];
 
     // Avoid overwriting slider
@@ -954,6 +960,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     // Save slider
     [sliders setValue:slider forKey:cvname];
+    [slidersKeys addObject:cvname];
     [[self contentView] addSubview:slider];
 
 
@@ -1092,7 +1099,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     CVWindow *cvwindow = (CVWindow *)[self window];
     if ([cvwindow respondsToSelector:@selector(sliders)]) {
-        for(NSString *key in [cvwindow sliders]) {
+        for(NSString *key in [cvwindow slidersKeys]) {
             CVSlider *slider = [[cvwindow sliders] valueForKey:key];
             NSRect r = [slider frame];
             r.origin.y = height - r.size.height;
