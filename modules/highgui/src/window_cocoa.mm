@@ -92,6 +92,7 @@ static bool wasInitialized = false;
 @interface CVSlider : NSView {
     NSSlider *slider;
     NSTextField *name;
+    NSString *initialName;
     int *value;
     void *userData;
     CvTrackbarCallback callback;
@@ -99,6 +100,7 @@ static bool wasInitialized = false;
 }
 @property(retain) NSSlider *slider;
 @property(retain) NSTextField *name;
+@property(retain) NSString *initialName;
 @property(assign) int *value;
 @property(assign) void *userData;
 @property(assign) CvTrackbarCallback callback;
@@ -948,12 +950,16 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     // Create slider
     CVSlider *slider = [[CVSlider alloc] init];
     [[slider name] setStringValue:cvname];
+    slider.initialName = [NSString stringWithFormat:@"%s", name];
     [[slider slider] setMaxValue:max];
     [[slider slider] setMinValue:0];
     if(value)
     {
         [[slider slider] setIntValue:*value];
         [slider setValue:value];
+        NSString *temp = [slider initialName];
+        NSString *text = [NSString stringWithFormat:@"%@ %d", temp, *value];
+        [[slider name] setStringValue: text];
     }
     if(callback)
         [slider setCallback:callback];
@@ -1151,6 +1157,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
 @synthesize slider;
 @synthesize name;
+@synthesize initialName;
 @synthesize value;
 @synthesize userData;
 @synthesize callback;
@@ -1193,6 +1200,9 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 - (void)sliderChanged:(NSNotification *)notification {
     (void)notification;
     int pos = [slider intValue];
+    NSString *temp = [self initialName];
+    NSString *text = [NSString stringWithFormat:@"%@ %d", temp, *value];
+    [name setStringValue: text];
     if(value)
         *value = pos;
     if(callback)
