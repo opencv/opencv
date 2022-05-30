@@ -322,6 +322,7 @@ CV_EXPORTS_W bool haveImageReader( const String& filename );
  */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
+CV_EXPORTS_W Mat imreadoptional( const String& filename, Size limitSize, int flags = IMREAD_ANYCOLOR);
 
 //! @} imgcodecs
 

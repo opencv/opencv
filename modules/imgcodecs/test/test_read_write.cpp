@@ -303,4 +303,12 @@ TEST(Imgcodecs_Image, write_umat)
     EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
+TEST(ImgCodecs_Image, imreadoptional)
+{
+    const string src_name = TS::ptr()->get_data_path() + "../python/images/baboon.bmp";
+
+    Mat img = imreadoptional(src_name, Size(400,400));
+    ASSERT_TRUE(img.empty());
+}
+
 }} // namespace

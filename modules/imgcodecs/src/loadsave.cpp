@@ -383,7 +383,7 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
  *
 */
 static bool
-imread_( const String& filename, int flags, Mat& mat )
+imread_( const String& filename, int flags, Mat& mat, Size limitSize = Size())
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -440,6 +440,10 @@ imread_( const String& filename, int flags, Mat& mat )
 
     // established the required input image size
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+    if(!limitSize.empty() && (limitSize.width * limitSize.height < size.width * size.height)) {
+        return false;
+    }
 
     // grab the decoded type
     int type = decoder->type();
@@ -627,6 +631,15 @@ Mat imread( const String& filename, int flags )
     imread_( filename, flags, img );
 
     /// return a reference to the data
+    return img;
+}
+
+Mat imreadoptional( const String& filename, Size limitSize, int flags) {
+    CV_TRACE_FUNCTION();
+
+    Mat img;
+    imread_(filename, flags, img, limitSize);
+
     return img;
 }
 
