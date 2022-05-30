@@ -484,7 +484,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             for( i = 0; i < 3; i++ )
                 for( j = 0; j < 3; j++ )
                 {
-                    values_read = fscanf(file, "%lf", &goodRotMatrs[currImage].val[i*3+j]);
+                    // Yes, load with transpose
+                    values_read = fscanf(file, "%lf", &goodRotMatrs[currImage].val[j*3+i]);
                     CV_Assert(values_read == 1);
                 }
         }
@@ -661,7 +662,7 @@ void CV_CameraCalibrationTest::run( int start_from )
 
         /* ----- Compare per view re-projection errors ----- */
         CV_Assert(perViewErrors.size() == (size_t)numImages);
-        code = compare(&perViewErrors[0], &goodPerViewErrors[0], numImages, 1.1, "per view errors vector");
+        code = compare(&perViewErrors[0], &goodPerViewErrors[0], numImages, 0.1, "per view errors vector");
         if( code < 0 )
             break;
 
@@ -792,7 +793,6 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
     {
         Mat r9;
         cvtest::Rodrigues( rvecs[i], r9 );
-        cv::transpose(r9, r9);
         r9.convertTo(rotationMatrices[i], CV_64F);
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }
