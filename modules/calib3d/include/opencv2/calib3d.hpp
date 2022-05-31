@@ -2099,7 +2099,7 @@ unit length.
 CV_EXPORTS_W void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
 
 /** @brief Recovers the relative camera rotation and the translation from an estimated essential
-matrix and the corresponding points in two images, using cheirality check. Returns the number of
+matrix and the corresponding points in two images, using chirality check. Returns the number of
 inliers that pass the check.
 
 @param E The input essential matrix.
@@ -2118,10 +2118,10 @@ therefore is only known up to scale, i.e. t is the direction of the translation 
 length.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
 inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+recover pose. In the output mask only inliers which pass the chirality check.
 
 This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
-possible pose hypotheses by doing cheirality check. The cheirality check means that the
+possible pose hypotheses by doing chirality check. The chirality check means that the
 triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
 
 This function can be used to process the output E and mask from @ref findEssentialMat. In this
@@ -2169,7 +2169,7 @@ are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
 inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+recover pose. In the output mask only inliers which pass the chirality check.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -2205,11 +2205,11 @@ length.
 points).
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
 inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+recover pose. In the output mask only inliers which pass the chirality check.
 @param triangulatedPoints 3D points which were reconstructed by triangulation.
 
 This function differs from the one above that it outputs the triangulated 3D point that are used for
-the cheirality check.
+the chirality check.
  */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             InputArray cameraMatrix, OutputArray R, OutputArray t, double distanceThresh, InputOutputArray mask = noArray(),
