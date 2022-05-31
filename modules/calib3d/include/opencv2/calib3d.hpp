@@ -2117,7 +2117,7 @@ described below.
 therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
 length.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
 recover pose. In the output mask only inliers which pass the cheirality check.
 
 This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
@@ -2168,7 +2168,7 @@ length.
 are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
 recover pose. In the output mask only inliers which pass the cheirality check.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
@@ -2204,7 +2204,7 @@ length.
 @param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite
 points).
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
 recover pose. In the output mask only inliers which pass the cheirality check.
 @param triangulatedPoints 3D points which were reconstructed by triangulation.
 
