@@ -231,7 +231,7 @@ static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = utils::getConfigura
 #endif
 );
 
-static const String getBuildExtraOptions()
+static String getBuildExtraOptions()
 {
     static String param_buildExtraOptions;
     static bool initialized = false;
