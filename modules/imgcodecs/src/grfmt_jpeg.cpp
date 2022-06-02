@@ -217,7 +217,7 @@ ImageDecoder JpegDecoder::newDecoder() const
 
 bool  JpegDecoder::readHeader()
 {
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     close();
 
     JpegState* state = new JpegState;
@@ -402,7 +402,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 
 bool  JpegDecoder::readData( Mat& img )
 {
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     size_t step = img.step;
     bool color = img.channels() > 1;
 
@@ -590,7 +590,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         fileWrapper() : f(0) {}
         ~fileWrapper() { if(f) fclose(f); }
     };
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     fileWrapper fw;
     int width = img.cols, height = img.rows;
 

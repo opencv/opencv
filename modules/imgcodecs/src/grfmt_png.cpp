@@ -141,7 +141,7 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, uchar* dst, size_t size )
 
 bool  PngDecoder::readHeader()
 {
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     close();
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
@@ -223,7 +223,7 @@ bool  PngDecoder::readHeader()
 
 bool  PngDecoder::readData( Mat& img )
 {
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     AutoBuffer<uchar*> _buffer(m_height);
     uchar** buffer = _buffer.data();
     bool color = img.channels() > 1;
@@ -359,7 +359,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     FILE * volatile f = 0;
     int y, width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
-    volatile bool result = false;
+    volatile bool result = false; // volatile due to setjmp use below
     AutoBuffer<uchar*> buffer;
 
     if( depth != CV_8U && depth != CV_16U )
