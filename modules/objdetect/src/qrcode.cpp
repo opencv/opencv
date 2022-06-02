@@ -2379,12 +2379,26 @@ bool QRDecode::samplingForVersion()
 
     const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
     const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
+    const int skipped_rows = postIntermediate.rows - delta_rows * version_size;
+    const int skipped_cols = postIntermediate.cols - delta_cols * version_size;
+
+    vector<int> deltas_rows(version_size, delta_rows);
+    vector<int> deltas_cols(version_size, delta_cols);
+
+    for (int i = 0; i < abs(skipped_rows); i++) {
+        deltas_rows[(i*version_size)/abs(skipped_rows)+(version_size/abs(skipped_cols)-1)/2]
+        += skipped_rows > 0 ? 1 : -1;
+    }
+    for (int i = 0; i < abs(skipped_cols); i++) {
+        deltas_cols[(i*version_size)/abs(skipped_cols)+(version_size/abs(skipped_cols)-1)/2]
+        += skipped_cols > 0 ? 1 : -1;
+    }
 
     const double totalFrequencyElem = countNonZero(postIntermediate) / static_cast<double>(postIntermediate.total());
     straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
 
-    for (int r = 0, i = 0; i < version_size; r += delta_rows, i++) {
-        for (int c = 0, j = 0; j < version_size; c += delta_cols, j++) {
+    for (int r = 0, i = 0; i < version_size; r += deltas_rows[i], i++) {
+        for (int c = 0, j = 0; j < version_size; c += deltas_cols[j], j++) {
             Mat tile = postIntermediate(
                            Range(r, min(r + delta_rows, postIntermediate.rows)),
                            Range(c, min(c + delta_cols, postIntermediate.cols)));
