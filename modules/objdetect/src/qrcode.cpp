@@ -2379,43 +2379,17 @@ bool QRDecode::samplingForVersion()
     const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
     const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
 
-    vector<double> listFrequencyElem;
-    for (int r = 0; r < postIntermediate.rows; r += delta_rows)
-    {
-        for (int c = 0; c < postIntermediate.cols; c += delta_cols)
-        {
+    const double totalFrequencyElem = countNonZero(postIntermediate) / static_cast<double>(postIntermediate.total());
+    straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
+
+    for (int r = 0, i = 0; i < version_size; r += delta_rows, i++) {
+        for (int c = 0, j = 0; j < version_size; c += delta_cols, j++) {
             Mat tile = postIntermediate(
                            Range(r, min(r + delta_rows, postIntermediate.rows)),
                            Range(c, min(c + delta_cols, postIntermediate.cols)));
             const double frequencyElem = (countNonZero(tile) * 1.0) / tile.total();
-            listFrequencyElem.push_back(frequencyElem);
+            straight.ptr<uint8_t>(i)[j] = (frequencyElem < totalFrequencyElem) ? 0 : 255;
         }
-    }
-
-    double dispersionEFE = std::numeric_limits<double>::max();
-    double experimentalFrequencyElem = 0;
-    for (double expVal = 0; expVal < 1; expVal+=0.001)
-    {
-        double testDispersionEFE = 0.0;
-        for (size_t i = 0; i < listFrequencyElem.size(); i++)
-        {
-            testDispersionEFE += (listFrequencyElem[i] - expVal) *
-                                 (listFrequencyElem[i] - expVal);
-        }
-        testDispersionEFE /= (listFrequencyElem.size() - 1);
-        if (dispersionEFE > testDispersionEFE)
-        {
-            dispersionEFE = testDispersionEFE;
-            experimentalFrequencyElem = expVal;
-        }
-    }
-
-    straight = Mat(Size(version_size, version_size), CV_8UC1, Scalar(0));
-    for (int r = 0; r < version_size * version_size; r++)
-    {
-        int i   = r / straight.cols;
-        int j   = r % straight.cols;
-        straight.ptr<uint8_t>(i)[j] = (listFrequencyElem[r] < experimentalFrequencyElem) ? 0 : 255;
     }
     return true;
 }
