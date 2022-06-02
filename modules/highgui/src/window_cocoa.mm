@@ -940,7 +940,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     if(slidersKeys == nil)
         slidersKeys = [[NSMutableArray alloc] init];
-    
+
     NSString *cvname = [NSString stringWithFormat:@"%s", name];
 
     // Avoid overwriting slider
