@@ -683,7 +683,25 @@ TEST(Objdetect_QRCode_basic, not_found_qrcode)
 #endif
 }
 
+TEST(Objdetect_QRCode_detect, detect_regression_21287)
+{
+    const std::string name_current_image = "issue_21287.png";
+    const std::string root = "qrcode/";
 
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    Mat straight_barcode;
+    cv::String decoded_info;
+    EXPECT_TRUE(qrcode.detect(src, corners));
+    EXPECT_TRUE(!corners.empty());
+#ifdef HAVE_QUIRC
+    EXPECT_NO_THROW(qrcode.decode(src, corners, straight_barcode));
+#endif
+}
 
 #endif // UPDATE_QRCODE_TEST_DATA
 
