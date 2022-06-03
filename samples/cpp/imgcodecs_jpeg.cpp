@@ -31,8 +31,7 @@ int main(int /*argc*/, const char** /* argv */ )
     // Draw original image(s).
     int top = 0; // Upper images
     { 
-        int left = 0;
-        for( left = 0 ; left < img.rows * 5 ; left += img.rows ){
+        for( int left = 0 ; left < img.rows * 5 ; left += img.rows ){
             Mat roi = framebuffer( Rect( left, top, img.rows, img.cols ) );
             img.copyTo(roi);
            
@@ -43,7 +42,7 @@ int main(int /*argc*/, const char** /* argv */ )
     // Draw lossy images
     top += img.cols; // Lower images
     {
-        struct {
+        struct test_config{
             string comment;
             uint32_t sampling_factor;
         } config [] = {
@@ -55,8 +54,8 @@ int main(int /*argc*/, const char** /* argv */ )
         };
 
         int left = 0;
-       
-        for ( auto it : config )
+
+        for ( const test_config &it : config )
         {
             // Compress images with sampling factor parameter.
             vector<int> param;
