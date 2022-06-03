@@ -1070,6 +1070,15 @@ protected:
     };
 };
 
+float static getMinSideLen(const vector<Point2f> &points) {
+    CV_Assert(points.size() == 4ull);
+    double res = norm(points[1]-points[0]);
+    for (size_t i = 1ull; i < points.size(); i++) {
+        res = min(res, norm(points[i]-points[(i+1ull) % points.size()]));
+    }
+    return static_cast<float>(res);
+}
+
 void QRDecode::init(const Mat &src, const vector<Point2f> &points)
 {
     CV_TRACE_FUNCTION();
@@ -1081,7 +1090,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     original_points = bbox;
     version = 0;
     version_size = 0;
-    test_perspective_size = 251;
+    test_perspective_size = max(getMinSideLen(points)+1.f, 251.f);
     result_info = "";
 }
 
@@ -2096,7 +2105,7 @@ bool QRDecode::straightenQRCodeInParts()
     {
         return false;
     }
-    float perspective_curved_size = 251.0;
+    float perspective_curved_size = max(getMinSideLen(original_points)+1.f, 251.f);;
     const Size temporary_size(cvRound(perspective_curved_size), cvRound(perspective_curved_size));
 
     float dist = perspective_curved_size / (number_pnts_to_cut - 1);
@@ -2367,10 +2376,9 @@ bool QRDecode::versionDefinition()
 bool QRDecode::samplingForVersion()
 {
     CV_TRACE_FUNCTION();
-    const double multiplyingFactor = (version < 3)  ? 1 :
-                                     (version == 3) ? 1.5 :
-                                     (version < 6) ? version*(version+1) :
-                                     version;
+    const double multiplyingFactor = (version < 3)  ? 1. :
+                                     (version == 3) ? 2. :
+                                     3.;
     const Size newFactorSize(
                   cvRound(no_border_intermediate.size().width  * multiplyingFactor),
                   cvRound(no_border_intermediate.size().height * multiplyingFactor));
@@ -2379,6 +2387,7 @@ bool QRDecode::samplingForVersion()
 
     const int delta_rows = cvRound((postIntermediate.rows * 1.0) / version_size);
     const int delta_cols = cvRound((postIntermediate.cols * 1.0) / version_size);
+    // number of elements in the tail
     const int skipped_rows = postIntermediate.rows - delta_rows * version_size;
     const int skipped_cols = postIntermediate.cols - delta_cols * version_size;
 
@@ -2386,12 +2395,16 @@ bool QRDecode::samplingForVersion()
     vector<int> deltas_cols(version_size, delta_cols);
 
     for (int i = 0; i < abs(skipped_rows); i++) {
-        deltas_rows[(i*version_size)/abs(skipped_rows)+(version_size/abs(skipped_cols)-1)/2]
-        += skipped_rows > 0 ? 1 : -1;
+        // fix deltas_rows at each skip_step
+        const double skip_step = static_cast<double>(version_size)/abs(skipped_rows);
+        const int corrected_index = static_cast<int>(i*skip_step + skip_step/2);
+        deltas_rows[corrected_index] += skipped_rows > 0 ? 1 : -1;
     }
     for (int i = 0; i < abs(skipped_cols); i++) {
-        deltas_cols[(i*version_size)/abs(skipped_cols)+(version_size/abs(skipped_cols)-1)/2]
-        += skipped_cols > 0 ? 1 : -1;
+        // fix deltas_cols at each skip_step
+        const double skip_step = static_cast<double>(version_size)/abs(skipped_cols);
+        const int corrected_index = static_cast<int>(i*skip_step + skip_step/2);
+        deltas_cols[corrected_index] += skipped_cols > 0 ? 1 : -1;
     }
 
     const double totalFrequencyElem = countNonZero(postIntermediate) / static_cast<double>(postIntermediate.total());
