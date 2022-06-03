@@ -53,14 +53,16 @@ int main(int /*argc*/, const char** /* argv */ )
             { "444", IMWRITE_JPEG_SAMPLING_FACTOR_444 },
         };
 
+        const int config_num = 5;
+
         int left = 0;
 
-        for ( const test_config &it : config )
+        for ( int i = 0 ; i < config_num; i++ )
         {
             // Compress images with sampling factor parameter.
             vector<int> param;
             param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
-            param.push_back( it.sampling_factor );
+            param.push_back( config[i].sampling_factor );
             vector<uint8_t> jpeg;
             (void) imencode(".jpg", img, jpeg, param );
 
@@ -71,7 +73,7 @@ int main(int /*argc*/, const char** /* argv */ )
             // Copy into framebuffer and comment
             Mat roi = framebuffer( Rect( left, top, lossy_img.rows, lossy_img.cols ) );
             lossy_img.copyTo(roi);
-            cv::putText( roi, it.comment, Point(5,155), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0), 2, 4, false );
+            cv::putText( roi, config[i].comment, Point(5,155), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0), 2, 4, false );
 
             left += lossy_img.rows;
         }

@@ -235,13 +235,14 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_valid)
         IMWRITE_JPEG_SAMPLING_FACTOR_440,
         IMWRITE_JPEG_SAMPLING_FACTOR_444,
     };
+    const int sampling_factor_list_num = 5;
 
-    for ( const uint32_t &it : sampling_factor_list )
+    for ( int i = 0 ; i < sampling_factor_list_num; i ++ )
     {
         vector<int> param;
         param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
-        param.push_back( it );
-        EXPECT_EQ( it, test_jpeg_subsampling(src, param) );
+        param.push_back( sampling_factor_list[i] );
+        EXPECT_EQ( sampling_factor_list[i], test_jpeg_subsampling(src, param) );
     }
 }
 
@@ -258,12 +259,13 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
         0x421111, // 4x2,1x1,1x1 - unknown
         0x441111, // 4x4,1x1,1x1 - 410(libjpeg cannot handle it)
     };
+    const int sampling_factor_list_num = 8;
 
-    for ( const uint32_t &it : sampling_factor_list )
+    for ( int i = 0 ; i < sampling_factor_list_num; i ++ )
     {
         vector<int> param;
         param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
-        param.push_back( it );
+        param.push_back( sampling_factor_list[i] );
         EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
     }
 }
