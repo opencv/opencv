@@ -13,9 +13,9 @@ using namespace cv;
 
 int main(int /*argc*/, const char** /* argv */ )
 {
-    Mat framebuffer = Mat( 160 * 2, 160 * 5, CV_8UC3, cv::Scalar::all(255) );
+    Mat framebuffer( 160 * 2, 160 * 5, CV_8UC3, cv::Scalar::all(255) );
 
-    Mat img = Mat( 160, 160, CV_8UC3, cv::Scalar::all(255) );
+    Mat img( 160, 160, CV_8UC3, cv::Scalar::all(255) );
 
     // Create test image.
     {
@@ -30,11 +30,11 @@ int main(int /*argc*/, const char** /* argv */ )
 
     // Draw original image(s).
     int top = 0; // Upper images
-    { 
+    {
         for( int left = 0 ; left < img.rows * 5 ; left += img.rows ){
             Mat roi = framebuffer( Rect( left, top, img.rows, img.cols ) );
             img.copyTo(roi);
-           
+
             cv::putText( roi, "original", Point(5,15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(0), 2, 4, false );
         }
     }
@@ -67,7 +67,7 @@ int main(int /*argc*/, const char** /* argv */ )
             // Decompress it.
             Mat jpegMat(jpeg);
             Mat lossy_img = imdecode(jpegMat, -1);
-         
+
             // Copy into framebuffer and comment
             Mat roi = framebuffer( Rect( left, top, lossy_img.rows, lossy_img.cols ) );
             lossy_img.copyTo(roi);

@@ -221,13 +221,13 @@ static uint32_t test_jpeg_subsampling( const Mat src, const vector<int> param )
 TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_default)
 {
     vector<int> param;
-    Mat src = Mat::ones(48,64,CV_8UC3);
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
     EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
 }
 
 TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_valid)
 {
-    Mat src = Mat::ones(48,64,CV_8UC3);
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
     const uint32_t sampling_factor_list[] = {
         IMWRITE_JPEG_SAMPLING_FACTOR_411,
         IMWRITE_JPEG_SAMPLING_FACTOR_420,
@@ -236,7 +236,7 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_valid)
         IMWRITE_JPEG_SAMPLING_FACTOR_444,
     };
 
-    for ( auto it : sampling_factor_list )
+    for ( const uint32_t &it : sampling_factor_list )
     {
         vector<int> param;
         param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
@@ -247,7 +247,7 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_valid)
 
 TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
 {
-    Mat src = Mat::ones(48,64,CV_8UC3);
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
     const uint32_t sampling_factor_list[] = { // Invalid list
         0x111112,
         0x000000,
@@ -259,7 +259,7 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
         0x441111, // 4x4,1x1,1x1 - 410(libjpeg cannot handle it)
     };
 
-    for ( auto it : sampling_factor_list )
+    for ( const uint32_t &it : sampling_factor_list )
     {
         vector<int> param;
         param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );

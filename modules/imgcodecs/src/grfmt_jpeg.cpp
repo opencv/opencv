@@ -44,6 +44,8 @@
 
 #ifdef HAVE_JPEG
 
+#include <opencv2/core/utils/logger.hpp>
+
 #ifdef _MSC_VER
 //interaction between '_setjmp' and C++ object destruction is non-portable
 #pragma warning(disable: 4611)
@@ -704,7 +706,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                     break;
 
                     default:
-                    // Unknown parameter is set.
+                    CV_LOG_WARNING(NULL, cv::format("Unknown value for IMWRITE_JPEG_SAMPLING_FACTOR: 0x%06x", sampling_factor ) );
                     sampling_factor = 0;
                     break;
                 }
