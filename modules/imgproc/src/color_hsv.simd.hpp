@@ -39,36 +39,51 @@ struct RGB2HSV_b
     : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange)
     {
         CV_Assert( hrange == 180 || hrange == 256 );
+
+        const TablesSingleton& global_tables = TablesSingleton::getInstance();
+        hdiv_table_ = hrange == 180 ? global_tables.hdiv_table180 : global_tables.hdiv_table256;
+        sdiv_table_ = global_tables.sdiv_table;
     }
 
-    void operator()(const uchar* src, uchar* dst, int n) const
+    struct TablesSingleton
     {
-        CV_INSTRUMENT_REGION();
+        int sdiv_table[256];
+        int hdiv_table180[256];
+        int hdiv_table256[256];
 
-        int i, bidx = blueIdx, scn = srccn;
-        const int hsv_shift = 12;
-
-        static int sdiv_table[256];
-        static int hdiv_table180[256];
-        static int hdiv_table256[256];
-        static volatile bool initialized = false;
-
-        int hr = hrange;
-        const int* hdiv_table = hr == 180 ? hdiv_table180 : hdiv_table256;
-
-        if( !initialized )
+    protected:
+        TablesSingleton()
         {
+            const int hsv_shift = 12;
+
             sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
-            for( i = 1; i < 256; i++ )
+            for (int i = 1; i < 256; i++)
             {
                 sdiv_table[i] = saturate_cast<int>((255 << hsv_shift)/(1.*i));
                 hdiv_table180[i] = saturate_cast<int>((180 << hsv_shift)/(6.*i));
                 hdiv_table256[i] = saturate_cast<int>((256 << hsv_shift)/(6.*i));
             }
-            initialized = true;
         }
+    public:
+        static TablesSingleton& getInstance()
+        {
+            static TablesSingleton g_tables;
+            return g_tables;
+        }
+    };
 
-        i = 0;
+    void operator()(const uchar* src, uchar* dst, int n) const
+    {
+        CV_INSTRUMENT_REGION();
+
+        int bidx = blueIdx, scn = srccn;
+        const int hsv_shift = 12;
+
+        int hr = hrange;
+        const int* hdiv_table/*[256]*/ = hdiv_table_;
+        const int* sdiv_table/*[256]*/ = sdiv_table_;
+
+        int i = 0;
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
@@ -231,6 +246,9 @@ struct RGB2HSV_b
     }
 
     int srccn, blueIdx, hrange;
+
+    const int* hdiv_table_/*[256]*/;
+    const int* sdiv_table_/*[256]*/;
 };
 
 

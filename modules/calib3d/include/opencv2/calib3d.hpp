@@ -430,6 +430,9 @@ R & t \\
     \f[u = f_x (x' + \alpha y') + c_x \\
     v = f_y y' + c_y\f]
 
+    Summary:
+    Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
+
     @defgroup calib3d_c C API
 
   @}
@@ -3883,7 +3886,7 @@ namespace fisheye
     CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
         OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
-    /** @brief Performs camera calibaration
+    /** @brief Performs camera calibration
 
     @param objectPoints vector of vectors of calibration pattern points in the calibration pattern
     coordinate space.
