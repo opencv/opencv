@@ -85,7 +85,7 @@ int main( int argc, const char** argv )
         "{ help h usage ? |      | show this message }"
         "{ image i        |      | (required) path to reference image }"
         "{ model m        |      | (required) path to cascade xml file }"
-        "{ data d         |      | (optional) path to video output folder incl. trailing path separator }"
+        "{ data d         |      | (optional) path to video output folder }"
         "{ ext            | avi  | (optional) output video file extension e.g. avi (default) or mp4 }"
         "{ fourcc         | XVID | (optional) output video file's 4-character codec e.g. XVID (default) or H264 }"
         "{ fps            |   15 | (optional) output video file's frames-per-second rate }"
