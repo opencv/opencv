@@ -167,7 +167,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<TiffDecoder>() );
         encoders.push_back( makePtr<TiffEncoder>() );
     #endif
-    #ifdef HAVE_PNG
+    #ifdef HAVE_SPNG
+        decoders.push_back( makePtr<SPngDecoder>() );
+        encoders.push_back( makePtr<SPngEncoder>() );
+    #elif defined(HAVE_PNG)
         decoders.push_back( makePtr<PngDecoder>() );
         encoders.push_back( makePtr<PngEncoder>() );
     #endif
