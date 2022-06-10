@@ -1840,7 +1840,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
     if (data)
     {
-        rotation_angle = cvRound(av_display_rotation_get((const int32_t*)data));
+        rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
         if (rotation_angle < 0)
             rotation_angle += 360;
     }
