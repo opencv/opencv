@@ -2155,7 +2155,7 @@ static void showSaveDialog(CvWindow& window)
 #endif
     ofn.hwndOwner = window.hwnd;
     ofn.lpstrFilter =
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
                       "Portable Network Graphics files (*.png)\0*.png\0"
 #endif
                       "Windows bitmap (*.bmp;*.dib)\0*.bmp;*.dib\0"
@@ -2181,7 +2181,7 @@ static void showSaveDialog(CvWindow& window)
     ofn.lpstrFile = szFileName;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN | OFN_NOCHANGEDIR;
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     ofn.lpstrDefExt = "png";
 #else
     ofn.lpstrDefExt = "bmp";

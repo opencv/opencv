@@ -49,6 +49,7 @@
 #include "grfmt_pxm.hpp"
 #include "grfmt_pfm.hpp"
 #include "grfmt_tiff.hpp"
+#include "grfmt_spng.hpp"
 #include "grfmt_png.hpp"
 #include "grfmt_jpeg2000.hpp"
 #include "grfmt_jpeg2000_openjpeg.hpp"

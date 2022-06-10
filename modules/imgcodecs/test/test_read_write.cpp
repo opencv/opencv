@@ -28,7 +28,7 @@ const tuple<string, Size> images[] =
 #ifdef HAVE_JPEG
     make_tuple<string, Size>("../cv/imgproc/stuff.jpg", Size(640, 480)),
 #endif
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     make_tuple<string, Size>("../cv/shared/pic1.png", Size(400, 300)),
 #endif
     make_tuple<string, Size>("../highgui/readwrite/ordinary.bmp", Size(480, 272)),
@@ -148,7 +148,7 @@ typedef string Ext;
 typedef testing::TestWithParam<Ext> Imgcodecs_Image;
 
 const string exts[] = {
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     "png",
 #endif
 #ifdef HAVE_TIFF
