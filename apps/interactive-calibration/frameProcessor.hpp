@@ -50,6 +50,7 @@ protected:
     double mMaxTemplateOffset;
     float mSquareSize;
     float mTemplDist;
+    bool mSaveFrames;
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);

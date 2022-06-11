@@ -266,6 +266,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                    static_cast<float>(mCalibData->imageSize.width * mCalibData->imageSize.width)) / 20.0;
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
+    mSaveFrames = capParams.saveFrames;
 
     switch(mBoardType)
     {
@@ -291,9 +292,13 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
 cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
 {
     cv::Mat frameCopy;
+    cv::Mat frameCopyToSave;
     frame.copyTo(frameCopy);
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
+
+    if(mSaveFrames)
+        frame.copyTo(frameCopyToSave);
 
     switch(mBoardType)
     {
@@ -322,6 +327,10 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);
+
+                if(mSaveFrames)
+                    mCalibData->allFrames.push_back(frameCopyToSave);
+
                 mCapuredFrames++;
             }
             else {
