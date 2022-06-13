@@ -382,7 +382,7 @@ elseif(LOONGARCH64)
   ocv_update(CPU_LASX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_lasx.cpp")
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "LASX")
   ocv_update(CPU_LASX_FLAGS_ON "-mlasx")
-  set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
+  set(CPU_BASELINE "LASX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 endif()
 
