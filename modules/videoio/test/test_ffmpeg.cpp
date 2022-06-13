@@ -413,6 +413,11 @@ TEST(videoio, mp4_orientation_meta_auto)
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
 
+#ifndef _WIN32 // TODO: FFmpeg wrapper update
+    // related issue: https://github.com/opencv/opencv/issues/22088
+    EXPECT_EQ(90, cap.get(CAP_PROP_ORIENTATION_META));
+#endif
+
     cap.set(CAP_PROP_ORIENTATION_AUTO, true);
     if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
         throw SkipTestException("FFmpeg frame rotation metadata is not supported");
