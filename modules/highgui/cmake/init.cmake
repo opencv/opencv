@@ -38,6 +38,7 @@ endmacro()
 
 add_backend("gtk" WITH_GTK)
 add_backend("win32ui" WITH_WIN32UI)
+add_backend("wayland" WITH_WAYLAND)
 # TODO cocoa
 # TODO qt
 # TODO opengl

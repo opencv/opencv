@@ -130,6 +130,7 @@ void setWindowTitle_W32(const cv::String& name, const cv::String& title);
 void setWindowTitle_GTK(const cv::String& name, const cv::String& title);
 void setWindowTitle_QT(const cv::String& name, const cv::String& title);
 void setWindowTitle_COCOA(const cv::String& name, const cv::String& title);
+void setWindowTitle_WAYLAND(const cv::String& name, const cv::String& title);
 
 int pollKey_W32();
 
