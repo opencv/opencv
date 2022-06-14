@@ -85,10 +85,10 @@ bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     for (int i = 0; i < miterCounts.size().height; i++)
         iterCounts.push_back(miterCounts.at<int>(i));
     bool isCorrect = RGBDICPOdometryImpl(Rt, scale, Mat(), srcFrame, dstFrame, cameraMatrix,
-        this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
-        iterCounts, this->settings.getMaxTranslation(),
-        this->settings.getMaxRotation(), settings.getSobelScale(),
-        OdometryType::DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
+                                         this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
+                                         iterCounts, this->settings.getMaxTranslation(),
+                                         this->settings.getMaxRotation(), settings.getSobelScale(),
+                                         OdometryType::DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
 
@@ -107,7 +107,7 @@ bool OdometryICP::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArra
 
 bool OdometryICP::compute(InputArray, InputArray, InputArray, InputArray, OutputArray) const
 {
-    CV_Error(cv::Error::StsBadFunc, "This volume does not work with depth and rgb data simultaneously");
+    CV_Error(cv::Error::StsBadFunc, "This odometry does not work with depth and rgb data simultaneously");
 }
 
 class OdometryRGB : public Odometry::Impl
@@ -165,12 +165,13 @@ bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     for (int i = 0; i < miterCounts.size().height; i++)
         iterCounts.push_back(miterCounts.at<int>(i));
     bool isCorrect = RGBDICPOdometryImpl(Rt, scale, Mat(), srcFrame, dstFrame, cameraMatrix,
-        this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
-        iterCounts, this->settings.getMaxTranslation(),
-        this->settings.getMaxRotation(), settings.getSobelScale(),
-        OdometryType::RGB, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
+                                         this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
+                                         iterCounts, this->settings.getMaxTranslation(),
+                                         this->settings.getMaxRotation(), settings.getSobelScale(),
+                                         OdometryType::RGB, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
+
 bool OdometryRGB::compute(InputArray _srcFrame, InputArray _dstFrame, OutputArray Rt, float& scale) const
 {
     OdometryFrame srcFrame = this->createOdometryFrame();
@@ -243,10 +244,10 @@ bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& d
     for (int i = 0; i < miterCounts.size().height; i++)
         iterCounts.push_back(miterCounts.at<int>(i));
     bool isCorrect = RGBDICPOdometryImpl(Rt, scale, Mat(), srcFrame, dstFrame, cameraMatrix,
-        this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
-        iterCounts, this->settings.getMaxTranslation(),
-        this->settings.getMaxRotation(), settings.getSobelScale(),
-        OdometryType::RGB_DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
+                                         this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
+                                         iterCounts, this->settings.getMaxTranslation(),
+                                         this->settings.getMaxRotation(), settings.getSobelScale(),
+                                         OdometryType::RGB_DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
 
@@ -256,7 +257,7 @@ bool OdometryRGBD::compute(InputArray, InputArray, OutputArray, float&) const
 }
 
 bool OdometryRGBD::compute(InputArray _srcDepthFrame, InputArray _srcRGBFrame,
-                          InputArray _dstDepthFrame, InputArray _dstRGBFrame, OutputArray Rt) const
+                           InputArray _dstDepthFrame, InputArray _dstRGBFrame, OutputArray Rt) const
 {
     OdometryFrame srcFrame = this->createOdometryFrame();
     OdometryFrame dstFrame = this->createOdometryFrame();

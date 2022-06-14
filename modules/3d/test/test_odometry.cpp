@@ -288,17 +288,18 @@ void OdometryTest::run()
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
 
-        Mat warpedImage, warpedDepth;
-        warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
+        Mat warpedImage, warpedDepth, scaledDepth;
+
+        float test_scale = 1.03f;
+        scaledDepth = testScale ? depth * test_scale : depth;
+
+        warpFrame(image, scaledDepth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
         OdometryFrame odfSrc = odometry.createOdometryFrame();
         OdometryFrame odfDst = odometry.createOdometryFrame();
 
-        float test_scale = 1.03f;
         float scale_error = 0.05f;
-        if (testScale)
-            warpedDepth *= test_scale;
 
         odfSrc.setImage(image);
         odfSrc.setDepth(depth);
