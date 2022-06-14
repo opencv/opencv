@@ -1931,10 +1931,18 @@ void ONNXImporter::parseImageScaler(LayerParams& layerParams, const opencv_onnx:
 
 void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_CheckEQ(node_proto.input_size(), 1, "");
     layerParams.type = "ReLU6";
-    layerParams.set("min_value", layerParams.get<float>("min", -FLT_MAX));
-    layerParams.set("max_value", layerParams.get<float>("max", FLT_MAX));
+    float min_value = -FLT_MAX, max_value = FLT_MAX;
+    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+    {
+        min_value = getBlob(node_proto, 1).at<float>(0);
+    }
+    if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
+    {
+        max_value = getBlob(node_proto, 2).at<float>(0);
+    }
+    layerParams.set("min_value", min_value);
+    layerParams.set("max_value", max_value);
     addLayer(layerParams, node_proto);
 }
 
