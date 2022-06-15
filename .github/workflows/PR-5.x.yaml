@@ -15,5 +15,11 @@ jobs:
   W10:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10.yaml@main
 
+  macOS-ARM64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@main
+
+  macOS-X64:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
+
   TIM-VX:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
