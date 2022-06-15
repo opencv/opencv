@@ -1933,16 +1933,20 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
 {
     layerParams.type = "ReLU6";
     float min_value = -FLT_MAX, max_value = FLT_MAX;
-    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+    int input_size = node_proto.input_size();
+
+    if(input_size >= 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end())
     {
         min_value = getBlob(node_proto, 1).at<float>(0);
     }
-    if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
+
+    if(input_size >= 3 && constBlobs.find(node_proto.input(2)) != constBlobs.end())
     {
         max_value = getBlob(node_proto, 2).at<float>(0);
     }
-    layerParams.set("min_value", min_value);
-    layerParams.set("max_value", max_value);
+
+    layerParams.set("min_value", layerParams.get<float>("min", min_value));
+    layerParams.set("max_value", layerParams.get<float>("max", max_value));
     addLayer(layerParams, node_proto);
 }
 
