@@ -381,19 +381,19 @@ public:
         int ninputs = inputs.size();
 
         std::vector<const char*> v_inp;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp), [] (const auto& m) { return m.template ptr<const char>(); });
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp), [] (const Mat& m) { return m.template ptr<const char>(); });
         const char** inp = v_inp.data();
 
         std::vector<int> v_inp_dims;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_dims), [] (const auto& m) { return m.dims; });
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_dims), [] (const Mat& m) { return m.dims; });
         const int* inp_ndims = v_inp_dims.data();
 
         std::vector<const int*> v_inp_shape;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_shape), [] (const auto& m) { return m.size.p; });
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_shape), [] (const Mat& m) { return m.size.p; });
         const int** inp_shape = v_inp_shape.data();
 
         std::vector<const size_t*> v_inp_step;
-        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_step), [] (const auto& m) { return m.step.p; });
+        std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_step), [] (const Mat& m) { return m.step.p; });
         const size_t** inp_step = v_inp_step.data();
 
         char* out = outputs[0].ptr<char>();
