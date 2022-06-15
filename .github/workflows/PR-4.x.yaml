@@ -2,6 +2,7 @@ name: PR:4.x
 
 on:
   pull_request:
+    types: [opened, reopened, labeled, unlabeled, synchronize]
     branches:
       - 4.x
 
@@ -20,6 +21,10 @@ jobs:
 
   macOS-X64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+
+  iOS:
+    if: contains(github.event.pull_request.labels.*.name, 'ios')
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
 
   TIM-VX:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
