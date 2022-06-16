@@ -259,12 +259,17 @@ public:
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
 
-        int *shape_buf;
-        size_t *step_buf;
+        // int *shape_buf;
+        // size_t *step_buf;
         int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        step_buf = (size_t*)alloca(3*max_ndims*(sizeof(size_t) + sizeof(int)));
-        shape_buf = (int*)(step_buf + max_ndims*3);
+        AutoBuffer<size_t> step_buf_(3 * max_ndims);
+        size_t* step_buf = step_buf_.data();
+        AutoBuffer<int> shape_buf_(3 * max_ndims);
+        int* shape_buf = shape_buf_.data();
+
+        // step_buf = (size_t*)alloca(3*max_ndims*(sizeof(size_t) + sizeof(int)));
+        // shape_buf = (int*)(step_buf + max_ndims*3);
         size_t all_type_sizes[] = {sizeof(T), sizeof(T), sizeof(T)};
         int all_ndims[] = {out.dims, a.dims, b.dims};
         const int* orig_shapes[] = {out.size.p, a.size.p, b.size.p};
