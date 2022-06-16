@@ -289,12 +289,12 @@ public:
         const char** inp, char* out,
         const size_t** steps, char** ptrs)
     {
-//        ASSERT(ndims >= 2);
+        CV_Assert(ndims >= 2);
         size_t dp = steps[0][ndims-1]/sizeof(T);
         size_t dp1 = steps[1][ndims-1]/sizeof(T);
         size_t dp2 = steps[2][ndims-1]/sizeof(T);
 
-//        ASSERT(dp == 1);
+        CV_Assert(dp == 1);
         enum { BLOCK_SIZE = 1024 };
         T blck[BLOCK_SIZE];
 
