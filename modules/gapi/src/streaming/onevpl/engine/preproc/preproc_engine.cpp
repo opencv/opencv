@@ -34,8 +34,8 @@ bool FrameInfoComparator::equal_to(const mfxFrameInfo& lhs, const mfxFrameInfo& 
     return lhs == rhs;
 }
 
-void apply_roi(mfxFrameSurface1* surface_handle,
-               const cv::util::optional<cv::Rect> &opt_roi) {
+static void apply_roi(mfxFrameSurface1* surface_handle,
+                      const cv::util::optional<cv::Rect> &opt_roi) {
     if (opt_roi.has_value()) {
         const cv::Rect &roi = opt_roi.value();
         surface_handle->Info.CropX = static_cast<mfxU16>(roi.x);
@@ -147,7 +147,7 @@ VPPPreprocEngine::VPPPreprocEngine(std::unique_ptr<VPLAccelerationPolicy>&& acce
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.vpp_out_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 2) Falls back on generic status procesing
+        // 2) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<session_type&>(sess));
@@ -176,7 +176,8 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     const vpp_pp_params &params = initial_frame_param.get<vpp_pp_params>();
 
     // adjust preprocessing settings
-    mfxVideoParam mfxVPPParams{0};
+    mfxVideoParam mfxVPPParams{};
+    memset(&mfxVPPParams, 0, sizeof(mfxVideoParam));
     // NB: IN params for VPP session must be equal to decoded surface params
     mfxVPPParams.vpp.In = params.info;
 
@@ -273,7 +274,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
                 throw std::runtime_error("Cannot execute MFXVideoVPP_QueryIOSurf");
             }
 
-            // NB: Assing ID as upper limit descendant to distinguish specific VPP allocation
+            // NB: Assign ID as upper limit descendant to distinguish specific VPP allocation
             // from decode allocations witch started from 0: by local module convention
 
             static uint16_t request_id = 0;

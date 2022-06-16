@@ -2440,7 +2440,11 @@ TEST(OneVPL_Source, Init)
 
     std::vector<CfgParam> src_params;
     src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
+#ifdef __WIN32
     src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+#elif defined(__linux__)
+    src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_VAAPI));
+#endif
     src_params.push_back(CfgParam::create_decoder_id(MFX_CODEC_HEVC));
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 

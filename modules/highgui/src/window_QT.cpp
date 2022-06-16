@@ -2198,23 +2198,58 @@ void CvWindow::displayPropertiesWin()
         global_control_panel->hide();
 }
 
+static bool isTranslatableKey(Qt::Key key)
+{
+    // https://github.com/opencv/opencv/issues/21899
+    // https://doc.qt.io/qt-5/qt.html#Key-enum
+    // https://doc.qt.io/qt-6/qt.html#Key-enum
+    // https://github.com/qt/qtbase/blob/dev/src/testlib/qasciikey.cpp
+
+    bool ret = false;
+
+    switch ( key )
+    {
+        // Special keys
+        case Qt::Key_Escape:
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+        case Qt::Key_Backspace:
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            ret = true;
+            break;
+
+        // latin-1 keys.
+        default:
+        ret = (
+            ( ( Qt::Key_Space        <= key ) && ( key <= Qt::Key_AsciiTilde ) ) // 0x20--0x7e
+            ||
+            ( ( Qt::Key_nobreakspace <= key ) && ( key <= Qt::Key_ssharp     ) ) // 0x0a0--0x0de
+            ||
+            ( key == Qt::Key_division )                                          // 0x0f7
+            ||
+            ( key == Qt::Key_ydiaeresis )                                        // 0x0ff
+        );
+        break;
+    }
+
+    return ret;
+}
 
 //Need more test here !
 void CvWindow::keyPressEvent(QKeyEvent *evnt)
 {
-    //see http://doc.trolltech.com/4.6/qt.html#Key-enum
     int key = evnt->key();
+    const Qt::Key qtkey = static_cast<Qt::Key>(key);
 
-        Qt::Key qtkey = static_cast<Qt::Key>(key);
-        char asciiCode = QTest::keyToAscii(qtkey);
-        if (asciiCode != 0)
-            key = static_cast<int>(asciiCode);
-        else
-            key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
+    if ( isTranslatableKey( qtkey ) )
+        key = static_cast<int>( QTest::keyToAscii( qtkey ) );
+    else
+        key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
 
     //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
-        if (evnt->modifiers() != Qt::ControlModifier)
-        {
+    if (evnt->modifiers() != Qt::ControlModifier)
+    {
         mutexKey.lock();
         last_key = key;
         mutexKey.unlock();

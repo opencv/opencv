@@ -12,6 +12,8 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
 #ifdef HAVE_INF_ENGINE
 // For IE classes (ParamMap, etc)
 #include <inference_engine.hpp>
@@ -202,4 +204,6 @@ DXGI_FORMAT VPLMediaFrameDX11Adapter::get_dx11_color_format(uint32_t mfx_fourcc)
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL

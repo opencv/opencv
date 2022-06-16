@@ -27,7 +27,7 @@ struct EncoderConfig {
      */
     enum class Profile: int { H264_BASELINE, H264_HIGH, H264_MAIN, H265_MAIN, MJPEG };
     /**
-     * Specifies prefered bitrate (kb) of compressed output bitstream
+     * Specifies preferred bitrate (kb) of compressed output bitstream
      */
     std::int32_t bitrate = 8000;
     /**

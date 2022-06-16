@@ -592,7 +592,7 @@ subgraph cluster_3 {style=filled;color=azure2; C};
 
 *** But how does it run?
 
-- Since ~infer~ is an *Operation*, backends may provide *Kernels* implenting it;
+- Since ~infer~ is an *Operation*, backends may provide *Kernels* implementing it;
 - The only publicly available inference backend now is *OpenVINO™*:
   - Brings its ~infer~ kernel atop of the Inference Engine;
 - NN model data is passed through G-API compile arguments (like kernels);

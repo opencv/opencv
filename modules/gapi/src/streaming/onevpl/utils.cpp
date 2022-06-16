@@ -357,7 +357,7 @@ std::string mfxstatus_to_string(mfxStatus err) {
     }
 
     std::string ret("<unknown ");
-    ret += std::to_string(err) + ">";
+    ret += std::to_string(static_cast<size_t>(err)) + ">";
     return ret;
 }
 
@@ -384,7 +384,7 @@ std::string mfx_frame_info_to_string(const mfxFrameInfo &info) {
     return ss.str();
 }
 
-int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
+static int compare(const mfxFrameInfo &lhs, const mfxFrameInfo &rhs) {
     //NB: mfxFrameInfo is a `packed` struct declared in VPL
     return memcmp(&lhs, &rhs, sizeof(mfxFrameInfo));
 }
@@ -401,7 +401,7 @@ std::string ext_mem_frame_type_to_cstr(int type) {
     std::stringstream ss;
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_DECODER_TARGET);
     APPEND_STRINGIFY_MASK_N_ERASE(type, "|", MFX_MEMTYPE_DXVA2_PROCESSOR_TARGET);
-    // NB: accoring to VPL source the commented MFX_* constane below are belong to the
+    // NB: according to VPL source the commented MFX_* constane below are belong to the
     // same actual integral value as condition abobe. So it is impossible
     // to distinct them in condition branch.  Just put this comment and possible
     // constans here...

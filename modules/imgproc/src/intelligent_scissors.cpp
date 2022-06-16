@@ -429,13 +429,13 @@ struct IntelligentScissorsMB::Impl
         gradient_direction.create(src_size);
         for (int y = 0; y < src_size.height; y++)
         {
-            const float* magnutude_row = image_magnitude_.ptr<float>(y);
+            const float* magnitude_row = image_magnitude_.ptr<float>(y);
             const float* Ix_row = Ix_.ptr<float>(y);
             const float* Iy_row = Iy_.ptr<float>(y);
             Point2f* gradient_direction_row = gradient_direction.ptr<Point2f>(y);
             for (int x = 0; x < src_size.width; x++)
             {
-                const float m = magnutude_row[x];
+                const float m = magnitude_row[x];
                 if (m > FLT_EPSILON)
                 {
                     float m_inv = 1.0f / m;

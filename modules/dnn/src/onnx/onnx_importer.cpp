@@ -171,6 +171,7 @@ private:
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
@@ -192,7 +193,17 @@ private:
     void parseOperatorSet();
 
     const std::string str_domain_ai_onnx = "ai.onnx";
+
+
+    bool useLegacyNames;
+    bool getParamUseLegacyNames()
+    {
+        bool param = utils::getConfigurationParameterBool("OPENCV_DNN_ONNX_USE_LEGACY_NAMES", false);
+        return param;
+    }
+    std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
 };
+
 
 class ONNXLayerHandler : public detail::LayerHandler
 {
@@ -228,6 +239,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
+    , useLegacyNames(getParamUseLegacyNames())
 {
     hasDynamicShapes = false;
     CV_Assert(onnxFile);
@@ -251,6 +263,7 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
     : layerHandler(DNN_DIAGNOSTICS_RUN ? new ONNXLayerHandler(this) : nullptr)
     , dstNet(net)
     , onnx_opset(0)
+    , useLegacyNames(getParamUseLegacyNames())
 {
     hasDynamicShapes = false;
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
@@ -272,6 +285,7 @@ ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
 
     populateNet();
 }
+
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
 {
@@ -904,11 +918,14 @@ const ONNXImporter::DispatchMap& ONNXImporter::getDispatchMap(const opencv_onnx:
     return it->second;
 }
 
-const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
+std::string ONNXImporter::extractNodeName(const opencv_onnx::NodeProto& node_proto)
 {
+    // We need to rework DNN outputs API, this is a workaround for #21698
     if (node_proto.has_name() && !node_proto.name().empty())
     {
-        return node_proto.name();
+        if (useLegacyNames)
+            return node_proto.name();
+        return cv::format("onnx_node!%s", node_proto.name().c_str());
     }
     for (int i = 0; i < node_proto.output_size(); ++i)
     {
@@ -918,7 +935,9 @@ const std::string& extractNodeName(const opencv_onnx::NodeProto& node_proto)
         // the second method is to use an empty string in place of an input or output name.
         if (!name.empty())
         {
-            return name;
+            if (useLegacyNames)
+                return name.c_str();
+            return cv::format("onnx_node_output_%d!%s", i, name.c_str());
         }
     }
     CV_Error(Error::StsAssert, "Couldn't deduce Node name.");
@@ -2886,6 +2905,82 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         addLayer(constParams, proto);
     }
 
+void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+{
+    // We parse "DepthToSpace" and "SpaceToDepth" in this function.
+    opencv_onnx::NodeProto node_proto = node_proto_;
+    const std::string& layer_type = node_proto.op_type();
+    CV_Assert(layer_type == "DepthToSpace" || layer_type == "SpaceToDepth");
+
+    // Get blocksize
+    CV_Assert(layerParams.has("blocksize"));
+    int blocksize = layerParams.get<int>("blocksize");
+    CV_Assert(blocksize > 0);
+
+    // Get mode, only for "DepthToSpace"
+    std::string modeType = layerParams.get<std::string>("mode", "DCR");
+
+    MatShape inpShape = outShapes[node_proto.input(0)];
+    CV_Assert(inpShape.size() == 4);
+    int N = inpShape[0], C = inpShape[1], H = inpShape[2], W = inpShape[3];
+
+    // Implement DepthToSpace and SpaceToDepth by the Reshape and Permute layer.
+    std::array<int, 6> shape0, perm;
+    std::array<int, 4> shape1;
+
+    if (layer_type == "DepthToSpace")
+    {
+        if (modeType == "DCR")
+        {
+            shape0 = {N, blocksize, blocksize, C/(blocksize * blocksize), H, W};
+            perm = {0, 3, 4, 1, 5, 2};
+            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
+        }
+        else if (modeType == "CRD")
+        {
+            shape0 = {N, C/(blocksize * blocksize), blocksize, blocksize, H, W};
+            perm = {0, 1, 4, 2, 5, 3};
+            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "The mode of " + modeType + " in " + layer_type + " Layer is not supported");
+    }
+    else // SpaceToDepth
+    {
+        shape0 = {N, C, H/blocksize, blocksize, W/blocksize, blocksize};
+        perm = {0, 3, 5, 1, 2, 4};
+        shape1 = {N, C * blocksize * blocksize, H/blocksize, W/blocksize};
+    }
+
+    // Step1: Reshape
+    LayerParams reshapeLp;
+    reshapeLp.name = layerParams.name + "/reshape";
+    reshapeLp.type = "Reshape";
+    CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
+    reshapeLp.set("dim", DictValue::arrayInt(shape0.data(), shape0.size()));
+
+    opencv_onnx::NodeProto protoReshape;
+    protoReshape.add_input(node_proto.input(0));
+    protoReshape.add_output(reshapeLp.name);
+    addLayer(reshapeLp, protoReshape);
+
+    // Step2: Transpose
+    LayerParams permuteLp;
+    permuteLp.name = layerParams.name + "/permute";
+    permuteLp.type = "Permute";
+    CV_Assert(layer_id.find(permuteLp.name) == layer_id.end());
+    permuteLp.set("order", DictValue::arrayInt(perm.data(), perm.size()));
+
+    opencv_onnx::NodeProto protoPermute;
+    protoPermute.add_input(reshapeLp.name);
+    protoPermute.add_output(permuteLp.name);
+    addLayer(permuteLp, protoPermute);
+
+    // Step3: Reshape
+    layerParams.type = "Reshape";
+    layerParams.set("dim", DictValue::arrayInt(shape1.data(), shape1.size()));
+
+    node_proto.set_input(0, permuteLp.name);
     addLayer(layerParams, node_proto);
 }
 
@@ -2936,13 +3031,53 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    opencv_onnx::NodeProto node_proto = node_proto_;
     int ninputs = node_proto.input_size();
     CV_Assert(ninputs == 8 || ninputs == 9);
 
     Mat inp_sc = getBlob(node_proto, 1);
     Mat inp_zp = getBlob(node_proto, 2);
+
+    if (layerParams.has("pad"))
+    {
+        bool asymmetricPadding = false;
+        DictValue pads = layerParams.get("pad");
+        const int dims = pads.size() / 2;
+
+        for (int i = 0; i < dims; ++i)
+        {
+            if (pads.get<int>(i) != pads.get<int>(i + dims))
+            {
+                asymmetricPadding = true;
+                break;
+            }
+        }
+        if (asymmetricPadding && pads.size() == 4)
+        {
+            layerParams.erase("pad");
+            std::vector<int> paddings(4, 0);
+            for (int i = 0; i < dims; ++i)
+            {
+                paddings.push_back(pads.get<int>(i));
+                paddings.push_back(pads.get<int>(dims + i));
+            }
+            LayerParams padLp;
+            padLp.name = layerParams.name + "/pad";
+            padLp.type = "PaddingInt8";
+            padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+            padLp.set("depth", CV_8S);
+            padLp.set("value", inp_zp.at<int8_t>(0));
+
+            opencv_onnx::NodeProto proto;
+            proto.add_input(node_proto.input(0));
+            proto.add_output(padLp.name);
+
+            addLayer(padLp, proto);
+            node_proto.set_input(0, padLp.name);
+        }
+    }
 
     Mat weights = getBlob(node_proto, 3);
     int outCn = weights.size[0];
@@ -3373,6 +3508,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
+    dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = &ONNXImporter::parseElementWise;
@@ -3380,8 +3516,8 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-                                          "Identity", "Log", "Round", "Selu", "Sigmoid", "Sin", "Sinh", "Softmax",
-                                          "Softplus", "Softsign", "Sqrt", "Tan", "ThresholdedRelu"};
+                                          "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
+                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu"};
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;
