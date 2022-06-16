@@ -2904,6 +2904,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         proto.add_output(constParams.name);
         addLayer(constParams, proto);
     }
+}
 
 void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
