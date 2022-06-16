@@ -232,7 +232,7 @@ The following is an adaptation of @ref tutorial_js_face_detection.
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
-const { writeFileSync, readFileSync } = require('fs');
+const { writeFileSync, existsSync, mkdirSync } = require('fs');
 
 (async () => {
   await loadOpenCV();
