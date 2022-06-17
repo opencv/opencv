@@ -86,6 +86,9 @@ int main( int argc, const char** argv )
         "{ image i        |      | (required) path to reference image }"
         "{ model m        |      | (required) path to cascade xml file }"
         "{ data d         |      | (optional) path to video output folder }"
+        "{ ext            | avi  | (optional) output video file extension e.g. avi (default) or mp4 }"
+        "{ fourcc         | XVID | (optional) output video file's 4-character codec e.g. XVID (default) or H264 }"
+        "{ fps            |   15 | (optional) output video file's frames-per-second rate }"
     );
     // Read in the input arguments
     if (parser.has("help")){
@@ -96,7 +99,9 @@ int main( int argc, const char** argv )
     string model(parser.get<string>("model"));
     string output_folder(parser.get<string>("data"));
     string image_ref = (parser.get<string>("image"));
-    if (model.empty() || image_ref.empty()){
+    string fourcc = (parser.get<string>("fourcc"));
+    int fps = parser.get<int>("fps");
+    if (model.empty() || image_ref.empty() || fourcc.size()!=4 || fps<1){
         parser.printMessage();
         printLimits();
         return -1;
@@ -166,11 +171,19 @@ int main( int argc, const char** argv )
     // each stage, containing all weak classifiers for that stage.
     bool draw_planes = false;
     stringstream output_video;
-    output_video << output_folder << "model_visualization.avi";
+    output_video << output_folder << "model_visualization." << parser.get<string>("ext");
     VideoWriter result_video;
     if( output_folder.compare("") != 0 ){
         draw_planes = true;
-        result_video.open(output_video.str(), VideoWriter::fourcc('X','V','I','D'), 15, Size(reference_image.cols * resize_factor, reference_image.rows * resize_factor), false);
+        result_video.open(output_video.str(), VideoWriter::fourcc(fourcc[0],fourcc[1],fourcc[2],fourcc[3]), fps, visualization.size(), false);
+        if (!result_video.isOpened()){
+            cerr << "the output video '" << output_video.str() << "' could not be opened."
+                 << " fourcc=" << fourcc
+                 << " fps=" << fps
+                 << " frameSize=" << visualization.size()
+                 << endl;
+            return -1;
+        }
     }
 
     if(haar){
