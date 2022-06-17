@@ -1934,7 +1934,7 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
     layerParams.type = "ReLU6";
     float min_value = -FLT_MAX, max_value = FLT_MAX;
     int input_size = node_proto.input_size();
-    CV_Assert(1 <= input_size && input_size <= 3);
+    CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
 
     if(input_size >= 2)
     {
