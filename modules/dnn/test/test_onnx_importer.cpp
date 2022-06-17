@@ -387,6 +387,7 @@ TEST_P(Test_ONNX_layers, PReLU)
 TEST_P(Test_ONNX_layers, Clip)
 {
     testONNXModels("clip", npy);
+    testONNXModels("clip_init_min_max");
 }
 
 TEST_P(Test_ONNX_layers, Shape)
