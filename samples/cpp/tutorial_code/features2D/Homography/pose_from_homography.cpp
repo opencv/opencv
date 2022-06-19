@@ -109,9 +109,18 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
 
     //! [polar-decomposition-of-the-rotation-matrix]
     cout << "R (before polar decomposition):\n" << R << "\ndet(R): " << determinant(R) << endl;
-    Mat W, U, Vt;
+    Mat_<double> W, U, Vt;
     SVDecomp(R, W, U, Vt);
     R = U*Vt;
+    double det = determinant(R);
+    if (det < 0)
+    {
+        Vt.at<double>(2,0) *= -1;
+        Vt.at<double>(2,1) *= -1;
+        Vt.at<double>(2,2) *= -1;
+
+        R = U*Vt;
+    }
     cout << "R (after polar decomposition):\n" << R << "\ndet(R): " << determinant(R) << endl;
     //! [polar-decomposition-of-the-rotation-matrix]
 
