@@ -868,8 +868,11 @@ public:
 
 /** @brief The class defining termination criteria for iterative algorithms.
 
-You can initialize it by default constructor and then override any parameters, or the structure may
-be fully initialized using the advanced variant of the constructor.
+For the purpose of backward compatibility two interfaces are presented now: new one, where all
+checks are hidden inside class and legacy one, which is just structure for storing values, all
+logic lies on user. If you are a user who uses opencv functions with TernCriteria, use the new
+interface to access those functions. If you are a developer who changes the body of opencv
+functions, do a cast of the incoming TermCriteria object
 */
 class CV_EXPORTS TermCriteria
 {
@@ -888,10 +891,12 @@ public:
     TermCriteria();
 
     /**
-    @param type The type of termination criteria, one of TermCriteria::Type
-    @param maxCount The maximum number of iterations or elements to compute.
-    @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
-    */
+     * @deprecated
+     * @param type The type of termination criteria, one of TermCriteria::Type
+     * @param maxCount The maximum number of iterations or elements to compute.
+     * @param epsilon The desired accuracy or change in parameters at which the iterative algorithm
+     * stops.
+     */
     TermCriteria(int type, int maxCount, double epsilon);
 
     /**
@@ -902,6 +907,7 @@ public:
 
     /**
      * Check if flag with according value is set
+     * @deprecated
      */
     inline bool isValid() const
     {
