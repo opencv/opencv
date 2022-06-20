@@ -374,7 +374,7 @@ http://www.learnopencv.com/histogram-of-oriented-gradients
 http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-tutorial
 
  */
-struct CV_EXPORTS_W HOGDescriptor
+class CV_EXPORTS_W HOGDescriptor
 {
 public:
     enum HistogramNormType { L2Hys = 0 //!< Default histogramNormType
@@ -385,15 +385,6 @@ public:
 
     /**@brief Creates the HOG descriptor and detector with default parameters.
 
-    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
-    */
-    CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
-        cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
-        histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true),
-        free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS), signedGradient(false)
-    {}
-
-    /** @overload
     @param _winSize sets winSize with given value.
     @param _blockSize sets blockSize with given value.
     @param _blockStride sets blockStride with given value.
@@ -407,11 +398,11 @@ public:
     @param _nlevels sets nlevels with given value.
     @param _signedGradient sets signedGradient with given value.
     */
-    CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
-                  Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  HOGDescriptor::HistogramNormType _histogramNormType=HOGDescriptor::L2Hys,
-                  double _L2HysThreshold=0.2, bool _gammaCorrection=false,
-                  int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
+    CV_WRAP HOGDescriptor(Size _winSize = Size(64, 128), Size _blockSize = Size(16, 16), Size _blockStride = Size(8, 8),
+                  Size _cellSize = Size(8, 8), int _nbins = 9, int _derivAperture = 1, double _winSigma = -1,
+                  HOGDescriptor::HistogramNormType _histogramNormType = HOGDescriptor::L2Hys,
+                  double _L2HysThreshold = 0.2, bool _gammaCorrection = true,
+                  int _nlevels = HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient = false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
     nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
     histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
