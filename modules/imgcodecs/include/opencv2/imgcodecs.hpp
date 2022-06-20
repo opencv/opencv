@@ -89,6 +89,7 @@ enum ImwriteFlags {
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
        IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use.
        IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
@@ -102,11 +103,21 @@ enum ImwriteFlags {
        IMWRITE_TIFF_COMPRESSION    = 259 //!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
      };
 
+enum ImwriteJPEGSamplingFactorParams {
+       IMWRITE_JPEG_SAMPLING_FACTOR_411 = 0x411111, //!< 4x1,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_420 = 0x221111, //!< 2x2,1x1,1x1(Default)
+       IMWRITE_JPEG_SAMPLING_FACTOR_422 = 0x211111, //!< 2x1,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_440 = 0x121111, //!< 1x2,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_444 = 0x111111  //!< 1x1,1x1,1x1(No subsampling)
+     };
+
+
 enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
        IMWRITE_EXR_TYPE_HALF   = 1, //!< store as HALF (FP16)
        IMWRITE_EXR_TYPE_FLOAT  = 2  //!< store as FP32 (default)
      };
+
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
 /** These flags will be modify the way of PNG image compression and will be passed to the underlying zlib processing stage.

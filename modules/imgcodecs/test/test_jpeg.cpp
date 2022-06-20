@@ -178,6 +178,98 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
     EXPECT_EQ(0, remove(output_normal.c_str()));
 }
 
+//==================================================================================================
+
+static const uint32_t default_sampling_factor = static_cast<uint32_t>(0x221111);
+
+static uint32_t test_jpeg_subsampling( const Mat src, const vector<int> param )
+{
+    vector<uint8_t> jpeg;
+
+    if ( cv::imencode(".jpg", src, jpeg, param ) == false )
+    {
+        return 0;
+    }
+
+    if ( src.channels() != 3 )
+    {
+        return 0;
+    }
+
+    // Find SOF Marker(FFC0)
+    int sof_offset = 0; // not found.
+    int jpeg_size = static_cast<int>( jpeg.size() );
+    for ( int i = 0 ; i < jpeg_size - 1; i++ )
+    {
+        if ( (jpeg[i] == 0xff ) && ( jpeg[i+1] == 0xC0 ) )
+        {
+            sof_offset = i;
+            break;
+        }
+    }
+    if ( sof_offset == 0 )
+    {
+        return 0;
+    }
+
+    // Extract Subsampling Factor from SOF.
+    return ( jpeg[sof_offset + 0x0A + 3 * 0 + 1] << 16 ) +
+           ( jpeg[sof_offset + 0x0A + 3 * 1 + 1] << 8  ) +
+           ( jpeg[sof_offset + 0x0A + 3 * 2 + 1]       ) ;
+}
+
+TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_default)
+{
+    vector<int> param;
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
+    EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
+}
+
+TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_valid)
+{
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
+    const uint32_t sampling_factor_list[] = {
+        IMWRITE_JPEG_SAMPLING_FACTOR_411,
+        IMWRITE_JPEG_SAMPLING_FACTOR_420,
+        IMWRITE_JPEG_SAMPLING_FACTOR_422,
+        IMWRITE_JPEG_SAMPLING_FACTOR_440,
+        IMWRITE_JPEG_SAMPLING_FACTOR_444,
+    };
+    const int sampling_factor_list_num = 5;
+
+    for ( int i = 0 ; i < sampling_factor_list_num; i ++ )
+    {
+        vector<int> param;
+        param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
+        param.push_back( sampling_factor_list[i] );
+        EXPECT_EQ( sampling_factor_list[i], test_jpeg_subsampling(src, param) );
+    }
+}
+
+TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
+{
+    Mat src( 48, 64, CV_8UC3, cv::Scalar::all(0) );
+    const uint32_t sampling_factor_list[] = { // Invalid list
+        0x111112,
+        0x000000,
+        0x001111,
+        0xFF1111,
+        0x141111, // 1x4,1x1,1x1 - unknown
+        0x241111, // 2x4,1x1,1x1 - unknown
+        0x421111, // 4x2,1x1,1x1 - unknown
+        0x441111, // 4x4,1x1,1x1 - 410(libjpeg cannot handle it)
+    };
+    const int sampling_factor_list_num = 8;
+
+    for ( int i = 0 ; i < sampling_factor_list_num; i ++ )
+    {
+        vector<int> param;
+        param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
+        param.push_back( sampling_factor_list[i] );
+        EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
+    }
+}
+
 #endif // HAVE_JPEG
 
 }} // namespace
