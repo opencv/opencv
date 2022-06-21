@@ -389,9 +389,11 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
-TEST_P(Test_ONNX_layers, Clip_init_min_max)
+TEST_P(Test_ONNX_layers, Clip_init)
 {
     testONNXModels("clip_init_min_max");
+    testONNXModels("clip_init_min");
+    testONNXModels("clip_init_max");
 }
 
 TEST_P(Test_ONNX_layers, Shape)
