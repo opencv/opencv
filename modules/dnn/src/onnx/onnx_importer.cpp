@@ -1291,6 +1291,17 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.type = (depth == CV_8S) ? "ReshapeInt8" : "Reshape";
     layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
 
+    // Set batchsize dim as dynamic to be compatible with batch size >= 2.
+    if (targetShape[0] == 1 && targetShape.size() > 1)
+    {
+        std::vector<int> dynamicAxes = {0};  // The index of batchsize dim is 0.
+        std::vector<int> inputIndices = {0};
+
+        layerParams.set("has_dynamic_shapes", true);
+        layerParams.set("dynamic_axes", DictValue::arrayInt(dynamicAxes.data(), dynamicAxes.size()));
+        layerParams.set("input_indices", DictValue::arrayInt(inputIndices.data(), inputIndices.size()));
+    }
+
     node_proto.set_input(0, node_proto.output(0));
     node_proto.set_output(0, output_name);
 

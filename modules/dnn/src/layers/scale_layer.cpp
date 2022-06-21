@@ -121,13 +121,46 @@ public:
 
         Mat &inpBlob = inputs[0];
         Mat &outBlob = outputs[0];
+        MatShape inpShape = shape(inpBlob);
+
+        bool multiBatch = false;
+
         // There is a mode when we multiply a first blob by a second one
         // instead of trainable weights.
-        Mat weights = hasWeights ? (blobs.empty() ? inputs[1] : blobs[0]).reshape(1, 1) : Mat();;
-        Mat bias = hasBias ? (blobs.empty() ? inputs[1] : blobs.back()).reshape(1, 1) : Mat();
+        Mat weights = Mat();
+        int numWeights = 0;
+        if (hasWeights)
+        {
+            if (blobs.empty())
+            {
+                weights = inputs[1];
+                MatShape weightsShape = shape(weights);
+                if (inpShape[0] == weightsShape[0] && inpShape[0] != 1) // batch size > 1
+                {
+                    weights.reshape(1, weightsShape[0]);
+                    if (axis == 0)
+                        numWeights = weights.total(0);
+                    else
+                        numWeights = weights.total(1);
+                    multiBatch = true;
+                }
+                else
+                {
+                    weights = weights.reshape(1, 1);
+                    numWeights = weights.total();
+                }
+            }
+            else
+            {
+                weights = blobs[0].reshape(1, 1);
+                numWeights = weights.total();
+            }
+        }
 
-        MatShape inpShape = shape(inpBlob);
-        const int numWeights = !weights.empty() ? weights.total() : bias.total();
+        Mat bias = hasBias ? (blobs.empty() ? inputs[1] : blobs.back()).reshape(1, 1) : Mat();
+        if (numWeights == 0)
+            numWeights = bias.total();
+
         CV_Assert(numWeights != 0);
         if (hasWeights && hasBias)
             CV_CheckEQ(weights.total(), bias.total(), "Incompatible weights/bias blobs");
@@ -145,6 +178,7 @@ public:
         int numSlices = total(inpShape, 0, axis);
         float* inpData = (float*)inpBlob.data;
         float* outData = (float*)outBlob.data;
+        float* weightData = (float *)weights.data;
 
         if (endAxis != inpBlob.dims)
         {
@@ -153,6 +187,9 @@ public:
             int spatialSize = total(inpShape, endAxis);  // spatialSize != 1
             for (int i = 0; i < numSlices; ++i)
             {
+                if (multiBatch)
+                    weightsData = !weights.empty() ? (float*)weights.row(i).data : 0;
+
                 for (int j = 0; j < numWeights; ++j)
                 {
                     float w = weightsData ? weightsData[j] : 1;
@@ -176,13 +213,33 @@ public:
         }
         else
         {
+            size_t wTotal = weights.total();
+            size_t iTotal = inputs[0].total();
+            bool multiBatchW = false;
+            int wSlice = iTotal/wTotal;
+
+            if (wSlice == 1)
+            {
+                // That means the weight and the input has the same shape.
+                // And if the batchsize of input is n, the weight must has the n batchsize.
+                multiBatchW = true;
+            }
+
             for (int i = 0; i < numSlices; ++i)
             {
                 Mat inpSlice(1, numWeights, CV_32F, inpData);
                 Mat outSlice(1, numWeights, CV_32F, outData);
+
                 if (!weights.empty())
                 {
-                    multiply(inpSlice, weights, outSlice);
+                    if (multiBatchW)
+                    {
+                        Mat weightSlice(1, numWeights, CV_32F, weightData);
+                        multiply(inpSlice, weightSlice, outSlice);
+                    }
+                    else
+                        multiply(inpSlice, weights, outSlice);
+
                     if (hasBias)
                         add(outSlice, bias, outSlice);
                 }
@@ -199,6 +256,8 @@ public:
                 }
                 inpData += numWeights;
                 outData += numWeights;
+                if (multiBatchW)
+                    weightData += numWeights;
             }
         }
     }

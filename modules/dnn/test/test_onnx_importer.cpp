@@ -461,6 +461,36 @@ TEST_P(Test_ONNX_layers, Scale)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
     testONNXModels("scale");
+
+    // Test ScaleLayer with batchsize of 2.
+    {
+        String basename = "scale";
+        String onnxmodel = _tf("models/" + basename + ".onnx", required);
+
+        Mat inp = blobFromNPY(_tf("data/input_" + basename + ".npy"));
+        Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+        MatShape inputShape = shape(inp), refShape = shape(ref);
+        inputShape[0] = 2; // set batch size;
+        refShape[0] = 2;
+
+        Mat inpBatch = Mat(inputShape, inp.type()), refBatch = Mat(refShape, ref.type());
+        inp.copyTo(inpBatch.row(0));
+        inp.copyTo(inpBatch.row(1));
+
+        ref.copyTo(refBatch.row(0));
+        ref.copyTo(refBatch.row(1));
+
+        Net net = readNetFromONNX(onnxmodel);
+        ASSERT_FALSE(net.empty());
+
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+
+        net.setInput(inpBatch);
+        Mat out = net.forward("");
+
+        normAssert(refBatch, out, "", 0, 0);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Scale_broadcast)
