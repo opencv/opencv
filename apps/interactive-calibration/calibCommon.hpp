@@ -21,7 +21,7 @@ namespace calib
 
     enum InputType { Video, Pictures };
     enum InputVideoSource { Camera, File };
-    enum TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };
+    enum TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid, CirclesGrid };
 
     static const std::string mainWindowName = "Calibration";
     static const std::string gridWindowName = "Board locations";
