@@ -1936,7 +1936,7 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
     int input_size = node_proto.input_size();
     CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
 
-    if(input_size == 2)
+    if (input_size >= 2 && !node_proto.input(1).empty())
     {
         if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
             min_value = getBlob(node_proto, 1).at<float>(0);
@@ -1944,12 +1944,12 @@ void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodePr
             CV_Error(Error::StsNotImplemented, "Non-constant min values in Clip are not supported");
     }
 
-    if(input_size == 3)
+    if (input_size == 3 && !node_proto.input(2).empty())
     {
-        if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-            min_value = getBlob(node_proto, 1).at<float>(0);
         if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
             max_value = getBlob(node_proto, 2).at<float>(0);
+        else
+            CV_Error(Error::StsNotImplemented, "Non-constant max values in Clip are not supported");
     }
 
     layerParams.set("min_value", layerParams.get<float>("min", min_value));
