@@ -201,7 +201,9 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
     cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::imshow(mainWindowName, frame);
+    cv::Mat resized = frame;
+    cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
+    cv::imshow(mainWindowName, resized);
     cv::waitKey(300);
 }
 
@@ -267,6 +269,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
     mSaveFrames = capParams.saveFrames;
+    mZoom = capParams.zoom;
 
     switch(mBoardType)
     {

@@ -94,6 +94,7 @@ namespace calib
         int maxFramesNum;
         int minFramesNum;
         bool saveFrames;
+        float zoom;
 
         captureParameters()
         {
