@@ -84,7 +84,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, value, true ));
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, true ));
     }
 
     void write(const char* key, const char* str, bool quote)
