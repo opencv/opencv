@@ -585,7 +585,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
 
                     CV_Assert(strlen(encoding) < 1000);
                     char buf[1100];
-                    sprintf(buf, "<?xml version=\"1.0\" encoding=\"%s\"?>\n", encoding);
+                    snprintf(buf, sizeof(buf), "<?xml version=\"1.0\" encoding=\"%s\"?>\n", encoding);
                     puts(buf);
                 } else
                     puts("<?xml version=\"1.0\"?>\n");

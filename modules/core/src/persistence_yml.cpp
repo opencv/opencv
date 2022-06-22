@@ -40,7 +40,7 @@ public:
         {
             /* reset struct flag. in order not to print ']' */
             struct_flags = FileNode::SEQ;
-            sprintf(buf, "!!binary |");
+            snprintf(buf, sizeof(buf), "!!binary |");
             data = buf;
         }
         else if( FileNode::isFlow(struct_flags))
@@ -49,7 +49,7 @@ public:
             struct_flags |= FileNode::FLOW;
 
             if( type_name )
-                sprintf( buf, "!!%s %c", type_name, c );
+                snprintf( buf, sizeof(buf), "!!%s %c", type_name, c );
             else
             {
                 buf[0] = c;
@@ -59,7 +59,7 @@ public:
         }
         else if( type_name )
         {
-            sprintf( buf, "!!%s", type_name );
+            snprintf( buf, sizeof(buf), "!!%s", type_name );
             data = buf;
         }
 

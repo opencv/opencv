@@ -78,7 +78,7 @@ void CV_OptFlowPyrLKTest::run( int )
 
     for(;;)
     {
-    sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "lk_prev.dat" );
+    snprintf( filename, sizeof(filename), "%soptflow/%s", ts->get_data_path().c_str(), "lk_prev.dat" );
 
     {
         FileStorage fs(filename, FileStorage::READ);
@@ -91,7 +91,7 @@ void CV_OptFlowPyrLKTest::run( int )
         }
     }
 
-    sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "lk_next.dat" );
+    snprintf( filename, sizeof(filename), "%soptflow/%s", ts->get_data_path().c_str(), "lk_next.dat" );
 
     {
         FileStorage fs(filename, FileStorage::READ);
@@ -115,7 +115,7 @@ void CV_OptFlowPyrLKTest::run( int )
     }
 
     /* read first image */
-    sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_1.bmp" );
+    snprintf( filename, sizeof(filename), "%soptflow/%s", ts->get_data_path().c_str(), "rock_1.bmp" );
     imgI = cv::imread( filename, cv::IMREAD_UNCHANGED );
 
     if( imgI.empty() )
@@ -126,7 +126,7 @@ void CV_OptFlowPyrLKTest::run( int )
     }
 
     /* read second image */
-    sprintf( filename, "%soptflow/%s", ts->get_data_path().c_str(), "rock_2.bmp" );
+    snprintf( filename, sizeof(filename), "%soptflow/%s", ts->get_data_path().c_str(), "rock_2.bmp" );
     imgJ = cv::imread( filename, cv::IMREAD_UNCHANGED );
 
     if( imgJ.empty() )
