@@ -1746,6 +1746,11 @@ TEST_P(Test_ONNX_layers, DivConst)
     testONNXModels("div_const");
 }
 
+TEST_P(Test_ONNX_layers, Gemm)
+{
+    testONNXModels("gemm_no_transB");
+    testONNXModels("gemm_transB_0");
+}
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
