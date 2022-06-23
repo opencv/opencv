@@ -700,6 +700,7 @@ void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: add constant '" << name << "' shape=" << toString(shape(blob)) << ": " << toString(blob));
     constBlobs.insert(std::make_pair(name, blob));
+    constBlobsExtraInfo.insert(std::make_pair(name, TensorInfo(blob.dims)));
     outShapes.insert(std::make_pair(name, shape(blob)));
 }
 
@@ -2912,17 +2913,13 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);
+//        else if (t.dims == 1 && t_real_ndims == 1 )
     };
 
     if (const_0 && const_1)
     {
         Mat a = getBlob(node_proto, 0);
-        // for cases like a of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
-        // but for correct broadcast, we need to make it of shape (1, 2)
-        pre_broadcast_transform(a, getBlobExtraInfo(node_proto, 0).real_ndims);
-        
         Mat b = getBlob(node_proto, 1);
-        pre_broadcast_transform(b, getBlobExtraInfo(node_proto, 1).real_ndims);
 
         std::vector<Mat> inputs{a, b}, output;
         runLayer(layerParams, inputs, output);
@@ -2933,7 +2930,9 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     else if (const_0 || const_1)
     {
         Mat inp = getBlob(node_proto, const_id);
-        pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, 1).real_ndims);
+        // for cases like a of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
+        // but for correct broadcast, we need to make it of shape (1, 2)
+        pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
 
         LayerParams constParams;
         constParams.name = node_proto.input(const_id);
