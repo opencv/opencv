@@ -73,21 +73,7 @@ public:
      */
     bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt);
 
-    /** Compute Rigid Transformation and scale between two frames so that Rt * (src * scale) = dst
-    * Works only on OdometryType::DEPTH and OdometryAlgoType::COMMON
-     * @param srcFrame src frame ("original" image)
-     * @param dstFrame dst frame ("rotated" image)
-     * @param Rt Rigid transformation, which will be calculated, in form:
-     * { R_11 R_12 R_13 t_1
-     *   R_21 R_22 R_23 t_2
-     *   R_31 R_32 R_33 t_3
-     *   0    0    0    1  }
-     * @param scale scale between srcFrame and dstFrame (use scale = 1 for input)
-     */
-    bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt, float& scale);
-
     CV_WRAP bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const;
-    CV_WRAP bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt, OutputArray scale) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
 
     class Impl;
