@@ -124,13 +124,11 @@ public:
                  OdometryAlgoType _algtype,
                  double _maxError1,
                  double _maxError5,
-                 bool _testScale = false,
                  double _idError = DBL_EPSILON) :
         otype(_otype),
         algtype(_algtype),
         maxError1(_maxError1),
         maxError5(_maxError5),
-        testScale(_testScale),
         idError(_idError)
     { }
 
@@ -175,7 +173,7 @@ void OdometryTest::readData(Mat& image, Mat& depth) const
     }
     if(depth.empty())
     {
-        FAIL() << "Depth" << depthFilename.c_str() << "can not be read" << std::endl;
+        FAIL() << "Depth " << depthFilename.c_str() << "can not be read" << std::endl;
     }
 
     CV_DbgAssert(image.type() == CV_8UC1);
@@ -263,10 +261,9 @@ void OdometryTest::run()
         FAIL() << "Can not find Rt between the same frame" << std::endl;
     }
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    float sdiff = abs(scale - 1.f);
-    if (ndiff > idError && abs(scale - 1.f) < FLT_EPSILON)
+    if (ndiff > idError)
     {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << " sdiff = " << sdiff << std::endl;
+        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
     }
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
