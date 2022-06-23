@@ -491,4 +491,61 @@ TEST(RGBD_Odometry_FastICP, prepareFrame)
     test.prepareFrameCheck();
 }
 
+TEST(RGBD_Odometry_WarpFrame, compareToGold)
+{
+    //TODO: identity transform
+    //TODO: finish it
+
+    std::string dataPath = cvtest::TS::ptr()->get_data_path();
+    std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
+    // The depth was generated using the script at 3d/misc/python/warp_test.py
+    std::string warpedDepthFilename = dataPath + "/cv/rgbd/warped.png";
+
+    Mat srcDepth, warpedDepth;
+
+    srcDepth = imread(srcDepthFilename, -1);
+    if(srcDepth.empty())
+    {
+        FAIL() << "Depth " << srcDepthFilename.c_str() << "can not be read" << std::endl;
+    }
+
+    warpedDepth = imread(warpedDepthFilename, -1);
+    if(warpedDepth.empty())
+    {
+        FAIL() << "Depth " << warpedDepthFilename.c_str() << "can not be read" << std::endl;
+    }
+
+    CV_DbgAssert(srcDepth.type() == CV_16UC1);
+    CV_DbgAssert(warpedDepth.type() == CV_16UC1);
+
+    double fx = 525.0, fy = 525.0,
+           cx = 319.5, cy = 239.5;
+    Matx33d K(fx,  0, cx,
+               0, fy, cy,
+               0,  0,  1);
+    cv::Affine3d rt(cv::Vec3d(0.1, 0.2, 0.3), cv::Vec3d(-0.04, 0.05, 0.6));
+
+    //TODO: check with and without scaling
+    Mat srcDepthCvt, warpedDepthCvt;
+    srcDepth.convertTo(srcDepthCvt, CV_32FC1, 1.f/5000.f);
+    srcDepth = srcDepthCvt;
+    warpedDepth.convertTo(warpedDepthCvt, CV_32FC1, 1.f/5000.f);
+    warpedDepth = warpedDepthCvt;
+
+    srcDepth.setTo(std::numeric_limits<float>::quiet_NaN(), srcDepth < FLT_EPSILON);
+    warpedDepth.setTo(std::numeric_limits<float>::quiet_NaN(), warpedDepth < FLT_EPSILON);
+
+    //TODO: check with and without image
+    //TODO: check with and without mask
+    //TODO: check with and without distCoeff
+    Mat image, mask, distCoeff, dstImage, dstDepth, dstMask;
+    warpFrame(image, srcDepth, mask, rt.matrix, K, distCoeff,
+              dstImage, dstDepth, dstMask);
+
+    //TODO: check this norm
+    double depthDiff = cv::norm(dstDepth, warpedDepth, NORM_L2);
+    //TODO: find true threshold, maybe based on pixcount
+    ASSERT_LE(0.1, depthDiff);
+}
+
 }} // namespace

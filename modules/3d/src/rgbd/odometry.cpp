@@ -381,14 +381,18 @@ bool Odometry::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
 template<class ImageElemType>
 static void
 warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
-    const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
-    OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+              const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+              OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
+    //TODO: take into account that image can be empty
+    //TODO: mask can also be empty
+
     CV_Assert(_image.size() == depth.size());
 
     Mat cloud;
     depthTo3d(depth, cameraMatrix, cloud);
 
+    //TODO: replace this by channel split/merge after the function is covered by tests
     Mat cloud3;
     cloud3.create(cloud.size(), CV_32FC3);
     for (int y = 0; y < cloud3.rows; y++)
@@ -400,11 +404,13 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
         }
     }
 
+    //TODO: do the following instead of the functions: K*R*Kinv*[uv1]*z + K*t
+    //TODO: optimize it using K's structure
     std::vector<Point2f> points2d;
     Mat transformedCloud;
     perspectiveTransform(cloud3, transformedCloud, Rt);
     projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
-        distCoeff, points2d);
+                  distCoeff, points2d);
 
     Mat image = _image.getMat();
     Size sz = _image.size();
@@ -426,7 +432,8 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
         {
             const float transformed_z = transformedCloud_row[x].z;
             const Point2i p2d = points2d_row[x];
-            if ((!mask_row || mask_row[x]) && transformed_z > 0 && rect.contains(p2d) && /*!cvIsNaN(cloud_row[x].z) && */zBuffer.at<float>(p2d) > transformed_z)
+            if ((!mask_row || mask_row[x]) && transformed_z > 0 &&
+                rect.contains(p2d) && /*!cvIsNaN(cloud_row[x].z) && */zBuffer.at<float>(p2d) > transformed_z)
             {
                 warpedImage.at<ImageElemType>(p2d) = image_row[x];
                 zBuffer.at<float>(p2d) = transformed_z;
@@ -444,14 +451,17 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
     }
 }
 
+
 void warpFrame(InputArray image, InputArray depth, InputArray mask,
-    InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
-    OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+               InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
+               OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
     if (image.type() == CV_8UC1)
-        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
+        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(),
+                             warpedImage, warpedDepth, warpedMask);
     else if (image.type() == CV_8UC3)
-        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
+        warpFrameImpl<Point3_<uchar>>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(),
+                                      warpedImage, warpedDepth, warpedMask);
     else
         CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
 }
