@@ -63,10 +63,18 @@ class ONNXImporter
         LayerInfo(int _layerId = 0, int _outputId = 0) : layerId(_layerId), outputId(_outputId) {}
     };
 
+    struct TensorInfo {
+        int real_ndims;
+        TensorInfo(int _real_ndims = 0) : real_ndims(_real_ndims) {}
+    };
+
     std::map<std::string, Mat> getGraphTensors(
-                                    const opencv_onnx::GraphProto& graph_proto);
+                                    const opencv_onnx::GraphProto& graph_proto,
+                                    std::map<std::string, TensorInfo>& extra_tensor_info);
     Mat getBlob(const opencv_onnx::NodeProto& node_proto, int index);
     Mat getBlob(const std::string& input_name);
+    TensorInfo getBlobExtraInfo(const opencv_onnx::NodeProto& node_proto, int index);
+    TensorInfo getBlobExtraInfo(const std::string& input_name);
 
     LayerParams getLayerParams(const opencv_onnx::NodeProto& node_proto);
 
@@ -101,6 +109,7 @@ protected:
     std::string framework_name;
 
     std::map<std::string, Mat> constBlobs;
+    std::map<std::string, TensorInfo> constBlobsExtraInfo;
 
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
     bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
@@ -380,7 +389,8 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
 }
 
 std::map<std::string, Mat> ONNXImporter::getGraphTensors(
-                                        const opencv_onnx::GraphProto& graph_proto)
+                                        const opencv_onnx::GraphProto& graph_proto,
+                                        std::map<std::string, TensorInfo>& extra_tensor_info)
 {
     std::map<std::string, Mat> layers_weights;
 
@@ -395,6 +405,7 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
             continue;
 
         layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
+        extra_tensor_info.insert(std::make_pair(tensor_proto.name(), TensorInfo(tensor_proto.dims_size())));
     }
     return layers_weights;
 }
@@ -567,6 +578,23 @@ Mat ONNXImporter::getBlob(const std::string& input_name)
         CV_Error(Error::StsBadArg, std::string("Blob ") + input_name + " not found in const blobs");
     }
     return constBlob->second;
+}
+
+ONNXImporter::TensorInfo ONNXImporter::getBlobExtraInfo(const opencv_onnx::NodeProto &node_proto, int index)
+{
+    CV_Assert(index < node_proto.input_size());
+    const std::string& input_name = node_proto.input(index);
+    return getBlobExtraInfo(input_name);
+}
+
+ONNXImporter::TensorInfo ONNXImporter::getBlobExtraInfo(const std::string& input_name)
+{
+    std::map<std::string, TensorInfo>::const_iterator constBlobExtraInfo = constBlobsExtraInfo.find(input_name);
+    if (constBlobExtraInfo == constBlobsExtraInfo.end())
+    {
+        CV_Error(Error::StsBadArg, std::string("Blob ") + input_name + " not found in const blobs of extra info");
+    }
+    return constBlobExtraInfo->second;
 }
 
 void ONNXImporter::addLayer(LayerParams& layerParams,
@@ -799,7 +827,7 @@ void ONNXImporter::populateNet()
     const int layersSize = graph_proto.node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: graph simplified to " << layersSize << " nodes");
 
-    constBlobs = getGraphTensors(graph_proto);  // scan GraphProto.initializer
+    constBlobs = getGraphTensors(graph_proto, constBlobsExtraInfo);  // scan GraphProto.initializer
     std::vector<String> netInputs;  // map with network inputs (without const blobs)
     // Add all the inputs shapes. It includes as constant blobs as network's inputs shapes.
     for (int i = 0; i < graph_proto.input_size(); ++i)
@@ -2881,10 +2909,21 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     bool const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
     int const_id = (1 + const_1 - const_0)/2;
 
+    auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
+        if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
+            transpose(t, t);
+    };
+
     if (const_0 && const_1)
     {
         Mat a = getBlob(node_proto, 0);
+        // for cases like a of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
+        // but for correct broadcast, we need to make it of shape (1, 2)
+        pre_broadcast_transform(a, getBlobExtraInfo(node_proto, 0).real_ndims);
+        
         Mat b = getBlob(node_proto, 1);
+        pre_broadcast_transform(b, getBlobExtraInfo(node_proto, 1).real_ndims);
+
         std::vector<Mat> inputs{a, b}, output;
         runLayer(layerParams, inputs, output);
         CV_Assert(output.size() == 1);
@@ -2894,6 +2933,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     else if (const_0 || const_1)
     {
         Mat inp = getBlob(node_proto, const_id);
+        pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, 1).real_ndims);
 
         LayerParams constParams;
         constParams.name = node_proto.input(const_id);
