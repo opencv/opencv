@@ -6,7 +6,6 @@
 
 #include "../../precomp.hpp"
 #include "fast_convolution.hpp"
-#include "fast_convolution_internals.hpp"
 #include "fast_convolution.simd.hpp"
 
 namespace cv { namespace dnn {
@@ -18,8 +17,8 @@ Ptr<FastConv2d> initFastConv2d(
         int dilation_x, int dilation_y,
         const std::vector<size_t>& pads_begin,
         const std::vector<size_t>& pads_end,
-        float* weightsPtr,
-        float* biasPtr)
+        float* srcWeights,
+        float* srcBias)
 {
     Ptr<FastConv2d> conv = makePtr<FastConv2d>();
 
@@ -35,8 +34,6 @@ Ptr<FastConv2d> initFastConv2d(
     conv->dilation_x = dilation_x;
 
     conv->ngroups = ngroups;
-    conv->biasPtr = biasPtr;
-
     conv->pad_top = pads_begin[0];
     conv->pad_bottom = pads_end[0];
     conv->pad_left = pads_begin[1];
@@ -45,14 +42,13 @@ Ptr<FastConv2d> initFastConv2d(
     // store bias; append some zero's to make sure that
     // we can always read FAST_CONV_MR elements starting from any valid index
     {
-        // TODO! support 1x1 branch
         int k = 0, nbias = K + FAST_CONV_MR-1;
-        conv->biasBuf.allocate(nbias);
-        conv->biasPtr = conv->biasBuf.data();
+        conv->biasBuf.reserve(nbias);
+        float* biasBufPtr = conv->biasBuf.data();
         for(; k < K; k++)
-            conv->biasPtr[k] = biasPtr ? biasPtr[k] : 0.f;
+            biasBufPtr[k] = srcBias ? srcBias[k] : 0.f;
         for(; k < nbias; k++)
-            conv->biasPtr[k] = 0.f;
+            biasBufPtr[k] = 0.f;
     }
 
 #if CV_NEON // For now, winograd is ARM platform only.
@@ -70,13 +66,13 @@ Ptr<FastConv2d> initFastConv2d(
         int ksize = Hk*Wk;
         int padded_ksize = ((ksize + FAST_VEC_NLANES-1)/FAST_VEC_NLANES)*FAST_VEC_NLANES;  // this code aims to let memory fit with vector size.
         int nweights = C*padded_ksize;
-        conv->weightsBuf.allocate(nweights);
-        conv->weightsPtr = conv->weightsBuf.data();
-        memset(conv->weightsPtr, 0, nweights*sizeof(conv->weightsPtr[0]));
+        conv->weightsBuf.reserve(nweights);
+        float* weightsBufPtr = conv->weightsBuf.data();
+        memset(weightsBufPtr, 0, nweights*sizeof(weightsBufPtr[0]));
         for(int c = 0; c < C; c++)
         {
             for (int k = 0; k < ksize; k++)
-                conv->weightsPtr[c*padded_ksize + k] = weightsPtr[c*ksize + k];
+                weightsBufPtr[c*padded_ksize + k] = srcWeights[c*ksize + k];
         }
     }
     else
@@ -86,10 +82,10 @@ Ptr<FastConv2d> initFastConv2d(
         int Kg = K/ngroups, Cg = max(C/ngroups, 1);
         int Kg_aligned = ((Kg + FAST_CONV_MR - 1)/FAST_CONV_MR)*FAST_CONV_MR;
         size_t nweights = ngroups*Kg_aligned*Cg*Hk*Wk;
-        conv->weightsBuf.allocate(nweights);
-        conv->weightsPtr = conv->weightsBuf.data();
-        memset(conv->weightsPtr, 0, nweights*sizeof(conv->weightsPtr[0]));
-        float* packed_wptr = conv->weightsPtr;
+        conv->weightsBuf.reserve(nweights);
+        float* weightsBufPtr = conv->weightsBuf.data();
+        memset(weightsBufPtr, 0, nweights*sizeof(weightsBufPtr[0]));
+        float* packed_wptr = weightsBufPtr;
 
         // pack the weight.
         for(int g = 0; g < ngroups; g++)
@@ -101,7 +97,7 @@ Ptr<FastConv2d> initFastConv2d(
                 {
                     for(int yx = 0; yx < Hk*Wk; yx++, packed_wptr += FAST_CONV_MR)
                     {
-                        const float* wptr = weightsPtr + ((g*Kg + k0)*Cg + c)*Hk*Wk + yx;
+                        const float* wptr = srcWeights + ((g*Kg + k0)*Cg + c)*Hk*Wk + yx;
                         int k = 0;
                         for(; k < dk; k++, wptr += Cg*Hk*Wk)
                             packed_wptr[k] = *wptr;
@@ -115,7 +111,7 @@ Ptr<FastConv2d> initFastConv2d(
         // Prepare Weight for Winograd F(6x6, 3x3)
         if (conv->ifWinograd63)
         {
-            initWinograd63(conv, weightsPtr, K, C);
+            initWinograd63(conv, srcWeights, K, C);
         }
     }
     return conv;
@@ -353,9 +349,9 @@ static void packInput(float* inpbuf, const float* inptr, int* yxtab, int ksize, 
     }
 }
 
-static void doConvolution(float* outptr0, float* inpbuf_task, float* cbuf, const Ptr<FastConv2d>& conv, int HkWkCg,int k0, int k1, int yx0, int yx1,
-        size_t out_planesize, int g, int Kg, int Kg_aligned , bool partial0,
-        ActivationLayer*& activ, float minval, float maxval, bool ifMinMaxAct)
+static void matMulCompute(float* outptr0, float* inpbuf_task, float* cbuf, const Ptr<FastConv2d>& conv, int HkWkCg,
+                          int k0, int k1, int yx0, int yx1, size_t out_planesize, int g, int Kg, int Kg_aligned,
+                          bool partial0, ActivationLayer*& activ, float minval, float maxval, bool ifMinMaxAct)
 {
     int outstep0 = out_planesize;
 
@@ -375,27 +371,20 @@ static void doConvolution(float* outptr0, float* inpbuf_task, float* cbuf, const
 
 #if CV_TRY_AVX2
         if (conv->useAVX2)
-            opt_AVX2::conv_block( HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
+            opt_AVX2::convBlock_AVX2( HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
                                   inpbuf_task, outptr, outstep, conv->biasPtr + Kg * g + k,
                                   minval, maxval, ifMinMaxAct);
         else
 #endif
-#if CV_TRY_AVX
-        if (conv->useAVX)
-            opt_AVX::conv_block( HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
-                                 inpbuf_task, outptr, outstep, conv->biasPtr + Kg * g + k,
-                                 minval, maxval, ifMinMaxAct);
-        else
-#endif
 #if CV_TRY_NEON
         if (conv->useNEON)
-            conv_blockNEON(HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
-                                 inpbuf_task, outptr, outstep, conv->biasPtr + Kg * g + k,
+            opt_NEON::convBlock_NEON(HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
+                                 inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
                                  minval, maxval, ifMinMaxAct);
         else
 #endif
-            conv_block_SIMD(HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
-                            inpbuf_task, outptr, outstep, conv->biasPtr + Kg * g + k,
+            convBlock(HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
+                            inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
                             minval, maxval, ifMinMaxAct);
 
         // activation
@@ -436,7 +425,6 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                 minval = 0.0f;
                 ifMinMaxAct = true;
                 activ = nullptr;
-
             }
             else // Leaky ReLU
             {
@@ -538,10 +526,16 @@ void runFastConv2d(InputArray _input, OutputArray _output,
     int Kstripes = Kg_nblocks*stripes_per_sample;
     int nsubtasks = N*ngroups*Kstripes;
 
-    float* inpbuf_all = (float *)fastMalloc(inputbufsize * sizeof(float ));
-    float* output_buf = (float *)fastMalloc(outbufsize * sizeof(float ));
+    AutoBuffer<float> inpbuf_all_, outputbuf_;
+    inputbufsize = alignSize(inputbufsize, VEC_ALIGN);
+    inpbuf_all_.allocate(inputbufsize + VEC_ALIGN);
+    float* inpbuf_all = alignPtr(inpbuf_all_.data(), (int)(VEC_ALIGN*sizeof(float)));
 
-    AutoBuffer<int> ofstab_(Hk*Wk*3);
+    outbufsize = alignSize(outbufsize, VEC_ALIGN);
+    outputbuf_.allocate(outbufsize + VEC_ALIGN);
+    float* output_buf = alignPtr(outputbuf_.data(), (int)(VEC_ALIGN*sizeof(float)));
+
+    std::vector<int> ofstab_(Hk*Wk*3, 0);
     int* ofstab = ofstab_.data();
     int* yxtab = ofstab + Hk*Wk;
 
@@ -622,7 +616,7 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                         size_t outofs = ((n * ngroups + g) * Kg + k0) * outstep0 + yx0;
                         float *outptr0 = out + outofs;
 
-                        doConvolution(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
+                        matMulCompute(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
                                       Kg, Kg_aligned, partial0, activ, minval, maxval, ifMinMaxAct);
                     }
                 }
@@ -649,13 +643,17 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                     subtask += kyx1 - kyx0;
                     int k0, k1;
                     int yx0, yx_limit;
-                    if (stripes_per_sample == 1) {
+
+                    if (stripes_per_sample == 1)
+                    {
                         k0 = kyx0 * FAST_CONV_MR;
                         k1 = kyx1 * FAST_CONV_MR;
                         k1 = k1 <= Kg ? k1 : Kg;
                         yx0 = 0;
                         yx_limit = out_planesize;
-                    } else {
+                    }
+                    else
+                    {
                         k0 = 0;
                         k1 = Kg;
                         yx0 = kyx0 * FAST_CONV_NR;
@@ -679,15 +677,13 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                         size_t outofs = ((n * ngroups + g) * Kg + k0) * outstep0 + yx0;
                         float *outptr0 = out + outofs;
 
-                        doConvolution(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
+                        matMulCompute(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
                                       Kg, Kg_aligned, partial0, activ, minval, maxval, ifMinMaxAct);
                     }
                 }
             }
         });
     }
-    fastFree((void *)inpbuf_all);
-    fastFree((void *)output_buf);
 }
 
 }} // namespace cv::dnn

@@ -1,3 +1,15 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+/*
+Winograd-based convolution F(6x6, 3x3).
+The code has been borrowed from ncnn inference engine (https://github.com/Tencent/ncnn)
+and adapted for OpenCV by Zihao Mu.
+
+Below is the original copyright
+*/
+
 // Tencent is pleased to support the open source community by making ncnn available.
 //
 // Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
@@ -11,20 +23,18 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
-// This file is modified from the NCNN (https://github.com/Tencent/ncnn/blob/master/src/layer/arm/convolution_3x3_pack4.h)
 
 #include "../../precomp.hpp"
 #include "fast_convolution.hpp"
-#include "fast_convolution_internals.hpp"
 
-enum {
+namespace cv { namespace dnn {
+enum
+{
     WINO_STEP=6,
     WINO_KSIZE=3,
     WINO_SIZE= WINO_STEP + WINO_KSIZE - 1,
     WINO_AREA= WINO_SIZE * WINO_SIZE
 };
-
-namespace cv { namespace dnn {
 
 #if CV_NEON
 static void winograd_trans_input_F63(float* src, float* dst, int Channle_div4, const int tiles, const int big_step, const int line_step, const int* ofstab0)
@@ -329,7 +339,7 @@ static void winograd_trans_output_F63(float* src_, float* bias_, float minval, f
     }
 }
 
-void initWinograd63(Ptr<FastConv2d>& conv, float* src_weight, int K, int C)
+void initWinograd63(Ptr<FastConv2d>& conv, float* srcWeight, int K, int C)
 {
     static const float ktm[8][3] = {
             {1.0f,      0.0f,      0.0f},
@@ -351,10 +361,10 @@ void initWinograd63(Ptr<FastConv2d>& conv, float* src_weight, int K, int C)
     // Allocate memory for winograd.
     int nweights = K_aligned * C_aligned * WINO_AREA;
 
-    conv->weightsWino63Buf.allocate(nweights);
-    conv->weightsWino63Ptr = conv->weightsWino63Buf.data();
-    memset(conv->weightsWino63Ptr, 0, nweights*sizeof(conv->weightsWino63Ptr[0]));
-    float* wptrWino = conv->weightsWino63Ptr;
+    conv->weightsWino63Buf.reserve(nweights);
+    float* weightsWino63Ptr = conv->weightsWino63Buf.data();
+    memset(weightsWino63Ptr, 0, nweights*sizeof(weightsWino63Ptr[0]));
+    float* wptrWino = weightsWino63Ptr;
 
     AutoBuffer<float> kernelTm0_;
     kernelTm0_.allocate(WINO_AREA * K * C);
@@ -369,7 +379,7 @@ void initWinograd63(Ptr<FastConv2d>& conv, float* src_weight, int K, int C)
             for (int inc = 0; inc < C; inc++)
             {
                 float *kernel_tm0 = kernelTm + outc * winoSize + inc * WINO_AREA;
-                const float *kernel0 = src_weight + outc * kSize + inc * kArea;
+                const float *kernel0 = srcWeight + outc * kSize + inc * kArea;
 
                 // transform kernel, transposed
                 const float *k0 = kernel0;
@@ -538,7 +548,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         lineNum = tiles;
     }
     CV_Assert(lineNum > 0 && inpPack > 0);
-    AutoBuffer<int> ofstab0_(tiles * 2);
+    std::vector<int> ofstab0_(tiles * 2, 0);
     int* ofstab0 = ofstab0_.data(); // [line Number, input pack]
 
     int tiles_tmp = tiles;
@@ -584,14 +594,23 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
     size_t outputbuf_size = tiles * K_aligned * 8 * 8;
     size_t outputCnbuf_size = ntasks * 8 * 8 * 4;
 
-    float* inputbuf0 = (float *) fastMalloc(inputbuf_size * sizeof(float ));
-    float* inputCnbuf0 = (float *) fastMalloc(inputbufCn_size * sizeof(float ));
+    AutoBuffer<float> inputbuf0_, inputCnbuf0_, outputbuf0_, outputCnbuf0_;
 
-    float* outputbuf0 = (float *) fastMalloc(outputbuf_size * sizeof(float ));
-    float* outputCnbuf0 = (float *) fastMalloc(outputCnbuf_size * sizeof(float ));
+    inputbuf0_.allocate(inputbuf_size);
+    float* inputbuf0 = alignPtr(inputbuf0_.data(), (int)(sizeof(float)));
+    memset(inputbuf0, 0, inputbuf_size * sizeof(float ));
+
+    inputCnbuf0_.allocate(inputbufCn_size);
+    float* inputCnbuf0 = inputCnbuf0_.data();
+
+    outputbuf0_.allocate(outputbuf_size);
+    float* outputbuf0 = outputbuf0_.data();
+
+    outputCnbuf0_.allocate(outputCnbuf_size);
+    float* outputCnbuf0 = outputCnbuf0_.data();
 
     // Input Parallel For
-    float* weight_ptr0 = conv->weightsWino63Ptr;
+    float* weight_ptr0 = conv->weightsWino63Buf.data();
     for (int bn = 0; bn < N; bn++)
     {
         float* input_ptr0 = input.ptr<float>() + bn * Hi * Wi * C;
@@ -1274,7 +1293,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             outputCnbuf_i += FAST_VEC_NLANES;
                         }
 
-                        winograd_trans_output_F63(outputCnbuf, conv->biasPtr + outCn,
+                        winograd_trans_output_F63(outputCnbuf, conv->biasBuf.data() + outCn,
                                                   minval, maxval, ifMinMaxAct);
 
                         int wEnd = (wi + 1) * 6 > W0 ? W0 - (wi * 6) : 6;
@@ -1311,11 +1330,6 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
             }
         });
     }
-
-    fastFree(inputbuf0);
-    fastFree(inputCnbuf0);
-    fastFree(outputbuf0);
-    fastFree(outputCnbuf0);
 
     return 1;
 }

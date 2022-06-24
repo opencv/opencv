@@ -5,19 +5,18 @@
 // This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx)
 
 #include "../../precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 #include "fast_convolution.hpp"
-#include "fast_convolution_internals.hpp"
 
 namespace cv { namespace dnn {
 
-static void depthWiseBlockSIMD(const float *inptr, float *outptr, const float *weights, float biasval, int *ofstab, int *yxtab,
+static void depthWiseBlock(const float *inptr, float *outptr, const float *weights, float biasval, int *ofstab, int *yxtab,
                            float minval, float maxval, int Hi, int Wi, int H0, int W0, int ksize, int pad_top, int pad_left,
                            int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                            int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
 
 #ifdef CV_SIMD128
-
     v_float32x4 vminval = v_setall_f32(minval), vmaxval = v_setall_f32(maxval);
 
     v_float32x4 w0 = v_setall_f32(
@@ -317,7 +316,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
     const float *inp = input.ptr<float>();
     float *out = output.ptr<float>();
 
-    AutoBuffer<int> ofstab_(3 * padded_ksize);
+    std::vector<int> ofstab_(3 * padded_ksize, 0);
     int *ofstab = ofstab_.data();
     int *yxtab = ofstab + padded_ksize;
 
@@ -331,7 +330,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         ofstab[k] = dy * Wi + dx;
     }
 
-    const float *weights0 = conv->weightsPtr, *bias = conv->biasPtr;
+    const float *weights0 = conv->weightsBuf.data(), *bias = conv->biasBuf.data();
     int inner_ytop = (pad_bottom + stride_y - 1) / stride_y, inner_ybottom = 3;
     int inner_xleft = (pad_left + stride_x - 1) / stride_x, inner_xright = 4;
 
@@ -365,19 +364,12 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
 
 #if CV_TRY_AVX2
             if (conv->useAVX2)
-                opt_AVX2::depthWiseBlock(inptr, outptr0, weights, biasval, ofstab, yxtab, minval, maxval, Hi, Wi, H0, W0, ksize,
+                opt_AVX2::depthWiseBlock_AVX2(inptr, outptr0, weights, biasval, ofstab, yxtab, minval, maxval, Hi, Wi, H0, W0, ksize,
                                          pad_top, pad_left, dilation_y, stride_x, stride_y, inner_xleft, inner_xright, inner_ytop,
                                          inner_ybottom, ifMinMaxAct, useSIMD, is3x3);
             else
 #endif
-#if CV_TRY_AVX
-            if (conv->useAVX)
-                opt_AVX::depthWiseBlock(inptr, outptr0, weights, biasval, ofstab, yxtab, minval, maxval, Hi, Wi, H0, W0, ksize,
-                                        pad_top, pad_left, dilation_y, stride_x, stride_y, inner_xleft, inner_xright, inner_ytop,
-                                        inner_ybottom, ifMinMaxAct, useSIMD, is3x3);
-            else
-#endif
-            depthWiseBlockSIMD(inptr, outptr0, weights, biasval, ofstab, yxtab, minval, maxval, Hi, Wi, H0, W0, ksize,
+            depthWiseBlock(inptr, outptr0, weights, biasval, ofstab, yxtab, minval, maxval, Hi, Wi, H0, W0, ksize,
                            pad_top, pad_left, dilation_y, stride_x, stride_y, inner_xleft, inner_xright, inner_ytop,
                            inner_ybottom, ifMinMaxAct, useSIMD, is3x3);
 

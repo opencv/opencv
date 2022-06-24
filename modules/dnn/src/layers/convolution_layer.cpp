@@ -255,7 +255,7 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat, fast_weights;
+    Mat weightsMat, fastWeights;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
@@ -297,24 +297,15 @@ public:
         tengine_graph=NULL;
 #endif
     }
-
+#ifdef HAVE_TENGINE
     ~ConvolutionLayerImpl()
     {
-        if (fastConv2dImpl)
-        {
-            fastConv2dImpl->weightsWino63Buf.deallocate();
-            fastConv2dImpl->weightsBuf.deallocate();
-            fastConv2dImpl->biasBuf.deallocate();
-            fastConv2dImpl.reset();
-        }
-
-#ifdef HAVE_TENGINE
         if(NULL != tengine_graph )
         {
             tengine_release(tengine_graph);
         }
-#endif
     }
+#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -434,7 +425,7 @@ public:
         if (!blobs.empty())
         {
             Mat wm = blobs[0].reshape(1, numOutput);
-            fast_weights = wm;
+            fastWeights = wm;
             if ((wm.step1() % VEC_ALIGN != 0) ||
                 !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
             )
@@ -641,8 +632,8 @@ public:
             // Keep origin weights unchanged.
             if (weightsMat.data == blobs[0].data)
                 weightsMat = weightsMat.clone();
-            if (fast_weights.data == blobs[0].data)
-                fast_weights = fast_weights.clone();
+            if (fastWeights.data == blobs[0].data)
+                fastWeights = fastWeights.clone();
 
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
@@ -650,7 +641,7 @@ public:
                 double wi = w.at<float>(i);
                 weightsMultipliers[i] *= wi;
                 cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
-                cv::multiply(originWeights.row(i), weightsMultipliers[i], fast_weights.row(i));
+                cv::multiply(originWeights.row(i), weightsMultipliers[i], fastWeights.row(i));
                 biasvec[i] *= wi;
             }
         }
@@ -1969,6 +1960,9 @@ public:
         if (blobs.empty())
         {
             variableWeight = true;
+            if (fastWeights.data != inputs[1].data)
+                fastWeights = inputs[1].clone();
+
             Mat wm = inputs[1].reshape(1, outCn);
             if (wm.data != weightsMat.data)
             {
@@ -2085,35 +2079,34 @@ public:
         {
             int nstripes = std::max(getNumThreads(), 1);
 
-            if (!variableWeight)
+            // Initialization of FastCovn2d
+            if ((!fastConv2dImpl || variableWeight) && inputs[0].dims == 4)
             {
-                // Initialization of FastCovn2d
-                if (!fastConv2dImpl && inputs[0].dims == 4)
-                {
-                    int K = outputs[0].size[1];
-                    int C = inputs[0].size[1];
-                    int Hk = kernel_size[kernel_size.size() - 2];
-                    int Wk = kernel_size.back();
+                int K = outputs[0].size[1];
+                int C = inputs[0].size[1];
+                int Hk = kernel_size[kernel_size.size() - 2];
+                int Wk = kernel_size.back();
 
-                    CV_Assert(outputs[0].size[1] % ngroups == 0);
-                    int stride_h = strides[strides.size() - 2];
-                    int stride_w = strides.back();
+                CV_Assert(outputs[0].size[1] % ngroups == 0);
+                int stride_h = strides[strides.size() - 2];
+                int stride_w = strides.back();
 
-                    int dilation_h = dilations[dilations.size() - 2];
-                    int dilation_w = dilations.back();
-                    float* weightsPtr = fast_weights.ptr<float>();
+                int dilation_h = dilations[dilations.size() - 2];
+                int dilation_w = dilations.back();
+                float* weightsPtr = fastWeights.ptr<float>();
+                CV_Assert(weightsPtr);
 
-                    fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h,
-                                                  dilation_w, dilation_h, pads_begin, pads_end, weightsPtr, &biasvec[0]);
-                }
-
-                if (fastConv2dImpl)
-                {
-                    runFastConv2d(inputs[0], outputs[0], fastConv2dImpl, nstripes, activ);
-                    return;
-                }
+                fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h,
+                                              dilation_w, dilation_h, pads_begin, pads_end, weightsPtr, &biasvec[0]);
             }
 
+            if (fastConv2dImpl)
+            {
+                runFastConv2d(inputs[0], outputs[0], fastConv2dImpl, nstripes, activ);
+                return;
+            }
+
+            // Use only for Conv1D and Conv3D.
             ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                             kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
 
