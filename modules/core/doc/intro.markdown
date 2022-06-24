@@ -71,7 +71,7 @@ data sharing. A destructor decrements the reference counter associated with the 
 The buffer is deallocated if and only if the reference counter reaches zero, that is, when no other
 structures refer to the same buffer. Similarly, when a Mat instance is copied, no actual data is
 really copied. Instead, the reference counter is incremented to memorize that there is another owner
-of the same data. There is also the Mat::clone method that creates a full copy of the matrix data.
+of the same data. There is also the cv::Mat::clone method that creates a full copy of the matrix data.
 See the example below:
 ```.cpp
     // create a big 8Mb matrix
@@ -159,11 +159,11 @@ grayscale conversion. Note that frame and edges are allocated only once during t
 of the loop body since all the next video frames have the same resolution. If you somehow change the
 video resolution, the arrays are automatically reallocated.
 
-The key component of this technology is the Mat::create method. It takes the desired array size and
-type. If the array already has the specified size and type, the method does nothing. Otherwise, it
-releases the previously allocated data, if any (this part involves decrementing the reference
+The key component of this technology is the cv::Mat::create method. It takes the desired array size
+and type. If the array already has the specified size and type, the method does nothing. Otherwise,
+it releases the previously allocated data, if any (this part involves decrementing the reference
 counter and comparing it with zero), and then allocates a new buffer of the required size. Most
-functions call the Mat::create method for each output array, and so the automatic output data
+functions call the cv::Mat::create method for each output array, and so the automatic output data
 allocation is implemented.
 
 Some notable exceptions from this scheme are cv::mixChannels, cv::RNG::fill, and a few other
@@ -247,9 +247,9 @@ Examples:
                                // matrix (10-element complex vector)
     Mat img(Size(1920, 1080), CV_8UC3); // make a 3-channel (color) image
                                         // of 1920 columns and 1080 rows.
-    Mat grayscale(image.size(), CV_MAKETYPE(image.depth(), 1)); // make a 1-channel image of
-                                                                // the same size and same
-                                                                // channel type as img
+    Mat grayscale(img.size(), CV_MAKETYPE(img.depth(), 1)); // make a 1-channel image of
+                                                            // the same size and same
+                                                            // channel type as img
 ```
 Arrays with more complex elements cannot be constructed or processed using OpenCV. Furthermore, each
 function or method can handle only a subset of all possible array types. Usually, the more complex
@@ -269,14 +269,14 @@ extended in future based on user requests.
 ### InputArray and OutputArray
 
 Many OpenCV functions process dense 2-dimensional or multi-dimensional numerical arrays. Usually,
-such functions take cppMat as parameters, but in some cases it's more convenient to use
+such functions take `cv::Mat` as parameters, but in some cases it's more convenient to use
 `std::vector<>` (for a point set, for example) or `cv::Matx<>` (for 3x3 homography matrix and such). To
 avoid many duplicates in the API, special "proxy" classes have been introduced. The base "proxy"
 class is cv::InputArray. It is used for passing read-only arrays on a function input. The derived from
 InputArray class cv::OutputArray is used to specify an output array for a function. Normally, you should
 not care of those intermediate types (and you should not declare variables of those types
 explicitly) - it will all just work automatically. You can assume that instead of
-InputArray/OutputArray you can always use `Mat`, `std::vector<>`, `cv::Matx<>`, `cv::Vec<>` or `cv::Scalar`. When a
+InputArray/OutputArray you can always use `cv::Mat`, `std::vector<>`, `cv::Matx<>`, `cv::Vec<>` or `cv::Scalar`. When a
 function has an optional input or output array, and you do not have or do not want one, pass
 cv::noArray().
 
@@ -288,7 +288,7 @@ the optimization algorithm did not converge), it returns a special error code (t
 boolean variable).
 
 The exceptions can be instances of the cv::Exception class or its derivatives. In its turn,
-cv::Exception is a derivative of std::exception. So it can be gracefully handled in the code using
+cv::Exception is a derivative of `std::exception`. So it can be gracefully handled in the code using
 other standard C++ library components.
 
 The exception is typically thrown either using the `#CV_Error(errcode, description)` macro, or its
@@ -297,7 +297,7 @@ printf-like `#CV_Error_(errcode, (printf-spec, printf-args))` variant, or using 
 satisfied. For performance-critical code, there is #CV_DbgAssert(condition) that is only retained in
 the Debug configuration. Due to the automatic memory management, all the intermediate buffers are
 automatically deallocated in case of a sudden error. You only need to add a try statement to catch
-exceptions, if needed: :
+exceptions, if needed:
 ```.cpp
     try
     {
