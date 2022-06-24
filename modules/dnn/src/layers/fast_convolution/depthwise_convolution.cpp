@@ -5,7 +5,6 @@
 // This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx)
 
 #include "../../precomp.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 #include "fast_convolution.hpp"
 
 namespace cv { namespace dnn {

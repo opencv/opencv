@@ -371,8 +371,8 @@ static void matMulCompute(float* outptr0, float* inpbuf_task, float* cbuf, const
 
 #if CV_TRY_AVX2
         if (conv->useAVX2)
-            opt_AVX2::convBlock_AVX2( HkWkCg, conv->weightsPtr + (g * Kg_aligned + k) * HkWkCg,
-                                  inpbuf_task, outptr, outstep, conv->biasPtr + Kg * g + k,
+            opt_AVX2::convBlock_AVX2( HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
+                                  inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
                                   minval, maxval, ifMinMaxAct);
         else
 #endif
