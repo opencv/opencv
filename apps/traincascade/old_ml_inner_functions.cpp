@@ -520,7 +520,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
             if( ri != rf )
             {
                 char buf[100];
-                sprintf( buf, "response #%d is not integral", idx );
+                snprintf( buf, sizeof(buf), "response #%d is not integral", idx );
                 CV_ERROR( CV_StsBadArg, buf );
             }
             dst[i] = ri;

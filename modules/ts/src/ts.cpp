@@ -312,7 +312,7 @@ void BaseTest::safe_run( int start_from )
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
-            sprintf( buf, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
+            snprintf( buf, sizeof(buf), "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
                     errorStr, delim, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
@@ -603,7 +603,7 @@ void TS::set_gtest_status()
         return SUCCEED();
 
     char seedstr[32];
-    sprintf(seedstr, "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
+    snprintf(seedstr, sizeof(seedstr), "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
                                 (unsigned)(current_test_info.rng_seed));
 
     string logs = "";

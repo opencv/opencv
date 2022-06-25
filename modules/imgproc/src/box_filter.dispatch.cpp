@@ -89,7 +89,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     globalsize[1] = size.height / 2;
 
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
 
     ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, build_opts);
     if (kernel.empty())
@@ -196,7 +196,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[0] = roundUp(globalsize[0], wgRound);
 
         char build_options[1024], cvt[2][40];
-        sprintf(build_options, "-D cn=%d "
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "

@@ -86,8 +86,8 @@ namespace fs
 {
 int strcasecmp(const char* str1, const char* str2);
 char* itoa( int _val, char* buffer, int /*radix*/ );
-char* floatToString( char* buf, float value, bool halfprecision, bool explicitZero );
-char* doubleToString( char* buf, double value, bool explicitZero );
+char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero );
+char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero );
 
 int calcStructSize( const char* dt, int initial_size );
 int calcElemSize( const char* dt, int initial_size );

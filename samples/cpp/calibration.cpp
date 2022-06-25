@@ -225,7 +225,7 @@ static void saveCameraParams( const string& filename,
 
     if( flags != 0 )
     {
-        sprintf( buf, "flags: %s%s%s%s",
+        snprintf( buf, sizeof(buf), "flags: %s%s%s%s",
             flags & CALIB_USE_INTRINSIC_GUESS ? "+use_intrinsic_guess" : "",
             flags & CALIB_FIX_ASPECT_RATIO ? "+fix_aspectRatio" : "",
             flags & CALIB_FIX_PRINCIPAL_POINT ? "+fix_principal_point" : "",

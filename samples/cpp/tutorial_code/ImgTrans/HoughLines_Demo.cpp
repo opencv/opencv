@@ -58,7 +58,7 @@ int main( int argc, char** argv )
 
    /// Create Trackbars for Thresholds
    char thresh_label[50];
-   sprintf( thresh_label, "Thres: %d + input", min_threshold );
+   snprintf( thresh_label, sizeof(thresh_label), "Thres: %d + input", min_threshold );
 
    namedWindow( standard_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, standard_name, &s_trackbar, max_trackbar, Standard_Hough);

@@ -234,7 +234,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
@@ -294,7 +294,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     } \
     static PyType_Slot pyopencv_##CLASS_ID##_Slots[] =  \

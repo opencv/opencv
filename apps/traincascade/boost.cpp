@@ -1677,7 +1677,7 @@ void CvCascadeBoost::write( FileStorage &fs, const Mat& featureMap ) const
     fs << CC_WEAK_CLASSIFIERS << "[";
     for( int wi = 0; wi < weak->total; wi++)
     {
-        /*sprintf( cmnt, "tree %i", wi );
+        /*snprintf( cmnt, sizeof(cmnt), "tree %i", wi );
         cvWriteComment( fs, cmnt, 0 );*/
         weakTree = *((CvCascadeBoostTree**) cvGetSeqElem( weak, wi ));
         weakTree->write( fs, featureMap );
