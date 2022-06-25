@@ -487,7 +487,7 @@ TEST(Core_InputOutput, FileStorage)
     cv::FileStorage f(file, cv::FileStorage::WRITE);
 
     char arr[66];
-    sprintf(arr, "sprintf is hell %d", 666);
+    snprintf(arr, sizeof(arr), "snprintf is hell %d", 666);
     EXPECT_NO_THROW(f << arr);
 }
 
@@ -1765,8 +1765,8 @@ TEST(Core_InputOutput, FileStorage_JSON_VeryLongLines)
         std::string val;
         for(int i = 0; i < 52500; i += 100)
         {
-            sprintf(key, "KEY%d", i);
-            sprintf(val0, "VALUE%d", i);
+            snprintf(key, sizeof(key), "KEY%d", i);
+            snprintf(val0, sizeof(val0), "VALUE%d", i);
             fs[key] >> val;
             ASSERT_EQ(val, val0);
         }

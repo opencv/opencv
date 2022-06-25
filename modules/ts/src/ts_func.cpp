@@ -29,7 +29,7 @@ string vec2str( const string& sep, const int* v, size_t nelems )
     string result = "";
     for( size_t i = 0; i < nelems; i++ )
     {
-        sprintf(buf, "%d", v[i]);
+        snprintf(buf, sizeof(buf), "%d", v[i]);
         result += string(buf);
         if( i < nelems - 1 )
             result += sep;
@@ -2154,15 +2154,15 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
+        snprintf( msg, sizeof(msg), "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
-        sprintf( msg, "%s: Invalid output", desc );
+        snprintf( msg, sizeof(msg), "%s: Invalid output", desc );
         code = TS::FAIL_INVALID_OUTPUT;
         break;
     case CMP_EPS_INVALID_REF_DATA:
-        sprintf( msg, "%s: Invalid reference output", desc );
+        snprintf( msg, sizeof(msg), "%s: Invalid reference output", desc );
         code = TS::FAIL_INVALID_OUTPUT;
         break;
     default:
