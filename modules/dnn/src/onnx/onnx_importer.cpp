@@ -3380,6 +3380,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     int outCn = weights.size[0];
     Mat w_scale = getBlob(node_proto, 4);
     CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
+    bool per_channel = w_scale.total() == outCn ? true : false;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
 
     Mat out_sc = getBlob(node_proto, 6);
@@ -3398,6 +3399,7 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     layerParams.set("num_output", outCn);
     layerParams.set("input_zeropoint", inp_zp.at<int8_t>(0));
     layerParams.set("input_scale",inp_sc.at<float>(0));
+    layerParams.set("per_channel", per_channel);
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(biasFused);
     layerParams.blobs.push_back(outputMultiplier);
@@ -3423,6 +3425,7 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
 
     Mat w_scale = getBlob(node_proto, 4);
     CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
+    bool per_channel = w_scale.total() == outCn ? true : false;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
     Mat out_sc = getBlob(node_proto, 6);
 
@@ -3439,6 +3442,7 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     layerParams.set("axis", firstInpDims - secondInpDims + 1);
     layerParams.set("input_scale", inp_sc.at<float>(0));
     layerParams.set("input_zeropoint", inp_zp.at<int8_t>(0));
+    layerParams.set("per_channel", per_channel);
 
     layerParams.blobs.push_back(weights);
     layerParams.blobs.push_back(bias);
