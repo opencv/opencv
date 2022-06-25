@@ -1408,7 +1408,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             img_convert_ctx,
             picture->data,
             picture->linesize,
-            0, video_st->codec->coded_height,
+            0, picture->height,
             rgb_picture.data,
             rgb_picture.linesize
             );
