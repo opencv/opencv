@@ -1695,6 +1695,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
     case CAP_PROP_FRAME_HEIGHT:
         return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
+    case CAP_PROP_FRAME_TYPE:
+        return (double)av_get_picture_type_char(picture->pict_type);
     case CAP_PROP_FPS:
         return get_fps();
     case CAP_PROP_FOURCC:
