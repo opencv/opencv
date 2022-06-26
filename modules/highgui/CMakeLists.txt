@@ -1,9 +1,9 @@
 set(the_description "High-level GUI")
 
 if(ANDROID)
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
 else()
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python java)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
