@@ -1633,7 +1633,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             img_convert_ctx,
             sw_picture->data,
             sw_picture->linesize,
-            0, context->coded_height,
+            0, sw_picture->height,
             rgb_picture.data,
             rgb_picture.linesize
             );
