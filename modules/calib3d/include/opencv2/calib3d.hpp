@@ -3230,7 +3230,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details.
 
 This function extracts relative camera motion between two views of a planar object and returns up to
 four mathematical solution tuples of rotation, translation, and plane normal. The decomposition of
-the homography matrix H is described in detail in @cite Malis.
+the homography matrix H is described in detail in @cite Malis2007.
 
 If the homography H, induced by the plane, gives the constraint
 \f[s_i \vecthree{x'_i}{y'_i}{1} \sim H \vecthree{x_i}{y_i}{1}\f] on the source image points
@@ -3258,7 +3258,7 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the #findHomography function
 
 This function is intended to filter the output of the #decomposeHomographyMat based on additional
-information as described in @cite Malis . The summary of the method: the #decomposeHomographyMat function
+information as described in @cite Malis2007 . The summary of the method: the #decomposeHomographyMat function
 returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
 sets of points visible in the camera frame before and after the homography transformation is applied,
 we can determine which are the true potential solutions and which are the opposites by verifying which
