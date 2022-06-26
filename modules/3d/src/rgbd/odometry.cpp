@@ -365,7 +365,7 @@ bool Odometry::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
 template<class ImageElemType>
 static void
 warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
-              const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+              const Mat& Rt, const Mat& cameraMatrix,
               OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
     //TODO: take into account that image can be empty
@@ -394,7 +394,7 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
     Mat transformedCloud;
     perspectiveTransform(cloud3, transformedCloud, Rt);
     projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
-                  distCoeff, points2d);
+                  Mat::zeros(1, 5, CV_64FC1), points2d);
 
     Mat image = _image.getMat();
     Size sz = _image.size();
@@ -437,14 +437,14 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
 
 
 void warpFrame(InputArray image, InputArray depth, InputArray mask,
-               InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
+               InputArray Rt, InputArray cameraMatrix,
                OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
     if (image.type() == CV_8UC1)
-        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(),
+        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(),
                              warpedImage, warpedDepth, warpedMask);
     else if (image.type() == CV_8UC3)
-        warpFrameImpl<Point3_<uchar>>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(),
+        warpFrameImpl<Point3_<uchar>>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(),
                                       warpedImage, warpedDepth, warpedMask);
     else
         CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");

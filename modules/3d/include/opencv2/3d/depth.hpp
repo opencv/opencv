@@ -132,12 +132,11 @@ CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double 
  * @param mask The mask of used pixels (of CV_8UC1), it can be empty
  * @param Rt The transformation that will be applied to the 3d points computed from the depth
  * @param cameraMatrix Camera matrix
- * @param distCoeff Distortion coefficients
  * @param warpedImage The warped image.
  * @param warpedDepth The warped depth.
  * @param warpedMask The warped mask.
  */
-CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
+CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, InputArray Rt, InputArray cameraMatrix,
                             OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
 
 enum RgbdPlaneMethod
