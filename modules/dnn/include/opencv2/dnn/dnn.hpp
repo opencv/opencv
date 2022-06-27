@@ -624,7 +624,7 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param perChannel Quantization granularity of quantized Net. The default is true, that means quantize model
          *  in per-channel way (channel-wise). Set it false to quantize model in per-tensor way (or tensor-wise).
          */
-        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel);
+        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel=true);
 
         /** @brief Returns input scale and zeropoint for a quantized Net.
          *  @param scales output parameter for returning input scales.

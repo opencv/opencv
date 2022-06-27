@@ -33,7 +33,7 @@ void getQuantizationParams(const Mat& src, std::vector<float>& scales, std::vect
 }
 
 // FIXIT drop from inference API
-Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel = true)
+Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
 {
     // Net can be quantized only once.
     if (netWasQuantized)
