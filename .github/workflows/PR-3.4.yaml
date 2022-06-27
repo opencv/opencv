@@ -20,3 +20,6 @@ jobs:
 
   macOS-X64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-macOS-x86_64.yaml@main
+
+  iOS:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-iOS.yaml@main
