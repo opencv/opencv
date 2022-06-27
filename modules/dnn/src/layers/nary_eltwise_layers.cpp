@@ -128,6 +128,7 @@ public:
 
         // step 1.
         // * make all inputs and the output max_ndims-dimensional.
+        // ** prepend dimension 1 to the mat of less dims
         // * compute proper step's
         for (i = max_ndims-1; i >= 0; i-- ) {
             for (k = 0; k < narrays; k++) {
@@ -259,17 +260,13 @@ public:
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
 
-        // int *shape_buf;
-        // size_t *step_buf;
         int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        AutoBuffer<size_t> step_buf_(3 * max_ndims);
-        size_t* step_buf = step_buf_.data();
-        AutoBuffer<int> shape_buf_(3 * max_ndims);
-        int* shape_buf = shape_buf_.data();
+        // buf holds step_buf & shape_buf, each of them holds size (or shape) of a, b & output
+        AutoBuffer<size_t> buf(2 * 3 * max_ndims);
+        size_t* step_buf = buf.data();
+        int* shape_buf = (int*)(buf.data() + 3 * max_ndims);
 
-        // step_buf = (size_t*)alloca(3*max_ndims*(sizeof(size_t) + sizeof(int)));
-        // shape_buf = (int*)(step_buf + max_ndims*3);
         size_t all_type_sizes[] = {sizeof(T), sizeof(T), sizeof(T)};
         int all_ndims[] = {out.dims, a.dims, b.dims};
         const int* orig_shapes[] = {out.size.p, a.size.p, b.size.p};
