@@ -69,8 +69,7 @@ class ONNXImporter
     };
 
     std::map<std::string, Mat> getGraphTensors(
-                                    const opencv_onnx::GraphProto& graph_proto,
-                                    std::map<std::string, TensorInfo>& extra_tensor_info);
+                                    const opencv_onnx::GraphProto& graph_proto);
     Mat getBlob(const opencv_onnx::NodeProto& node_proto, int index);
     Mat getBlob(const std::string& input_name);
     TensorInfo getBlobExtraInfo(const opencv_onnx::NodeProto& node_proto, int index);
@@ -389,8 +388,7 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
 }
 
 std::map<std::string, Mat> ONNXImporter::getGraphTensors(
-                                        const opencv_onnx::GraphProto& graph_proto,
-                                        std::map<std::string, TensorInfo>& extra_tensor_info)
+                                        const opencv_onnx::GraphProto& graph_proto)
 {
     std::map<std::string, Mat> layers_weights;
 
@@ -405,7 +403,7 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
             continue;
 
         layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
-        extra_tensor_info.insert(std::make_pair(tensor_proto.name(), TensorInfo(tensor_proto.dims_size())));
+        constBlobsExtraInfo.insert(std::make_pair(tensor_proto.name(), TensorInfo(tensor_proto.dims_size())));
     }
     return layers_weights;
 }
@@ -513,6 +511,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 opencv_onnx::TensorProto tensor = attribute_proto.t();
                 Mat blob = getMatFromTensor(tensor);
                 lp.blobs.push_back(blob);
+                lp.set("original_dims_of_mat", tensor.dims_size());
             }
             else if (attribute_proto.has_g())
             {
@@ -700,7 +699,6 @@ void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: add constant '" << name << "' shape=" << toString(shape(blob)) << ": " << toString(blob));
     constBlobs.insert(std::make_pair(name, blob));
-    constBlobsExtraInfo.insert(std::make_pair(name, TensorInfo(blob.dims)));
     outShapes.insert(std::make_pair(name, shape(blob)));
 }
 
@@ -828,7 +826,7 @@ void ONNXImporter::populateNet()
     const int layersSize = graph_proto.node_size();
     CV_LOG_DEBUG(NULL, "DNN/ONNX: graph simplified to " << layersSize << " nodes");
 
-    constBlobs = getGraphTensors(graph_proto, constBlobsExtraInfo);  // scan GraphProto.initializer
+    constBlobs = getGraphTensors(graph_proto);  // scan GraphProto.initializer
     std::vector<String> netInputs;  // map with network inputs (without const blobs)
     // Add all the inputs shapes. It includes as constant blobs as network's inputs shapes.
     for (int i = 0; i < graph_proto.input_size(); ++i)
@@ -1466,6 +1464,12 @@ void ONNXImporter::parseConstant(LayerParams& layerParams, const opencv_onnx::No
     CV_Assert(node_proto.input_size() == 0);
     CV_Assert(layerParams.blobs.size() == 1);
     addConstant(node_proto.output(0), layerParams.blobs[0]);
+    // add constant for constBlobsExtraInfo
+    if (layerParams.has("original_dims_of_mat"))
+    {
+        int original_dims_of_mat = layerParams.get<int>("original_dims_of_mat");
+        constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(original_dims_of_mat)));
+    }
 }
 
 void transformBlobs(std::vector<Mat>& blobs)
@@ -2218,6 +2222,10 @@ void ONNXImporter::parseFlatten(LayerParams& layerParams, const opencv_onnx::Nod
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
         Mat input = getBlob(node_proto, 0);
+        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end())
+        {
+            constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), getBlobExtraInfo(node_proto, 0)));
+        }
         int axis = normalize_axis(axis_, input.dims);
 
         int out_size[2] = {1, 1};
@@ -2550,6 +2558,10 @@ void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodePr
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
         Mat blob = getBlob(node_proto, 0);
+        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end())
+        {
+            constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), getBlobExtraInfo(node_proto, 0)));
+        }
         int type;
         switch (layerParams.get<int>("to"))
         {
@@ -2686,6 +2698,10 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
             hasVariableInps = true;
             break;
         }
+    }
+    if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end())
+    {
+        constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), getBlobExtraInfo(node_proto, 0)));
     }
 
     if (!hasVariableInps)
@@ -2913,7 +2929,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);
-//        else if (t.dims == 1 && t_real_ndims == 1 )
     };
 
     if (const_0 && const_1)
@@ -2932,7 +2947,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         Mat inp = getBlob(node_proto, const_id);
         // for cases like a of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
         // but for correct broadcast, we need to make it of shape (1, 2)
-        pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
+        if (constBlobsExtraInfo.find(node_proto.input(const_id)) != constBlobsExtraInfo.end())
+            pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
 
         LayerParams constParams;
         constParams.name = node_proto.input(const_id);
@@ -2943,7 +2959,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         proto.add_output(constParams.name);
         addLayer(constParams, proto);
     }
-
     addLayer(layerParams, node_proto);
 }
 
