@@ -49,7 +49,8 @@ def reprojectRtProject(image, K, depthFactor, rmat, tmat):
 
             v = K @ (rmat @ Kinv @ np.array([x*z, y*z, z]).T + tmat[:, 0])
 
-            projected[y, x, :] = v[:]
+            if z > 0:
+                projected[y, x, :] = v[:]
     
     return projected
 
@@ -105,6 +106,6 @@ def outFile(path, ptsimg):
 outObj = False
 if outObj:
     objdir = "/path/to/objdir/"
-    outFile(objdir + "reproj_rot_proj.obj", reproject(im2, depthFactor, K))
+    outFile(objdir + "reproj_rot_proj.obj", reproject(dstDepth, depthFactor, K))
     outFile(objdir + "rotated.obj", reprojectRt(srcDepth, K, depthFactor, rmat, tmat))
 
