@@ -468,7 +468,22 @@ TEST(RGBD_Odometry_FastICP, prepareFrame)
 }
 
 
-void warpFrameTest(bool needRgb, bool scaleDown, bool checkMask, bool identityTransform)
+struct WarpFrameTest
+{
+    WarpFrameTest() :
+     srcDepth(), srcRgb(), srcMask(),
+     dstDepth(), dstRgb(), dstMask(),
+     warpedDepth(), warpedRgb(), warpedMask()
+      {}
+
+    void run(bool needRgb, bool scaleDown, bool checkMask, bool identityTransform, int depthType, int imageType);
+
+    Mat srcDepth, srcRgb, srcMask;
+    Mat dstDepth, dstRgb, dstMask;
+    Mat warpedDepth, warpedRgb, warpedMask;
+};
+
+void WarpFrameTest::run(bool needRgb, bool scaleDown, bool checkMask, bool identityTransform, int depthType, int rgbType)
 {
     std::string dataPath = cvtest::TS::ptr()->get_data_path();
     std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
@@ -476,8 +491,6 @@ void warpFrameTest(bool needRgb, bool scaleDown, bool checkMask, bool identityTr
     // The depth was generated using the script at 3d/misc/python/warp_test.py
     std::string warpedDepthFilename = dataPath + "/cv/rgbd/warpedDepth.png";
     std::string warpedRgbFilename   = dataPath + "/cv/rgbd/warpedRgb.png";
-
-    Mat srcDepth, srcRgb, warpedDepth, warpedRgb;
 
     srcDepth = imread(srcDepthFilename, IMREAD_UNCHANGED);
     ASSERT_FALSE(srcDepth.empty())  << "Depth " << srcDepthFilename.c_str() << "can not be read" << std::endl;
@@ -495,46 +508,38 @@ void warpFrameTest(bool needRgb, bool scaleDown, bool checkMask, bool identityTr
     ASSERT_TRUE(srcDepth.type() == CV_16UC1);
     ASSERT_TRUE(warpedDepth.type() == CV_16UC1);
 
-    if (needRgb)
-    {
-        srcRgb = imread(srcRgbFilename);
-        ASSERT_FALSE(srcRgb.empty()) << "Image " << srcRgbFilename.c_str() << "can not be read" << std::endl;
+    Mat epsSrc = srcDepth > 0, epsWarped = warpedDepth > 0;
 
-        if (identityTransform)
-        {
-            warpedRgb = srcRgb;
-        }
-        else
-        {
-            warpedRgb = imread(warpedRgbFilename);
-            ASSERT_FALSE (warpedRgb.empty()) << "Image " << warpedRgbFilename.c_str() << "can not be read" << std::endl;
-        }
+    const double depthFactor = 5000.0;
+    // scale float types only
+    double depthScaleCoeff = scaleDown ? ( depthType == CV_16U ? 1.          : 1./depthFactor ) :    1.;
+    double transScaleCoeff = scaleDown ? ( depthType == CV_16U ? depthFactor : 1.             ) : depthFactor;
 
-        ASSERT_TRUE(warpedRgb.type() == CV_8UC3);
-    }
-    else
-    {
-        srcRgb = Mat(); warpedRgb = Mat();
-    }
-
-    double fx = 525.0, fy = 525.0,
-           cx = 319.5, cy = 239.5;
-    Matx33d K(fx,  0, cx,
-               0, fy, cy,
-               0,  0,  1);
-    cv::Affine3d rt;
-    rt = identityTransform ? cv::Affine3d() : cv::Affine3d(cv::Vec3d(0.1, 0.2, 0.3), cv::Vec3d(-0.04, 0.05, 0.6));
-
-    float scaleCoeff = scaleDown ? 1.f/5000.f : 1.f;
     Mat srcDepthCvt, warpedDepthCvt;
-    srcDepth.convertTo(srcDepthCvt, CV_32FC1, scaleCoeff);
+    srcDepth.convertTo(srcDepthCvt, depthType, depthScaleCoeff);
     srcDepth = srcDepthCvt;
-    warpedDepth.convertTo(warpedDepthCvt, CV_32FC1, scaleCoeff);
+    warpedDepth.convertTo(warpedDepthCvt, depthType, depthScaleCoeff);
     warpedDepth = warpedDepthCvt;
 
-    //TODO: check that NaNs in depth work the same as explicit mask
-    Mat epsSrc = srcDepth >= FLT_EPSILON, epsWarped = warpedDepth >= FLT_EPSILON;
-    Mat srcMask, warpedMask;
+    Scalar badVal;
+    switch (depthType)
+    {
+    case CV_16U:
+        badVal = 0;
+        break;
+    case CV_32F:
+        badVal = std::numeric_limits<float>::quiet_NaN();
+        break;
+    case CV_64F:
+        badVal = std::numeric_limits<double>::quiet_NaN();
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported depth data type");
+    }
+
+    srcDepth.setTo(badVal, ~epsSrc);
+    warpedDepth.setTo(badVal, ~epsWarped);
+
     if (checkMask)
     {
         srcMask = epsSrc; warpedMask = epsWarped;
@@ -543,41 +548,164 @@ void warpFrameTest(bool needRgb, bool scaleDown, bool checkMask, bool identityTr
     {
         srcMask = Mat(); warpedMask = Mat();
     }
-    srcDepth.setTo(std::numeric_limits<float>::quiet_NaN(), ~epsSrc);
-    warpedDepth.setTo(std::numeric_limits<float>::quiet_NaN(), ~epsWarped);
 
-    Mat distCoeff, dstRgb, dstDepth, dstMask;
-    warpFrame(srcRgb, srcDepth, srcMask, rt.matrix, K,
-              dstRgb, dstDepth, dstMask);
+    if (needRgb)
+    {
+        srcRgb = imread(srcRgbFilename, rgbType == CV_8UC1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+        ASSERT_FALSE(srcRgb.empty()) << "Image " << srcRgbFilename.c_str() << "can not be read" << std::endl;
 
-    //TODO: finish it
+        if (identityTransform)
+        {
+            srcRgb.copyTo(warpedRgb, epsSrc);
+        }
+        else
+        {
+            warpedRgb = imread(warpedRgbFilename, rgbType == CV_8UC1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+            ASSERT_FALSE (warpedRgb.empty()) << "Image " << warpedRgbFilename.c_str() << "can not be read" << std::endl;
+        }
 
-    //TODO: check this norm
-    double depthDiff = cv::norm(dstDepth, warpedDepth, NORM_L2);
-    double rgbDiff = cv::norm(dstRgb, warpedRgb, NORM_L2);
-    double maskDiff = cv::norm(dstMask, warpedMask, NORM_L2);
-    //TODO: find true threshold, maybe based on pixcount
-    ASSERT_LE(0.1, depthDiff);
+        if (rgbType == CV_8UC4)
+        {
+            Mat newSrcRgb, newWarpedRgb;
+            cvtColor(srcRgb, newSrcRgb, COLOR_RGB2RGBA);
+            srcRgb = newSrcRgb;
+            // let's keep alpha channel
+            std::vector<Mat> warpedRgbChannels;
+            split(warpedRgb, warpedRgbChannels);
+            warpedRgbChannels.push_back(epsWarped);
+            merge(warpedRgbChannels, newWarpedRgb);
+            warpedRgb = newWarpedRgb;
+        }
+
+        ASSERT_TRUE(srcRgb.type() == rgbType);
+        ASSERT_TRUE(warpedRgb.type() == rgbType);
+    }
+    else
+    {
+        srcRgb = Mat(); warpedRgb = Mat();
+    }
+
+    // test data used to generate warped depth and rgb
+    // the script used to generate is at TODO: here
+    double fx = 525.0, fy = 525.0,
+           cx = 319.5, cy = 239.5;
+    Matx33d K(fx,  0, cx,
+               0, fy, cy,
+               0,  0,  1);
+    cv::Affine3d rt;
+    cv::Vec3d tr(-0.04, 0.05, 0.6);
+    rt = identityTransform ? cv::Affine3d() : cv::Affine3d(cv::Vec3d(0.1, 0.2, 0.3), tr * transScaleCoeff);
+
+    warpFrame(srcDepth, srcRgb, srcMask, rt.matrix, K, dstDepth, dstRgb, dstMask);
+}
+
+
+TEST(RGBD_Odometry_WarpFrame, inputTypes)
+{
+    // [depthType, rgbType]
+    std::array<int, 5*2> types =
+    { CV_16U, CV_8UC3,
+      CV_32F, CV_8UC3,
+      CV_64F, CV_8UC3,
+      CV_32F, CV_8UC1,
+      CV_32F, CV_8UC4 };
+    const double shortl2diff = 233.983;
+    const double shortlidiff = 1;
+    const double floatl2diff = 0.03820836;
+    const double floatlidiff = 0.00020004;
+    for (int i = 0; i < 5; i++)
+    {
+        int depthType = types[i*2 + 0];
+        int rgbType = types[i*2 + 1];
+
+        WarpFrameTest w;
+        // scale down does not happen on CV_16U
+        // to avoid integer overflow
+        w.run(/* needRgb */ true, /* scaleDown*/ true,
+              /* checkMask */ true, /* identityTransform */ false, depthType, rgbType);
+
+        double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+        double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+        EXPECT_EQ(0, maskDiff);
+        EXPECT_EQ(0, rgbDiff);
+
+        double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+        double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+        double l2threshold = depthType == CV_16U ? shortl2diff : floatl2diff;
+        double lithreshold = depthType == CV_16U ? shortlidiff : floatlidiff;
+
+        EXPECT_GE(l2threshold, l2diff);
+        EXPECT_GE(lithreshold, lidiff);
+    }
 }
 
 TEST(RGBD_Odometry_WarpFrame, identity)
 {
-    warpFrameTest(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ true);
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ true, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+    ASSERT_EQ(0, rgbDiff);
+    ASSERT_EQ(0, maskDiff);
+
+    double depthDiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.dstMask);
+
+    ASSERT_GE(DBL_EPSILON, depthDiff);
 }
 
 TEST(RGBD_Odometry_WarpFrame, noRgb)
 {
-    warpFrameTest(/* needRgb */ false, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ false);
+    WarpFrameTest w;
+    w.run(/* needRgb */ false, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+    ASSERT_EQ(0, maskDiff);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+    ASSERT_GE(0.03820836, l2diff);
+    ASSERT_GE(0.00020004, lidiff);
 }
 
 TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
 {
-    warpFrameTest(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ false, /* identityTransform */ false);
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ false, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+
+    ASSERT_EQ(0, rgbDiff);
+
+    Mat goodVals = (w.warpedDepth == w.warpedDepth);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, goodVals);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, goodVals);
+
+    ASSERT_GE(0.03820836, l2diff);
+    ASSERT_GE(0.00020004, lidiff);
 }
 
 TEST(RGBD_Odometry_WarpFrame, bigScale)
 {
-    warpFrameTest(/* needRgb */ true, /* scaleDown*/ false, /* checkMask */ true, /* identityTransform */ false);
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ false, /* checkMask */ true, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+    ASSERT_EQ(0, maskDiff);
+    ASSERT_EQ(0, rgbDiff);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+    ASSERT_GE(191.026565, l2diff);
+    ASSERT_GE(0.99951172, lidiff);
 }
 
 }} // namespace
