@@ -71,7 +71,7 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-#include "./fast_convolution/fast_convolution.hpp"
+#include "fast_convolution/fast_convolution.hpp"
 
 namespace cv
 {
@@ -255,11 +255,12 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat, fastWeights;
+    Mat weightsMat;  // Used to store weight params. It will be used for layer fusion and memory alignment.
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
 
+    Mat fastWeights; // Used to store weight params. It will be used for layer fusion and without memory alignment.
     Ptr<FastConv2d> fastConv2dImpl;
 
 #ifdef HAVE_OPENCL

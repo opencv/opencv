@@ -118,10 +118,6 @@ void convBlock(int k, const float *a, const float *b,
     }
 #endif
 #else
-#error "unsupported FAST_CONV_MR and/or FAST_CONV_NR"
-#endif
-    CV_LOG_WARNING(NULL, "Runing at unoptimized code. The combination of FAST_CONV_MR and/or FAST_CONV_NR "
-                         "is not supported in SIMD128 branch.");
     for (int i = 0; i < FAST_CONV_MR; i++)
     {
         float beta = bias[i];
@@ -151,6 +147,7 @@ void convBlock(int k, const float *a, const float *b,
             }
         }
     }
+#endif
 }
 } // namespace dnn
 

@@ -1,8 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx).
+// Here is the original license:
 /*
     This file is a part of ficus language project.
     See ficus/LICENSE for the licensing terms
 */
-// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx)
 
 #include "../../precomp.hpp"
 #include "fast_convolution.hpp"
@@ -14,7 +19,6 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                            int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                            int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
-
 #ifdef CV_SIMD128
     v_float32x4 vminval = v_setall_f32(minval), vmaxval = v_setall_f32(maxval);
 

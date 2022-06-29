@@ -1,8 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx).
+// Here is the original license:
 /*
     This file is a part of ficus language project.
     See ficus/LICENSE for the licensing terms
 */
-// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx)
 
 #include "../../precomp.hpp"
 #include "fast_convolution.hpp"
