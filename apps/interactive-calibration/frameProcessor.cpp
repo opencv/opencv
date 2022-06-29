@@ -201,8 +201,15 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
     cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::Mat resized = frame;
-    cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
+    cv::Mat resized;
+    if (std::fabs(mZoom - 1.) > 0.001f)
+    {
+        cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
+    }
+    else
+    {
+        resized = frame;
+    }
     cv::imshow(mainWindowName, resized);
     cv::waitKey(300);
 }
