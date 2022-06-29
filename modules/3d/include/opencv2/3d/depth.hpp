@@ -124,20 +124,20 @@ CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d
  */
 CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double depth_factor = 1000.0);
 
-/** Warp the image: compute 3d points from the depth, transform them using given transformation,
- * then project color point cloud to an image plane.
- * This function can be used to visualize results of the Odometry algorithm.
- * @param image The image (of CV_8UC1 or CV_8UC3 type)
- * @param depth The depth (of type used in depthTo3d fuction)
- * @param mask The mask of used pixels (of CV_8UC1), it can be empty
- * @param Rt The transformation that will be applied to the 3d points computed from the depth
- * @param cameraMatrix Camera matrix
- * @param warpedImage The warped image.
- * @param warpedDepth The warped depth.
- * @param warpedMask The warped mask.
+/** Warps depth or RGB-D image by reprojecting it in 3d, applying Rt transformation
+ * and then projecting it back onto the image plane.
+ * This function can be used to visualize the results of the Odometry algorithm.
+ * @param depth Depth data, should be 1-channel CV_16U, CV_16S, CV_32F or CV_64F
+ * @param image RGB image (optional), should be 1-, 3- or 4-channel CV_8U
+ * @param mask Mask of used pixels (optional), should be CV_8UC1
+ * @param Rt Rotation+translation matrix (3x4 or 4x4) to be applied to depth points
+ * @param cameraMatrix Camera intrinsics matrix (3x3)
+ * @param warpedDepth The warped depth data (optional)
+ * @param warpedImage The warped RGB image (optional)
+ * @param warpedMask The mask of valid pixels in warped image (optional)
  */
-CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, InputArray Rt, InputArray cameraMatrix,
-                            OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
+CV_EXPORTS_W void warpFrame(InputArray depth, InputArray image, InputArray mask, InputArray Rt, InputArray cameraMatrix,
+                            OutputArray warpedDepth = noArray(), OutputArray warpedImage = noArray(), OutputArray warpedMask = noArray());
 
 enum RgbdPlaneMethod
 {
