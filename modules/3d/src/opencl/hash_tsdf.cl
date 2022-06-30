@@ -277,7 +277,6 @@ __kernel void integrateAllVolumeUnits(
         // vol2cam + camPoseInv * volPoseRot * mulIdx
         float3 mulIdx = convert_float3(idx * volUnitResolution) * voxelSize;
         float16 volUnit2cam = vol2cam;
-
         volUnit2cam.s37b += (float3)(dot(mulIdx, vol2cam.s012),
                                      dot(mulIdx, vol2cam.s456),
                                      dot(mulIdx, vol2cam.s89a));

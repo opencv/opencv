@@ -671,6 +671,10 @@ TEST(HashTSDF_GPU, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
+TEST(HashTSDF_GPU, reproduce_volPoseRot)
+{
+    regressionVolPoseRot();
+}
 }
 }  // namespace
 

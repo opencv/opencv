@@ -178,6 +178,28 @@ int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 
+Vec6f TSDFVolume::getBoundingBox(int precision) const
+{
+    if (precision == BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+    }
+    else
+    {
+        const float mval = std::numeric_limits<float>::max();
+        Vec6f bb(0, 0, 0, volSize.x, volSize.y, volSize.z);
+
+        return bb;
+    }
+}
+
+void TSDFVolume::setEnableGrowth(bool /*v*/) { }
+
+bool TSDFVolume::getEnableGrowth() const
+{
+    return true;
+}
+
 
 // HASH_TSDF
 
@@ -188,6 +210,7 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
     volumeUnitDegree = calcVolumeUnitDegree(volResolution);
+    enableGrowth = true;
 
 #ifndef HAVE_OPENCL
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());
@@ -364,6 +387,115 @@ void HashTsdfVolume::reset()
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
+void HashTSDFVolume::setEnableGrowth(bool v)
+{
+    enableGrowth = v;
+}
+
+bool HashTSDFVolume::getEnableGrowth() const
+{
+    return enableGrowth;
+}
+
+Vec6f HashTSDFVolumeCPU::getBoundingBox(int precision) const
+{
+    if (precision == BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+    }
+    else
+    {
+        std::vector<Point3f> pts;
+        for (const auto& keyvalue : volumeUnits)
+        {
+            Vec3i idx = keyvalue.first;
+            float side = volumeUnitResolution * voxelSize;
+            Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
+            pts.push_back(base);
+            pts.push_back(base + Point3f(side, 0, 0));
+            pts.push_back(base + Point3f(0, side, 0));
+            pts.push_back(base + Point3f(0, 0, side));
+            pts.push_back(base + Point3f(side, side, 0));
+            pts.push_back(base + Point3f(side, 0, side));
+            pts.push_back(base + Point3f(0, side, side));
+            pts.push_back(base + Point3f(side, side, side));
+        }
+
+        if (pts.empty())
+        {
+            return Vec6f();
+        }
+        else
+        {
+            const float mval = std::numeric_limits<float>::max();
+            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+            for (auto p : pts)
+            {
+                // pt in local coords
+                Point3f pg = p;
+                bb[0] = min(bb[0], pg.x);
+                bb[1] = min(bb[1], pg.y);
+                bb[2] = min(bb[2], pg.z);
+                bb[3] = max(bb[3], pg.x);
+                bb[4] = max(bb[4], pg.y);
+                bb[5] = max(bb[5], pg.z);
+            }
+
+            return bb;
+        }
+    }
+}
+
+Vec6f HashTSDFVolumeGPU::getBoundingBox(int precision) const
+{
+    if (precision == BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+    }
+    else
+    {
+        std::vector<Point3f> pts;
+        for (int row = 0; row < hashTable.last; row++)
+        {
+            cv::Vec4i idx4 = hashTable.data[row];
+            cv::Vec3i idx(idx4[0], idx4[1], idx4[2]);
+            float side = volumeUnitResolution * voxelSize;
+            Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
+            pts.push_back(base);
+            pts.push_back(base + Point3f(side, 0, 0));
+            pts.push_back(base + Point3f(0, side, 0));
+            pts.push_back(base + Point3f(0, 0, side));
+            pts.push_back(base + Point3f(side, side, 0));
+            pts.push_back(base + Point3f(side, 0, side));
+            pts.push_back(base + Point3f(0, side, side));
+            pts.push_back(base + Point3f(side, side, side));
+        }
+
+        if (pts.empty())
+        {
+            return Vec6f();
+        }
+        else
+        {
+            const float mval = std::numeric_limits<float>::max();
+            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+            for (auto p : pts)
+            {
+                // pt in local coords
+                Point3f pg = p;
+                bb[0] = min(bb[0], pg.x);
+                bb[1] = min(bb[1], pg.y);
+                bb[2] = min(bb[2], pg.z);
+                bb[3] = max(bb[3], pg.x);
+                bb[4] = max(bb[4], pg.y);
+                bb[5] = max(bb[5], pg.z);
+            }
+
+            return bb;
+        }
+    }
+}
+
 // COLOR_TSDF
 
 ColorTsdfVolume::ColorTsdfVolume(const VolumeSettings& _settings) :
@@ -451,5 +583,27 @@ void ColorTsdfVolume::reset()
 
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t ColorTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+Vec6f ColoredTSDFVolume::getBoundingBox(int precision) const
+{
+    if (precision == BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+    }
+    else
+    {
+        const float mval = std::numeric_limits<float>::max();
+        Vec6f bb(0, 0, 0, volSize.x, volSize.y, volSize.z);
+
+        return bb;
+    }
+}
+
+void ColoredTSDFVolume::setEnableGrowth(bool /*v*/) { }
+
+bool ColoredTSDFVolume::getEnableGrowth() const
+{
+    return true;
+}
 
 }

@@ -110,6 +110,26 @@ public:
     */
     size_t getTotalVolumeUnits() const;
 
+    //TODO: rewrite it to pImpl properly
+
+    enum BoundingBoxPrecision
+    {
+        VOLUME_UNIT = 0,
+        VOXEL = 1
+    };
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const = 0;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) = 0;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const = 0;
+
     class Impl;
 private:
     Ptr<Impl> impl;

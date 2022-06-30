@@ -65,6 +65,19 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
 public:
     Vec6f frameParams;
 #ifndef HAVE_OPENCL
@@ -105,6 +118,20 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
 public:
     int lastVolIndex;
     int lastFrameId;
@@ -154,6 +181,20 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
 private:
     Vec4i volStrides;
     Vec6f frameParams;

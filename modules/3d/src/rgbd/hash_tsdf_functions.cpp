@@ -92,6 +92,93 @@ void integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
 {
+    //TODO: this
+
+/*
+
+    //! Compute volumes to be allocated
+    if (enableGrowth)
+    {
+        const int depthStride = volumeUnitDegree;
+        const float invDepthFactor = 1.f / depthFactor;
+        const Intr::Reprojector reproj(intrinsics.makeReprojector());
+        const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+        const Point3f truncPt(truncDist, truncDist, truncDist);
+        VolumeUnitIndexSet newIndices;
+        Mutex mutex;
+        Range allocateRange(0, depth.rows);
+
+        auto AllocateVolumeUnitsInvoker = [&](const Range& range) {
+            VolumeUnitIndexSet localAccessVolUnits;
+            for (int y = range.start; y < range.end; y += depthStride)
+            {
+                const depthType* depthRow = depth[y];
+                for (int x = 0; x < depth.cols; x += depthStride)
+                {
+                    depthType z = depthRow[x] * invDepthFactor;
+                    if (z <= 0 || z > this->truncateThreshold)
+                        continue;
+                    Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
+                    Point3f volPoint = cam2vol * camPoint;
+                    //! Find accessed TSDF volume unit for valid 3D vertex
+                    Vec3i lower_bound = this->volumeToVolumeUnitIdx(volPoint - truncPt);
+                    Vec3i upper_bound = this->volumeToVolumeUnitIdx(volPoint + truncPt);
+
+                    for (int i = lower_bound[0]; i <= upper_bound[0]; i++)
+                        for (int j = lower_bound[1]; j <= upper_bound[1]; j++)
+                            for (int k = lower_bound[2]; k <= upper_bound[2]; k++)
+                            {
+                                const Vec3i tsdf_idx = Vec3i(i, j, k);
+                                if (localAccessVolUnits.count(tsdf_idx) <= 0 && this->volumeUnits.count(tsdf_idx) <= 0)
+                                {
+                                    //! This volume unit will definitely be required for current integration
+                                    localAccessVolUnits.emplace(tsdf_idx);
+                                }
+                            }
+                }
+            }
+
+            mutex.lock();
+            for (const auto& tsdf_idx : localAccessVolUnits)
+            {
+                //! If the insert into the global set passes
+                if (!newIndices.count(tsdf_idx))
+                {
+                    // Volume allocation can be performed outside of the lock
+                    newIndices.emplace(tsdf_idx);
+                }
+            }
+            mutex.unlock();
+        };
+        parallel_for_(allocateRange, AllocateVolumeUnitsInvoker);
+
+        //! Perform the allocation
+        for (auto idx : newIndices)
+        {
+            VolumeUnit& vu = this->volumeUnits.emplace(idx, VolumeUnit()).first->second;
+
+            Matx44f subvolumePose = pose.translate(pose.rotation() * volumeUnitIdxToVolume(idx)).matrix;
+
+            vu.pose = subvolumePose;
+            vu.index = lastVolIndex; lastVolIndex++;
+            if (lastVolIndex > int(volUnitsData.size().height))
+            {
+                volUnitsData.resize((lastVolIndex - 1) * 2);
+            }
+            volUnitsData.row(vu.index).forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* */ /* position */ /*/)
+                {
+                    TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
+                    v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+                });
+            //! This volume unit will definitely be required for current integration
+            vu.lastVisibleIndex = frameId;
+            vu.isActive = true;
+        }
+    }
+
+*/
+
+
     //std::cout << "integrateHashTsdfVolumeUnit()" << std::endl;
 
     CV_TRACE_FUNCTION();
@@ -477,6 +564,59 @@ void ocl_integrateHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
 {
+    //TODO: this
+
+    /*
+    
+
+    if (enableGrowth)
+    {
+        // Save length to fill new data in ranges
+        int sizeBefore = hashTable.last;
+        allocateVolumeUnits(depth, depthFactor, cameraPose, intrinsics);
+        int sizeAfter = hashTable.last;
+        //! Perform the allocation
+
+        // Grow buffers
+        int buff_lvl = (int)(1 << bufferSizeDegree);
+        if (sizeAfter >= buff_lvl)
+        {
+            bufferSizeDegree = (int)(log2(sizeAfter) + 1); // clz() would be better
+            int oldBuffSize = buff_lvl;
+            buff_lvl = (int)pow(2, bufferSizeDegree);
+
+            volUnitsDataCopy.resize(buff_lvl);
+
+            Range oldr(0, oldBuffSize);
+            int volCubed = volumeUnitResolution * volumeUnitResolution * volumeUnitResolution;
+            UMat newData(buff_lvl, volCubed, CV_8UC2);
+            volUnitsData.copyTo(newData.rowRange(oldr));
+            volUnitsData = newData;
+
+            UMat newLastVisibleIndices(buff_lvl, 1, CV_32S);
+            lastVisibleIndices.copyTo(newLastVisibleIndices.rowRange(oldr));
+            lastVisibleIndices = newLastVisibleIndices;
+
+            UMat newIsActiveFlags(buff_lvl, 1, CV_8U);
+            isActiveFlags.copyTo(newIsActiveFlags.rowRange(oldr));
+            isActiveFlags = newIsActiveFlags;
+        }
+
+        // Fill data for new volume units
+        Range r(sizeBefore, sizeAfter);
+        if (r.start < r.end)
+        {
+            lastVisibleIndices.rowRange(r) = frameId;
+            isActiveFlags.rowRange(r) = 1;
+
+            TsdfVoxel emptyVoxel(floatToTsdf(0.0f), 0);
+            volUnitsData.rowRange(r) = Vec2b((uchar)(emptyVoxel.tsdf), (uchar)(emptyVoxel.weight));
+        }
+    }
+    
+    */
+
+
     CV_TRACE_FUNCTION();
     UMat depth = _depth.getUMat();
     CV_Assert(!depth.empty());
