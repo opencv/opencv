@@ -2922,48 +2922,63 @@ void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::Node
 // "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max"
 void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert(node_proto.input_size() == 2);
+    String op_type = toLowerCase(node_proto.op_type());
+    
     layerParams.type = "NaryEltwise";
     layerParams.set("operation", toLowerCase(node_proto.op_type()));
 
-    bool const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
-    bool const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
-    int const_id = (1 + const_1 - const_0)/2;
-
-    auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
-        if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
-            transpose(t, t);
-    };
-
-    if (const_0 && const_1)
+    // element-wise layers that can have >=1 inputs but actually have one input
+    if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
     {
-        Mat a = getBlob(node_proto, 0);
-        Mat b = getBlob(node_proto, 1);
-
-        std::vector<Mat> inputs{a, b}, output;
-        runLayer(layerParams, inputs, output);
-        CV_Assert(output.size() == 1);
-        addConstant(node_proto.output(0), output[0]);
+        layerParams.type = "Identity";
+        addLayer(layerParams, node_proto);
         return;
     }
-    else if (const_0 || const_1)
+    else
     {
-        Mat inp = getBlob(node_proto, const_id);
-        // for cases like a of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
-        // but for correct broadcast, we need to make it of shape (1, 2)
-        if (constBlobsExtraInfo.find(node_proto.input(const_id)) != constBlobsExtraInfo.end())
-            pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
+        CV_Assert(node_proto.input_size() == 2);
+        
+        auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
+            if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
+                transpose(t, t);
+        };
 
-        LayerParams constParams;
-        constParams.name = node_proto.input(const_id);
-        constParams.type = "Const";
-        constParams.blobs.push_back(inp);
+        bool const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
+        bool const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
+        int const_id = (1 + const_1 - const_0)/2;
 
-        opencv_onnx::NodeProto proto;
-        proto.add_output(constParams.name);
-        addLayer(constParams, proto);
+        if (const_0 && const_1)
+        {
+            Mat a = getBlob(node_proto, 0);
+            Mat b = getBlob(node_proto, 1);
+
+            std::vector<Mat> inputs{a, b}, output;
+            runLayer(layerParams, inputs, output);
+            CV_Assert(output.size() == 1);
+            addConstant(node_proto.output(0), output[0]);
+            return;
+        }
+        else if (const_0 || const_1)
+        {
+            Mat inp = getBlob(node_proto, const_id);
+            // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
+            // but for correct broadcast, we need to make it of shape (1, 2)
+            if (constBlobsExtraInfo.find(node_proto.input(const_id)) != constBlobsExtraInfo.end())
+                pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
+
+            // carry the constant by adding a Const node
+            LayerParams constParams;
+            constParams.name = node_proto.input(const_id);
+            constParams.type = "Const";
+            constParams.blobs.push_back(inp);
+
+            opencv_onnx::NodeProto proto;
+            proto.add_output(constParams.name);
+            addLayer(constParams, proto);
+        }
+        // add element-wise layer
+        addLayer(layerParams, node_proto);
     }
-    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
