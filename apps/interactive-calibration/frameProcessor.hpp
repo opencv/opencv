@@ -51,6 +51,7 @@ protected:
     float mSquareSize;
     float mTemplDist;
     bool mSaveFrames;
+    float mZoom;
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);
