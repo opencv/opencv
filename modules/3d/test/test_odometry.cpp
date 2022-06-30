@@ -545,7 +545,7 @@ TEST(RGBD_Odometry_WarpFrame, inputTypes)
       CV_32F, CV_8UC4 };
     const double shortl2diff = 233.983;
     const double shortlidiff = 1;
-    const double floatl2diff = 0.03820836;
+    const double floatl2diff = 0.038209;
     const double floatlidiff = 0.00020004;
     for (int i = 0; i < 5; i++)
     {
@@ -602,7 +602,7 @@ TEST(RGBD_Odometry_WarpFrame, noRgb)
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
 
-    ASSERT_GE(0.03820836, l2diff);
+    ASSERT_GE(0.038209, l2diff);
     ASSERT_GE(0.00020004, lidiff);
 }
 
@@ -620,7 +620,7 @@ TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, goodVals);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, goodVals);
 
-    ASSERT_GE(0.03820836, l2diff);
+    ASSERT_GE(0.038209, l2diff);
     ASSERT_GE(0.00020004, lidiff);
 }
 
