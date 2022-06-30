@@ -520,7 +520,8 @@ void WarpFrameTest::run(bool needRgb, bool scaleDown, bool checkMask, bool ident
     }
 
     // test data used to generate warped depth and rgb
-    // the script used to generate is at TODO: here
+    // the script used to generate is in opencv_extra repo
+    // at testdata/cv/rgbd/warped_depth_generator/warp_test.py
     double fx = 525.0, fy = 525.0,
            cx = 319.5, cy = 239.5;
     Matx33d K(fx,  0, cx,
