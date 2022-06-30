@@ -7,73 +7,6 @@
 namespace opencv_test { namespace {
 
 static
-void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& tvec, const Mat& K,
-               Mat& warpedImage, Mat& warpedDepth)
-{
-    CV_Assert(!image.empty());
-    CV_Assert(image.type() == CV_8UC1);
-
-    CV_Assert(depth.size() == image.size());
-    CV_Assert(depth.type() == CV_32FC1);
-
-    CV_Assert(!rvec.empty());
-    CV_Assert(rvec.total() == 3);
-    CV_Assert(rvec.type() == CV_64FC1);
-
-    CV_Assert(!tvec.empty());
-    CV_Assert(tvec.size() == Size(1, 3));
-    CV_Assert(tvec.type() == CV_64FC1);
-
-    warpedImage.create(image.size(), CV_8UC1);
-    warpedImage = Scalar(0);
-    warpedDepth.create(image.size(), CV_32FC1);
-    warpedDepth = Scalar(FLT_MAX);
-
-    Mat cloud;
-    depthTo3d(depth, K, cloud);
-
-    Mat cloud3, channels[4];
-    cv::split(cloud, channels);
-    std::vector<Mat> merged = { channels[0], channels[1], channels[2] };
-    cv::merge(merged, cloud3);
-
-    Mat Rt = Mat::eye(4, 4, CV_64FC1);
-    {
-        Mat R, dst;
-        cv::Rodrigues(rvec, R);
-
-        dst = Rt(Rect(0,0,3,3));
-        R.copyTo(dst);
-
-        dst = Rt(Rect(3,0,1,3));
-        tvec.copyTo(dst);
-    }
-    Mat warpedCloud, warpedImagePoints;
-    perspectiveTransform(cloud3, warpedCloud, Rt);
-    projectPoints(warpedCloud.reshape(3, 1), Mat(3,1,CV_32FC1, Scalar(0)), Mat(3,1,CV_32FC1, Scalar(0)), K, Mat(1,5,CV_32FC1, Scalar(0)), warpedImagePoints);
-    warpedImagePoints = warpedImagePoints.reshape(2, cloud.rows);
-    Rect r(0, 0, image.cols, image.rows);
-    for(int y = 0; y < cloud.rows; y++)
-    {
-        for(int x = 0; x < cloud.cols; x++)
-        {
-            Point p = warpedImagePoints.at<Point2f>(y,x);
-            if(r.contains(p))
-            {
-                float curDepth = warpedDepth.at<float>(p.y, p.x);
-                float newDepth = warpedCloud.at<Point3f>(y, x).z;
-                if(newDepth < curDepth && newDepth > 0)
-                {
-                    warpedImage.at<uchar>(p.y, p.x) = image.at<uchar>(y,x);
-                    warpedDepth.at<float>(p.y, p.x) = newDepth;
-                }
-            }
-        }
-    }
-    warpedDepth.setTo(std::numeric_limits<float>::quiet_NaN(), warpedDepth > 100);
-}
-
-static
 void dilateFrame(Mat& image, Mat& depth)
 {
     CV_Assert(!image.empty());
@@ -279,11 +212,11 @@ void OdometryTest::run()
     {
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
+        Affine3d rt(rvec, tvec);
 
-        Mat warpedImage, warpedDepth, scaledDepth;
+        Mat warpedImage, warpedDepth;
 
-
-        warpFrame(image, scaledDepth, rvec, tvec, K, warpedImage, warpedDepth);
+        warpFrame(depth, image, noArray(), rt.matrix, K, warpedDepth, warpedImage);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
         OdometryFrame odfSrc = odometry.createOdometryFrame();
@@ -312,7 +245,8 @@ void OdometryTest::run()
             imshow("image", image);
             imshow("warpedImage", warpedImage);
             Mat resultImage, resultDepth;
-            warpFrame(image, depth, calcRvec, calcTvec, K, resultImage, resultDepth);
+
+            warpFrame(depth, image, noArray(), calcRt, K, resultDepth, resultImage);
             imshow("resultImage", resultImage);
             waitKey(100);
         }
