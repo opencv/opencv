@@ -477,7 +477,7 @@ void warpFrame(InputArray depth, InputArray image, InputArray mask,
     const double infinity = std::numeric_limits<double>::max();
 
     Mat zBuffer(sz, CV_32FC1, infinity);
-    
+
     const Rect rect = Rect(Point(), sz);
 
     for (int y = 0; y < sz.height; y++)

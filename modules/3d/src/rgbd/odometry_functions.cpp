@@ -778,7 +778,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
             Mat tmp61(6, 1, CV_64FC1, Scalar(0));
             if(transformType == OdometryTransformType::ROTATION)
-            {                
+            {
                 ksi.copyTo(tmp61.rowRange(0,3));
                 ksi = tmp61;
             }
@@ -834,7 +834,7 @@ void computeCorresps(const Matx33f& _K, const Mat& rt,
         diffs = Mat(depthDst.size(), CV_32F, Scalar::all(-1));
 
     // src_2d = K * src_3d, src_3d = K_inv * [src_2d | z]
-    // 
+    //
 
     Matx33d K(_K);
     Matx33d K_inv = K.inv(DECOMP_SVD);
