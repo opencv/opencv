@@ -21,5 +21,8 @@ jobs:
   macOS-X64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
 
+  iOS:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
+
   TIM-VX:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
