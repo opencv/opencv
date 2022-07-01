@@ -1018,7 +1018,7 @@ template<typename R> struct TheTest
         EXPECT_EQ((LaneType)max, (LaneType)v_reduce_max(a));
         EXPECT_EQ((int)(sum), (int)v_reduce_sum(a));
         dataA[0] += VTraits<R>::vlanes();
-        R an = dataA; 
+        R an = dataA;
         min = VTraits<R>::vlanes();
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {

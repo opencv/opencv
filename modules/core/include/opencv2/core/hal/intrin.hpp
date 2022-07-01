@@ -704,7 +704,7 @@ namespace CV__SIMD_NAMESPACE {
     struct VTraits;
 
     template <>
-    struct VTraits<v_uint8> 
+    struct VTraits<v_uint8>
     {
         static inline int vlanes() { return v_uint8::nlanes; }
         static const int nlanes = v_uint8::nlanes;
@@ -712,76 +712,76 @@ namespace CV__SIMD_NAMESPACE {
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_int8> 
+    struct VTraits<v_int8>
     {
         static inline int vlanes() { return v_int8::nlanes; }
-        static const int nlanes = v_int8::nlanes; 
+        static const int nlanes = v_int8::nlanes;
         using lane_type = schar;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_uint16> 
+    struct VTraits<v_uint16>
     {
         static inline int vlanes() { return v_uint16::nlanes; }
-        static const int nlanes = v_uint16::nlanes; 
+        static const int nlanes = v_uint16::nlanes;
         using lane_type = ushort;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_int16> 
+    struct VTraits<v_int16>
     {
         static inline int vlanes() { return v_int16::nlanes;  }
-        static const int nlanes = v_int16::nlanes; 
+        static const int nlanes = v_int16::nlanes;
         using lane_type = short;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_uint32> 
+    struct VTraits<v_uint32>
     {
         static inline int vlanes() { return v_uint32::nlanes; }
-        static const int nlanes = v_uint32::nlanes; 
+        static const int nlanes = v_uint32::nlanes;
         using lane_type = uint;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_int32> 
+    struct VTraits<v_int32>
     {
         static inline int vlanes() { return v_int32::nlanes; }
-        static const int nlanes = v_int32::nlanes; 
+        static const int nlanes = v_int32::nlanes;
         using lane_type = int;
         static const int max_nlanes = nlanes;
     };
 
     template <>
-    struct VTraits<v_float32> 
+    struct VTraits<v_float32>
     {
         static inline int vlanes() { return v_float32::nlanes; }
-        static const int nlanes = v_float32::nlanes; 
+        static const int nlanes = v_float32::nlanes;
         using lane_type = float;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_uint64> 
+    struct VTraits<v_uint64>
     {
         static inline int vlanes() { return v_uint64::nlanes; }
-        static const int nlanes = v_uint64::nlanes; 
+        static const int nlanes = v_uint64::nlanes;
         using lane_type = uint64;
         static const int max_nlanes = nlanes;
     };
     template <>
-    struct VTraits<v_int64> 
+    struct VTraits<v_int64>
     {
         static inline int vlanes() { return v_int64::nlanes; }
-        static const int nlanes = v_int64::nlanes; 
+        static const int nlanes = v_int64::nlanes;
         using lane_type = int64;
         static const int max_nlanes = nlanes;
     };
     #if CV_SIMD_64F
     template <>
-    struct VTraits<v_float64> 
+    struct VTraits<v_float64>
     {
         static inline int vlanes() { return v_float64::nlanes; }
-        static const int nlanes = v_float64::nlanes; 
+        static const int nlanes = v_float64::nlanes;
         using lane_type = double;
         static const int max_nlanes = nlanes;
     };

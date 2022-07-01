@@ -1081,7 +1081,7 @@ static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, co
     a = uchar(0xff);
 }
 
-#if CV_SIMD 
+#if CV_SIMD
 static inline void yRGBuvToRGBA(const v_uint8& vy,
                                 const v_int32 (&ruv)[4],
                                 const v_int32 (&guv)[4],
