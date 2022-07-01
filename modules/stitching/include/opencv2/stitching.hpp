@@ -302,6 +302,14 @@ public:
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
     CV_WRAP double workScale() const { return work_scale_; }
+
+    /** @brief Return the mask of the panorama.
+
+    The mask is a 8U UMat with the values: 0xFF (white) for pixels filled by the input images,
+    0 (black) for unused pixels. It can be used as the mask for inpaint.
+
+    @return The mask.
+     */
     UMat resultMask() const { return result_mask_; }
 
 private:
