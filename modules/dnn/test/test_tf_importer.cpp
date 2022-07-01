@@ -1336,7 +1336,7 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
     }
     else
     {
-        l1_geometry = 1e-4, lInf_geometry = 3e-3;
+        l1_geometry = 1e-4, lInf_geometry = 4.3e-3;
     }
     normAssert(scores, blobFromNPY(refScoresPath), "scores", l1_scores, lInf_scores);
     normAssert(geometry, blobFromNPY(refGeometryPath), "geometry", l1_geometry, lInf_geometry);
