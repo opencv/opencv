@@ -426,7 +426,6 @@ public:
         if (!blobs.empty())
         {
             Mat wm = blobs[0].reshape(1, numOutput);
-            fastWeights = wm;
             if ((wm.step1() % VEC_ALIGN != 0) ||
                 !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
             )
@@ -439,6 +438,7 @@ public:
                 wm.copyTo(wm_aligned);
                 wm = wm_aligned;
             }
+            fastWeights = blobs[0].reshape(1, numOutput);
             weightsMat = wm;
         }
         else
@@ -633,7 +633,13 @@ public:
             // Keep origin weights unchanged.
             if (weightsMat.data == blobs[0].data)
                 weightsMat = weightsMat.clone();
-            if (fastWeights.data == blobs[0].data)
+
+            // If fastWeights is the same as weightsMat, we don't need to allocate more space for fastWeights.
+            bool sameFastWeights = false;
+            if (fastWeights.step1() == weightsMat.step1()) // If weightsMat is realigned, it is not the same as fastWeights.
+                sameFastWeights = true;
+
+            if (!sameFastWeights && fastWeights.data == blobs[0].data)
                 fastWeights = fastWeights.clone();
 
             Mat originWeights = blobs[0].reshape(1, outCn);
@@ -642,9 +648,12 @@ public:
                 double wi = w.at<float>(i);
                 weightsMultipliers[i] *= wi;
                 cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
-                cv::multiply(originWeights.row(i), weightsMultipliers[i], fastWeights.row(i));
+                if (!sameFastWeights)
+                    cv::multiply(originWeights.row(i), weightsMultipliers[i], fastWeights.row(i));
                 biasvec[i] *= wi;
             }
+            if (sameFastWeights)
+                fastWeights = weightsMat;
         }
 
         if (!b.empty())
