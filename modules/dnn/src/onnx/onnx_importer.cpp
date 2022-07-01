@@ -2979,7 +2979,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
             addLayer(constParams, proto);
         }
         // FIXIT: This is added for handling cases of two non-constant inputs, especially one of the input is one dimensional. Remove this case if one dimensional Mat is supported (PR #18594).
-        else if (op_type == "div" or op_type == "mul")
+        else if (op_type == "div" || op_type == "mul")
         {
             // if the two inputs have different dimensions,
             // make sure the one with more dimensions is always input[0]
