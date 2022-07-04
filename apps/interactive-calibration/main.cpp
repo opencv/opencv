@@ -42,6 +42,7 @@ const std::string keys  =
         "{pf       | defaultConfig.xml| Advanced application parameters}"
         "{save_frames | false   | Save frames that contribute to final calibration}"
         "{zoom     | 1       | Zoom factor applied to the image}"
+        "{force_reopen | false   | Forcefully reopen camera in case of errors}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
