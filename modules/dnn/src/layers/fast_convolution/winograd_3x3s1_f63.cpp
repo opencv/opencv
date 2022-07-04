@@ -192,7 +192,7 @@ static void winograd_trans_input_F63(float* src, float* dst, int Channle_div4, c
         float* input0 = input_buf0 + 4 * tiles * r;
 
         // TODO! support tiles > 12
-//#if (ARMV8)
+//#if CV_NEON_AARCH64
 //        for (; ti + 11 < tiles; ti += 12)
 //        {
 //            float* out1 = out0 + line_step * ofstab0[ti * 2] + Channle_div4 * ofstab0[ti * 2 + 1] * 4;
@@ -617,7 +617,6 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         float* output_ptr0 = output.ptr<float>() + bn * out_planesize * K;
 
         // Transform Input
-        //int taskItemLen = C_aligned/4/ntasks;
         int C_aligned_div4 = C_aligned/4;
 
         parallel_for_(Range(0, ntasks), [&](const Range& range)
@@ -1093,59 +1092,63 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
 #else // ARMv7 16 registers.
 
                         // init 16 registers. FMA/load ratio = 32/12
-                        float32x4_t r00 = vdupq_n_f32(0.0f), r01 = r00, r02 = r00, r03 = r00;
-                        float32x4_t r04 = r00, r05 = r00, r06 = r00, r07 = r00;
-                        float32x4_t r08 = r00, r09 = r00, r10 = r00, r11 = r00;
-                        float32x4_t r12 = r00, r13 = r00, r14 = r00, r15 = r00;
+                        float32x2_t q00 = vdup_n_f32(0.0f), q01 = q00, q02 = q00, q03 = q00,
+                                    q04 = q00, q05 = q00, q06 = q00, q07 = q00;
+
+                        float32x4_t r04 = vdupq_n_f32(0.0f), r05 = r04, r06 = r04, r07 = r04;
+                        float32x4_t r08 = r04, r09 = r04, r10 = r04, r11 = r04;
+                        float32x4_t r12 = r04, r13 = r04, r14 = r04, r15 = r04;
 
                         for (; nn > 0; nn--)
                         {
-                            r00 = vld1q_f32(r0), r01 = vld1q_f32(r0+4), r02 = vld1q_f32(r0+8), r03 = vld1q_f32(r0+12);
+                            q00 = vld1_f32(r0), q01 = vld1_f32(r0+2), q02 = vld1_f32(r0+4), q03 = vld1_f32(r0+6);
+                            q04 = vld1_f32(r0+8), q05 = vld1_f32(r0+10), q06 = vld1_f32(r0+12), q07 = vld1_f32(r0+14);
                             r04 = vld1q_f32(k0), r05 = vld1q_f32(k0+4), r06 = vld1q_f32(k0+8), r07 = vld1q_f32(k0+12);
                             r0 += 16, k0 += 16;
 
-                            r08 = vfmaq_laneq_f32(r08, r04, r00, 0);
-                            r09 = vfmaq_laneq_f32(r09, r04, r01, 0);
-                            r10 = vfmaq_laneq_f32(r10, r04, r02, 0);
-                            r11 = vfmaq_laneq_f32(r11, r04, r03, 0);
+                            r08 = vmlaq_lane_f32(r08, r04, q00, 0);
+                            r09 = vmlaq_lane_f32(r09, r04, q02, 0);
+                            r10 = vmlaq_lane_f32(r10, r04, q04, 0);
+                            r11 = vmlaq_lane_f32(r11, r04, q06, 0);
 
-                            r08 = vfmaq_laneq_f32(r08, r05, r00, 1);
-                            r09 = vfmaq_laneq_f32(r09, r05, r01, 1);
-                            r10 = vfmaq_laneq_f32(r10, r05, r02, 1);
-                            r11 = vfmaq_laneq_f32(r11, r05, r03, 1);
+                            r08 = vmlaq_lane_f32(r08, r05, q00, 1);
+                            r09 = vmlaq_lane_f32(r09, r05, q02, 1);
+                            r10 = vmlaq_lane_f32(r10, r05, q04, 1);
+                            r11 = vmlaq_lane_f32(r11, r05, q06, 1);
 
-                            r08 = vfmaq_laneq_f32(r08, r06, r00, 2);
-                            r09 = vfmaq_laneq_f32(r09, r06, r01, 2);
-                            r10 = vfmaq_laneq_f32(r10, r06, r02, 2);
-                            r11 = vfmaq_laneq_f32(r11, r06, r03, 2);
+                            r08 = vmlaq_lane_f32(r08, r06, q01, 0);
+                            r09 = vmlaq_lane_f32(r09, r06, q03, 0);
+                            r10 = vmlaq_lane_f32(r10, r06, q05, 0);
+                            r11 = vmlaq_lane_f32(r11, r06, q07, 0);
 
-                            r08 = vfmaq_laneq_f32(r08, r07, r00, 3);
-                            r09 = vfmaq_laneq_f32(r09, r07, r01, 3);
-                            r10 = vfmaq_laneq_f32(r10, r07, r02, 3);
-                            r11 = vfmaq_laneq_f32(r11, r07, r03, 3);
+                            r08 = vmlaq_lane_f32(r08, r07, q01, 1);
+                            r09 = vmlaq_lane_f32(r09, r07, q03, 1);
+                            r10 = vmlaq_lane_f32(r10, r07, q05, 1);
+                            r11 = vmlaq_lane_f32(r11, r07, q07, 1);
 
-                            r00 = vld1q_f32(r0), r01 = vld1q_f32(r0+4), r02 = vld1q_f32(r0+8), r03 = vld1q_f32(r0+12);
+                            q00 = vld1_f32(r0), q01 = vld1_f32(r0+2), q02 = vld1_f32(r0+4), q03 = vld1_f32(r0+6);
+                            q04 = vld1_f32(r0+8), q05 = vld1_f32(r0+10), q06 = vld1_f32(r0+12), q07 = vld1_f32(r0+14);
                             r0 += 16;
 
-                            r12 = vfmaq_laneq_f32(r12, r04, r00, 0);
-                            r13 = vfmaq_laneq_f32(r13, r04, r01, 0);
-                            r14 = vfmaq_laneq_f32(r14, r04, r02, 0);
-                            r15 = vfmaq_laneq_f32(r15, r04, r03, 0);
+                            r12 = vmlaq_lane_f32(r12, r04, q00, 0);
+                            r13 = vmlaq_lane_f32(r13, r04, q02, 0);
+                            r14 = vmlaq_lane_f32(r14, r04, q04, 0);
+                            r15 = vmlaq_lane_f32(r15, r04, q06, 0);
 
-                            r12 = vfmaq_laneq_f32(r12, r05, r00, 1);
-                            r13 = vfmaq_laneq_f32(r13, r05, r01, 1);
-                            r14 = vfmaq_laneq_f32(r14, r05, r02, 1);
-                            r15 = vfmaq_laneq_f32(r15, r05, r03, 1);
+                            r12 = vmlaq_lane_f32(r12, r05, q00, 1);
+                            r13 = vmlaq_lane_f32(r13, r05, q02, 1);
+                            r14 = vmlaq_lane_f32(r14, r05, q04, 1);
+                            r15 = vmlaq_lane_f32(r15, r05, q06, 1);
 
-                            r12 = vfmaq_laneq_f32(r12, r06, r00, 2);
-                            r13 = vfmaq_laneq_f32(r13, r06, r01, 2);
-                            r14 = vfmaq_laneq_f32(r14, r06, r02, 2);
-                            r15 = vfmaq_laneq_f32(r15, r06, r03, 2);
+                            r12 = vmlaq_lane_f32(r12, r06, q01, 0);
+                            r13 = vmlaq_lane_f32(r13, r06, q03, 0);
+                            r14 = vmlaq_lane_f32(r14, r06, q05, 0);
+                            r15 = vmlaq_lane_f32(r15, r06, q07, 0);
 
-                            r12 = vfmaq_laneq_f32(r12, r07, r00, 3);
-                            r13 = vfmaq_laneq_f32(r13, r07, r01, 3);
-                            r14 = vfmaq_laneq_f32(r14, r07, r02, 3);
-                            r15 = vfmaq_laneq_f32(r15, r07, r03, 3);
+                            r12 = vmlaq_lane_f32(r12, r07, q01, 1);
+                            r13 = vmlaq_lane_f32(r13, r07, q03, 1);
+                            r14 = vmlaq_lane_f32(r14, r07, q05, 1);
+                            r15 = vmlaq_lane_f32(r15, r07, q07, 1);
                         }
 
                         vst1q_f32(output0_tm, r08), vst1q_f32(output0_tm + 4, r09), vst1q_f32(output0_tm + 8, r10), vst1q_f32(output0_tm + 12, r11);
@@ -1162,7 +1165,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                         const float* r0 = input_tm + ofstab0[ti * 2] * line_step;
                         const float* k0 = kernel_tm_i;
 
-
+#if CV_NEON_AARCH64
                         // init 12 registers. FMA/load ratio = 12/8
                         float32x4_t r00 = vdupq_n_f32(0.0f), r01 = r00, r02 = r00, r03 = r00;
                         float32x4_t r08 = r00, r09 = r00, r10 = r00, r11 = r00;
@@ -1194,7 +1197,42 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             r18 = vfmaq_laneq_f32(r18, r11, r02, 3);
                             r19 = vfmaq_laneq_f32(r19, r11, r03, 3);
                         }
+#else
+                        // init 12 registers. FMA/load ratio = 12/8
+                        float32x2_t q00 = vdup_n_f32(0.0f), q01 = q00, q02 = q00, q03 = q00,
+                                q04 = q00, q05 = q00, q06 = q00, q07 = q00;
+                        float32x4_t r08 = vdupq_n_f32(0.0f), r09 = r08, r10 = r08, r11 = r08;
+                        float32x4_t r16 = r08, r17 = r08, r18 = r08, r19 = r08;
 
+                        for(; nn > 0; nn--)
+                        {
+                            q00 = vld1_f32(r0), q01 = vld1_f32(r0+2), q02 = vld1_f32(r0+4), q03 = vld1_f32(r0+6);
+                            q04 = vld1_f32(r0+8), q05 = vld1_f32(r0+10), q06 = vld1_f32(r0+12), q07 = vld1_f32(r0+14);
+                            r08 = vld1q_f32(k0), r09 = vld1q_f32(k0+4), r10 = vld1q_f32(k0+8), r11 = vld1q_f32(k0+12);
+                            r0 += 16, k0 += 16;
+
+                            r16 = vmlaq_lane_f32(r16, r08, q00, 0);
+                            r17 = vmlaq_lane_f32(r17, r08, q02, 0);
+                            r18 = vmlaq_lane_f32(r18, r08, q04, 0);
+                            r19 = vmlaq_lane_f32(r19, r08, q06, 0);
+                            
+                            r16 = vmlaq_lane_f32(r16, r09, q00, 1);
+                            r17 = vmlaq_lane_f32(r17, r09, q02, 1);
+                            r18 = vmlaq_lane_f32(r18, r09, q04, 1);
+                            r19 = vmlaq_lane_f32(r19, r09, q06, 1);
+                            
+                            r16 = vmlaq_lane_f32(r16, r10, q01, 0);
+                            r17 = vmlaq_lane_f32(r17, r10, q03, 0);
+                            r18 = vmlaq_lane_f32(r18, r10, q05, 0);
+                            r19 = vmlaq_lane_f32(r19, r10, q07, 0);
+                            
+                            r16 = vmlaq_lane_f32(r16, r11, q01, 1);
+                            r17 = vmlaq_lane_f32(r17, r11, q03, 1);
+                            r18 = vmlaq_lane_f32(r18, r11, q05, 1);
+                            r19 = vmlaq_lane_f32(r19, r11, q07, 1);
+
+                        }
+#endif
                         vst1q_f32(output0_tm, r16), vst1q_f32(output0_tm + 4, r17), vst1q_f32(output0_tm + 8, r18), vst1q_f32(output0_tm + 12, r19);
                         output0_tm += 16;
                     }
@@ -1205,6 +1243,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                         const float* r0 = input_tm + ofstab0[ti * 2] * line_step;
                         const float* k0 = kernel_tm_i;
 
+#if CV_NEON_AARCH64
                         // init 8 registers. FMA/load ratio = 8/6
                         float32x4_t r00 = vdupq_n_f32(0.0f), r01 = r00;
                         float32x4_t r08 = r00, r09 = r00, r10 = r00, r11 = r00;
@@ -1228,7 +1267,31 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             r16 = vfmaq_laneq_f32(r16, r11, r00, 3);
                             r17 = vfmaq_laneq_f32(r17, r11, r01, 3);
                         }
+#else
+                        // init 8 registers. FMA/load ratio = 8/6
+                        float32x2_t q00 = vdup_n_f32(0.0f), q01 = q00, q02 = q00, q03 = q00;
+                        float32x4_t r08 = vdupq_n_f32(0.0f), r09 = r08, r10 = r08, r11 = r08;
+                        float32x4_t r16 = r08, r17 = r08;
 
+                        for(; nn > 0; nn--)
+                        {
+                            q00 = vld1_f32(r0), q01 = vld1_f32(r0+2), q02 = vld1_f32(r0+4), q03 = vld1_f32(r0+6);
+                            r08 = vld1q_f32(k0), r09 = vld1q_f32(k0+4), r10 = vld1q_f32(k0+8), r11 = vld1q_f32(k0+12);
+                            r0 += 8, k0 += 16;
+
+                            r16 = vmlaq_lane_f32(r16, r08, q00, 0);
+                            r17 = vmlaq_lane_f32(r17, r08, q02, 0);
+
+                            r16 = vmlaq_lane_f32(r16, r09, q00, 1);
+                            r17 = vmlaq_lane_f32(r17, r09, q02, 1);
+
+                            r16 = vmlaq_lane_f32(r16, r10, q01, 0);
+                            r17 = vmlaq_lane_f32(r17, r10, q03, 0);
+
+                            r16 = vmlaq_lane_f32(r16, r11, q01, 1);
+                            r17 = vmlaq_lane_f32(r17, r11, q03, 1);
+                        }
+#endif
                         vst1q_f32(output0_tm, r16), vst1q_f32(output0_tm + 4, r17);
                         output0_tm += 8;
                     }
@@ -1239,7 +1302,8 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                         const float* r0 = input_tm + ofstab0[ti * 2] * line_step;
                         const float* k0 = kernel_tm_i;
 
-                        // init 8 registers. FMA/load ratio = 8/6
+#if CV_NEON_AARCH64
+                        // init 6 registers. FMA/load ratio = 6/5
                         float32x4_t r00 = vdupq_n_f32(0.0f);
                         float32x4_t r08 = r00, r09 = r00, r10 = r00, r11 = r00;
                         float32x4_t r16 = r00;
@@ -1255,7 +1319,24 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             r16 = vfmaq_laneq_f32(r16, r10, r00, 2);
                             r16 = vfmaq_laneq_f32(r16, r11, r00, 3);
                         }
+#else
+                        // init 6 registers. FMA/load ratio = 6/5
+                        float32x2_t q00 = vdup_n_f32(0.0f), q01 = q00;
+                        float32x4_t r08 = vdupq_n_f32(0.0f), r09 = r08, r10 = r08, r11 = r08;
+                        float32x4_t r16 = r08;
 
+                        for(; nn > 0; nn--)
+                        {
+                            q00 = vld1_f32(r0), q01 = vld1_f32(r0+2);
+                            r08 = vld1q_f32(k0), r09 = vld1q_f32(k0+4), r10 = vld1q_f32(k0+8), r11 = vld1q_f32(k0+12);
+                            r0 += 4, k0 += 16;
+
+                            r16 = vmlaq_lane_f32(r16, r08, q00, 0);
+                            r16 = vmlaq_lane_f32(r16, r09, q00, 1);
+                            r16 = vmlaq_lane_f32(r16, r10, q01, 0);
+                            r16 = vmlaq_lane_f32(r16, r11, q01, 1);
+                        }
+#endif
                         vst1q_f32(output0_tm, r16);
                         output0_tm += 4;
                     }
