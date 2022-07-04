@@ -281,6 +281,9 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
+        VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
+        VERIFY HAVE_WAYLAND)
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS
   VERIFY HAVE_IPP)
@@ -1259,6 +1262,24 @@ endif(WIN32)
 # ========================== GUI ==========================
 status("")
 status("  GUI: " "${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
+
+if(WITH_WAYLAND OR HAVE_WAYLAND)
+  if(HAVE_WAYLAND_CLIENT)
+    status("    Wayland Client:" "YES (ver ${WAYLAND_CLIENT_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_CURSOR)
+    status("    Wayland Cursor:" "YES (ver ${WAYLAND_CURSOR_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_PROTOCOL)
+    status("    Wayland Protocol:" "YES (ver ${WAYLAND_PROTOCOL_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_EGL)
+    status("    Wayland EGL:" "YES (ver ${WAYLAND_EGL_VERSION})")
+  endif()
+  if(HAVE_XKBCOMMON)
+    status("    Xkbcommon:" "YES (ver ${XKBCOMMON_VERSION})")
+  endif()
+endif()
 
 if(WITH_QT OR HAVE_QT)
   if(HAVE_QT)
