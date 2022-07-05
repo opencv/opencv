@@ -1215,17 +1215,17 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             r17 = vmlaq_lane_f32(r17, r08, q02, 0);
                             r18 = vmlaq_lane_f32(r18, r08, q04, 0);
                             r19 = vmlaq_lane_f32(r19, r08, q06, 0);
-                            
+
                             r16 = vmlaq_lane_f32(r16, r09, q00, 1);
                             r17 = vmlaq_lane_f32(r17, r09, q02, 1);
                             r18 = vmlaq_lane_f32(r18, r09, q04, 1);
                             r19 = vmlaq_lane_f32(r19, r09, q06, 1);
-                            
+
                             r16 = vmlaq_lane_f32(r16, r10, q01, 0);
                             r17 = vmlaq_lane_f32(r17, r10, q03, 0);
                             r18 = vmlaq_lane_f32(r18, r10, q05, 0);
                             r19 = vmlaq_lane_f32(r19, r10, q07, 0);
-                            
+
                             r16 = vmlaq_lane_f32(r16, r11, q01, 1);
                             r17 = vmlaq_lane_f32(r17, r11, q03, 1);
                             r18 = vmlaq_lane_f32(r18, r11, q05, 1);
