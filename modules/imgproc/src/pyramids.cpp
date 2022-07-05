@@ -1118,6 +1118,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
                 dst0[x] = t0;
             }
         }
+
     }
 
     if (dsize.height > ssize.height*2)
