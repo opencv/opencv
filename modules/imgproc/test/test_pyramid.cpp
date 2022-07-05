@@ -18,18 +18,29 @@ TEST(Imgproc_PyrUp, pyrUp_regression_22184)
 
 TEST(Imgproc_PyrUp, pyrUp_regression_22195)
 {
-    Mat src(99, 99,CV_16UC3,Scalar(255,255,255));
+    Mat src(13, 13,CV_16UC3,Scalar(0,0,0));
+    {
+        int swidth = src.cols;
+        int sheight = src.rows;
+        int cn = src.channels();
+        int count = 0;
+        for (int y = 0; y < sheight; y++)
+        {
+            ushort *src_c = src.ptr<ushort>(y);
+            for (int x = 0; x < swidth * cn; x++)
+            {
+                src_c[x] = (count++) % 10;
+            }
+        }
+    }
     Mat dst(src.cols * 2 - 1, src.rows * 2 - 1, CV_16UC3, Scalar(0,0,0));
     pyrUp(src, dst, Size(dst.cols, dst.rows));
-    
-    int dwidth = dst.cols;
-    int dheight = dst.rows;
-    int cn = dst.channels();
-    ushort *dst_last = dst.ptr<ushort>(dheight - 1);
-    ushort *dst_last2 = dst.ptr<ushort>(dheight - 3);
-    for (int x = 0; x < dwidth * cn; x++)
+
     {
-        ASSERT_EQ(dst_last[x], dst_last2[x]);
+        ushort *dst_c = dst.ptr<ushort>(dst.rows - 1);
+        ASSERT_EQ(dst_c[0], 6);
+        ASSERT_EQ(dst_c[1], 6);
+        ASSERT_EQ(dst_c[2], 1);
     }
 }
 
