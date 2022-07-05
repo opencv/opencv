@@ -983,13 +983,25 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
         dsts[0] = dst0; dsts[1] = dst1;
 
-        x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
-        for( ; x < dsize.width; x++ )
+        if (dst0 != dst1)
         {
-            T t1 = castOp((row1[x] + row2[x])*4);
-            T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
-            dst1[x] = t1; dst0[x] = t0;
+            x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
+            for( ; x < dsize.width; x++ )
+            {
+                T t1 = castOp((row1[x] + row2[x])*4);
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst1[x] = t1; dst0[x] = t0;
+            }
         }
+        else
+        {
+            for(x = 0; x < dsize.width; x++ )
+            {
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst0[x] = t0;
+            }
+        }
+        
     }
 
     if (dsize.height > ssize.height*2)
