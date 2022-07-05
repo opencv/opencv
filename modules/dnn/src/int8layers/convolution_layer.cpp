@@ -51,6 +51,7 @@ public:
         input_zp = params.get<int>("input_zeropoint");
         output_zp = params.get<int>("zeropoints");
         output_sc = params.get<float>("scales");
+        per_channel = params.get<bool>("per_channel", true);
 
         if (kernel_size.size() == 2) {
             kernel = Size(kernel_size[1], kernel_size[0]);

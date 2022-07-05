@@ -26,6 +26,8 @@ public:
         output_zp = params.get<int>("zeropoints");
         output_sc = params.get<float>("scales");
         axis = params.get<int>("axis", 1);
+        per_channel = params.get<bool>("per_channel", true);
+
         if (blobs.size() == 3)
         {
             // blobs[0] - Weights

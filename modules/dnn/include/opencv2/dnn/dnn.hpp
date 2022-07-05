@@ -621,8 +621,10 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param calibData Calibration data to compute the quantization parameters.
          *  @param inputsDtype Datatype of quantized net's inputs. Can be CV_32F or CV_8S.
          *  @param outputsDtype Datatype of quantized net's outputs. Can be CV_32F or CV_8S.
+         *  @param perChannel Quantization granularity of quantized Net. The default is true, that means quantize model
+         *  in per-channel way (channel-wise). Set it false to quantize model in per-tensor way (or tensor-wise).
          */
-        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype);
+        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel=true);
 
         /** @brief Returns input scale and zeropoint for a quantized Net.
          *  @param scales output parameter for returning input scales.

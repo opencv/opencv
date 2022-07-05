@@ -263,6 +263,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
@@ -368,6 +372,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
         static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
     };
 

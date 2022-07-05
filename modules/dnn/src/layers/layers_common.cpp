@@ -250,5 +250,16 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
     }
 }
 
+double getWeightScale(const Mat& weightsMat)
+{
+    double realMin, realMax;
+
+    cv::minMaxIdx(weightsMat, &realMin, &realMax);
+    realMin = std::min(realMin, 0.0);
+    realMax = std::max(realMax, 0.0);
+
+    return (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
+}
+
 }
 }

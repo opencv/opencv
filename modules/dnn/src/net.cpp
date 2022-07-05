@@ -115,12 +115,12 @@ void Net::forward(std::vector<std::vector<Mat>>& outputBlobs,
 }
 
 // FIXIT drop from inference API
-Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype)
+Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
     CV_Assert(!empty());
-    return impl->quantize(calibData, inputsDtype, outputsDtype);
+    return impl->quantize(calibData, inputsDtype, outputsDtype, perChannel);
 }
 
 // FIXIT drop from inference API

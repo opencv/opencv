@@ -258,7 +258,7 @@ struct Net::Impl : public detail::NetImplBase
     void dumpNetworkToFile() const;
 
     // FIXIT drop from inference API
-    Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype) /*const*/;
+    Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel) /*const*/;
     void getInputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
     void getOutputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
 
