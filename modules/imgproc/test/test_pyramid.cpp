@@ -16,7 +16,7 @@ TEST(Imgproc_PyrUp, pyrUp_regression_22184)
     ASSERT_GT(cvRound(min_val), 0);
 }
 
-TEST(Imgproc_PyrUp, pyrUp_regression_22195)
+TEST(Imgproc_PyrUp, pyrUp_regression_22193)
 {
     Mat src(13, 13,CV_16UC3,Scalar(0,0,0));
     {
