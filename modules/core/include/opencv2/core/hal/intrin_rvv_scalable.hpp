@@ -1,6 +1,6 @@
 
-#ifndef OPENCV_HAL_INTRIN_RVV_VEC_HPP
-#define OPENCV_HAL_INTRIN_RVV_VEC_HPP
+#ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
+#define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 
 #include <initializer_list>
 #include <assert.h>
@@ -487,4 +487,4 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 } //namespace cv
 
-#endif
+#endif //OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
