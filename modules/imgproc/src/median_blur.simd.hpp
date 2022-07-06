@@ -689,10 +689,11 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     break;
 
 #if CV_SIMD || CV_SIMD_SCALABLE
-                for( ; j <= size.width - VTraits<typename VecOp::arg_type>::vlanes() - cn; j += VTraits<typename VecOp::arg_type>::vlanes() )
+                int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
-                for( ; j <= size.width - 1 - cn; j += 1 )
+                int nlanes = 1;
 #endif
+                for( ; j <= size.width - nlanes - cn; j += nlanes )
                 {
                     VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
                     VT p3 = vop.load(row1+j-cn), p4 = vop.load(row1+j), p5 = vop.load(row1+j+cn);
@@ -793,10 +794,11 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     break;
 
 #if CV_SIMD || CV_SIMD_SCALABLE
-                for( ; j <= size.width - VTraits<typename VecOp::arg_type>::vlanes() - cn*2; j += VTraits<typename VecOp::arg_type>::vlanes() )
+                int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
-                for( ; j <= size.width - 1 - cn*2; j += 1 )
+                int nlanes = 1;
 #endif
+                for( ; j <= size.width - nlanes - cn*2; j += nlanes )
                 {
                     VT p0 = vop.load(row[0]+j-cn*2), p5 = vop.load(row[1]+j-cn*2), p10 = vop.load(row[2]+j-cn*2), p15 = vop.load(row[3]+j-cn*2), p20 = vop.load(row[4]+j-cn*2);
                     VT p1 = vop.load(row[0]+j-cn*1), p6 = vop.load(row[1]+j-cn*1), p11 = vop.load(row[2]+j-cn*1), p16 = vop.load(row[3]+j-cn*1), p21 = vop.load(row[4]+j-cn*1);
