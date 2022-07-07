@@ -882,8 +882,9 @@ void PyrDownInvoker<CastOp>::operator()(const Range& range) const
                 const int* tabR = *_tabR;
                 for (int x_ = 0; x < dsize.width; x++, x_++)
                 {
-                    row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
-                        src[tabR[x_]] + src[tabR[x_+cn*4]];
+                    int cn_off = (x_ / cn) * cn;
+                    row[x] = src[tabR[x_+cn_off+cn*2]]*6 + (src[tabR[x_+cn_off+cn]] + src[tabR[x_+cn_off+cn*3]])*4 +
+                        src[tabR[x_+cn_off]] + src[tabR[x_+cn_off+cn*4]];
                 }
             } while (0);
         }
