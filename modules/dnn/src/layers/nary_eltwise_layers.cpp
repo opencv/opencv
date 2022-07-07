@@ -260,22 +260,48 @@ public:
         const Mat& b = inputs[1];
         Mat& out = outputs[0];
 
+        // collect info of inputs and output
+        const int* in_shape[] = {a.size.p, b.size.p};
+        const size_t* in_step[] = {a.step.p, b.step.p};
+        const int* out_shape = out.size.p;
+        const size_t* out_step = out.step.p;
+        const int in_ndims[] = {a.dims, b.dims};
+        int out_ndims = out.dims;
+
         int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        // buf holds step_buf & shape_buf, each of them holds size (or shape) of a, b & output
-        AutoBuffer<size_t> buf(2 * 3 * max_ndims);
-        size_t* step_buf = buf.data();
-        int* shape_buf = (int*)(buf.data() + 3 * max_ndims);
+        // buf holds the properties for a, b & output:
+        //  * shape_buf & step_buf, 3*2*max_ndims elements in total
+        //  * orig_shape, shape (result_shape), orig_step, step (result_step), 3*4 elements in total
+        //  * all_ndims, 3*1 elements in total
+        //  * all_type_sizes, 3*1 elements in total
+        AutoBuffer<size_t> buf(3 * (2 * max_ndims + 6));
 
-        size_t all_type_sizes[] = {sizeof(T), sizeof(T), sizeof(T)};
-        int all_ndims[] = {out.dims, a.dims, b.dims};
-        const int* orig_shapes[] = {out.size.p, a.size.p, b.size.p};
-        const size_t* orig_steps[] = {out.step.p, a.step.p, b.step.p};
-        int* shapes[] = {shape_buf, shape_buf + max_ndims, shape_buf + max_ndims*2};
-        size_t* steps[] = {step_buf, step_buf + max_ndims, step_buf + max_ndims*2};
+        int** orig_shapes = (int**)(buf.data());
+        int** shapes = orig_shapes + 3;
+        size_t** orig_steps = (size_t**)(shapes + 3);
+        size_t** steps = orig_steps + 3;
+
+        int* shape_buf = (int*)(steps + 3);
+        size_t* step_buf = (size_t*)(shape_buf + 3 * max_ndims);
+
+        int* all_ndims = (int*)(step_buf + 3 * max_ndims);
+        size_t* all_type_sizes = (size_t*)(all_ndims + 3);
+
+        // assign orig_shapes, shapes, orig_steps, steps, all_ndims, all_type_sizes
+        for (int i = 0; i < 3; i++)
+        {
+            orig_shapes[i] = (int*)(i == 0 ? out_shape : in_shape[i-1]);
+            orig_steps[i] = (size_t*)(i == 0 ? out_step : in_step[i-1]);
+            shapes[i] = shape_buf + i * max_ndims;
+            steps[i] = step_buf + i * max_ndims;
+            all_ndims[i] = i == 0 ? out_ndims : in_ndims[i-1];
+            all_type_sizes[i] = sizeof(T);
+        }
 
         if (!prepare_for_broadcast_op(3, max_ndims, all_type_sizes,
-                                      all_ndims, orig_shapes, orig_steps,
+                                      all_ndims, (const int**)orig_shapes,
+                                      (const size_t**)orig_steps,
                                       shapes, steps))
             return;
 
