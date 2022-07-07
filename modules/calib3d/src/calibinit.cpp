@@ -1232,7 +1232,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         centers[i] = ci;
         center += ci;
     }
-    center.x *= (1.0f / quad_count);
+    center *= (1.0f / quad_count);
 
     // If we still have more quadrangles than we should,
     // we try to eliminate bad ones based on minimizing the bounding box.
@@ -1298,6 +1298,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         quad_group[min_box_area_index] = quad_group[quad_count];
         centers[min_box_area_index] = centers[quad_count];
     }
+    quad_group.resize(quad_count);
 
     return quad_count;
 }
