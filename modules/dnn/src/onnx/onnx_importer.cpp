@@ -2925,7 +2925,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     opencv_onnx::NodeProto node_proto = node_proto_;
     String op_type = toLowerCase(node_proto.op_type());
     bool isDiv = op_type == "div";
-    
+
     layerParams.type = "NaryEltwise";
     layerParams.set("operation", toLowerCase(node_proto.op_type()));
 
@@ -2939,7 +2939,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     else
     {
         CV_Assert(node_proto.input_size() == 2);
-        
+
         auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
             if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
                 transpose(t, t);
