@@ -158,59 +158,7 @@ void convBlock_NEON(int k, const float *a, const float *b,
                 float *c, int ldc, const float *bias,
                 float minval, float maxval, bool ifActiv)
 {
-#if FAST_CONV_MR == 4 && FAST_CONV_NR == 12
-    {
-        float32x4_t c0 = vdupq_n_f32(bias[0]), c1 = c0, c2 = c0;
-        float32x4_t c3 = vdupq_n_f32(bias[1]), c4 = c3, c5 = c3;
-        float32x4_t c6 = vdupq_n_f32(bias[2]), c7 = c6, c8 = c6;
-        float32x4_t c9 = vdupq_n_f32(bias[3]), c10 = c9, c11 = c9;
-
-        float32x4_t a0 = vdupq_n_f32(0.0f);
-        float32x4_t b0 = vdupq_n_f32(0.0f), b1 = vdupq_n_f32(0.0f), b2 = vdupq_n_f32(0.0f);
-
-        for (int p = 0; p < k; p++, a += FAST_CONV_MR, b += FAST_CONV_NR)
-        {
-            a0 = vld1q_f32(a);
-            b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
-
-            c0 = vfmaq_laneq_f32(c0, b0, a0, 0);
-            c1 = vfmaq_laneq_f32(c1, b1, a0, 0);
-            c2 = vfmaq_laneq_f32(c2, b2, a0, 0);
-            c3 = vfmaq_laneq_f32(c3, b0, a0, 1);
-            c4 = vfmaq_laneq_f32(c4, b1, a0, 1);
-            c5 = vfmaq_laneq_f32(c5, b2, a0, 1);
-
-            c6 = vfmaq_laneq_f32(c6, b0, a0, 2);
-            c7 = vfmaq_laneq_f32(c7, b1, a0, 2);
-            c8 = vfmaq_laneq_f32(c8, b2, a0, 2);
-
-            c9 = vfmaq_laneq_f32(c9, b0, a0, 3);
-            c10 = vfmaq_laneq_f32(c10, b1, a0, 3);
-            c11 = vfmaq_laneq_f32(c11, b2, a0, 3);
-        }
-
-        if (ifActiv)
-        {
-            b0 = vdupq_n_f32(minval), b1 = vdupq_n_f32(maxval);
-            c0 = vminq_f32(vmaxq_f32(c0, b0), b1);
-            c1 = vminq_f32(vmaxq_f32(c1, b0), b1);
-            c2 = vminq_f32(vmaxq_f32(c2, b0), b1);
-            c3 = vminq_f32(vmaxq_f32(c3, b0), b1);
-            c4 = vminq_f32(vmaxq_f32(c4, b0), b1);
-            c5 = vminq_f32(vmaxq_f32(c5, b0), b1);
-            c6 = vminq_f32(vmaxq_f32(c6, b0), b1);
-            c7 = vminq_f32(vmaxq_f32(c7, b0), b1);
-            c8 = vminq_f32(vmaxq_f32(c8, b0), b1);
-            c9 = vminq_f32(vmaxq_f32(c9, b0), b1);
-            c10 = vminq_f32(vmaxq_f32(c10, b0), b1);
-            c11 = vminq_f32(vmaxq_f32(c11, b0), b1);
-        }
-        vst1q_f32(c, c0); vst1q_f32(c+4, c1); vst1q_f32(c+8, c2);
-        vst1q_f32(c + ldc, c3); vst1q_f32(c + ldc + 4, c4); vst1q_f32(c + ldc + 8, c5);
-        vst1q_f32(c + ldc*2, c6); vst1q_f32(c + ldc*2 + 4, c7); vst1q_f32(c + ldc*2 + 8, c8);
-        vst1q_f32(c + ldc*3, c9); vst1q_f32(c + ldc*3 + 4, c10); vst1q_f32(c + ldc*3 + 8, c11);
-    }
-#elif FAST_CONV_MR == 4 && FAST_CONV_NR == 28
+#if CV_NEON_AARCH64 && FAST_CONV_MR == 4 && FAST_CONV_NR == 28  // AARCH64
     {
         float32x4_t c0 = vdupq_n_f32(bias[0]), c1 = c0, c2 = c0, c3 = c0, c4 = c0, c5 = c0, c24 = c0;
         float32x4_t c6 = vdupq_n_f32(bias[1]), c7 = c6, c8 = c6, c9 = c6, c10 = c6, c11 = c6, c25 = c6;
@@ -220,7 +168,8 @@ void convBlock_NEON(int k, const float *a, const float *b,
         float32x4_t a0 = vdupq_n_f32(0.0f);
         float32x4_t b0 = vdupq_n_f32(0.0f), b1 = vdupq_n_f32(0.0f), b2 = vdupq_n_f32(0.0f);
 
-        for (int p = 0; p < k; p++, a += FAST_CONV_MR) {
+        for (int p = 0; p < k; p++, a += FAST_CONV_MR)
+        {
             a0 = vld1q_f32(a);
             b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
             b += 12;
@@ -330,11 +279,63 @@ void convBlock_NEON(int k, const float *a, const float *b,
         vst1q_f32(c + ldc * 3 + 20, c23);
         vst1q_f32(c + ldc * 3 + 24, c27);
     }
+#elif (!defined(CV_NEON_AARCH64) || !CV_NEON_AARCH64) && FAST_CONV_MR == 4 && FAST_CONV_NR == 12 // ARMv7
+    {
+        float32x4_t c0 = vdupq_n_f32(bias[0]), c1 = c0, c2 = c0;
+        float32x4_t c3 = vdupq_n_f32(bias[1]), c4 = c3, c5 = c3;
+        float32x4_t c6 = vdupq_n_f32(bias[2]), c7 = c6, c8 = c6;
+        float32x4_t c9 = vdupq_n_f32(bias[3]), c10 = c9, c11 = c9;
+
+        float32x2_t a0 = vdup_n_f32(0.0f), a1 = a0;
+        float32x4_t b0 = vdupq_n_f32(0.0f), b1 = vdupq_n_f32(0.0f), b2 = vdupq_n_f32(0.0f);
+
+        for (int p = 0; p < k; p++, a += FAST_CONV_MR, b += FAST_CONV_NR)
+        {
+            a0 = vld1_f32(a), a1 = vld1_f32(a+2);
+            b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
+
+            c0 = vmlaq_lane_f32(c0, b0, a0, 0);
+            c1 = vmlaq_lane_f32(c1, b1, a0, 0);
+            c2 = vmlaq_lane_f32(c2, b2, a0, 0);
+
+            c3 = vmlaq_lane_f32(c3, b0, a0, 1);
+            c4 = vmlaq_lane_f32(c4, b1, a0, 1);
+            c5 = vmlaq_lane_f32(c5, b2, a0, 1);
+
+            c6 = vmlaq_lane_f32(c6, b0, a1, 0);
+            c7 = vmlaq_lane_f32(c7, b1, a1, 0);
+            c8 = vmlaq_lane_f32(c8, b2, a1, 0);
+
+            c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
+            c10 = vmlaq_lane_f32(c10, b1, a1, 1);
+            c11 = vmlaq_lane_f32(c11, b2, a1, 1);
+        }
+
+        if (ifActiv)
+        {
+            b0 = vdupq_n_f32(minval), b1 = vdupq_n_f32(maxval);
+            c0 = vminq_f32(vmaxq_f32(c0, b0), b1);
+            c1 = vminq_f32(vmaxq_f32(c1, b0), b1);
+            c2 = vminq_f32(vmaxq_f32(c2, b0), b1);
+            c3 = vminq_f32(vmaxq_f32(c3, b0), b1);
+            c4 = vminq_f32(vmaxq_f32(c4, b0), b1);
+            c5 = vminq_f32(vmaxq_f32(c5, b0), b1);
+            c6 = vminq_f32(vmaxq_f32(c6, b0), b1);
+            c7 = vminq_f32(vmaxq_f32(c7, b0), b1);
+            c8 = vminq_f32(vmaxq_f32(c8, b0), b1);
+            c9 = vminq_f32(vmaxq_f32(c9, b0), b1);
+            c10 = vminq_f32(vmaxq_f32(c10, b0), b1);
+            c11 = vminq_f32(vmaxq_f32(c11, b0), b1);
+        }
+        vst1q_f32(c, c0); vst1q_f32(c+4, c1); vst1q_f32(c+8, c2);
+        vst1q_f32(c + ldc, c3); vst1q_f32(c + ldc + 4, c4); vst1q_f32(c + ldc + 8, c5);
+        vst1q_f32(c + ldc*2, c6); vst1q_f32(c + ldc*2 + 4, c7); vst1q_f32(c + ldc*2 + 8, c8);
+        vst1q_f32(c + ldc*3, c9); vst1q_f32(c + ldc*3 + 4, c10); vst1q_f32(c + ldc*3 + 8, c11);
+    }
 #else
 #error "unsupported FAST_CONV_MR and/or FAST_CONV_NR in convBlock_NEON."
 #endif
 }
-
 #endif
 } // namespace opt_NEON
 

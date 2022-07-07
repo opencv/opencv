@@ -9,7 +9,7 @@
 
 #ifndef FAST_CONV_PRAM
 #define FAST_CONV_PRAM
-#if CV_NEON && __aarch64__  // 32 registers.
+#if CV_NEON && CV_NEON_AARCH64  // 32 registers.
 #define FAST_CONV_MR 4
 #define FAST_CONV_NR 28
 enum { FAST_VEC_NLANES=4 };
