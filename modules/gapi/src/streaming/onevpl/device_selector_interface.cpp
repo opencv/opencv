@@ -121,7 +121,7 @@ Context create_dx11_context(Context::Ptr ctx_ptr) {
 
 Device create_vaapi_device(Device::Ptr device_ptr,
                            const std::string& device_name,
-                           int file_description) {
+                           int /*file_description*/) {
     return detail::DeviceContextCreator::create_entity<Device>(device_ptr,
                                                                device_name,
                                                                AccelType::VAAPI);
