@@ -102,7 +102,6 @@ cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
     return cv::util::make_optional(std::move(rv));
 }
 
-#ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
 
@@ -152,7 +151,6 @@ AccelParamsType create_device_with_ctx(IDXGIAdapter* adapter) {
 }
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
-#endif // HAVE_INF_ENGINE
 } // anonymous namespace
 
 namespace custom {
