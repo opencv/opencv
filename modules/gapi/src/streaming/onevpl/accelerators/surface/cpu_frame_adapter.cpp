@@ -64,7 +64,7 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
 }
 
 cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
-    GAPI_Assert("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
+    throw std::runtime_error("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
     return {};
 }
 

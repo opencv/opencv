@@ -50,7 +50,6 @@ private:
     std::unique_ptr<VPLAccelerationPolicy> cpu_dispatcher;
 #ifdef __linux__
     VADisplay va_handle;
-    int device_fd;  // TODO Move it out in device selector
 #endif // __linux__
 };
 } // namespace onevpl

@@ -30,6 +30,16 @@
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#include "va/va.h"
+#include "va/va_drm.h"
+
+#include <fcntl.h>
+#include <unistd.h>
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // __linux__
+
 #include <codecvt>
 #include "opencv2/core/directx.hpp"
 
@@ -37,6 +47,23 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+#ifdef __linux__
+struct Aux {
+    ~Aux() {
+        for (int fd : fds) {
+            close(fd);
+        }
+    }
+
+    void remember_fd(int fd) {
+        fds.insert(fd);
+    }
+private:
+    std::set<int> fds;
+};
+#else
+struct Aux {};
+#endif
 
 static std::vector<CfgParam> insertCfgparam(std::vector<CfgParam> &&param_array, AccelType type) {
     switch (type) {
@@ -153,7 +180,78 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             break;
         }
         case MFX_IMPL_VIA_VAAPI : {
-            GAPI_LOG_WARNING(nullptr, "TODO MFX_IMPL_VIA_VAAPI falls back to CPU case")
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            static const char *predefined_vaapi_devices_list[] {"/dev/dri/renderD128",
+                                                                "/dev/dri/renderD129",
+                                                                "/dev/dri/card0",
+                                                                "/dev/dri/card1",
+                                                                nullptr};
+            std::stringstream ss;
+            int device_fd = -1;
+            VADisplay va_handle;va_handle = nullptr;
+            for (const char **device_path = predefined_vaapi_devices_list;
+                *device_path != nullptr; device_path++) {
+                device_fd = open(*device_path, O_RDWR);
+                if (device_fd < 0) {
+                    std::string info("Cannot open GPU file: \"");
+                    info = info + *device_path + "\", error: " + strerror(errno);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                va_handle = vaGetDisplayDRM(device_fd);
+                if (!va_handle) {
+                    close(device_fd);
+
+                    std::string info("VAAPI device vaGetDisplayDRM failed, error: ");
+                    info += strerror(errno);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                int major_version = 0, minor_version = 0;
+                VAStatus status {};
+                status = vaInitialize(va_handle, &major_version, &minor_version);
+                if (VA_STATUS_SUCCESS != status) {
+                    close(device_fd);
+                    va_handle = nullptr;
+
+                    std::string info("Cannot initialize VAAPI device, error: ");
+                    info += vaErrorStr(status);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                GAPI_LOG_INFO(nullptr, "VAAPI created for device: " << *device_path);
+                break;
+            }
+
+            // check device creation
+            if (!va_handle) {
+                GAPI_LOG_WARNING(nullptr, "Cannot create VAAPI device. Log:\n" << ss.str());
+                throw std::logic_error(std::string("Cannot create device for \"") +
+                                   CfgParam::acceleration_mode_name() +
+                                   ": MFX_IMPL_VIA_VAAPI\"");
+            }
+
+            // Unfortunately VAAPI doesn't provide API for extracting initial FD value from VADisplay, which
+            // value is stored as VADisplay fields, by the way. But, because we here are only one creator
+            // of VAAPI device then we will need make cleanup for all allocated resources by ourselfs
+            //and FD is definitely must be utilized. So, let's use complementary struct `Aux` which
+            // represent some kind of 'platform specific data' and which will store opened FD for
+            // future utilization
+            platform_specific_data.reset (new Aux);
+            platform_specific_data->remember_fd(device_fd);
+
+            suggested_device = IDeviceSelector::create<Device>(va_handle, "GPU", AccelType::VAAPI);
+            suggested_context = IDeviceSelector::create<Context>(nullptr, AccelType::VAAPI);
+#else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+#endif // #ifdef __linux__
             break;
         }
         case MFX_ACCEL_MODE_NA: {
@@ -234,6 +332,19 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
 #endif // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
         }
+        case MFX_IMPL_VIA_VAAPI : {
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            suggested_device = IDeviceSelector::create<Device>(device_ptr, device_id, AccelType::VAAPI);
+            suggested_context = IDeviceSelector::create<Context>(nullptr, AccelType::VAAPI);
+#else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+#endif // #ifdef __linux__
+            break;
+        }
         case MFX_ACCEL_MODE_NA: {
             GAPI_LOG_WARNING(nullptr, "Incompatible \"" <<  CfgParam::acceleration_mode_name() <<
                                       ": MFX_ACCEL_MODE_NA\" with "
@@ -284,7 +395,13 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const Device &device,
 #endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
         }
         case AccelType::VAAPI:
-            GAPI_LOG_WARNING(nullptr, "TODO MFX_IMPL_VIA_VAAPI falls back to CPU case")
+#ifdef __linux__
+#if !defined(HAVE_VA) || !defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+#endif // #ifdef __linux__
             break;
         case AccelType::HOST:
             break;
@@ -331,6 +448,15 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
             device_ptr = nullptr;
 #endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
+        }
+        case AccelType::VAAPI: {
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            VADisplay va_handle = reinterpret_cast<VADisplay>(suggested_device.get_ptr());
+            vaTerminate(va_handle);
+            platform_specific_data.reset();
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // #ifdef __linux__
         }
         default:
             break;
