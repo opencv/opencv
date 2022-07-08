@@ -62,16 +62,13 @@ this case, use explicit namespace specifiers to resolve the name conflicts:
 
 ### Automatic Memory Management
 
-OpenCV handles all the memory automatically.
-
-First of all, std::vector, cv::Mat, and other data structures used by the functions and methods have
-destructors that deallocate the underlying memory buffers when needed. This means that the
-destructors do not always deallocate the buffers as in case of Mat. They take into account possible
-data sharing. A destructor decrements the reference counter associated with the matrix data buffer.
-The buffer is deallocated if and only if the reference counter reaches zero, that is, when no other
-structures refer to the same buffer. Similarly, when a Mat instance is copied, no actual data is
-really copied. Instead, the reference counter is incremented to memorize that there is another owner
-of the same data. There is also the cv::Mat::clone method that creates a full copy of the matrix data.
+OpenCV manages memory automatically. Destructors for data structures such as std::vector and cv::Mat
+do not always deallocate their underlying memory buffers because they take into account possible data
+sharing. A destructor decrements the reference counter associated with the matrix data buffer.
+The buffer is deallocated if and only if the reference counter reaches zero, which is when no other
+structures refer to the shared buffer. Similarly, when a cv::Mat instance is copied, no actual data is
+copied. Instead, the reference counter is incremented to record that there is another owner
+of the same data. If needed, the cv::Mat::clone method creates a full copy of the underlying data.
 See the example below:
 ```.cpp
     // create a big 8Mb matrix
