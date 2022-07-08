@@ -302,6 +302,16 @@ DECLARE_CV_CPUID_X86
 #endif
 
 
+#if ((__cplusplus >= 201103L) || (defined(_MSC_VER) && _MSC_VER >= 1800))
+  #define HAVE_CXX11 1
+#else
+  #define HAVE_CXX11 0
+#endif
+
+#if HAVE_CXX11
+  #include <chrono>
+#endif
+
 namespace cv
 {
 
@@ -840,7 +850,10 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined _WIN32 || defined WINCE
+#if HAVE_CXX11
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    return (int64)now.time_since_epoch().count();
+#elif defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
@@ -859,7 +872,11 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined _WIN32 || defined WINCE
+#if HAVE_CXX11
+    using clock_period_t = std::chrono::steady_clock::duration::period;
+    double clock_freq = clock_period_t::den / clock_period_t::num;
+    return clock_freq;
+#elif defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
