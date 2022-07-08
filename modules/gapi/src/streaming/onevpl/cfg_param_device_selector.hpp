@@ -20,6 +20,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+class Aux;
 struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
     CfgParamDeviceSelector(const CfgParams& params = {});
     CfgParamDeviceSelector(Device::Ptr device_ptr,
@@ -37,6 +38,7 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
 private:
     Device suggested_device;
     Context suggested_context;
+    std::unique_ptr<Aux> platform_specific_data;
 };
 } // namespace onevpl
 } // namespace wip

@@ -178,8 +178,8 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
         GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
         ptr = nullptr;
 #else
+        GAPI_LOG_INFO(nullptr, "Workspace memory to release: " << ptr);
         free(ptr);
-        GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
         ptr = nullptr;
 #endif
 
