@@ -82,6 +82,12 @@ public:
             op = OPERATION::ADD;
         else if (operation == "div")
             op = OPERATION::DIV;
+        else if (operation == "and")
+            op = OPERATION::AND;
+        else if (operation == "or")
+            op = OPERATION::OR;
+        else if (operation == "xor")
+            op = OPERATION::XOR;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
@@ -438,7 +444,7 @@ public:
         int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
         for(i = 0; i < ninputs; i++)
             max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
-        
+
         // buf holds the following buffers for inputs & output:
         //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), (ninputs+1)*4 elements in total
         //  * ptrs, (ninputs+1)*1 elements in total
@@ -599,6 +605,24 @@ public:
                 binary_forward<T>(div, std::forward<Args>(args)...);
                 break;
             }
+            case OPERATION::AND:
+            {
+                auto op_and = [](const uint8_t &a, const uint8_t &b) { return a & b; };
+                binary_forward<T>(op_and, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::OR:
+            {
+                auto op_or = [](const uint8_t &a, const uint8_t &b) { return a | b; };
+                binary_forward<T>(op_or, std::forward<Args>(args)...);
+                break;
+            }
+            case OPERATION::XOR:
+            {
+                auto op_xor = [](const uint8_t &a, const uint8_t &b) { return a ^ b; };
+                binary_forward<T>(op_xor, std::forward<Args>(args)...);
+                break;
+            }
             default:
                 CV_Error(Error::StsBadArg, "Unsupported operation.");
         };
@@ -616,7 +640,9 @@ public:
                 opDispatch<int32_t>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
-                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::MOD);
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::MOD &&
+                          op != OPERATION::AND && op != OPERATION::OR &&
+                          op != OPERATION::XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
                 break;
             default:

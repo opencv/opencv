@@ -157,11 +157,6 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_add)
     test_layer({N, C, H, W}, {N, C, H, W}, "add");
 }
 
-// PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_and)
-// {
-//     test_layer({N, C, H, W}, {N, C, H, W}, "and");
-// }
-
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_div)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "div");
@@ -202,11 +197,6 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_mul)
     test_layer({N, C, H, W}, {N, C, H, W}, "mul");
 }
 
-// PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_or)
-// {
-//     test_layer({N, C, H, W}, {N, C, H, W}, "or");
-// }
-
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_pow)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "pow");
@@ -221,16 +211,6 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_sum)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "sum");
 }
-
-// PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_where)
-// {
-//     test_layer({N, C, H, W}, {N, C, H, W}, "where");
-// }
-
-// PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_xor)
-// {
-//     test_layer({N, C, H, W}, {N, C, H, W}, "xor");
-// }
 
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_mul)
 {
