@@ -270,9 +270,9 @@ public:
 
         int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        // buf holds the properties for a, b & output:
+        // buf holds the folllowing for a, b & output:
+        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), 3*4 elements in total
         //  * shape_buf & step_buf, 3*2*max_ndims elements in total
-        //  * orig_shape, shape (result_shape), orig_step, step (result_step), 3*4 elements in total
         //  * all_ndims, 3*1 elements in total
         //  * all_type_sizes, 3*1 elements in total
         AutoBuffer<size_t> buf(3 * (2 * max_ndims + 6));
@@ -408,45 +408,55 @@ public:
     {
         int ninputs = inputs.size();
 
+        // collect all input
         std::vector<const char*> v_inp;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp), [] (const Mat& m) { return m.template ptr<const char>(); });
         const char** inp = v_inp.data();
 
+        // collect ndims of all input
         std::vector<int> v_inp_dims;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_dims), [] (const Mat& m) { return m.dims; });
         const int* inp_ndims = v_inp_dims.data();
 
+        // collect shapes of all input
         std::vector<const int*> v_inp_shape;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_shape), [] (const Mat& m) { return m.size.p; });
         const int** inp_shape = v_inp_shape.data();
 
+        // collect steps of all input
         std::vector<const size_t*> v_inp_step;
         std::transform(inputs.begin(), inputs.end(), std::back_inserter(v_inp_step), [] (const Mat& m) { return m.step.p; });
         const size_t** inp_step = v_inp_step.data();
 
+        // collect info of output (ndims, shape, step)
         char* out = outputs[0].ptr<char>();
-
         int out_ndims = outputs[0].dims;
         const int* out_shape = outputs[0].size.p;
         const size_t* out_step = outputs[0].step.p;
 
+        // find max ndims for broadcasting
         int i, max_ndims = out_ndims > 2 ? out_ndims : 2;
         for(i = 0; i < ninputs; i++)
             max_ndims = max_ndims > inp_ndims[i] ? max_ndims : inp_ndims[i];
-        size_t* buf = (size_t*)malloc((ninputs+1)*
-            (max_ndims*(sizeof(int) + sizeof(size_t))
-            + sizeof(void*)*5   // 5 arrays with pointers with shape [ninputs][maxdims]
-            + sizeof(int)       // array of dims with shape [ninputs]
-            + sizeof(size_t))); // array of element sizes with shape [ninputs]
+        
+        // buf holds the following buffers for inputs & output:
+        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), (ninputs+1)*4 elements in total
+        //  * ptrs, (ninputs+1)*1 elements in total
+        //  * shape_buf & step_buf, (ninputs+1)*2*max_ndims elements in total
+        //  * all_ndims, (ninputs+1)*1 elements in total
+        //  * all_type_sizes, (ninputs+1)*1 elements in total
+        AutoBuffer<size_t> buf((ninputs + 1) * (2 * max_ndims + 7));
 
-        int** orig_shapes = (int**)buf;
+        int** orig_shapes = (int**)buf.data();
         int** shapes = orig_shapes + ninputs + 1;
         size_t** orig_steps = (size_t**)(shapes + ninputs + 1);
         size_t** steps = orig_steps + ninputs + 1;
+
         char** ptrs = (char**)(steps + ninputs + 1);
 
         size_t* step_buf = (size_t*)(ptrs + ninputs + 1);
         int* shape_buf = (int*)(step_buf + (ninputs + 1)*max_ndims);
+
         int* all_ndims = shape_buf + (ninputs + 1)*max_ndims;
         size_t* all_type_sizes = (size_t*)(all_ndims + ninputs + 1);
 
@@ -467,7 +477,6 @@ public:
 
         nary_forward_impl<T>(
                 f, scale, ninputs, max_ndims, shapes[0], inp, out, (const size_t **) steps, ptrs);
-        free(buf);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
