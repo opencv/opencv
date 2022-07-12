@@ -1256,7 +1256,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
             Mat points(1, quad_count, CV_32FC2, &centers[0]);
             cv::convexHull(points, hull, true);
             centers[skip] = temp;
-            double hull_area = contourArea(hull, true);
+            double hull_area = contourArea(hull, false);
 
             // remember smallest box area
             if (hull_area < min_box_area)
