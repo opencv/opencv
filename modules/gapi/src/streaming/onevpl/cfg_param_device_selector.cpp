@@ -65,7 +65,7 @@ private:
 struct Aux {};
 #endif
 
-static std::vector<CfgParam> insertCfgparam(std::vector<CfgParam> &&param_array, AccelType type) {
+std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type) {
     switch (type) {
         case AccelType::HOST:
             break;

@@ -21,6 +21,8 @@ namespace wip {
 namespace onevpl {
 
 class Aux;
+std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type);
+
 struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
     CfgParamDeviceSelector(const CfgParams& params = {});
     CfgParamDeviceSelector(Device::Ptr device_ptr,
