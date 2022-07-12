@@ -41,9 +41,6 @@ public:
         DIV,
     } op;
 
-    // TODO: coeffs + ActivationFunction
-//    std::vector<float> coeffs;
-
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
@@ -258,7 +255,6 @@ public:
         }
     }
 
-    // TODO: AutoBuffer for all allocations, this should be called and cached inside finailize()
     template <typename T, typename Functor>
     void binary_forward(const Functor& f, const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
     {
@@ -401,15 +397,10 @@ public:
         }
     }
 
-    // TODO: AutoBuffer for all allocations, this should be called and cached inside finailize()
     template <typename T, typename Functor>
     void nary_forward(
         const Functor& f, T scale,
         const std::vector<Mat>& inputs, std::vector<Mat>& outputs
-
-//        int ninputs, const char** inp, const int* inp_ndims,
-//        const int** inp_shape, const size_t** inp_step,
-//        char* out, int out_ndims, const int* out_shape, const size_t* out_step
         )
     {
         int ninputs = inputs.size();
