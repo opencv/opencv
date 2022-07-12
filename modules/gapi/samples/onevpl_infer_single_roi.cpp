@@ -59,7 +59,7 @@ const std::string keys =
     "{ vpp_frames_pool_size         | 0                                         | OneVPL source applies this parameter as preallocated frames pool size for VPP preprocessing results}"
     "{ roi                          | -1,-1,-1,-1                               | Region of interest (ROI) to use for inference. Identified automatically when not set }"
     "{ source_device                | CPU                                       | choose device for decoding }"
-    "{ preproc_device               | CPU                                       | choose device for preprocessing }";
+    "{ preproc_device               |                                           | choose device for preprocessing }";
 
 
 namespace {
@@ -609,11 +609,6 @@ int main(int argc, char *argv[]) {
         if (is_gpu(source_device)) {
             std::cout << "enforce VPL Source deconding on device: " << source_device << std::endl;
             // use special 'Device' constructor for `onevpl::GSource`
-            // put accel type description for VPL source
-            source_cfgs.push_back(cfg::create_from_string(
-                                        "mfxImplDescription.AccelerationMode"
-                                        ":"
-                                        "MFX_ACCEL_MODE_VIA_D3D11"));
             cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs,
                                                  gpu_accel_device.value(),
                                                  gpu_accel_ctx.value());

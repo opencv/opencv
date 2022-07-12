@@ -28,6 +28,7 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
     VPLAccelerationPolicy(selector),
     cpu_dispatcher(new VPLCPUAccelerationPolicy(selector)),
     va_handle() {
+    GAPI_LOG_INFO(nullptr, "created - TODO dispatchered on CPU acceleration");
 #if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
     // setup VAAPI device
     IDeviceSelector::DeviceScoreTable devices = get_device_selector()->select_devices();
