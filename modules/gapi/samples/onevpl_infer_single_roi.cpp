@@ -16,6 +16,7 @@
 
 #ifdef HAVE_INF_ENGINE
 #include <inference_engine.hpp> // ParamMap
+#endif // HAVE_INF_ENGINE
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
@@ -29,10 +30,8 @@
 #pragma comment(lib, "dxgi")
 #undef NOMINMAX
 #undef D3D11_NO_HELPERS
-
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
-#endif // HAVE_INF_ENGINE
 
 #ifdef __linux__
 #if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
