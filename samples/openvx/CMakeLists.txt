@@ -1,6 +1,6 @@
 ocv_install_example_src(cpp *.cpp *.hpp CMakeLists.txt)
 
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 2.8.12.2)
 
 set(OPENCV_OPENVX_SAMPLE_REQUIRED_DEPS
   opencv_core
