@@ -57,10 +57,10 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target> >
 
 struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 {
-    void test_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const String op)
+    void test_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const String op, bool isRef = false)
     {
-//        int backendId = get<0>(GetParam());
-//        int targetId = get<1>(GetParam());
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
 
         Mat a(a_shape, CV_32FC1);
         Mat b(b_shape, CV_32FC1);
@@ -73,7 +73,10 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 
         Net net;
         LayerParams lp;
-        lp.type = "NaryEltwise";
+        if (isRef)
+            lp.type = "Eltwise";
+        else
+            lp.type = "NaryEltwise";
         lp.name = "testLayer";
         lp.set("operation", op);
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
@@ -88,52 +91,8 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
             net.setInput(a, inpNames[0]);
             net.setInput(b, inpNames[1]);
 
-//            net.setPreferableBackend(backendId);
-//            net.setPreferableTarget(targetId);
-            Mat out = net.forward();
-        }
-
-        TEST_CYCLE()
-        {
-            Mat res = net.forward();
-        }
-
-        SANITY_CHECK_NOTHING();
-    }
-
-    void test_ref_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const String op)
-    {
-//        int backendId = get<0>(GetParam());
-//        int targetId = get<1>(GetParam());
-
-        Mat a(a_shape, CV_32FC1);
-        Mat b(b_shape, CV_32FC1);
-
-        for (int i = 0; i < (int)a.total(); ++i)
-            a.ptr<float>()[i] = (float)(i & 4095);
-
-        for (int i = 0; i < (int)b.total(); ++i)
-            b.ptr<float>()[i] = (float)(i ^ 4095);
-
-        Net net;
-        LayerParams lp;
-        lp.type = "Eltwise";
-        lp.name = "testLayer";
-        lp.set("operation", op);
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 1, id, 1);
-
-        // warmup
-        {
-            std::vector<String> inpNames(2);
-            inpNames[0] = "a";
-            inpNames[1] = "b";
-            net.setInputsNames(inpNames);
-            net.setInput(a, inpNames[0]);
-            net.setInput(b, inpNames[1]);
-
-//            net.setPreferableBackend(backendId);
-//            net.setPreferableTarget(targetId);
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
             Mat out = net.forward();
         }
 
@@ -162,6 +121,11 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_div)
     test_layer({N, C, H, W}, {N, C, H, W}, "div");
 }
 
+PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_div)
+{
+    test_layer({N, C, H, W}, {N, C, H, W}, "div", true);
+}
+
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_equal)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "equal");
@@ -182,6 +146,11 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_max)
     test_layer({N, C, H, W}, {N, C, H, W}, "max");
 }
 
+PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_max)
+{
+    test_layer({N, C, H, W}, {N, C, H, W}, "max", true);
+}
+
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_mean)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "mean");
@@ -192,9 +161,19 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_min)
     test_layer({N, C, H, W}, {N, C, H, W}, "min");
 }
 
+PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_min)
+{
+    test_layer({N, C, H, W}, {N, C, H, W}, "min", true);
+}
+
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_mul)
 {
     test_layer({N, C, H, W}, {N, C, H, W}, "mul");
+}
+
+PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_mul)
+{
+    test_layer({N, C, H, W}, {N, C, H, W}, "prod", true);
 }
 
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_pow)
@@ -212,29 +191,9 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_sum)
     test_layer({N, C, H, W}, {N, C, H, W}, "sum");
 }
 
-PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_mul)
-{
-    test_ref_layer({N, C, H, W}, {N, C, H, W}, "prod");
-}
-
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_sum)
 {
-    test_ref_layer({N, C, H, W}, {N, C, H, W}, "sum");
-}
-
-PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_max)
-{
-    test_ref_layer({N, C, H, W}, {N, C, H, W}, "max");
-}
-
-PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_min)
-{
-    test_ref_layer({N, C, H, W}, {N, C, H, W}, "min");
-}
-
-PERF_TEST_P_(Layer_NaryEltwise, NCHW_NCHW_ref_div)
-{
-    test_ref_layer({N, C, H, W}, {N, C, H, W}, "div");
+    test_layer({N, C, H, W}, {N, C, H, W}, "sum", true);
 }
 
 PERF_TEST_P_(Layer_NaryEltwise, NCHW_C_sum)
