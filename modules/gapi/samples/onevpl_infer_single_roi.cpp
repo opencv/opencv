@@ -300,9 +300,13 @@ support_matrix resolved_conf{{
                                         {"CPU", {{ "CPU", {/* unsupported: preproc mix */}},
                                                  { "GPU", {/* unsupported: preproc mix */}}
                                                 }},
-
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
                                         {"GPU", {{ "CPU", std::make_shared<flow>(true, false)},
                                                  { "GPU", std::make_shared<flow>(true, true)}}}
+#else   // TODO VAAPI under linux doesn't support GPU IE remote context
+                                        {"GPU", {{ "CPU", std::make_shared<flow>(true, false)},
+                                                 { "GPU", std::make_shared<flow>(true, false)}}}
+#endif
                                     }}
                             },
                             {"CPU", {{
