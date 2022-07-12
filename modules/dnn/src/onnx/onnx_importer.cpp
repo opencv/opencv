@@ -2924,7 +2924,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     String op_type = toLowerCase(node_proto.op_type());
-    bool isDiv = op_type == "div";
 
     layerParams.type = "NaryEltwise";
     layerParams.set("operation", toLowerCase(node_proto.op_type()));
@@ -2977,70 +2976,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
             opencv_onnx::NodeProto proto;
             proto.add_output(constParams.name);
             addLayer(constParams, proto);
-        }
-        // FIXIT: This is added for handling cases of two non-constant inputs, especially one of the input is one dimensional. Remove this case if one dimensional Mat is supported (PR #18594).
-        else if (op_type == "div" || op_type == "mul")
-        {
-            // if the two inputs have different dimensions,
-            // make sure the one with more dimensions is always input[0]
-            if (total(outShapes[node_proto.input(0)]) < total(outShapes[node_proto.input(1)]))
-            {
-                opencv_onnx::NodeProto proto;
-                proto.add_input(node_proto.input(1));
-                proto.add_input(node_proto.input(0));
-                proto.add_output(node_proto.output(0));
-                node_proto = proto;
-            }
-
-            if (isDiv)
-            {
-                LayerParams powerParams;
-                powerParams.name = layerParams.name + "/inv";
-                powerParams.type = "Power";
-                powerParams.set("power", -1);
-
-                //Create Power layer
-                int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
-                //Connect to input
-                IterLayerId_t layerId = layer_id.find(node_proto.input(1));
-                CV_Assert(layerId != layer_id.end());
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-                //Add shape
-                layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
-                outShapes[powerParams.name] = outShapes[node_proto.input(1)];
-
-                //Replace input to Power
-                node_proto.set_input(1, powerParams.name);
-            }
-
-            const MatShape& broadShape = outShapes[node_proto.input(1)];
-            const MatShape& outShape = outShapes[node_proto.input(0)];
-
-            size_t axis = 0;
-            int broadAxis = -1;
-            findBroadAxis(broadShape, outShape, axis, broadAxis);
-
-            // if there is a one dimension in the middle that should be broadcasted, broadcast it
-            if (broadAxis != -1)
-            {
-                opencv_onnx::NodeProto concat_node_proto = node_proto;
-                const std::string& input1 = concat_node_proto.input(1);
-
-                expandMid(layerParams.name, concat_node_proto, input1, outShape[broadAxis]);
-
-                LayerParams concatLP;
-                concatLP.name = layerParams.name + "/concat";
-                concatLP.set("axis", broadAxis);
-                concatLP.type = "Concat";
-                concat_node_proto.set_output(0, concatLP.name);
-
-                addLayer(concatLP, concat_node_proto);
-                node_proto.set_input(1, concatLP.name);
-            }
-
-            CV_Assert(axis != outShape.size());
-            layerParams.set("axis", static_cast<int>(axis));
-            layerParams.type = "Scale";
         }
         // add element-wise layer
         addLayer(layerParams, node_proto);
