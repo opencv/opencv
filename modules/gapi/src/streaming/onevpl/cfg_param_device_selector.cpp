@@ -48,21 +48,21 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 #ifdef __linux__
-struct Aux {
-    ~Aux() {
+struct PlatformSpecificParams {
+    ~PlatformSpecificParams() {
         for (int fd : fds) {
             close(fd);
         }
     }
 
-    void remember_fd(int fd) {
+    void track_fd(int fd) {
         fds.insert(fd);
     }
 private:
     std::set<int> fds;
 };
 #else
-struct Aux {};
+struct PlatformSpecificParams {};
 #endif
 
 std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type) {
@@ -238,11 +238,11 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             // Unfortunately VAAPI doesn't provide API for extracting initial FD value from VADisplay, which
             // value is stored as VADisplay fields, by the way. But, because we here are only one creator
             // of VAAPI device then we will need make cleanup for all allocated resources by ourselfs
-            //and FD is definitely must be utilized. So, let's use complementary struct `Aux` which
+            //and FD is definitely must be utilized. So, let's use complementary struct `PlatformSpecificParams` which
             // represent some kind of 'platform specific data' and which will store opened FD for
             // future utilization
-            platform_specific_data.reset (new Aux);
-            platform_specific_data->remember_fd(device_fd);
+            platform_specific_data.reset (new PlatformSpecificParams);
+            platform_specific_data->track_fd(device_fd);
 
             suggested_device = IDeviceSelector::create<Device>(va_handle, "GPU", AccelType::VAAPI);
             suggested_context = IDeviceSelector::create<Context>(nullptr, AccelType::VAAPI);
