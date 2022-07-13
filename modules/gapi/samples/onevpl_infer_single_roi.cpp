@@ -25,7 +25,6 @@
 // get rid of generate macro max/min/etc from DX side
 #define D3D11_NO_HELPERS
 #define NOMINMAX
-#include <cldnn/cldnn_config.hpp>
 #include <d3d11.h>
 #pragma comment(lib, "dxgi")
 #undef NOMINMAX
