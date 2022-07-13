@@ -2935,51 +2935,60 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         addLayer(layerParams, node_proto);
         return;
     }
-    else
+
+    auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
+        if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
+            transpose(t, t);
+    };
+
+    size_t consts = 0;
+    for (size_t i = 0; i < node_proto.input_size(); ++i)
     {
-        CV_Assert(node_proto.input_size() == 2);
-
-        auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
-            if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
-                transpose(t, t);
-        };
-
-        bool const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
-        bool const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
-        int const_id = (1 + const_1 - const_0)/2;
-
-        if (const_0 && const_1)
+        if (layer_id.find(node_proto.input(i)) == layer_id.end())
         {
-            Mat a = getBlob(node_proto, 0);
-            Mat b = getBlob(node_proto, 1);
-
-            std::vector<Mat> inputs{a, b}, output;
-            runLayer(layerParams, inputs, output);
-            CV_Assert(output.size() == 1);
-            addConstant(node_proto.output(0), output[0]);
-            return;
+            ++consts;
         }
-        else if (const_0 || const_1)
-        {
-            Mat inp = getBlob(node_proto, const_id);
-            // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
-            // but for correct broadcast, we need to make it of shape (1, 2)
-            if (constBlobsExtraInfo.find(node_proto.input(const_id)) != constBlobsExtraInfo.end())
-                pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, const_id).real_ndims);
-
-            // carry the constant by adding a Const node
-            LayerParams constParams;
-            constParams.name = node_proto.input(const_id);
-            constParams.type = "Const";
-            constParams.blobs.push_back(inp);
-
-            opencv_onnx::NodeProto proto;
-            proto.add_output(constParams.name);
-            addLayer(constParams, proto);
-        }
-        // add element-wise layer
-        addLayer(layerParams, node_proto);
     }
+
+    if (consts == node_proto.input_size())
+    {
+        std::vector<Mat> inputs, output;
+        for (size_t i = 0; i < node_proto.input_size(); ++i)
+        {
+            inputs.push_back(getBlob(node_proto, i));
+        }
+        runLayer(layerParams, inputs, output);
+        CV_Assert(output.size() == 1);
+        addConstant(node_proto.output(0), output[0]);
+        return;
+    }
+    else if (consts > 0)
+    {
+        for (size_t i = 0; i < node_proto.input_size(); ++i)
+        {
+            if (layer_id.find(node_proto.input(i)) == layer_id.end())
+            {
+                Mat inp = getBlob(node_proto, i);
+                // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
+                // but for correct broadcast, we need to make it of shape (1, 2)
+                if (constBlobsExtraInfo.find(node_proto.input(i)) != constBlobsExtraInfo.end())
+                    pre_broadcast_transform(inp, getBlobExtraInfo(node_proto, i).real_ndims);
+
+                // carry the constant by adding a Const node
+                LayerParams constParams;
+                constParams.name = node_proto.input(i);
+                constParams.type = "Const";
+                constParams.blobs.push_back(inp);
+
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(constParams, proto);
+            }
+        }
+    }
+
+    // add element-wise layer
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
