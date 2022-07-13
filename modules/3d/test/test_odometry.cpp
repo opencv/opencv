@@ -627,4 +627,31 @@ TEST(RGBD_Odometry_WarpFrame, bigScale)
     ASSERT_LE(lidiff, 0.99951172);
 }
 
+TEST(RGBD_DepthTo3D, mask)
+{
+    std::string dataPath = cvtest::TS::ptr()->get_data_path();
+    std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
+
+    Mat srcDepth = imread(srcDepthFilename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(srcDepth.empty())  << "Depth " << srcDepthFilename.c_str() << "can not be read" << std::endl;
+    ASSERT_TRUE(srcDepth.type() == CV_16UC1);
+
+    Mat srcMask = srcDepth > 0;
+
+    // test data used to generate warped depth and rgb
+    // the script used to generate is in opencv_extra repo
+    // at testdata/cv/rgbd/warped_depth_generator/warp_test.py
+    double fx = 525.0, fy = 525.0,
+           cx = 319.5, cy = 239.5;
+    Matx33d intr(fx,  0, cx,
+                  0, fy, cy,
+                  0,  0,  1);
+
+    Mat srcCloud;
+    depthTo3d(srcDepth, intr, srcCloud, srcMask);
+    size_t npts = countNonZero(srcMask);
+
+    ASSERT_EQ(npts, srcCloud.total());
+}
+
 }} // namespace

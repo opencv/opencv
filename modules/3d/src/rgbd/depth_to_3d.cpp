@@ -46,7 +46,7 @@ static void depthTo3d_from_uvz(const cv::Mat& in_K, const cv::Mat& u_mat, const 
     coordinates[0] = coordinates[0].mul(z_mat);
     coordinates[1] = (v_mat - cy).mul(z_mat) * (1. / fy);
     coordinates[2] = z_mat;
-    coordinates[3] = 0;
+    coordinates[3] = Mat(u_mat.size(), CV_32F, Scalar(0));
     cv::merge(coordinates, points3d);
 }
 
