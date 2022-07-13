@@ -557,7 +557,7 @@ int main(int argc, char *argv[]) {
         }
         gpu_accel_device = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_vaapi_device(reinterpret_cast<void*>(va_handle),
-                                                                       "GPU", device_fd));
+                                                                       "GPU"));
         gpu_accel_ctx = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_vaapi_context(nullptr));
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)

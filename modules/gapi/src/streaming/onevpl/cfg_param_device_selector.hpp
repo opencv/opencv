@@ -20,7 +20,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-class Aux;
+class PlatformSpecificParams;
 std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type);
 
 struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
@@ -40,7 +40,7 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
 private:
     Device suggested_device;
     Context suggested_context;
-    std::unique_ptr<Aux> platform_specific_data;
+    std::unique_ptr<PlatformSpecificParams> platform_specific_data;
 };
 } // namespace onevpl
 } // namespace wip
