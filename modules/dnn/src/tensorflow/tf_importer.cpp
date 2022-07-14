@@ -2541,6 +2541,8 @@ void TFImporter::parsePack(tensorflow::GraphDef& net, const tensorflow::NodeDef&
     if (dim != 0)
         CV_Error(Error::StsNotImplemented, "Unsupported mode of pack operation.");
 
+    data_layouts[name] = DATA_LAYOUT_UNKNOWN;
+
     CV_Assert(hasLayerAttr(layer, "N"));
     int num = (int)getLayerAttr(layer, "N").i();
     CV_CheckEQ(num_inputs, num, "");
