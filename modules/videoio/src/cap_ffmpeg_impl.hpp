@@ -617,6 +617,7 @@ struct CvCapture_FFMPEG
     int hw_device;
     int use_opencl;
     int extraDataIdx;
+    int nThreads;
 };
 
 void CvCapture_FFMPEG::init()
@@ -662,6 +663,7 @@ void CvCapture_FFMPEG::init()
     hw_device = -1;
     use_opencl = 0;
     extraDataIdx = 1;
+    nThreads = 0;
 }
 
 
@@ -987,7 +989,8 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 //#ifdef FF_API_THREAD_INIT
 //  avcodec_thread_init(enc, get_number_of_cpus());
 //#else
-    enc->thread_count = get_number_of_cpus();
+    const int nCpus = get_number_of_cpus();
+    enc->thread_count = enc->thread_count ? min(enc->thread_count, nCpus) : nCpus;
 //#endif
 
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
@@ -1081,6 +1084,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT_MSEC);
         }
 #endif
+        if (params.has(CAP_PROP_N_THREADS))
+        {
+            nThreads = params.get<int>(CAP_PROP_N_THREADS);
+        }
         if (params.warnUnusedParameters())
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
@@ -1248,6 +1255,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #endif
                     continue;
                 }
+                context->thread_count = nThreads;
                 fill_codec_context(context, dict);
 #ifdef CV_FFMPEG_CODECPAR
                 avcodec_parameters_to_context(context, par);
@@ -1444,6 +1452,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
 #if USE_AV_INTERRUPT_CALLBACK
     // activate interrupt callback
+    interrupt_metadata.timeout = 0;
     get_monotonic_time(&interrupt_metadata.value);
     interrupt_metadata.timeout_after_ms = read_timeout;
 #endif
@@ -1760,6 +1769,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_STREAM_OPEN_TIME_USEC:
         //ic->start_time_realtime is in microseconds
         return ((double)ic->start_time_realtime);
+    case CAP_PROP_N_THREADS:
+        return static_cast<double>(nThreads);
     default:
         break;
     }
