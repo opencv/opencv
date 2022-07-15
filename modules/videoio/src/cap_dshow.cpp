@@ -90,8 +90,11 @@ Thanks to:
 
 #if defined(__clang__)  // clang or MSVC clang
 #pragma clang diagnostic ignored "-Wnon-virtual-dtor"
-#elif defined(__GNUC__) // MinGW
+#elif defined(__GNUC__) // gcc
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+
+#ifdef __MINGW32__
 #define STRSAFE_NO_DEPRECATE
 #endif
 
