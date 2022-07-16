@@ -1201,7 +1201,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     (void)notification;
     int pos = [slider intValue];
     NSString *temp = [self initialName];
-    NSString *text = [NSString stringWithFormat:@"%@ %d", temp, *value];
+    NSString *text = [NSString stringWithFormat:@"%@ %d", temp, pos];
     [name setStringValue: text];
     if(value)
         *value = pos;
