@@ -3288,6 +3288,9 @@ Ptr<BaseFilter> getLinearFilter(
     if( sdepth == CV_32F && ddepth == CV_32F )
         return makePtr<Filter2D<float, Cast<float, float>, FilterVec_32f> >
             (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta));
+    if( sdepth == CV_32F && ddepth == CV_64F )
+        return makePtr<Filter2D<float,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<Filter2D<double,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);

@@ -2366,5 +2366,35 @@ TEST(Imgproc_GaussianBlur, regression_11303)
     EXPECT_LE(cv::norm(src, dst, NORM_L2), 1e-3);
 }
 
+TEST(Imgproc_filter2D, float_double_regression_22242)
+{
+    cv::Mat1f input_float(5, 5);
+    input_float(0, 0) = 17;   input_float(0, 1) = 24;   input_float(0, 2) = 1;    input_float(0, 3) = 8;    input_float(0, 4) = 15;
+    input_float(1, 0) = 23;   input_float(1, 1) = 5;    input_float(1, 2) = 7;    input_float(1, 3) = 14;   input_float(1, 4) = 16;
+    input_float(2, 0) = 4;    input_float(2, 1) = 6;    input_float(2, 2) = 13;   input_float(2, 3) = 20;   input_float(2, 4) = 22;
+    input_float(3, 0) = 10;   input_float(3, 1) = 12;   input_float(3, 2) = 19;   input_float(3, 3) = 21;   input_float(3, 4) = 3;
+    input_float(4, 0) = 11;   input_float(4, 1) = 18;   input_float(4, 2) = 25;   input_float(4, 3) = 2;    input_float(4, 4) = 9;
+
+    cv::Mat1d input_double(5, 5);
+    input_double(0, 0) = 17;   input_double(0, 1) = 24;   input_double(0, 2) = 1;    input_double(0, 3) = 8;    input_double(0, 4) = 15;
+    input_double(1, 0) = 23;   input_double(1, 1) = 5;    input_double(1, 2) = 7;    input_double(1, 3) = 14;   input_double(1, 4) = 16;
+    input_double(2, 0) = 4;    input_double(2, 1) = 6;    input_double(2, 2) = 13;   input_double(2, 3) = 20;   input_double(2, 4) = 22;
+    input_double(3, 0) = 10;   input_double(3, 1) = 12;   input_double(3, 2) = 19;   input_double(3, 3) = 21;   input_double(3, 4) = 3;
+    input_double(4, 0) = 11;   input_double(4, 1) = 18;   input_double(4, 2) = 25;   input_double(4, 3) = 2;    input_double(4, 4) = 9;
+
+    cv::Mat1d kernel(3, 3);
+    kernel(0, 0) = 0;   kernel(0, 1) = 1;   kernel(0, 2) = 0;
+    kernel(1, 0) = 1;   kernel(1, 1) = -4;  kernel(1, 2) = 1;
+    kernel(2, 0) = 0;   kernel(2, 1) = 1;   kernel(2, 2) = 0;
+
+    cv::Mat1d output_from_float(5, 5);
+    cv::filter2D(input_float, output_from_float, output_from_float.depth(), kernel, cv::Point(-1, -1), 0, cv::BORDER_CONSTANT);
+
+    cv::Mat1d output_from_double(5, 5);
+    cv::filter2D(input_double, output_from_double, output_from_double.depth(), kernel, cv::Point(-1, -1), 0, cv::BORDER_CONSTANT);
+
+    EXPECT_LE(cv::norm(output_from_float, output_from_double, NORM_L2), 1e-9);
+}
+
 
 }} // namespace
