@@ -38,7 +38,10 @@ using uint = unsigned int;
 using uint64 = unsigned long int;
 using int64 = long int;
 
-
+static const int __cv_rvv_e8_nlanes = vsetvlmax_e8m1();
+static const int __cv_rvv_e16_nlanes = vsetvlmax_e16m1();
+static const int __cv_rvv_e32_nlanes = vsetvlmax_e32m1();
+static const int __cv_rvv_e64_nlanes = vsetvlmax_e64m1();
 
 template <class T>
 struct VTraits;
@@ -46,7 +49,7 @@ struct VTraits;
 template <>
 struct VTraits<v_uint8>
 {
-    static inline int vlanes() { return vsetvlmax_e8m1(); }
+    static inline int vlanes() { return __cv_rvv_e8_nlanes; }
     using lane_type = uchar;
     static const int max_nlanes = CV_RVV_MAX_VLEN/8;
 };
@@ -54,35 +57,35 @@ struct VTraits<v_uint8>
 template <>
 struct VTraits<v_int8>
 {
-    static inline int vlanes() { return vsetvlmax_e8m1(); }
+    static inline int vlanes() { return __cv_rvv_e8_nlanes; }
     using lane_type = schar;
     static const int max_nlanes = CV_RVV_MAX_VLEN/8;
 };
 template <>
 struct VTraits<v_uint16>
 {
-    static inline int vlanes() { return vsetvlmax_e16m1(); }
+    static inline int vlanes() { return __cv_rvv_e16_nlanes; }
     using lane_type = ushort;
     static const int max_nlanes = CV_RVV_MAX_VLEN/16;
 };
 template <>
 struct VTraits<v_int16>
 {
-    static inline int vlanes() { return vsetvlmax_e16m1(); }
+    static inline int vlanes() { return __cv_rvv_e16_nlanes; }
     using lane_type = short;
     static const int max_nlanes = CV_RVV_MAX_VLEN/16;
 };
 template <>
 struct VTraits<v_uint32>
 {
-    static inline int vlanes() { return vsetvlmax_e32m1(); }
+    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
     using lane_type = uint;
     static const int max_nlanes = CV_RVV_MAX_VLEN/32;
 };
 template <>
 struct VTraits<v_int32>
 {
-    static inline int vlanes() { return vsetvlmax_e32m1(); }
+    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
     using lane_type = int;
     static const int max_nlanes = CV_RVV_MAX_VLEN/32;
 };
@@ -90,21 +93,21 @@ struct VTraits<v_int32>
 template <>
 struct VTraits<v_float32>
 {
-    static inline int vlanes() { return vsetvlmax_e32m1(); }
+    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
     using lane_type = float;
     static const int max_nlanes = CV_RVV_MAX_VLEN/32;
 };
 template <>
 struct VTraits<v_uint64>
 {
-    static inline int vlanes() { return vsetvlmax_e64m1(); }
+    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
     using lane_type = uint64;
     static const int max_nlanes = CV_RVV_MAX_VLEN/64;
 };
 template <>
 struct VTraits<v_int64>
 {
-    static inline int vlanes() { return vsetvlmax_e64m1(); }
+    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
     using lane_type = int64;
     static const int max_nlanes = CV_RVV_MAX_VLEN/64;
 };
@@ -112,7 +115,7 @@ struct VTraits<v_int64>
 template <>
 struct VTraits<v_float64>
 {
-    static inline int vlanes() { return vsetvlmax_e64m1(); }
+    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
     using lane_type = double;
     static const int max_nlanes = CV_RVV_MAX_VLEN/64;
 };
