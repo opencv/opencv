@@ -41,13 +41,13 @@ struct UvcDeviceInfo
     uint16_t mi = 0; // uvc interface index
 };
 
-typedef enum
+enum StreamState
 {
     STREAM_STOPED = 0, // stoped or ready
     STREAM_STARTING = 1,
     STREAM_STARTED = 2,
     STREAM_STOPPING = 3,
-} StreamState;
+};
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName);
 FrameFormat frameFourccToFormat(uint32_t fourcc);
@@ -89,7 +89,7 @@ protected:
 protected:
     const UvcDeviceInfo devInfo_;
     StreamType streamType_;
-    std::shared_ptr<DepthFrameProcessor> depthFrameProcessor_;
+    Ptr<DepthFrameProcessor> depthFrameProcessor_;
 };
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR

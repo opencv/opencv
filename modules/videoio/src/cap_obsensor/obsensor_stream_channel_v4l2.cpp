@@ -138,7 +138,7 @@ std::vector<UvcDeviceInfo> V4L2Context::queryUvcDeviceInfoList()
             IOCTL_FAILED_EXEC(xioctl(videoFd, VIDIOC_QUERYCAP, &caps), {
                 close(videoFd);
                 continue;
-                });
+            });
             close(videoFd);
 
             if (caps.capabilities & V4L2_CAP_VIDEO_CAPTURE)
@@ -168,17 +168,14 @@ std::vector<UvcDeviceInfo> V4L2Context::queryUvcDeviceInfoList()
     return uvcDevList;
 }
 
-std::shared_ptr<IStreamChannel> V4L2Context::createStreamChannel(const UvcDeviceInfo& devInfo)
+Ptr<IStreamChannel> V4L2Context::createStreamChannel(const UvcDeviceInfo& devInfo)
 {
-    return std::make_shared<V4L2StreamChannel>(devInfo);
+    return makePtr<V4L2StreamChannel>(devInfo);
 }
 
-V4L2StreamChannel::V4L2StreamChannel(const UvcDeviceInfo& devInfo) :
-    IUvcStreamChannel(devInfo),
-    devFd_(-1),
-    streamState_(STREAM_STOPED),
-    xuRecvBuf_(nullptr),
-    xuSendBuf_(nullptr)
+V4L2StreamChannel::V4L2StreamChannel(const UvcDeviceInfo &devInfo) : IUvcStreamChannel(devInfo),
+                                                                     devFd_(-1),
+                                                                     streamState_(STREAM_STOPED)
 {
 
     devFd_ = open(devInfo_.id.c_str(), O_RDWR | O_NONBLOCK, 0);
@@ -186,7 +183,8 @@ V4L2StreamChannel::V4L2StreamChannel(const UvcDeviceInfo& devInfo) :
     {
         CV_LOG_ERROR(NULL, "Open " << devInfo_.id << " failed ! errno=" << errno)
     }
-    else if (streamType_ == OBSENSOR_STREAM_DEPTH) {
+    else if (streamType_ == OBSENSOR_STREAM_DEPTH)
+    {
         initDepthFrameProcessor();
     }
 
@@ -199,14 +197,6 @@ V4L2StreamChannel::~V4L2StreamChannel() noexcept
     {
         close(devFd_);
         devFd_ = -1;
-    }
-    if (xuRecvBuf_ != nullptr)
-    {
-        delete[] xuRecvBuf_;
-    }
-    if (xuSendBuf_ != nullptr)
-    {
-        delete[] xuSendBuf_;
     }
 }
 
@@ -268,7 +258,7 @@ void V4L2StreamChannel::start(const StreamProfile& profile, FrameCallback frameC
             }
         }
         return;
-        });
+    });
     grabFrameThread_ = std::thread(&V4L2StreamChannel::grabFrame, this);
 }
 
@@ -291,7 +281,7 @@ void V4L2StreamChannel::grabFrame()
         streamState_ = STREAM_STOPED;
         streamStateCv_.notify_all();
         return;
-        });
+    });
 
     while (streamState_ == STREAM_STARTING || streamState_ == STREAM_STARTED)
     {
@@ -304,7 +294,8 @@ void V4L2StreamChannel::grabFrame()
             streamStateCv_.notify_all();
         }
         Frame fo = { currentProfile_.format, currentProfile_.width, currentProfile_.height, buf.length, frameBuffList[buf.index].ptr };
-        if (depthFrameProcessor_) {
+        if (depthFrameProcessor_)
+        {
             depthFrameProcessor_->process(&fo);
         }
         frameCallback_(&fo);
@@ -317,17 +308,16 @@ void V4L2StreamChannel::grabFrame()
 
 bool V4L2StreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
 {
-    if (xuSendBuf_ == nullptr)
-    {
-        xuSendBuf_ = new uint8_t[XU_MAX_DATA_LENGTH];
+    if (xuSendBuf_.size() < XU_MAX_DATA_LENGTH) {
+        xuSendBuf_.resize(XU_MAX_DATA_LENGTH);
     }
-    memcpy(xuSendBuf_, data, len);
+    memcpy(xuSendBuf_.data(), data, len);
     struct uvc_xu_control_query xu_ctrl_query = {
         .unit = XU_UNIT_ID,
         .selector = ctrl,
         .query = UVC_SET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),
-        .data = xuSendBuf_
+        .data = xuSendBuf_.data()
     };
     if (devFd_ > 0)
     {
@@ -338,25 +328,24 @@ bool V4L2StreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
 
 bool V4L2StreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len)
 {
-    if (xuRecvBuf_ == nullptr)
-    {
-        xuRecvBuf_ = new uint8_t[XU_MAX_DATA_LENGTH];
+    if (xuRecvBuf_.size() < XU_MAX_DATA_LENGTH) {
+        xuRecvBuf_.resize(XU_MAX_DATA_LENGTH);
     }
     struct uvc_xu_control_query xu_ctrl_query = {
         .unit = XU_UNIT_ID,
         .selector = ctrl,
         .query = UVC_GET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),
-        .data = xuRecvBuf_
+        .data = xuRecvBuf_.data()
     };
 
     IOCTL_FAILED_EXEC(xioctl(devFd_, UVCIOC_CTRL_QUERY, &xu_ctrl_query), {
         *len = 0;
         return false;
-        });
+    });
 
     *len = xu_ctrl_query.size;
-    *data = xuRecvBuf_;
+    *data = xuRecvBuf_.data();
     return true;
 }
 
@@ -366,9 +355,9 @@ void V4L2StreamChannel::stop()
     {
         streamState_ = STREAM_STOPPING;
         std::unique_lock<std::mutex> lk(streamStateMutex_);
-        streamStateCv_.wait_for(lk, std::chrono::milliseconds(1000), [&]() {
+        streamStateCv_.wait_for(lk, std::chrono::milliseconds(1000), [&](){
             return streamState_ == STREAM_STOPED;
-            });
+        });
         uint32_t type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         IOCTL_FAILED_LOG(xioctl(devFd_, VIDIOC_STREAMOFF, &type));
     }

@@ -32,26 +32,26 @@
 
 namespace cv {
 namespace obsensor {
-typedef enum
+enum StreamType
 {
     OBSENSOR_STREAM_IR = 1,
     OBSENSOR_STREAM_COLOR = 2,
     OBSENSOR_STREAM_DEPTH = 3,
-} StreamType;
+};
 
-typedef enum
+enum FrameFormat
 {
     FRAME_FORMAT_UNKNOWN = -1,
     FRAME_FORMAT_YUYV = 0,
     FRAME_FORMAT_MJPG = 5,
     FRAME_FORMAT_Y16 = 8,
-} FrameFormat;
+};
 
-typedef enum
+enum PropertyId
 {
     DEPTH_TO_COLOR_ALIGN = 42,
     CAMERA_PARAM = 1001,
-}PropertyId;
+};
 
 struct Frame
 {
@@ -70,7 +70,8 @@ struct StreamProfile
     FrameFormat format;
 };
 
-typedef struct {
+struct CameraParam
+{
     float    p0[4];
     float    p1[4];
     float    p2[9];
@@ -79,7 +80,7 @@ typedef struct {
     float    p5[5];
     uint32_t p6[2];
     uint32_t p7[2];
-}CameraParam;
+};
 
 typedef std::function<void(Frame*)> FrameCallback;
 class IStreamChannel
@@ -95,7 +96,7 @@ public:
 };
 
 // "StreamChannelGroup" mean a group of stream channels from same one physical device
-std::vector<std::shared_ptr<IStreamChannel>> getStreamChannelGroup(uint32_t groupIdx = 0);
+std::vector<Ptr<IStreamChannel>> getStreamChannelGroup(uint32_t groupIdx = 0);
 
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR

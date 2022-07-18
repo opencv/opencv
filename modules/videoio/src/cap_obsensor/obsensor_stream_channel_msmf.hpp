@@ -48,7 +48,7 @@ template <class T>
 class ComPtr
 {
 public:
-    ComPtr(){}
+    ComPtr() {}
     ComPtr(T* lp)
     {
         p = lp;
@@ -57,7 +57,7 @@ public:
     {
         p = lp.p;
     }
-    virtual ~ComPtr(){}
+    virtual ~ComPtr() {}
 
     void swap(_In_ ComPtr<T>& lp)
     {
@@ -112,17 +112,17 @@ public:
     static MFContext& getInstance();
 
     std::vector<UvcDeviceInfo> queryUvcDeviceInfoList();
-    std::shared_ptr<IStreamChannel> createStreamChannel(const UvcDeviceInfo& devInfo);
+    Ptr<IStreamChannel> createStreamChannel(const UvcDeviceInfo& devInfo);
 
 private:
     MFContext(void);
 };
 
-typedef struct FrameRate
+struct FrameRate
 {
     unsigned int denominator;
     unsigned int numerator;
-} FrameRate;
+};
 
 class MSMFStreamChannel : public IUvcStreamChannel, public IMFSourceReaderCallback
 {
@@ -159,8 +159,8 @@ private:
     std::mutex streamStateMutex_;
     std::condition_variable streamStateCv_;
 
-    uint8_t* xuRecvBuf_;
-    uint8_t* xuSendBuf_;
+    std::vector<uint8_t> xuRecvBuf_;
+    std::vector<uint8_t> xuSendBuf_;
 
 public:
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv) override;

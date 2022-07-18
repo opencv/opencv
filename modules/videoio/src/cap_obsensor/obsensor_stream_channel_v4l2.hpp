@@ -32,22 +32,22 @@
 namespace cv {
 namespace obsensor {
 #define MAX_FRAME_BUFFER_NUM 4
-typedef struct
+struct V4L2FrameBuffer
 {
     uint32_t length = 0;
     uint8_t* ptr = nullptr;
-} V4L2FrameBuffer;
+};
 
 int xioctl(int fd, int req, void* arg);
 
 class V4L2Context
 {
 public:
-    ~V4L2Context() {};
+    ~V4L2Context() {}
     static V4L2Context& getInstance();
 
     std::vector<UvcDeviceInfo> queryUvcDeviceInfoList();
-    std::shared_ptr<IStreamChannel> createStreamChannel(const UvcDeviceInfo& devInfo);
+    Ptr<IStreamChannel> createStreamChannel(const UvcDeviceInfo& devInfo);
 
 private:
     V4L2Context() noexcept {}
@@ -82,8 +82,8 @@ private:
     FrameCallback frameCallback_;
     StreamProfile currentProfile_;
 
-    uint8_t* xuRecvBuf_;
-    uint8_t* xuSendBuf_;
+    std::vector<uint8_t> xuRecvBuf_;
+    std::vector<uint8_t> xuSendBuf_;
 };
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR_V4L2

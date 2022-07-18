@@ -47,7 +47,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 channel->start(colorProfile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     colorFrame_ = Mat(1, frame->dataSize, CV_8UC1, frame->data).clone();
-                    });
+                });
                 break;
             case obsensor::OBSENSOR_STREAM_DEPTH:
                 uint8_t data;
@@ -55,10 +55,11 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 channel->start(depthProfile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     depthFrame_ = Mat(frame->height, frame->width, CV_16UC1, frame->data, frame->width * 2).clone();
-                    });
+                });
                 uint32_t len;
                 memset(&camParam_, 0, sizeof(camParam_));
                 channel->getProperty(obsensor::CAMERA_PARAM, (uint8_t*)&camParam_, &len);
+                camParamScale_ = (int)(camParam_.p1[2] * 2 / 640 + 0.5);
                 break;
             default:
                 break;
@@ -118,18 +119,19 @@ double VideoCapture_obsensor::getProperty(int propIdx) const {
     double rst = 0.0;
     propIdx = propIdx & (~CAP_OBSENSOR_GENERATORS_MASK);
     // int gen = propIdx & CAP_OBSENSOR_GENERATORS_MASK;
-    switch (propIdx) {
+    switch (propIdx)
+    {
     case CAP_PROP_OBSENSOR_INTRINSIC_FX:
-        rst = camParam_.p1[0] / (int)(camParam_.p1[2] * 2 / 640 + 0.5);
+        rst = camParam_.p1[0] / camParamScale_;
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_FY:
-        rst = camParam_.p1[1] / (int)(camParam_.p1[2] * 2 / 640 + 0.5);
+        rst = camParam_.p1[1] / camParamScale_;
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_CX:
-        rst = camParam_.p1[2] / (int)(camParam_.p1[2] * 2 / 640 + 0.5);
+        rst = camParam_.p1[2] / camParamScale_;
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_CY:
-        rst = camParam_.p1[3] / (int)(camParam_.p1[2] * 2 / 640 + 0.5);
+        rst = camParam_.p1[3] / camParamScale_;
         break;
     }
     return rst;

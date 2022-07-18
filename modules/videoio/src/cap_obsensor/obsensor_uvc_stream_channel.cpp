@@ -59,7 +59,8 @@ const std::map<uint32_t, FrameFormat> fourccToOBFormat = {
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName)
 {
     std::string uvcDevName = devName;
-    for (size_t i = 0; i < uvcDevName.length(); i++) {
+    for (size_t i = 0; i < uvcDevName.length(); i++)
+    {
         uvcDevName[i] = (char)tolower(uvcDevName[i]); 
     }
     if (uvcDevName.find(" depth") != std::string::npos)
@@ -98,9 +99,9 @@ uint32_t frameFormatToFourcc(FrameFormat fmt)
     return 0;
 }
 
-std::vector<std::shared_ptr<IStreamChannel>> getStreamChannelGroup(uint32_t groupIdx)
+std::vector<Ptr<IStreamChannel>> getStreamChannelGroup(uint32_t groupIdx)
 {
-    std::vector<std::shared_ptr<IStreamChannel>> streamChannelGroup;
+    std::vector<Ptr<IStreamChannel>> streamChannelGroup;
 
 #if defined(HAVE_OBSENSOR_V4L2)
     auto& ctx = V4L2Context::getInstance();
@@ -151,30 +152,37 @@ std::vector<std::shared_ptr<IStreamChannel>> getStreamChannelGroup(uint32_t grou
     return streamChannelGroup;
 }
 
-DepthFrameProcessor::DepthFrameProcessor(const OBExtensionParam& param) : param_(param) {
+DepthFrameProcessor::DepthFrameProcessor(const OBExtensionParam& param) : param_(param)
+{
     double tempValue = 0;
     double rstValue = 0;
     lookUpTable_ = new uint16_t[4096];
     memset(lookUpTable_, 0, 4096 * 2);
-    for (uint16_t oriValue = 0; oriValue < 4096; oriValue++) {
-        if (oriValue == 0) {
+    for (uint16_t oriValue = 0; oriValue < 4096; oriValue++)
+    {
+        if (oriValue == 0)
+        {
             continue;
         }
         tempValue = 200.375 - (double)oriValue / 8;
         rstValue = (double)param_.pd / (1 + tempValue * param_.ps / param_.bl) * 10;
-        if ((rstValue >= 40) && (rstValue <= 10000) && rstValue < 65536) {
+        if ((rstValue >= 40) && (rstValue <= 10000) && rstValue < 65536)
+        {
             lookUpTable_[oriValue] = (uint16_t)rstValue;
         }
     }
 }
 
-DepthFrameProcessor::~DepthFrameProcessor() {
+DepthFrameProcessor::~DepthFrameProcessor()
+{
     delete[] lookUpTable_;
 }
 
-void DepthFrameProcessor::process(Frame* frame) {
+void DepthFrameProcessor::process(Frame* frame)
+{
     uint16_t* data = (uint16_t*)frame->data;
-    for (uint32_t i = 0; i < frame->dataSize / 2; i++) {
+    for (uint32_t i = 0; i < frame->dataSize / 2; i++)
+    {
         data[i] = lookUpTable_[data[i] & 0x0fff];
     }
 }
@@ -190,7 +198,8 @@ StreamType IUvcStreamChannel::streamType() const {
     return streamType_;
 }
 
-bool IUvcStreamChannel::setProperty(int propId, const uint8_t* /*data*/, uint32_t /*dataSize*/) {
+bool IUvcStreamChannel::setProperty(int propId, const uint8_t* /*data*/, uint32_t /*dataSize*/)
+{
     uint8_t* rcvData;
     uint32_t rcvLen;
     bool rst = true;
@@ -214,7 +223,8 @@ bool IUvcStreamChannel::setProperty(int propId, const uint8_t* /*data*/, uint32_
     return rst;
 }
 
-bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* recvDataSize) {
+bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* recvDataSize)
+{
     bool rst = true;
     uint8_t* rcvData;
     uint32_t rcvLen;
@@ -223,7 +233,8 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
     case CAMERA_PARAM:
         rst &= setXu(2, OB_EXT_CMD5, sizeof(OB_EXT_CMD5));
         rst &= getXu(2, &rcvData, &rcvLen);
-        if (rst && OB_EXT_CMD5[6] == rcvData[6] && rcvData[8] == 0 && rcvData[9] == 0) {
+        if (rst && OB_EXT_CMD5[6] == rcvData[6] && rcvData[8] == 0 && rcvData[9] == 0)
+        {
             memcpy(recvData, rcvData + 10, rcvLen - 10);
             *recvDataSize = rcvLen - 10;
         }
@@ -236,12 +247,15 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
     return rst;
 }
 
-bool IUvcStreamChannel::initDepthFrameProcessor() {
-    if (streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4))) {
+bool IUvcStreamChannel::initDepthFrameProcessor()
+{
+    if (streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
+    {
         uint8_t* rcvData;
         uint32_t rcvLen;
-        if (getXu(1, &rcvData, &rcvLen) && OB_EXT_CMD4[6] == rcvData[6] && rcvData[8] == 0 && rcvData[9] == 0) {
-            depthFrameProcessor_ = std::make_shared<DepthFrameProcessor>(*(OBExtensionParam*)(rcvData + 10));
+        if (getXu(1, &rcvData, &rcvLen) && OB_EXT_CMD4[6] == rcvData[6] && rcvData[8] == 0 && rcvData[9] == 0)
+        {
+            depthFrameProcessor_ = makePtr<DepthFrameProcessor>(*(OBExtensionParam*)(rcvData + 10));
             return true;
         }
     }

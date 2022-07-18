@@ -33,7 +33,7 @@ class VideoCapture_obsensor : public IVideoCapture
 {
 public:
     VideoCapture_obsensor(int index);
-    virtual ~VideoCapture_obsensor() {};
+    virtual ~VideoCapture_obsensor() {}
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;
     virtual bool setProperty(int propIdx, double propVal) CV_OVERRIDE;
@@ -48,7 +48,7 @@ public:
 
 private:
     bool isOpened_;
-    std::vector<std::shared_ptr<obsensor::IStreamChannel>> streamChannelGroup_;
+    std::vector<Ptr<obsensor::IStreamChannel>> streamChannelGroup_;
 
     std::mutex frameMutex_;
 
@@ -59,6 +59,7 @@ private:
     Mat grabbedColorFrame_;
 
     obsensor::CameraParam camParam_;
+    int camParamScale_;
 };
 } // namespace cv::
 #endif // HAVE_OBSENSOR

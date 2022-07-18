@@ -95,7 +95,8 @@ bool parseUvcDeviceSymbolicLink(const std::string& symbolicLink, uint16_t& vid, 
     std::string& device_guid)
 {
     std::string lowerStr = symbolicLink;
-    for (size_t i = 0; i < lowerStr.length(); i++) {
+    for (size_t i = 0; i < lowerStr.length(); i++)
+    {
         lowerStr[i] = (char)tolower(lowerStr[i]); 
     }
     auto tokens = stringSplit(lowerStr, '#');
@@ -199,9 +200,9 @@ std::vector<UvcDeviceInfo> MFContext::queryUvcDeviceInfoList()
     return uvcDevList;
 }
 
-std::shared_ptr<IStreamChannel> MFContext::createStreamChannel(const UvcDeviceInfo& devInfo)
+Ptr<IStreamChannel> MFContext::createStreamChannel(const UvcDeviceInfo& devInfo)
 {
-    return std::make_shared<MSMFStreamChannel>(devInfo);
+    return makePtr<MSMFStreamChannel>(devInfo);
 }
 
 MFContext::MFContext()
@@ -213,9 +214,7 @@ MFContext::MFContext()
 MSMFStreamChannel::MSMFStreamChannel(const UvcDeviceInfo& devInfo) :
     IUvcStreamChannel(devInfo),
     mfContext_(MFContext::getInstance()),
-    xuNodeId_(-1),
-    xuRecvBuf_(nullptr),
-    xuSendBuf_(nullptr)
+    xuNodeId_(-1)
 {
     HR_FAILED_RETURN(MFCreateAttributes(&deviceAttrs_, 2));
     HR_FAILED_RETURN(deviceAttrs_->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID));
@@ -240,19 +239,23 @@ MSMFStreamChannel::MSMFStreamChannel(const UvcDeviceInfo& devInfo) :
         HR_FAILED_RETURN(deviceSource_->QueryInterface(__uuidof(IKsTopologyInfo), reinterpret_cast<void**>(&xuKsTopologyInfo_)));
         DWORD nNodes = 0;
         HR_FAILED_RETURN(xuKsTopologyInfo_->get_NumNodes(&nNodes));
-        for (DWORD i = 0; i < nNodes; i++) {
+        for (DWORD i = 0; i < nNodes; i++)
+        {
             GUID nodeType;
             HR_FAILED_EXEC(xuKsTopologyInfo_->get_NodeType(i, &nodeType), { continue; })
-                if (nodeType == KSNODETYPE_DEV_SPECIFIC) {
+                if (nodeType == KSNODETYPE_DEV_SPECIFIC)
+                {
                     xuNodeId_ = i;
                 }
         }
-        if (xuNodeId_ != -1) {
+        if (xuNodeId_ != -1)
+        {
             HR_FAILED_RETURN(xuKsTopologyInfo_->CreateNodeInstance(xuNodeId_, IID_IUnknown, reinterpret_cast<LPVOID*>(&xuNodeInstance_)));
             HR_FAILED_RETURN(xuNodeInstance_->QueryInterface(__uuidof(IKsControl), reinterpret_cast<void**>(&xuKsControl_)));
         }
 
-        if (streamType_ == OBSENSOR_STREAM_DEPTH) {
+        if (streamType_ == OBSENSOR_STREAM_DEPTH)
+        {
             initDepthFrameProcessor();
         }
 }
@@ -284,20 +287,17 @@ MSMFStreamChannel::~MSMFStreamChannel()
     {
         deviceSource_.Release();
     }
-    if (xuKsTopologyInfo_) {
+    if (xuKsTopologyInfo_)
+    {
         xuKsTopologyInfo_.Release();
     }
-    if (xuNodeInstance_) {
+    if (xuNodeInstance_)
+    {
         xuNodeInstance_.Release();
     }
-    if (xuKsControl_) {
+    if (xuKsControl_)
+    {
         xuKsControl_.Release();
-    }
-    if (xuRecvBuf_ != nullptr) {
-        delete[] xuRecvBuf_;
-    }
-    if (xuSendBuf_ != nullptr) {
-        delete[] xuSendBuf_;
     }
 }
 
@@ -310,6 +310,7 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
 
     frameCallback_ = frameCallback;
     currentProfile_ = profile;
+    currentStreamIndex_ = -1;
 
     for (uint8_t index = 0; index <= 5; index++)
     {
@@ -346,7 +347,7 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
                 std::unique_lock<std::mutex> lock(streamStateMutex_);
                 auto success = streamStateCv_.wait_for(lock, std::chrono::milliseconds(3000), [&]() {
                     return streamState_ == STREAM_STARTED;
-                    });
+                });
                 if (!success)
                 {
                     stop();
@@ -373,15 +374,16 @@ void MSMFStreamChannel::stop()
         std::unique_lock<std::mutex> lk(streamStateMutex_);
         streamStateCv_.wait_for(lk, std::chrono::milliseconds(1000), [&]() {
             return streamState_ == STREAM_STOPED;
-            });
+        });
     }
 }
 
-bool  MSMFStreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len) {
-    if (xuSendBuf_ == nullptr) {
-        xuSendBuf_ = new uint8_t[XU_MAX_DATA_LENGTH];
+bool  MSMFStreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
+{
+    if (xuSendBuf_.size() < XU_MAX_DATA_LENGTH) {
+        xuSendBuf_.resize(XU_MAX_DATA_LENGTH);
     }
-    memcpy(xuSendBuf_, data, len);
+    memcpy(xuSendBuf_.data(), data, len);
 
     KSP_NODE                              node;
     memset(&node, 0, sizeof(KSP_NODE));
@@ -391,15 +393,16 @@ bool  MSMFStreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len) 
     node.NodeId = xuNodeId_;
 
     ULONG bytes_received = 0;
-    HR_FAILED_EXEC(xuKsControl_->KsProperty(reinterpret_cast<PKSPROPERTY>(&node), sizeof(KSP_NODE), (void*)xuSendBuf_, XU_MAX_DATA_LENGTH, &bytes_received), {
+    HR_FAILED_EXEC(xuKsControl_->KsProperty(reinterpret_cast<PKSPROPERTY>(&node), sizeof(KSP_NODE), (void*)xuSendBuf_.data(), XU_MAX_DATA_LENGTH, &bytes_received), {
         return false;
-        });
+    });
     return true;
 }
 
-bool  MSMFStreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len) {
-    if (xuRecvBuf_ == nullptr) {
-        xuRecvBuf_ = new uint8_t[XU_MAX_DATA_LENGTH];
+bool  MSMFStreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len)
+{
+    if (xuRecvBuf_.size() < XU_MAX_DATA_LENGTH) {
+        xuRecvBuf_.resize(XU_MAX_DATA_LENGTH);
     }
     KSP_NODE node;
     memset(&node, 0, sizeof(KSP_NODE));
@@ -409,12 +412,12 @@ bool  MSMFStreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len) {
     node.NodeId = xuNodeId_;
 
     ULONG bytes_received = 0;
-    HR_FAILED_EXEC(xuKsControl_->KsProperty(reinterpret_cast<PKSPROPERTY>(&node), sizeof(node), xuRecvBuf_, XU_MAX_DATA_LENGTH, &bytes_received), {
+    HR_FAILED_EXEC(xuKsControl_->KsProperty(reinterpret_cast<PKSPROPERTY>(&node), sizeof(node), xuRecvBuf_.data(), XU_MAX_DATA_LENGTH, &bytes_received), {
         *len = 0;
         data = nullptr;
         return false;
-        });
-    *data = xuRecvBuf_;
+    });
+    *data = xuRecvBuf_.data();
     *len = bytes_received;
     return true;
 }
@@ -429,7 +432,7 @@ STDMETHODIMP MSMFStreamChannel::QueryInterface(REFIID iid, void** ppv)
     };
     return QISearch(this, qit, iid, ppv);
 #pragma warning(pop)
-};
+}
 
 STDMETHODIMP_(ULONG)
 MSMFStreamChannel::AddRef()
@@ -472,7 +475,8 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
 
             buffer->Lock(&byte_buffer, &max_length, &current_length);
             Frame fo = { currentProfile_.format, currentProfile_.width, currentProfile_.height, current_length, (uint8_t*)byte_buffer };
-            if (depthFrameProcessor_) {
+            if (depthFrameProcessor_)
+            {
                 depthFrameProcessor_->process(&fo);
             }
             frameCallback_(&fo);
@@ -480,7 +484,7 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
         }
     }
     return S_OK;
-};
+}
 
 STDMETHODIMP MSMFStreamChannel::OnEvent(DWORD /*sidx*/, IMFMediaEvent* /*event*/)
 {

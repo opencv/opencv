@@ -18,15 +18,12 @@ int main()
     Mat adjDepthMap;
     while (true)
     {
+        // Grab depth map like this:
         // obsensorCapture >> depthMap;
-        // if (!depthMap.empty())
-        // {
-        //     normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
-        //     applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
-        //     imshow("DEPTH", adjDepthMap);
-        // }
 
-        if(obsensorCapture.grab()){
+        // Another way to grab depth map (and bgr image).
+        if (obsensorCapture.grab())
+        {
             if (obsensorCapture.retrieve(image, CAP_OBSENSOR_BGR_IMAGE))
             {
                 imshow("RGB", image);
@@ -39,16 +36,21 @@ int main()
                 imshow("DEPTH", adjDepthMap);
             }
 
-            const float alpha = 0.6f;
-            if(!image.empty() && !depthMap.empty()){
+            // depth map overlay on bgr image
+            static const float alpha = 0.6f;
+            if (!image.empty() && !depthMap.empty())
+            {
                 normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
                 cv::resize(adjDepthMap, adjDepthMap, cv::Size(image.cols, image.rows));
-                for(int i = 0; i < image.rows; i++) {
-                    for(int j = 0; j < image.cols; j++) {
-                        cv::Vec3b &outRgb    = image.at<cv::Vec3b>(i, j);
+                for (int i = 0; i < image.rows; i++)
+                {
+                    for (int j = 0; j < image.cols; j++)
+                    {
+                        cv::Vec3b& outRgb = image.at<cv::Vec3b>(i, j);
                         uint8_t depthValue =   255 - adjDepthMap.at<uint8_t>(i, j);
-                        if(depthValue != 0 && depthValue!=255){
-                            outRgb[0] = (uint8_t)(outRgb[0] * (1.0f - alpha) + depthValue *  alpha);
+                        if (depthValue != 0 && depthValue != 255)
+                        {
+                            outRgb[0] = (uint8_t)(outRgb[0] * (1.0f - alpha) + depthValue * alpha);
                             outRgb[1] = (uint8_t)(outRgb[1] * (1.0f - alpha) + depthValue *  alpha);
                             outRgb[2] = (uint8_t)(outRgb[2] * (1.0f - alpha) + depthValue *  alpha);
                         }
