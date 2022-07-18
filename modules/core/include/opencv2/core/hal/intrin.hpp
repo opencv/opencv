@@ -702,7 +702,7 @@ namespace CV__SIMD_NAMESPACE {
 
     template <class T>
     struct VTraits;
-#if CV_SIMD512
+#if CV_SIMD512 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 512)
     template <>
     struct VTraits<v_uint8>
     {
@@ -776,7 +776,7 @@ namespace CV__SIMD_NAMESPACE {
         using lane_type = double;
     };
     #endif
-#elif CV_SIMD256
+#elif CV_SIMD256 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 256)
     template <>
     struct VTraits<v_uint8>
     {
@@ -850,7 +850,7 @@ namespace CV__SIMD_NAMESPACE {
         using lane_type = double;
     };
     #endif
-#elif CV_SIMD128
+#elif CV_SIMD128 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 128)
     template <>
     struct VTraits<v_uint8>
     {
