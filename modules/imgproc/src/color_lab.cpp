@@ -3612,6 +3612,7 @@ struct Luv2RGBinteger
         }
     }
 
+#if CV_SIMD
     inline void processLuvToXYZ(const v_uint8& lv, const v_uint8& uv, const v_uint8& vv,
                                 v_int32 (&x)[4], v_int32 (&y)[4], v_int32 (&z)[4]) const
     {
@@ -3717,6 +3718,7 @@ struct Luv2RGBinteger
             z[k] = v_max(zero, v_min(base2, z[k]));
         }
     }
+#endif
 
     void operator()(const uchar* src, uchar* dst, int n) const
     {

@@ -1038,6 +1038,7 @@ static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, i
     buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * uu;
 }
 
+#if CV_SIMD
 static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
                              v_int32 (&ruv)[4],
                              v_int32 (&guv)[4],
@@ -1067,6 +1068,7 @@ static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
         buv[k] = vshift + ub * uu[k];
     }
 }
+#endif
 
 static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, const int buv,
                                 uchar& r, uchar& g, uchar& b, uchar& a)
@@ -1079,6 +1081,7 @@ static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, co
     a = uchar(0xff);
 }
 
+#if CV_SIMD
 static inline void yRGBuvToRGBA(const v_uint8& vy,
                                 const v_int32 (&ruv)[4],
                                 const v_int32 (&guv)[4],
@@ -1117,6 +1120,7 @@ static inline void yRGBuvToRGBA(const v_uint8& vy,
     gg = v_pack_u(g0, g1);
     bb = v_pack_u(b0, b1);
 }
+#endif
 
 template<int bIdx, int dcn, bool is420>
 static inline void cvtYuv42xxp2RGB8(const uchar u, const uchar v,
@@ -1426,6 +1430,7 @@ static inline uchar rgbToY42x(uchar r, uchar g, uchar b)
     return saturate_cast<uchar>(yy >> ITUR_BT_601_SHIFT);
 }
 
+#if CV_SIMD
 static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint8& b)
 {
     const int shifted16 = (16 << ITUR_BT_601_SHIFT);
@@ -1455,6 +1460,7 @@ static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint
 
     return v_pack(y0, y1);
 }
+#endif
 
 static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
 {
@@ -1467,6 +1473,7 @@ static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
     v = saturate_cast<uchar>(vv >> ITUR_BT_601_SHIFT);
 }
 
+#if CV_SIMD
 static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint8& g0, const v_uint8& g1,
                               const v_uint8& b0, const v_uint8& b1, v_uint8& u, v_uint8& v)
 {
@@ -1514,6 +1521,7 @@ static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint
     u = v_pack_u(u0, u1);
     v = v_pack_u(v0, v1);
 }
+#endif
 
 
 struct RGB8toYUV420pInvoker: public ParallelLoopBody

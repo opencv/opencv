@@ -177,7 +177,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
 {
     int x, c, width = img1.cols, cn = img1.channels();
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
-    int D = (int)alignSize(maxD - minD, v_int16::nlanes), width1 = maxX1 - minX1;
+    int D = (int)alignSize(maxD - minD, VTraits<v_int16>::vlanes()), width1 = maxX1 - minX1;
     //This minX1 & maxX2 correction is defining which part of calculatable line must be calculated
     //That is needs of parallel algorithm
     xrange_min = (xrange_min < 0) ? 0: xrange_min;
@@ -502,8 +502,8 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
     const int D = params.numDisparities;
     int width1 = maxX1 - minX1;
-    int Da = (int)alignSize(D, v_int16::nlanes);
-    int Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
+    int Da = (int)alignSize(D,VTraits<v_int16>::vlanes());
+    int Dlra = Da + VTraits<v_int16>::vlanes();//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = params.calcSADWindowSize().width/2, SH2 = params.calcSADWindowSize().height/2;
     int npasses = params.isFullDP() ? 2 : 1;
@@ -977,11 +977,10 @@ struct CalcVerticalSums: public ParallelLoopBody
         width = img1.cols;
         int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
         D = maxD - minD;
-        Da = (int)alignSize(D, v_int16::nlanes);
-        Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
+        Da = (int)alignSize(D, VTraits<v_int16>::vlanes());
+        Dlra = Da + VTraits<v_int16>::vlanes();//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
         width1 = maxX1 - minX1;
         D = params.numDisparities;
-        Da = (int)alignSize(D, v_int16::nlanes);
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -1235,8 +1234,8 @@ struct CalcHorizontalSums: public ParallelLoopBody
         INVALID_DISP = minD - 1;
         INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
         D = maxD - minD;
-        Da = (int)alignSize(D, v_int16::nlanes);
-        Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
+        Da = (int)alignSize(D, VTraits<v_int16>::vlanes());
+        Dlra = Da + VTraits<v_int16>::vlanes();//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
         width1 = maxX1 - minX1;
     }
 
@@ -1484,8 +1483,8 @@ static void computeDisparitySGBM_HH4( const Mat& img1, const Mat& img2,
     int width = disp1.cols, height = disp1.rows;
     int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
     int width1 = maxX1 - minX1;
-    int Da = (int)alignSize(params.numDisparities, v_int16::nlanes);
-    int Dlra = Da + v_int16::nlanes;//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
+    int Da = (int)alignSize(params.numDisparities, VTraits<v_int16>::vlanes());
+    int Dlra = Da + VTraits<v_int16>::vlanes();//Additional memory is necessary to store disparity values(MAX_COST) for d=-1 and d=D
     int INVALID_DISP = minD - 1;
     int INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
 
@@ -1630,7 +1629,7 @@ SGBM3WayMainLoop::SGBM3WayMainLoop(const Mat& _img1,
     width = img1->cols; height = img1->rows;
     minD = params.minDisparity; maxD = minD + params.numDisparities; D = maxD - minD;
     minX1 = std::max(maxD, 0); maxX1 = width + std::min(minD, 0); width1 = maxX1 - minX1;
-    Da = (int)alignSize(D, v_int16::nlanes);
+    Da = (int)alignSize(D, VTraits<v_int16>::vlanes());
 
     SW2 = SH2 = params.SADWindowSize > 0 ? params.SADWindowSize/2 : 1;
 

@@ -7,7 +7,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #undef CV__SIMD_FORCE_WIDTH
 
-#if CV_SIMD_WIDTH != 16
+#if CV_SIMD && CV_SIMD_WIDTH != 16
 #error "Invalid build configuration"
 #endif
 
