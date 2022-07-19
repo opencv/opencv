@@ -55,3 +55,5 @@
 "test_sub_bcast",
 "test_sub_uint8",  // output type mismatch
 "test_upsample_nearest",
+"test_div_bcast", // remove when 1D Mat is supported
+"test_mul_bcast", // remove when 1D Mat is supported
