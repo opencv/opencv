@@ -131,20 +131,20 @@ TEST_F(fisheyeTest, distortUndistortPoints)
 
     /* Test with random D set */
     for (size_t i = 0; i < 10; ++i) {
-        cv::Mat D(1, 4, CV_64F);
-        theRNG().fill(D, cv::RNG::UNIFORM, -0.00001, 0.00001);
+        cv::Mat DE(1, 4, CV_64F);
+        theRNG().fill(DE, cv::RNG::UNIFORM, -0.00001, 0.00001);
 
         /* Distort -> Undistort */
         cv::Mat distortedPoints;
-        cv::fisheye::distortPoints(points0, distortedPoints, K, D);
+        cv::fisheye::distortPoints(points0, distortedPoints, K, DE);
         cv::Mat undistortedPoints;
-        cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, D);
+        cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, DE);
 
         EXPECT_MAT_NEAR(points0, undistortedPoints, 1e-8);
 
         /* Undistort -> Distort */
-        cv::fisheye::undistortPoints(points0, undistortedPoints, K, D);
-        cv::fisheye::distortPoints(undistortedPoints, distortedPoints, K, D);
+        cv::fisheye::undistortPoints(points0, undistortedPoints, K, DE);
+        cv::fisheye::distortPoints(undistortedPoints, distortedPoints, K, DE);
 
         EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
     }
