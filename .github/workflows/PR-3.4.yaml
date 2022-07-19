@@ -6,7 +6,7 @@ on:
       - 3.4
 
 jobs:
-  Ubuntu1804-ARM64:
+  Ubuntu2004-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-ARM64.yaml@main
 
   Ubuntu2004-x64:
