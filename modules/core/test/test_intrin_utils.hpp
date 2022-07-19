@@ -477,8 +477,8 @@ template<typename R> struct TheTest
         R a = data1, b = data2, c = data3;
         R d = data1, e = data2, f = data3, g = data4;
 
-        LaneType buf3[VTraits<R>::vlanes() * 3];
-        LaneType buf4[VTraits<R>::vlanes() * 4];
+        LaneType buf3[VTraits<R>::max_nlanes * 3];
+        LaneType buf4[VTraits<R>::max_nlanes * 4];
 
         v_store_interleave(buf3, a, b, c);
         v_store_interleave(buf4, d, e, f, g);
@@ -513,7 +513,7 @@ template<typename R> struct TheTest
 
         R a = data1, b = data2;
 
-        LaneType buf2[VTraits<R>::vlanes() * 2];
+        LaneType buf2[VTraits<R>::max_nlanes * 2];
 
         v_store_interleave(buf2, a, b);
 
