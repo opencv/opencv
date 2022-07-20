@@ -11,7 +11,7 @@ TEST(Imgproc_PyrUp, pyrUp_regression_22184)
     Mat src(100,100,CV_16UC3,Scalar(255,255,255));
     Mat dst(100 * 2 + 1, 100 * 2 + 1, CV_16UC3, Scalar(0,0,0));
     pyrUp(src, dst, Size(dst.cols, dst.rows));
-    double min_val;
+    double min_val = 0;
     minMaxLoc(dst, &min_val);
     ASSERT_GT(cvRound(min_val), 0);
 }
