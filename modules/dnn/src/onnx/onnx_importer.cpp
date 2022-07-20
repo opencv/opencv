@@ -1303,7 +1303,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
 
     // Set batchsize dim as dynamic to be compatible with batch size >= 2.
-    if (targetShape[0] == 1 && targetShape.size() > 1)
+    if (targetShape.size() > 1)
     {
         std::vector<int> dynamicAxes = {0};  // The index of batchsize dim is 0.
         std::vector<int> inputIndices = {0};
