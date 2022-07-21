@@ -617,7 +617,6 @@ struct CvCapture_FFMPEG
     int hw_device;
     int use_opencl;
     int extraDataIdx;
-    int nThreads;
 };
 
 void CvCapture_FFMPEG::init()
@@ -663,7 +662,6 @@ void CvCapture_FFMPEG::init()
     hw_device = -1;
     use_opencl = 0;
     extraDataIdx = 1;
-    nThreads = 0;
 }
 
 
@@ -990,7 +988,7 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 //  avcodec_thread_init(enc, get_number_of_cpus());
 //#else
     const int nCpus = get_number_of_cpus();
-    enc->thread_count = enc->thread_count ? min(enc->thread_count, nCpus) : nCpus;
+    enc->thread_count = enc->thread_count ? enc->thread_count: nCpus;
 //#endif
 
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
@@ -1027,6 +1025,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
     unsigned i;
     bool valid = false;
+    int nThreads = 0;
 
     close();
 
@@ -1770,7 +1769,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         //ic->start_time_realtime is in microseconds
         return ((double)ic->start_time_realtime);
     case CAP_PROP_N_THREADS:
-        return static_cast<double>(nThreads);
+        return static_cast<double>(context->thread_count);
     default:
         break;
     }

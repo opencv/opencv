@@ -96,7 +96,7 @@ TEST(videoio_ffmpeg, image)
 //==========================================================================
 
 #define THREADS testing::ValuesIn({ 0,1,2,2000 })
-typedef tuple<string, int> videoio_read_params_t;
+typedef tuple<string, int, bool> videoio_read_params_t;
 typedef testing::TestWithParam< testing::tuple<videoio_read_params_t, int>> videoio_read;
 
 TEST_P(videoio_read, threads)
@@ -106,11 +106,15 @@ TEST_P(videoio_read, threads)
         throw SkipTestException("Backend was not found");
     const string fileName = get<0>(get<0>(GetParam()));
     const int nFrames = get<1>(get<0>(GetParam()));
+    const bool fixedThreadCount = get<2>(get<0>(GetParam()));
     const int nThreads = get<1>(GetParam());
     VideoCapture cap(findDataFile(fileName), api, { CAP_PROP_N_THREADS, nThreads });
     if (!cap.isOpened())
         throw SkipTestException("Video stream is not supported");
-    EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), nThreads);
+    if (nThreads == 0 || fixedThreadCount)
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), VideoCapture(findDataFile(fileName), api).get(CAP_PROP_N_THREADS));
+    else
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), nThreads);
     Mat frame;
     int n = 0;
     while (cap.read(frame)) {
@@ -122,13 +126,13 @@ TEST_P(videoio_read, threads)
 
 const videoio_read_params_t videoio_read_params[] =
 {
-    videoio_read_params_t("video/big_buck_bunny.h264", 125),
-    videoio_read_params_t("video/big_buck_bunny.h265", 125),
-    videoio_read_params_t("video/big_buck_bunny.mjpg.avi", 125),
-    videoio_read_params_t("video/big_buck_bunny.mov", 125),
-    videoio_read_params_t("video/big_buck_bunny.mp4", 125),
-    videoio_read_params_t("video/big_buck_bunny.mpg", 125),
-    videoio_read_params_t("video/big_buck_bunny.wmv", 125),
+    videoio_read_params_t("video/big_buck_bunny.h264", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.h265", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.mjpg.avi", 125, true),
+    videoio_read_params_t("video/big_buck_bunny.mov", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.mp4", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.mpg", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.wmv", 125, true),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params), THREADS));
