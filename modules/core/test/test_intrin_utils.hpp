@@ -25,61 +25,7 @@ void test_hal_intrin_float16();
 template <typename R> struct Data;
 template <int N> struct initializer;
 
-#if CV_SIMD
-template <> struct initializer<64>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
-        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
-        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
-    }
-};
-
-template <> struct initializer<32>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
-        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]);
-    }
-};
-
-template <> struct initializer<16>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
-    }
-};
-
-template <> struct initializer<8>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
-    }
-};
-
-template <> struct initializer<4>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1], d[2], d[3]);
-    }
-};
-
-template <> struct initializer<2>
-{
-    template <typename R> static R init(const Data<R> & d)
-    {
-        return R(d[0], d[1]);
-    }
-};
-
-#else
-
+#if CV_SIMD_SCALABLE
 template <> struct initializer<128>
 {
     template <typename R> static R init(const Data<R> & d)
@@ -144,6 +90,59 @@ template <> struct initializer<2>
     template <typename R> static R init(const Data<R> & d)
     {
         return v_load({d[0], d[1]});
+    }
+};
+
+#else
+template <> struct initializer<64>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
+        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31],
+        d[32], d[33], d[34], d[35], d[36], d[37], d[38], d[39], d[40], d[41], d[42], d[43], d[44], d[45], d[46], d[47],
+        d[48], d[49], d[50], d[51], d[52], d[53], d[54], d[55], d[56], d[57], d[58], d[59], d[60], d[61], d[62], d[63]);
+    }
+};
+
+template <> struct initializer<32>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15],
+        d[16], d[17], d[18], d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], d[28], d[29], d[30], d[31]);
+    }
+};
+
+template <> struct initializer<16>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
+    }
+};
+
+template <> struct initializer<8>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
+    }
+};
+
+template <> struct initializer<4>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1], d[2], d[3]);
+    }
+};
+
+template <> struct initializer<2>
+{
+    template <typename R> static R init(const Data<R> & d)
+    {
+        return R(d[0], d[1]);
     }
 };
 #endif
@@ -1726,8 +1725,122 @@ template<typename R> struct TheTest
 #endif
 };
 
+#if CV_SIMD_SCALABLE //Temporary
+#define DUMP_ENTRY(type) printf("SIMD: %s\n", CV__TRACE_FUNCTION);
 
-#if CV_SIMD
+
+//=============  8-bit integer =====================================================================
+
+void test_hal_intrin_uint8()
+{
+    DUMP_ENTRY(v_uint8);
+    // typedef v_uint8 R;
+    TheTest<v_uint8>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+void test_hal_intrin_int8()
+{
+    DUMP_ENTRY(v_int8);
+    // typedef v_int8 R;
+    TheTest<v_int8>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+//============= 16-bit integer =====================================================================
+
+void test_hal_intrin_uint16()
+{
+    DUMP_ENTRY(v_uint16);
+    // typedef v_uint16 R;
+    TheTest<v_uint16>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+void test_hal_intrin_int16()
+{
+    DUMP_ENTRY(v_int16);
+    // typedef v_int16 R;
+    TheTest<v_int16>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+//============= 32-bit integer =====================================================================
+
+void test_hal_intrin_uint32()
+{
+    DUMP_ENTRY(v_uint32);
+    // typedef v_uint32 R;
+    TheTest<v_uint32>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+void test_hal_intrin_int32()
+{
+    DUMP_ENTRY(v_int32);
+    // typedef v_int32 R;
+    TheTest<v_int32>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+//============= 64-bit integer =====================================================================
+
+void test_hal_intrin_uint64()
+{
+    DUMP_ENTRY(v_uint64);
+    // typedef v_uint64 R;
+    TheTest<v_uint64>()
+        .test_loadstore()
+        ;
+}
+
+void test_hal_intrin_int64()
+{
+    DUMP_ENTRY(v_int64);
+    // typedef v_int64 R;
+    TheTest<v_int64>()
+        .test_loadstore()
+        ;
+}
+
+//============= Floating point =====================================================================
+void test_hal_intrin_float32()
+{
+    DUMP_ENTRY(v_float32);
+    // typedef v_float32 R;
+    TheTest<v_float32>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+}
+
+void test_hal_intrin_float64()
+{
+    DUMP_ENTRY(v_float64);
+#if CV_SIMD_64F
+    // typedef v_float64 R;
+    TheTest<v_float64>()
+        .test_loadstore()
+        .test_min_max()
+        ;
+
+#endif
+}
+
+#else
+
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*(int)sizeof(v_uint8), CV__TRACE_FUNCTION);
 //=============  8-bit integer =====================================================================
 
@@ -2073,119 +2186,6 @@ void test_hal_intrin_float16()
         ;
 #else
     std::cout << "SKIP: CV_FP16 is not available" << std::endl;
-#endif
-}
-#elif CV_SIMD_SCALABLE //Temporary
-#define DUMP_ENTRY(type) printf("SIMD: %s\n", CV__TRACE_FUNCTION);
-
-
-//=============  8-bit integer =====================================================================
-
-void test_hal_intrin_uint8()
-{
-    DUMP_ENTRY(v_uint8);
-    // typedef v_uint8 R;
-    TheTest<v_uint8>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-void test_hal_intrin_int8()
-{
-    DUMP_ENTRY(v_int8);
-    // typedef v_int8 R;
-    TheTest<v_int8>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-//============= 16-bit integer =====================================================================
-
-void test_hal_intrin_uint16()
-{
-    DUMP_ENTRY(v_uint16);
-    // typedef v_uint16 R;
-    TheTest<v_uint16>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-void test_hal_intrin_int16()
-{
-    DUMP_ENTRY(v_int16);
-    // typedef v_int16 R;
-    TheTest<v_int16>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-//============= 32-bit integer =====================================================================
-
-void test_hal_intrin_uint32()
-{
-    DUMP_ENTRY(v_uint32);
-    // typedef v_uint32 R;
-    TheTest<v_uint32>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-void test_hal_intrin_int32()
-{
-    DUMP_ENTRY(v_int32);
-    // typedef v_int32 R;
-    TheTest<v_int32>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-//============= 64-bit integer =====================================================================
-
-void test_hal_intrin_uint64()
-{
-    DUMP_ENTRY(v_uint64);
-    // typedef v_uint64 R;
-    TheTest<v_uint64>()
-        .test_loadstore()
-        ;
-}
-
-void test_hal_intrin_int64()
-{
-    DUMP_ENTRY(v_int64);
-    // typedef v_int64 R;
-    TheTest<v_int64>()
-        .test_loadstore()
-        ;
-}
-
-//============= Floating point =====================================================================
-void test_hal_intrin_float32()
-{
-    DUMP_ENTRY(v_float32);
-    // typedef v_float32 R;
-    TheTest<v_float32>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-}
-
-void test_hal_intrin_float64()
-{
-    DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
-    // typedef v_float64 R;
-    TheTest<v_float64>()
-        .test_loadstore()
-        .test_min_max()
-        ;
-
 #endif
 }
 
