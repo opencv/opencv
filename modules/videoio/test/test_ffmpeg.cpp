@@ -139,7 +139,7 @@ INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(v
 
 //==========================================================================
 
-typedef tuple<VideoCaptureAPIs, string, string, string, string, string> videoio_container_params_t;
+typedef tuple<VideoCaptureAPIs, string, string, string, string, string, bool> videoio_container_params_t;
 typedef testing::TestWithParam< testing::tuple<videoio_container_params_t, int>> videoio_container;
 
 TEST_P(videoio_container, read)
@@ -156,6 +156,7 @@ TEST_P(videoio_container, read)
     const string pixelFormat = get<5>(get<0>(GetParam()));
     const string fileName = path + "." + ext;
     const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext_raw.c_str()).c_str());
+    const bool fixedThreadCount = get<6>(get<0>(GetParam()));
     const int nThreads = get<1>(GetParam());
 
     // Write encoded video read using VideoContainer to tmp file
@@ -164,7 +165,10 @@ TEST_P(videoio_container, read)
         VideoCapture container(findDataFile(fileName), api, { CAP_PROP_N_THREADS, nThreads });
         if (!container.isOpened())
             throw SkipTestException("Video stream is not supported");
-        EXPECT_EQ(container.get(CAP_PROP_N_THREADS), nThreads);
+        if (nThreads == 0 || fixedThreadCount)
+            EXPECT_EQ(container.get(CAP_PROP_N_THREADS), VideoCapture(findDataFile(fileName), api).get(CAP_PROP_N_THREADS));
+        else
+            EXPECT_EQ(container.get(CAP_PROP_N_THREADS), nThreads);
         if (!container.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
             throw SkipTestException("Fetching of RAW video streams is not supported");
         ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));  // check
@@ -215,9 +219,9 @@ TEST_P(videoio_container, read)
 
 const videoio_container_params_t videoio_container_params[] =
 {
-    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420"),
-    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420"),
-    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "mjpg.avi", "mjpg", "MJPG", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420", false),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420", false),
+    videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "mjpg.avi", "mjpg", "MJPG", "I420", true),
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mkv", "mkv.h264", "h264", "I420"),
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mkv", "mkv.h265", "hevc", "I420"),
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mp4", "mp4.avc1", "avc1", "I420"),
