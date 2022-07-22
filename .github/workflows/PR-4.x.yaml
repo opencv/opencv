@@ -24,5 +24,8 @@ jobs:
   iOS:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
 
+  Android:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-Android.yaml@main
+
   TIM-VX:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
