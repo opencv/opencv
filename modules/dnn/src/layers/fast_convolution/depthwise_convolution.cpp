@@ -19,7 +19,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                            int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                            int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
-#ifdef CV_SIMD128
+#if CV_SIMD128
     v_float32x4 vminval = v_setall_f32(minval), vmaxval = v_setall_f32(maxval);
 
     v_float32x4 w0 = v_setall_f32(
@@ -44,7 +44,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
     int dy0 = 1;
     for (int y0 = 0; y0 < H0; y0 += dy0, outptr += W0 * dy0)
     {
-#ifdef CV_SIMD128
+#if CV_SIMD128
         dy0 = inner_ytop <= y0 && y0 + 3 < inner_ybottom && is3x3 && stride_y == 1 && dilation_y == 1
               ? 3 : 1;
 #endif
@@ -103,7 +103,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
             if (x0 == W0)
                 break;
             x1 = inner_xright;
-#ifdef CV_SIMD128
+#if CV_SIMD128
             if (useSIMD)
             {
                 if (is3x3)
