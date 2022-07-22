@@ -1,7 +1,6 @@
 # --- obsensor ---
 if(NOT HAVE_OBSENSOR)
   if(WIN32)
-    set(CMAKE_REQUIRED_QUIET TRUE) # for check_include_file
     check_include_file(mfapi.h HAVE_MFAPI)
     if(HAVE_MFAPI)
       set(HAVE_OBSENSOR TRUE)
@@ -9,7 +8,6 @@ if(NOT HAVE_OBSENSOR)
       ocv_add_external_target(obsensor "" "" "HAVE_OBSENSOR;HAVE_OBSENSOR_MSMF")
     endif()
   elseif(UNIX)
-    set(CMAKE_REQUIRED_QUIET TRUE) # for check_include_file
     check_include_file(linux/videodev2.h HAVE_CAMV4L2)
     if(HAVE_CAMV4L2)
       set(HAVE_OBSENSOR TRUE)

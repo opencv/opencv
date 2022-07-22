@@ -50,12 +50,13 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 });
                 break;
             case obsensor::OBSENSOR_STREAM_DEPTH:
-                uint8_t data;
+                uint8_t data = 1;
                 channel->setProperty(obsensor::DEPTH_TO_COLOR_ALIGN, &data, 1);
                 channel->start(depthProfile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     depthFrame_ = Mat(frame->height, frame->width, CV_16UC1, frame->data, frame->width * 2).clone();
                 });
+
                 uint32_t len;
                 memset(&camParam_, 0, sizeof(camParam_));
                 channel->getProperty(obsensor::CAMERA_PARAM, (uint8_t*)&camParam_, &len);

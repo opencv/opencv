@@ -7,6 +7,11 @@ using namespace cv;
 int main()
 {
     VideoCapture obsensorCapture(0, CAP_OBSENSOR);
+    if(!obsensorCapture.isOpened()){
+        std::cerr << "Failed to open obsensor capture! Index out of range or no response from device";
+        return -1;
+    }
+
     double fx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FX);
     double fy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FY);
     double cx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
@@ -47,7 +52,7 @@ int main()
                     for (int j = 0; j < image.cols; j++)
                     {
                         cv::Vec3b& outRgb = image.at<cv::Vec3b>(i, j);
-                        uint8_t depthValue =   255 - adjDepthMap.at<uint8_t>(i, j);
+                        uint8_t depthValue = 255 - adjDepthMap.at<uint8_t>(i, j);
                         if (depthValue != 0 && depthValue != 255)
                         {
                             outRgb[0] = (uint8_t)(outRgb[0] * (1.0f - alpha) + depthValue * alpha);
@@ -62,7 +67,7 @@ int main()
             depthMap.release();
         }
 
-        if (waitKey(30) >= 0)
+        if (pollKey() >= 0)
             break;
     }
     return 0;
