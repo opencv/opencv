@@ -50,6 +50,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 });
                 break;
             case obsensor::OBSENSOR_STREAM_DEPTH:
+            {
                 uint8_t data = 1;
                 channel->setProperty(obsensor::DEPTH_TO_COLOR_ALIGN, &data, 1);
                 channel->start(depthProfile, [&](obsensor::Frame* frame) {
@@ -61,6 +62,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 memset(&camParam_, 0, sizeof(camParam_));
                 channel->getProperty(obsensor::CAMERA_PARAM, (uint8_t*)&camParam_, &len);
                 camParamScale_ = (int)(camParam_.p1[2] * 2 / 640 + 0.5);
+            }
                 break;
             default:
                 break;
