@@ -1004,7 +1004,7 @@ template<typename R> struct TheTest
     TheTest & test_reduce()
     {
         Data<R> dataA;
-        LaneType min = VTraits<R>::vlanes(), max = 0;
+        LaneType min = (LaneType)VTraits<R>::vlanes(), max = 0;
         int sum = 0;
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
@@ -1016,9 +1016,9 @@ template<typename R> struct TheTest
         EXPECT_EQ((LaneType)min, (LaneType)v_reduce_min(a));
         EXPECT_EQ((LaneType)max, (LaneType)v_reduce_max(a));
         EXPECT_EQ((int)(sum), (int)v_reduce_sum(a));
-        dataA[0] += VTraits<R>::vlanes();
+        dataA[0] += (LaneType)VTraits<R>::vlanes();
         R an = dataA;
-        min = VTraits<R>::vlanes();
+        min = (LaneType)VTraits<R>::vlanes();
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             min = std::min<LaneType>(min, dataA[i]);
@@ -1029,7 +1029,7 @@ template<typename R> struct TheTest
 
     TheTest & test_reduce_sad()
     {
-        Data<R> dataA, dataB(VTraits<R>::vlanes()/2);
+        Data<R> dataA, dataB((LaneType)VTraits<R>::vlanes() /2);
         R a = dataA;
         R b = dataB;
         uint sum = 0;
