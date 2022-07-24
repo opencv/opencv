@@ -41,7 +41,7 @@ const std::string keys  =
         "{d        | 0.8     | Min delay between captures}"
         "{pf       | defaultConfig.xml| Advanced application parameters}"
         "{save_frames | false   | Save frames that contribute to final calibration}"
-        "{zoom     | 1       | Zoom factor applied to the image}"
+        "{zoom     | 1       | Zoom factor applied to the preview image}"
         "{force_reopen | false   | Forcefully reopen camera in case of errors}"
         "{help     |         | Print help}";
 
