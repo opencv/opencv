@@ -186,8 +186,7 @@ void OdometryTest::run()
     Mat mask(image.size(), CV_8UC1, Scalar(255));
 
     odometry.prepareFrame(odf);
-    bool isComputed;
-    isComputed = odometry.compute(odf, odf, calcRt);
+    bool isComputed = odometry.compute(odf, odf, calcRt);
 
     if(!isComputed)
     {
