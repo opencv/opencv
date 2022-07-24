@@ -534,47 +534,48 @@ void WarpFrameTest::run(bool needRgb, bool scaleDown, bool checkMask, bool ident
     warpFrame(srcDepth, srcRgb, srcMask, rt.matrix, K, dstDepth, dstRgb, dstMask);
 }
 
+typedef std::pair<int, int> WarpFrameInputTypes;
+typedef testing::TestWithParam<WarpFrameInputTypes> WarpFrameInputs;
 
-TEST(RGBD_Odometry_WarpFrame, inputTypes)
+TEST_P(WarpFrameInputs, checkTypes)
 {
-    // [depthType, rgbType]
-    std::array<int, 5*2> types =
-    { CV_16U, CV_8UC3,
-      CV_32F, CV_8UC3,
-      CV_64F, CV_8UC3,
-      CV_32F, CV_8UC1,
-      CV_32F, CV_8UC4 };
     const double shortl2diff = 233.983;
     const double shortlidiff = 1;
     const double floatl2diff = 0.038209;
     const double floatlidiff = 0.00020004;
-    for (int i = 0; i < 5; i++)
-    {
-        int depthType = types[i*2 + 0];
-        int rgbType = types[i*2 + 1];
 
-        WarpFrameTest w;
-        // scale down does not happen on CV_16U
-        // to avoid integer overflow
-        w.run(/* needRgb */ true, /* scaleDown*/ true,
-              /* checkMask */ true, /* identityTransform */ false, depthType, rgbType);
+    int depthType = GetParam().first;
+    int rgbType   = GetParam().second;
 
-        double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
-        double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+    WarpFrameTest w;
+    // scale down does not happen on CV_16U
+    // to avoid integer overflow
+    w.run(/* needRgb */ true, /* scaleDown*/ true,
+          /* checkMask */ true, /* identityTransform */ false, depthType, rgbType);
 
-        EXPECT_EQ(0, maskDiff);
-        EXPECT_EQ(0, rgbDiff);
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
 
-        double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
-        double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+    EXPECT_EQ(0, maskDiff);
+    EXPECT_EQ(0, rgbDiff);
 
-        double l2threshold = depthType == CV_16U ? shortl2diff : floatl2diff;
-        double lithreshold = depthType == CV_16U ? shortlidiff : floatlidiff;
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
 
-        EXPECT_GE(l2threshold, l2diff);
-        EXPECT_GE(lithreshold, lidiff);
-    }
+    double l2threshold = depthType == CV_16U ? shortl2diff : floatl2diff;
+    double lithreshold = depthType == CV_16U ? shortlidiff : floatlidiff;
+
+    EXPECT_GE(l2threshold, l2diff);
+    EXPECT_GE(lithreshold, lidiff);
 }
+
+INSTANTIATE_TEST_CASE_P(RGBD_Odometry, WarpFrameInputs, ::testing::Values(
+                        WarpFrameInputTypes { CV_16U, CV_8UC3 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC3 },
+                        WarpFrameInputTypes { CV_64F, CV_8UC3 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC1 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC4 }));
+
 
 TEST(RGBD_Odometry_WarpFrame, identity)
 {
