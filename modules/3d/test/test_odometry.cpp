@@ -565,8 +565,8 @@ TEST_P(WarpFrameInputs, checkTypes)
     double l2threshold = depthType == CV_16U ? shortl2diff : floatl2diff;
     double lithreshold = depthType == CV_16U ? shortlidiff : floatlidiff;
 
-    EXPECT_GE(l2threshold, l2diff);
-    EXPECT_GE(lithreshold, lidiff);
+    EXPECT_LE(l2diff, l2threshold);
+    EXPECT_LE(lidiff, lithreshold);
 }
 
 INSTANTIATE_TEST_CASE_P(RGBD_Odometry, WarpFrameInputs, ::testing::Values(
@@ -590,7 +590,7 @@ TEST(RGBD_Odometry_WarpFrame, identity)
 
     double depthDiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.dstMask);
 
-    ASSERT_GE(DBL_EPSILON, depthDiff);
+    ASSERT_LE(depthDiff, DBL_EPSILON);
 }
 
 TEST(RGBD_Odometry_WarpFrame, noRgb)
@@ -604,8 +604,8 @@ TEST(RGBD_Odometry_WarpFrame, noRgb)
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
 
-    ASSERT_GE(0.038209, l2diff);
-    ASSERT_GE(0.00020004, lidiff);
+    ASSERT_LE(l2diff, 0.038209);
+    ASSERT_LE(lidiff, 0.00020004);
 }
 
 TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
@@ -622,8 +622,8 @@ TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, goodVals);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, goodVals);
 
-    ASSERT_GE(0.038209, l2diff);
-    ASSERT_GE(0.00020004, lidiff);
+    ASSERT_LE(l2diff, 0.038209);
+    ASSERT_LE(lidiff, 0.00020004);
 }
 
 TEST(RGBD_Odometry_WarpFrame, bigScale)
@@ -640,8 +640,8 @@ TEST(RGBD_Odometry_WarpFrame, bigScale)
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
 
-    ASSERT_GE(191.026565, l2diff);
-    ASSERT_GE(0.99951172, lidiff);
+    ASSERT_LE(l2diff, 191.026565);
+    ASSERT_LE(lidiff, 0.99951172);
 }
 
 }} // namespace
