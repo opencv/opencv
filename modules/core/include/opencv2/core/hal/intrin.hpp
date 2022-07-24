@@ -714,7 +714,7 @@ namespace CV__SIMD_NAMESPACE {
         return a - b; \
     } \
     template<typename... Args> \
-    inline _Tpvec v_add(_Tpvec f1, _Tpvec f2, Args... vf) { \
+    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
         return v_add(f1 + f2, vf...); \
     }
 
@@ -765,7 +765,7 @@ namespace CV__SIMD_NAMESPACE {
         return a * b; \
     } \
     template<typename... Args> \
-    inline _Tpvec v_mul(_Tpvec f1, _Tpvec f2, Args... vf) { \
+    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
         return v_mul(f1 * f2, vf...); \
     }
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
@@ -820,7 +820,7 @@ namespace CV__SIMD_NAMESPACE {
 
     //////////// get0 ////////////
     #define OPENCV_HAL_WRAP_GRT0_INT(_Tpvec, _Tp) \
-    inline _Tp v_get0(v_##_Tpvec v) \
+    inline _Tp v_get0(const v_##_Tpvec& v) \
     { \
         return v.get0(); \
     }
@@ -839,7 +839,7 @@ namespace CV__SIMD_NAMESPACE {
     #endif
 
     #define OPENCV_HAL_WRAP_EXTRACT(_Tpvec, _Tp, vl) \
-    inline _Tp v_extract_highest(_Tpvec v) \
+    inline _Tp v_extract_highest(const _Tpvec& v) \
     { \
         return v_extract_n<vl-1>(v); \
     }
@@ -858,7 +858,7 @@ namespace CV__SIMD_NAMESPACE {
     #endif
 
     #define OPENCV_HAL_WRAP_BROADCAST(_Tpvec) \
-    inline _Tpvec v_broadcast_highest(_Tpvec v) \
+    inline _Tpvec v_broadcast_highest(const _Tpvec& v) \
     { \
         return v_broadcast_element<VTraits<_Tpvec>::nlanes-1>(v); \
     }
@@ -868,7 +868,7 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BROADCAST(v_float32)
 
 
-#endif //CV_SIMD
+#endif //!CV_SIMD_SCALABLE
 
 //! @cond IGNORED
 

@@ -123,7 +123,7 @@ struct VTraits<v_float64>
 
 //////////// get0 ////////////
 #define OPENCV_HAL_IMPL_RVV_GRT0_INT(_Tpvec, _Tp) \
-inline _Tp v_get0(v_##_Tpvec v) \
+inline _Tp v_get0(const v_##_Tpvec& v) \
 { \
     return vmv_x(v); \
 }
@@ -137,12 +137,12 @@ OPENCV_HAL_IMPL_RVV_GRT0_INT(int32, int)
 OPENCV_HAL_IMPL_RVV_GRT0_INT(uint64, uint64)
 OPENCV_HAL_IMPL_RVV_GRT0_INT(int64, int64)
 
-inline float v_get0(v_float32 v) \
+inline float v_get0(const v_float32& v) \
 { \
     return vfmv_f(v); \
 }
 #if CV_SIMD_SCALABLE_64F
-inline double v_get0(v_float64 v) \
+inline double v_get0(const v_float64& v) \
 { \
     return vfmv_f(v); \
 }
