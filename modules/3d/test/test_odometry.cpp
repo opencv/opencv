@@ -421,7 +421,7 @@ void WarpFrameTest::run(bool needRgb, bool scaleDown, bool checkMask, bool ident
     std::string dataPath = cvtest::TS::ptr()->get_data_path();
     std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
     std::string srcRgbFilename   = dataPath + "/cv/rgbd/rgb.png";
-    // The depth was generated using the script at 3d/misc/python/warp_test.py
+    // The depth was generated using the script at testdata/cv/rgbd/warped_depth_generator/warp_test.py
     std::string warpedDepthFilename = dataPath + "/cv/rgbd/warpedDepth.png";
     std::string warpedRgbFilename   = dataPath + "/cv/rgbd/warpedRgb.png";
 
