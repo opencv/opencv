@@ -4,6 +4,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/core/stl/algorithm.hh"
 #include "opencv2/core.hpp"
+#include "opencv2/core/detail/cpp_features.hpp"
+#include <numeric>
 
 namespace opencv_test { namespace {
 
@@ -47,6 +49,9 @@ class CORE_stl_forward : public ::testing::Test {
     cv::Mat_<int> subMat;
     cv::Mat_<float> matSub_f;
 };
+
+//This opencv feature requires return type auto a C++14 feature
+#ifdef _stl_forward_cpp_features_present
 
 TEST_F(CORE_stl_forward, iterators_replacable)
 {
@@ -192,7 +197,7 @@ TEST_F(CORE_stl_forward, find_test)
 
     EXPECT_EQ(replaced_dist,orig_dist);
 }
-
+#endif //_stl_forward_cpp_features_present
 
 
 }} // namespace

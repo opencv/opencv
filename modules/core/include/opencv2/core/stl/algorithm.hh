@@ -19,21 +19,19 @@ namespace experimental {
 ///@brief overload for forwarding a tuple and index sequence with cv iterators
 /// replaced as pointers
 template <typename... Args, std::size_t... Is>
-auto all_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>)
-    -> decltype(std::all_of(std::get<Is>(tpl)...)) {
+auto all_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>){
   return std::all_of(std::get<Is>(tpl)...);
 }
 
 ///@brief Forwarding for stl algorithm with the same name. Decides at runtime if the iterators are replaced with pointers
 /// or kept as cv iterators for non-contiguous matrices.
 template <typename... Args>
-auto all_of(Args&&... args)
-    -> decltype(std::all_of(std::forward<Args>(args)...)) {
+auto all_of(Args&&... args) -> decltype(std::all_of(std::forward<Args>(args)...)){
 
   if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
     return all_of(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
-        cv::detail::make_index_sequence<std::tuple_size<std::tuple<Args...>>::value>());
+        cv::detail::make_index_sequence_variadic<Args...>());
   } else {
     return std::all_of(std::forward<Args>(args)...);
   }
@@ -43,21 +41,19 @@ auto all_of(Args&&... args)
 ///@brief overload for forwarding a tuple and index sequence with cv iterators
 /// replaced as pointers
 template <typename... Args, std::size_t... Is>
-auto any_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>)
-    -> decltype(std::any_of(std::get<Is>(tpl)...)) {
+auto any_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>) {
   return std::any_of(std::get<Is>(tpl)...);
 }
 
 ///@brief Forwarding for stl algorithm with the same name. Decides at runtime if the iterators are replaced with pointers
 /// or kept as cv iterators for non-contiguous matrices.
 template <typename... Args>
-auto any_of(Args&&... args)
-    -> decltype(std::any_of(std::forward<Args>(args)...)) {
+auto any_of(Args&&... args) -> decltype(std::any_of(std::forward<Args>(args)...)) {
 
   if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
     return any_of(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
-        cv::detail::make_index_sequence<std::tuple_size<std::tuple<Args...>>::value>());
+        cv::detail::make_index_sequence_variadic<Args...>());
   } else {
     return std::any_of(std::forward<Args>(args)...);
   }
@@ -66,21 +62,19 @@ auto any_of(Args&&... args)
 ///@brief overload for forwarding a tuple and index sequence with cv iterators
 /// replaced as pointers
 template <typename... Args, std::size_t... Is>
-auto none_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>)
-    -> decltype(std::none_of(std::get<Is>(tpl)...)) {
+auto none_of(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>) {
   return std::none_of(std::get<Is>(tpl)...);
 }
 
 ///@brief Forwarding for stl algorithm with the same name. Decides at runtime if the iterators are replaced with pointers
 /// or kept as cv iterators for non-contiguous matrices.
 template <typename... Args>
-auto none_of(Args&&... args)
-    -> decltype(std::none_of(std::forward<Args>(args)...)) {
+auto none_of(Args&&... args) -> decltype(std::none_of(std::forward<Args>(args)...)){
 
   if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
     return none_of(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
-        cv::detail::make_index_sequence<std::tuple_size<std::tuple<Args...>>::value>());
+        cv::detail::make_index_sequence_variadic<Args...>());
   } else {
     return std::none_of(std::forward<Args>(args)...);
   }
@@ -89,8 +83,7 @@ auto none_of(Args&&... args)
 ///@brief overload for forwarding a tuple and index sequence with cv iterators
 /// replaced as pointers
 template <typename... Args, std::size_t... Is>
-auto count_if(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>)
-    -> decltype(std::count_if(std::get<Is>(tpl)...)) {
+auto count_if(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>){
   return std::count_if(std::get<Is>(tpl)...);
 }
 
@@ -103,7 +96,7 @@ auto count_if(Args&&... args)
   if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
     return count_if(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
-        cv::detail::make_index_sequence<std::tuple_size<std::tuple<Args...>>::value>());
+        cv::detail::make_index_sequence_variadic<Args...>());
   } else {
     return std::count_if(std::forward<Args>(args)...);
   }

@@ -4,6 +4,7 @@
 
 #ifndef OPENCV_CORE_DETAIL_UTIL_HPP
 #define OPENCV_CORE_DETAIL_UTIL_HPP
+#include <tuple>
 
 namespace cv {
 namespace detail {
@@ -24,6 +25,7 @@ struct _merge_and_renumber<index_sequence<I1...>, index_sequence<I2...>>
 
 // --------------------------------------------------------------
 
+
 template <size_t N>
 struct make_index_sequence
     : _merge_and_renumber<typename make_index_sequence<N / 2>::type,
@@ -32,6 +34,11 @@ struct make_index_sequence
 template <> struct make_index_sequence<0> : index_sequence<> {};
 template <> struct make_index_sequence<1> : index_sequence<0> {};
 
+//Make an index sequence matching a variadic template pack
+template<typename ... Args>
+struct make_index_sequence_variadic : public make_index_sequence<std::tuple_size<std::tuple<Args...>>::value>
+{
+};
 
 
 template <bool B, class T = void>
@@ -51,7 +58,13 @@ void for_(F func, index_sequence<Is...>) {
 template <std::size_t N, typename F> void for_(F func) {
   for_(func, make_index_sequence<N>());
 }
+template<typename Iter>
+struct is_reverse_iterator : std::false_type { };
 
+template<typename Iter>
+struct is_reverse_iterator<std::reverse_iterator<Iter>>
+: std::integral_constant<bool, !is_reverse_iterator<Iter>::value>
+{ };
 
 
 }}

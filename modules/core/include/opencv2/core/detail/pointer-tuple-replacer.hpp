@@ -7,7 +7,12 @@
 #include "opencv2/core.hpp"
 #include <tuple>
 #include <type_traits>
+#include <iterator>
 #include "opencv2/core/detail/util.hh"
+#include "opencv2/core/detail/cpp_features.hpp"
+
+//This opencv feature requires certain C++14 features
+#ifdef _stl_forward_cpp_features_present
 
 namespace cv {
 namespace detail {
@@ -24,161 +29,55 @@ namespace detail {
 
 //*********************************************************************/
 
-template <typename T>constexpr  auto replace_cv_it(cv::MatConstIterator_<T> it) -> T * {
+template <typename T> constexpr T* replace_cv_it(cv::MatConstIterator_<T> it) {
   return (T *)it.ptr;
 }
 
-template <typename T>constexpr  auto replace_cv_it(cv::MatIterator_<T> it) -> T * {
+template <typename T>constexpr T* replace_cv_it(cv::MatIterator_<T> it){
   return (T *)it.ptr;
 }
 
-template <
-    typename T,
+template <typename T,
     enable_if_t<!std::is_base_of<cv::MatConstIterator, T>::value, bool> = true>
-auto replace_single_element(T t) -> T {
+constexpr auto replace_single_element(T t){
   return t;
 }
 
-template <
-    typename T,
+template <typename T,
     enable_if_t<std::is_base_of<cv::MatConstIterator, T>::value, bool> = true>
-constexpr auto replace_single_element(T t) -> decltype(replace_cv_it(t)) {
+constexpr auto replace_single_element(T t){
   return replace_cv_it(t);
 }
 
-template <typename T1>
-constexpr auto make_tpl_replaced(T1 t1)
-    -> decltype(std::make_tuple(replace_single_element(t1))) {
-  return std::make_tuple(replace_single_element(t1));
+//Resolves if an iterator is a reverse iterator or a normal forward iterator
+template <typename T,
+    enable_if_t<!is_reverse_iterator<T>::value, bool> = true>
+constexpr auto replace_single_element_directional(T t){
+  return replace_single_element(t);
 }
 
-template <typename T1, typename T2>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2)
-    -> decltype(std::make_tuple(replace_single_element(t1),
-                                replace_single_element(t2))) {
-  return std::make_tuple(replace_single_element(t1),
-                         replace_single_element(t2));
+//Resolves if an iterator is a reverse iterator or a normal forward iterator
+template <typename T,
+    enable_if_t<is_reverse_iterator<T>::value, bool> = true>
+constexpr auto replace_single_element_directional(T t){
+  return std::make_reverse_iterator(replace_single_element(t.base()));
 }
 
-template <typename T1, typename T2, typename T3>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3)
-    -> decltype(std::make_tuple(replace_single_element(t1),
-                                replace_single_element(t2),
-                                replace_single_element(t3))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3));
-}
-
-template <typename T1, typename T2, typename T3, typename T4>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4)
-    -> decltype(std::make_tuple(replace_single_element(t1),
-                                replace_single_element(t2),
-                                replace_single_element(t3),
-                                replace_single_element(t4))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3),
-                         replace_single_element(t4));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5)
-    -> decltype(std::make_tuple(replace_single_element(t1),
-                                replace_single_element(t2),
-                                replace_single_element(t3),
-                                replace_single_element(t4),
-                                replace_single_element(t5))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5,
-          typename T6>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) -> decltype(
-    std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                    replace_single_element(t3), replace_single_element(t4),
-                    replace_single_element(t5), replace_single_element(t6))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5),
-                         replace_single_element(t6));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5,
-          typename T6, typename T7>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7)
-    -> decltype(
-        std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                        replace_single_element(t3), replace_single_element(t4),
-                        replace_single_element(t5), replace_single_element(t6),
-                        replace_single_element(t7))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5), replace_single_element(t6),
-                         replace_single_element(t7));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5,
-          typename T6, typename T7, typename T8>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8)
-    -> decltype(std::make_tuple(
-        replace_single_element(t1), replace_single_element(t2),
-        replace_single_element(t3), replace_single_element(t4),
-        replace_single_element(t5), replace_single_element(t6),
-        replace_single_element(t7), replace_single_element(t8))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5), replace_single_element(t6),
-                         replace_single_element(t7),
-                         replace_single_element(t8));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5,
-          typename T6, typename T7, typename T8, typename T9>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8,
-                       T9 t9)
-    -> decltype(
-        std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                        replace_single_element(t3), replace_single_element(t4),
-                        replace_single_element(t5), replace_single_element(t6),
-                        replace_single_element(t7), replace_single_element(t8),
-                        replace_single_element(t9))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5), replace_single_element(t6),
-                         replace_single_element(t7), replace_single_element(t8),
-                         replace_single_element(t9));
-}
-
-template <typename T1, typename T2, typename T3, typename T4, typename T5,
-          typename T6, typename T7, typename T8, typename T9, typename T10>
-constexpr auto make_tpl_replaced(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8,
-                       T9 t9, T10 t10)
-    -> decltype(std::make_tuple(
-        replace_single_element(t1), replace_single_element(t2),
-        replace_single_element(t3), replace_single_element(t4),
-        replace_single_element(t5), replace_single_element(t6),
-        replace_single_element(t7), replace_single_element(t8),
-        replace_single_element(t9), replace_single_element(t10))) {
-  return std::make_tuple(replace_single_element(t1), replace_single_element(t2),
-                         replace_single_element(t3), replace_single_element(t4),
-                         replace_single_element(t5), replace_single_element(t6),
-                         replace_single_element(t7), replace_single_element(t8),
-                         replace_single_element(t9),
-                         replace_single_element(t10));
+template<typename Arg>
+constexpr auto make_tpl_replaced(Arg && arg)
+{
+    return std::make_tuple(replace_single_element_directional(arg));
 }
 
 
-//Thanks to https://stackoverflow.com/questions/34745581/forbids-functions-with-static-assert#comment57237292_34745581
-template <typename...>
-struct always_false { static constexpr bool value = false; };
-
-template<typename ... Args> void make_tpl_replaced(Args... ){
-static_assert(always_false<Args...>::value,
-              "Zeor or more than ten arguments are currently not supported for forwarding to stl.");
+template<typename Arg, typename ... Args>
+auto make_tpl_replaced(Arg && arg, Args&& ... args)
+{
+    return std::tuple_cat(std::make_tuple(replace_single_element_directional(arg)), make_tpl_replaced(args ...));
 }
 
 
 } // namespace detail
 } // namespace cv
+#endif //_stl_forward_cpp_features_present
 #endif // OPENCV_CORE_DETAIL_DISPATCH_HELPER_IMPL_HPP
