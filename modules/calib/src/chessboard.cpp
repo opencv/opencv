@@ -3917,6 +3917,10 @@ bool cv::findChessboardCornersSB(InputArray image_, Size pattern_size,
     }
     std::vector<cv::Point2f> points;
     KeyPoint::convert(corners,points);
+    for(auto& c: points)
+    {
+        c = c + Point2f(0.5, 0.5);
+    }
     Mat(points).copyTo(corners_);
 
     // export meta data

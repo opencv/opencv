@@ -677,6 +677,10 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         }
         cornerSubPix(img, out_corners, Size(2, 2), Size(-1,-1),
                          TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 15, 0.1));
+        for(auto& c: out_corners)
+        {
+            c = c + Point2f(0.5, 0.5);
+        }
     }
 
     Mat(out_corners).copyTo(corners_);
