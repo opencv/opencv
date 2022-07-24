@@ -100,14 +100,8 @@ void OdometryTest::readData(Mat& image, Mat& depth) const
     image = imread(imageFilename,  0);
     depth = imread(depthFilename, -1);
 
-    if(image.empty())
-    {
-        FAIL() << "Image " << imageFilename.c_str() << " can not be read" << std::endl;
-    }
-    if(depth.empty())
-    {
-        FAIL() << "Depth " << depthFilename.c_str() << "can not be read" << std::endl;
-    }
+    ASSERT_FALSE(image.empty()) << "Image " << imageFilename.c_str() << " can not be read" << std::endl;
+    ASSERT_FALSE(depth.empty()) << "Depth " << depthFilename.c_str() << "can not be read" << std::endl;
 
     CV_DbgAssert(image.type() == CV_8UC1);
     CV_DbgAssert(depth.type() == CV_16UC1);
@@ -161,11 +155,7 @@ void OdometryTest::checkUMats()
     bool isComputed = odometry.compute(odf, odf, calcRt);
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
-    if (diff > idError)
-    {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
-    }
-
+    ASSERT_FALSE(diff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
 }
 
 void OdometryTest::run()
@@ -188,15 +178,9 @@ void OdometryTest::run()
     odometry.prepareFrame(odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
 
-    if(!isComputed)
-    {
-        FAIL() << "Can not find Rt between the same frame" << std::endl;
-    }
+    ASSERT_TRUE(isComputed) << "Can not find Rt between the same frame" << std::endl;
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    if (ndiff > idError)
-    {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
-    }
+    ASSERT_FALSE(ndiff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
