@@ -2155,7 +2155,7 @@ public:
             return false;
 
         k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::ReadOnlyNoSize(twiddles), thread_count, num_dfts);
-        return k.run(2, globalsize, localsize, false);
+        return k.run(2, globalsize, localsize, true);
     }
 
 private:
