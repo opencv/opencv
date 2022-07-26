@@ -34,6 +34,11 @@ if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_cudafilters)
 endif()
 ocv_list_filterout(cpp_samples "real_time_pose_estimation/")
 ocv_list_filterout(cpp_samples "parallel_backend/")
+if(ARM AND CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
+  # suppress warnings from GCC only on 7.1 and later
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-psabi)
+endif()
+
 foreach(sample_filename ${cpp_samples})
   set(package "cpp")
   if(sample_filename MATCHES "tutorial_code/snippet")

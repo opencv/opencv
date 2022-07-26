@@ -2024,6 +2024,8 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
 
 void findBroadAxis(const MatShape& broadShape, const MatShape& outShape, size_t& axis, int& broadAxis)
 {
+    // Currently, this function can only complete 1-dimensional expansion of broadShape.
+    // If there are two dimensions in broadShape that need to be expended, it will fail.
     const size_t diff = outShape.size() - broadShape.size();
 
     // find the first non-one element of the broadcasting shape

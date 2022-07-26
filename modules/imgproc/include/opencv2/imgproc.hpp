@@ -2809,7 +2809,7 @@ It makes possible to do a fast blurring or fast block correlation with a variabl
 example. In case of multi-channel images, sums for each channel are accumulated independently.
 
 As a practical example, the next figure shows the calculation of the integral of a straight
-rectangle Rect(3,3,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
+rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
 original image are shown, as well as the relative pixels in the integral images sum and tilted .
 
 ![integral calculation example](pics/integral.png)
@@ -3174,7 +3174,14 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           const int* histSize, const float** ranges,
                           bool uniform = true, bool accumulate = false );
 
-/** @overload */
+/** @overload
+
+this variant supports only uniform histograms.
+
+ranges argument is either empty vector or a flattened vector of histSize.size()*2 elements
+(histSize.size() element pairs). The first and second elements of each pair specify the lower and
+upper boundaries.
+*/
 CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
                             const std::vector<int>& channels,
                             InputArray mask, OutputArray hist,

@@ -414,6 +414,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
+        g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -561,6 +562,24 @@ struct HWFeatures
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
+        int cpufile = open("/proc/self/auxv", O_RDONLY);
+
+        if (cpufile >= 0)
+        {
+            Elf64_auxv_t auxv;
+            const size_t size_auxv_t = sizeof(auxv);
+
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
+            {
+                if (auxv.a_type == AT_HWCAP)
+                {
+                    have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0;
+                    break;
+                }
+            }
+
+            close(cpufile);
+        }
     #elif defined __arm__ && defined __ANDROID__
       #if defined HAVE_CPUFEATURES
         CV_LOG_INFO(NULL, "calling android_getCpuFeatures() ...");
