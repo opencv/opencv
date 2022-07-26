@@ -757,6 +757,7 @@ input = Variable(torch.randn(3, 1, 2, 4))
 model = Squeeze()
 model.eval()
 save_data_and_model("squeeze", input, model)
+save_data_and_model("squeeze_axes_op13", input, model, version=13)
 
 class Div(nn.Module):
 
