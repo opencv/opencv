@@ -53,7 +53,7 @@ namespace {
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
 - platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
-- RGB-D: OpenNI/OpenNI2, REALSENSE
+- RGB-D: OpenNI/OpenNI2, REALSENSE, OBSENSOR
 - special OpenCV (file-based): "images", "mjpeg"
 - special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)/uEye
 - other: XINE, gphoto2, etc
@@ -171,6 +171,11 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
                            0)
 #endif
+
+#ifdef HAVE_OBSENSOR
+    DECLARE_STATIC_BACKEND(CAP_OBSENSOR, "OBSENSOR", MODE_CAPTURE_BY_INDEX, 0, create_obsensor_capture, 0)
+#endif
+
     // dropped backends: MIL, TYZX
 };
 
