@@ -1821,6 +1821,14 @@ x = Variable(torch.randn([1, 2, 2, 2]))
 model = Mish()
 save_data_and_model("mish", x, model)
 
+class Mish2(nn.Module):
+    def forward(self, x):
+        return x * (torch.tanh(torch.log(torch.exp(x) + 1)))
+
+x = Variable(torch.randn([1, 2, 2, 2]))
+model = Mish2()
+save_data_and_model("mish_no_softplus", x, model)
+
 class PadCalculation(nn.Module):
     def forward(self, x):
         y = F.max_pool2d(x, kernel_size=2)
