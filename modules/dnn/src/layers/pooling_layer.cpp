@@ -199,34 +199,13 @@ public:
         {
             return type == MAX || type == AVE || type == ROI;
         }
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        {
-            if (computeMaxIdx)
-                return false;
-            if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
-            if (kernel_size.size() == 1)
-                return false;
-            if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL) {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-                if (type == MAX && (pads_begin[1] == 1 && pads_begin[0] == 1) && (strides[0] == 2 && strides[1] == 2)) {
-                    return !isMyriadX();
-                }
-#endif
-                return type == MAX || type == AVE;
-            }
-            else
-                return type != STOCHASTIC && type != SUM;
-        }
-#endif
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-#ifdef HAVE_DNN_NGRAPH
             return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
-#endif
         }
-        else if (backendId == DNN_BACKEND_OPENCV)
+#endif
+        if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
@@ -292,6 +271,17 @@ public:
                 }
                 return true;
             }
+        }
+        else if (backendId == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            if (kernel_size.size() == 3)
+            {
+                // fallback to CPU implementation.
+                preferableTarget = DNN_TARGET_CPU;
+            }
+#endif
+            return false;
         }
         return false;
     }
@@ -549,54 +539,6 @@ public:
         else
             return Ptr<BackendNode>();
     }
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        if (type == MAX || type == AVE)
-        {
-            InferenceEngine::Builder::PoolingLayer ieLayer(name);
-
-            ieLayer.setKernel(kernel_size);
-            ieLayer.setStrides(strides);
-            ieLayer.setPaddingsBegin(pads_begin);
-            ieLayer.setPaddingsEnd(pads_end);
-
-            ieLayer.setPoolingType(type == MAX ?
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::AVG);
-            ieLayer.setRoundingType(ceilMode ?
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::CEIL :
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::FLOOR);
-            ieLayer.setExcludePad(!avePoolPaddedArea);
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            if (!padMode.empty())
-                l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else if (type == ROI)
-        {
-            InferenceEngine::Builder::ROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setPooled({pooledSize.height, pooledSize.width});
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else if (type == PSROI)
-        {
-            InferenceEngine::Builder::PSROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setOutputDim(psRoiOutChannels);
-            ieLayer.setGroupSize(pooledSize.width);
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-        return Ptr<BackendNode>();
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

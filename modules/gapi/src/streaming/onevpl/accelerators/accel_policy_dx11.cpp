@@ -13,8 +13,7 @@
 #include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
 #pragma comment(lib,"d3d11.lib")
 
 #define D3D11_NO_HELPERS
@@ -98,9 +97,7 @@ void VPLDX11AccelerationPolicy::deinit(session_t session) {
 
 VPLDX11AccelerationPolicy::pool_key_t
 VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc_req,
-                                               mfxVideoParam& param) {
-    param.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-
+                                               mfxFrameInfo& info) {
     // allocate textures by explicit request
     mfxFrameAllocResponse mfxResponse;
     mfxStatus sts = on_alloc(&alloc_req, &mfxResponse);
@@ -120,7 +117,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest& alloc
     pool_t pool(numSurfaces);
     for (int i = 0; i < numSurfaces; i++) {
         std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1 {});
-        handle->Info = param.mfx.FrameInfo;
+        handle->Info = info;
         handle->Data.MemId = mfxResponse.mids[i];
 
         pool.push_back(Surface::create_surface(std::move(handle), table_it->second));
@@ -159,12 +156,21 @@ size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
     GAPI_Assert(false && "get_free_surface_count() is not implemented");
 }
 
-size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy::get_surface_count() is not implemented");
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
+    auto pool_it = pool_table.find(key);
+    if (pool_it == pool_table.end()) {
+        std::stringstream ss;
+        ss << "key is not found: " << key << ", table size: " << pool_table.size();
+        const std::string& str = ss.str();
+        GAPI_LOG_WARNING(nullptr, str);
+        throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
+    }
+    return pool_it->second.total_size();
 }
 
-cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
-                                                                           mfxFrameSurface1* surface) {
+cv::MediaFrame::AdapterPtr
+VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
+                                                const FrameConstructorArgs &params) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -175,7 +181,8 @@ cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_
     }
 
     pool_t& requested_pool = pool_it->second;
-    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(surface))};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameDX11Adapter(requested_pool.find_by_handle(params.assoc_surface),
+                                                                   params.assoc_handle)};
 }
 
 mfxStatus VPLDX11AccelerationPolicy::alloc_cb(mfxHDL pthis, mfxFrameAllocRequest *request,
@@ -261,24 +268,70 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
     desc.Format = colorFormat;
     desc.SampleDesc.Count = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+    desc.MiscFlags = 0;
     desc.BindFlags = D3D11_BIND_DECODER;
+
+    if ((MFX_MEMTYPE_FROM_VPPIN & request->Type) && (DXGI_FORMAT_YUY2 == desc.Format) ||
+        (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format) ||
+        (DXGI_FORMAT_R10G10B10A2_UNORM == desc.Format) ||
+        (DXGI_FORMAT_R16G16B16A16_UNORM == desc.Format)) {
+        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    }
+
+    if ((MFX_MEMTYPE_FROM_VPPOUT & request->Type) ||
+        (MFX_MEMTYPE_VIDEO_MEMORY_PROCESSOR_TARGET & request->Type)) {
+        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    }
 
     if (request->Type & MFX_MEMTYPE_SHARED_RESOURCE) {
         desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
         desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
     }
 
-    ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
+    if (DXGI_FORMAT_P8 == desc.Format) {
+        desc.BindFlags = 0;
+    }
+
+    /* NB:
+     * On the one hand current OpenVINO API doesn't support texture array and
+     * D3D11 API doesn't allow to address specific texture element in array.
+     * On the other hand using textures array should be more performant case
+     * in applications (according to community experience)
+     * So, to be compliant with OV let's turn off textures array feature, but keep
+     * this code in commented section to consider such "optimization" in future
+     */
+#if 0
+    size_t main_textures_count = 1;
+    if (D3D11_BIND_RENDER_TARGET & desc.BindFlags) {
+        GAPI_LOG_DEBUG(nullptr, "Use array of testures instead of texture array");
+        desc.ArraySize = 1;
+        main_textures_count = request->NumFrameSuggested;
+    }
+#else
+    // enforcement to use array of textures
+    size_t main_textures_count = request->NumFrameSuggested;
+
+    // enforcement to do not use texture array as subresources as part of a single texture
+    desc.ArraySize = 1;
+#endif
+
+    // create GPU textures
     HRESULT err = S_OK;
-    {
-        ID3D11Texture2D *pTexture2D = nullptr;
-        err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
-        if (FAILED(err)) {
-            GAPI_LOG_WARNING(nullptr, "Cannot create texture, error: " + std::to_string(HRESULT_CODE(err)));
-            return MFX_ERR_MEMORY_ALLOC;
+    std::vector<ComPtrGuard<ID3D11Texture2D>> main_textures;
+    main_textures.reserve(main_textures_count);
+    for (size_t i = 0; i < main_textures_count; i++) {
+        ComPtrGuard<ID3D11Texture2D> main_texture = createCOMPtrGuard<ID3D11Texture2D>();
+        {
+            ID3D11Texture2D *pTexture2D = nullptr;
+            err = hw_handle->CreateTexture2D(&desc, nullptr, &pTexture2D);
+            if (FAILED(err)) {
+                GAPI_LOG_WARNING(nullptr, "Cannot create texture by index: " << i <<
+                                          ", error: " << std::to_string(HRESULT_CODE(err)));
+                return MFX_ERR_MEMORY_ALLOC;
+            }
+            main_texture.reset(pTexture2D);
         }
-        main_texture.reset(pTexture2D);
+        main_textures.push_back(std::move(main_texture));
     }
 
     // create staging texture to read it from
@@ -308,7 +361,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_alloc(const mfxFrameAllocRequest *reques
                                          DX11AllocationRecord::create(request->NumFrameSuggested,
                                                                       device_context,
                                                                       allocator,
-                                                                      std::move(main_texture),
+                                                                      std::move(main_textures),
                                                                       std::move(staging_textures)));
         if (!inserted_it.second) {
             GAPI_LOG_WARNING(nullptr, "Cannot assign allocation by id: " + std::to_string(request->AllocId) +
@@ -363,7 +416,7 @@ mfxStatus VPLDX11AccelerationPolicy::on_get_hdl(mfxMemId mid, mfxHDL *handle) {
     pPair->second = static_cast<mfxHDL>(reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
                                         static_cast<uint64_t>(data->get_subresource())));
 
-    GAPI_LOG_DEBUG(nullptr, "texture : " << pPair->first << ", sub id: " << pPair->second);
+    GAPI_LOG_DEBUG(nullptr, "ID3D11Texture2D : " << pPair->first << ", sub id: " << pPair->second);
     return MFX_ERR_NONE;
 }
 
@@ -379,12 +432,60 @@ mfxStatus VPLDX11AccelerationPolicy::on_free(mfxFrameAllocResponse *response) {
     }
 
     allocation_table.erase(table_it);
+    GAPI_LOG_DEBUG(nullptr, "Allocation by requested id: " << response->AllocId <<
+                            " has been erased");
     return MFX_ERR_NONE;
 }
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
+
+#else // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+
+namespace cv {
+namespace gapi {
+namespace wip {
+namespace onevpl {
+VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy() = default;
+
+void VPLDX11AccelerationPolicy::init(session_t ) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+void VPLDX11AccelerationPolicy::deinit(session_t) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::pool_key_t VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest&,
+                                                                                     mfxFrameInfo&) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+
+cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t,
+                                                                          const FrameConstructorArgs &) {
+    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+}
+} // namespace onevpl
+} // namespace wip
+} // namespace gapi
+} // namespace cv
+#endif // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
 #endif // HAVE_ONEVPL

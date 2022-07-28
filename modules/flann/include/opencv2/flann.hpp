@@ -116,7 +116,7 @@ cv::flann::L2 - Squared Euclidean distance functor, optimized version.
 
 cv::flann::L1 - Manhattan distance functor, optimized version.
 
-cv::flann::MinkowskiDistance -  The Minkowsky distance functor.
+cv::flann::MinkowskiDistance -  The Minkowski distance functor.
 This is highly optimised with loop unrolling.
 The computation of squared root at the end is omitted for efficiency.
 

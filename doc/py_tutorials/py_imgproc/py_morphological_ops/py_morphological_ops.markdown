@@ -48,7 +48,7 @@ Result:
 
 ### 2. Dilation
 
-It is just opposite of erosion. Here, a pixel element is '1' if atleast one pixel under the kernel
+It is just opposite of erosion. Here, a pixel element is '1' if at least one pixel under the kernel
 is '1'. So it increases the white region in the image or size of foreground object increases.
 Normally, in cases like noise removal, erosion is followed by dilation. Because, erosion removes
 white noises, but it also shrinks our object. So we dilate it. Since noise is gone, they won't come

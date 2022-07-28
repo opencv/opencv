@@ -26,6 +26,31 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+void VPLLegacyDecodeEngine::try_modify_pool_size_request_param(const char* param_name,
+                                                               size_t new_frames_count,
+                                                               mfxFrameAllocRequest& request) {
+    if (new_frames_count < request.NumFrameMin) {
+        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << param_name << "\": " <<
+                                  new_frames_count << ". It must be equal or greater than "
+                                  "mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin);
+        throw std::runtime_error(std::string("Invalid value of param: ") +
+                                 param_name + ", underflow");
+    } else {
+        if (static_cast<size_t>(std::numeric_limits<mfxU16>::max()) < new_frames_count) {
+            GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << param_name << "\": " <<
+                                      new_frames_count << ". It must not be greater than " <<
+                                      std::numeric_limits<mfxU16>::max());
+            throw std::runtime_error(std::string("Invalid value of param: ") +
+                                     param_name + ", overflow");
+        }
+        request.NumFrameSuggested = static_cast<mfxU16>(new_frames_count);
+        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overridden by user input: " <<
+                                ", mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin <<
+                                ", mfxFrameAllocRequest.NumFrameSuggested: " << request.NumFrameSuggested <<
+                                ", mfxFrameAllocRequest.Type: " << request.Type);
+    }
+}
+
 VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
  : ProcessingEngineBase(std::move(accel)) {
 
@@ -58,11 +83,8 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    (my_sess.data_provider || (my_sess.stream && my_sess.stream->DataLength))
-                                                        ? my_sess.stream.get()
-
-                                                        : nullptr, /* No more data to read, start decode draining mode*/
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -73,12 +95,12 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                    my_sess.last_status == MFX_WRN_DEVICE_BUSY) {
                 try {
                     if (my_sess.last_status == MFX_ERR_MORE_SURFACE) {
-                        my_sess.swap_surface(*this);
+                        my_sess.swap_decode_surface(*this);
                     }
                     my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
-                                                    my_sess.stream.get(),
-                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
+                                                    my_sess.get_mfx_bitstream_ptr(),
+                                                    my_sess.processing_surface_ptr.lock()->get_handle(),
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
@@ -130,7 +152,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.sync_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 4) Falls back on generic status procesing
+        // 4) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<LegacyDecodeSession&>(sess));
@@ -138,11 +160,12 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
     );
 }
 
-ProcessingEngineBase::session_ptr
-VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
-                                          const std::vector<CfgParam>& cfg_params,
-                                          std::shared_ptr<IDataProvider> provider) {
-    GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
+VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param(
+                                                mfxSession mfx_session,
+                                                const std::vector<CfgParam>& cfg_params,
+                                                std::shared_ptr<IDataProvider> provider) {
+
+     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
     // init session
     acceleration_policy->init(mfx_session);
@@ -152,9 +175,10 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
 
     // Prepare video param
     mfxVideoParam mfxDecParams {};
+    memset(&mfxDecParams, 0, sizeof(mfxDecParams));
     mfxDecParams.mfx.CodecId = decoder_id_name;
 
-    // set memory stream direction accroding to accelearion policy device type
+    // set memory stream direction according to acceleration policy device type
     IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
     GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
     AccelType accel_type = devices.begin()->second.get_type();
@@ -206,85 +230,59 @@ VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                             ", mfxFrameAllocRequest.Type: " << decRequest.Type);
 
     // NB: override NumFrameSuggested preallocation size (how many frames we can hold)
-    size_t preallocated_frames_count = decRequest.NumFrameSuggested;
-    // NB: if you see bunch of WARNING about "cannot get free surface from pool"
-    // and have abundant RAM size then increase `preallocated_frames_count`
+    // if you see bunch of WARNING about "cannot get free surface from pool"
+    // and have abundant RAM size then increase `CfgParam::frames_pool_size_name()`
     // to keep more free surfaces in a round. Otherwise VPL decode pipeline will be waiting
     // till application is freeing unusable surface on its side.
     //
-    auto queue_capacity_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() == CfgParam::frames_pool_size_name();
-    });
-    if (queue_capacity_it != cfg_params.end()) {
-        cv::util::visit(cv::util::overload_lambdas(
-            [&preallocated_frames_count](uint8_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](int8_t value)    { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](uint16_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](int16_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](uint32_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](int32_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](uint64_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](int64_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](float_t value)   { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](double_t value)  { preallocated_frames_count = static_cast<size_t>(value);   },
-            [&preallocated_frames_count](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
-            [&preallocated_frames_count](const std::string& value) {
-                preallocated_frames_count = strtoull_or_throw(value.c_str());
-            }),
-            queue_capacity_it->get_value());
-
+    cv::optional<size_t> preallocated_frames_count_cfg;
+    extract_optional_param_by_name(CfgParam::frames_pool_size_name(),
+                                   cfg_params,
+                                   preallocated_frames_count_cfg);
+    if (preallocated_frames_count_cfg.has_value()) {
         GAPI_LOG_INFO(nullptr, "Try to use CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
-                      preallocated_frames_count << ", for session: " << mfx_session);
+                      preallocated_frames_count_cfg.value() << ", for session: " << mfx_session);
+        try_modify_pool_size_request_param(CfgParam::frames_pool_size_name(),
+                                           preallocated_frames_count_cfg.value(),
+                                           decRequest);
 
     }
-    if (preallocated_frames_count < decRequest.NumFrameMin) {
-        GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
-                                  preallocated_frames_count << ". It must be equal or greater than "
-                                  "mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin);
-        throw std::runtime_error(std::string("Invalid value of param: ") +
-                                 CfgParam::frames_pool_size_name() + ", underflow");
-    } else {
-        if (static_cast<size_t>(std::numeric_limits<mfxU16>::max()) < preallocated_frames_count) {
-            GAPI_LOG_WARNING(nullptr, "Cannot proceed with CfgParam \"" << CfgParam::frames_pool_size_name() << "\": " <<
-                                  preallocated_frames_count << ". It must not be equal than " <<
-                                  std::numeric_limits<mfxU16>::max());
-            throw std::runtime_error(std::string("Invalid value of param: ") +
-                                 CfgParam::frames_pool_size_name() + ", overflow");
-        }
-        decRequest.NumFrameSuggested = static_cast<mfxU16>(preallocated_frames_count);
-        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input for session: " << mfx_session <<
-                            ", mfxFrameAllocRequest.NumFrameMin: " << decRequest.NumFrameMin <<
-                            ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
-                            ", mfxFrameAllocRequest.Type: " << decRequest.Type);
-    }
 
+    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
-                acceleration_policy->create_surface_pool(decRequest, mfxDecParams);
+                acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 
     // Input parameters finished, now initialize decode
-    // create decoder for session accoring to header recovered from source file
+    // create decoder for session according to header recovered from source file
+    GAPI_LOG_INFO(nullptr, "Initialize decoder for session: " << mfx_session <<
+                           ", frame info: " << mfx_frame_info_to_string(mfxDecParams.mfx.FrameInfo));
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error initializing Decode, error: " +
                                  mfxstatus_to_string(sts));
     }
 
-    DecoderParams decoder_param {bitstream, mfxDecParams};
+    return {decode_pool_key, {bitstream, mfxDecParams, preallocated_frames_count_cfg}};
+}
+
+
+ProcessingEngineBase::session_ptr
+VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
+                                          const std::vector<CfgParam>& cfg_params,
+                                          std::shared_ptr<IDataProvider> provider) {
+
+    SessionParam param = prepare_session_param(mfx_session, cfg_params, provider);
 
     // create session
     std::shared_ptr<LegacyDecodeSession> sess_ptr =
                 register_session<LegacyDecodeSession>(mfx_session,
-                                                      std::move(decoder_param),
+                                                      std::move(param.decoder_params),
                                                       provider);
 
-    sess_ptr->init_surface_pool(decode_pool_key);
+    sess_ptr->init_surface_pool(param.decode_pool_key);
     // prepare working decode surface
-    sess_ptr->swap_surface(*this);
+    sess_ptr->swap_decode_surface(*this);
     return sess_ptr;
-}
-
-ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
-    return op(sess);
 }
 
 void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
@@ -293,8 +291,9 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
     GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
 
     // manage memory ownership rely on acceleration policy
+    VPLAccelerationPolicy::FrameConstructorArgs args{ready_surface, sess.session};
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
-                                                                   ready_surface);
+                                                                   args);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
     // pop away synced out object
@@ -310,7 +309,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
         {
             // prepare sync object for new surface
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -331,7 +330,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
@@ -355,9 +354,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
-                                    "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
-            */
+            GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] got MFX_WRN_VIDEO_PARAM_CHANGED");
             return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
@@ -377,7 +374,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             break;
         case MFX_WRN_IN_EXECUTION:
             try {
-                sess.swap_surface(*this);
+                sess.swap_decode_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());

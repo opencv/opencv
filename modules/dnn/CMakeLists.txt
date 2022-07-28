@@ -23,6 +23,10 @@ if(WITH_WEBNN AND HAVE_WEBNN)
   add_definitions(-DHAVE_WEBNN=1)
 endif()
 
+if(HAVE_TIMVX)
+  add_definitions(-DHAVE_TIMVX=1)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
@@ -146,6 +150,11 @@ if(HAVE_TENGINE)
 	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
+if(HAVE_TIMVX)
+    list(APPEND include_dirs ${TIMVX_INCLUDE_DIR})
+    list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
+endif()
+
 set(webnn_srcs "")
 if(NOT EMSCRIPTEN)
   if(HAVE_WEBNN)
@@ -165,24 +174,13 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 set(dnn_runtime_libs "")
-if(INF_ENGINE_TARGET)
-  set(use_nn_builder OFF)
-  if(TARGET inference_engine_nn_builder OR # custom imported target
-     TARGET IE::inference_engine_nn_builder OR # default imported target via InferenceEngineConfig.cmake
-     INF_ENGINE_RELEASE VERSION_LESS "2020000000") # compatibility with older versions on IE
-    set(use_nn_builder ON)
+
+ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
+if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
+  if(NOT HAVE_OPENVINO AND NOT HAVE_NGRAPH)
+    message(FATAL_ERROR "DNN: Inference Engine is not supported without enabled 'nGraph'. Check build configuration.")
   endif()
-  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ${use_nn_builder})  # future: NOT HAVE_NGRAPH
-  if(OPENCV_DNN_IE_NN_BUILDER_2019)
-    message(STATUS "DNN: Enabling Inference Engine NN Builder API support")
-    add_definitions(-DHAVE_DNN_IE_NN_BUILDER_2019=1)
-  endif()
-  list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
-endif()
-if(HAVE_NGRAPH)
-  message(STATUS "DNN: Enabling Inference Engine nGraph API support")
-  add_definitions(-DHAVE_DNN_NGRAPH)
-  list(APPEND dnn_runtime_libs ngraph::ngraph)
+  list(APPEND dnn_runtime_libs ocv.3rdparty.openvino)
 endif()
 
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
@@ -193,7 +191,7 @@ ocv_add_accuracy_tests(${dnn_runtime_libs})
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
-ocv_add_perf_tests(${INF_ENGINE_TARGET}
+ocv_add_perf_tests(${dnn_runtime_libs}
     FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.hpp" "${CMAKE_CURRENT_LIST_DIR}/test/test_common.impl.hpp"
     FILES Src ${perf_srcs}
     FILES Include ${perf_hdrs}

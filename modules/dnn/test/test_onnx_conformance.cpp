@@ -954,7 +954,7 @@ public:
 
         if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
-            default_l1 = 4e-3;
+            default_l1 = 7e-3;
             default_lInf = 2e-2;
         }
         else
@@ -1181,10 +1181,10 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     }
 
     std::vector<std::string> layerNames = net.getUnconnectedOutLayersNames();
-    std::vector< std::vector<Mat> > outputs_;
+    std::vector<Mat> outputs;
     try
     {
-        net.forward(outputs_, layerNames);
+        net.forward(outputs, layerNames);
     }
     catch (...)
     {
@@ -1192,8 +1192,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         applyTestTag(CV_TEST_TAG_DNN_ERROR_FORWARD);
         throw;
     }
-    ASSERT_GE(outputs_.size(), 1);
-    const std::vector<Mat>& outputs = outputs_[0];
+    ASSERT_GE(outputs.size(), 1);
 
     if (checkLayersFallbacks && checkFallbacks(net))
     {

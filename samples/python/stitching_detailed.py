@@ -324,7 +324,10 @@ def main():
                 is_work_scale_set = True
             img = cv.resize(src=full_img, dsize=None, fx=work_scale, fy=work_scale, interpolation=cv.INTER_LINEAR_EXACT)
         if is_seam_scale_set is False:
-            seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            if seam_megapix > 0:
+                seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            else:
+                seam_scale = 1.0
             seam_work_aspect = seam_scale / work_scale
             is_seam_scale_set = True
         img_feat = cv.detail.computeImageFeatures2(finder, img)
@@ -345,9 +348,9 @@ def main():
     img_names_subset = []
     full_img_sizes_subset = []
     for i in range(len(indices)):
-        img_names_subset.append(img_names[indices[i, 0]])
-        img_subset.append(images[indices[i, 0]])
-        full_img_sizes_subset.append(full_img_sizes[indices[i, 0]])
+        img_names_subset.append(img_names[indices[i]])
+        img_subset.append(images[indices[i]])
+        full_img_sizes_subset.append(full_img_sizes[indices[i]])
     images = img_subset
     img_names = img_names_subset
     full_img_sizes = full_img_sizes_subset
@@ -479,7 +482,7 @@ def main():
                 blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
             elif blend_type == "multiband":
                 blender = cv.detail_MultiBandBlender()
-                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
+                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int32))
             elif blend_type == "feather":
                 blender = cv.detail_FeatherBlender()
                 blender.setSharpness(1. / blend_width)
@@ -513,6 +516,5 @@ def main():
 
 
 if __name__ == '__main__':
-    print(__doc__)
     main()
     cv.destroyAllWindows()

@@ -1,6 +1,69 @@
 
                 ChangeLog file for zlib
 
+Changes in 1.2.12 (27 Mar 2022)
+- Cygwin does not have _wopen(), so do not create gzopen_w() there
+- Permit a deflateParams() parameter change as soon as possible
+- Limit hash table inserts after switch from stored deflate
+- Fix bug when window full in deflate_stored()
+- Fix CLEAR_HASH macro to be usable as a single statement
+- Avoid a conversion error in gzseek when off_t type too small
+- Have Makefile return non-zero error code on test failure
+- Avoid some conversion warnings in gzread.c and gzwrite.c
+- Update use of errno for newer Windows CE versions
+- Small speedup to inflate [psumbera]
+- Return an error if the gzputs string length can't fit in an int
+- Add address checking in clang to -w option of configure
+- Don't compute check value for raw inflate if asked to validate
+- Handle case where inflateSync used when header never processed
+- Avoid the use of ptrdiff_t
+- Avoid an undefined behavior of memcpy() in gzappend()
+- Avoid undefined behaviors of memcpy() in gz*printf()
+- Avoid an undefined behavior of memcpy() in _tr_stored_block()
+- Make the names in functions declarations identical to definitions
+- Remove old assembler code in which bugs have manifested
+- Fix deflateEnd() to not report an error at start of raw deflate
+- Add legal disclaimer to README
+- Emphasize the need to continue decompressing gzip members
+- Correct the initialization requirements for deflateInit2()
+- Fix a bug that can crash deflate on some input when using Z_FIXED
+- Assure that the number of bits for deflatePrime() is valid
+- Use a structure to make globals in enough.c evident
+- Use a macro for the printf format of big_t in enough.c
+- Clean up code style in enough.c, update version
+- Use inline function instead of macro for index in enough.c
+- Clarify that prefix codes are counted in enough.c
+- Show all the codes for the maximum tables size in enough.c
+- Add gznorm.c example, which normalizes gzip files
+- Fix the zran.c example to work on a multiple-member gzip file
+- Add tables for crc32_combine(), to speed it up by a factor of 200
+- Add crc32_combine_gen() and crc32_combine_op() for fast combines
+- Speed up software CRC-32 computation by a factor of 1.5 to 3
+- Use atomic test and set, if available, for dynamic CRC tables
+- Don't bother computing check value after successful inflateSync()
+- Correct comment in crc32.c
+- Add use of the ARMv8 crc32 instructions when requested
+- Use ARM crc32 instructions if the ARM architecture has them
+- Explicitly note that the 32-bit check values are 32 bits
+- Avoid adding empty gzip member after gzflush with Z_FINISH
+- Fix memory leak on error in gzlog.c
+- Fix error in comment on the polynomial representation of a byte
+- Clarify gz* function interfaces, referring to parameter names
+- Change macro name in inflate.c to avoid collision in VxWorks
+- Correct typo in blast.c
+- Improve portability of contrib/minizip
+- Fix indentation in minizip's zip.c
+- Replace black/white with allow/block. (theresa-m)
+- minizip warning fix if MAXU32 already defined. (gvollant)
+- Fix unztell64() in minizip to work past 4GB. (Daniël Hörchner)
+- Clean up minizip to reduce warnings for testing
+- Add fallthrough comments for gcc
+- Eliminate use of ULL constants
+- Separate out address sanitizing from warnings in configure
+- Remove destructive aspects of make distclean
+- Check for cc masquerading as gcc or clang in configure
+- Fix crc32.c to compile local functions only if used
+
 Changes in 1.2.11 (15 Jan 2017)
 - Fix deflate stored bug when pulling last block from window
 - Permit immediate deflateParams changes before any deflate input
@@ -511,7 +574,7 @@ Changes in 1.2.3.5 (8 Jan 2010)
 - Don't use _vsnprintf on later versions of MSVC [Lowman]
 - Add CMake build script and input file [Lowman]
 - Update contrib/minizip to 1.1 [Svensson, Vollant]
-- Moved nintendods directory from contrib to .
+- Moved nintendods directory from contrib to root
 - Replace gzio.c with a new set of routines with the same functionality
 - Add gzbuffer(), gzoffset(), gzclose_r(), gzclose_w() as part of above
 - Update contrib/minizip to 1.1b
@@ -685,7 +748,7 @@ Changes in 1.2.2.4 (11 July 2005)
 - Be more strict on incomplete code sets in inflate_table() and increase
   ENOUGH and MAXD -- this repairs a possible security vulnerability for
   invalid inflate input.  Thanks to Tavis Ormandy and Markus Oberhumer for
-  discovering the vulnerability and providing test cases.
+  discovering the vulnerability and providing test cases
 - Add ia64 support to configure for HP-UX [Smith]
 - Add error return to gzread() for format or i/o error [Levin]
 - Use malloc.h for OS/2 [Necasek]
@@ -721,7 +784,7 @@ Changes in 1.2.2.2 (30 December 2004)
 - Add Z_FIXED strategy option to deflateInit2() to force fixed trees
 - Add updated make_vms.com [Coghlan], update README
 - Create a new "examples" directory, move gzappend.c there, add zpipe.c,
-  fitblk.c, gzlog.[ch], gzjoin.c, and zlib_how.html.
+  fitblk.c, gzlog.[ch], gzjoin.c, and zlib_how.html
 - Add FAQ entry and comments in deflate.c on uninitialized memory access
 - Add Solaris 9 make options in configure [Gilbert]
 - Allow strerror() usage in gzio.c for STDC
@@ -792,7 +855,7 @@ Changes in 1.2.1.1 (9 January 2004)
 - Fix a big fat bug in inftrees.c that prevented decoding valid
   dynamic blocks with only literals and no distance codes --
   Thanks to "Hot Emu" for the bug report and sample file
-- Add a note to puff.c on no distance codes case.
+- Add a note to puff.c on no distance codes case
 
 Changes in 1.2.1 (17 November 2003)
 - Remove a tab in contrib/gzappend/gzappend.c
@@ -1036,14 +1099,14 @@ Changes in 1.2.0 (9 March 2003)
 - Add contrib/puff/ simple inflate for deflate format description
 
 Changes in 1.1.4 (11 March 2002)
-- ZFREE was repeated on same allocation on some error conditions.
+- ZFREE was repeated on same allocation on some error conditions
   This creates a security problem described in
   http://www.zlib.org/advisory-2002-03-11.txt
 - Returned incorrect error (Z_MEM_ERROR) on some invalid data
 - Avoid accesses before window for invalid distances with inflate window
-  less than 32K.
+  less than 32K
 - force windowBits > 8 to avoid a bug in the encoder for a window size
-  of 256 bytes. (A complete fix will be available in 1.1.5).
+  of 256 bytes. (A complete fix will be available in 1.1.5)
 
 Changes in 1.1.3 (9 July 1998)
 - fix "an inflate input buffer bug that shows up on rare but persistent
@@ -1117,7 +1180,7 @@ Changes in 1.1.1 (27 Feb 98)
 - remove block truncation heuristic which had very marginal effect for zlib
   (smaller lit_bufsize than in gzip 1.2.4) and degraded a little the
   compression ratio on some files. This also allows inlining _tr_tally for
-  matches in deflate_slow.
+  matches in deflate_slow
 - added msdos/Makefile.w32 for WIN32 Microsoft Visual C++ (Bob Frazier)
 
 Changes in 1.1.0 (24 Feb 98)
@@ -1162,7 +1225,7 @@ Changes in 1.0.8 (27 Jan 1998)
 - include sys/types.h to get off_t on some systems (Marc Lehmann & QingLong)
 - use constant arrays for the static trees in trees.c instead of computing
   them at run time (thanks to Ken Raeburn for this suggestion). To create
-  trees.h, compile with GEN_TREES_H and run "make test".
+  trees.h, compile with GEN_TREES_H and run "make test"
 - check return code of example in "make test" and display result
 - pass minigzip command line options to file_compress
 - simplifying code of inflateSync to avoid gcc 2.8 bug
@@ -1201,12 +1264,12 @@ Changes in 1.0.6 (19 Jan 1998)
 - add functions gzprintf, gzputc, gzgetc, gztell, gzeof, gzseek, gzrewind and
   gzsetparams (thanks to Roland Giersig and Kevin Ruland for some of this code)
 - Fix a deflate bug occurring only with compression level 0 (thanks to
-  Andy Buckler for finding this one).
-- In minigzip, pass transparently also the first byte for .Z files.
+  Andy Buckler for finding this one)
+- In minigzip, pass transparently also the first byte for .Z files
 - return Z_BUF_ERROR instead of Z_OK if output buffer full in uncompress()
 - check Z_FINISH in inflate (thanks to Marc Schluper)
 - Implement deflateCopy (thanks to Adam Costello)
-- make static libraries by default in configure, add --shared option.
+- make static libraries by default in configure, add --shared option
 - move MSDOS or Windows specific files to directory msdos
 - suppress the notion of partial flush to simplify the interface
   (but the symbol Z_PARTIAL_FLUSH is kept for compatibility with 1.0.4)
@@ -1218,7 +1281,7 @@ Changes in 1.0.6 (19 Jan 1998)
 - added Makefile.nt (thanks to Stephen Williams)
 - added the unsupported "contrib" directory:
    contrib/asm386/ by Gilles Vollant <info@winimage.com>
-        386 asm code replacing longest_match().
+        386 asm code replacing longest_match()
    contrib/iostream/ by Kevin Ruland <kevin@rodin.wustl.edu>
         A C++ I/O streams interface to the zlib gz* functions
    contrib/iostream2/  by Tyge Løvset <Tyge.Lovset@cmr.no>
@@ -1226,7 +1289,7 @@ Changes in 1.0.6 (19 Jan 1998)
    contrib/untgz/  by "Pedro A. Aranda Guti\irrez" <paag@tid.es>
         A very simple tar.gz file extractor using zlib
    contrib/visual-basic.txt by Carlos Rios <c_rios@sonda.cl>
-        How to use compress(), uncompress() and the gz* functions from VB.
+        How to use compress(), uncompress() and the gz* functions from VB
 - pass params -f (filtered data), -h (huffman only), -1 to -9 (compression
   level) in minigzip (thanks to Tom Lane)
 
@@ -1235,8 +1298,8 @@ Changes in 1.0.6 (19 Jan 1998)
 - add undocumented function inflateSyncPoint() (hack for Paul Mackerras)
 - add undocumented function zError to convert error code to string
   (for Tim Smithers)
-- Allow compilation of gzio with -DNO_DEFLATE to avoid the compression code.
-- Use default memcpy for Symantec MSDOS compiler.
+- Allow compilation of gzio with -DNO_DEFLATE to avoid the compression code
+- Use default memcpy for Symantec MSDOS compiler
 - Add EXPORT keyword for check_func (needed for Windows DLL)
 - add current directory to LD_LIBRARY_PATH for "make test"
 - create also a link for libz.so.1
@@ -1249,7 +1312,7 @@ Changes in 1.0.6 (19 Jan 1998)
 - allow compilation with ANSI keywords only enabled for TurboC in large model
 - avoid "versionString"[0] (Borland bug)
 - add NEED_DUMMY_RETURN for Borland
-- use variable z_verbose for tracing in debug mode (L. Peter Deutsch).
+- use variable z_verbose for tracing in debug mode (L. Peter Deutsch)
 - allow compilation with CC
 - defined STDC for OS/2 (David Charlap)
 - limit external names to 8 chars for MVS (Thomas Lund)
@@ -1259,7 +1322,7 @@ Changes in 1.0.6 (19 Jan 1998)
 - use _fdopen instead of fdopen for MSC >= 6.0 (Thomas Fanslau)
 - added makelcc.bat for lcc-win32 (Tom St Denis)
 - in Makefile.dj2, use copy and del instead of install and rm (Frank Donahoe)
-- Avoid expanded $Id$. Use "rcs -kb" or "cvs admin -kb" to avoid Id expansion.
+- Avoid expanded $Id$. Use "rcs -kb" or "cvs admin -kb" to avoid Id expansion
 - check for unistd.h in configure (for off_t)
 - remove useless check parameter in inflate_blocks_free
 - avoid useless assignment of s->check to itself in inflate_blocks_new
@@ -1280,7 +1343,7 @@ Changes in 1.0.5 (3 Jan 98)
 Changes in 1.0.4 (24 Jul 96)
 - In very rare conditions, deflate(s, Z_FINISH) could fail to produce an EOF
   bit, so the decompressor could decompress all the correct data but went
-  on to attempt decompressing extra garbage data. This affected minigzip too.
+  on to attempt decompressing extra garbage data. This affected minigzip too
 - zlibVersion and gzerror return const char* (needed for DLL)
 - port to RISCOS (no fdopen, no multiple dots, no unlink, no fileno)
 - use z_error only for DEBUG (avoid problem with DLLs)
@@ -1310,7 +1373,7 @@ Changes in 1.0.1 (20 May 96) [1.0 skipped to avoid confusion]
 - fix array overlay in deflate.c which sometimes caused bad compressed data
 - fix inflate bug with empty stored block
 - fix MSDOS medium model which was broken in 0.99
-- fix deflateParams() which could generate bad compressed data.
+- fix deflateParams() which could generate bad compressed data
 - Bytef is define'd instead of typedef'ed (work around Borland bug)
 - added an INDEX file
 - new makefiles for DJGPP (Makefile.dj2), 32-bit Borland (Makefile.b32),
@@ -1331,7 +1394,7 @@ Changes in 0.99 (27 Jan 96)
 - allow preset dictionary shared between compressor and decompressor
 - allow compression level 0 (no compression)
 - add deflateParams in zlib.h: allow dynamic change of compression level
-  and compression strategy.
+  and compression strategy
 - test large buffers and deflateParams in example.c
 - add optional "configure" to build zlib as a shared library
 - suppress Makefile.qnx, use configure instead
@@ -1373,30 +1436,30 @@ Changes in 0.99 (27 Jan 96)
 - use STDC instead of __GO32__ to avoid redeclaring exit, calloc, etc...
 - use Z_BINARY instead of BINARY
 - document that gzclose after gzdopen will close the file
-- allow "a" as mode in gzopen.
+- allow "a" as mode in gzopen
 - fix error checking in gzread
 - allow skipping .gz extra-field on pipes
 - added reference to Perl interface in README
 - put the crc table in FAR data (I dislike more and more the medium model :)
 - added get_crc_table
-- added a dimension to all arrays (Borland C can't count).
+- added a dimension to all arrays (Borland C can't count)
 - workaround Borland C bug in declaration of inflate_codes_new & inflate_fast
 - guard against multiple inclusion of *.h (for precompiled header on Mac)
-- Watcom C pretends to be Microsoft C small model even in 32 bit mode.
+- Watcom C pretends to be Microsoft C small model even in 32 bit mode
 - don't use unsized arrays to avoid silly warnings by Visual C++:
      warning C4746: 'inflate_mask' : unsized array treated as  '__far'
-     (what's wrong with far data in far model?).
+     (what's wrong with far data in far model?)
 - define enum out of inflate_blocks_state to allow compilation with C++
 
 Changes in 0.95 (16 Aug 95)
 - fix MSDOS small and medium model (now easier to adapt to any compiler)
 - inlined send_bits
 - fix the final (:-) bug for deflate with flush (output was correct but
-  not completely flushed in rare occasions).
+  not completely flushed in rare occasions)
 - default window size is same for compression and decompression
-  (it's now sufficient to set MAX_WBITS in zconf.h).
+  (it's now sufficient to set MAX_WBITS in zconf.h)
 - voidp -> voidpf and voidnp -> voidp (for consistency with other
-  typedefs and because voidnp was not near in large model).
+  typedefs and because voidnp was not near in large model)
 
 Changes in 0.94 (13 Aug 95)
 - support MSDOS medium model
@@ -1405,12 +1468,12 @@ Changes in 0.94 (13 Aug 95)
 - added support for VMS
 - allow a compression level in gzopen()
 - gzflush now calls fflush
-- For deflate with flush, flush even if no more input is provided.
+- For deflate with flush, flush even if no more input is provided
 - rename libgz.a as libz.a
 - avoid complex expression in infcodes.c triggering Turbo C bug
 - work around a problem with gcc on Alpha (in INSERT_STRING)
 - don't use inline functions (problem with some gcc versions)
-- allow renaming of Byte, uInt, etc... with #define.
+- allow renaming of Byte, uInt, etc... with #define
 - avoid warning about (unused) pointer before start of array in deflate.c
 - avoid various warnings in gzio.c, example.c, infblock.c, adler32.c, zutil.c
 - avoid reserved word 'new' in trees.c
@@ -1429,7 +1492,7 @@ Changes in 0.92 (3 May 95)
 - no memcpy on Pyramid
 - suppressed inftest.c
 - optimized fill_window, put longest_match inline for gcc
-- optimized inflate on stored blocks.
+- optimized inflate on stored blocks
 - untabify all sources to simplify patches
 
 Changes in 0.91 (2 May 95)
@@ -1447,7 +1510,7 @@ Changes in 0.9 (1 May 95)
 - let again gzread copy uncompressed data unchanged (was working in 0.71)
 - deflate(Z_FULL_FLUSH), inflateReset and inflateSync are now fully implemented
 - added a test of inflateSync in example.c
-- moved MAX_WBITS to zconf.h because users might want to change that.
+- moved MAX_WBITS to zconf.h because users might want to change that
 - document explicitly that zalloc(64K) on MSDOS must return a normalized
   pointer (zero offset)
 - added Makefiles for Microsoft C, Turbo C, Borland C++
@@ -1456,7 +1519,7 @@ Changes in 0.9 (1 May 95)
 Changes in 0.8 (29 April 95)
 - added fast inflate (inffast.c)
 - deflate(Z_FINISH) now returns Z_STREAM_END when done. Warning: this
-  is incompatible with previous versions of zlib which returned Z_OK.
+  is incompatible with previous versions of zlib which returned Z_OK
 - work around a TurboC compiler bug (bad code for b << 0, see infutil.h)
   (actually that was not a compiler bug, see 0.81 above)
 - gzread no longer reads one extra byte in certain cases
@@ -1466,50 +1529,50 @@ Changes in 0.8 (29 April 95)
 
 Changes in 0.71 (14 April 95)
 - Fixed more MSDOS compilation problems :( There is still a bug with
-  TurboC large model.
+  TurboC large model
 
 Changes in 0.7 (14 April 95)
-- Added full inflate support.
+- Added full inflate support
 - Simplified the crc32() interface. The pre- and post-conditioning
   (one's complement) is now done inside crc32(). WARNING: this is
-  incompatible with previous versions; see zlib.h for the new usage.
+  incompatible with previous versions; see zlib.h for the new usage
 
 Changes in 0.61 (12 April 95)
-- workaround for a bug in TurboC. example and minigzip now work on MSDOS.
+- workaround for a bug in TurboC. example and minigzip now work on MSDOS
 
 Changes in 0.6 (11 April 95)
 - added minigzip.c
 - added gzdopen to reopen a file descriptor as gzFile
-- added transparent reading of non-gziped files in gzread.
+- added transparent reading of non-gziped files in gzread
 - fixed bug in gzread (don't read crc as data)
-- fixed bug in destroy (gzio.c) (don't return Z_STREAM_END for gzclose).
+- fixed bug in destroy (gzio.c) (don't return Z_STREAM_END for gzclose)
 - don't allocate big arrays in the stack (for MSDOS)
 - fix some MSDOS compilation problems
 
 Changes in 0.5:
 - do real compression in deflate.c. Z_PARTIAL_FLUSH is supported but
-  not yet Z_FULL_FLUSH.
+  not yet Z_FULL_FLUSH
 - support decompression but only in a single step (forced Z_FINISH)
-- added opaque object for zalloc and zfree.
+- added opaque object for zalloc and zfree
 - added deflateReset and inflateReset
-- added a variable zlib_version for consistency checking.
-- renamed the 'filter' parameter of deflateInit2 as 'strategy'.
-  Added Z_FILTERED and Z_HUFFMAN_ONLY constants.
+- added a variable zlib_version for consistency checking
+- renamed the 'filter' parameter of deflateInit2 as 'strategy'
+  Added Z_FILTERED and Z_HUFFMAN_ONLY constants
 
 Changes in 0.4:
-- avoid "zip" everywhere, use zlib instead of ziplib.
+- avoid "zip" everywhere, use zlib instead of ziplib
 - suppress Z_BLOCK_FLUSH, interpret Z_PARTIAL_FLUSH as block flush
-  if compression method == 8.
+  if compression method == 8
 - added adler32 and crc32
 - renamed deflateOptions as deflateInit2, call one or the other but not both
-- added the method parameter for deflateInit2.
+- added the method parameter for deflateInit2
 - added inflateInit2
 - simplied considerably deflateInit and inflateInit by not supporting
   user-provided history buffer. This is supported only in deflateInit2
-  and inflateInit2.
+  and inflateInit2
 
 Changes in 0.3:
 - prefix all macro names with Z_
-- use Z_FINISH instead of deflateEnd to finish compression.
+- use Z_FINISH instead of deflateEnd to finish compression
 - added Z_HUFFMAN_ONLY
 - added gzerror()

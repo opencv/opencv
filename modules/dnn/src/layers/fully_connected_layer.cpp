@@ -148,12 +148,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return axis == 1;
+#endif
+
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               (backendId == DNN_BACKEND_WEBNN && axis == 1) ||
-               (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
-                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
+               (backendId == DNN_BACKEND_WEBNN && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -570,23 +573,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::FullyConnectedLayer ieLayer(name);
-
-        const int outNum = blobs[0].size[0];
-        ieLayer.setOutputNum(outNum);
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        addConstantData("weights", wrapToInfEngineBlob(blobs[0], {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1], 1, 1}, InferenceEngine::Layout::OIHW), l);
-        if (bias)
-            addConstantData("biases", wrapToInfEngineBlob(blobs[1], {(size_t)outNum}, InferenceEngine::Layout::C), l);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -633,29 +619,41 @@ public:
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);
         Mat outputMultiplier(1, numOutput, CV_32F);
+        bool perChannel = params.get<bool>("per_channel", true);
 
-        double realMin, realMax, weightsScale;
-        for( int i = 0; i < numOutput; i++ )
+        if (perChannel) // per-Channel quantization.
         {
-            // Quantize weights
-            cv::minMaxIdx(weightsMat.row(i), &realMin, &realMax);
-            realMin = std::min(realMin, 0.0);
-            realMax = std::max(realMax, 0.0);
-            weightsScale = (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
-            weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+            for (int i = 0; i < numOutput; i++)
+            {
+                double weightsScale = getWeightScale(weightsMat.row(i));
 
-            // Quantize biases
+                weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+                float biasScale = inputScale * weightsScale;
+                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
+        }
+        else // per-Tensor quantization.
+        {
+            double weightsScale = getWeightScale(weightsMat);
+
+            weightsMat.convertTo(weightsQuantized, CV_8S, 1.f/weightsScale);
             float biasScale = inputScale * weightsScale;
-            biasQuantized.at<int>(i) = (int)std::round(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
 
-            // Store multiplier
-            outputMultiplier.at<float>(i) = biasScale / outputScale;
+            for (int i = 0; i < numOutput; i++)
+            {
+                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
         }
 
         params.blobs.clear();
+        params.set("per_channel", perChannel);
         params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
         params.blobs.push_back(biasQuantized);
         params.blobs.push_back(outputMultiplier);
+        params.set("input_scale", inputScale);
+        params.set("input_zeropoint", inputZp);
         return true;
     }
 

@@ -122,28 +122,38 @@ class Mat:
         (dtype, ctype) = flags.dtype()
         elsize = np.dtype(dtype).itemsize
 
-        ptr = m['data']
-        dataptr = int(ptr)
-        length = (int(m['dataend']) - dataptr) // elsize
-        start = (int(m['datastart']) - dataptr) // elsize
+        shape = size.to_numpy()
+        steps = np.asarray([int(m['step']['p'][i]) for i in range(len(shape))], dtype=np.int64)
 
-        if length == 0:
+        ptr = m['data']
+        # either we are default-constructed or sizes are zero
+        if int(ptr) == 0 or np.prod(shape * steps) == 0:
             self.mat = np.array([])
             self.view = self.mat
             return
 
+        # we don't want to show excess brackets
+        if flags.channels() != 1:
+            shape = np.append(shape, flags.channels())
+            steps = np.append(steps, elsize)
+
+        # get the length of contiguous array from data to the last element of the matrix
+        length = 1 + np.sum((shape - 1) * steps) // elsize
+
         if dtype != np.float16:
+            # read all elements into self.mat
             ctype = gdb.lookup_type(ctype)
             ptr = ptr.cast(ctype.array(length - 1).pointer()).dereference()
             self.mat = np.array([ptr[i] for i in range(length)], dtype=dtype)
         else:
+            # read as uint16_t and then reinterpret the bytes as float16
             u16 = gdb.lookup_type('uint16_t')
             ptr = ptr.cast(u16.array(length - 1).pointer()).dereference()
             self.mat = np.array([ptr[i] for i in range(length)], dtype=np.uint16)
             self.mat = self.mat.view(np.float16)
 
-        steps = np.asarray([int(m['step']['p'][i]) for i in range(size.dims())], dtype=np.int64)
-        self.view = np.lib.stride_tricks.as_strided(self.mat[start:], shape=size.to_numpy(), strides=steps)
+        # numpy will do the heavy lifting of strided access
+        self.view = np.lib.stride_tricks.as_strided(self.mat, shape=shape, strides=steps)
 
     def __iter__(self):
         return iter({'data': stri(self.view)}.items())

@@ -28,13 +28,41 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
 
     GstVideoMeta* videoMeta = gst_buffer_get_video_meta(m_buffer);
     if (videoMeta != nullptr) {
-        m_strides = { videoMeta->stride[0], videoMeta->stride[1] };
-        m_offsets = { videoMeta->offset[0], videoMeta->offset[1] };
+        switch (m_frameDesc.fmt) {
+            case cv::MediaFormat::NV12: {
+                m_strides = { videoMeta->stride[0], videoMeta->stride[1] };
+                m_offsets = { videoMeta->offset[0], videoMeta->offset[1] };
+                break;
+            }
+            case cv::MediaFormat::GRAY: {
+                m_strides = { videoMeta->stride[0]};
+                m_offsets = { videoMeta->offset[0]};
+                break;
+            }
+            default: {
+                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                break;
+            }
+        }
     } else {
-        m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0),
-                      GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 1) };
-        m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0),
-                      GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 1) };
+        switch (m_frameDesc.fmt) {
+            case cv::MediaFormat::NV12: {
+                m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0),
+                              GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 1) };
+                m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0),
+                              GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 1) };
+                break;
+            }
+            case cv::MediaFormat::GRAY: {
+                m_strides = { GST_VIDEO_INFO_PLANE_STRIDE(m_videoInfo.get(), 0)};
+                m_offsets = { GST_VIDEO_INFO_PLANE_OFFSET(m_videoInfo.get(), 0)};
+                break;
+            }
+            default: {
+                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                break;
+            }
+        }
     }
 }
 
@@ -71,8 +99,10 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
 
         if(!m_isMapped.load(std::memory_order_relaxed)) {
 
-            GAPI_Assert(GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 2);
-            GAPI_Assert(GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_NV12);
+            GAPI_Assert(GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 2 ||
+                        GST_VIDEO_INFO_N_PLANES(m_videoInfo.get()) == 1);
+            GAPI_Assert(GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_NV12 ||
+                        GST_VIDEO_INFO_FORMAT(m_videoInfo.get()) == GST_VIDEO_FORMAT_GRAY8);
 
             // TODO: Use RAII for map/unmap
             if (access == cv::MediaFrame::Access::W) {
@@ -85,27 +115,56 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
             }
 
             GAPI_Assert(GST_VIDEO_FRAME_PLANE_STRIDE(&m_videoFrame, 0) == m_strides[0]);
-            GAPI_Assert(GST_VIDEO_FRAME_PLANE_STRIDE(&m_videoFrame, 1) == m_strides[1]);
             GAPI_Assert(GST_VIDEO_FRAME_PLANE_OFFSET(&m_videoFrame, 0) == m_offsets[0]);
-            GAPI_Assert(GST_VIDEO_FRAME_PLANE_OFFSET(&m_videoFrame, 1) == m_offsets[1]);
+            if (m_frameDesc.fmt == cv::MediaFormat::NV12) {
+                GAPI_Assert(GST_VIDEO_FRAME_PLANE_STRIDE(&m_videoFrame, 1) == m_strides[1]);
+                GAPI_Assert(GST_VIDEO_FRAME_PLANE_OFFSET(&m_videoFrame, 1) == m_offsets[1]);
+            }
 
             m_isMapped.store(true, std::memory_order_release);
         }
     }
 
-    cv::MediaFrame::View::Ptrs ps {
-        static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[0], // Y-plane
-        static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[1], // UV-plane
-        nullptr,
-        nullptr
-    };
+    cv::MediaFrame::View::Ptrs ps;
+    cv::MediaFrame::View::Strides ss;
 
-    cv::MediaFrame::View::Strides ss = {
-        static_cast<std::size_t>(m_strides[0]), // Y-plane stride
-        static_cast<std::size_t>(m_strides[1]), // UV-plane stride
-        0u,
-        0u
-    };
+    switch (m_frameDesc.fmt) {
+        case cv::MediaFormat::NV12: {
+            ps = {
+                static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[0], // Y-plane
+                static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[1], // UV-plane
+                nullptr,
+                nullptr
+            };
+            ss = {
+                static_cast<std::size_t>(m_strides[0]), // Y-plane stride
+                static_cast<std::size_t>(m_strides[1]), // UV-plane stride
+                0u,
+                0u
+            };
+            break;
+        }
+        case cv::MediaFormat::GRAY: {
+            ps = {
+                static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(&m_videoFrame, 0)) + m_offsets[0], // Y-plane
+                nullptr,
+                nullptr,
+                nullptr
+            };
+            ss = {
+                static_cast<std::size_t>(m_strides[0]), // Y-plane stride
+                0u,
+                0u,
+                0u
+            };
+            break;
+        }
+        default: {
+            GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+            break;
+        }
+    }
+
 
     --thread_counters;
     return cv::MediaFrame::View(std::move(ps), std::move(ss));

@@ -201,7 +201,16 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
     cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::imshow(mainWindowName, frame);
+    cv::Mat resized;
+    if (std::fabs(mZoom - 1.) > 0.001f)
+    {
+        cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
+    }
+    else
+    {
+        resized = frame;
+    }
+    cv::imshow(mainWindowName, resized);
     cv::waitKey(300);
 }
 
@@ -266,6 +275,8 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                    static_cast<float>(mCalibData->imageSize.width * mCalibData->imageSize.width)) / 20.0;
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
+    mSaveFrames = capParams.saveFrames;
+    mZoom = capParams.zoom;
 
     switch(mBoardType)
     {
@@ -291,9 +302,13 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
 cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
 {
     cv::Mat frameCopy;
+    cv::Mat frameCopyToSave;
     frame.copyTo(frameCopy);
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
+
+    if(mSaveFrames)
+        frame.copyTo(frameCopyToSave);
 
     switch(mBoardType)
     {
@@ -322,6 +337,10 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);
+
+                if(mSaveFrames)
+                    mCalibData->allFrames.push_back(frameCopyToSave);
+
                 mCapuredFrames++;
             }
             else {

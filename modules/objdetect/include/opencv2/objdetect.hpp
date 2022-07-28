@@ -383,7 +383,7 @@ public:
          };
     enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
 
-    /**@brief Creates the HOG descriptor and detector with default params.
+    /**@brief Creates the HOG descriptor and detector with default parameters.
 
     aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
     */
@@ -419,6 +419,8 @@ public:
     {}
 
     /** @overload
+
+    Creates the HOG descriptor and detector and loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
     @param filename The file name containing HOGDescriptor properties and coefficients for the linear SVM classifier.
     */
     CV_WRAP HOGDescriptor(const String& filename)
@@ -457,19 +459,19 @@ public:
     */
     CV_WRAP virtual void setSVMDetector(InputArray svmdetector);
 
-    /** @brief Reads HOGDescriptor parameters from a cv::FileNode.
+    /** @brief Reads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file node.
     @param fn File node
     */
     virtual bool read(FileNode& fn);
 
-    /** @brief Stores HOGDescriptor parameters in a cv::FileStorage.
+    /** @brief Stores HOGDescriptor parameters and coefficients for the linear SVM classifier in a file storage.
     @param fs File storage
     @param objname Object name
     */
     virtual void write(FileStorage& fs, const String& objname) const;
 
-    /** @brief loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
-    @param filename Path of the file to read.
+    /** @brief loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file
+    @param filename Name of the file to read.
     @param objname The optional name of the node to read (if empty, the first top-level node will be used).
     */
     CV_WRAP virtual bool load(const String& filename, const String& objname = String());
@@ -542,13 +544,14 @@ public:
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
     @param scale Coefficient of the detection window increase.
-    @param finalThreshold Final threshold
+    @param groupThreshold Coefficient to regulate the similarity threshold. When detected, some objects can be covered
+    by many rectangles. 0 means not to perform grouping.
     @param useMeanshiftGrouping indicates grouping algorithm
     */
     CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   CV_OUT std::vector<double>& foundWeights, double hitThreshold = 0,
                                   Size winStride = Size(), Size padding = Size(), double scale = 1.05,
-                                  double finalThreshold = 2.0,bool useMeanshiftGrouping = false) const;
+                                  double groupThreshold = 2.0, bool useMeanshiftGrouping = false) const;
 
     /** @brief Detects objects of different sizes in the input image. The detected objects are returned as a list
     of rectangles.
@@ -560,13 +563,14 @@ public:
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
     @param scale Coefficient of the detection window increase.
-    @param finalThreshold Final threshold
+    @param groupThreshold Coefficient to regulate the similarity threshold. When detected, some objects can be covered
+    by many rectangles. 0 means not to perform grouping.
     @param useMeanshiftGrouping indicates grouping algorithm
     */
     virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold = 0, Size winStride = Size(),
                                   Size padding = Size(), double scale = 1.05,
-                                  double finalThreshold = 2.0, bool useMeanshiftGrouping = false) const;
+                                  double groupThreshold = 2.0, bool useMeanshiftGrouping = false) const;
 
     /** @brief  Computes gradients and quantized gradient orientations.
     @param img Matrix contains the image to be computed

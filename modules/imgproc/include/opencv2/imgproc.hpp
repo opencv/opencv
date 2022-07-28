@@ -118,7 +118,7 @@ sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_
 where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
 f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-resize for details.
+#resize for details.
 
 @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
@@ -1576,7 +1576,7 @@ CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
 For every pixel \f$ (x, y) \f$ in the source image, the function calculates the sum of squares of those neighboring
 pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
 
-The unnormalized square box filter can be useful in computing local image statistics such as the the local
+The unnormalized square box filter can be useful in computing local image statistics such as the local
 variance and standard deviation around the neighborhood of a pixel.
 
 @param src input image
@@ -2345,7 +2345,7 @@ way:
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
 @endcode
 To shrink an image, it will generally look best with #INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with c#INTER_CUBIC (slow) or #INTER_LINEAR
+enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
 @param src input image.
@@ -2437,7 +2437,7 @@ The function remap transforms the source image using the specified map:
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using convertMaps. The reason you might want to
+\f$map_1\f$, or fixed-point maps created by using #convertMaps. The reason you might want to
 convert from floating to fixed-point representations of a map is that they can yield much faster
 (\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
@@ -2447,7 +2447,7 @@ This function cannot operate in-place.
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
-CV_32FC1, or CV_32FC2. See convertMaps for details on converting a floating point
+CV_32FC1, or CV_32FC2. See #convertMaps for details on converting a floating point
 representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
@@ -2472,7 +2472,7 @@ options ( (map1.type(), map2.type()) \f$\rightarrow\f$ (dstmap1.type(), dstmap2.
 supported:
 
 - \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. This is the
-most frequently used conversion operation, in which the original floating-point maps (see remap )
+most frequently used conversion operation, in which the original floating-point maps (see #remap)
 are converted to a more compact and much faster fixed-point representation. The first output array
 contains the rounded coordinates and the second array (created only when nninterpolation=false )
 contains indices in the interpolation tables.
@@ -3559,10 +3559,11 @@ a mask and then extract the contour, or copy the region to another image, and so
 function unless the #FLOODFILL_MASK_ONLY flag is set in the second variant of the function. See
 the details below.
 @param mask Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels
-taller than image. Since this is both an input and output parameter, you must take responsibility
-of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
+taller than image. If an empty Mat is passed it will be created automatically. Since this is both an
+input and output parameter, you must take responsibility of initializing it.
+Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
-mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
+mask corresponding to filled pixels in the image are set to 1 or to the specified value in flags
 as described below. Additionally, the function fills the border of the mask with ones to simplify
 internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
@@ -4832,13 +4833,11 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
-/** @brief Line iterator
+/** @brief Class for iterating over all pixels on a raster line segment.
 
-The class is used to iterate over all the pixels on the raster line
-segment connecting two specified points.
-
-The class LineIterator is used to get each pixel of a raster line. It
-can be treated as versatile implementation of the Bresenham algorithm
+The class LineIterator is used to get each pixel of a raster line connecting
+two specified points.
+It can be treated as a versatile implementation of the Bresenham algorithm
 where you can stop at each pixel and do some extra processing, for
 example, grab pixel values along the line or draw a line with an effect
 (for example, with XOR operation).
@@ -4867,14 +4866,19 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief initializes the iterator
+    /** @brief Initializes iterator object for the given line and image.
 
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters;
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped on the image boundaries.
+
+    @param img Underlying image.
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
@@ -4907,16 +4911,23 @@ public:
     }
     void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
 
-    /** @brief returns pointer to the current pixel
+    /** @brief Returns pointer to the current pixel.
     */
     uchar* operator *();
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the prefix version (++it).
     */
     LineIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the postfix version (it++).
     */
     LineIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
+
+    /** @brief Returns coordinates of the current pixel.
     */
     Point pos() const;
 

@@ -118,5 +118,22 @@ class stitching_compose_panorama_args(NewOpenCVTests):
         assert result == 0
 
 
+class stitching_matches_info_test(NewOpenCVTests):
+
+    def test_simple(self):
+        finder = cv.ORB.create()
+        img1 = self.get_sample('stitching/a1.png')
+        img2 = self.get_sample('stitching/a2.png')
+
+        img_feat1 = cv.detail.computeImageFeatures2(finder, img1)
+        img_feat2 = cv.detail.computeImageFeatures2(finder, img2)
+
+        matcher = cv.detail.BestOf2NearestMatcher_create()
+        matches_info = matcher.apply(img_feat1, img_feat2)
+
+        self.assertIsNotNone(matches_info.matches)
+        self.assertIsNotNone(matches_info.inliers_mask)
+
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

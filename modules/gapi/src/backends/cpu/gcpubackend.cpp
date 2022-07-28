@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2021 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -27,6 +27,7 @@
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
 #include "utils/itt.hpp"
+#include "logger.hpp"
 
 // FIXME: Is there a way to take a typed graph (our GModel),
 // and create a new typed graph _ATOP_ of that (by extending with a couple of
@@ -88,7 +89,7 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         {
         case NodeType::OP:
         {
-            m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+            m_opNodes.push_back(nh);
 
             // If kernel is stateful then prepare storage for its state.
             GCPUKernel k = gcm.metadata(nh).get<CPUUnit>().k;
@@ -107,21 +108,12 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);
             }
-            //preallocate internal Mats in advance
-            if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
-            {
-                const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
-                createMat(mat_desc, mat);
-            }
             break;
         }
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));
         }
     }
-
-    // For each stateful kernel call 'setup' user callback to initialize state.
-    setupKernelStates();
+    makeReshape();
 }
 
 // FIXME: Document what it does
@@ -176,9 +168,44 @@ void cv::gimpl::GCPUExecutable::setupKernelStates()
     }
 }
 
+void cv::gimpl::GCPUExecutable::makeReshape() {
+    // Prepare the execution script
+    m_script.clear();
+    for (auto &nh : m_opNodes) {
+        m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+    }
+
+    // Preallocate internal mats
+    for (auto& nh : m_dataNodes) {
+        const auto& desc = m_gm.metadata(nh).get<Data>();
+        if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT) {
+            const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
+            auto& mat = m_res.slot<cv::Mat>()[desc.rc];
+            createMat(mat_desc, mat);
+        }
+    }
+}
+
+void cv::gimpl::GCPUExecutable::reshape(ade::Graph&, const GCompileArgs& args) {
+    m_compileArgs = args;
+    makeReshape();
+    // TODO: Add an input meta sensitivity flag to stateful kernels.
+    // When reshape() happens, reset state for meta-sensitive kernels only
+    if (!m_nodesToStates.empty()) {
+        std::call_once(m_warnFlag,
+            [](){
+                GAPI_LOG_WARNING(NULL,
+                    "\nGCPUExecutable::reshape was called. Resetting states of stateful kernels.");
+            });
+        setupKernelStates();
+    }
+}
+
 void cv::gimpl::GCPUExecutable::handleNewStream()
 {
-    m_newStreamStarted = true;
+    // In case if new video-stream happens - for each stateful kernel
+    // call 'setup' user callback to re-initialize state.
+    setupKernelStates();
 }
 
 void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
@@ -206,14 +233,6 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
             // and should be excluded, but now we just don't support it
             magazine::resetInternalData(m_res, desc);
         }
-    }
-
-    // In case if new video-stream happens - for each stateful kernel
-    // call 'setup' user callback to re-initialize state.
-    if (m_newStreamStarted)
-    {
-        setupKernelStates();
-        m_newStreamStarted = false;
     }
 
     // OpenCV backend execution is not a rocket science at all.

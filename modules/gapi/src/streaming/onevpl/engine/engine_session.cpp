@@ -14,8 +14,10 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-EngineSession::EngineSession(mfxSession sess, std::shared_ptr<IDataProvider::mfx_bitstream>&& str) :
-        session(sess), stream(std::move(str)) {}
+EngineSession::EngineSession(mfxSession sess) :
+    session(sess) {
+}
+
 EngineSession::~EngineSession()
 {
     GAPI_LOG_INFO(nullptr, "Close session: " << session);
@@ -25,6 +27,31 @@ EngineSession::~EngineSession()
 std::string EngineSession::error_code_to_str() const
 {
     return mfxstatus_to_string(last_status);
+}
+
+void EngineSession::request_free_surface(mfxSession session,
+                                         VPLAccelerationPolicy::pool_key_t key,
+                                         VPLAccelerationPolicy &acceleration_policy,
+                                         std::weak_ptr<Surface> &surface_to_exchange,
+                                         bool reset_if_not_found) {
+    try {
+        auto cand = acceleration_policy.get_free_surface(key).lock();
+
+        GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
+                                ", old: " << (!surface_to_exchange.expired()
+                                              ? surface_to_exchange.lock()->get_handle()
+                                              : nullptr) <<
+                                ", new: "<< cand->get_handle());
+
+        surface_to_exchange = cand;
+    } catch (const std::runtime_error& ex) {
+        GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what());
+        if (reset_if_not_found) {
+            surface_to_exchange.reset();
+        }
+        // Delegate exception processing on caller side
+        throw;
+    }
 }
 } // namespace onevpl
 } // namespace wip

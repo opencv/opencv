@@ -353,7 +353,7 @@ namespace graph {
             }
 
             ctx.executed++;
-            // reset dependecy_count to initial state to simplify re-execution of the same graph
+            // reset dependency_count to initial state to simplify re-execution of the same graph
             node->dependency_count = node->dependencies;
 
             return result;

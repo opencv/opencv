@@ -32,13 +32,13 @@ namespace gst {
  *        Pipeline can actually contain many sink elements, but it must have one and only one
  *        appsink among them.
  *
- *      - data passed to appsink should be video-frame in NV12 format.
+ *      - data passed to appsink should be video-frame in NV12 or GRAY8 format.
  *
  * 'outputType' is used to select type of output data to produce: 'cv::MediaFrame' or 'cv::Mat'.
  * To produce 'cv::MediaFrame'-s you need to pass 'GStreamerSource::OutputType::FRAME' and,
  * correspondingly, 'GStreamerSource::OutputType::MAT' to produce 'cv::Mat'-s.
  * Please note, that in the last case, output 'cv::Mat' will be of BGR format, internal conversion
- * from NV12 GStreamer data will happen.
+ * from NV12 / GRAY8 GStreamer data will happen.
  * Default value for 'outputType' is 'GStreamerSource::OutputType::MAT'.
  *
  * @note Stream sources are passed to G-API via shared pointers, so please use gapi::make_src<>
@@ -82,6 +82,14 @@ protected:
 
 using GStreamerSource = gst::GStreamerSource;
 
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_gst_src(const std::string& pipeline,
+                    const GStreamerSource::OutputType outputType =
+                    GStreamerSource::OutputType::MAT)
+{
+    return make_src<GStreamerSource>(pipeline, outputType);
+}
 } // namespace wip
 } // namespace gapi
 } // namespace cv

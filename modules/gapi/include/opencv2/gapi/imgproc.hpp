@@ -504,8 +504,8 @@ namespace imgproc {
             }
             else
             {
-                int outSz_w = static_cast<int>(round(in.size.width  * fx));
-                int outSz_h = static_cast<int>(round(in.size.height * fy));
+                int outSz_w = saturate_cast<int>(in.size.width  * fx);
+                int outSz_h = saturate_cast<int>(in.size.height * fy);
                 GAPI_Assert(outSz_w > 0 && outSz_h > 0);
                 return in.withSize(Size(outSz_w, outSz_h));
             }
@@ -1241,7 +1241,7 @@ or column if there are N channels, or have N columns if there is a single channe
 @param src Input set of 2D points stored in one of possible containers: Mat,
 std::vector<cv::Point2i>, std::vector<cv::Point2f>, std::vector<cv::Point2d>.
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
-and @ref DIST_C are not suppored.
+and @ref DIST_C are not supported.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
 is chosen.
 @param reps Sufficient accuracy for the radius (distance between the coordinate origin and the
@@ -1313,7 +1313,7 @@ or column if there are N channels, or have N columns if there is a single channe
 @param src Input set of 3D points stored in one of possible containers: Mat,
 std::vector<cv::Point3i>, std::vector<cv::Point3f>, std::vector<cv::Point3d>.
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
-and @ref DIST_C are not suppored.
+and @ref DIST_C are not supported.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
 is chosen.
 @param reps Sufficient accuracy for the radius (distance between the coordinate origin and the

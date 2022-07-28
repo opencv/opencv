@@ -72,7 +72,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
             __syncthreads();
 
             /* We interchange `threadIdx.x` and `threadIdx.y` so that consecutive output indices map to
-             * consecutive threads. This would allow writes across threds in a warp to be coalesced.
+             * consecutive threads. This would allow writes across threads in a warp to be coalesced.
              */
             const index_type out_x = blockIdx.y * TILE_SIZE + threadIdx.x;
             const index_type out_y_begin = blockIdx.x * TILE_SIZE + threadIdx.y;
@@ -156,7 +156,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
          * tensor indices be [o1, o2, ...]. The permutation operation essentially copies items
          * from the input tensor to new locations in the output tensor as dictated by the indices.
          *
-         * If the size of the nth axis (say i2) of the input is one the input and output indicies for
+         * If the size of the nth axis (say i2) of the input is one the input and output indices for
          * all the elements will be of the form be [i1, 0, ...] and [..., 0, ...] respectively.
          * The index does not contribute to the element's address calculation and hence would give
          * identical result if it weren't there.

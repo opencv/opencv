@@ -48,7 +48,7 @@ void __wrap_printf_func(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     char buffer[256];
-    vsprintf (buffer, fmt, args);
+    vsnprintf (buffer, sizeof(buffer), fmt, args);
     cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
     va_end(args);
 }

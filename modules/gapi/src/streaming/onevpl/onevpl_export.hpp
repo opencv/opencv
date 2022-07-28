@@ -10,12 +10,17 @@
 #endif // defined(_MSC_VER)
 
 #ifdef HAVE_ONEVPL
+#if defined(MFX_VERSION)
 #if (MFX_VERSION >= 2000)
 #include <vpl/mfxdispatcher.h>
 #endif // MFX_VERSION
+#endif // defined(MFX_VERSION)
 
 #include <vpl/mfx.h>
 #include <vpl/mfxvideo.h>
+
+extern mfxLoader mfx_handle;
+extern int impl_number;
 #endif // HAVE_ONEVPL
 
 #if defined(_MSC_VER)

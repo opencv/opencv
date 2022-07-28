@@ -155,7 +155,7 @@ public:
     CV_WRAP void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
-    void release();
+    CV_WRAP void release();
 
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
@@ -689,7 +689,7 @@ class CV_EXPORTS_W BufferPool
 public:
 
     //! Gets the BufferPool for the given stream.
-    explicit BufferPool(Stream& stream);
+    CV_WRAP explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, int type);

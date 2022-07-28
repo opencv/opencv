@@ -37,7 +37,7 @@ public:
     InfEngineNgraphNet(detail::NetImplBase& netImpl);
     InfEngineNgraphNet(detail::NetImplBase& netImpl, InferenceEngine::CNNNetwork& net);
 
-    void addOutput(const std::string& name);
+    void addOutput(const Ptr<InfEngineNgraphNode>& node);
 
     bool isInitialized();
     void init(Target targetId);
@@ -47,7 +47,6 @@ public:
     void initPlugin(InferenceEngine::CNNNetwork& net);
     ngraph::ParameterVector setInputs(const std::vector<cv::Mat>& inputs, const std::vector<std::string>& names);
 
-    void setUnconnectedNodes(Ptr<InfEngineNgraphNode>& node);
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
     void createNet(Target targetId);
@@ -88,8 +87,7 @@ public:
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
-    std::vector<std::string> requestedOutputs;
-    std::unordered_set<std::shared_ptr<ngraph::Node>> unconnectedNodes;
+    std::unordered_map<std::string, Ptr<InfEngineNgraphNode> > requestedOutputs;
 
     std::map<std::string, InferenceEngine::TensorDesc> outputsDesc;
 };
@@ -102,7 +100,7 @@ public:
                         std::vector<Mat>& internals);
 
     InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
-    InfEngineNgraphNode(std::shared_ptr<ngraph::Node>& _node);
+    InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node);
 
     void setName(const std::string& name);
 

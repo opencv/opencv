@@ -205,12 +205,12 @@ public:
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
     Ptr<Feature2D> featuresFinder() { return features_finder_; }
-    const Ptr<Feature2D> featuresFinder() const { return features_finder_; }
+    Ptr<Feature2D> featuresFinder() const { return features_finder_; }
     void setFeaturesFinder(Ptr<Feature2D> features_finder)
         { features_finder_ = features_finder; }
 
     Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher_; }
-    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
+    Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
@@ -302,6 +302,14 @@ public:
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
     CV_WRAP double workScale() const { return work_scale_; }
+
+    /** @brief Return the mask of the panorama.
+
+    The mask is a 8U UMat with the values: 0xFF (white) for pixels filled by the input images,
+    0 (black) for unused pixels. It can be used as the mask for inpaint.
+
+    @return The mask.
+     */
     UMat resultMask() const { return result_mask_; }
 
 private:

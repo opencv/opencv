@@ -8,7 +8,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-namespace detail {
+inline namespace detail {
 
 class NotImplementedImpl CV_FINAL : public NotImplemented
 {
@@ -83,11 +83,6 @@ public:
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         CV_Error(Error::StsNotImplemented, msg);
     }

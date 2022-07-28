@@ -15,8 +15,7 @@
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 #include "streaming/onevpl/accelerators/dx11_alloc_resource.hpp"
 
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
 #define D3D11_NO_HELPERS
 #define NOMINMAX
 #include <d3d11.h>
@@ -24,7 +23,9 @@
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>
-#endif
+#endif // HAVE_OPENCL
+#undef NOMINMAX
+#endif // HAVE_DIRECTX && HAVE_D3D11
 
 namespace cv {
 namespace gapi {
@@ -43,14 +44,16 @@ struct GAPI_EXPORTS VPLDX11AccelerationPolicy final: public VPLAccelerationPolic
     void init(session_t session) override;
     void deinit(session_t session) override;
     pool_key_t create_surface_pool(const mfxFrameAllocRequest& alloc_request,
-                                   mfxVideoParam& param) override;
+                                   mfxFrameInfo& info) override;
     surface_weak_ptr_t get_free_surface(pool_key_t key) override;
     size_t get_free_surface_count(pool_key_t key) const override;
     size_t get_surface_count(pool_key_t key) const override;
 
     cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
-                                                    mfxFrameSurface1* surface) override;
+                                                    const FrameConstructorArgs &params) override;
 private:
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
     ID3D11Device *hw_handle;
     ID3D11DeviceContext* device_context;
 
@@ -75,14 +78,13 @@ private:
     std::map<alloc_id_t, allocation_t> allocation_table;
 
     std::map<pool_key_t, pool_t> pool_table;
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
 };
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#undef NOMINMAX
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
 
 #endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_ACCELERATORS_ACCEL_POLICY_DX11_HPP

@@ -12,6 +12,8 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/onevpl_export.hpp"
 
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
 #ifdef HAVE_INF_ENGINE
 // For IE classes (ParamMap, etc)
 #include <inference_engine.hpp>
@@ -40,113 +42,71 @@ void unlock_mid(mfxMemId mid, mfxFrameData &data, MediaFrame::Access mode) {
     }
 }
 
-VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> surface):
-    parent_surface_ptr(surface) {
-    GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
-
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    Surface::data_t& data = parent_surface_ptr->get_data();
-    GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
-                            ", w: " << info.Width << ", h: " << info.Height <<
-                            ", p: " << data.Pitch);
-    switch(info.FourCC)
-    {
-        case MFX_FOURCC_I420:
-            throw std::runtime_error("MediaFrame doesn't support I420 type");
-            break;
-        case MFX_FOURCC_NV12:
-            frame_desc.fmt = MediaFormat::NV12;
-            break;
-        default:
-            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
-    }
-    frame_desc.size = cv::Size{info.Width, info.Height};
+VPLMediaFrameDX11Adapter::VPLMediaFrameDX11Adapter(std::shared_ptr<Surface> assoc_surface,
+                                                   SessionHandle assoc_handle):
+    BaseFrameAdapter(assoc_surface, assoc_handle, AccelType::DX11) {
+    Surface::data_t& data = assoc_surface->get_data();
 
     LockAdapter* alloc_data = reinterpret_cast<LockAdapter*>(data.MemId);
     alloc_data->set_adaptee(this);
-
-    parent_surface_ptr->obtain_lock();
 }
 
 VPLMediaFrameDX11Adapter::~VPLMediaFrameDX11Adapter() {
-    // Each VPLMediaFrameDX11Adapter releases mfx surface counter
-    // The last VPLMediaFrameDX11Adapter releases shared Surface pointer
-    // The last surface pointer releases workspace memory
-    Surface::data_t& data = parent_surface_ptr->get_data();
+    Surface::data_t& data = surface()->get_data();
     LockAdapter* alloc_data = reinterpret_cast<LockAdapter*>(data.MemId);
     alloc_data->set_adaptee(nullptr);
-
-    parent_surface_ptr->release_lock();
-}
-
-cv::GFrameDesc VPLMediaFrameDX11Adapter::meta() const {
-    return frame_desc;
 }
 
 MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
-    Surface::data_t& data = parent_surface_ptr->get_data();
-    const Surface::info_t& info = parent_surface_ptr->get_info();
+    // NB: make copy for some copyable object, because access release may be happened
+    // after source/pool destruction, so we need a copy
+    auto surface_ptr_copy = surface();
+    Surface::data_t& data = surface_ptr_copy->get_data();
+    const Surface::info_t& info = surface_ptr_copy->get_info();
     void* frame_id = reinterpret_cast<void*>(this);
 
-    GAPI_LOG_DEBUG(nullptr, "START lock frame in surface: " << parent_surface_ptr->get_handle() <<
+    GAPI_LOG_DEBUG(nullptr, "START lock frame in surface: " << surface_ptr_copy->get_handle() <<
                             ", frame id: " << frame_id);
 
     // lock MT
     lock_mid(data.MemId, data, mode);
 
-    GAPI_LOG_DEBUG(nullptr, "FINISH lock frame in surface: " << parent_surface_ptr->get_handle() <<
+    GAPI_LOG_DEBUG(nullptr, "FINISH lock frame in surface: " << surface_ptr_copy->get_handle() <<
                             ", frame id: " << frame_id);
     using stride_t = typename cv::MediaFrame::View::Strides::value_type;
     stride_t pitch = static_cast<stride_t>(data.Pitch);
 
-    // NB: make copy for some copyable object, because access release may be happened
-    // after source/pool destruction, so we need a copy
-    auto parent_surface_ptr_copy = parent_surface_ptr;
+    auto release_guard = [surface_ptr_copy, frame_id, mode] () {
+        surface_ptr_copy->obtain_lock();
+
+        auto& data = surface_ptr_copy->get_data();
+        GAPI_LOG_DEBUG(nullptr, "START unlock frame in surface: " << surface_ptr_copy->get_handle() <<
+                                ", frame id: " << frame_id);
+        unlock_mid(data.MemId, data, mode);
+
+        GAPI_LOG_DEBUG(nullptr, "FINISH unlock frame in surface: " << surface_ptr_copy->get_handle() <<
+                                ", frame id: " << frame_id);
+        surface_ptr_copy->release_lock();
+    };
+
     switch(info.FourCC) {
         case MFX_FOURCC_I420:
         {
             GAPI_Assert(data.Y && data.U && data.V && "MFX_FOURCC_I420 frame data is nullptr");
             cv::MediaFrame::View::Ptrs pp = { data.Y, data.U, data.V, nullptr };
             cv::MediaFrame::View::Strides ss = { pitch, pitch / 2, pitch / 2, 0u };
-            return cv::MediaFrame::View(std::move(pp), std::move(ss),
-                                        [parent_surface_ptr_copy,
-                                         frame_id, mode] () {
-                parent_surface_ptr_copy->obtain_lock();
-
-                auto& data = parent_surface_ptr_copy->get_data();
-                GAPI_LOG_DEBUG(nullptr, "START unlock frame in surface: " << parent_surface_ptr_copy->get_handle() <<
-                                        ", frame id: " << frame_id);
-                unlock_mid(data.MemId, data, mode);
-
-                GAPI_LOG_DEBUG(nullptr, "FINISH unlock frame in surface: " << parent_surface_ptr_copy->get_handle() <<
-                                        ", frame id: " << frame_id);
-
-                parent_surface_ptr_copy->release_lock();
-            });
+            return cv::MediaFrame::View(std::move(pp), std::move(ss), release_guard);
         }
         case MFX_FOURCC_NV12:
         {
             if (!data.Y || !data.UV) {
-                GAPI_LOG_WARNING(nullptr, "Empty data detected!!! for surface: " << parent_surface_ptr->get_handle() <<
+                GAPI_LOG_WARNING(nullptr, "Empty data detected!!! for surface: " << surface_ptr_copy->get_handle() <<
                                           ", frame id: " << frame_id);
             }
             GAPI_Assert(data.Y && data.UV && "MFX_FOURCC_NV12 frame data is nullptr");
             cv::MediaFrame::View::Ptrs pp = { data.Y, data.UV, nullptr, nullptr };
             cv::MediaFrame::View::Strides ss = { pitch, pitch, 0u, 0u };
-            return cv::MediaFrame::View(std::move(pp), std::move(ss),
-                                        [parent_surface_ptr_copy,
-                                        frame_id, mode] () {
-                parent_surface_ptr_copy->obtain_lock();
-
-                auto& data = parent_surface_ptr_copy->get_data();
-                GAPI_LOG_DEBUG(nullptr, "START unlock frame in surface: " << parent_surface_ptr_copy->get_handle() <<
-                                        ", frame id: " << frame_id);
-                unlock_mid(data.MemId, data, mode);
-
-                GAPI_LOG_DEBUG(nullptr, "FINISH unlock frame in surface: " << parent_surface_ptr_copy->get_handle() <<
-                                        ", frame id: " << frame_id);
-                parent_surface_ptr_copy->release_lock();
-            });
+            return cv::MediaFrame::View(std::move(pp), std::move(ss), release_guard);
         }
             break;
         default:
@@ -155,30 +115,45 @@ MediaFrame::View VPLMediaFrameDX11Adapter::access(MediaFrame::Access mode) {
 }
 
 cv::util::any VPLMediaFrameDX11Adapter::blobParams() const {
+    /*GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully integrated"
+                         "in OpenVINO InferenceEngine and would be temporary disable.");*/
 #ifdef HAVE_INF_ENGINE
-    GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not fully operable "
-                "in G-API streaming. Please waiting for future PRs");
-
-    Surface::data_t& data = parent_surface_ptr->get_data();
+    auto surface_ptr_copy = get_surface();
+    Surface::data_t& data = surface_ptr_copy->get_data();
+    const Surface::info_t& info = surface_ptr_copy->get_info();
     NativeHandleAdapter* native_handle_getter = reinterpret_cast<NativeHandleAdapter*>(data.MemId);
 
     mfxHDLPair handle{};
     native_handle_getter->get_handle(data.MemId, reinterpret_cast<mfxHDL&>(handle));
 
-    InferenceEngine::ParamMap params{{"SHARED_MEM_TYPE", "VA_SURFACE"},
-                                     {"DEV_OBJECT_HANDLE", handle.first},
-                                     {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
-                                     {"VA_PLANE",
+    GAPI_Assert(frame_desc.fmt == MediaFormat::NV12 &&
+                "blobParams() for VPLMediaFrameDX11Adapter supports NV12 only");
+
+    InferenceEngine::ParamMap y_params{{"SHARED_MEM_TYPE", "VA_SURFACE"},
+                                       {"DEV_OBJECT_HANDLE", handle.first},
+                                       {"COLOR_FORMAT", InferenceEngine::ColorFormat::NV12},
+                                       {"VA_PLANE",
                                          static_cast<DX11AllocationItem::subresource_id_t>(
                                             reinterpret_cast<uint64_t>(
                                                 reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
                                                     handle.second)))}};//,
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    InferenceEngine::TensorDesc tdesc({InferenceEngine::Precision::U8,
-                                       {1, 3, static_cast<size_t>(info.Height),
-                                        static_cast<size_t>(info.Width)},
-                                       InferenceEngine::Layout::NCHW});
-    return std::make_pair(tdesc, params);
+    InferenceEngine::TensorDesc y_tdesc({InferenceEngine::Precision::U8,
+                                        {1, 1, static_cast<size_t>(info.Height),
+                                         static_cast<size_t>(info.Width)},
+                                        InferenceEngine::Layout::NHWC});
+
+    InferenceEngine::ParamMap uv_params = y_params;
+    uv_params["MEM_HANDLE"] = handle.first;
+    uv_params["VA_PLANE"] = static_cast<DX11AllocationItem::subresource_id_t>(
+                                            reinterpret_cast<uint64_t>(
+                                                reinterpret_cast<DX11AllocationItem::subresource_id_t *>(
+                                                    handle.second))) + 1;
+    InferenceEngine::TensorDesc uv_tdesc({InferenceEngine::Precision::U8,
+                                         {1, 2, static_cast<size_t>(info.Height) / 2,
+                                          static_cast<size_t>(info.Width) / 2},
+                                         InferenceEngine::Layout::NHWC});
+    return std::make_pair(std::make_pair(y_tdesc, y_params),
+                          std::make_pair(uv_tdesc, uv_params));
 #else
     GAPI_Assert(false && "VPLMediaFrameDX11Adapter::blobParams() is not implemented");
 #endif // HAVE_INF_ENGINE
@@ -229,4 +204,6 @@ DXGI_FORMAT VPLMediaFrameDX11Adapter::get_dx11_color_format(uint32_t mfx_fourcc)
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL

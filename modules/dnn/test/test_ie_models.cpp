@@ -290,7 +290,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
         if (cvtest::debugLevel > 0)
         {
             const std::vector<size_t>& dims = desc.getDims();
-            std::cout << "Input: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
+            std::cout << "Input: '" << it.first << "' precision=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
             std::cout << "]  ocv_mat=" << inputsMap[it.first].size << " of " << typeToString(inputsMap[it.first].type()) << std::endl;
@@ -308,7 +308,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
         if (cvtest::debugLevel > 0)
         {
             const std::vector<size_t>& dims = desc.getDims();
-            std::cout << "Output: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
+            std::cout << "Output: '" << it.first << "' precision=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
             std::cout << "]  ocv_mat=" << outputsMap[it.first].size << " of " << typeToString(outputsMap[it.first].type()) << std::endl;
@@ -371,17 +371,17 @@ TEST_P(DNNTestOpenVINO, models)
             || modelName == "person-vehicle-bike-detection-2004"  // 2021.4+: ncDeviceOpen:1013 Failed to find booted device after boot
         )
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     if (targetId == DNN_TARGET_OPENCL && (false
             || modelName == "face-detection-0106"  // Operation: 2278 of type ExperimentalDetectronPriorGridGenerator(op::v6) is not supported
         )
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     if (targetId == DNN_TARGET_OPENCL_FP16 && (false
             || modelName == "face-detection-0106"  // Operation: 2278 of type ExperimentalDetectronPriorGridGenerator(op::v6) is not supported
         )
     )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
 #if INF_ENGINE_VER_MAJOR_GE(2020020000)
@@ -397,12 +397,7 @@ TEST_P(DNNTestOpenVINO, models)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     bool isFP16 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD);
 

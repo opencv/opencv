@@ -484,7 +484,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             for( i = 0; i < 3; i++ )
                 for( j = 0; j < 3; j++ )
                 {
-                    values_read = fscanf(file, "%lf", &goodRotMatrs[currImage].val[i*3+j]);
+                    // Yes, load with transpose
+                    values_read = fscanf(file, "%lf", &goodRotMatrs[currImage].val[j*3+i]);
                     CV_Assert(values_read == 1);
                 }
         }
@@ -568,12 +569,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         /* ----- Compute reprojection error ----- */
         double dx,dy;
         double rx,ry;
-        double meanDx,meanDy;
-        double maxDx = 0.0;
-        double maxDy = 0.0;
 
-        meanDx = 0;
-        meanDy = 0;
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             double imageMeanDx = 0;
@@ -585,20 +581,8 @@ void CV_CameraCalibrationTest::run( int start_from )
                 dx = rx - imagePoints[currImage][currPoint].x;
                 dy = ry - imagePoints[currImage][currPoint].y;
 
-                meanDx += dx;
-                meanDy += dy;
-
                 imageMeanDx += dx*dx;
                 imageMeanDy += dy*dy;
-
-                dx = fabs(dx);
-                dy = fabs(dy);
-
-                if( dx > maxDx )
-                    maxDx = dx;
-
-                if( dy > maxDy )
-                    maxDy = dy;
             }
             goodPerViewErrors[currImage] = sqrt( (imageMeanDx + imageMeanDy) /
                                            (etalonSize.width * etalonSize.height));
@@ -608,9 +592,6 @@ void CV_CameraCalibrationTest::run( int start_from )
             if(perViewErrors[currImage] == 0.0)
                 perViewErrors[currImage] = goodPerViewErrors[currImage];
         }
-
-        meanDx /= numImages * etalonSize.width * etalonSize.height;
-        meanDy /= numImages * etalonSize.width * etalonSize.height;
 
         /* ========= Compare parameters ========= */
         CV_Assert(cameraMatrix.type() == CV_64F && cameraMatrix.size() == Size(3, 3));
@@ -681,7 +662,7 @@ void CV_CameraCalibrationTest::run( int start_from )
 
         /* ----- Compare per view re-projection errors ----- */
         CV_Assert(perViewErrors.size() == (size_t)numImages);
-        code = compare(&perViewErrors[0], &goodPerViewErrors[0], numImages, 1.1, "per view errors vector");
+        code = compare(&perViewErrors[0], &goodPerViewErrors[0], numImages, 0.1, "per view errors vector");
         if( code < 0 )
             break;
 
@@ -812,7 +793,6 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
     {
         Mat r9;
         cvtest::Rodrigues( rvecs[i], r9 );
-        cv::transpose(r9, r9);
         r9.convertTo(rotationMatrices[i], CV_64F);
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }

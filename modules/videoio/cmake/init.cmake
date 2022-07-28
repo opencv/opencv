@@ -22,6 +22,7 @@ add_backend("realsense" WITH_LIBREALSENSE)
 add_backend("ueye" WITH_UEYE)
 add_backend("ximea" WITH_XIMEA)
 add_backend("xine" WITH_XINE)
+add_backend("obsensor" WITH_OBSENSOR)
 
 add_backend("avfoundation" WITH_AVFOUNDATION)
 add_backend("ios" WITH_CAP_IOS)

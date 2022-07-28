@@ -40,6 +40,8 @@ const std::string keys  =
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
         "{d        | 0.8     | Min delay between captures}"
         "{pf       | defaultConfig.xml| Advanced application parameters}"
+        "{save_frames | false   | Save frames that contribute to final calibration}"
+        "{zoom     | 1       | Zoom factor applied to the image}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
