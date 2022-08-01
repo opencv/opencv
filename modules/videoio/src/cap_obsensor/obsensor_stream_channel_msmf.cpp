@@ -33,6 +33,7 @@
 #pragma comment(lib, "Strmiids")
 #pragma comment(lib, "Mfreadwrite")
 #pragma comment(lib, "dxgi")
+#pragma comment(lib, "Shlwapi")
 
 namespace cv {
 namespace obsensor {
