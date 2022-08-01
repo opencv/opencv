@@ -454,7 +454,7 @@ try:
                 else:
                     raise unittest.SkipTest(str(e))
             except SystemError as e:
-                raise unittest.SkipTest(str(e) + ", casued by " + str(e.__cause__))
+                raise unittest.SkipTest(str(e) + ", caused by " + str(e.__cause__))
 
 
         def test_gst_multiple_sources(self):

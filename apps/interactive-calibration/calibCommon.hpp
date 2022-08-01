@@ -45,6 +45,8 @@ namespace calib
         double totalAvgErr;
         cv::Size imageSize;
 
+        std::vector<cv::Mat> allFrames;
+
         std::vector<std::vector<cv::Point2f> > imagePoints;
         std::vector< std::vector<cv::Point3f> > objectPoints;
 
@@ -91,6 +93,8 @@ namespace calib
         cv::Size cameraResolution;
         int maxFramesNum;
         int minFramesNum;
+        bool saveFrames;
+        float zoom;
 
         captureParameters()
         {
@@ -100,6 +104,7 @@ namespace calib
             minFramesNum = 10;
             fps = 30;
             cameraResolution = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
+            saveFrames = false;
         }
     };
 

@@ -606,12 +606,19 @@ struct HWFeatures
             close(cpufile);
         }
     #endif
-    #elif (defined __clang__ || defined __APPLE__)
+    #elif (defined __APPLE__)
     #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         have[CV_CPU_NEON] = true;
     #endif
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
+    #endif
+    #elif (defined __clang__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+        have[CV_CPU_NEON] = true;
+        #if (defined __ARM_FP  && ((__ARM_FP & 0x2) != 0))
+        have[CV_CPU_FP16] = true;
+        #endif
     #endif
     #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
@@ -1384,7 +1391,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_OpenGlApiCallError :     return "OpenGL API call";
     };
 
-    sprintf(buf, "Unknown %s code %d", status >= 0 ? "status":"error", status);
+    snprintf(buf, sizeof(buf), "Unknown %s code %d", status >= 0 ? "status":"error", status);
     return buf;
 }
 

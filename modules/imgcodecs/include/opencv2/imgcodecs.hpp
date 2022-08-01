@@ -88,8 +88,9 @@ enum ImwriteFlags {
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_OPTIMIZE       = 3,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
-       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is 0 - don't use.
-       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is 0 - don't use.
+       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
@@ -104,6 +105,15 @@ enum ImwriteFlags {
        IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272 //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
      };
+
+enum ImwriteJPEGSamplingFactorParams {
+       IMWRITE_JPEG_SAMPLING_FACTOR_411 = 0x411111, //!< 4x1,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_420 = 0x221111, //!< 2x2,1x1,1x1(Default)
+       IMWRITE_JPEG_SAMPLING_FACTOR_422 = 0x211111, //!< 2x1,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_440 = 0x121111, //!< 1x2,1x1,1x1
+       IMWRITE_JPEG_SAMPLING_FACTOR_444 = 0x111111  //!< 1x1,1x1,1x1(No subsampling)
+     };
+
 
 enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
@@ -301,7 +311,7 @@ CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
 result. See cv::imwrite for the list of supported formats and flags description.
 
-@param ext File extension that defines the output format.
+@param ext File extension that defines the output format. Must include a leading period.
 @param img Image to be written.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.

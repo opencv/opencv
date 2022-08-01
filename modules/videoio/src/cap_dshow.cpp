@@ -88,15 +88,13 @@ Thanks to:
 */
 /////////////////////////////////////////////////////////
 
-#if defined _MSC_VER && _MSC_VER >= 100
-//'sprintf': name was marked as #pragma deprecated
-#pragma warning(disable: 4995)
-#endif
-
 #if defined(__clang__)  // clang or MSVC clang
 #pragma clang diagnostic ignored "-Wnon-virtual-dtor"
-#elif defined(__GNUC__) // MinGW
+#elif defined(__GNUC__) // gcc
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+
+#ifdef __MINGW32__
 #define STRSAFE_NO_DEPRECATE
 #endif
 
@@ -2304,29 +2302,29 @@ void videoInput::processPixels(unsigned char * src, unsigned char * dst, int wid
 void videoInput::getMediaSubtypeAsString(GUID type, char * typeAsString){
 
     char tmpStr[8];
-    if( type == MEDIASUBTYPE_RGB24)     sprintf(tmpStr, "RGB24");
-    else if(type == MEDIASUBTYPE_RGB32) sprintf(tmpStr, "RGB32");
-    else if(type == MEDIASUBTYPE_RGB555)sprintf(tmpStr, "RGB555");
-    else if(type == MEDIASUBTYPE_RGB565)sprintf(tmpStr, "RGB565");
-    else if(type == MEDIASUBTYPE_YUY2)  sprintf(tmpStr, "YUY2");
-    else if(type == MEDIASUBTYPE_YVYU)  sprintf(tmpStr, "YVYU");
-    else if(type == MEDIASUBTYPE_YUYV)  sprintf(tmpStr, "YUYV");
-    else if(type == MEDIASUBTYPE_IYUV)  sprintf(tmpStr, "IYUV");
-    else if(type == MEDIASUBTYPE_UYVY)  sprintf(tmpStr, "UYVY");
-    else if(type == MEDIASUBTYPE_YV12)  sprintf(tmpStr, "YV12");
-    else if(type == MEDIASUBTYPE_YVU9)  sprintf(tmpStr, "YVU9");
-    else if(type == MEDIASUBTYPE_Y411)  sprintf(tmpStr, "Y411");
-    else if(type == MEDIASUBTYPE_Y41P)  sprintf(tmpStr, "Y41P");
-    else if(type == MEDIASUBTYPE_Y211)  sprintf(tmpStr, "Y211");
-    else if(type == MEDIASUBTYPE_AYUV)  sprintf(tmpStr, "AYUV");
-    else if(type == MEDIASUBTYPE_MJPG)  sprintf(tmpStr, "MJPG");
-    else if(type == MEDIASUBTYPE_Y800)  sprintf(tmpStr, "Y800");
-    else if(type == MEDIASUBTYPE_Y8)    sprintf(tmpStr, "Y8");
-    else if(type == MEDIASUBTYPE_GREY)  sprintf(tmpStr, "GREY");
-    else if(type == MEDIASUBTYPE_I420)  sprintf(tmpStr, "I420");
-    else if (type == MEDIASUBTYPE_BY8)  sprintf(tmpStr, "BY8");
-    else if (type == MEDIASUBTYPE_Y16)  sprintf(tmpStr, "Y16");
-    else sprintf(tmpStr, "OTHER");
+    if( type == MEDIASUBTYPE_RGB24)     snprintf(tmpStr, sizeof(tmpStr), "RGB24");
+    else if(type == MEDIASUBTYPE_RGB32) snprintf(tmpStr, sizeof(tmpStr), "RGB32");
+    else if(type == MEDIASUBTYPE_RGB555)snprintf(tmpStr, sizeof(tmpStr), "RGB555");
+    else if(type == MEDIASUBTYPE_RGB565)snprintf(tmpStr, sizeof(tmpStr), "RGB565");
+    else if(type == MEDIASUBTYPE_YUY2)  snprintf(tmpStr, sizeof(tmpStr), "YUY2");
+    else if(type == MEDIASUBTYPE_YVYU)  snprintf(tmpStr, sizeof(tmpStr), "YVYU");
+    else if(type == MEDIASUBTYPE_YUYV)  snprintf(tmpStr, sizeof(tmpStr), "YUYV");
+    else if(type == MEDIASUBTYPE_IYUV)  snprintf(tmpStr, sizeof(tmpStr), "IYUV");
+    else if(type == MEDIASUBTYPE_UYVY)  snprintf(tmpStr, sizeof(tmpStr), "UYVY");
+    else if(type == MEDIASUBTYPE_YV12)  snprintf(tmpStr, sizeof(tmpStr), "YV12");
+    else if(type == MEDIASUBTYPE_YVU9)  snprintf(tmpStr, sizeof(tmpStr), "YVU9");
+    else if(type == MEDIASUBTYPE_Y411)  snprintf(tmpStr, sizeof(tmpStr), "Y411");
+    else if(type == MEDIASUBTYPE_Y41P)  snprintf(tmpStr, sizeof(tmpStr), "Y41P");
+    else if(type == MEDIASUBTYPE_Y211)  snprintf(tmpStr, sizeof(tmpStr), "Y211");
+    else if(type == MEDIASUBTYPE_AYUV)  snprintf(tmpStr, sizeof(tmpStr), "AYUV");
+    else if(type == MEDIASUBTYPE_MJPG)  snprintf(tmpStr, sizeof(tmpStr), "MJPG");
+    else if(type == MEDIASUBTYPE_Y800)  snprintf(tmpStr, sizeof(tmpStr), "Y800");
+    else if(type == MEDIASUBTYPE_Y8)    snprintf(tmpStr, sizeof(tmpStr), "Y8");
+    else if(type == MEDIASUBTYPE_GREY)  snprintf(tmpStr, sizeof(tmpStr), "GREY");
+    else if(type == MEDIASUBTYPE_I420)  snprintf(tmpStr, sizeof(tmpStr), "I420");
+    else if (type == MEDIASUBTYPE_BY8)  snprintf(tmpStr, sizeof(tmpStr), "BY8");
+    else if (type == MEDIASUBTYPE_Y16)  snprintf(tmpStr, sizeof(tmpStr), "Y16");
+    else snprintf(tmpStr, sizeof(tmpStr), "OTHER");
 
     memcpy(typeAsString, tmpStr, sizeof(char)*8);
 }
@@ -2352,15 +2350,15 @@ void videoInput::getVideoPropertyAsString(int prop, char * propertyAsString){
 
     char tmpStr[16];
 
-    if ( prop==VideoProcAmp_Brightness) sprintf(tmpStr, "Brightness");
-    else if ( prop==VideoProcAmp_Contrast) sprintf(tmpStr, "Contrast");
-    else if ( prop==VideoProcAmp_Saturation) sprintf(tmpStr, "Saturation");
-    else if ( prop==VideoProcAmp_Hue) sprintf(tmpStr, "Hue");
-    else if ( prop==VideoProcAmp_Gain) sprintf(tmpStr, "Gain");
-    else if ( prop==VideoProcAmp_Gamma) sprintf(tmpStr, "Gamma");
-    else if ( prop==VideoProcAmp_ColorEnable) sprintf(tmpStr, "ColorEnable");
-    else if ( prop==VideoProcAmp_Sharpness) sprintf(tmpStr, "Sharpness");
-    else sprintf(tmpStr, "%u",prop);
+    if ( prop==VideoProcAmp_Brightness) snprintf(tmpStr, sizeof(tmpStr), "Brightness");
+    else if ( prop==VideoProcAmp_Contrast) snprintf(tmpStr, sizeof(tmpStr), "Contrast");
+    else if ( prop==VideoProcAmp_Saturation) snprintf(tmpStr, sizeof(tmpStr), "Saturation");
+    else if ( prop==VideoProcAmp_Hue) snprintf(tmpStr, sizeof(tmpStr), "Hue");
+    else if ( prop==VideoProcAmp_Gain) snprintf(tmpStr, sizeof(tmpStr), "Gain");
+    else if ( prop==VideoProcAmp_Gamma) snprintf(tmpStr, sizeof(tmpStr), "Gamma");
+    else if ( prop==VideoProcAmp_ColorEnable) snprintf(tmpStr, sizeof(tmpStr), "ColorEnable");
+    else if ( prop==VideoProcAmp_Sharpness) snprintf(tmpStr, sizeof(tmpStr), "Sharpness");
+    else snprintf(tmpStr, sizeof(tmpStr), "%u",prop);
 
     memcpy(propertyAsString, tmpStr, sizeof(char)*16);
 }
@@ -2455,14 +2453,14 @@ void videoInput::getCameraPropertyAsString(int prop, char * propertyAsString){
 
     char tmpStr[16];
 
-    if ( prop==CameraControl_Pan) sprintf(tmpStr, "Pan");
-    else if ( prop==CameraControl_Tilt) sprintf(tmpStr, "Tilt");
-    else if ( prop==CameraControl_Roll) sprintf(tmpStr, "Roll");
-    else if ( prop==CameraControl_Zoom) sprintf(tmpStr, "Zoom");
-    else if ( prop==CameraControl_Exposure) sprintf(tmpStr, "Exposure");
-    else if ( prop==CameraControl_Iris) sprintf(tmpStr, "Iris");
-    else if ( prop==CameraControl_Focus) sprintf(tmpStr, "Focus");
-    else sprintf(tmpStr, "%u",prop);
+    if ( prop==CameraControl_Pan) snprintf(tmpStr, sizeof(tmpStr), "Pan");
+    else if ( prop==CameraControl_Tilt) snprintf(tmpStr, sizeof(tmpStr), "Tilt");
+    else if ( prop==CameraControl_Roll) snprintf(tmpStr, sizeof(tmpStr), "Roll");
+    else if ( prop==CameraControl_Zoom) snprintf(tmpStr, sizeof(tmpStr), "Zoom");
+    else if ( prop==CameraControl_Exposure) snprintf(tmpStr, sizeof(tmpStr), "Exposure");
+    else if ( prop==CameraControl_Iris) snprintf(tmpStr, sizeof(tmpStr), "Iris");
+    else if ( prop==CameraControl_Focus) snprintf(tmpStr, sizeof(tmpStr), "Focus");
+    else snprintf(tmpStr, sizeof(tmpStr), "%u",prop);
 
     memcpy(propertyAsString, tmpStr, sizeof(char)*16);
 }

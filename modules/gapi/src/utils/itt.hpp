@@ -13,7 +13,7 @@
 
 #include <opencv2/gapi/util/compiler_hints.hpp>
 
-// NOTE: OPENCV_WITH_ITT is only defined if ITT dependecy is built by OpenCV infrastructure.
+// NOTE: OPENCV_WITH_ITT is only defined if ITT dependency is built by OpenCV infrastructure.
 //       There will not be such define in G-API standalone mode.
 // TODO: Consider using OpenCV's trace.hpp
 #if defined(OPENCV_WITH_ITT)

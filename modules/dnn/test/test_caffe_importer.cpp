@@ -633,6 +633,9 @@ TEST_P(opencv_face_detector, Accuracy)
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
@@ -650,7 +653,7 @@ TEST_P(opencv_face_detector, Accuracy)
                                     0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
+    normAssertDetections(ref, out, "", 0.5, 1e-4, 2e-4);
 }
 
 // False positives bug for large faces: https://github.com/opencv/opencv/issues/15106
@@ -659,6 +662,9 @@ TEST_P(opencv_face_detector, issue_15106)
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt");
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
+
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("cv/shared/lena.png"));
@@ -673,13 +679,13 @@ TEST_P(opencv_face_detector, issue_15106)
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
     Mat ref = (Mat_<float>(1, 7) << 0, 1, 0.9149431, 0.30424616, 0.26964942, 0.88733053, 0.99815309);
-    normAssertDetections(ref, out, "", 0.2, 6e-5, 1e-4);
+    normAssertDetections(ref, out, "", 0.89, 6e-5, 1e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
         Values("dnn/opencv_face_detector.caffemodel",
                "dnn/opencv_face_detector_fp16.caffemodel"),
-        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))
     )
 );
 
@@ -689,7 +695,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
         CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
 #else
-        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_MEMORY_2GB,
 #endif
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG

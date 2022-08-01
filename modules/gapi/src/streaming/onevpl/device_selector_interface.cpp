@@ -20,6 +20,8 @@ const char* to_cstring(AccelType type) {
             return "HOST";
         case AccelType::DX11:
             return "DX11";
+        case AccelType::VAAPI:
+            return "VAAPI";
         default:
             GAPI_DbgAssert(false && "Unexpected AccelType");
             break;

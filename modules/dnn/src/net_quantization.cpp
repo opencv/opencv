@@ -33,7 +33,7 @@ void getQuantizationParams(const Mat& src, std::vector<float>& scales, std::vect
 }
 
 // FIXIT drop from inference API
-Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype)
+Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
 {
     // Net can be quantized only once.
     if (netWasQuantized)
@@ -191,6 +191,10 @@ Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outpu
         }
         inp_out_sc[1] = scales[ld.id];
         inp_out_zp[1] = zeropoints[ld.id];
+
+        // Set the quantization type, per-tensor quantize or per-channel quantize.
+        // Especially for Convolution layer and Fully connection layer.
+        ld.params.set("per_channel", perChannel);
 
         // Quantize layer
         Ptr<Layer> layer = ld.layerInstance;

@@ -133,8 +133,6 @@ cvCreateChildMemStorage( CvMemStorage * parent )
 static void
 icvDestroyMemStorage( CvMemStorage* storage )
 {
-    int k = 0;
-
     CvMemBlock *block;
     CvMemBlock *dst_top = 0;
 
@@ -144,7 +142,7 @@ icvDestroyMemStorage( CvMemStorage* storage )
     if( storage->parent )
         dst_top = storage->parent->top;
 
-    for( block = storage->bottom; block != 0; k++ )
+    for( block = storage->bottom; block != 0; )
     {
         CvMemBlock *temp = block;
 

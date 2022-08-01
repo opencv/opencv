@@ -381,7 +381,7 @@ public:
      *
      * @note The value of `cv::GArray<T>` may be overwritten by assigning some
      * other `cv::GArray<T>` to the object using `operator=` -- on the
-     * assigment, the old association or value is discarded.
+     * assignment, the old association or value is discarded.
      *
      * @param v a std::vector<T> to associate with this
      * `cv::GArray<T>` object. Vector data is copied into the

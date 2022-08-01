@@ -87,15 +87,15 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
 
         ParamCreator<ValueType> creator;
         if (name == CfgParam::implementation_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
         } else if (name == CfgParam::decoder_id_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
         } else if (name == CfgParam::acceleration_mode_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if ((name == CfgParam::frames_pool_size_name()) || (name == CfgParam::vpp_frames_pool_size_name())) {
-            ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+            ret.push_back(creator.create(name, static_cast<mfxU32>(strtoull_or_throw(value.c_str()), false)));
         } else if ((name == CfgParam::vpp_in_width_name()) || (name == CfgParam::vpp_in_height_name()) ||
                    (name == CfgParam::vpp_in_crop_w_name()) || (name == CfgParam::vpp_in_crop_h_name()) ||
                    (name == CfgParam::vpp_in_crop_x_name()) || (name == CfgParam::vpp_in_crop_y_name()) ||
@@ -186,7 +186,7 @@ unsigned long strtoul_or_throw(const char* str) {
     errno = 0;
     unsigned long ret = strtoul(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == ULONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoul failed for: " << str);
         GAPI_Assert(false && "strtoul_or_throw");
@@ -199,7 +199,7 @@ size_t strtoull_or_throw(const char* str) {
     errno = 0;
     size_t ret = strtoull(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULLONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoull failed for: " << str);
         GAPI_Assert(false && "strtoull_or_throw");

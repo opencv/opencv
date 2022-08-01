@@ -29,7 +29,7 @@ class Test_Int8_layers : public DNNTestLayer
 public:
     void testLayer(const String& basename, const String& importer, double l1, double lInf,
                    int numInps = 1, int numOuts = 1, bool useCaffeModel = false,
-                   bool useCommonInputBlob = true, bool hasText = false)
+                   bool useCommonInputBlob = true, bool hasText = false, bool perChannel = true)
     {
         CV_Assert_N(numInps >= 1, numInps <= 10, numOuts >= 1, numOuts <= 10);
         std::vector<Mat> inps(numInps), inps_int8(numInps);
@@ -75,7 +75,7 @@ public:
         for (int i = 0; i < numOuts; i++)
             refs[i] = blobFromNPY(outPath + ((numOuts > 1) ? cv::format("_%d.npy", i) : ".npy"));
 
-        qnet = net.quantize(inps, CV_8S, CV_8S);
+        qnet = net.quantize(inps, CV_8S, CV_8S, perChannel);
         qnet.getInputDetails(inputScale, inputZp);
         qnet.getOutputDetails(outputScale, outputZp);
 
@@ -103,6 +103,12 @@ TEST_P(Test_Int8_layers, Convolution1D)
 {
     testLayer("conv1d", "ONNX", 0.00302, 0.00909);
     testLayer("conv1d_bias", "ONNX", 0.00306, 0.00948);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testLayer("conv1d", "ONNX", 0.00302, 0.00909, 1, 1, false, true, false, false);
+        testLayer("conv1d_bias", "ONNX", 0.00319, 0.00948, 1, 1, false, true, false, false);
+    }
 }
 
 TEST_P(Test_Int8_layers, Convolution2D)
@@ -130,6 +136,18 @@ TEST_P(Test_Int8_layers, Convolution2D)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_TIMVX);
     testLayer("layer_convolution", "Caffe", 0.0174, 0.0758, 1, 1, true);
     testLayer("depthwise_conv2d", "TensorFlow", 0.0388, 0.169);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testLayer("single_conv", "TensorFlow", 0.00413, 0.02301, 1, 1, false, true, false, false);
+        testLayer("atrous_conv2d_valid", "TensorFlow", 0.027967, 0.07808, 1, 1, false, true, false, false);
+        testLayer("atrous_conv2d_same", "TensorFlow", 0.01945, 0.1322, 1, 1, false, true, false, false);
+        testLayer("keras_atrous_conv2d_same", "TensorFlow", 0.005677, 0.03327, 1, 1, false, true, false, false);
+        testLayer("convolution", "ONNX", 0.00538, 0.01517, 1, 1, false, true, false, false);
+        testLayer("two_convolution", "ONNX", 0.00295, 0.00926, 1, 1, false, true, false, false);
+        testLayer("layer_convolution", "Caffe", 0.0175, 0.0759, 1, 1, true, true, false, false);
+        testLayer("depthwise_conv2d", "TensorFlow", 0.041847, 0.18744, 1, 1, false, true, false, false);
+    }
 }
 
 TEST_P(Test_Int8_layers, Convolution3D)
@@ -144,6 +162,13 @@ TEST_P(Test_Int8_layers, Flatten)
     testLayer("flatten", "TensorFlow", 0.0036, 0.0069, 1, 1, false, true, true);
     testLayer("unfused_flatten", "TensorFlow", 0.0014, 0.0028);
     testLayer("unfused_flatten_unknown_batch", "TensorFlow", 0.0043, 0.0051);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testLayer("conv3d", "TensorFlow", 0.00734, 0.02434, 1, 1, false, true, false, false);
+        testLayer("conv3d", "ONNX", 0.00377, 0.01362, 1, 1, false, true, false, false);
+        testLayer("conv3d_bias", "ONNX", 0.00201, 0.0039, 1, 1, false, true, false, false);
+    }
 }
 
 TEST_P(Test_Int8_layers, Padding)
@@ -265,14 +290,32 @@ TEST_P(Test_Int8_layers, Mish)
     testLayer("mish", "ONNX", 0.0015, 0.0025);
 }
 
-TEST_P(Test_Int8_layers, Softmax)
+TEST_P(Test_Int8_layers, Softmax_Caffe)
 {
     testLayer("layer_softmax", "Caffe", 0.0011, 0.0036);
+}
+TEST_P(Test_Int8_layers, Softmax_keras_TF)
+{
     testLayer("keras_softmax", "TensorFlow", 0.00093, 0.0027);
+}
+TEST_P(Test_Int8_layers, Softmax_slim_TF)
+{
     testLayer("slim_softmax", "TensorFlow", 0.0016, 0.0034);
+}
+TEST_P(Test_Int8_layers, Softmax_slim_v2_TF)
+{
     testLayer("slim_softmax_v2", "TensorFlow", 0.0029, 0.017);
+}
+TEST_P(Test_Int8_layers, Softmax_ONNX)
+{
     testLayer("softmax", "ONNX", 0.0016, 0.0028);
+}
+TEST_P(Test_Int8_layers, Softmax_log_ONNX)
+{
     testLayer("log_softmax", "ONNX", 0.014, 0.025);
+}
+TEST_P(Test_Int8_layers, DISABLED_Softmax_unfused_ONNX)  // FIXIT Support 'Identity' layer for outputs (#22022)
+{
     testLayer("softmax_unfused", "ONNX", 0.0009, 0.0021);
 }
 
@@ -331,6 +374,20 @@ TEST_P(Test_Int8_layers, InnerProduct)
         testLayer("constant", "ONNX", 0.00021, 0.0006);
 
     testLayer("lin_with_constant", "ONNX", 0.0011, 0.0016);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testLayer("layer_inner_product", "Caffe", 0.0055, 0.02, 1, 1, true, true, false, false);
+        testLayer("matmul", "TensorFlow", 0.0075, 0.019, 1, 1, false, true, false, false);
+        testLayer("nhwc_transpose_reshape_matmul", "TensorFlow", 0.0009, 0.0091, 1, 1, false, true, false, false);
+        testLayer("nhwc_reshape_matmul", "TensorFlow", 0.037, 0.071, 1, 1, false, true, false, false);
+        testLayer("matmul_layout", "TensorFlow", 0.035, 0.095, 1, 1, false, true, false, false);
+        testLayer("tf2_dense", "TensorFlow", 0, 0, 1, 1, false, true, false, false);
+        testLayer("matmul_add", "ONNX", 0.041, 0.082, 1, 1, false, true, false, false);
+        testLayer("linear", "ONNX", 0.0022, 0.004, 1, 1, false, true, false, false);
+        testLayer("constant", "ONNX", 0.00038, 0.0012, 1, 1, false, true, false, false);
+        testLayer("lin_with_constant", "ONNX", 0.0011, 0.0016, 1, 1, false, true, false, false);
+    }
 }
 
 TEST_P(Test_Int8_layers, Reshape)
@@ -389,7 +446,7 @@ TEST_P(Test_Int8_layers, Slice_strided_tf)
     testLayer("strided_slice", "TensorFlow", 0.008, 0.0142);
 }
 
-TEST_P(Test_Int8_layers, Slice_onnx)
+TEST_P(Test_Int8_layers, DISABLED_Slice_onnx)  // FIXIT Support 'Identity' layer for outputs (#22022)
 {
     testLayer("slice", "ONNX", 0.0046, 0.0077);
 }
@@ -447,9 +504,9 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Int8_layers, dnnBackendsAndTargetsInt8());
 class Test_Int8_nets : public DNNTestLayer
 {
 public:
-    void testClassificationNet(Net baseNet, const Mat& blob, const Mat& ref, double l1, double lInf)
+    void testClassificationNet(Net baseNet, const Mat& blob, const Mat& ref, double l1, double lInf, bool perChannel = true)
     {
-        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F);
+        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F, perChannel);
         qnet.setPreferableBackend(backend);
         qnet.setPreferableTarget(target);
 
@@ -459,9 +516,9 @@ public:
     }
 
     void testDetectionNet(Net baseNet, const Mat& blob, const Mat& ref,
-                          double confThreshold, double scoreDiff, double iouDiff)
+                          double confThreshold, double scoreDiff, double iouDiff, bool perChannel = true)
     {
-        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F);
+        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F, perChannel);
         qnet.setPreferableBackend(backend);
         qnet.setPreferableTarget(target);
 
@@ -470,14 +527,14 @@ public:
         normAssertDetections(ref, out, "", confThreshold, scoreDiff, iouDiff);
     }
 
-    void testFaster(Net baseNet, const Mat& ref, double confThreshold, double scoreDiff, double iouDiff)
+    void testFaster(Net baseNet, const Mat& ref, double confThreshold, double scoreDiff, double iouDiff, bool perChannel = true)
     {
         Mat inp = imread(_tf("dog416.png"));
         resize(inp, inp, Size(800, 600));
         Mat blob = blobFromImage(inp, 1.0, Size(), Scalar(102.9801, 115.9465, 122.7717), false, false);
         Mat imInfo = (Mat_<float>(1, 3) << inp.rows, inp.cols, 1.6f);
 
-        Net qnet = baseNet.quantize(std::vector<Mat>{blob, imInfo}, CV_32F, CV_32F);
+        Net qnet = baseNet.quantize(std::vector<Mat>{blob, imInfo}, CV_32F, CV_32F, perChannel);
         qnet.setPreferableBackend(backend);
         qnet.setPreferableTarget(target);
 
@@ -487,7 +544,7 @@ public:
         normAssertDetections(ref, out, "", confThreshold, scoreDiff, iouDiff);
     }
 
-    void testONNXNet(const String& basename, double l1, double lInf, bool useSoftmax = false)
+    void testONNXNet(const String& basename, double l1, double lInf, bool useSoftmax = false, bool perChannel = true)
     {
         String onnxmodel = findDataFile("dnn/onnx/models/" + basename + ".onnx", false);
 
@@ -497,7 +554,7 @@ public:
         baseNet.setPreferableBackend(backend);
         baseNet.setPreferableTarget(target);
 
-        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F);
+        Net qnet = baseNet.quantize(blob, CV_32F, CV_32F, perChannel);
         qnet.setInput(blob);
         Mat out = qnet.forward();
 
@@ -520,7 +577,7 @@ public:
 
     void testDarknetModel(const std::string& cfg, const std::string& weights,
                           const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool perChannel = true)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -560,7 +617,7 @@ public:
         Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
 
         Net baseNet = readNetFromDarknet(findDataFile("dnn/" + cfg), findDataFile("dnn/" + weights, false));
-        Net qnet = baseNet.quantize(inp, CV_32F, CV_32F);
+        Net qnet = baseNet.quantize(inp, CV_32F, CV_32F, perChannel);
         qnet.setPreferableBackend(backend);
         qnet.setPreferableTarget(target);
         qnet.setInput(inp);
@@ -678,7 +735,7 @@ TEST_P(Test_Int8_nets, GoogLeNet)
     Mat blob = blobFromImages(inpMats, 1.0, Size(224, 224), Scalar(), false);
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
 
-    float l1 = 2e-4, lInf = 0.06;
+    float l1 = 2e-4, lInf = 0.07;
     testClassificationNet(net, blob, ref, l1, lInf);
 }
 
@@ -700,8 +757,13 @@ TEST_P(Test_Int8_nets, ResNet50)
     Mat blob = blobFromImage(inp, 1.0, Size(224, 224), Scalar(), false);
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
 
-    float l1 = 3e-4, lInf = 0.04;
+    float l1 = 3e-4, lInf = 0.05;
     testClassificationNet(net, blob, ref, l1, lInf);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testClassificationNet(net, blob, ref, l1, lInf, false);
+    }
 }
 
 TEST_P(Test_Int8_nets, DenseNet121)
@@ -906,7 +968,7 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
 
-    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.21;
+    float confThreshold = 0.5, scoreDiff = 0.002, iouDiff = 0.4;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -934,8 +996,13 @@ TEST_P(Test_Int8_nets, EfficientDet)
                                     0, 17, 0.8245924, 0.16657517850399017, 0.3996818959712982, 0.4111558794975281, 0.9306337833404541,
                                     0, 7, 0.8039304, 0.6118435263633728, 0.13175517320632935, 0.9065558314323425, 0.2943994700908661);
 
-    float confThreshold = 0.65, scoreDiff = 0.17, iouDiff = 0.18;
+    float confThreshold = 0.65, scoreDiff = 0.3, iouDiff = 0.18;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
+
+    {
+        SCOPED_TRACE("Per-tensor quantize");
+        testDetectionNet(net, blob, ref, 0.85, scoreDiff, iouDiff, false);
+    }
 }
 
 TEST_P(Test_Int8_nets, FasterRCNN_resnet50)
@@ -998,7 +1065,7 @@ TEST_P(Test_Int8_nets, FasterRCNN_vgg16)
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
         CV_TEST_TAG_MEMORY_2GB,
 #else
-        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_MEMORY_2GB,
 #endif
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
@@ -1016,7 +1083,7 @@ TEST_P(Test_Int8_nets, FasterRCNN_vgg16)
                                     0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
                                     0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166);
 
-    float confThreshold = 0.8, scoreDiff = 0.024, iouDiff = 0.35;
+    float confThreshold = 0.8, scoreDiff = 0.048, iouDiff = 0.35;
     testFaster(net, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -1066,7 +1133,7 @@ TEST_P(Test_Int8_nets, RFCN)
     Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
                                     0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
 
-    float confThreshold = 0.8, scoreDiff = 0.017, iouDiff = 0.11;
+    float confThreshold = 0.8, scoreDiff = 0.15, iouDiff = 0.11;
     testFaster(net, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -1096,7 +1163,7 @@ TEST_P(Test_Int8_nets, YoloVoc)
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
 
-    double scoreDiff = 0.1, iouDiff = 0.3;
+    double scoreDiff = 0.12, iouDiff = 0.3;
     {
     SCOPED_TRACE("batch size 1");
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
@@ -1129,11 +1196,20 @@ TEST_P(Test_Int8_nets, TinyYoloVoc)
     {
     SCOPED_TRACE("batch size 1");
     testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
+        {
+            SCOPED_TRACE("Per-tensor quantize");
+            testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), 0.1, 0.2, 0.24, 0.6, false);
+        }
     }
 
     {
     SCOPED_TRACE("batch size 2");
     testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+
+        {
+            SCOPED_TRACE("Per-tensor quantize");
+            testDarknetModel(config_file, weights_file, ref, 0.1, 0.2, 0.24, 0.6, false);
+        }
     }
 }
 
@@ -1251,6 +1327,11 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
     {
         SCOPED_TRACE("batch size 1");
         testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
+
+        {
+            SCOPED_TRACE("Per-tensor quantize");
+            testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, 0.16, 0.7, 0.4, false);
+        }
     }
 
     throw SkipTestException("batch2: bad accuracy on second image");

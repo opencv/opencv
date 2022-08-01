@@ -56,7 +56,7 @@ char* itoa( int _val, char* buffer, int /*radix*/ )
     return ptr;
 }
 
-char* doubleToString( char* buf, double value, bool explicitZero )
+char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
 {
     Cv64suf val;
     unsigned ieee754_hi;
@@ -70,15 +70,15 @@ char* doubleToString( char* buf, double value, bool explicitZero )
         if( ivalue == value )
         {
             if( explicitZero )
-                sprintf( buf, "%d.0", ivalue );
+                snprintf( buf, bufSize, "%d.0", ivalue );
             else
-                sprintf( buf, "%d.", ivalue );
+                snprintf( buf, bufSize, "%d.", ivalue );
         }
         else
         {
             static const char* fmt = "%.16e";
             char* ptr = buf;
-            sprintf( buf, fmt, value );
+            snprintf( buf, bufSize, fmt, value );
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -99,7 +99,7 @@ char* doubleToString( char* buf, double value, bool explicitZero )
     return buf;
 }
 
-char* floatToString( char* buf, float value, bool halfprecision, bool explicitZero )
+char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero )
 {
     Cv32suf val;
     unsigned ieee754;
@@ -112,17 +112,17 @@ char* floatToString( char* buf, float value, bool halfprecision, bool explicitZe
         if( ivalue == value )
         {
             if( explicitZero )
-                sprintf( buf, "%d.0", ivalue );
+                snprintf( buf, bufSize, "%d.0", ivalue );
             else
-                sprintf( buf, "%d.", ivalue );
+                snprintf( buf, bufSize, "%d.", ivalue );
         }
         else
         {
             char* ptr = buf;
             if (halfprecision)
-                sprintf(buf, "%.4e", value);
+                snprintf(buf, bufSize, "%.4e", value);
             else
-                sprintf(buf, "%.8e", value);
+                snprintf(buf, bufSize, "%.8e", value);
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -585,7 +585,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
 
                     CV_Assert(strlen(encoding) < 1000);
                     char buf[1100];
-                    sprintf(buf, "<?xml version=\"1.0\" encoding=\"%s\"?>\n", encoding);
+                    snprintf(buf, sizeof(buf), "<?xml version=\"1.0\" encoding=\"%s\"?>\n", encoding);
                     puts(buf);
                 } else
                     puts("<?xml version=\"1.0\"?>\n");
@@ -817,7 +817,7 @@ char *FileStorage::Impl::gets(size_t maxCount) {
         int delta = (int) strlen(ptr);
         ofs += delta;
         maxCount -= delta;
-        if (ptr[delta - 1] == '\n' || maxCount == 0)
+        if (delta == 0 || ptr[delta - 1] == '\n' || maxCount == 0)
             break;
         if (delta == count)
             buffer.resize((size_t) (buffer.size() * 1.5));
@@ -1107,15 +1107,15 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         data += sizeof(int);
                         break;
                     case CV_32F:
-                        ptr = fs::floatToString(buf, *(float *) data, false, explicitZero);
+                        ptr = fs::floatToString(buf, sizeof(buf), *(float *) data, false, explicitZero);
                         data += sizeof(float);
                         break;
                     case CV_64F:
-                        ptr = fs::doubleToString(buf, *(double *) data, explicitZero);
+                        ptr = fs::doubleToString(buf, sizeof(buf), *(double *) data, explicitZero);
                         data += sizeof(double);
                         break;
                     case CV_16F: /* reference */
-                        ptr = fs::floatToString(buf, (float) *(float16_t *) data, true, explicitZero);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero);
                         data += sizeof(float16_t);
                         break;
                     default:

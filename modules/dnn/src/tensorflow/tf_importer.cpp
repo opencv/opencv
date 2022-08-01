@@ -568,7 +568,7 @@ private:
     typedef std::map<std::string, TFImporterNodeParser> DispatchMap;
 
     const DispatchMap dispatch;
-    static const DispatchMap buildDispatchMap();
+    static DispatchMap buildDispatchMap();
 
     void parseConvolution        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseBias               (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
@@ -645,7 +645,7 @@ protected:
     TFImporter* importer;
 };
 
-const TFImporter::DispatchMap TFImporter::buildDispatchMap()
+TFImporter::DispatchMap TFImporter::buildDispatchMap()
 {
     static DispatchMap dispatch;
     dispatch["Conv2D"] = dispatch["SpaceToBatchND"] = dispatch["DepthwiseConv2dNative"] =
@@ -2540,6 +2540,8 @@ void TFImporter::parsePack(tensorflow::GraphDef& net, const tensorflow::NodeDef&
     int dim = (int)getLayerAttr(layer, "axis").i();
     if (dim != 0)
         CV_Error(Error::StsNotImplemented, "Unsupported mode of pack operation.");
+
+    data_layouts[name] = DATA_LAYOUT_UNKNOWN;
 
     CV_Assert(hasLayerAttr(layer, "N"));
     int num = (int)getLayerAttr(layer, "N").i();

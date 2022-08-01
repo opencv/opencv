@@ -98,7 +98,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
 - (instancetype)initWithSize:(Size2i*)size type:(int)type {
     self = [super init];
     if (self) {
-        _nativePtr = new cv::Mat(size.width, size.height, type);
+        _nativePtr = new cv::Mat(size.height, size.width, type);
     }
     return self;
 }
@@ -128,7 +128,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-        _nativePtr = new cv::Mat(size.width, size.height, type, scalerTemp);
+        _nativePtr = new cv::Mat(size.height, size.width, type, scalerTemp);
     }
     return self;
 }

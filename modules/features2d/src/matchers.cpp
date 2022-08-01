@@ -475,7 +475,7 @@ void DescriptorMatcher::DescriptorCollection::clear()
     mergedDescriptors.release();
 }
 
-const Mat DescriptorMatcher::DescriptorCollection::getDescriptor( int imgIdx, int localDescIdx ) const
+Mat DescriptorMatcher::DescriptorCollection::getDescriptor( int imgIdx, int localDescIdx ) const
 {
     CV_Assert( imgIdx < (int)startIdxs.size() );
     int globalIdx = startIdxs[imgIdx] + localDescIdx;
@@ -489,7 +489,7 @@ const Mat& DescriptorMatcher::DescriptorCollection::getDescriptors() const
     return mergedDescriptors;
 }
 
-const Mat DescriptorMatcher::DescriptorCollection::getDescriptor( int globalDescIdx ) const
+Mat DescriptorMatcher::DescriptorCollection::getDescriptor( int globalDescIdx ) const
 {
     CV_Assert( globalDescIdx < size() );
     return mergedDescriptors.row( globalDescIdx );

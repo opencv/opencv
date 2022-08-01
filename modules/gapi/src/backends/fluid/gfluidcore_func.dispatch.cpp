@@ -6,6 +6,8 @@
 
 #if !defined(GAPI_STANDALONE)
 
+#include <opencv2/core/hal/intrin.hpp>
+#if CV_SIMD
 #include "gfluidcore_func.hpp"
 #include "gfluidcore_func.simd.hpp"
 
@@ -14,7 +16,6 @@
 #include "gfluidutils.hpp"
 
 #include <opencv2/core/cvdef.h>
-#include <opencv2/core/hal/intrin.hpp>
 
 #include <cmath>
 #include <cstdlib>
@@ -394,5 +395,5 @@ CONVERTTO_SCALED_SIMD(float, float)
 } // namespace fluid
 } // namespace gapi
 } // namespace cv
-
+#endif // CV_SIMD
 #endif // !defined(GAPI_STANDALONE)

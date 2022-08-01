@@ -45,6 +45,7 @@
 #define OPENCV_CALIB3D_HPP
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/types.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
 
@@ -428,6 +429,9 @@ R & t \\
 
     \f[u = f_x (x' + \alpha y') + c_x \\
     v = f_y y' + c_y\f]
+
+    Summary:
+    Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
 
     @defgroup calib3d_c C API
 
@@ -3226,7 +3230,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details.
 
 This function extracts relative camera motion between two views of a planar object and returns up to
 four mathematical solution tuples of rotation, translation, and plane normal. The decomposition of
-the homography matrix H is described in detail in @cite Malis.
+the homography matrix H is described in detail in @cite Malis2007.
 
 If the homography H, induced by the plane, gives the constraint
 \f[s_i \vecthree{x'_i}{y'_i}{1} \sim H \vecthree{x_i}{y_i}{1}\f] on the source image points
@@ -3254,7 +3258,7 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the #findHomography function
 
 This function is intended to filter the output of the #decomposeHomographyMat based on additional
-information as described in @cite Malis . The summary of the method: the #decomposeHomographyMat function
+information as described in @cite Malis2007 . The summary of the method: the #decomposeHomographyMat function
 returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
 sets of points visible in the camera frame before and after the homography transformation is applied,
 we can determine which are the true potential solutions and which are the opposites by verifying which
@@ -3721,6 +3725,21 @@ void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R, InputArray P, TermCriteria criteria);
 
+/**
+ * @brief Compute undistorted image points position
+ *
+ * @param src Observed points position, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or
+CV_64FC2) (or vector\<Point2f\> ).
+ * @param dst Output undistorted points position (1xN/Nx1 2-channel or vector\<Point2f\> ).
+ * @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+ * @param distCoeffs Distortion coefficients
+ */
+CV_EXPORTS_W
+void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
+                          InputArray distCoeffs,
+                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5,
+                                                      0.01));
+
 //! @} calib3d
 
 /** @brief The methods in this namespace use a so-called fisheye camera model.
@@ -3783,8 +3802,7 @@ namespace fisheye
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
     Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-    This means if you want to transform back points undistorted with #fisheye::undistortPoints you have to
-    multiply them with \f$P^{-1}\f$.
+    This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
      */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
@@ -3797,10 +3815,12 @@ namespace fisheye
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
     @param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+    @param criteria Termination criteria
     @param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
      */
     CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
-        InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray());
+        InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray(),
+                TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8));
 
     /** @brief Computes undistortion and rectification maps for image transform by #remap. If D is empty zero
     distortion is used, if R or P is empty identity matrixes are used.
@@ -3866,7 +3886,7 @@ namespace fisheye
     CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
         OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
-    /** @brief Performs camera calibaration
+    /** @brief Performs camera calibration
 
     @param objectPoints vector of vectors of calibration pattern points in the calibration pattern
     coordinate space.

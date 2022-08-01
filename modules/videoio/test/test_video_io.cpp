@@ -224,7 +224,7 @@ public:
             if (cvtest::debugLevel > 0)
                 std::cout << "i = " << i << ": timestamp = " << timestamp << std::endl;
             const double frame_period = 1000.f/bunny_param.getFps();
-            // NOTE: eps == frame_period, because videoCapture returns frame begining timestamp or frame end
+            // NOTE: eps == frame_period, because videoCapture returns frame beginning timestamp or frame end
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
             EXPECT_NEAR(timestamp, i*frame_period, frame_period) << "i=" << i;
         }
@@ -713,6 +713,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_umat_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_umat_result);
             ASSERT_FALSE(umat.empty());
             umat.copyTo(frame);
@@ -728,6 +735,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_result);
         }
         ASSERT_FALSE(frame.empty());
