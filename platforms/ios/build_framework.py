@@ -379,6 +379,13 @@ class Builder:
                 "-framework", "CoreImage", "-framework", "CoreMedia", "-framework", "QuartzCore",
                 "-framework", "Accelerate", "-framework", "OpenCL",
             ]
+        elif target_platform == "iphoneos" or target_platform == "iphonesimulator":
+            framework_options = [
+                "-iframework", "%s/System/iOSSupport/System/Library/Frameworks" % sdk_dir,
+                "-framework", "AVFoundation", "-framework", "CoreGraphics",
+                "-framework", "CoreImage", "-framework", "CoreMedia", "-framework", "QuartzCore",
+                "-framework", "Accelerate", "-framework", "UIKit", "-framework", "CoreVideo",
+            ]
         execute([
             "clang++",
             "-Xlinker", "-rpath",
