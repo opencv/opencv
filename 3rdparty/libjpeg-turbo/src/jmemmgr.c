@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, 2021, D. R. Commander.
+ * Copyright (C) 2016, 2021-2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -37,12 +37,6 @@
 #endif
 #include <limits.h>
 
-#ifndef NO_GETENV
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare getenv() */
-extern char *getenv(const char *name);
-#endif
-#endif
-
 
 LOCAL(size_t)
 round_up_pow2(size_t a, size_t b)
@@ -74,10 +68,13 @@ round_up_pow2(size_t a, size_t b)
  * There isn't any really portable way to determine the worst-case alignment
  * requirement.  This module assumes that the alignment requirement is
  * multiples of ALIGN_SIZE.
- * By default, we define ALIGN_SIZE as sizeof(double).  This is necessary on
- * some workstations (where doubles really do need 8-byte alignment) and will
- * work fine on nearly everything.  If your machine has lesser alignment needs,
- * you can save a few bytes by making ALIGN_SIZE smaller.
+ * By default, we define ALIGN_SIZE as the maximum of sizeof(double) and
+ * sizeof(void *).  This is necessary on some workstations (where doubles
+ * really do need 8-byte alignment) and will work fine on nearly everything.
+ * We use the maximum of sizeof(double) and sizeof(void *) since sizeof(double)
+ * may be insufficient, for example, on CHERI-enabled platforms with 16-byte
+ * pointers and a 16-byte alignment requirement.  If your machine has lesser
+ * alignment needs, you can save a few bytes by making ALIGN_SIZE smaller.
  * The only place I know of where this will NOT work is certain Macintosh
  * 680x0 compilers that define double as a 10-byte IEEE extended float.
  * Doing 10-byte alignment is counterproductive because longwords won't be
@@ -87,7 +84,7 @@ round_up_pow2(size_t a, size_t b)
 
 #ifndef ALIGN_SIZE              /* so can override from jconfig.h */
 #ifndef WITH_SIMD
-#define ALIGN_SIZE  sizeof(double)
+#define ALIGN_SIZE  MAX(sizeof(void *), sizeof(double))
 #else
 #define ALIGN_SIZE  32 /* Most of the SIMD instructions we support require
                           16-byte (128-bit) alignment, but AVX2 requires
@@ -1162,12 +1159,16 @@ jinit_memory_mgr(j_common_ptr cinfo)
    */
 #ifndef NO_GETENV
   {
-    char *memenv;
+    char memenv[30] = { 0 };
 
-    if ((memenv = getenv("JPEGMEM")) != NULL) {
+    if (!GETENV_S(memenv, 30, "JPEGMEM") && strlen(memenv) > 0) {
       char ch = 'x';
 
+#ifdef _MSC_VER
+      if (sscanf_s(memenv, "%ld%c", &max_to_use, &ch, 1) > 0) {
+#else
       if (sscanf(memenv, "%ld%c", &max_to_use, &ch) > 0) {
+#endif
         if (ch == 'm' || ch == 'M')
           max_to_use *= 1000L;
         mem->pub.max_memory_to_use = max_to_use * 1000L;

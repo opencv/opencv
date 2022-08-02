@@ -1,0 +1,37 @@
+/* Version ID for the JPEG library.
+ * Might be useful for tests like "#if JPEG_LIB_VERSION >= 60".
+ */
+#define JPEG_LIB_VERSION  @JPEG_LIB_VERSION@
+
+/* libjpeg-turbo version */
+#define LIBJPEG_TURBO_VERSION  @VERSION@
+
+/* libjpeg-turbo version in integer form */
+#define LIBJPEG_TURBO_VERSION_NUMBER  @LIBJPEG_TURBO_VERSION_NUMBER@
+
+/* Support arithmetic encoding */
+#cmakedefine C_ARITH_CODING_SUPPORTED 1
+
+/* Support arithmetic decoding */
+#cmakedefine D_ARITH_CODING_SUPPORTED 1
+
+/* Support in-memory source/destination managers */
+#cmakedefine MEM_SRCDST_SUPPORTED 1
+
+/* Use accelerated SIMD routines. */
+#cmakedefine WITH_SIMD 1
+
+/*
+ * Define BITS_IN_JSAMPLE as either
+ *   8   for 8-bit sample values (the usual setting)
+ *   12  for 12-bit sample values
+ * Only 8 and 12 are legal data precisions for lossy JPEG according to the
+ * JPEG standard, and the IJG code does not support anything else!
+ * We do not support run-time selection of data precision, sorry.
+ */
+
+#define BITS_IN_JSAMPLE  @BITS_IN_JSAMPLE@      /* use 8 or 12 */
+
+/* Define if your (broken) compiler shifts signed values as if they were
+   unsigned. */
+#cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1
