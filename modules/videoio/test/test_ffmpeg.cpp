@@ -399,7 +399,32 @@ const ffmpeg_cap_properties_param_t videoio_ffmpeg_properties[] = {
 
 INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_cap_properties, testing::ValuesIn(videoio_ffmpeg_properties));
 
+typedef tuple<string, string> ffmpeg_get_fourcc_param_t;
+typedef testing::TestWithParam<ffmpeg_get_fourcc_param_t> ffmpeg_get_fourcc;
 
+TEST_P(ffmpeg_get_fourcc, check_short_codecs)
+{
+    const VideoCaptureAPIs api = CAP_FFMPEG;
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+    const string fileName = get<0>(GetParam());
+    const string fourcc = get<1>(GetParam());
+    VideoCapture cap(findDataFile(fileName), api);
+    if (!cap.isOpened())
+        throw SkipTestException("Video stream is not supported");
+    ASSERT_EQ(fourccToString(cap.get(CAP_PROP_FOURCC)), fourcc);
+}
+
+const ffmpeg_get_fourcc_param_t ffmpeg_get_fourcc_param[] =
+{
+    ffmpeg_get_fourcc_param_t("../cv/tracking/faceocc2/data/faceocc2.webm", "VP80"),
+    ffmpeg_get_fourcc_param_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "vp09"),
+    ffmpeg_get_fourcc_param_t("video/sample_322x242_15frames.yuv420p.libaom-av1.mp4", "av01"),
+    ffmpeg_get_fourcc_param_t("video/big_buck_bunny.h265", "hevc"),
+    ffmpeg_get_fourcc_param_t("video/big_buck_bunny.h264", "h264")
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_get_fourcc, testing::ValuesIn(ffmpeg_get_fourcc_param));
 
 // related issue: https://github.com/opencv/opencv/issues/15499
 TEST(videoio, mp4_orientation_meta_auto)
