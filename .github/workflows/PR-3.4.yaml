@@ -26,3 +26,6 @@ jobs:
 
   Android:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-Android.yaml@main
+
+  docs:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-docs.yaml@main
