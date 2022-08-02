@@ -411,7 +411,6 @@ TEST_P(Test_ONNX_layers, ReduceMean)
 TEST_P(Test_ONNX_layers, ReduceSum)
 {
     testONNXModels("reduce_sum");
-    testONNXModels("reduce_sum_axis");
     testONNXModels("reduce_sum_axis_dynamic_batch");
 }
 
