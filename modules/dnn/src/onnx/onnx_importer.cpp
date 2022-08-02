@@ -1191,7 +1191,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
             int axesNum = axesMat.total();
             for (int i = 0; i < axesNum; i++)
             {
-                int axis = normalize_axis(static_cast<int>(axesMat.at<float>(i)), inpShape.size());
+                int axis = normalize_axis(axesMat.at<int>(i), inpShape.size());
                 shouldDelete[axis] = true;
             }
         }
@@ -1220,7 +1220,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         }
     }
 
-    MatShape targetShape;
+    std::vector<int> targetShape;
     for (int i = 0; i < inpShape.size(); ++i)
     {
         if (!shouldDelete[i])
@@ -1290,30 +1290,10 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         }
     }
 
-    LayerParams reduceLp = layerParams;
-    reduceLp.name = layerParams.name + "/reduce";
-    CV_Assert(layer_id.find(reduceLp.name) == layer_id.end());
-    reduceLp.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
+    layerParams.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
+    layerParams.set("target_dims", DictValue::arrayInt(&targetShape[0], targetShape.size()));
 
     node_proto.set_input(0, inputString);
-    node_proto.set_output(0, reduceLp.name);
-    addLayer(reduceLp, node_proto);
-
-    layerParams.type = (depth == CV_8S) ? "ReshapeInt8" : "Reshape";
-    layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
-
-    // Set batchsize dim as dynamic to be compatible with batch size >= 2.
-    if (targetShape.size() > 1)
-    {
-        std::vector<int> dynamicAxes = {0};  // The index of batchsize dim is 0.
-        std::vector<int> inputIndices = {0};
-
-        layerParams.set("has_dynamic_shapes", true);
-        layerParams.set("dynamic_axes", DictValue::arrayInt(dynamicAxes.data(), dynamicAxes.size()));
-        layerParams.set("input_indices", DictValue::arrayInt(inputIndices.data(), inputIndices.size()));
-    }
-
-    node_proto.set_input(0, node_proto.output(0));
     node_proto.set_output(0, output_name);
 
     addLayer(layerParams, node_proto);
