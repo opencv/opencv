@@ -67,7 +67,10 @@ TEST(Test_Darknet, read_yolo_voc)
 
 TEST(Test_Darknet, read_yolo_voc_stream)
 {
-    applyTestTag(CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+            CV_TEST_TAG_MEMORY_1GB,
+            CV_TEST_TAG_DEBUG_VERYLONG
+            );
     Mat ref;
     Mat sample = imread(_tf("dog416.png"));
     Mat inp = blobFromImage(sample, 1.0/255, Size(416, 416), Scalar(), true, false);
@@ -594,7 +597,11 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets_async, Combine(
 
 TEST_P(Test_Darknet_nets, YOLOv3)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+    applyTestTag(
+            CV_TEST_TAG_LONG,
+            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
@@ -673,7 +680,11 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
 TEST_P(Test_Darknet_nets, YOLOv4)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+    applyTestTag(
+            CV_TEST_TAG_LONG,
+            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_DEBUG_VERYLONG
+            );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
@@ -864,7 +875,11 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
 TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB));
+    applyTestTag(
+            CV_TEST_TAG_LONG,
+            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_DEBUG_VERYLONG
+            );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Ngraph operation Transpose with name permute_168 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
