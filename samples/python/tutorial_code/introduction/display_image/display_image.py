@@ -13,6 +13,9 @@ if img is None:
 cv.imshow("Display window", img)
 k = cv.waitKey(0)
 ## [imshow]
+## [closewindow]
+cv.destroyWindow("Display window")
+## [closewindow]
 ## [imsave]
 if k == ord("s"):
     cv.imwrite("starry_night.png", img)

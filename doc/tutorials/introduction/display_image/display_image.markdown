@@ -112,7 +112,7 @@ The first argument is the title of the window and the second argument is the @re
 Because we want our window to be displayed until the user presses a key (otherwise the program would
 end far too quickly), we use the @ref cv::waitKey function whose only parameter is just how long
 should it wait for a user input (measured in milliseconds). Zero means to wait forever.
-The return value is the key that was pressed.
+The return value is the key that was pressed. The function cv::waitKey is followed by the function cv::destroyWindow which accepts as a parameter a string representing the name of a window to be closed.
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/introduction/display_image/display_image.cpp imshow
