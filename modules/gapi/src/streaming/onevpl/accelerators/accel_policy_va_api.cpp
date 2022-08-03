@@ -27,30 +27,17 @@ namespace onevpl {
 VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
     VPLAccelerationPolicy(selector),
     cpu_dispatcher(new VPLCPUAccelerationPolicy(selector)),
-    va_handle(),
-    device_fd(-1) {
+    va_handle() {
+    GAPI_LOG_INFO(nullptr, "created - TODO dispatchered on CPU acceleration");
 #if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
-    // TODO Move it out in device selector
-    device_fd = open("/dev/dri/renderD128", O_RDWR);
-    if (device_fd < 0) {
-        GAPI_LOG_WARNING(nullptr, "VAAPI device descriptor \"/dev/dri/renderD128\" has not found");
-        throw std::runtime_error("cannot open VAAPI device");
-    }
-    va_handle = vaGetDisplayDRM(device_fd);
-    if (!va_handle) {
-        GAPI_LOG_WARNING(nullptr, "VAAPI device vaGetDisplayDRM failed, error: " << strerror(errno));
-        close(device_fd);
-        throw std::runtime_error("vaGetDisplayDRM failed");
-    }
-    int major_version = 0, minor_version = 0;
-    VAStatus status {};
-    status = vaInitialize(va_handle, &major_version, &minor_version);
-    if (VA_STATUS_SUCCESS != status) {
-        GAPI_LOG_WARNING(nullptr, "Cannot initialize VAAPI device, error: " << vaErrorStr(status));
-        close(device_fd);
-        throw std::runtime_error("vaInitialize failed");
-    }
-    GAPI_LOG_INFO(nullptr, "created");
+    // setup VAAPI device
+    IDeviceSelector::DeviceScoreTable devices = get_device_selector()->select_devices();
+    GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration  VAAPI devices are not unsupported");
+    AccelType accel_type = devices.begin()->second.get_type();
+    GAPI_Assert(accel_type == AccelType::VAAPI &&
+                "Unexpected device AccelType while is waiting AccelType::VAAPI");
+
+    va_handle = reinterpret_cast<VADisplay>(devices.begin()->second.get_ptr());
 #else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
     GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
@@ -58,7 +45,6 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
 
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() {
     vaTerminate(va_handle);
-    close(device_fd);
     GAPI_LOG_INFO(nullptr, "destroyed");
 }
 

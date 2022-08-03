@@ -14,6 +14,7 @@
 
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
@@ -41,30 +42,56 @@ IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
     cv::util::suppress_unused_warning(context);
     std::unique_ptr<VPPPreprocDispatcher> dispatcher(new VPPPreprocDispatcher);
 #ifdef HAVE_ONEVPL
-    if (device.get_type() == onevpl::AccelType::DX11) {
-        bool gpu_pp_is_created = false;
+    bool pp_is_created = false;
+    switch (device.get_type()) {
+        case onevpl::AccelType::DX11: {
+            GAPI_LOG_INFO(nullptr, "Creating DX11 VPP preprocessing engine");
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-        GAPI_LOG_INFO(nullptr, "Creating DX11 VPP preprocessing engine");
-        // create GPU VPP preproc engine
-        dispatcher->insert_worker<VPPPreprocEngine>(
+            // create GPU VPP preproc engine
+            dispatcher->insert_worker<VPPPreprocEngine>(
                                 std::unique_ptr<VPLAccelerationPolicy>{
                                         new VPLDX11AccelerationPolicy(
                                             std::make_shared<CfgParamDeviceSelector>(
                                                     device, context, CfgParams{}))
                                 });
-        GAPI_LOG_INFO(nullptr, "DX11 VPP preprocessing engine created");
-        gpu_pp_is_created = true;
+            GAPI_LOG_INFO(nullptr, "DX11 VPP preprocessing engine created");
+            pp_is_created = true;
 #endif
 #endif
-        GAPI_Assert(gpu_pp_is_created && "VPP preproc for GPU is requested, but it is avaiable only for DX11 at now");
-    } else {
-        GAPI_LOG_INFO(nullptr, "Creating CPU VPP preprocessing engine");
-        dispatcher->insert_worker<VPPPreprocEngine>(
+            break;
+        }
+        case onevpl::AccelType::VAAPI: {
+            GAPI_LOG_INFO(nullptr, "Creating VAAPI VPP preprocessing engine");
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            // create GPU VPP preproc engine
+            dispatcher->insert_worker<VPPPreprocEngine>(
+                                std::unique_ptr<VPLAccelerationPolicy>{
+                                        new VPLVAAPIAccelerationPolicy(
+                                            std::make_shared<CfgParamDeviceSelector>(
+                                                    device, context, CfgParams{}))
+                                });
+            GAPI_LOG_INFO(nullptr, "VAAPI VPP preprocessing engine created");
+            pp_is_created = true;
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // #ifdef __linux__
+            break;
+        }
+        default: {
+            GAPI_LOG_INFO(nullptr, "Creating CPU VPP preprocessing engine");
+            dispatcher->insert_worker<VPPPreprocEngine>(
                         std::unique_ptr<VPLAccelerationPolicy>{
                                 new VPLCPUAccelerationPolicy(
                                     std::make_shared<CfgParamDeviceSelector>(CfgParams{}))});
-        GAPI_LOG_INFO(nullptr, "CPU VPP preprocessing engine created");
+            GAPI_LOG_INFO(nullptr, "CPU VPP preprocessing engine created");
+            pp_is_created = true;
+            break;
+        }
+    }
+    if (!pp_is_created) {
+        GAPI_LOG_WARNING(nullptr, "Cannot create VPP preprocessing engine: configuration unsupported");
+        GAPI_Assert(false && "VPP preproc unsupported");
     }
 #endif // HAVE_ONEVPL
     return dispatcher;
