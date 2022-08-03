@@ -153,7 +153,8 @@ std::vector<UvcDeviceInfo> V4L2Context::queryUvcDeviceInfoList()
                 }
                 std::istringstream(modalias.substr(5, 4)) >> std::hex >> uvcDev.vid;
                 std::istringstream(modalias.substr(10, 4)) >> std::hex >> uvcDev.pid;
-                std::getline(std::ifstream(video + "/device/interface"), uvcDev.name);
+                std::ifstream iface(video + "/device/interface");
+                std::getline(iface, uvcDev.name);
                 std::ifstream(video + "/device/bInterfaceNumber") >> uvcDev.mi;
                 uvcDevMap.insert({ interfaceRealPath, uvcDev });
             }
