@@ -2214,6 +2214,7 @@ TEST_P(Test_ONNX_nets, Shufflenet)
 
 TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Failed to allocate graph: MYRIAD device is not opened
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
