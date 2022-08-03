@@ -7,73 +7,6 @@
 namespace opencv_test { namespace {
 
 static
-void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& tvec, const Mat& K,
-               Mat& warpedImage, Mat& warpedDepth)
-{
-    CV_Assert(!image.empty());
-    CV_Assert(image.type() == CV_8UC1);
-
-    CV_Assert(depth.size() == image.size());
-    CV_Assert(depth.type() == CV_32FC1);
-
-    CV_Assert(!rvec.empty());
-    CV_Assert(rvec.total() == 3);
-    CV_Assert(rvec.type() == CV_64FC1);
-
-    CV_Assert(!tvec.empty());
-    CV_Assert(tvec.size() == Size(1, 3));
-    CV_Assert(tvec.type() == CV_64FC1);
-
-    warpedImage.create(image.size(), CV_8UC1);
-    warpedImage = Scalar(0);
-    warpedDepth.create(image.size(), CV_32FC1);
-    warpedDepth = Scalar(FLT_MAX);
-
-    Mat cloud;
-    depthTo3d(depth, K, cloud);
-
-    Mat cloud3, channels[4];
-    cv::split(cloud, channels);
-    std::vector<Mat> merged = { channels[0], channels[1], channels[2] };
-    cv::merge(merged, cloud3);
-
-    Mat Rt = Mat::eye(4, 4, CV_64FC1);
-    {
-        Mat R, dst;
-        cv::Rodrigues(rvec, R);
-
-        dst = Rt(Rect(0,0,3,3));
-        R.copyTo(dst);
-
-        dst = Rt(Rect(3,0,1,3));
-        tvec.copyTo(dst);
-    }
-    Mat warpedCloud, warpedImagePoints;
-    perspectiveTransform(cloud3, warpedCloud, Rt);
-    projectPoints(warpedCloud.reshape(3, 1), Mat(3,1,CV_32FC1, Scalar(0)), Mat(3,1,CV_32FC1, Scalar(0)), K, Mat(1,5,CV_32FC1, Scalar(0)), warpedImagePoints);
-    warpedImagePoints = warpedImagePoints.reshape(2, cloud.rows);
-    Rect r(0, 0, image.cols, image.rows);
-    for(int y = 0; y < cloud.rows; y++)
-    {
-        for(int x = 0; x < cloud.cols; x++)
-        {
-            Point p = warpedImagePoints.at<Point2f>(y,x);
-            if(r.contains(p))
-            {
-                float curDepth = warpedDepth.at<float>(p.y, p.x);
-                float newDepth = warpedCloud.at<Point3f>(y, x).z;
-                if(newDepth < curDepth && newDepth > 0)
-                {
-                    warpedImage.at<uchar>(p.y, p.x) = image.at<uchar>(y,x);
-                    warpedDepth.at<float>(p.y, p.x) = newDepth;
-                }
-            }
-        }
-    }
-    warpedDepth.setTo(std::numeric_limits<float>::quiet_NaN(), warpedDepth > 100);
-}
-
-static
 void dilateFrame(Mat& image, Mat& depth)
 {
     CV_Assert(!image.empty());
@@ -167,14 +100,8 @@ void OdometryTest::readData(Mat& image, Mat& depth) const
     image = imread(imageFilename,  0);
     depth = imread(depthFilename, -1);
 
-    if(image.empty())
-    {
-        FAIL() << "Image " << imageFilename.c_str() << " can not be read" << std::endl;
-    }
-    if(depth.empty())
-    {
-        FAIL() << "Depth" << depthFilename.c_str() << "can not be read" << std::endl;
-    }
+    ASSERT_FALSE(image.empty()) << "Image " << imageFilename.c_str() << " can not be read" << std::endl;
+    ASSERT_FALSE(depth.empty()) << "Depth " << depthFilename.c_str() << "can not be read" << std::endl;
 
     CV_DbgAssert(image.type() == CV_8UC1);
     CV_DbgAssert(depth.type() == CV_16UC1);
@@ -228,11 +155,7 @@ void OdometryTest::checkUMats()
     bool isComputed = odometry.compute(odf, odf, calcRt);
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
-    if (diff > idError)
-    {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
-    }
-
+    ASSERT_FALSE(diff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
 }
 
 void OdometryTest::run()
@@ -255,15 +178,9 @@ void OdometryTest::run()
     odometry.prepareFrame(odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
 
-    if(!isComputed)
-    {
-        FAIL() << "Can not find Rt between the same frame" << std::endl;
-    }
+    ASSERT_TRUE(isComputed) << "Can not find Rt between the same frame" << std::endl;
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    if(ndiff > idError)
-    {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
-    }
+    ASSERT_FALSE(ndiff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
@@ -278,13 +195,16 @@ void OdometryTest::run()
     {
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
+        Affine3d rt(rvec, tvec);
 
         Mat warpedImage, warpedDepth;
-        warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
+
+        warpFrame(depth, image, noArray(), rt.matrix, K, warpedDepth, warpedImage);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
         OdometryFrame odfSrc = odometry.createOdometryFrame();
         OdometryFrame odfDst = odometry.createOdometryFrame();
+
         odfSrc.setImage(image);
         odfSrc.setDepth(depth);
         odfDst.setImage(warpedImage);
@@ -294,8 +214,11 @@ void OdometryTest::run()
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
 
         if (!isComputed)
+        {
+            CV_LOG_INFO(NULL, "Iter " << iter << "; Odometry compute returned false");
             continue;
-        Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
+        }
+        Mat calcR = calcRt(Rect(0, 0, 3, 3)), calcRvec;
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
         Mat calcTvec = calcRt(Rect(3,0,1,3));
@@ -305,7 +228,8 @@ void OdometryTest::run()
             imshow("image", image);
             imshow("warpedImage", warpedImage);
             Mat resultImage, resultDepth;
-            warpFrame(image, depth, calcRvec, calcTvec, K, resultImage, resultDepth);
+
+            warpFrame(depth, image, noArray(), calcRt, K, resultDepth, resultImage);
             imshow("resultImage", resultImage);
             waitKey(100);
         }
@@ -321,9 +245,7 @@ void OdometryTest::run()
         double tdiffnorm = cv::norm(diff.translation());
 
         if (rdiffnorm < possibleError && tdiffnorm < possibleError)
-        {
             better_1time_count++;
-        }
         if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError)
             better_5times_count++;
 
@@ -460,6 +382,249 @@ TEST(RGBD_Odometry_FastICP, prepareFrame)
 {
     OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
     test.prepareFrameCheck();
+}
+
+
+struct WarpFrameTest
+{
+    WarpFrameTest() :
+     srcDepth(), srcRgb(), srcMask(),
+     dstDepth(), dstRgb(), dstMask(),
+     warpedDepth(), warpedRgb(), warpedMask()
+      {}
+
+    void run(bool needRgb, bool scaleDown, bool checkMask, bool identityTransform, int depthType, int imageType);
+
+    Mat srcDepth, srcRgb, srcMask;
+    Mat dstDepth, dstRgb, dstMask;
+    Mat warpedDepth, warpedRgb, warpedMask;
+};
+
+void WarpFrameTest::run(bool needRgb, bool scaleDown, bool checkMask, bool identityTransform, int depthType, int rgbType)
+{
+    std::string dataPath = cvtest::TS::ptr()->get_data_path();
+    std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
+    std::string srcRgbFilename   = dataPath + "/cv/rgbd/rgb.png";
+    // The depth was generated using the script at testdata/cv/rgbd/warped_depth_generator/warp_test.py
+    std::string warpedDepthFilename = dataPath + "/cv/rgbd/warpedDepth.png";
+    std::string warpedRgbFilename   = dataPath + "/cv/rgbd/warpedRgb.png";
+
+    srcDepth = imread(srcDepthFilename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(srcDepth.empty())  << "Depth " << srcDepthFilename.c_str() << "can not be read" << std::endl;
+
+    if (identityTransform)
+    {
+        warpedDepth = srcDepth;
+    }
+    else
+    {
+        warpedDepth = imread(warpedDepthFilename, IMREAD_UNCHANGED);
+        ASSERT_FALSE(warpedDepth.empty()) << "Depth " << warpedDepthFilename.c_str() << "can not be read" << std::endl;
+    }
+
+    ASSERT_TRUE(srcDepth.type() == CV_16UC1);
+    ASSERT_TRUE(warpedDepth.type() == CV_16UC1);
+
+    Mat epsSrc = srcDepth > 0, epsWarped = warpedDepth > 0;
+
+    const double depthFactor = 5000.0;
+    // scale float types only
+    double depthScaleCoeff = scaleDown ? ( depthType == CV_16U ? 1.          : 1./depthFactor ) :    1.;
+    double transScaleCoeff = scaleDown ? ( depthType == CV_16U ? depthFactor : 1.             ) : depthFactor;
+
+    Mat srcDepthCvt, warpedDepthCvt;
+    srcDepth.convertTo(srcDepthCvt, depthType, depthScaleCoeff);
+    srcDepth = srcDepthCvt;
+    warpedDepth.convertTo(warpedDepthCvt, depthType, depthScaleCoeff);
+    warpedDepth = warpedDepthCvt;
+
+    Scalar badVal;
+    switch (depthType)
+    {
+    case CV_16U:
+        badVal = 0;
+        break;
+    case CV_32F:
+        badVal = std::numeric_limits<float>::quiet_NaN();
+        break;
+    case CV_64F:
+        badVal = std::numeric_limits<double>::quiet_NaN();
+        break;
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported depth data type");
+    }
+
+    srcDepth.setTo(badVal, ~epsSrc);
+    warpedDepth.setTo(badVal, ~epsWarped);
+
+    if (checkMask)
+    {
+        srcMask = epsSrc; warpedMask = epsWarped;
+    }
+    else
+    {
+        srcMask = Mat(); warpedMask = Mat();
+    }
+
+    if (needRgb)
+    {
+        srcRgb = imread(srcRgbFilename, rgbType == CV_8UC1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+        ASSERT_FALSE(srcRgb.empty()) << "Image " << srcRgbFilename.c_str() << "can not be read" << std::endl;
+
+        if (identityTransform)
+        {
+            srcRgb.copyTo(warpedRgb, epsSrc);
+        }
+        else
+        {
+            warpedRgb = imread(warpedRgbFilename, rgbType == CV_8UC1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
+            ASSERT_FALSE (warpedRgb.empty()) << "Image " << warpedRgbFilename.c_str() << "can not be read" << std::endl;
+        }
+
+        if (rgbType == CV_8UC4)
+        {
+            Mat newSrcRgb, newWarpedRgb;
+            cvtColor(srcRgb, newSrcRgb, COLOR_RGB2RGBA);
+            srcRgb = newSrcRgb;
+            // let's keep alpha channel
+            std::vector<Mat> warpedRgbChannels;
+            split(warpedRgb, warpedRgbChannels);
+            warpedRgbChannels.push_back(epsWarped);
+            merge(warpedRgbChannels, newWarpedRgb);
+            warpedRgb = newWarpedRgb;
+        }
+
+        ASSERT_TRUE(srcRgb.type() == rgbType);
+        ASSERT_TRUE(warpedRgb.type() == rgbType);
+    }
+    else
+    {
+        srcRgb = Mat(); warpedRgb = Mat();
+    }
+
+    // test data used to generate warped depth and rgb
+    // the script used to generate is in opencv_extra repo
+    // at testdata/cv/rgbd/warped_depth_generator/warp_test.py
+    double fx = 525.0, fy = 525.0,
+           cx = 319.5, cy = 239.5;
+    Matx33d K(fx,  0, cx,
+               0, fy, cy,
+               0,  0,  1);
+    cv::Affine3d rt;
+    cv::Vec3d tr(-0.04, 0.05, 0.6);
+    rt = identityTransform ? cv::Affine3d() : cv::Affine3d(cv::Vec3d(0.1, 0.2, 0.3), tr * transScaleCoeff);
+
+    warpFrame(srcDepth, srcRgb, srcMask, rt.matrix, K, dstDepth, dstRgb, dstMask);
+}
+
+typedef std::pair<int, int> WarpFrameInputTypes;
+typedef testing::TestWithParam<WarpFrameInputTypes> WarpFrameInputs;
+
+TEST_P(WarpFrameInputs, checkTypes)
+{
+    const double shortl2diff = 233.983;
+    const double shortlidiff = 1;
+    const double floatl2diff = 0.038209;
+    const double floatlidiff = 0.00020004;
+
+    int depthType = GetParam().first;
+    int rgbType   = GetParam().second;
+
+    WarpFrameTest w;
+    // scale down does not happen on CV_16U
+    // to avoid integer overflow
+    w.run(/* needRgb */ true, /* scaleDown*/ true,
+          /* checkMask */ true, /* identityTransform */ false, depthType, rgbType);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+    EXPECT_EQ(0, maskDiff);
+    EXPECT_EQ(0, rgbDiff);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+    double l2threshold = depthType == CV_16U ? shortl2diff : floatl2diff;
+    double lithreshold = depthType == CV_16U ? shortlidiff : floatlidiff;
+
+    EXPECT_LE(l2diff, l2threshold);
+    EXPECT_LE(lidiff, lithreshold);
+}
+
+INSTANTIATE_TEST_CASE_P(RGBD_Odometry, WarpFrameInputs, ::testing::Values(
+                        WarpFrameInputTypes { CV_16U, CV_8UC3 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC3 },
+                        WarpFrameInputTypes { CV_64F, CV_8UC3 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC1 },
+                        WarpFrameInputTypes { CV_32F, CV_8UC4 }));
+
+
+TEST(RGBD_Odometry_WarpFrame, identity)
+{
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ true, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+    ASSERT_EQ(0, rgbDiff);
+    ASSERT_EQ(0, maskDiff);
+
+    double depthDiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.dstMask);
+
+    ASSERT_LE(depthDiff, DBL_EPSILON);
+}
+
+TEST(RGBD_Odometry_WarpFrame, noRgb)
+{
+    WarpFrameTest w;
+    w.run(/* needRgb */ false, /* scaleDown*/ true, /* checkMask */ true, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+    ASSERT_EQ(0, maskDiff);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+    ASSERT_LE(l2diff, 0.038209);
+    ASSERT_LE(lidiff, 0.00020004);
+}
+
+TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
+{
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ true, /* checkMask */ false, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+
+    ASSERT_EQ(0, rgbDiff);
+
+    Mat goodVals = (w.warpedDepth == w.warpedDepth);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, goodVals);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, goodVals);
+
+    ASSERT_LE(l2diff, 0.038209);
+    ASSERT_LE(lidiff, 0.00020004);
+}
+
+TEST(RGBD_Odometry_WarpFrame, bigScale)
+{
+    WarpFrameTest w;
+    w.run(/* needRgb */ true, /* scaleDown*/ false, /* checkMask */ true, /* identityTransform */ false, CV_32F, CV_8UC3);
+
+    double rgbDiff = cv::norm(w.dstRgb, w.warpedRgb, NORM_L2);
+    double maskDiff = cv::norm(w.dstMask, w.warpedMask, NORM_L2);
+
+    ASSERT_EQ(0, maskDiff);
+    ASSERT_EQ(0, rgbDiff);
+
+    double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, w.warpedMask);
+    double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, w.warpedMask);
+
+    ASSERT_LE(l2diff, 191.026565);
+    ASSERT_LE(lidiff, 0.99951172);
 }
 
 }} // namespace

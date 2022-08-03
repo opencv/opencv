@@ -13,6 +13,7 @@ def main():
         help="""DEPTH - works with depth,
                 RGB - works with images,
                 RGB_DEPTH - works with all,
+                SCALE - works with depth and calculate Rt with scale,
                 default - runs all algos""",
         default="")
     parser.add_argument(
@@ -50,18 +51,17 @@ def main():
         odometry = cv.Odometry(cv.DEPTH)
         Rt = np.zeros((4, 4))
         odometry.compute(depth1, depth2, Rt)
-        print(Rt)
+        print("Rt:\n {}".format(Rt))
     if args.algo == "RGB" or args.algo == "":
         odometry = cv.Odometry(cv.RGB)
         Rt = np.zeros((4, 4))
         odometry.compute(rgb1, rgb2, Rt)
-        print(Rt)
+        print("Rt:\n {}".format(Rt))
     if args.algo == "RGB_DEPTH" or args.algo == "":
         odometry = cv.Odometry(cv.RGB_DEPTH)
         Rt = np.zeros((4, 4))
         odometry.compute(depth1, rgb1, depth2, rgb2, Rt)
-        print(Rt)
-
+        print("Rt:\n {}".format(Rt))
 
 
 if __name__ == '__main__':

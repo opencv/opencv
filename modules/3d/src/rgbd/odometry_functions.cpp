@@ -359,8 +359,8 @@ void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage
 
 template<typename TMat>
 void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth,
-    InputArrayOfArrays pyramidNormal,
-    InputOutputArrayOfArrays pyramidMask)
+                        InputArrayOfArrays pyramidNormal,
+                        InputOutputArrayOfArrays pyramidMask)
 {
     minDepth = std::max(0.f, minDepth);
 
@@ -492,8 +492,8 @@ void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputO
 }
 
 void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
-    InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
-    InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale)
+                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
+                                InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale)
 {
     size_t didxLevels = pyramid_dI_dx.size(-1).width;
     size_t texLevels = pyramidTexturedMask.size(-1).width;
@@ -606,7 +606,7 @@ void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, 
 }
 
 void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
-    InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask)
+                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask)
 {
     size_t maskLevels = pyramidMask.size(-1).width;
     size_t norMaskLevels = pyramidNormalsMask.size(-1).width;
@@ -648,38 +648,15 @@ void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask
     }
 }
 
-
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          const OdometryFrame srcFrame,
                          const OdometryFrame dstFrame,
                          const Matx33f& cameraMatrix,
                          float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
                          double maxTranslation, double maxRotation, double sobelScale,
-                         OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype)
+                         OdometryType method, OdometryTransformType transformType, OdometryAlgoType algtype)
 {
-    int transformDim = -1;
-    CalcRgbdEquationCoeffsPtr rgbdEquationFuncPtr = 0;
-    CalcICPEquationCoeffsPtr icpEquationFuncPtr = 0;
-    switch(transfromType)
-    {
-    case OdometryTransformType::RIGID_TRANSFORMATION:
-        transformDim = 6;
-        rgbdEquationFuncPtr = calcRgbdEquationCoeffs;
-        icpEquationFuncPtr = calcICPEquationCoeffs;
-        break;
-    case OdometryTransformType::ROTATION:
-        transformDim = 3;
-        rgbdEquationFuncPtr = calcRgbdEquationCoeffsRotation;
-        icpEquationFuncPtr = calcICPEquationCoeffsRotation;
-        break;
-    case OdometryTransformType::TRANSLATION:
-        transformDim = 3;
-        rgbdEquationFuncPtr = calcRgbdEquationCoeffsTranslation;
-        icpEquationFuncPtr = calcICPEquationCoeffsTranslation;
-        break;
-    default:
-        CV_Error(Error::StsBadArg, "Incorrect transformation type");
-    }
+    int transformDim = getTransformDim(transformType);
 
     const int minOverdetermScale = 20;
     const int minCorrespsCount = minOverdetermScale * transformDim;
@@ -695,7 +672,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     for(int level = (int)iterCounts.size() - 1; level >= 0; level--)
     {
         const Matx33f& levelCameraMatrix = pyramidCameraMatrix[level];
-        const Matx33f& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
         const Mat srcLevelDepth, dstLevelDepth;
         const Mat srcLevelImage, dstLevelImage;
         srcFrame.getPyramidAt(srcLevelDepth, OdometryFramePyramidType::PYR_DEPTH, level);
@@ -717,32 +693,33 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         for(int iter = 0; iter < iterCounts[level]; iter ++)
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
-            Mat corresps_rgbd, corresps_icp, diffs_rgbd, diffs_icp;
-            double sigma_rgbd = 0, sigma_icp = 0;
+            Mat corresps_rgbd, corresps_icp, diffs_rgbd;
+            Mat dummy;
+            double sigma_rgbd = 0, dummyFloat = 0;
 
             const Mat pyramidMask;
             srcFrame.getPyramidAt(pyramidMask, OdometryFramePyramidType::PYR_MASK, level);
 
-            if(method != OdometryType::DEPTH)// RGB
+            if(method != OdometryType::DEPTH) // RGB
             {
                 const Mat pyramidTexturedMask;
                 dstFrame.getPyramidAt(pyramidTexturedMask, OdometryFramePyramidType::PYR_TEXMASK, level);
-                computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                computeCorresps(levelCameraMatrix, resultRt,
                                 srcLevelImage, srcLevelDepth, pyramidMask,
                                 dstLevelImage, dstLevelDepth, pyramidTexturedMask, maxDepthDiff,
                                 corresps_rgbd, diffs_rgbd, sigma_rgbd, OdometryType::RGB);
             }
 
-            if(method != OdometryType::RGB)// ICP
+            if(method != OdometryType::RGB) // ICP
             {
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     const Mat pyramidNormalsMask;
                     dstFrame.getPyramidAt(pyramidNormalsMask, OdometryFramePyramidType::PYR_NORMMASK, level);
-                    computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                        Mat(), srcLevelDepth, pyramidMask,
-                        Mat(), dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
-                        corresps_icp, diffs_icp, sigma_icp, OdometryType::DEPTH);
+                    computeCorresps(levelCameraMatrix, resultRt,
+                                    Mat(), srcLevelDepth, pyramidMask,
+                                    Mat(), dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
+                                    corresps_icp, dummy, dummyFloat, OdometryType::DEPTH);
                 }
             }
 
@@ -763,7 +740,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 dstFrame.getPyramidAt(dstPyrIdy, OdometryFramePyramidType::PYR_DIY, level);
                 calcRgbdLsmMatrices(srcPyrCloud, resultRt, dstPyrIdx, dstPyrIdy,
                                     corresps_rgbd, diffs_rgbd, sigma_rgbd, fx, fy, sobelScale,
-                                    AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
+                                    AtA_rgbd, AtB_rgbd, transformType);
                 AtA += AtA_rgbd;
                 AtB += AtB_rgbd;
             }
@@ -776,7 +753,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
-                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
+                                       corresps_icp, AtA_icp, AtB_icp, transformType);
                 }
                 else
                 {
@@ -798,27 +775,28 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             {
                 break;
             }
-            if(transfromType == OdometryTransformType::ROTATION)
+
+            Mat tmp61(6, 1, CV_64FC1, Scalar(0));
+            if(transformType == OdometryTransformType::ROTATION)
             {
-                Mat tmp(6, 1, CV_64FC1, Scalar(0));
-                ksi.copyTo(tmp.rowRange(0,3));
-                ksi = tmp;
+                ksi.copyTo(tmp61.rowRange(0,3));
+                ksi = tmp61;
             }
-            else if(transfromType == OdometryTransformType::TRANSLATION)
+            else if(transformType == OdometryTransformType::TRANSLATION)
             {
-                Mat tmp(6, 1, CV_64FC1, Scalar(0));
-                ksi.copyTo(tmp.rowRange(3,6));
-                ksi = tmp;
+                ksi.copyTo(tmp61.rowRange(3,6));
+                ksi = tmp61;
             }
 
             computeProjectiveMatrix(ksi, currRt);
             resultRt = currRt * resultRt;
+
+            //TODO: fixit, transform is used for Fast ICP only
             Vec6f x(ksi);
             Affine3f tinc(Vec3f(x.val), Vec3f(x.val + 3));
             transform = tinc * transform;
 
             isOk = true;
-
         }
 
     }
@@ -826,7 +804,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
-
     if(isOk)
     {
         Mat deltaRt;
@@ -841,105 +818,112 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     return isOk;
 }
 
+// Rotate dst by RtInv to get corresponding src pixels
 // In RGB case compute sigma and diffs too
-void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
-    const Mat& image0, const Mat& depth0, const Mat& validMask0,
-    const Mat& image1, const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
-    Mat& _corresps, Mat& _diffs, double& _sigma, OdometryType method)
+void computeCorresps(const Matx33f& _K, const Mat& rt,
+                     const Mat& imageSrc, const Mat& depthSrc, const Mat& validMaskSrc,
+                     const Mat& imageDst, const Mat& depthDst, const Mat& selectMaskDst, float maxDepthDiff,
+                     Mat& _corresps, Mat& _diffs, double& _sigma, OdometryType method)
 {
-    CV_Assert(Rt.type() == CV_64FC1);
+    Mat mrtInv = rt.inv(DECOMP_SVD);
+    Matx44d rtInv = mrtInv;
 
-    Mat corresps(depth1.size(), CV_16SC2, Scalar::all(-1));
-    Mat diffs(depth1.size(), CV_32F, Scalar::all(-1));
+    Mat corresps(depthDst.size(), CV_16SC2, Scalar::all(-1));
+    Mat diffs;
+    if (method == OdometryType::RGB)
+        diffs = Mat(depthDst.size(), CV_32F, Scalar::all(-1));
 
-    Matx33d K(_K), K_inv(_K_inv);
-    Rect r(0, 0, depth1.cols, depth1.rows);
-    Mat Kt = Rt(Rect(3, 0, 1, 3)).clone();
-    Kt = K * Kt;
-    const double* Kt_ptr = Kt.ptr<const double>();
+    // src_2d = K * src_3d, src_3d = K_inv * [src_2d | z]
+    //
 
-    AutoBuffer<float> buf(3 * (depth1.cols + depth1.rows));
+    Matx33d K(_K);
+    Matx33d K_inv = K.inv(DECOMP_SVD);
+    Rect r(0, 0, depthDst.cols, depthDst.rows);
+    Matx31d tinv = rtInv.get_minor<3, 1>(0, 3);
+    Matx31d ktinvm = K * tinv;
+    //const double* Kt_ptr = Kt.ptr<const double>();
+    Point3d ktinv(ktinvm(0, 0), ktinvm(1, 0), ktinvm(2, 0));
+
+    AutoBuffer<float> buf(3 * (depthDst.cols + depthDst.rows));
     float* KRK_inv0_u1 = buf.data();
-    float* KRK_inv1_v1_plus_KRK_inv2 = KRK_inv0_u1 + depth1.cols;
-    float* KRK_inv3_u1 = KRK_inv1_v1_plus_KRK_inv2 + depth1.rows;
-    float* KRK_inv4_v1_plus_KRK_inv5 = KRK_inv3_u1 + depth1.cols;
-    float* KRK_inv6_u1 = KRK_inv4_v1_plus_KRK_inv5 + depth1.rows;
-    float* KRK_inv7_v1_plus_KRK_inv8 = KRK_inv6_u1 + depth1.cols;
+    float* KRK_inv1_v1_plus_KRK_inv2 = buf.data() + depthDst.cols;
+    float* KRK_inv3_u1               = buf.data() + depthDst.cols     + depthDst.rows;
+    float* KRK_inv4_v1_plus_KRK_inv5 = buf.data() + depthDst.cols * 2 + depthDst.rows;
+    float* KRK_inv6_u1               = buf.data() + depthDst.cols * 2 + depthDst.rows * 2;
+    float* KRK_inv7_v1_plus_KRK_inv8 = buf.data() + depthDst.cols * 3 + depthDst.rows * 2;
     {
-        Mat R = Rt(Rect(0, 0, 3, 3)).clone();
+        Matx33d rinv = rtInv.get_minor<3, 3>(0, 0);
 
-        Mat KRK_inv = K * R * K_inv;
-        const double* KRK_inv_ptr = KRK_inv.ptr<const double>();
-        for (int u1 = 0; u1 < depth1.cols; u1++)
+        Matx33d kriki = K * rinv * K_inv;
+        for (int udst = 0; udst < depthDst.cols; udst++)
         {
-            KRK_inv0_u1[u1] = (float)(KRK_inv_ptr[0] * u1);
-            KRK_inv3_u1[u1] = (float)(KRK_inv_ptr[3] * u1);
-            KRK_inv6_u1[u1] = (float)(KRK_inv_ptr[6] * u1);
+            KRK_inv0_u1[udst] = (float)(kriki(0, 0) * udst);
+            KRK_inv3_u1[udst] = (float)(kriki(1, 0) * udst);
+            KRK_inv6_u1[udst] = (float)(kriki(2, 0) * udst);
         }
 
-        for (int v1 = 0; v1 < depth1.rows; v1++)
+        for (int vdst = 0; vdst < depthDst.rows; vdst++)
         {
-            KRK_inv1_v1_plus_KRK_inv2[v1] = (float)(KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
-            KRK_inv4_v1_plus_KRK_inv5[v1] = (float)(KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
-            KRK_inv7_v1_plus_KRK_inv8[v1] = (float)(KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
+            KRK_inv1_v1_plus_KRK_inv2[vdst] = (float)(kriki(0, 1) * vdst + kriki(0, 2));
+            KRK_inv4_v1_plus_KRK_inv5[vdst] = (float)(kriki(1, 1) * vdst + kriki(1, 2));
+            KRK_inv7_v1_plus_KRK_inv8[vdst] = (float)(kriki(2, 1) * vdst + kriki(2, 2));
         }
     }
 
     double sigma = 0;
     int correspCount = 0;
-    for (int v1 = 0; v1 < depth1.rows; v1++)
+    for (int vdst = 0; vdst < depthDst.rows; vdst++)
     {
-        const float* depth1_row = depth1.ptr<float>(v1);
-        const uchar* mask1_row = selectMask1.ptr<uchar>(v1);
-        for (int u1 = 0; u1 < depth1.cols; u1++)
+        const float* depthDst_row = depthDst.ptr<float>(vdst);
+        const uchar* maskDst_row = selectMaskDst.ptr<uchar>(vdst);
+        for (int udst = 0; udst < depthDst.cols; udst++)
         {
-            float d1 = depth1_row[u1];
-            if (mask1_row[u1] && !cvIsNaN(d1))
-            {
-                //CV_DbgAssert(!cvIsNaN(d1));
-                float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
-                    Kt_ptr[2]);
+            float ddst = depthDst_row[udst];
 
-                if (transformed_d1 > 0)
+            if (maskDst_row[udst] && !cvIsNaN(ddst))
+            {
+                float transformed_ddst = static_cast<float>(ddst * (KRK_inv6_u1[udst] + KRK_inv7_v1_plus_KRK_inv8[vdst]) + ktinv.z);
+
+                if (transformed_ddst > 0)
                 {
-                    float transformed_d1_inv = 1.f / transformed_d1;
-                    int u0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv0_u1[u1] + KRK_inv1_v1_plus_KRK_inv2[v1]) +
-                        Kt_ptr[0]));
-                    int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
-                        Kt_ptr[1]));
-                    if (r.contains(Point(u0, v0)))
+                    float transformed_ddst_inv = 1.f / transformed_ddst;
+                    int usrc = cvRound(transformed_ddst_inv * (ddst * (KRK_inv0_u1[udst] + KRK_inv1_v1_plus_KRK_inv2[vdst]) + ktinv.x));
+                    int vsrc = cvRound(transformed_ddst_inv * (ddst * (KRK_inv3_u1[udst] + KRK_inv4_v1_plus_KRK_inv5[vdst]) + ktinv.y));
+                    if (r.contains(Point(usrc, vsrc)))
                     {
-                        float d0 = depth0.at<float>(v0, u0);
-                        if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        float dsrc = depthSrc.at<float>(vsrc, usrc);
+                        if (validMaskSrc.at<uchar>(vsrc, usrc) && std::abs(transformed_ddst - dsrc) <= maxDepthDiff)
                         {
-                            CV_DbgAssert(!cvIsNaN(d0));
-                            Vec2s& c = corresps.at<Vec2s>(v0, u0);
-                            float& d = diffs.at<float>(v0, u0);
+                            CV_DbgAssert(!cvIsNaN(dsrc));
+                            Vec2s& c = corresps.at<Vec2s>(vsrc, usrc);
                             float diff = 0;
                             if (c[0] != -1)
                             {
                                 diff = 0;
                                 int exist_u1 = c[0], exist_v1 = c[1];
 
-                                float exist_d1 = (float)(depth1.at<float>(exist_v1, exist_u1) *
-                                    (KRK_inv6_u1[exist_u1] + KRK_inv7_v1_plus_KRK_inv8[exist_v1]) + Kt_ptr[2]);
+                                float exist_d1 = (float)(depthDst.at<float>(exist_v1, exist_u1) *
+                                                 (KRK_inv6_u1[exist_u1] + KRK_inv7_v1_plus_KRK_inv8[exist_v1]) + ktinv.z);
 
-                                if (transformed_d1 > exist_d1)
+                                if (transformed_ddst > exist_d1)
                                     continue;
                                 if (method == OdometryType::RGB)
-                                    diff = static_cast<float>(static_cast<int>(image0.at<uchar>(v0, u0)) -
-                                        static_cast<int>(image1.at<uchar>(v1, u1)));
+                                    diff = static_cast<float>(static_cast<int>(imageSrc.at<uchar>(vsrc, usrc)) -
+                                                              static_cast<int>(imageDst.at<uchar>(vdst, udst)));
                             }
                             else
                             {
                                 if (method == OdometryType::RGB)
-                                    diff = static_cast<float>(static_cast<int>(image0.at<uchar>(v0, u0)) -
-                                                              static_cast<int>(image1.at<uchar>(v1, u1)));
+                                    diff = static_cast<float>(static_cast<int>(imageSrc.at<uchar>(vsrc, usrc)) -
+                                                              static_cast<int>(imageDst.at<uchar>(vdst, udst)));
                                 correspCount++;
                             }
-                            c = Vec2s((short)u1, (short)v1);
-                            d = diff;
-                            sigma += diff * diff;
+                            c = Vec2s((short)udst, (short)vdst);
+                            if (method == OdometryType::RGB)
+                            {
+                                diffs.at<float>(vsrc, usrc) = diff;
+                                sigma += diff * diff;
+                            }
                         }
                     }
                 }
@@ -950,20 +934,26 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
     _sigma = std::sqrt(sigma / double(correspCount));
 
     _corresps.create(correspCount, 1, CV_32SC4);
-    _diffs.create(correspCount, 1, CV_32F);
     Vec4i* corresps_ptr = _corresps.ptr<Vec4i>();
-    float* diffs_ptr = _diffs.ptr<float>();
-    for (int v0 = 0, i = 0; v0 < corresps.rows; v0++)
+    float* diffs_ptr;
+    if (method == OdometryType::RGB)
     {
-        const Vec2s* corresps_row = corresps.ptr<Vec2s>(v0);
-        const float* diffs_row = diffs.ptr<float>(v0);
-        for (int u0 = 0; u0 < corresps.cols; u0++)
+        _diffs.create(correspCount, 1, CV_32F);
+        diffs_ptr = _diffs.ptr<float>();
+    }
+    for (int vsrc = 0, i = 0; vsrc < corresps.rows; vsrc++)
+    {
+        const Vec2s* corresps_row = corresps.ptr<Vec2s>(vsrc);
+        const float* diffs_row;
+        if (method == OdometryType::RGB)
+            diffs_row = diffs.ptr<float>(vsrc);
+        for (int usrc = 0; usrc < corresps.cols; usrc++)
         {
-            const Vec2s& c = corresps_row[u0];
-            const float& d = diffs_row[u0];
+            const Vec2s& c = corresps_row[usrc];
+            const float& d = diffs_row[usrc];
             if (c[0] != -1)
             {
-                corresps_ptr[i] = Vec4i(u0, v0, c[0], c[1]);
+                corresps_ptr[i] = Vec4i(usrc, vsrc, c[0], c[1]);
                 if (method == OdometryType::RGB)
                     diffs_ptr[i] = d;
                 i++;
@@ -973,18 +963,18 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
 }
 
 void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
-    const Mat& dI_dx1, const Mat& dI_dy1,
-    const Mat& corresps, const Mat& _diffs, const double _sigma,
-    double fx, double fy, double sobelScaleIn,
-    Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
+                         const Mat& dI_dx1, const Mat& dI_dy1,
+                         const Mat& corresps, const Mat& _diffs, const double _sigma,
+                         double fx, double fy, double sobelScaleIn,
+                         Mat& AtA, Mat& AtB, OdometryTransformType transformType)
 {
+    int transformDim = getTransformDim(transformType);
     AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
     AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
     double* AtB_ptr = AtB.ptr<double>();
 
-
     CV_Assert(Rt.type() == CV_64FC1);
-    const double* Rt_ptr = Rt.ptr<const double>();
+    Affine3d rtmat(Rt);
 
     const float* diffs_ptr = _diffs.ptr<float>();
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
@@ -1005,15 +995,13 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
         double w_sobelScale = w * sobelScaleIn;
 
         const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
-        Point3f tp0;
-        tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0[0] * Rt_ptr[4] + p0[1] * Rt_ptr[5] + p0[2] * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
+        Point3f tp0 = rtmat * Point3f(p0[0], p0[1], p0[2]);
 
-        func(A_ptr,
-            w_sobelScale * dI_dx1.at<short int>(v1, u1),
-            w_sobelScale * dI_dy1.at<short int>(v1, u1),
-            tp0, fx, fy);
+        rgbdCoeffsFunc(transformType,
+                       A_ptr,
+                       w_sobelScale * dI_dx1.at<short int>(v1, u1),
+                       w_sobelScale * dI_dy1.at<short int>(v1, u1),
+                       tp0, fx, fy);
 
         for (int y = 0; y < transformDim; y++)
         {
@@ -1031,11 +1019,13 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
             AtA.at<double>(x, y) = AtA.at<double>(y, x);
 }
 
+
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
-    const Mat& cloud1, const Mat& normals1,
-    const Mat& corresps,
-    Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
+                        const Mat& cloud1, const Mat& normals1,
+                        const Mat& corresps,
+                        Mat& AtA, Mat& AtB, OdometryTransformType transformType)
 {
+    int transformDim = getTransformDim(transformType);
     AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
     AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
     double* AtB_ptr = AtB.ptr<double>();
@@ -1084,18 +1074,21 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         const Vec4i& c = corresps_ptr[correspIndex];
         int u1 = c[2], v1 = c[3];
 
-        double w = sigma + std::abs(diffs_ptr[correspIndex]);
+        double w = sigma +std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1. / w : 1.;
 
         Vec4f n4 = normals1.at<Vec4f>(v1, u1);
-        func(A_ptr, tps0_ptr[correspIndex], Vec3f(n4[0], n4[1], n4[2]) * w);
+        Vec4f p1 = cloud1.at<Vec4f>(v1, u1);
 
+        icpCoeffsFunc(transformType,
+                      A_ptr, tps0_ptr[correspIndex], Point3f(p1[0], p1[1], p1[2]), Vec3f(n4[0], n4[1], n4[2]) * w);
         for (int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for (int x = y; x < transformDim; x++)
+            {
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
-
+            }
             AtB_ptr[y] += A_ptr[y] * w * diffs_ptr[correspIndex];
         }
     }
@@ -1112,7 +1105,7 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
     const double* ksi_ptr = ksi.ptr<const double>();
     // 0.5 multiplication is here because (dual) quaternions keep half an angle/twist inside
     Matx44d matdq = (DualQuatd(0, ksi_ptr[0], ksi_ptr[1], ksi_ptr[2],
-        0, ksi_ptr[3], ksi_ptr[4], ksi_ptr[5]) * 0.5).exp().toMat(QUAT_ASSUME_UNIT);
+                               0, ksi_ptr[3], ksi_ptr[4], ksi_ptr[5]) * 0.5).exp().toMat(QUAT_ASSUME_UNIT);
     Mat(matdq).copyTo(Rt);
 }
 

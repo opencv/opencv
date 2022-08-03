@@ -16,7 +16,7 @@ namespace cv
 /** These constants are used to set a type of data which odometry will use
 * @param DEPTH     only depth data
 * @param RGB       only rgb image
-* @param RGB_DEPTH only depth and rgb data simultaneously
+* @param RGB_DEPTH depth and rgb data simultaneously
 */
 enum OdometryType
 {
@@ -26,8 +26,8 @@ enum OdometryType
 };
 
 /** These constants are used to set the speed and accuracy of odometry
-* @param COMMON only accurate but not so fast
-* @param FAST   only less accurate but faster
+* @param COMMON accurate but not so fast
+* @param FAST   less accurate but faster
 */
 enum class OdometryAlgoType
 {
@@ -62,9 +62,9 @@ public:
      */
     void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame);
 
-    /** Prepare frame for odometry calculation
+    /** Compute Rigid Transformation between two frames so that Rt * src = dst
      * @param srcFrame src frame ("original" image)
-     * @param dstFrame dsr frame ("rotated" image)
+     * @param dstFrame dst frame ("rotated" image)
      * @param Rt Rigid transformation, which will be calculated, in form:
      * { R_11 R_12 R_13 t_1
      *   R_21 R_22 R_23 t_2
