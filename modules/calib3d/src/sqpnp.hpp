@@ -111,7 +111,7 @@ private:
     static double det3x3(const cv::Matx<double, 9, 1>& e);
 
     /*
-    * @brief                Tests the cheirality for a given solution.
+    * @brief                Tests the chirality for a given solution.
     * @param solution       The solution to evaluate.
     */
     inline bool positiveDepth(const SQPSolution& solution) const;
