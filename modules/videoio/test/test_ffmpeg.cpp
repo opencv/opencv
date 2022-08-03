@@ -408,11 +408,16 @@ TEST_P(ffmpeg_get_fourcc, check_short_codecs)
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("Backend was not found");
     const string fileName = get<0>(GetParam());
-    const string fourcc = get<1>(GetParam());
+    const string fourcc_string = get<1>(GetParam());
     VideoCapture cap(findDataFile(fileName), api);
     if (!cap.isOpened())
         throw SkipTestException("Video stream is not supported");
-    ASSERT_EQ(fourccToString(cap.get(CAP_PROP_FOURCC)), fourcc);
+    const double fourcc = cap.get(CAP_PROP_FOURCC);
+#ifdef _WIN32  // handle old FFmpeg backend
+    if(!fourcc && fileName == "../cv/tracking/faceocc2/data/faceocc2.webm")
+        throw SkipTestException("Feature not yet supported by Windows FFmpeg shared library!");
+#endif
+    ASSERT_EQ(fourccToString(fourcc), fourcc_string);
 }
 
 const ffmpeg_get_fourcc_param_t ffmpeg_get_fourcc_param[] =
