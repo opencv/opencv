@@ -65,6 +65,14 @@ endif()
 
 message(STATUS "${BITS}-bit build (${CPU_TYPE})")
 
+macro(boolean_number var)
+  if(${var})
+    set(${var} 1 ${ARGN})
+  else()
+    set(${var} 0 ${ARGN})
+  endif()
+endmacro()
+
 option(REQUIRE_SIMD "Generate a fatal error if SIMD extensions are not available for this platform (default is to fall back to a non-SIMD build)" FALSE)
 option(WITH_ARITH_ENC "Include arithmetic encoding support when emulating the libjpeg v6b API/ABI" TRUE)
 option(WITH_ARITH_DEC "Include arithmetic decoding support when emulating the libjpeg v6b API/ABI" TRUE)
