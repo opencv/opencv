@@ -36,7 +36,7 @@ GSource::GSource(const std::string& filePath,
 GSource::GSource(const std::string& filePath,
                  const CfgParams& cfg_params,
                  const Device &device, const Context &ctx) :
-    GSource(filePath, cfg_params,
+    GSource(filePath, update_param_with_accel_type(CfgParams{cfg_params}, device.get_type()),
             std::make_shared<CfgParamDeviceSelector>(device, ctx, cfg_params)) {
 }
 

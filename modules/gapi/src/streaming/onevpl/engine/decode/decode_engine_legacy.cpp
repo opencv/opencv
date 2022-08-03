@@ -186,6 +186,9 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     } else if (accel_type == AccelType::HOST) {
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    } else if (accel_type == AccelType::VAAPI) {
+        // TODO make proper direction
+        mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     } else {
         GAPI_Assert(false && "unsupported AccelType from device selector");
     }
