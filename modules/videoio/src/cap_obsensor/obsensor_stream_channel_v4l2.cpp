@@ -101,7 +101,7 @@ std::vector<UvcDeviceInfo> V4L2Context::queryUvcDeviceInfoList()
         cv::utils::fs::glob(videosDir, "*", videos, false, true);
         for (const auto& video : videos)
         {
-            UvcDeviceInfo uvcDev;
+            UvcDeviceInfo uvcDev{};
             cv::String videoName = video.substr(video.find_last_of("/") + 1);
             char buf[PATH_MAX];
             if (realpath(video.c_str(), buf) == nullptr || cv::String(buf).find("virtual") != std::string::npos)
