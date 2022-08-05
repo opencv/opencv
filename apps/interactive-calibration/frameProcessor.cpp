@@ -108,6 +108,16 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
     return false;
 }
 
+bool CalibProcessor::detectAndParseCircles(const cv::Mat &frame)
+{
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_SYMMETRIC_GRID, mBlobDetectorPtr);
+    if(isTemplateFound) {
+        mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
+        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+    }
+    return isTemplateFound;
+}
+
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 {
     bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
@@ -159,6 +169,14 @@ void CalibProcessor::saveFrameData()
     case chAruco:
         mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
+        break;
+    case CirclesGrid:
+        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
+        for( int i = 0; i < mBoardSize.height; i++ )
+            for( int j = 0; j < mBoardSize.width; j++ )
+                objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
+        mCalibData->imagePoints.push_back(mCurrentImagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case AcirclesGrid:
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
@@ -288,6 +306,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                                         capParams.charucoMarkerSize, mArucoDictionary);
 #endif
         break;
+    case CirclesGrid:
     case AcirclesGrid:
         mBlobDetectorPtr = cv::SimpleBlobDetector::create();
         break;
@@ -317,6 +336,9 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         break;
     case chAruco:
         isTemplateFound = detectAndParseChAruco(frameCopy);
+        break;
+    case CirclesGrid:
+        isTemplateFound = detectAndParseCircles(frameCopy);
         break;
     case AcirclesGrid:
         isTemplateFound = detectAndParseACircles(frameCopy);
