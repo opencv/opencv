@@ -55,6 +55,7 @@ protected:
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);
+    bool detectAndParseCircles(const cv::Mat& frame);
     bool detectAndParseACircles(const cv::Mat& frame);
     bool detectAndParseDualACircles(const cv::Mat& frame);
     void saveFrameData();
