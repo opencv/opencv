@@ -179,12 +179,12 @@ else()
   endif()
 endif()
 
+ocv_list_add_prefix(JPEG_SOURCES src/)
+
 set(JPEG_SOURCES ${JPEG_SOURCES} ${SIMD_OBJS})
 
 # No SIMD
 # set(JPEG_SOURCES ${JPEG_SOURCES} jsimd_none.c)
-
-ocv_list_add_prefix(JPEG_SOURCES src/)
 
 add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:simd>
         ${SIMD_OBJS})
