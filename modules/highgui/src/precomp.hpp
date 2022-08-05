@@ -60,8 +60,6 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
-#include "opencv2/imgcodecs.hpp"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
