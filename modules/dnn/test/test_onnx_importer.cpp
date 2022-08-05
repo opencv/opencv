@@ -1325,6 +1325,7 @@ TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 TEST_P(Test_ONNX_layers, Mish)
 {
     testONNXModels("mish");
+    testONNXModels("mish_no_softplus");
 }
 
 TEST_P(Test_ONNX_layers, CalculatePads)

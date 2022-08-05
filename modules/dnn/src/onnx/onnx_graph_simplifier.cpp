@@ -531,6 +531,35 @@ public:
     }
 };
 
+// softplus(x) = log(exp(x) + 1)
+class SoftplusSubgraph: public Subgraph
+{
+public:
+    SoftplusSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int exp = addNodeToMatch("Exp", input);
+        int addVal = addNodeToMatch("");
+        int add = addNodeToMatch("Add", addVal, exp);
+        addNodeToMatch("Log", add);
+        setFusedNode("Softplus", input);
+    }
+};
+
+class SoftplusSubgraph2: public Subgraph
+{
+public:
+    SoftplusSubgraph2()
+    {
+        int input = addNodeToMatch("");
+        int exp = addNodeToMatch("Exp", input);
+        int addVal = addNodeToMatch("");
+        int add = addNodeToMatch("Add", exp, addVal);
+        addNodeToMatch("Log", add);
+        setFusedNode("Softplus", input);
+    }
+};
+
 class MulCastSubgraph : public Subgraph
 {
 public:
@@ -734,6 +763,8 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
     subgraphs.push_back(makePtr<ExpandSubgraph>());
+    subgraphs.push_back(makePtr<SoftplusSubgraph>());
+    subgraphs.push_back(makePtr<SoftplusSubgraph2>());
     subgraphs.push_back(makePtr<MishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
