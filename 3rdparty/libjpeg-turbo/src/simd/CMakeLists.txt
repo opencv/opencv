@@ -1,9 +1,13 @@
 macro(simd_fail message)
-  if(REQUIRE_SIMD)
-    message(FATAL_ERROR "${message}.")
-  else()
     message(WARNING "${message}.  Performance will suffer.")
     set(WITH_SIMD 0 PARENT_SCOPE)
+endmacro()
+
+macro(boolean_number var)
+  if(${var})
+    set(${var} 1 ${ARGN})
+  else()
+    set(${var} 0 ${ARGN})
   endif()
 endmacro()
 
@@ -41,14 +45,14 @@ elseif(CPU_TYPE STREQUAL "i386")
   endif()
 endif()
 
-if(NOT REQUIRE_SIMD)
-  include(CheckLanguage)
-  check_language(ASM_NASM)
-  if(NOT CMAKE_ASM_NASM_COMPILER)
-    simd_fail("SIMD extensions disabled: could not find NASM compiler")
-    return()
-  endif()
+
+include(CheckLanguage)
+check_language(ASM_NASM)
+if(NOT CMAKE_ASM_NASM_COMPILER)
+  simd_fail("SIMD extensions disabled: could not find NASM compiler")
+  return()
 endif()
+
 enable_language(ASM_NASM)
 message(STATUS "CMAKE_ASM_NASM_COMPILER = ${CMAKE_ASM_NASM_COMPILER}")
 
@@ -224,6 +228,7 @@ elseif(CPU_TYPE STREQUAL "arm64" OR CPU_TYPE STREQUAL "arm")
 # following test determines whether -mfloat-abi=softfp should be explicitly
 # added to the compile flags for the intrinsics implementation of the Neon SIMD
 # extensions.
+
 if(BITS EQUAL 32)
   check_c_source_compiles("
     #if defined(__ARM_NEON__) || (!defined(__linux__) && !defined(ANDROID) && !defined(__ANDROID__))
