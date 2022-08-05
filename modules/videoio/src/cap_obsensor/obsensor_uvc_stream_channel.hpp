@@ -33,12 +33,12 @@ namespace obsensor {
 
 struct UvcDeviceInfo
 {
-    std::string id = ""; // uvc sub-device id
-    std::string name = "";
-    std::string uid = ""; // parent usb device id
-    uint16_t vid = 0;
-    uint16_t pid = 0;
-    uint16_t mi = 0; // uvc interface index
+    std::string id; // uvc sub-device id
+    std::string name;
+    std::string uid; // parent usb device id
+    uint16_t vid;
+    uint16_t pid;
+    uint16_t mi; // uvc interface index
 };
 
 enum StreamState

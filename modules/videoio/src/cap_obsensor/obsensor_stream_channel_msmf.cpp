@@ -195,7 +195,7 @@ std::vector<UvcDeviceInfo> MFContext::queryUvcDeviceInfoList()
         std::string uid, guid;
         if (!parseUvcDeviceSymbolicLink(symbolicLink, vid, pid, mi, uid, guid))
             continue;
-        uvcDevList.emplace_back(UvcDeviceInfo({ symbolicLink, name, uid, vid, pid, mi }));
+        uvcDevList.emplace_back(UvcDeviceInfo{ symbolicLink, name, uid, vid, pid, mi });
         CV_LOG_INFO(NULL, "UVC device found: name=" << name << ", vid=" << vid << ", pid=" << pid << ", mi=" << mi << ", uid=" << uid << ", guid=" << guid);
     }
     return uvcDevList;
