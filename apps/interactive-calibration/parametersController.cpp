@@ -91,6 +91,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     mCapParams.templDst = parser.get<float>("dst");
     mCapParams.saveFrames = parser.get<bool>("save_frames");
     mCapParams.zoom = parser.get<float>("zoom");
+    mCapParams.forceReopen = parser.get<bool>("force_reopen");
 
     if(!checkAssertion(mCapParams.squareSize > 0, "Distance between corners or circles must be positive"))
         return false;
