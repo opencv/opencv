@@ -260,9 +260,6 @@ bool  JpegDecoder::readHeader()
         }
     }
 
-    if( !result )
-        close();
-
     return result;
 }
 
@@ -512,7 +509,6 @@ bool  JpegDecoder::readData( Mat& img )
         }
     }
 
-    close();
     return result;
 }
 
