@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 2002-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2016, 2019, D. R. Commander.
+ * Copyright (C) 2009-2011, 2016, 2019, 2022, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
@@ -417,7 +417,7 @@ prepare_range_limit_table(j_decompress_ptr cinfo)
   table += (MAXJSAMPLE + 1);    /* allow negative subscripts of simple table */
   cinfo->sample_range_limit = table;
   /* First segment of "simple" table: limit[x] = 0 for x < 0 */
-  MEMZERO(table - (MAXJSAMPLE + 1), (MAXJSAMPLE + 1) * sizeof(JSAMPLE));
+  memset(table - (MAXJSAMPLE + 1), 0, (MAXJSAMPLE + 1) * sizeof(JSAMPLE));
   /* Main part of "simple" table: limit[x] = x */
   for (i = 0; i <= MAXJSAMPLE; i++)
     table[i] = (JSAMPLE)i;
@@ -426,10 +426,10 @@ prepare_range_limit_table(j_decompress_ptr cinfo)
   for (i = CENTERJSAMPLE; i < 2 * (MAXJSAMPLE + 1); i++)
     table[i] = MAXJSAMPLE;
   /* Second half of post-IDCT table */
-  MEMZERO(table + (2 * (MAXJSAMPLE + 1)),
-          (2 * (MAXJSAMPLE + 1) - CENTERJSAMPLE) * sizeof(JSAMPLE));
-  MEMCOPY(table + (4 * (MAXJSAMPLE + 1) - CENTERJSAMPLE),
-          cinfo->sample_range_limit, CENTERJSAMPLE * sizeof(JSAMPLE));
+  memset(table + (2 * (MAXJSAMPLE + 1)), 0,
+         (2 * (MAXJSAMPLE + 1) - CENTERJSAMPLE) * sizeof(JSAMPLE));
+  memcpy(table + (4 * (MAXJSAMPLE + 1) - CENTERJSAMPLE),
+         cinfo->sample_range_limit, CENTERJSAMPLE * sizeof(JSAMPLE));
 }
 
 

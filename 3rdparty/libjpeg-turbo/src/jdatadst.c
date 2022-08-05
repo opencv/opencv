@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * Modified 2009-2012 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2013, 2016, D. R. Commander.
+ * Copyright (C) 2013, 2016, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -22,11 +22,6 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"
-
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare malloc(),free() */
-extern void *malloc(size_t size);
-extern void free(void *ptr);
-#endif
 
 
 /* Expanded data destination object for stdio output */
@@ -116,7 +111,7 @@ empty_output_buffer(j_compress_ptr cinfo)
 {
   my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
 
-  if (JFWRITE(dest->outfile, dest->buffer, OUTPUT_BUF_SIZE) !=
+  if (fwrite(dest->buffer, 1, OUTPUT_BUF_SIZE, dest->outfile) !=
       (size_t)OUTPUT_BUF_SIZE)
     ERREXIT(cinfo, JERR_FILE_WRITE);
 
@@ -141,7 +136,7 @@ empty_mem_output_buffer(j_compress_ptr cinfo)
   if (nextbuffer == NULL)
     ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
 
-  MEMCOPY(nextbuffer, dest->buffer, dest->bufsize);
+  memcpy(nextbuffer, dest->buffer, dest->bufsize);
 
   free(dest->newbuffer);
 
@@ -175,7 +170,7 @@ term_destination(j_compress_ptr cinfo)
 
   /* Write any data remaining in the buffer */
   if (datacount > 0) {
-    if (JFWRITE(dest->outfile, dest->buffer, datacount) != datacount)
+    if (fwrite(dest->buffer, 1, datacount, dest->outfile) != datacount)
       ERREXIT(cinfo, JERR_FILE_WRITE);
   }
   fflush(dest->outfile);
