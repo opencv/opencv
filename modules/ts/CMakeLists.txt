@@ -15,10 +15,6 @@ if(WINRT)
 endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
-if(ARM AND CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
-  # suppress warnings from GCC only on 7.1 and later
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-psabi)
-endif()
 
 ocv_add_module(ts INTERNAL opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 
