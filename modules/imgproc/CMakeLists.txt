@@ -12,10 +12,6 @@ ocv_add_dispatched_file(smooth SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(sumpixels SSE2 AVX2 AVX512_SKX)
 ocv_add_dispatched_file(undistort SSE2 AVX2)
 ocv_define_module(imgproc opencv_core WRAP java python js)
-if(ARM AND CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 7.0)
-  # suppress warnings from GCC only on 7.1 and later
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-psabi)
-endif()
 
 ocv_check_environment_variables(OPENCV_IPP_GAUSSIAN_BLUR)
 option(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OFF)
