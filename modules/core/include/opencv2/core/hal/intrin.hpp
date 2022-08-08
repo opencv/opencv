@@ -537,7 +537,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_setall_f32(float v) { return VXPREFIX(_setall_f32)(v); }
     inline v_int64 vx_setall_s64(int64 v) { return VXPREFIX(_setall_s64)(v); }
     inline v_uint64 vx_setall_u64(uint64 v) { return VXPREFIX(_setall_u64)(v); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_setall_f64(double v) { return VXPREFIX(_setall_f64)(v); }
 #endif
     //! @}
@@ -554,7 +554,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_setzero_f32() { return VXPREFIX(_setzero_f32)(); }
     inline v_int64 vx_setzero_s64() { return VXPREFIX(_setzero_s64)(); }
     inline v_uint64 vx_setzero_u64() { return VXPREFIX(_setzero_u64)(); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_setzero_f64() { return VXPREFIX(_setzero_f64)(); }
 #endif
     //! @}
@@ -571,7 +571,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load(const float * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int64 vx_load(const int64 * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint64 vx_load(const uint64 * ptr) { return VXPREFIX(_load)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load(const double * ptr) { return VXPREFIX(_load)(ptr); }
 #endif
     //! @}
@@ -588,7 +588,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_aligned(const float * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int64 vx_load_aligned(const int64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint64 vx_load_aligned(const uint64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_aligned(const double * ptr) { return VXPREFIX(_load_aligned)(ptr); }
 #endif
     //! @}
@@ -605,7 +605,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_low(const float * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int64 vx_load_low(const int64 * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint64 vx_load_low(const uint64 * ptr) { return VXPREFIX(_load_low)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_low(const double * ptr) { return VXPREFIX(_load_low)(ptr); }
 #endif
     //! @}
@@ -622,7 +622,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_halves(const float * ptr0, const float * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int64 vx_load_halves(const int64 * ptr0, const int64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint64 vx_load_halves(const uint64 * ptr0, const uint64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_halves(const double * ptr0, const double * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
 #endif
     //! @}
@@ -639,7 +639,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_lut(const float* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int64 vx_lut(const int64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint64 vx_lut(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_lut(const double* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
 #endif
     //! @}
@@ -656,7 +656,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_lut_pairs(const float* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int64 vx_lut_pairs(const int64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint64 vx_lut_pairs(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_lut_pairs(const double* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
 #endif
     //! @}

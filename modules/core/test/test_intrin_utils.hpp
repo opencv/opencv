@@ -1737,7 +1737,33 @@ void test_hal_intrin_uint8()
     // typedef v_uint8 R;
     TheTest<v_uint8>()
         .test_loadstore()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul_expand()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+#if 0 // not implemented in rvv backend yet.
+        .test_interleave()
+        .test_mul()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
+        .test_pack_b()
+        .test_unpack()
+        .test_reverse()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1747,7 +1773,33 @@ void test_hal_intrin_int8()
     // typedef v_int8 R;
     TheTest<v_int8>()
         .test_loadstore()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul_expand()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_absdiffs()
+        .test_abs()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+#if 0
+        .test_interleave()
+        .test_mul()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_unpack()
+        .test_reverse()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1759,7 +1811,34 @@ void test_hal_intrin_uint16()
     // typedef v_uint16 R;
     TheTest<v_uint16>()
         .test_loadstore()
+        .test_expand()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul_expand()
+        .test_mul_hi()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+#if 0
+        .test_interleave()
+        .test_mul()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
+        .test_unpack()
+        .test_reverse()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1769,7 +1848,36 @@ void test_hal_intrin_int16()
     // typedef v_int16 R;
     TheTest<v_int16>()
         .test_loadstore()
+        .test_expand()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul_expand()
+        .test_mul_hi()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_absdiffs()
+        .test_abs()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+#if 0
+        .test_interleave()
+        .test_mul()
+        .test_cmp()
+        .test_dotprod()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_unpack()
+        .test_reverse()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1781,7 +1889,33 @@ void test_hal_intrin_uint32()
     // typedef v_uint32 R;
     TheTest<v_uint32>()
         .test_loadstore()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_mul_expand()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_unpack()
+        .test_reverse()
+        .test_transpose()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1791,7 +1925,36 @@ void test_hal_intrin_int32()
     // typedef v_int32 R;
     TheTest<v_int32>()
         .test_loadstore()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_abs()
+        .test_shift<1>().test_shift<8>()
+        .test_dotprod_expand_f64()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_dotprod()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_unpack()
+        .test_reverse()
+        .test_float_cvt32()
+        .test_float_cvt64()
+        .test_transpose()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1803,7 +1966,20 @@ void test_hal_intrin_uint64()
     // typedef v_uint64 R;
     TheTest<v_uint64>()
         .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
         ;
+#if 0
+    #if CV_SIMD_64F
+       .test_cmp64()
+    #endif
+        .test_reverse()
+#endif
 }
 
 void test_hal_intrin_int64()
@@ -1812,7 +1988,21 @@ void test_hal_intrin_int64()
     // typedef v_int64 R;
     TheTest<v_int64>()
         .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_cvt64_double()
         ;
+#if 0
+    #if CV_SIMD_64F
+       .test_cmp64()
+    #endif
+        .test_reverse()
+#endif
 }
 
 //============= Floating point =====================================================================
@@ -1822,18 +2012,61 @@ void test_hal_intrin_float32()
     // typedef v_float32 R;
     TheTest<v_float32>()
         .test_loadstore()
+        .test_addsub()
+        .test_mul()
+        .test_div()
+        .test_sqrt_abs()
         .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+#if 0
+        .test_interleave()
+        .test_interleave_2channel()
+        .test_cmp()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_unpack()
+        .test_float_math()
+        .test_float_cvt64()
+        .test_matmul()
+        .test_transpose()
+        .test_reverse()
+        .test_reduce_sum4()
+#endif
         ;
 }
 
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
+#if CV_SIMD_SCALABLE_64F
     // typedef v_float64 R;
     TheTest<v_float64>()
         .test_loadstore()
+        .test_addsub()
+        .test_mul()
+        .test_div()
+        .test_sqrt_abs()
         .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+#if 0
+        .test_cmp()
+        .test_unpack()
+        .test_float_cvt32()
+        .test_float_math()
+        .test_reverse()
+#endif
         ;
 
 #endif
@@ -1874,6 +2107,7 @@ void test_hal_intrin_uint8()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
@@ -1914,6 +2148,7 @@ void test_hal_intrin_int8()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1951,6 +2186,7 @@ void test_hal_intrin_uint16()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1988,6 +2224,7 @@ void test_hal_intrin_int16()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -2022,6 +2259,8 @@ void test_hal_intrin_uint32()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
         .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
         .test_transpose()
         ;
 }
@@ -2058,6 +2297,8 @@ void test_hal_intrin_int32()
         .test_float_cvt32()
         .test_float_cvt64()
         .test_transpose()
+        .test_extract_highest()
+        .test_broadcast_highest()
         ;
 }
 
@@ -2079,6 +2320,7 @@ void test_hal_intrin_uint64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -2099,6 +2341,7 @@ void test_hal_intrin_int64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_cvt64_double()
         ;
@@ -2134,6 +2377,8 @@ void test_hal_intrin_float32()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
         .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -2163,6 +2408,7 @@ void test_hal_intrin_float64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
