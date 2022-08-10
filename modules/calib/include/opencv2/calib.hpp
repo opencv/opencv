@@ -1099,6 +1099,34 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
+/*
+Multiview calibraton.
+
+Input:
+@objPoints   of size NUM_FRAMES x NUM_POINTS x 3 -- object points
+@imagePoints of size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 3 -- image points
+@imageSize   of size NUM_CAMERAS x 2 -- size of images
+@visibility - visibility mask of size NUM_CAMERAS x NUM_FRAMES - boolean
+@USE_INTRINSICS_GUESS - if true then intrinsic parameters (K and distortion) are not estimated
+@is_fisheye of size NUM_CAMERAS -- indicates whether i-th camera is fisheye. Currently supported either all or none.
+
+Output:
+@return: true if success, false - otherwise
+@Rs of size NUM_CAMERAS x 3 x 3 -- rotation matrices wrt camera 0, where Rs[0] = I
+@Ts of size NUM_CAMERAS x 3 x 1 -- translation vectors wrt camera 0, where Ts[0] = 0
+@rvecs0 of size NUM_FRAMES x 3 x 3 -- rotation vectors for camera 0 (may contain null Mat, if frame is not valid)
+@tvecs0 of size NUM_FRAMES x 3 x 1 -- translation vectors for camera 0  (may contain null Mat, if frame is not valid)
+@Ks of size NUM_CAMERAS x 3 x 3 -- intrinsic matrices
+@distortions of size NUM_CAMERAS x NUM_PARAMS
+
+*/
+
+CV_EXPORTS_W bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
+        const std::vector<Size> &imageSize, const Mat &visibility,
+        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
+        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
+        OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS=false);
+
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
 
