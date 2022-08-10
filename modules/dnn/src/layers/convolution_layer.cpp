@@ -101,10 +101,6 @@ public:
         if (kernel_size.size() == 2) {
             kernel = Size(kernel_size[1], kernel_size[0]);
             stride = Size(strides[1], strides[0]);
-            for (int i = 0; i < pads_begin.size(); i++) {
-                if (pads_begin[i] != pads_end[i])
-                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
-            }
             pad = Size(pads_begin[1], pads_begin[0]);
             dilation = Size(dilations[1], dilations[0]);
 
@@ -163,10 +159,6 @@ public:
         }
         getConvPoolPaddings(inpShape, kernel_size, strides, padMode, pads_begin, pads_end);
         if (pads_begin.size() == 2) {
-            for (int i = 0; i < pads_begin.size(); i++) {
-                if (pads_begin[i] != pads_end[i])
-                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
-            }
             pad = Size(pads_begin[1], pads_begin[0]);
         }
         fusedWeights = false;
