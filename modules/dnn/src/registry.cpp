@@ -11,6 +11,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_ascendcl.hpp"
 
 #include "halide_scheduler.hpp"
 
@@ -115,6 +116,13 @@ private:
         if (haveTimVX())
         {
             backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
+        }
+#endif
+
+#ifdef HAVE_ASCENDCL
+        if (haveAscendCL())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_ASCENDCL, DNN_TARGET_NPU));
         }
 #endif
     }

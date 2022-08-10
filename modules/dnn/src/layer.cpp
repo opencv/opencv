@@ -84,6 +84,14 @@ Ptr<BackendNode> Layer::initTimVX(void* timVxInfo,
     return Ptr<BackendNode>();
 }
 
+Ptr<BackendNode> Layer::initAscendCL(void* cannInfo,
+                                     const std::vector<Ptr<BackendWrapper>>& inputs,
+                                     const std::vector<Ptr<BackendWrapper>>& outputs)
+{
+    CV_Error(Error::StsNotImplemented, "AscendCL pipeline of " + type + " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
 Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 {
     return Ptr<BackendNode>();

@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_ascendcl.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -371,6 +372,15 @@ public:
             return true;
         }
 #endif
+#ifdef HAVE_ASCENDCL
+        if (backendId == DNN_BACKEND_ASCENDCL)
+        {
+            if (ksize == 2 || ksize == 3)
+                return true;
+            CV_LOG_WARNING(NULL, "AscendCL backend only supports Conv2D and Conv3D.");
+            return false;
+        }
+#endif
         return false;
     }
 
@@ -662,6 +672,61 @@ public:
                 biasvec[i] += b.at<float>(i);
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
+    }
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        bool has_bias = hasBias() || fusedBias;
+        int out_channel = blobs[0].size[0];
+
+        // create tensor: host -> device
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        /*
+         * Create Op
+         */
+        // each of the followings are quadruple according to AscendCL Operator Manual
+        std::vector<int64_t> _strides, _pads, _dilations;
+        _strides = {1, 1, (int64_t)strides[0], (int64_t)strides[1]};
+        _pads = {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]};
+        _dilations = {1, 1, (int64_t)dilations[0], (int64_t)dilations[1]};
+
+        // calc group
+        int _groups = inputs_->getShapeAt(1) / shape(blobs[0])[1];
+
+        // create Conv2D
+        std::shared_ptr<ascendcl::Operator> op_conv2d(new ascendcl::Conv2D(_strides, _pads, _dilations, _groups));
+
+        // put weight and bias into a single blob
+        Ptr<AscendCLBackendWrapper> weightWrapper = Ptr<AscendCLBackendWrapper>(new AscendCLBackendWrapper(blobs[0]));
+        weightWrapper->createTensor();
+
+        std::vector<Ptr<BackendWrapper> > blobsWrapper;
+        blobsWrapper.push_back(weightWrapper);
+
+        if (has_bias)
+        {
+            Mat biasMat({out_channel}, CV_32F, &biasvec[0]);
+            Ptr<AscendCLBackendWrapper> biasWrapper = Ptr<AscendCLBackendWrapper>(new AscendCLBackendWrapper(biasMat));
+            biasWrapper->createTensor();
+            blobsWrapper.push_back(biasWrapper);
+        }
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_conv2d, blobsWrapper));
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

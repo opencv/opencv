@@ -27,6 +27,10 @@ if(HAVE_TIMVX)
   add_definitions(-DHAVE_TIMVX=1)
 endif()
 
+if(HAVE_ASCENDCL)
+  add_definitions(-DHAVE_ASCENDCL=1)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
@@ -153,6 +157,11 @@ endif()
 if(HAVE_TIMVX)
     list(APPEND include_dirs ${TIMVX_INCLUDE_DIR})
     list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
+endif()
+
+if(HAVE_ASCENDCL)
+    list(APPEND include_dirs ${ASCENDCL_INCLUDE_DIRS})
+    list(APPEND libs -Wl,--whole-archive ${ASCENDCL_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
 set(webnn_srcs "")

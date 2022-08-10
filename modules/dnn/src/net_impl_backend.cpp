@@ -82,6 +82,12 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             return Ptr<BackendWrapper>(new TimVXBackendWrapper(baseBuffer, host));
 #endif
         }
+        else if (preferableBackend == DNN_BACKEND_ASCENDCL)
+        {
+#ifdef HAVE_ASCENDCL
+            return Ptr<BackendWrapper>(new AscendCLBackendWrapper(baseBuffer, host));
+#endif
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -145,6 +151,14 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         initTimVXBackend();
 #else
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of TimVX");
+#endif
+    }
+    else if (preferableBackend == DNN_BACKEND_ASCENDCL)
+    {
+#ifdef HAVE_ASCENDCL
+        initAscendCLBackend();
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of AscendCL");
 #endif
     }
     else

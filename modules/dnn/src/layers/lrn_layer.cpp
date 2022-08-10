@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_ascendcl.hpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
@@ -106,7 +107,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM));
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM)) ||
+               backendId == DNN_BACKEND_ASCENDCL;
     }
 
 #ifdef HAVE_OPENCL
@@ -365,6 +367,34 @@ public:
 #ifdef HAVE_VULKAN
         std::shared_ptr<vkcom::OpBase> op(new vkcom::OpLRN(size / 2, bias, alpha, beta, normBySize));
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
+#endif
+        return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        // create op
+        String norm_region = "ACROSS_CHANNELS";
+        if (type == SPATIAL_NRM)
+            norm_region = "WITHIN_CHANNEL";
+        std::shared_ptr<ascendcl::Operator> op_lrn(new ascendcl::LRN(size, bias, alpha, beta, norm_region));
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_lrn));
 #endif
         return Ptr<BackendNode>();
     }

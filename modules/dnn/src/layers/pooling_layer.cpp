@@ -47,6 +47,7 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_webnn.hpp"
+#include "../op_ascendcl.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -225,6 +226,13 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return haveVulkan() &&
                            (type == MAX || type == AVE);
+            return false;
+        }
+        else if (backendId == DNN_BACKEND_ASCENDCL)
+        {
+            // MaxPool & GlobalMaxPool
+            if (kernel_size.size() == 2)
+                return haveAscendCL() && (type == MAX);
             return false;
         }
         else if (backendId == DNN_BACKEND_WEBNN)
@@ -528,6 +536,56 @@ public:
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
     }
 #endif
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        // create op
+        //  * ksize, [N, C, H, W]; kernel_size: 0 - h, 1 - w
+        std::vector<int64_t> ksize = {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]};
+        //  * strides, [N, C, H, W]; strides: 0 - h, 1 - w
+        std::vector<int64_t> strides_ = {1, 1, (int64_t)strides[0], (int64_t)strides[1]};
+        //  * padding_mode, String; default "CALCULATED"
+        String padding_mode = "CALCULATED";
+        if (padMode == "SAME" || padMode == "VALID")
+            padding_mode = padMode;
+        else if (!padMode.empty())
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+        //  * pads, [top, bottom, left, right]; pads_begin: 0 - top, 1 - left; pads_end: 0 - bottom, 1 - right
+        std::vector<int64_t> pads = {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]};
+        //  * global_pooling, bool
+        bool global_pooling = globalPooling;
+        //  * ceil_mode, bool
+        bool ceil_mode = ceilMode;
+        if (type == MAX)
+        {
+            std::shared_ptr<ascendcl::Operator> op_maxpool(new ascendcl::MaxPool(ksize, strides_, padding_mode, pads, global_pooling, ceil_mode));
+            return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_maxpool));
+        }
+        else if (type == AVE)
+        {
+            std::shared_ptr<ascendcl::Operator> op_maxpool(new ascendcl::AvgPool(ksize, strides_, padding_mode, pads, global_pooling, ceil_mode));
+            return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_maxpool));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
+    }
 
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE

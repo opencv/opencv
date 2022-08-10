@@ -12,6 +12,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_ascendcl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
@@ -24,6 +25,7 @@
 #include "layer_internals.hpp"  // LayerPin LayerData DataLayer
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
+#include <atomic>
 
 namespace cv {
 namespace dnn {
@@ -32,6 +34,22 @@ CV__DNN_INLINE_NS_BEGIN
 using std::make_pair;
 using std::string;
 
+// #ifdef HAVE_ASCENDCL
+// class AclEnvGuard {
+// public:
+//     explicit AclEnvGuard();
+//     ~AclEnvGuard();
+//     aclError GetErrno() const { return errno_; }
+//     static std::shared_ptr<AclEnvGuard> GetAclEnv();
+
+// private:
+//     static std::shared_ptr<AclEnvGuard> global_acl_env_;
+//     static std::mutex global_acl_env_mutex_;
+
+//     aclError errno_;
+// };
+// #endif
+
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
 {
@@ -39,6 +57,28 @@ struct Net::Impl : public detail::NetImplBase
     typedef std::map<int, LayerData> MapIdToLayerData;
 
     Impl();
+    ~Impl()
+    {
+#ifdef HAVE_ASCENDCL
+        if (--cannRefCount == 0)
+        {
+            aclError ret;
+            ret = aclFinalize();
+            CV_Assert(ret == ACL_SUCCESS);
+        }
+#endif // HAVE_ASCENDCL
+    }
+
+#ifdef HAVE_ASCENDCL
+    static std::atomic<int> cannRefCount;
+    // std::shared_ptr<AclEnvGuard> aclEnvGuard;
+
+    // !!! Important Note !!!
+    // keep cannInfo before the declaration of backendWrappers,
+    // otherwise the stream and context will be destroyed before the tensors are release!
+    std::unique_ptr<CannInfo> cannInfo;
+    void initAscendCLBackend();
+#endif
 
     Ptr<DataLayer> netInputLayer;
     std::vector<LayerPin> blobsToKeep;

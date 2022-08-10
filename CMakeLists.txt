@@ -462,6 +462,9 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
+OCV_OPTION(WITH_ASCENDCL "Include AscendCL support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_ASCENDCL)
 
 # OpenCV build components
 # ===================================================
@@ -744,6 +747,9 @@ if(WITH_TENGINE)
 endif()
 if(WITH_TIMVX)
   include(cmake/OpenCVFindTIMVX.cmake)
+endif()
+if(WITH_ASCENDCL)
+    include(cmake/OpenCVFindAscendCL.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1682,6 +1688,16 @@ if(WITH_TIMVX)
     status("    Include path"  TIMVX_INCLUDE_DIR THEN "${TIMVX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" TIMVX_LIBRARY THEN "${TIMVX_LIBRARY}" ELSE "NO")
     status("    VIVANTE SDK path" VIVANTE_SDK_DIR THEN "${VIVANTE_SDK_DIR}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_ASCENDCL)
+  status("")
+  status("  AscendCL:"    HAVE_ASCENDCL THEN "YES" ELSE "NO")
+  if(HAVE_ASCENDCL)
+    status("    Include path"  ASCENDCL_INCLUDE_DIRS THEN "${ASCENDCL_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"    ASCENDCL_LIBRARIES THEN "${ASCENDCL_LIBRARIES}" ELSE "NO")
+    status("    Driver path" ASCEND_DRIVER_DIR THEN "${ASCEND_DRIVER_DIR}" ELSE "NO")
   endif()
 endif()
 

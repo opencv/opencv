@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_ascendcl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -156,7 +157,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
-               (backendId == DNN_BACKEND_WEBNN && axis == 1);
+               (backendId == DNN_BACKEND_WEBNN && axis == 1) ||
+               (backendId == DNN_BACKEND_ASCENDCL && haveAscendCL() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -605,6 +607,49 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        CV_Assert(!weightsMat.empty() && !biasMat.empty());
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        /*
+         * MatMul (Note it does not support GEMM with alpha and beta)
+         */
+        // create input tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        // create output tensor
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+        // create other tensors (x1, x2, bias), put them all in inputsWrapper
+        std::vector<Ptr<BackendWrapper> > inputsWrapper;
+        inputsWrapper.push_back(inputs_);
+        //  * w
+        Ptr<AscendCLBackendWrapper> wWrapper = Ptr<AscendCLBackendWrapper>(new AscendCLBackendWrapper(weightsMat));
+        wWrapper->createTensor();
+        inputsWrapper.push_back(wWrapper);
+        //  * b
+        auto biasMat_ = bias ? biasMat : Mat::zeros(1, weightsMat.size[1], weightsMat.type());
+        Ptr<AscendCLBackendWrapper> bWrapper = Ptr<AscendCLBackendWrapper>(new AscendCLBackendWrapper(biasMat_));
+        bWrapper->createTensor();
+        inputsWrapper.push_back(bWrapper);
+
+        // create op
+        std::shared_ptr<ascendcl::Operator> op(new ascendcl::MatMul(false, true)); // weight always needs to be transposed, since input * weight.im2row
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputsWrapper, op));
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
+    }
+
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE

@@ -47,6 +47,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
+#include "../op_ascendcl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -163,8 +164,8 @@ public:
     ReshapeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        int axis = params.get<int>("axis", 0);
-        int numAxes = params.get<int>("num_axes", -1);
+        axis = params.get<int>("axis", 0);
+        numAxes = params.get<int>("num_axes", -1);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
 
@@ -224,7 +225,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_WEBNN;
+               backendId == DNN_BACKEND_WEBNN ||
+               backendId == DNN_BACKEND_ASCENDCL;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -352,6 +354,37 @@ public:
     }
 #endif
 
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+        // create tensor for shape
+        Mat shapeMat({(int)newShapeDesc.size()}, CV_32FC1, newShapeDesc.data());
+        Ptr<AscendCLBackendWrapper> shapeWrapper = Ptr<AscendCLBackendWrapper>(new AscendCLBackendWrapper(shapeMat));
+        shapeWrapper->createTensor();
+        std::vector<Ptr<BackendWrapper>> blobsWrapper;
+        blobsWrapper.push_back(shapeWrapper);
+
+        // create op
+        std::shared_ptr<ascendcl::Operator> op_reshape(new ascendcl::Reshape(axis, numAxes));
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_reshape, blobsWrapper));
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
+    }
+
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(
         void *context_,
@@ -464,6 +497,8 @@ public:
     }
 
 private:
+    int axis;
+    int numAxes;
     std::vector<MatShape> outShapes;
     std::vector<int> dynamicShapes; // Which axes shapes are dynamic and require reinitialization with new input
     std::vector<int> inputIndices; // Which axes from input are needed to compute correct output shape

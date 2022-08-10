@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_ascendcl.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
@@ -116,7 +117,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
+               (backendId == DNN_BACKEND_ASCENDCL && haveAscendCL());
     }
 
 #ifdef HAVE_OPENCL
@@ -376,6 +378,33 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        // create op
+        std::vector<int64_t> axes_ = {(int64_t)axisRaw};
+        std::shared_ptr<ascendcl::Operator> op_softmax(new ascendcl::Softmax(axes_));
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_softmax));
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
+    }
+
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE

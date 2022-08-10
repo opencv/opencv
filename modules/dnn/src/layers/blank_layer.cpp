@@ -43,6 +43,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_ascendcl.hpp"
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/reshape.hpp"
@@ -68,7 +69,8 @@ public:
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_ASCENDCL;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -142,6 +144,32 @@ public:
         return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
     }
 #endif
+
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create input tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        // create output tensor
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        // create op
+        std::shared_ptr<ascendcl::Operator> op_identity(new ascendcl::Identity());
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, op_identity));
+#endif
+        return Ptr<BackendNode>();
+    }
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE

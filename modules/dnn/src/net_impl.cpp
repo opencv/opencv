@@ -12,7 +12,57 @@ CV__DNN_INLINE_NS_BEGIN
 
 
 static int g_networkId = 0;
+#ifdef HAVE_ASCENDCL
+std::atomic<int> Net::Impl::cannRefCount{0};
+// std::shared_ptr<AclEnvGuard> AclEnvGuard::global_acl_env_ = nullptr;
+// std::mutex AclEnvGuard::global_acl_env_mutex_;
 
+// AclEnvGuard::AclEnvGuard() : errno_(ACL_ERROR_NONE)
+// {
+//     errno_ = aclInit(NULL);
+//     std::cout << "In AclEnvGuard, ret = " << errno_ << std::endl;
+//     if (errno_ != ACL_ERROR_NONE && errno_ != ACL_ERROR_REPEAT_INITIALIZE)
+//     {
+//         CV_LOG_INFO(NULL, "Failed at aclInit with ret = " << errno_);
+//     }
+//     CV_LOG_INFO(NULL, "Succeeded at aclInit()");
+// }
+
+// AclEnvGuard::~AclEnvGuard()
+// {
+//     errno_ = aclFinalize();
+//     std::cout << "In ~AclEnvGuard, ret = " << errno_ << std::endl;
+//     if (errno_ != ACL_SUCCESS)
+//     {
+//         CV_LOG_INFO(NULL, "Failed at aclFinalize() with ret = " << errno_);
+//     }
+//     CV_LOG_INFO(NULL, "Succeeded at aclFinalize()");
+// }
+
+// std::shared_ptr<AclEnvGuard> AclEnvGuard::GetAclEnv()
+// {
+//     std::shared_ptr<AclEnvGuard> acl_env;
+
+//     std::lock_guard<std::mutex> lock(global_acl_env_mutex_);
+//     acl_env = global_acl_env_;
+//     if (acl_env != nullptr)
+//     {
+//         CV_LOG_INFO(NULL, "CANN has been initialized. Skipping...");
+//     }
+//     else
+//     {
+//         acl_env = std::make_shared<AclEnvGuard>();
+//         std::cout << "In AclEnvGuard::GetAclEnv, acl_env = " << acl_env << std::endl;
+//         aclError ret = acl_env->GetErrno();
+//         if (ret != ACL_ERROR_NONE && ret != ACL_ERROR_REPEAT_INITIALIZE)
+//         {
+//             return nullptr;
+//         }
+//         global_acl_env_ = acl_env;
+//     }
+//     return acl_env;
+// }
+#endif
 
 detail::NetImplBase::NetImplBase()
     : networkId(CV_XADD(&g_networkId, 1))
@@ -135,6 +185,8 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
               IS_DNN_CUDA_TARGET(preferableTarget));
     CV_Assert(preferableBackend != DNN_BACKEND_TIMVX ||
               preferableTarget == DNN_TARGET_NPU);
+    CV_Assert(preferableBackend != DNN_BACKEND_ASCENDCL ||
+              preferableTarget == DNN_TARGET_NPU);
 
     if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
     {
@@ -183,6 +235,12 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
         }
 
         if (preferableBackend == DNN_BACKEND_TIMVX && !haveTimVX())
+        {
+            preferableBackend = DNN_BACKEND_OPENCV;
+            preferableTarget = DNN_TARGET_CPU;
+        }
+
+        if (preferableBackend == DNN_BACKEND_ASCENDCL && !haveAscendCL())
         {
             preferableBackend = DNN_BACKEND_OPENCV;
             preferableTarget = DNN_TARGET_CPU;
@@ -842,6 +900,10 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 }
             }
 #endif
+            else if (preferableBackend == DNN_BACKEND_ASCENDCL)
+            {
+                forwardAscendCL(ld.outputBlobsWrappers, node);
+            }
             else
             {
                 CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
@@ -890,6 +952,11 @@ void Net::Impl::forwardToLayer(LayerData& ld, bool clearFlags)
 #ifdef HAVE_CUDA
     if (preferableBackend == DNN_BACKEND_CUDA)
         cudaInfo->context.stream.synchronize();
+#endif
+
+#ifdef HAVE_ASCENDCL
+    if (preferableBackend == DNN_BACKEND_ASCENDCL)
+        cannInfo->syncStream();
 #endif
 }
 
@@ -1595,6 +1662,7 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
     case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
     case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
+    case DNN_BACKEND_ASCENDCL: backend = "ASCENDCL/"; break;
         // don't use default:
     }
     out << "digraph G {\n";

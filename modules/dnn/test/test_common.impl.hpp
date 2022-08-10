@@ -31,6 +31,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
     case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
     case DNN_BACKEND_TIMVX: *os << "TIMVX"; return;
+    case DNN_BACKEND_ASCENDCL: *os << "ASCENDCL"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -251,7 +252,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withVkCom /*= true*/,
         bool withCUDA /*= true*/,
         bool withNgraph /*= true*/,
-        bool withWebnn /*= false*/
+        bool withWebnn /*= false*/,
+        bool withAscendCL /*= true*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -315,6 +317,16 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     }
 #else
     CV_UNUSED(withWebnn);
+#endif
+
+#ifdef HAVE_ASCENDCL
+    if (withAscendCL)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_ASCENDCL))
+            targets.push_back(make_tuple(DNN_BACKEND_ASCENDCL, target));
+    }
+#else
+    CV_UNUSED(withAscendCL);
 #endif
 
     {
@@ -484,6 +496,11 @@ void initDNNTests()
 #ifdef HAVE_TIMVX
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_TIMVX
+    );
+#endif
+#ifdef HAVE_ASCENDCL
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_ASCENDCL
     );
 #endif
     registerGlobalSkipTag(

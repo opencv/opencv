@@ -76,6 +76,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
+        DNN_BACKEND_ASCENDCL,
 #ifdef __OPENCV_BUILD
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -335,6 +336,17 @@ CV__DNN_INLINE_NS_BEGIN
                                            const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                            const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                            bool isLast);
+
+        /**
+         * @brief Returns a AscendCL backend node
+         *
+         * @param cannInfo void pointer for cannInfo which manages the CANN device, context and stream
+         * @param inputs layer inputs
+         * @param outputs layer outputs
+         */
+        virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                              const std::vector<Ptr<BackendWrapper> >& inputs,
+                                              const std::vector<Ptr<BackendWrapper> >& outputs);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.

@@ -13,6 +13,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_ascendcl.hpp"
 
 namespace cv {
 namespace dnn {
@@ -118,6 +119,13 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #ifdef HAVE_TIMVX
         return Ptr<BackendWrapper>(new TimVXBackendWrapper(m));
 #endif  // HAVE_TIMVX
+    }
+    else if (backendId == DNN_BACKEND_ASCENDCL)
+    {
+        CV_Assert(haveAscendCL());
+#ifdef HAVE_ASCENDCL
+        return Ptr<BackendWrapper>(new AscendCLBackendWrapper(m));
+#endif // HAVE_ASCENDCL
     }
     else
         CV_Error(Error::StsNotImplemented, "Unknown backend identifier");

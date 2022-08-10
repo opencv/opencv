@@ -1901,12 +1901,139 @@ TEST_P(Test_ONNX_nets, Alexnet)
     Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
     checkBackend(&inp, &ref);
 
-    net.setInput(blobFromImage(inp, 1.0f, Size(227, 227), Scalar(), false));
+    net.setInput(blobFromImage(inp, 1.0f, Size(224, 224), Scalar(), false));
     ASSERT_FALSE(net.empty());
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
     Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    tm.reset();
+    std::cout << "fist run = " << firstrun << std::endl;
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
 
     normAssert(out, ref, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_nets, ResNet50)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+
+    const String model =  findDataFile("dnn/ascend-models/resnet50-v1-12.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = imread(_tf("../grace_hopper_227.png"));
+    Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
+    checkBackend(&inp, &ref);
+
+    net.setInput(blobFromImage(inp, 1.0f, Size(224, 224), Scalar(), false));
+    ASSERT_FALSE(net.empty());
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+
+    normAssert(out, ref, "", default_l1,  default_lInf);
+    expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_nets, YOLOv3)
+{
+    const String model = findDataFile("dnn/yolov3.cfg");
+    const String weight = findDataFile("dnn/yolov3.weights");
+
+    Net net = readNetFromDarknet(model, weight);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = imread(_tf("../dog416.png"));
+    // Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
+    // checkBackend(&inp, &ref);
+
+    net.setInput(blobFromImage(inp, 1.0f, Size(416, 416), Scalar(), false));
+    ASSERT_FALSE(net.empty());
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)

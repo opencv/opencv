@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_ascendcl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -215,6 +216,28 @@ public:
         return Ptr<BackendNode>();
     }
 
+    virtual Ptr<BackendNode> initAscendCL(void* cannInfo,
+                                          const std::vector<Ptr<BackendWrapper> >& inputs,
+                                          const std::vector<Ptr<BackendWrapper> >& outputs) CV_OVERRIDE
+    {
+#ifdef HAVE_ASCENDCL
+        auto cannInfo_ = reinterpret_cast<CannInfo*>(cannInfo);
+        CV_Assert(cannInfo_);
+        auto stream = cannInfo_->getStream();
+
+        // create tensor
+        CV_Assert(inputs.size() == 1);
+        auto inputs_ = inputs[0].dynamicCast<AscendCLBackendWrapper>();
+        inputs_->createTensor();
+        CV_Assert(outputs.size() == 1);
+        auto outputs_ = outputs[0].dynamicCast<AscendCLBackendWrapper>();
+        outputs_->createTensor();
+
+        return Ptr<BackendNode>(new AscendCLBackendNode(stream, inputs, func.initAscendCL()));
+#endif // HAVE_ASCENDCL
+        return Ptr<BackendNode>();
+    }
+
     virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
         return func.tryFuse(top);
@@ -350,7 +373,8 @@ struct ReLUFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_VKCOM;
+               backendId == DNN_BACKEND_VKCOM ||
+               backendId == DNN_BACKEND_ASCENDCL;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -475,6 +499,20 @@ struct ReLUFunctor : public BaseFunctor
         return op;
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_ASCENDCL
+    std::shared_ptr<ascendcl::Operator> initAscendCL()
+    {
+        if (slope != 0)
+        {
+            std::shared_ptr<ascendcl::Operator> op_leakyrelu(new ascendcl::LeakyRelu(slope));
+            return op_leakyrelu;
+        }
+        std::shared_ptr<ascendcl::Operator> op_relu(new ascendcl::ReLU());
+        return op_relu;
+    }
+#endif // HAVE_ASCENDCL
+
 
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
@@ -635,6 +673,14 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_ASCENDCL
+    std::shared_ptr<ascendcl::Operator> initAscendCL()
+    {
+        std::shared_ptr<ascendcl::Operator> op_relu6(new ascendcl::ReLU6());
+        return op_relu6;
+    }
+#endif // HAVE_ASCENDCL
+
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
     {
@@ -750,6 +796,13 @@ struct BaseDefaultFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_ASCENDCL
+    std::shared_ptr<ascendcl::Operator> initAscendCL()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif // HAVE_ASCENDCL
 
 private:
     static const char* const ocl_kernel_name;
@@ -2030,6 +2083,14 @@ struct PowerFunctor : public BaseFunctor
     }
 #endif  // HAVE_VULKAN
 
+#ifdef HAVE_ASCENDCL
+    std::shared_ptr<ascendcl::Operator> initAscendCL()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+        return std::shared_ptr<ascendcl::Operator>();
+    }
+#endif // HAVE_ASCENDCL
+
     bool tryFuse(Ptr<dnn::Layer>& top)
     {
         if (power != 1.0f && shift != 0.0f)
@@ -2266,6 +2327,14 @@ struct ChannelsPReLUFunctor : public BaseFunctor
         return std::shared_ptr<vkcom::OpBase>();
     }
 #endif  // HAVE_VULKAN
+
+#ifdef HAVE_ASCENDCL
+    std::shared_ptr<ascendcl::Operator> initAscendCL()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+        return std::shared_ptr<ascendcl::Operator>();
+    }
+#endif // HAVE_ASCENDCL
 
     int64 getFLOPSPerElement() const { return 1; }
 };

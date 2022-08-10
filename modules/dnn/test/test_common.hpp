@@ -49,6 +49,7 @@
 #define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
 
 #define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
+#define CV_TEST_TAG_DNN_SKIP_ASCENDCL            "dnn_skip_ascendcl"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -141,7 +142,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withVkCom = true,
         bool withCUDA = true,
         bool withNgraph = true,
-        bool withWebnn = true
+        bool withWebnn = true,
+        bool withAscendCL = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
@@ -167,6 +169,11 @@ public:
         {
             *l1 = 4e-3;
             *lInf = 2e-2;
+        }
+        else if (backend == DNN_BACKEND_ASCENDCL && target == DNN_TARGET_NPU)
+        {
+            *l1 = 1e-3;
+            *lInf = 1e-3;
         }
         else
         {
