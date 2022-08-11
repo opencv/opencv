@@ -61,6 +61,15 @@ public:
         {
             reduceDims[i] = tempDims.get<int>(i);
         }
+
+        CV_Assert(params.has("target_dims"));
+        tempDims = params.get("target_dims");
+        n = tempDims.size();
+        targetDims.resize(n);
+        for (i = 0; i < n; i++)
+        {
+            targetDims[i] = tempDims.get<int>(i);
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -325,18 +334,29 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() > 0);
-        CV_Assert(reduceDims.size() != 0 && inputs[0].size() >= reduceDims.size());
+        CV_Assert( reduceDims.size() !=0 && targetDims.size() != 0 && inputs[0].size() >= reduceDims.size());
 
-        std::vector<int> outShape;
+        // outShapeTmp can save the right number of `total(outShapeTmp)`. And the outShape is used as the final output shape.
+        std::vector<int> outShapeTmp, outShape;
+        outShape.assign(targetDims.begin(), targetDims.end());
         if (inputs[0].size() == reduceDims.size())
-            outShape.push_back(1);
+            outShapeTmp.push_back(1);
         else
         {
             for (int i = 0; i < inputs[0].size() - reduceDims.size(); i++)
             {
-                outShape.push_back(inputs[0][i]);
+                outShapeTmp.push_back(inputs[0][i]);
             }
         }
+
+        // Support dynamic shape of Batch size.
+        // Note that: when there are multiple dynamic inputs, we will give an error.
+        if (total(outShape) != total(outShapeTmp) && outShape[0] != outShapeTmp[0])
+        {
+                outShape[0] = outShapeTmp[0];
+        }
+
+        CV_Assert(total(outShape) == total(outShapeTmp));
         outputs.assign(1, outShape);
 
         return false;

@@ -1203,36 +1203,47 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.set("reduce", reduceType);
     bool keepdims = layerParams.get<int>("keepdims", 1) == 1;
 
-    if (layer_type == "ReduceSum" && node_proto.input_size() == 2)
-    {
-        // TODO support the opset 13 of ReduceSum.
-        //  in opset 13, the ReduceSum has two input, it takes axes as input instead of attribute
-        //  details:https://github.com/onnx/onnx/issues/3420#issuecomment-844295687
-        CV_Error(Error::StsNotImplemented, "Unsupported " + layer_type + " operation of opset 13, please try to "
-                                                                         "re-export the onnx model with opset 11.");
-    }
-
     MatShape inpShape = outShapes[node_proto.input(0)];
     std::vector<bool> shouldDelete(inpShape.size(), false);
 
-    if (layerParams.has("axes"))
+    if (layer_type == "ReduceSum" && node_proto.input_size() == 2)
     {
-        DictValue axes = layerParams.get("axes");
-        for (int i = 0; i < axes.size(); i++)
+        if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
         {
-            int axis = normalize_axis(axes.get<int>(i), inpShape.size());
-            shouldDelete[axis] = true;
+            Mat axesMat = getBlob(node_proto, 1);
+            int axesNum = axesMat.total();
+            for (int i = 0; i < axesNum; i++)
+            {
+                int axis = normalize_axis(axesMat.at<int>(i), inpShape.size());
+                shouldDelete[axis] = true;
+            }
         }
+        else
+            //  in opset 13, the ReduceSum has two input, it takes axes as input instead of attribute
+            //  details:https://github.com/onnx/onnx/issues/3420#issuecomment-844295687
+            CV_Error(Error::StsNotImplemented, "Non-constant axis values in ReduceSum are not supported.");
     }
     else
     {
-        for (int i = 0; i < inpShape.size(); i++)
+        if (layerParams.has("axes"))
         {
-            shouldDelete[i] = true;
+            DictValue axes = layerParams.get("axes");
+            for (int i = 0; i < axes.size(); i++)
+            {
+                int axis = normalize_axis(axes.get<int>(i), inpShape.size());
+                shouldDelete[axis] = true;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < inpShape.size(); i++)
+            {
+                shouldDelete[i] = true;
+            }
         }
     }
 
-    MatShape targetShape;
+    std::vector<int> targetShape;
     for (int i = 0; i < inpShape.size(); ++i)
     {
         if (!shouldDelete[i])
@@ -1302,19 +1313,10 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         }
     }
 
-    LayerParams reduceLp = layerParams;
-    reduceLp.name = layerParams.name + "/reduce";
-    CV_Assert(layer_id.find(reduceLp.name) == layer_id.end());
-    reduceLp.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
+    layerParams.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
+    layerParams.set("target_dims", DictValue::arrayInt(&targetShape[0], targetShape.size()));
 
     node_proto.set_input(0, inputString);
-    node_proto.set_output(0, reduceLp.name);
-    addLayer(reduceLp, node_proto);
-
-    layerParams.type = (depth == CV_8S) ? "ReshapeInt8" : "Reshape";
-    layerParams.set("dim", DictValue::arrayInt(&targetShape[0], targetShape.size()));
-
-    node_proto.set_input(0, node_proto.output(0));
     node_proto.set_output(0, output_name);
 
     addLayer(layerParams, node_proto);
