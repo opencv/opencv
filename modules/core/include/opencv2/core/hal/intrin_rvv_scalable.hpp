@@ -612,34 +612,7 @@ OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int64, VTraits<v_int64>::vlanes())
 
-#define OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(op, vl) \
-inline v_float32 v_##op (const v_float32& a, const v_float32& b) \
-{ \
-    return vreinterpret_v_i32m1_f32m1(v##op(vreinterpret_v_f32m1_i32m1(a), vreinterpret_v_f32m1_i32m1(b), vl)); \
-}
-OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(and, VTraits<v_float32>::vlanes())
-OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(or, VTraits<v_float32>::vlanes())
-OPENCV_HAL_IMPL_RVV_FLT32_BIT_OP(xor, VTraits<v_float32>::vlanes())
 
-inline v_float32 v_not(const v_float32& a)
-{
-    return vreinterpret_v_i32m1_f32m1(vnot(vreinterpret_v_f32m1_i32m1(a), VTraits<v_float32>::vlanes()));
-}
-
-#if CV_SIMD_SCALABLE_64F
-#define OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(op, vl) \
-inline v_float64 v_##op (const v_float64& a, const v_float64& b) \
-{ \
-    return vreinterpret_v_i64m1_f64m1(v##op(vreinterpret_v_f64m1_i64m1(a), vreinterpret_v_f64m1_i64m1(b), vl)); \
-}
-OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(and, VTraits<v_float64>::vlanes())
-OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(or, VTraits<v_float64>::vlanes())
-OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(xor, VTraits<v_float64>::vlanes())
-inline v_float64 v_not (const v_float64& a)
-{
-    return vreinterpret_v_i64m1_f64m1(vnot(vreinterpret_v_f64m1_i64m1(a), VTraits<v_float64>::vlanes()));
-}
-#endif
 
 ////////////// Bitwise shifts //////////////
 
@@ -663,11 +636,9 @@ template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
     return _Tpvec(vsra(a, uint8_t(n), vl)); \
 }
 
-OPENCV_HAL_IMPL_RVV_UNSIGNED_SHIFT_OP(v_uint8, VTraits<v_uint8>::vlanes())
 OPENCV_HAL_IMPL_RVV_UNSIGNED_SHIFT_OP(v_uint16, VTraits<v_uint16>::vlanes())
 OPENCV_HAL_IMPL_RVV_UNSIGNED_SHIFT_OP(v_uint32, VTraits<v_uint32>::vlanes())
 OPENCV_HAL_IMPL_RVV_UNSIGNED_SHIFT_OP(v_uint64, VTraits<v_uint64>::vlanes())
-OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int8, VTraits<v_int8>::vlanes())
 OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int16, VTraits<v_int16>::vlanes())
 OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int64, VTraits<v_int64>::vlanes())
@@ -697,10 +668,6 @@ OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int32, v_min, vmin, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int32, v_max, vmax, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float32, v_min, vfmin, VTraits<v_float32>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float32, v_max, vfmax, VTraits<v_float32>::vlanes())
-OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_uint64, v_min, vminu, VTraits<v_uint64>::vlanes())
-OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_uint64, v_max, vmaxu, VTraits<v_uint64>::vlanes())
-OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int64, v_min, vmin, VTraits<v_int64>::vlanes())
-OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_int64, v_max, vmax, VTraits<v_int64>::vlanes())
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float64, v_min, vfmin, VTraits<v_float64>::vlanes())
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float64, v_max, vfmax, VTraits<v_float64>::vlanes())
@@ -722,8 +689,6 @@ OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint16, v_uint32, vuint32m1_t, unsigned, u32, V
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int16, v_int32, vint32m1_t, int, i32, VTraits<v_int16>::vlanes(), wredsum)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint32, v_uint64, vuint64m1_t, unsigned, u64, VTraits<v_uint32>::vlanes(), wredsumu)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int32, v_int64, vint64m1_t, int, i64, VTraits<v_int32>::vlanes(), wredsum)
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint64, v_uint64, vuint64m1_t, uint64, u64, VTraits<v_uint64>::vlanes(), redsum)
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int64, v_int64, vint64m1_t, int64, i64, VTraits<v_int64>::vlanes(), redsum)
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(_Tpvec, _wTpvec, _nwTpvec, scalartype, wsuffix, vl) \
 inline scalartype v_reduce_sum(const _Tpvec& a)  \
@@ -734,9 +699,6 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
     return (scalartype)v_get0(res); \
 }
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32, v_float32, vfloat32m1_t, float, f32, VTraits<v_float32>::vlanes())
-#if CV_SIMD_SCALABLE_64F
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, double, f64, VTraits<v_float64>::vlanes())
-#endif
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE(_Tpvec, func, scalartype, suffix, vl, red) \
 inline scalartype v_reduce_##func(const _Tpvec& a)  \
