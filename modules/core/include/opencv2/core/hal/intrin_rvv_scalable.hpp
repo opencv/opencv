@@ -474,36 +474,26 @@ inline _Tpvec v_##ocv_intrin(const _Tpvec& a, const _Tpvec& b) \
 
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint8, add, vsaddu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint8, sub, vssubu)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint8, div, vdivu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int8, add, vsadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int8, sub, vssub)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_int8, div, vdiv)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, add, vsaddu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, sub, vssubu)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, div, vdivu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, add, vsadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, sub, vssub)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, div, vdiv)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, add, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, sub, vsub)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, mul, vmul)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint32, div, vdivu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int32, add, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int32, sub, vsub)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int32, mul, vmul)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_int32, div, vdiv)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_float32, add, vfadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_float32, sub, vfsub)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_float32, mul, vfmul)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_float32, div, vfdiv)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint64, add, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint64, sub, vsub)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint64, mul, vmul)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint64, div, vdivu)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int64, add, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int64, sub, vsub)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_int64, mul, vmul)
-OPENCV_HAL_IMPL_RVV_BIN_OP(v_int64, div, vdiv)
 
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_float64, add, vfadd)
@@ -514,12 +504,12 @@ OPENCV_HAL_IMPL_RVV_BIN_OP(v_float64, div, vfdiv)
 
 #define OPENCV_HAL_IMPL_RVV_BIN_MADD(_Tpvec, rvv_add) \
 template<typename... Args> \
-inline _Tpvec v_add(_Tpvec f1, _Tpvec f2, Args... vf) { \
+inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
     return v_add(rvv_add(f1, f2, VTraits<_Tpvec>::vlanes()), vf...); \
 }
 #define OPENCV_HAL_IMPL_RVV_BIN_MMUL(_Tpvec, rvv_mul) \
 template<typename... Args> \
-inline _Tpvec v_mul(_Tpvec f1, _Tpvec f2, Args... vf) { \
+inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
     return v_mul(rvv_mul(f1, f2, VTraits<_Tpvec>::vlanes()), vf...); \
 }
 OPENCV_HAL_IMPL_RVV_BIN_MADD(v_uint8, vsaddu)
@@ -535,8 +525,6 @@ OPENCV_HAL_IMPL_RVV_BIN_MADD(v_int64, vadd)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_uint32, vmul)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_int32, vmul)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_float32, vfmul)
-OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_uint64, vmul)
-OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_int64, vmul)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_BIN_MADD(v_float64, vfadd)
 OPENCV_HAL_IMPL_RVV_BIN_MMUL(v_float64, vfmul)
@@ -555,8 +543,6 @@ OPENCV_HAL_IMPL_RVV_MUL_EXPAND(v_int8, v_int16, vint16m2_t, i16, vwmul)
 OPENCV_HAL_IMPL_RVV_MUL_EXPAND(v_uint16, v_uint32, vuint32m2_t, u32, vwmulu)
 OPENCV_HAL_IMPL_RVV_MUL_EXPAND(v_int16, v_int32, vint32m2_t, i32, vwmul)
 OPENCV_HAL_IMPL_RVV_MUL_EXPAND(v_uint32, v_uint64, vuint64m2_t, u64, vwmulu)
-OPENCV_HAL_IMPL_RVV_MUL_EXPAND(v_int32, v_int64, vint64m2_t, i64, vwmul)
-
 
 inline v_int16 v_mul_hi(const v_int16& a, const v_int16& b)
 {
@@ -582,7 +568,20 @@ OPENCV_HAL_IMPL_RVV_BIN_OP(v_uint16, mul_wrap, vmul)
 OPENCV_HAL_IMPL_RVV_BIN_OP(v_int16, mul_wrap, vmul)
 
 //////// Saturating Multiply ////////
-// TODO
+#define OPENCV_HAL_IMPL_RVV_MUL_SAT(_Tpvec, _clip, _wmul) \
+inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return _clip(_wmul(a, b, VTraits<_Tpvec>::vlanes()), 0, VTraits<_Tpvec>::vlanes()); \
+} \
+template<typename... Args> \
+inline _Tpvec v_mul(const _Tpvec& a1, const _Tpvec& a2, const Args&... va) { \
+    return v_mul(_clip(_wmul(a1, a2, VTraits<_Tpvec>::vlanes()), 0, VTraits<_Tpvec>::vlanes()), va...); \
+}
+
+OPENCV_HAL_IMPL_RVV_MUL_SAT(v_uint8, vnclipu, vwmulu)
+OPENCV_HAL_IMPL_RVV_MUL_SAT(v_int8, vnclip, vwmul)
+OPENCV_HAL_IMPL_RVV_MUL_SAT(v_uint16, vnclipu, vwmulu)
+OPENCV_HAL_IMPL_RVV_MUL_SAT(v_int16, vnclip, vwmul)
 
 ////////////// Bitwise logic //////////////
 
