@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, 2021, D. R. Commander.
+ * Copyright (C) 2016, 2021-2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -36,12 +36,6 @@
 #include <stdint.h>
 #endif
 #include <limits.h>
-
-#ifndef NO_GETENV
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare getenv() */
-extern char *getenv(const char *name);
-#endif
-#endif
 
 
 LOCAL(size_t)
@@ -1162,12 +1156,16 @@ jinit_memory_mgr(j_common_ptr cinfo)
    */
 #ifndef NO_GETENV
   {
-    char *memenv;
+    char memenv[30] = { 0 };
 
-    if ((memenv = getenv("JPEGMEM")) != NULL) {
+    if (!GETENV_S(memenv, 30, "JPEGMEM") && strlen(memenv) > 0) {
       char ch = 'x';
 
+#ifdef _MSC_VER
+      if (sscanf_s(memenv, "%ld%c", &max_to_use, &ch, 1) > 0) {
+#else
       if (sscanf(memenv, "%ld%c", &max_to_use, &ch) > 0) {
+#endif
         if (ch == 'm' || ch == 'M')
           max_to_use *= 1000L;
         mem->pub.max_memory_to_use = max_to_use * 1000L;
