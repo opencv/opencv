@@ -578,16 +578,18 @@ template<typename R> struct TheTest
 
     TheTest & test_addsub()
     {
-        Data<R> dataA, dataB;
+        Data<R> dataA, dataB, dataC;
         dataB.reverse();
-        R a = dataA, b = dataB;
+        dataA[1] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
+        R a = dataA, b = dataB, c = dataC;
 
-        Data<R> resC = v_add(a, b), resD = v_sub(a, b);
+        Data<R> resD = v_add(a, b), resE = v_add(a, b, c), resF = v_sub(a, b);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i]), resC[i]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] - dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i] + dataC[i]), resE[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] - dataB[i]), resF[i]);
         }
 
         return *this;
@@ -614,16 +616,18 @@ template<typename R> struct TheTest
 
     TheTest & test_mul()
     {
-        Data<R> dataA, dataB;
+        Data<R> dataA, dataB, dataC;
         dataA[1] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
         dataB.reverse();
-        R a = dataA, b = dataB;
+        R a = dataA, b = dataB, c = dataC;
 
-        Data<R> resC = v_mul(a, b);
+        Data<R> resD = v_mul(a, b);
+        Data<R> resE = v_mul(a, b, c);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i]), resC[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i] * dataC[i]), resE[i]);
         }
 
         return *this;
@@ -1741,6 +1745,7 @@ void test_hal_intrin_uint8()
         .test_expand_q()
         .test_addsub()
         .test_arithm_wrap()
+        .test_mul()
         .test_mul_expand()
         .test_logic()
         .test_min_max()
@@ -1752,7 +1757,6 @@ void test_hal_intrin_uint8()
         .test_extract_highest()
 #if 0 // not implemented in rvv backend yet.
         .test_interleave()
-        .test_mul()
         .test_cmp()
         .test_dotprod_expand()
         .test_reduce()
@@ -1777,6 +1781,7 @@ void test_hal_intrin_int8()
         .test_expand_q()
         .test_addsub()
         .test_arithm_wrap()
+        .test_mul()
         .test_mul_expand()
         .test_logic()
         .test_min_max()
@@ -1790,7 +1795,6 @@ void test_hal_intrin_int8()
         .test_extract_highest()
 #if 0
         .test_interleave()
-        .test_mul()
         .test_cmp()
         .test_dotprod_expand()
         .test_reduce()
@@ -1814,6 +1818,7 @@ void test_hal_intrin_uint16()
         .test_expand()
         .test_addsub()
         .test_arithm_wrap()
+        .test_mul()
         .test_mul_expand()
         .test_mul_hi()
         .test_shift<1>()
@@ -1828,7 +1833,6 @@ void test_hal_intrin_uint16()
         .test_extract_highest()
 #if 0
         .test_interleave()
-        .test_mul()
         .test_cmp()
         .test_dotprod_expand()
         .test_reduce()
@@ -1851,6 +1855,7 @@ void test_hal_intrin_int16()
         .test_expand()
         .test_addsub()
         .test_arithm_wrap()
+        .test_mul()
         .test_mul_expand()
         .test_mul_hi()
         .test_shift<1>()
@@ -1867,7 +1872,7 @@ void test_hal_intrin_int16()
         .test_extract_highest()
 #if 0
         .test_interleave()
-        .test_mul()
+
         .test_cmp()
         .test_dotprod()
         .test_dotprod_expand()
