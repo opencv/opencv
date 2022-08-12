@@ -2071,3 +2071,23 @@ graph2 = onnx.helper.make_graph(nodes2,
 gemm_model2 = onnx.helper.make_model(graph2)
 output_np = gemm_reference_implementation(input_np, weight_np)
 save_data_and_onnx_model("gemm_transB_0", input_np, output_np, gemm_model2)
+
+# ########################## ReduceSum with Dynamic Batch ##########################
+input_np = np.random.rand(2, 4, 4, 4).astype("float32")
+inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
+
+axis_np = np.array([1]).astype(np.int64)
+axis_tensor = onnx.helper.make_tensor('axis_tensor', data_type=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[axis_np.dtype], dims=axis_np.shape, vals=axis_np)
+
+outputs = [onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, shape=(2, 1, 4, 4))]
+
+nodes = [onnx.helper.make_node("ReduceSum", ["input1", "axis_tensor"], ["output"], keepdims=1)]
+
+graph = onnx.helper.make_graph(nodes,
+                            "reduce_sum",
+                            inputs,
+                            outputs, initializer=[axis_tensor])
+onnx_model = onnx.helper.make_model(graph)
+
+output_np = np.sum(input_np, axis=1, keepdims=1)
+save_data_and_onnx_model("reduce_sum_axis_dynamic_batch", input_np, output_np, onnx_model)
