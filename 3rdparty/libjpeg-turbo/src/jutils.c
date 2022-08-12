@@ -3,8 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * It was modified by The libjpeg-turbo Project to include only code
- * relevant to libjpeg-turbo.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -110,7 +110,7 @@ jcopy_sample_rows(JSAMPARRAY input_array, int source_row,
   for (row = num_rows; row > 0; row--) {
     inptr = *input_array++;
     outptr = *output_array++;
-    MEMCOPY(outptr, inptr, count);
+    memcpy(outptr, inptr, count);
   }
 }
 
@@ -120,7 +120,7 @@ jcopy_block_row(JBLOCKROW input_row, JBLOCKROW output_row,
                 JDIMENSION num_blocks)
 /* Copy a row of coefficient blocks from one place to another. */
 {
-  MEMCOPY(output_row, input_row, num_blocks * (DCTSIZE2 * sizeof(JCOEF)));
+  memcpy(output_row, input_row, num_blocks * (DCTSIZE2 * sizeof(JCOEF)));
 }
 
 
@@ -129,5 +129,5 @@ jzero_far(void *target, size_t bytestozero)
 /* Zero out a chunk of memory. */
 /* This might be sample-array data, block-array data, or alloc_large data. */
 {
-  MEMZERO(target, bytestozero);
+  memset(target, 0, bytestozero);
 }
