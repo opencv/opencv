@@ -703,7 +703,7 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<Ru>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            R_type ssub = dataA[i] - dataB[i] < std::numeric_limits<R_type>::min() ? std::numeric_limits<R_type>::min() : dataA[i] - dataB[i];
+            R_type ssub = dataA[i] - dataB[i] < std::numeric_limits<R_type>::lowest() ? std::numeric_limits<R_type>::lowest() : dataA[i] - dataB[i];
             EXPECT_EQ((u_type)std::abs(ssub), resC[i]);
         }
 
@@ -2018,6 +2018,7 @@ void test_hal_intrin_float32()
     TheTest<v_float32>()
         .test_loadstore()
         .test_addsub()
+        .test_abs()
         .test_mul()
         .test_div()
         .test_sqrt_abs()
@@ -2057,6 +2058,7 @@ void test_hal_intrin_float64()
         .test_addsub()
         .test_mul()
         .test_div()
+        .test_abs()
         .test_sqrt_abs()
         .test_min_max()
         .test_float_absdiff()
@@ -2364,6 +2366,7 @@ void test_hal_intrin_float32()
         .test_addsub()
         .test_mul()
         .test_div()
+        .test_abs()
         .test_cmp()
         .test_sqrt_abs()
         .test_min_max()
@@ -2401,6 +2404,7 @@ void test_hal_intrin_float64()
         .test_addsub()
         .test_mul()
         .test_div()
+        .test_abs()
         .test_cmp()
         .test_sqrt_abs()
         .test_min_max()
