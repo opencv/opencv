@@ -132,6 +132,16 @@ public:
         if (hasWeights && hasBias)
             CV_CheckEQ(weights.total(), bias.total(), "Incompatible weights/bias blobs");
 
+        if (weights.total() == 1)
+        {
+            // The total() of bias should be same as weights.
+            if (hasBias)
+                inpBlob.convertTo(outBlob, CV_32F, weights.at<float>(0), bias.at<float>(0));
+            else
+                inpBlob.convertTo(outBlob, CV_32F, weights.at<float>(0));
+            return;
+        }
+
         int endAxis;
         for (endAxis = axis + 1; endAxis <= inpBlob.dims; ++endAxis)
         {

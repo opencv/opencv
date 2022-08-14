@@ -89,7 +89,7 @@ def bootstrap():
     BINARIES_PATHS = []
 
     g_vars = globals()
-    l_vars = locals()
+    l_vars = locals().copy()
 
     if sys.version_info[:2] < (3, 0):
         from . load_config_py2 import exec_file_wrapper
