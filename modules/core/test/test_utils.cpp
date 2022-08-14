@@ -408,9 +408,6 @@ TEST_P(BufferArea, basic)
             EXPECT_EQ((double)0, dbl_ptr[i]);
         }
     }
-    EXPECT_TRUE(int_ptr == NULL);
-    EXPECT_TRUE(uchar_ptr == NULL);
-    EXPECT_TRUE(dbl_ptr == NULL);
 }
 
 TEST_P(BufferArea, align)
@@ -446,10 +443,6 @@ TEST_P(BufferArea, align)
                     << " (element size: " << sizeof(T) << ")";
             }
         }
-    }
-    for (size_t i = 0; i < CNT; ++i)
-    {
-        EXPECT_TRUE(buffers[i] == NULL);
     }
 }
 

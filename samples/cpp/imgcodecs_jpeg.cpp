@@ -17,7 +17,7 @@ int main(int /*argc*/, const char** /* argv */ )
     {
         const Point center( img.rows / 2 , img.cols /2 );
 
-        for( int radius = 5; radius < img.rows ; radius += 3.5 )
+        for( int radius = 5; radius < img.rows ; radius += 3 )
         {
             cv::circle( img, center, radius, Scalar(255,0,255) );
         }

@@ -1058,7 +1058,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 *                                Polygons filling                                        *
 \****************************************************************************************/
 
-static inline void ICV_HLINE_X(uchar* ptr, int xl, int xr, const uchar* color, int pix_size)
+static inline void ICV_HLINE_X(uchar* ptr, int64_t xl, int64_t xr, const uchar* color, int pix_size)
 {
     uchar* hline_min_ptr = (uchar*)(ptr) + (xl)*(pix_size);
     uchar* hline_end_ptr = (uchar*)(ptr) + (xr+1)*(pix_size);
@@ -1083,7 +1083,7 @@ static inline void ICV_HLINE_X(uchar* ptr, int xl, int xr, const uchar* color, i
 }
 //end ICV_HLINE_X()
 
-static inline void ICV_HLINE(uchar* ptr, int xl, int xr, const void* color, int pix_size)
+static inline void ICV_HLINE(uchar* ptr, int64_t xl, int64_t xr, const void* color, int pix_size)
 {
   ICV_HLINE_X(ptr, xl, xr, reinterpret_cast<const uchar*>(color), pix_size);
 }
@@ -1177,7 +1177,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
     edge[0].x = edge[1].x = -XY_ONE;
     edge[0].dx = edge[1].dx = 0;
 
-    ptr += img.step*y;
+    ptr += (int64_t)img.step*y;
 
     do
     {
@@ -1206,7 +1206,7 @@ FillConvexPoly( Mat& img, const Point2l* v, int npts, const void* color, int lin
                             }
 
                             edge[i].ye = ty;
-                            edge[i].dx = ((xe - xs)*2 + (ty - y)) / (2 * (ty - y));
+                            edge[i].dx = ((xe - xs)*2 + ((int64_t)ty - y)) / (2 * ((int64_t)ty - y));
                             edge[i].x = xs;
                             edge[i].idx = idx;
                             break;
@@ -1480,7 +1480,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
     size_t step = img.step;
     int pix_size = (int)img.elemSize();
     uchar* ptr = img.ptr();
-    int err = 0, dx = radius, dy = 0, plus = 1, minus = (radius << 1) - 1;
+    int64_t err = 0, dx = radius, dy = 0, plus = 1, minus = (radius << 1) - 1;
     int inside = center.x >= radius && center.x < size.width - radius &&
         center.y >= radius && center.y < size.height - radius;
 
@@ -1490,8 +1490,8 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
     while( dx >= dy )
     {
         int mask;
-        int y11 = center.y - dy, y12 = center.y + dy, y21 = center.y - dx, y22 = center.y + dx;
-        int x11 = center.x - dx, x12 = center.x + dx, x21 = center.x - dy, x22 = center.x + dy;
+        int64_t y11 = center.y - dy, y12 = center.y + dy, y21 = center.y - dx, y22 = center.y + dx;
+        int64_t x11 = center.x - dx, x12 = center.x + dx, x21 = center.x - dy, x22 = center.x + dy;
 
         if( inside )
         {
@@ -1531,7 +1531,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
         {
             if( fill )
             {
-                x11 = std::max( x11, 0 );
+                x11 = std::max( x11, (int64_t)0 );
                 x12 = MIN( x12, size.width - 1 );
             }
 
@@ -1569,7 +1569,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
             {
                 if( fill )
                 {
-                    x21 = std::max( x21, 0 );
+                    x21 = std::max( x21, (int64_t)0 );
                     x22 = MIN( x22, size.width - 1 );
                 }
 
@@ -1865,6 +1865,12 @@ void rectangle( InputOutputArray img, Rect rec,
                 int lineType, int shift )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert( 0 <= shift && shift <= XY_SHIFT );
+
+    // Crop the rectangle to right around the mat.
+    rec &= Rect(-(1 << shift), -(1 << shift), ((img.cols() + 2) << shift),
+                ((img.rows() + 2) << shift));
 
     if( !rec.empty() )
         rectangle( img, rec.tl(), rec.br() - Point(1<<shift,1<<shift),

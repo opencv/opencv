@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
+cmake_minimum_required(VERSION ${MIN_VER_CMAKE} FATAL_ERROR)
 
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)

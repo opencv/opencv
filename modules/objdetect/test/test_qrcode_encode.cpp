@@ -5,6 +5,16 @@
 #include "test_precomp.hpp"
 namespace opencv_test { namespace {
 
+#if !defined CV_CXX11
+// Wrapper for generating seeded random number via std::rand.
+template<unsigned Seed>
+class SeededRandFunctor {
+public:
+    SeededRandFunctor() { std::srand(Seed); }
+    int operator()(int i) { return std::rand() % (i + 1); }
+};
+#endif
+
 std::string encode_qrcode_images_name[] = {
         "version1_mode1.png", "version1_mode2.png", "version1_mode4.png",
         "version2_mode1.png", "version2_mode2.png", "version2_mode4.png",
@@ -380,8 +390,15 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
         std::string symbol_set = config["symbols_set"];
 
         std::string input_info = symbol_set;
-        std::random_shuffle(input_info.begin(), input_info.end());
-
+#if defined CV_CXX11
+        // std::random_shuffle is deprecated since C++11 and removed in C++17.
+        // Use manually constructed RNG with a fixed seed and std::shuffle instead.
+        std::mt19937 rand_gen {1};
+        std::shuffle(input_info.begin(), input_info.end(), rand_gen);
+#else
+        SeededRandFunctor<1> rand_gen;
+        std::random_shuffle(input_info.begin(), input_info.end(), rand_gen);
+#endif
         for (int j = min_stuctures_num; j < max_stuctures_num; j++)
         {
             QRCodeEncoder::Params params;

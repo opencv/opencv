@@ -963,7 +963,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
                 if (dsize.width > ssize.width*2)
                 {
-                    row[(_dst.cols-1) + x] = row[dx + cn];
+                    row[(_dst.cols-1) * cn + x] = row[dx + cn];
                 }
             }
 
