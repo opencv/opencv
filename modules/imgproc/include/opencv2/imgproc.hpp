@@ -78,10 +78,14 @@ Input depth (src.depth()) | Output depth (ddepth)
 --------------------------|----------------------
 CV_8U                     | -1/CV_16S/CV_32F/CV_64F
 CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F/CV_64F
+CV_32F                    | -1/CV_32F
 CV_64F                    | -1/CV_64F
 
 @note when ddepth=-1, the output image will have the same depth as the source.
+
+@note if you need double floating-point accuracy and using single floating-point input data
+(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
@@ -1753,7 +1757,7 @@ with the following \f$3 \times 3\f$ aperture:
 
 @param src Source image.
 @param dst Destination image of the same size and the same number of channels as src .
-@param ddepth Desired depth of the destination image.
+@param ddepth Desired depth of the destination image, see @ref filter_depths "combinations".
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
 details. The size must be positive and odd.
 @param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
