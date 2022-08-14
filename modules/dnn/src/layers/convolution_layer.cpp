@@ -1807,7 +1807,10 @@ public:
             config.in_shape = shape(inputs[0]);
             config.out_shape = shape(outputs[0]);
             config.kernel = kernel;
-            config.pad = pad;
+            // pads_begin: 0 - pad_top, 1 - pad_left
+            // pads_end: 0 - pad_bottom, 1 - pad_right
+            std::vector<int> pads = {int(pads_begin[0]), int(pads_end[0]), int(pads_begin[1]), int(pads_end[1])};
+            config.pads = pads;
             config.stride = stride;
             config.dilation = dilation;
             if (inputs[0].dims != 4 && inputs[0].dims != umat_blobs[0].dims)
