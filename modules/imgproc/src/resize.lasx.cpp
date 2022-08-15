@@ -171,7 +171,7 @@ public:
                     const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
                     __m256i CV_DECL_ALIGNED(64) pixels2 = v256_lut_quads((schar *)S2, (int *)addr2).val;
 
-		    const __m256i h_mask = __lasx_xvreplgr2vr_w(0xFFFF0000);
+                    const __m256i h_mask = __lasx_xvreplgr2vr_w(0xFFFF0000);
                     __m256i CV_DECL_ALIGNED(64) unpacked = __lasx_xvbitsel_v(pixels1, pixels2, h_mask);
 
                     __m256i CV_DECL_ALIGNED(64) bytes_shuffled = __lasx_xvshuf_b(unpacked, unpacked, shuffle_mask);
@@ -206,7 +206,7 @@ public:
                     const __m256i CV_DECL_ALIGNED(64) *addr2 = (__m256i*)(x_ofs + x + 8);
                     __m256i CV_DECL_ALIGNED(64) pixels2 = v256_lut_quads((schar *)S2, (int *)addr2).val;
                     
-		    const __m256i h_mask = __lasx_xvreplgr2vr_w(0xFFFF0000);
+                    const __m256i h_mask = __lasx_xvreplgr2vr_w(0xFFFF0000);
                     __m256i CV_DECL_ALIGNED(64) unpacked = __lasx_xvbitsel_v(pixels1, pixels2, h_mask);
 
                     __m256i CV_DECL_ALIGNED(64) bytes_shuffled = __lasx_xvshuf_b(unpacked, unpacked, shuffle_mask);
