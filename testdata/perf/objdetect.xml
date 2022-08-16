@@ -1173,9 +1173,10 @@
       <cols>8</cols>
       <dt>"2f"</dt>
       <data>
-        816. 351. 5.84290039e+02 3.93604767e+02 5.33537964e+02
-        2.11214584e+02 7.41005798e+02 1.75306686e+02 1.37186295e+02
-        9.75926285e+01 324. 106. 2.85984772e+02 2.61837006e+02 78. 250.</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---2_qrcodes-png->
+        78. 250. 1.37186295e+02 9.75926285e+01 2.85984772e+02
+        2.61837006e+02 324. 106. 5.33537964e+02 2.11214584e+02
+        5.84290039e+02 3.93604767e+02 7.41005798e+02 1.75306686e+02 816.
+        351.</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---2_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---3_close_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1185,10 +1186,10 @@
       <cols>8</cols>
       <dt>"2f"</dt>
       <data>
-        427. 305. 432. 195. 5.63702759e+02 2.00027893e+02 5.75158752e+02
-        3.14587311e+02 9.74701385e+01 2.10660492e+02 2.16747498e+02
-        2.02393738e+02 2.02170670e+02 3.11719971e+02 6.83709869e+01
-        3.18327362e+02</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---3_close_qrcodes-png->
+        6.83709869e+01 3.18327362e+02 9.74701385e+01 2.10660492e+02
+        2.02170670e+02 3.11719971e+02 2.16747498e+02 2.02393738e+02 427.
+        305. 432. 195. 5.63702759e+02 2.00027893e+02 5.75158752e+02
+        3.14587311e+02</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---3_close_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---3_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1198,31 +1199,32 @@
       <cols>12</cols>
       <dt>"2f"</dt>
       <data>
-        7.89138031e+01 3.53798889e+02 24. 219. 1.78466339e+02
-        1.49979492e+02 2.44396027e+02 2.76055573e+02 3.29238037e+02
-        3.27435486e+02 5.07550446e+02 3.40403656e+02 4.98189911e+02
-        5.20593933e+02 3.03671783e+02 5.05237244e+02 4.05693512e+02
-        8.29583893e+01 5.64939514e+02 7.34036331e+01 5.79725220e+02
-        2.19148407e+02 4.10551575e+02 2.26271515e+02</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---3_qrcodes-png->
+        24. 219. 7.89138031e+01 3.53798889e+02 1.78466339e+02
+        1.49979492e+02 2.44396027e+02 2.76055573e+02 3.03671783e+02
+        5.05237244e+02 3.29238037e+02 3.27435486e+02 4.05693512e+02
+        8.29583893e+01 4.10551575e+02 2.26271515e+02 4.98189911e+02
+        5.20593933e+02 5.07550446e+02 3.40403656e+02 5.64939514e+02
+        7.34036331e+01 5.79725220e+02 2.19148407e+02</data></val></corners></Perf_Objdetect_QRCode_Multi--detectMulti---3_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---4_qrcodes-png->
   <corners>
     <kind>196608</kind>
     <type>13</type>
     <min>8.8743965148925781e+01</min>
-    <max>5.4933288574218750e+02</max>
+    <max>5.5026916503906250e+02</max>
     <last>
       <x>15</x>
       <y>0</y>
-      <val>2.6726406860351562e+02</val></last>
+      <val>4.2119039916992188e+02</val></last>
     <rng1>
-      <x>7</x>
-      <y>0</y>
-      <val>1.8874525451660156e+02</val></rng1>
-    <rng2>
       <x>1</x>
       <y>0</y>
       <cn>1</cn>
-      <val>1.0777532196044922e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---4_qrcodes-png->
+      <val>277.</val></rng1>
+    <rng2>
+      <x>3</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>8.8743965148925781e+01</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---4_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---5_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1232,15 +1234,16 @@
     <last>
       <x>19</x>
       <y>0</y>
-      <val>1.9008435058593750e+02</val></last>
+      <val>2.9967327880859375e+02</val></last>
     <rng1>
-      <x>15</x>
-      <y>0</y>
-      <val>3.0490051269531250e+02</val></rng1>
-    <rng2>
       <x>11</x>
       <y>0</y>
-      <val>3.5555883789062500e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---5_qrcodes-png->
+      <val>3.5555883789062500e+02</val></rng1>
+    <rng2>
+      <x>16</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>1.9008435058593750e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---5_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---6_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1250,16 +1253,16 @@
     <last>
       <x>23</x>
       <y>0</y>
-      <val>2.3388528442382812e+02</val></last>
+      <val>5.6630999755859375e+02</val></last>
     <rng1>
-      <x>14</x>
-      <y>0</y>
-      <val>1.7737380981445312e+02</val></rng1>
-    <rng2>
-      <x>2</x>
+      <x>23</x>
       <y>0</y>
       <cn>1</cn>
-      <val>5.3890673828125000e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---6_qrcodes-png->
+      <val>5.6630999755859375e+02</val></rng1>
+    <rng2>
+      <x>11</x>
+      <y>0</y>
+      <val>4.1503683471679688e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---6_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---7_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1269,16 +1272,17 @@
     <last>
       <x>27</x>
       <y>0</y>
-      <val>7.3982092285156250e+02</val></last>
+      <val>3.3183511352539062e+02</val></last>
     <rng1>
-      <x>10</x>
-      <y>0</y>
-      <val>262.</val></rng1>
-    <rng2>
-      <x>4</x>
+      <x>25</x>
       <y>0</y>
       <cn>1</cn>
-      <val>4.9536679077148438e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---7_qrcodes-png->
+      <val>5.2104022216796875e+02</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>6.1864849853515625e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---7_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--detectMulti---8_close_qrcodes-png->
   <corners>
     <kind>196608</kind>
@@ -1288,213 +1292,34 @@
     <last>
       <x>31</x>
       <y>0</y>
-      <val>1.0135423583984375e+03</val></last>
-    <rng1>
-      <x>21</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>4.0810534667968750e+02</val></rng1>
-    <rng2>
-      <x>17</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>4.7599661254882812e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---8_close_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---2_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>2</len>
-    <idx>1</idx>
-    <min>46.</min>
-    <max>119.</max>
-    <last>
-      <x>44</x>
-      <y>0</y>
-      <val>110.</val></last>
-    <rng1>
-      <x>29</x>
-      <y>0</y>
-      <val>47.</val></rng1>
-    <rng2>
-      <x>40</x>
-      <y>0</y>
-      <val>105.</val></rng2></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>2</len>
-    <idx>1</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>28</x>
-      <y>28</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>26</x>
-      <y>20</y>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>9</x>
-      <y>7</y>
-      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---2_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---3_close_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>2</len>
-    <idx>1</idx>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>13</cols>
-      <dt>u</dt>
-      <data>
-        73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>2</len>
-    <idx>0</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>24</x>
-      <y>24</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>18</x>
-      <y>24</y>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>19</x>
-      <y>24</y>
-      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---3_close_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---3_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>3</len>
-    <idx>0</idx>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>13</cols>
-      <dt>u</dt>
-      <data>
-        73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>3</len>
-    <idx>1</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>28</x>
-      <y>28</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>15</x>
-      <y>27</y>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>27</x>
-      <y>17</y>
-      <val>0.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---3_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---4_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>4</len>
-    <idx>3</idx>
-    <min>46.</min>
-    <max>118.</max>
-    <last>
-      <x>40</x>
-      <y>0</y>
-      <val>52.</val></last>
-    <rng1>
-      <x>15</x>
-      <y>0</y>
-      <val>99.</val></rng1>
-    <rng2>
-      <x>22</x>
-      <y>0</y>
-      <val>110.</val></rng2></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>4</len>
-    <idx>1</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>24</x>
-      <y>24</y>
-      <val>0.</val></last>
+      <val>7.1797662353515625e+02</val></last>
     <rng1>
       <x>2</x>
-      <y>11</y>
-      <val>255.</val></rng1>
+      <y>0</y>
+      <cn>1</cn>
+      <val>4.7796615600585938e+02</val></rng1>
     <rng2>
-      <x>6</x>
-      <y>7</y>
-      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---4_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---5_qrcodes-png->
-  <decoded_info_uint8_t>
+      <x>1</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>5.3600378417968750e+02</val></rng2></corners></Perf_Objdetect_QRCode_Multi--detectMulti---8_close_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---2_qrcodes-png->
+  <decoded_info_sort>
     <kind>262144</kind>
     <type>0</type>
-    <len>5</len>
-    <idx>4</idx>
-    <min>46.</min>
-    <max>118.</max>
-    <last>
-      <x>40</x>
-      <y>0</y>
-      <val>52.</val></last>
-    <rng1>
-      <x>14</x>
-      <y>0</y>
-      <val>46.</val></rng1>
-    <rng2>
-      <x>3</x>
-      <y>0</y>
-      <val>112.</val></rng2></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>5</len>
-    <idx>4</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>28</x>
-      <y>28</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>25</x>
-      <y>27</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>10</x>
-      <y>17</y>
-      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---5_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---6_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>6</len>
-    <idx>5</idx>
+    <len>2</len>
+    <idx>0</idx>
     <val type_id="opencv-matrix">
       <rows>1</rows>
-      <cols>5</cols>
+      <cols>13</cols>
       <dt>u</dt>
       <data>
-        69 88 84 82 65</data></val></decoded_info_uint8_t>
-  <straight_barcode>
+        73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_sort>
+  <straight_barcode_sort>
     <kind>327680</kind>
     <type>0</type>
-    <len>6</len>
-    <idx>4</idx>
+    <len>2</len>
+    <idx>0</idx>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1502,19 +1327,214 @@
       <y>20</y>
       <val>255.</val></last>
     <rng1>
-      <x>14</x>
-      <y>0</y>
+      <x>9</x>
+      <y>6</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>15</x>
+      <y>7</y>
+      <val>255.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---2_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---3_close_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>2</len>
+    <idx>0</idx>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>13</cols>
+      <dt>u</dt>
+      <data>
+        73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>2</len>
+    <idx>1</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>24</x>
+      <y>24</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>24</x>
+      <y>11</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>4</x>
+      <y>14</y>
+      <val>255.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---3_close_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---3_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>3</len>
+    <idx>0</idx>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>13</cols>
+      <dt>u</dt>
+      <data>
+        73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>3</len>
+    <idx>1</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>28</x>
+      <y>28</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>20</x>
+      <y>14</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>9</x>
+      <y>22</y>
+      <val>0.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---3_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---4_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>4</len>
+    <idx>3</idx>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>15</cols>
+      <dt>u</dt>
+      <data>
+        232 174 161 231 174 151 230 156 186 232 167 134 232 167 137</data></val></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>4</len>
+    <idx>1</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>24</x>
+      <y>24</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>5</x>
+      <y>8</y>
       <val>0.</val></rng1>
     <rng2>
-      <x>16</x>
-      <y>8</y>
-      <val>0.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---6_qrcodes-png->
+      <x>21</x>
+      <y>18</y>
+      <val>0.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---4_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---5_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>5</len>
+    <idx>0</idx>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>19</cols>
+      <dt>u</dt>
+      <data>
+        71 114 101 97 116 32 80 108 97 99 101 32 116 111 32 119 111 114
+        107</data></val></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>5</len>
+    <idx>1</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>24</x>
+      <y>24</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>24</x>
+      <y>12</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>10</x>
+      <y>1</y>
+      <val>0.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---5_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---6_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>6</len>
+    <idx>2</idx>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>4</cols>
+      <dt>u</dt>
+      <data>
+        83 75 73 80</data></val></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>6</len>
+    <idx>0</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>20</x>
+      <y>20</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>11</x>
+      <y>9</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>11</x>
+      <y>10</y>
+      <val>255.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---6_qrcodes-png->
 <Perf_Objdetect_QRCode_Multi--decodeMulti---7_qrcodes-png->
-  <decoded_info_uint8_t>
+  <decoded_info_sort>
     <kind>262144</kind>
     <type>0</type>
     <len>7</len>
-    <idx>1</idx>
+    <idx>3</idx>
+    <min>46.</min>
+    <max>119.</max>
+    <last>
+      <x>44</x>
+      <y>0</y>
+      <val>110.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>0</y>
+      <val>104.</val></rng1>
+    <rng2>
+      <x>24</x>
+      <y>0</y>
+      <val>47.</val></rng2></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>7</len>
+    <idx>3</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>28</x>
+      <y>28</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>15</x>
+      <y>12</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>5</x>
+      <y>13</y>
+      <val>255.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---7_qrcodes-png->
+<Perf_Objdetect_QRCode_Multi--decodeMulti---8_close_qrcodes-png->
+  <decoded_info_sort>
+    <kind>262144</kind>
+    <type>0</type>
+    <len>8</len>
+    <idx>7</idx>
     <min>46.</min>
     <max>121.</max>
     <last>
@@ -1522,61 +1542,30 @@
       <y>0</y>
       <val>52.</val></last>
     <rng1>
+      <x>23</x>
+      <y>0</y>
+      <val>110.</val></rng1>
+    <rng2>
+      <x>10</x>
+      <y>0</y>
+      <val>116.</val></rng2></decoded_info_sort>
+  <straight_barcode_sort>
+    <kind>327680</kind>
+    <type>0</type>
+    <len>8</len>
+    <idx>6</idx>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
       <x>28</x>
-      <y>0</y>
-      <val>49.</val></rng1>
-    <rng2>
-      <x>8</x>
-      <y>0</y>
-      <val>103.</val></rng2></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>7</len>
-    <idx>1</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>24</x>
-      <y>24</y>
-      <val>0.</val></last>
+      <y>28</y>
+      <val>255.</val></last>
     <rng1>
-      <x>6</x>
-      <y>22</y>
-      <val>0.</val></rng1>
+      <x>23</x>
+      <y>19</y>
+      <val>255.</val></rng1>
     <rng2>
-      <x>0</x>
-      <y>15</y>
-      <val>0.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---7_qrcodes-png->
-<Perf_Objdetect_QRCode_Multi--decodeMulti---8_close_qrcodes-png->
-  <decoded_info_uint8_t>
-    <kind>262144</kind>
-    <type>0</type>
-    <len>8</len>
-    <idx>3</idx>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>6</cols>
-      <dt>u</dt>
-      <data>
-        80 111 108 105 110 97</data></val></decoded_info_uint8_t>
-  <straight_barcode>
-    <kind>327680</kind>
-    <type>0</type>
-    <len>8</len>
-    <idx>5</idx>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>24</x>
-      <y>24</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>12</x>
-      <y>6</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>9</x>
-      <y>5</y>
-      <val>255.</val></rng2></straight_barcode></Perf_Objdetect_QRCode_Multi--decodeMulti---8_close_qrcodes-png->
+      <x>17</x>
+      <y>8</y>
+      <val>0.</val></rng2></straight_barcode_sort></Perf_Objdetect_QRCode_Multi--decodeMulti---8_close_qrcodes-png->
 </opencv_storage>
