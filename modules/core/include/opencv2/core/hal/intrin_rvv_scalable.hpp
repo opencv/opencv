@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <assert.h>
 #include <vector>
+#include <opencv2/core/check.hpp>
 
 #ifndef CV_RVV_MAX_VLEN
 #define CV_RVV_MAX_VLEN 1024
@@ -1020,11 +1021,26 @@ OPENCV_HAL_IMPL_RVV_BROADCAST(v_uint32, u32)
 OPENCV_HAL_IMPL_RVV_BROADCAST(v_int32, s32)
 OPENCV_HAL_IMPL_RVV_BROADCAST(v_float32, f32)
 
-////////////// Transpose4x4 //////////////
-// TODO
 
 ////////////// Reverse //////////////
-// TODO
+#define OPENCV_HAL_IMPL_RVV_REVERSE(_Tpvec, width) \
+inline _Tpvec v_reverse(const _Tpvec& a)  \
+{ \
+    vuint##width##m1_t vidx = vrsub(vid_v_u##width##m1(VTraits<_Tpvec>::vlanes()), VTraits<_Tpvec>::vlanes()-1, VTraits<_Tpvec>::vlanes()); \
+    return vrgather(a, vidx, VTraits<_Tpvec>::vlanes()); \
+}
+OPENCV_HAL_IMPL_RVV_REVERSE(v_uint8, 8)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_int8, 8)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_uint16, 16)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_int16, 16)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_uint32, 32)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_int32, 32)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_float32, 32)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_uint64, 64)
+OPENCV_HAL_IMPL_RVV_REVERSE(v_int64, 64)
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_REVERSE(v_float64, 64)
+#endif
 
 //////////// Value reordering ////////////
 
@@ -1066,6 +1082,134 @@ inline v_int32 v_load_expand_q(const schar* ptr)
 {
     return vwcvt_x(vwcvt_x(vle8_v_i8mf4(ptr, VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes());
 }
+
+
+/* void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1)
+  a0 = {A1 A2 A3 A4}
+  a1 = {B1 B2 B3 B4}
+---------------
+  {A1 B1 A2 B2} and {A3 B3 A4 B4}
+*/
+
+#define OPENCV_HAL_IMPL_RVV_ZIP(_Tpvec, _wTpvec, suffix, width, width2, convert2um2, convert2um1) \
+inline void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1) { \
+    _wTpvec temp = vreinterpret_##suffix##m2(convert2um2( \
+        vor(vzext_vf2(convert2um1(a0), VTraits<_Tpvec>::vlanes()*2), \
+            vreinterpret_u##width2##m2(vslide1up(vreinterpret_u##width##m2(vzext_vf2(convert2um1(a1), VTraits<_Tpvec>::vlanes()*2)), 0, VTraits<_Tpvec>::vlanes()*2)), \
+            VTraits<_Tpvec>::vlanes()))); \
+    b0 = vget_##suffix##m1(temp, 0); \
+    b1 = vget_##suffix##m1(temp, 1); \
+}
+OPENCV_HAL_IMPL_RVV_ZIP(v_uint8, vuint8m2_t, u8, 8, 16, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_ZIP(v_int8, vint8m2_t, i8, 8, 16, vreinterpret_u8m2, vreinterpret_u8m1)
+OPENCV_HAL_IMPL_RVV_ZIP(v_uint16, vuint16m2_t, u16, 16, 32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_ZIP(v_int16, vint16m2_t, i16, 16, 32, vreinterpret_u16m2, vreinterpret_u16m1)
+OPENCV_HAL_IMPL_RVV_ZIP(v_uint32, vuint32m2_t, u32, 32, 64, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_ZIP(v_int32, vint32m2_t, i32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
+OPENCV_HAL_IMPL_RVV_ZIP(v_float32, vfloat32m2_t, f32, 32, 64, vreinterpret_u32m2, vreinterpret_u32m1)
+
+#define OPENCV_HAL_IMPL_RVV_UNPACKS(_Tpvec, width) \
+inline _Tpvec v_combine_low(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return vslideup(a, b, VTraits<_Tpvec>::vlanes()/2, VTraits<_Tpvec>::vlanes());\
+} \
+inline _Tpvec v_combine_high(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    return vslideup( \
+            vslidedown(a, a, VTraits<_Tpvec>::vlanes()/2, VTraits<_Tpvec>::vlanes()), \
+            vslidedown(b, b, VTraits<_Tpvec>::vlanes()/2, VTraits<_Tpvec>::vlanes()), \
+            VTraits<_Tpvec>::vlanes()/2, \
+            VTraits<_Tpvec>::vlanes()); \
+} \
+inline void v_recombine(const _Tpvec& a, const _Tpvec& b, _Tpvec& c, _Tpvec& d) \
+{ \
+    c = v_combine_low(a, b); \
+    d = v_combine_high(a, b); \
+}
+
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_uint8, 8)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_int8, 8)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_uint16, 16)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_int16, 16)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_uint32, 32)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_int32, 32)
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_float32, 32)
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_UNPACKS(v_float64, 64)
+#endif
+
+static uint64_t idx_interleave_pairs[] = { \
+    0x0705060403010200, 0x0f0d0e0c0b090a08, 0x1715161413111210, 0x1f1d1e1c1b191a18, \
+    0x2725262423212220, 0x2f2d2e2c2b292a28, 0x3735363433313230, 0x3f3d3e3c3b393a38, \
+    0x4745464443414240, 0x4f4d4e4c4b494a48, 0x5755565453515250, 0x5f5d5e5c5b595a58, \
+    0x6765666463616260, 0x6f6d6e6c6b696a68, 0x7775767473717270, 0x7f7d7e7c7b797a78};
+
+static uint64_t idx_interleave_quads[] = { \
+    0x0703060205010400, 0x0f0b0e0a0d090c08, 0x1713161215111410, 0x1f1b1e1a1d191c18, \
+    0x2723262225212420, 0x2f2b2e2a2d292c28, 0x3733363235313430, 0x3f3b3e3a3d393c38, \
+    0x4743464245414440, 0x4f4b4e4a4d494c48, 0x5753565255515450, 0x5f5b5e5a5d595c58, \
+    0x6763666265616460, 0x6f6b6e6a6d696c68, 0x7773767275717470, 0x7f7b7e7a7d797c78};
+
+#define OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(_Tpvec, func) \
+inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
+    CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
+    vuint8m1_t vidx = vundefined_u8m1();\
+    vidx = vreinterpret_u8m1(vle64_v_u64m1(idx_interleave_##func, 16)); \
+    return vrgather(vec, vidx, VTraits<v_uint8>::vlanes()); \
+}
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_uint8, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_int8, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_uint8, quads)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_int8, quads)
+
+#define OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(_Tpvec, width, vzext_vfx, func) \
+inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
+    CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
+    vuint##width##m1_t vidx = vundefined_u##width##m1();\
+    vidx = vget_u##width##m1(vzext_vfx(vreinterpret_u8m1(vle64_v_u64m1(idx_interleave_##func, 16)), VTraits<v_uint8>::vlanes()), 0); \
+    return vrgather(vec, vidx, VTraits<_Tpvec>::vlanes()); \
+}
+
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_uint16, 16, vzext_vf2, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int16, 16, vzext_vf2, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_uint32, 32, vzext_vf4, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int32, 32, vzext_vf4, pairs)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_float32, 32, vzext_vf4, pairs)
+
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_uint16, 16, vzext_vf2, quads)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int16, 16, vzext_vf2, quads)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_uint32, 32, vzext_vf4, quads)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int32, 32, vzext_vf4, quads)
+OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_float32, 32, vzext_vf4, quads)
+
+////////////// Transpose4x4 //////////////
+#define OPENCV_HAL_IMPL_RVV_ZIP4(_Tpvec, _wTpvec, suffix, convert2u, convert) \
+static inline void v_zip4(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1) { \
+    int vl = 4; \
+    _wTpvec temp = vreinterpret_##suffix##m2(convert2u( \
+        vor(vzext_vf2(convert(a0), vl), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(convert(a1), vl)), 0, vl*2)), \
+            vl))); \
+    b0 = vget_##suffix##m1(temp, 0); \
+    b1 = vget_##suffix##m1(vrgather(temp, vadd(vid_v_u32m2(vl), 4, vl)/*{4,5,6,7} */, vl) ,0); \
+}
+
+OPENCV_HAL_IMPL_RVV_ZIP4(v_uint32, vuint32m2_t, u32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_ZIP4(v_int32, vint32m2_t, i32, vreinterpret_u32m2, vreinterpret_u32m1)
+OPENCV_HAL_IMPL_RVV_ZIP4(v_float32, vfloat32m2_t, f32, vreinterpret_u32m2, vreinterpret_u32m1)
+
+#define OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(_Tpvec, suffix) \
+inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1, const _Tpvec& a2, const _Tpvec& a3, _Tpvec& b0, _Tpvec& b1, _Tpvec& b2, _Tpvec& b3) { \
+    _Tpvec t0,t1,t2,t3= vundefined_##suffix##m1(); \
+    v_zip4(a0, a2, t0, t2); \
+    v_zip4(a1, a3, t1, t3); \
+    v_zip4(t0, t1, b0, b1); \
+    v_zip4(t2, t3, b2, b3); \
+}
+
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_uint32, u32)
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_int32, i32)
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_float32, f32)
 
 //////////// PopCount //////////
 // TODO
