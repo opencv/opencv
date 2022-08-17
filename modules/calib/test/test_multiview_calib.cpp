@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 
 namespace opencv_test { namespace {
 
@@ -102,14 +103,14 @@ TEST(multiview_calibration, accuracy) {
     std::vector<std::vector<cv::Mat>> image_points_all(num_cameras);
     cv::Mat ones = cv::Mat_<float>::ones(1, num_pts);
     std::vector<std::vector<bool>> visibility;
+    cv::Mat centroid = cv::Mat(cv::Matx31f(
+            (float)cv::mean(pattern.row(0)).val[0],
+            (float)cv::mean(pattern.row(1)).val[0],
+            (float)cv::mean(pattern.row(2)).val[0]));
     for (int f = 0; f < MAX_SAMPLES; f++) {
         cv::Mat R = euler2rot(rng.uniform(yaw_min, yaw_max)*M_PI/180,
                               rng.uniform(pitch_min, pitch_max)*M_PI/180,
                               rng.uniform(roll_min, roll_max)*M_PI/180);
-        cv::Mat centroid = cv::Mat(cv::Matx31f(
-                (float)cv::mean(pattern.row(0)).val[0],
-                (float)cv::mean(pattern.row(1)).val[0],
-                (float)cv::mean(pattern.row(2)).val[0]));
         cv::Mat t = cv::Mat(cv::Matx31f(
                 (float)rng.uniform(tx_min, tx_max),
                 (float)rng.uniform(ty_min, ty_max),
@@ -169,19 +170,17 @@ TEST(multiview_calibration, accuracy) {
 
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
-    CV_Assert (calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
+    EXPECT_TRUE(calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
        Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs));
 
     const double K_err_tol = 1e1, dist_tol = 2e-1, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
         cv::Mat R;
         cv::Rodrigues(Rs[c], R);
-        ASSERT_LT(cv::norm(Ks_gt[c] - Ks[c]), K_err_tol);
-        ASSERT_LT(cv::norm(distortions_gt[c] - distortions[c]), dist_tol);
-        ASSERT_LT(cv::norm(Rs_gt[c] - R), R_tol);
-        ASSERT_LT(cv::norm(Ts_gt[c] - Ts[c]), T_tol);
+        EXPECT_MAT_NEAR(Ks_gt[c], Ks[c], K_err_tol);
+        EXPECT_MAT_NEAR(distortions_gt[c], distortions[c], dist_tol);
+        EXPECT_MAT_NEAR(Rs_gt[c], R, R_tol);
+        EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);
     }
 }
-
-
 }}

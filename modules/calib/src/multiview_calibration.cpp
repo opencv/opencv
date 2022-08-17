@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 namespace cv {
 namespace multiview {
@@ -65,19 +64,16 @@ public:
     }
 };
 
-static double robustWrapper (InputArray errors, const RobustFunction &fnc, double &rmse) {
+static double robustWrapper (InputArray errors, const RobustFunction &fnc) {
     Mat errs = errors.getMat();
     errs.convertTo(errs, CV_32F);
     auto * errs_ptr = (float *) errs.data;
     double robust_sum_sqr_errs = 0.0;
-    rmse = 0.0; // without robust wrapper
     for (int pt = 0; pt < (int)errs.total()*2; pt++) {
         auto sqr_err = errs_ptr[pt];
         sqr_err *= sqr_err; 
-        rmse += sqr_err;
         robust_sum_sqr_errs += fnc.getError(sqr_err);
     }
-    rmse = sqrt(rmse / (double) errs.total());
     return sqrt(robust_sum_sqr_errs);
 }
 
@@ -178,7 +174,9 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     CV_Assert(visibility.rows == (int)imageSize.size());
     CV_Assert(visibility.cols == std::max(objPoints.rows(), objPoints.cols())); // equal number of frames
     CV_Assert(Rs.isMatVector() == Ts.isMatVector());
-
+    if (USE_INTRINSICS_GUESS) {
+        CV_Assert(Ks.size() == distortions.size() && Ks.size() == imageSize.size());
+    }
     // normalize object points
     double scale_3d_pts = 0.0;
     const Mat obj_pts_0 = objPoints.getMat(0);
@@ -206,9 +204,9 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     objPoints_norm.reserve(NUM_FRAMES);
     for (int i = 0; i < NUM_FRAMES; i++) {
         if (obj_points_in_rows)
-            objPoints_norm.emplace_back(objPoints.getMat(i) / scale_3d_pts);
+            objPoints_norm.emplace_back(objPoints.getMat(i)*(1/scale_3d_pts));
         else
-            objPoints_norm.emplace_back(objPoints.getMat(i).t() / scale_3d_pts);
+            objPoints_norm.emplace_back(objPoints.getMat(i).t()*(1/scale_3d_pts));
         objPoints_norm[i] = objPoints_norm[i].reshape(1);
     }
 
@@ -311,17 +309,15 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             }
         }
     } else {
+        // use PnP to compute rvecs and tvecs
         for (int i = 0; i < NUM_FRAMES; i++) {
-            Mat objpt_i(objPoints_norm[i], false/*copy_data*/);
-            // use PnP to compute rvecs and tvecs
             for (int k = 0; k < NUM_CAMERAS; k++) {
                 if (!visibility_mat[k][i]) continue;
                 Vec3d rvec, tvec;
-                Mat imgpt_ik (imagePoints[k][i], false/*copy_data*/);
-                solvePnP(objpt_i, imgpt_ik, Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE );
+                solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE );
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
-                const auto err = multiview::computeReprojectionRMSE(objpt_i, imgpt_ik, Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                const auto err = multiview::computeReprojectionRMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
                 if (camera_rt_errors[i] > err) {
                     camera_rt_errors[i] = err;
                     camera_rt_best[i] = k;
@@ -443,11 +439,10 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                             Ks[c2], distortions[c2],
                             Size(), R, T, CALIB_FIX_INTRINSIC);
         } else {
-            Mat errors_per_view; // num_frames x 2
             stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], distortions[c1],
                             Ks[c2], distortions[c2],
-                            Size(), R, T, noArray(), noArray(), errors_per_view, CALIB_FIX_INTRINSIC);
+                            Size(), R, T, noArray(), noArray(), noArray(), CALIB_FIX_INTRINSIC);
         }
 		// R_0 = I
 		// R_ij = R_i R_j^T     =>  R_i = R_ij R_j
@@ -479,7 +474,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
 
     // use found rvecs / tvecs or estimate them to initialize rest of parameters
     int cnt_valid_frame = 0;
-    for(int i = 0; i < NUM_FRAMES; i++ ) {
+    for (int i = 0; i < NUM_FRAMES; i++ ) {
         if (!valid_frames[i]) continue;
         Vec3d rvec_0, tvec_0;
         if (camera_rt_best[i] != 0) {
@@ -497,10 +492,9 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             // t'_k = tvec_k = t_k + R_k t_0    => t_0 = R_k^T (tvec_k - t_k)
             const int rt_best_idx = camera_rt_best[i];
             Matx33d R_k;
-            tvec_0 = Rs_vec[rt_best_idx].t() * (tvecs_all[camera_rt_best[i]][i] - Ts_vec[rt_best_idx]);
-            Rodrigues(rvecs_all[camera_rt_best[i]][i], R_k);
-            Matx33d R0 = Rs_vec[rt_best_idx].t() * R_k;
-            Rodrigues(R0, rvec_0);
+            tvec_0 = Rs_vec[rt_best_idx].t() * (tvecs_all[rt_best_idx][i] - Ts_vec[rt_best_idx]);
+            Rodrigues(rvecs_all[rt_best_idx][i], R_k);
+            Rodrigues(Rs_vec[rt_best_idx].t() * R_k, rvec_0);
         } else {
             rvec_0 = rvecs_all[0][i];
             tvec_0 = tvecs_all[0][i];
@@ -522,11 +516,10 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm) {
         auto * param_p = _param.getMat().ptr<double>();
         errnorm = 0;
-        double rmse_robust = 0, rmse_plain = 0;
         cnt_valid_frame = 0;
-        for(int i = 0; i < NUM_FRAMES; i++ ) {
+        for (int i = 0; i < NUM_FRAMES; i++ ) {
             if (!valid_frames[i]) continue;
-            for(int k = 1; k < NUM_CAMERAS; k++ ) { // skip first camera as there is nothing to optimize
+            for (int k = 1; k < NUM_CAMERAS; k++ ) { // skip first camera as there is nothing to optimize
                 if (!visibility_mat[k][i]) continue;
                 const int cam_idx = (k-1)*6; // extrinsics
                 const auto * const pose_k = param_p + cam_idx;
@@ -570,12 +563,9 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                     else
                         projectPoints(objpt_i, om[1], T[1], Ks[k], distortions[k], tmpImagePoints);
                 }
-                double rmse_;
                 subtract( tmpImagePoints, imgpt_ik, tmpImagePoints);
-                const double robust_l2_norm = multiview::robustWrapper(tmpImagePoints, robust_fnc, rmse_);
+                const double robust_l2_norm = multiview::robustWrapper(tmpImagePoints, robust_fnc);
                 errnorm += robust_l2_norm;
-                rmse_plain += (rmse_ * rmse_ * NUM_PATTERN_PTS);
-                rmse_robust += (robust_l2_norm * robust_l2_norm);
 
                 if (JtJ_.needed()) {
                     Mat JtErr = JtErr_.getMat(), JtJ = JtJ_.getMat();
@@ -586,7 +576,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                     if( k != 0 ) { // k == 1 for stereoCalibrate
                         // d(err_{x|y}R) ~ de3
                         // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
-                        for(int p = 0; p < NUM_PATTERN_PTS*2; p++ ) {
+                        for (int p = 0; p < NUM_PATTERN_PTS*2; p++ ) {
                             Mat de3dr3( 1, 3, CV_64F, Je.ptr(p));
                             Mat de3dt3( 1, 3, CV_64F, de3dr3.ptr<double>() + 3 );
                             Mat de3dr2( 1, 3, CV_64F, J_0ToK.ptr(p) );
