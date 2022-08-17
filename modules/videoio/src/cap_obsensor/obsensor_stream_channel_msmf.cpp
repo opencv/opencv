@@ -25,6 +25,7 @@
 #include "obsensor_stream_channel_msmf.hpp"
 
 #include <shlwapi.h> // QISearch
+#include <Mferror.h>
 
 #pragma warning(disable : 4503)
 #pragma comment(lib, "mfplat")
@@ -98,7 +99,7 @@ bool parseUvcDeviceSymbolicLink(const std::string& symbolicLink, uint16_t& vid, 
     std::string lowerStr = symbolicLink;
     for (size_t i = 0; i < lowerStr.length(); i++)
     {
-        lowerStr[i] = (char)tolower(lowerStr[i]); 
+        lowerStr[i] = (char)tolower(lowerStr[i]);
     }
     auto tokens = stringSplit(lowerStr, '#');
     if (tokens.size() < 1 || (tokens[0] != R"(\\?\usb)" && tokens[0] != R"(\\?\hid)"))
@@ -317,8 +318,12 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
     {
         for (uint32_t k = 0;; k++)
         {
-            HR_FAILED_EXEC(streamReader_->GetNativeMediaType(index, k, &mediaType), { continue; })
-                GUID subtype;
+            auto hr = streamReader_->GetNativeMediaType(index, k, &mediaType);
+            if(hr == MF_E_INVALIDSTREAMNUMBER || hr == MF_E_NO_MORE_TYPES){
+                break;
+            }
+            HR_FAILED_EXEC(hr, { continue; })
+            GUID subtype;
             HR_FAILED_RETURN(mediaType->GetGUID(MF_MT_SUBTYPE, &subtype));
             HR_FAILED_RETURN(MFGetAttributeSize(mediaType.Get(), MF_MT_FRAME_SIZE, &width, &height));
             HR_FAILED_RETURN(MFGetAttributeRatio(mediaType.Get(), MF_MT_FRAME_RATE_RANGE_MIN, &frameRateMin.numerator, &frameRateMin.denominator));
