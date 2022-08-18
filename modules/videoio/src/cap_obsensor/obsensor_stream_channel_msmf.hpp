@@ -25,6 +25,8 @@
 
 #include "obsensor_uvc_stream_channel.hpp"
 
+#include <condition_variable>
+
 #include <windows.h>
 #include <guiddef.h>
 #include <mfapi.h>
