@@ -517,10 +517,6 @@ template<typename R> struct TheTest
             EXPECT_EQ(resP[4*i + 2], dataA[4*i+1]);
             EXPECT_EQ(resP[4*i + 3], dataA[4*i+3]);
         }
-        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-        {
-            printf("%d%s", (int)resQ[i], i == VTraits<R>::vlanes()-1 ? "\n" : " ");
-        }
         for (int i = 0; i < VTraits<R>::vlanes()/8; ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
