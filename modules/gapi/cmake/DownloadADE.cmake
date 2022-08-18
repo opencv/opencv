@@ -1,7 +1,7 @@
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
-set(ade_filename "v0.1.1f.zip")
-set(ade_subdir "ade-0.1.1f")
-set(ade_md5 "b624b995ec9c439cbc2e9e6ee940d3a2")
+set(ade_filename "v0.1.2.zip")
+set(ade_subdir "ade-0.1.2")
+set(ade_md5 "561c1e28ccf27ad0557a18e251c22226")
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_md5}
              URL
