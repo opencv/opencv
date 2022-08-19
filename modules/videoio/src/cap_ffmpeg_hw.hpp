@@ -21,6 +21,7 @@
 #define D3D11_NO_HELPERS
 #include <d3d11.h>
 #include <codecvt>
+#include <locale>
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>

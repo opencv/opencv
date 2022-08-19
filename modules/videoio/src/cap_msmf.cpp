@@ -29,6 +29,7 @@
 #ifdef HAVE_MSMF_DXVA
 #include <d3d11.h>
 #include <d3d11_4.h>
+#include <locale>
 #endif
 #include <new>
 #include <map>
