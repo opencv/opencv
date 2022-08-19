@@ -46,6 +46,201 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
     EXPECT_EQ(0, remove(file4.c_str()));
 }
 
+#ifdef __ANDROID__
+// Test disabled as it uses a lot of memory.
+// It is killed with SIGKILL by out of memory killer.
+TEST(Imgcodecs_Tiff, DISABLED_decode_issue22388_16UC1)
+#else
+TEST(Imgcodecs_Tiff, decode_issue22388_16UC1)
+#endif
+{
+    // See https://github.com/opencv/opencv/issues/22388
+    string file3 = cv::tempfile(".tiff");
+
+    /**
+     * 32768px * 32768px * 16bpp / 8 bit/byte = 2,147,483,648 byte.
+     */
+    cv::Mat big(32768, 32768, CV_16UC1, cv::Scalar::all(0));
+
+    for( int y = 0 ; y < big.rows; y++)
+    {
+        big.at<ushort>(y,0)          = (y * 2)  & 0xFFFF;
+        big.at<ushort>(y,big.cols-1) = (y * 3)  & 0xFFFF;
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        big.at<ushort>(0,x)          = (x * 5) & 0xFFFF;
+        big.at<ushort>(big.rows-1,x) = (x * 7) & 0xFFFF;
+    }
+
+    std::vector<int> params;
+    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(big.rows);
+
+    EXPECT_NO_THROW(cv::imwrite(file3, big, params));
+    big.release();
+
+    cv::Mat output;
+    // IMREAD_UNCHANGED flag is needed to read as 16bit.
+    EXPECT_NO_THROW(output = cv::imread(file3, IMREAD_UNCHANGED));
+
+    for( int y = 0 ; y < output.rows; y++)
+    {
+        EXPECT_EQ( (y * 2) & 0xFFFF, output.at<ushort>(y,0) );
+        EXPECT_EQ( (y * 3) & 0xFFFF, output.at<ushort>(y,output.cols-1) );
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        EXPECT_EQ( (x * 5) & 0xFFFF, output.at<ushort>(0,x) );
+        EXPECT_EQ( (x * 7) & 0xFFFF, output.at<ushort>(output.rows-1,x) );
+    }
+    EXPECT_EQ(0, remove(file3.c_str()));
+}
+
+#ifdef __ANDROID__
+// Test disabled as it uses a lot of memory.
+// It is killed with SIGKILL by out of memory killer.
+TEST(Imgcodecs_Tiff, DISABLED_decode_issue22388_16UC3)
+#else
+TEST(Imgcodecs_Tiff, decode_issue22388_16UC3)
+#endif
+{
+    // See https://github.com/opencv/opencv/issues/22388
+    string file3 = cv::tempfile(".tiff");
+
+    /**
+     * 10922px * 32768px * 48bpp / 8 bit/byte = 2,147,352,576 byte.
+     */
+    cv::Mat big(10922, 32768, CV_16UC3, cv::Scalar::all(0));
+
+    // Vec3w = Vec<ushort, 3>.
+    for( int y = 0 ; y < big.rows; y++)
+    {
+        big.at<Vec3w>(y,0)[0]          = (y * 2)  & 0xFFFF;
+        big.at<Vec3w>(y,0)[1]          = (y * 3)  & 0xFFFF;
+        big.at<Vec3w>(y,0)[2]          = (y * 5)  & 0xFFFF;
+        big.at<Vec3w>(y,big.cols-1)[0] = (y * 7)  & 0xFFFF;
+        big.at<Vec3w>(y,big.cols-1)[1] = (y * 11) & 0xFFFF;
+        big.at<Vec3w>(y,big.cols-1)[2] = (y * 13) & 0xFFFF;
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        big.at<Vec3w>(0,x)[0]          = (x * 17) & 0xFFFF;
+        big.at<Vec3w>(0,x)[1]          = (x * 19) & 0xFFFF;
+        big.at<Vec3w>(0,x)[2]          = (x * 23) & 0xFFFF;
+        big.at<Vec3w>(big.rows-1,x)[0] = (x * 29) & 0xFFFF;
+        big.at<Vec3w>(big.rows-1,x)[1] = (x * 31) & 0xFFFF;
+        big.at<Vec3w>(big.rows-1,x)[2] = (x * 37) & 0xFFFF;
+    }
+
+    std::vector<int> params;
+    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(big.rows);
+
+    EXPECT_NO_THROW(cv::imwrite(file3, big, params));
+    big.release();
+
+    cv::Mat output;
+    // IMREAD_UNCHANGED flag is needed to read as 16bit.
+    EXPECT_NO_THROW(output = cv::imread(file3, IMREAD_UNCHANGED));
+
+    for( int y = 0 ; y < output.rows; y++)
+    {
+        EXPECT_EQ( (y * 2)  & 0xFFFF, output.at<Vec3w>(y,0)[0] );
+        EXPECT_EQ( (y * 3)  & 0xFFFF, output.at<Vec3w>(y,0)[1] );
+        EXPECT_EQ( (y * 5)  & 0xFFFF, output.at<Vec3w>(y,0)[2] );
+        EXPECT_EQ( (y * 7)  & 0xFFFF, output.at<Vec3w>(y,output.cols-1)[0] );
+        EXPECT_EQ( (y * 11) & 0xFFFF, output.at<Vec3w>(y,output.cols-1)[1] );
+        EXPECT_EQ( (y * 13) & 0xFFFF, output.at<Vec3w>(y,output.cols-1)[2] );
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        EXPECT_EQ( (x * 17) & 0xFFFF, output.at<Vec3w>(0,x)[0] );
+        EXPECT_EQ( (x * 19) & 0xFFFF, output.at<Vec3w>(0,x)[1] );
+        EXPECT_EQ( (x * 23) & 0xFFFF, output.at<Vec3w>(0,x)[2] );
+        EXPECT_EQ( (x * 29) & 0xFFFF, output.at<Vec3w>(output.rows-1,x)[0] );
+        EXPECT_EQ( (x * 31) & 0xFFFF, output.at<Vec3w>(output.rows-1,x)[1] );
+        EXPECT_EQ( (x * 37) & 0xFFFF, output.at<Vec3w>(output.rows-1,x)[2] );
+    }
+    EXPECT_EQ(0, remove(file3.c_str()));
+}
+
+#ifdef __ANDROID__
+// Test disabled as it uses a lot of memory.
+// It is killed with SIGKILL by out of memory killer.
+TEST(Imgcodecs_Tiff, DISABLED_decode_issue22388_16UC4)
+#else
+TEST(Imgcodecs_Tiff, decode_issue22388_16UC4)
+#endif
+{
+    // See https://github.com/opencv/opencv/issues/22388
+    string file3 = cv::tempfile(".tiff");
+
+    /**
+     * 8192px * 32768px * 64bpp / 8 bit/byte = 2,147,483,648 byte.
+     */
+    cv::Mat big(8192, 32768, CV_16UC4, cv::Scalar::all(0));
+
+    // Vec4w = Vec<ushort, 4>.
+    for( int y = 0 ; y < big.rows; y++)
+    {
+        big.at<Vec4w>(y,0)[0]          = (y * 2)  & 0xFFFF;
+        big.at<Vec4w>(y,0)[1]          = (y * 3)  & 0xFFFF;
+        big.at<Vec4w>(y,0)[2]          = (y * 5)  & 0xFFFF;
+        big.at<Vec4w>(y,0)[3]          = (y * 7)  & 0xFFFF;
+        big.at<Vec4w>(y,big.cols-1)[0] = (y * 11) & 0xFFFF;
+        big.at<Vec4w>(y,big.cols-1)[1] = (y * 13) & 0xFFFF;
+        big.at<Vec4w>(y,big.cols-1)[2] = (y * 17) & 0xFFFF;
+        big.at<Vec4w>(y,big.cols-1)[3] = (y * 19) & 0xFFFF;
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        big.at<Vec4w>(0,x)[0]          = (x * 23) & 0xFFFF;
+        big.at<Vec4w>(0,x)[1]          = (x * 29) & 0xFFFF;
+        big.at<Vec4w>(0,x)[2]          = (x * 31) & 0xFFFF;
+        big.at<Vec4w>(0,x)[3]          = (x * 37) & 0xFFFF;
+        big.at<Vec4w>(big.rows-1,x)[0] = (x * 41) & 0xFFFF;
+        big.at<Vec4w>(big.rows-1,x)[1] = (x * 43) & 0xFFFF;
+        big.at<Vec4w>(big.rows-1,x)[2] = (x * 47) & 0xFFFF;
+        big.at<Vec4w>(big.rows-1,x)[3] = (x * 53) & 0xFFFF;
+    }
+
+    std::vector<int> params;
+    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(big.rows);
+
+    EXPECT_NO_THROW(cv::imwrite(file3, big, params));
+    big.release();
+
+    cv::Mat output;
+    // IMREAD_UNCHANGED flag is needed to read as 16bit.
+    EXPECT_NO_THROW(output = cv::imread(file3, IMREAD_UNCHANGED));
+
+    for( int y = 0 ; y < output.rows; y++)
+    {
+        EXPECT_EQ( (y * 2)  & 0xFFFF, output.at<Vec4w>(y,0)[0] );
+        EXPECT_EQ( (y * 3)  & 0xFFFF, output.at<Vec4w>(y,0)[1] );
+        EXPECT_EQ( (y * 5)  & 0xFFFF, output.at<Vec4w>(y,0)[2] );
+        EXPECT_EQ( (y * 7)  & 0xFFFF, output.at<Vec4w>(y,0)[3] );
+        EXPECT_EQ( (y * 11) & 0xFFFF, output.at<Vec4w>(y,output.cols-1)[0] );
+        EXPECT_EQ( (y * 13) & 0xFFFF, output.at<Vec4w>(y,output.cols-1)[1] );
+        EXPECT_EQ( (y * 17) & 0xFFFF, output.at<Vec4w>(y,output.cols-1)[2] );
+        EXPECT_EQ( (y * 19) & 0xFFFF, output.at<Vec4w>(y,output.cols-1)[3] );
+    }
+    for( int x = 1 ; x < big.cols-1; x++)
+    {
+        EXPECT_EQ( (x * 23) & 0xFFFF, output.at<Vec4w>(0,x)[0] );
+        EXPECT_EQ( (x * 29) & 0xFFFF, output.at<Vec4w>(0,x)[1] );
+        EXPECT_EQ( (x * 31) & 0xFFFF, output.at<Vec4w>(0,x)[2] );
+        EXPECT_EQ( (x * 37) & 0xFFFF, output.at<Vec4w>(0,x)[3] );
+        EXPECT_EQ( (x * 41) & 0xFFFF, output.at<Vec4w>(output.rows-1,x)[0] );
+        EXPECT_EQ( (x * 43) & 0xFFFF, output.at<Vec4w>(output.rows-1,x)[1] );
+        EXPECT_EQ( (x * 47) & 0xFFFF, output.at<Vec4w>(output.rows-1,x)[2] );
+        EXPECT_EQ( (x * 53) & 0xFFFF, output.at<Vec4w>(output.rows-1,x)[3] );
+    }
+    EXPECT_EQ(0, remove(file3.c_str()));
+}
+
 TEST(Imgcodecs_Tiff, write_read_16bit_big_little_endian)
 {
     // see issue #2601 "16-bit Grayscale TIFF Load Failures Due to Buffer Underflow and Endianness"

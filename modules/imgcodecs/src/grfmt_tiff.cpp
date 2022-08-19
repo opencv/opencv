@@ -466,6 +466,7 @@ bool  TiffDecoder::readData( Mat& img )
         }
 
         {
+
             if (tile_width0 == 0)
                 tile_width0 = m_width;
 
@@ -480,24 +481,66 @@ bool  TiffDecoder::readData( Mat& img )
             const uint64_t MAX_TILE_SIZE = (CV_BIG_UINT(1) << 30);
             CV_CheckLE((int)ncn, 4, "");
             CV_CheckLE((int)bpp, 64, "");
-            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte)) < MAX_TILE_SIZE) && "TIFF tile size is too large: >= 1Gb");
 
+            bool doReadScanline = false;
             if (dst_bpp == 8)
             {
                 // we will use TIFFReadRGBA* functions, so allocate temporary buffer for 32bit RGBA
                 bpp = 8;
                 ncn = 4;
             }
+            else if (dst_bpp == 16)
+            {
+                // if buffer_size >= MAX_TILE_SIZE, try to use TIFFReadScanline function.
+                if (
+                    (uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte))
+                    >=
+                    MAX_TILE_SIZE
+                )
+                {
+                    uint16_t planerConfig = (uint16)-1;
+                    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
+
+                    doReadScanline = (!is_tiled)
+                                     &&
+                                     (
+                                         (photometric == PHOTOMETRIC_MINISWHITE)
+                                         ||
+                                         (photometric == PHOTOMETRIC_MINISBLACK)
+                                         ||
+                                         (photometric == PHOTOMETRIC_RGB)
+                                     )
+                                     &&
+                                     (planerConfig != PLANARCONFIG_SEPARATE);
+
+                    if ( doReadScanline )
+                    {
+                        // Read each scanlines.
+                        tile_height0 = 1;
+                    }
+                }
+            }
             else if (dst_bpp == 32 || dst_bpp == 64)
             {
                 CV_Assert(ncn == img.channels());
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
+
+            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte)) < MAX_TILE_SIZE) && "TIFF tile size is too large: >= 1Gb");
             const size_t buffer_size = (bpp / bitsPerByte) * ncn * tile_height0 * tile_width0;
             AutoBuffer<uchar> _buffer(buffer_size);
             uchar* buffer = _buffer.data();
             ushort* buffer16 = (ushort*)buffer;
             int tileidx = 0;
+
+            if ( doReadScanline )
+            {
+                // buffer_size should be larger than TIFFScanlineSize().
+                CV_Assert((tsize_t)buffer_size >= TIFFScanlineSize(tif));
+
+                // Currently supported dst_bpp is only 16.
+                CV_Assert(dst_bpp == 16);
+            }
 
             for (int y = 0; y < m_height; y += (int)tile_height0)
             {
@@ -556,7 +599,11 @@ bool  TiffDecoder::readData( Mat& img )
 
                         case 16:
                         {
-                            if (!is_tiled)
+                            if (doReadScanline)
+                            {
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)buffer, y) >= 0);
+                            }
+                            else if (!is_tiled)
                             {
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32*)buffer, buffer_size) >= 0);
                             }
