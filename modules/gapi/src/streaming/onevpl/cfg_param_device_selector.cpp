@@ -250,7 +250,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #else // #ifdef __linux__
-            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
 #endif // #ifdef __linux__
             break;
         }
@@ -341,7 +341,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #else // #ifdef __linux__
-            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
 #endif // #ifdef __linux__
             break;
         }
@@ -400,7 +400,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const Device &device,
             GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #else // #ifdef __linux__
-            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only")
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
 #endif // #ifdef __linux__
             break;
         case AccelType::HOST:
