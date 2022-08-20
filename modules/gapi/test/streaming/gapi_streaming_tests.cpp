@@ -2440,7 +2440,7 @@ TEST(OneVPL_Source, Init)
 
     std::vector<CfgParam> src_params;
     src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
-#ifdef __WIN32
+#ifdef _WIN32
     src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
 #elif defined(__linux__)
     src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_VAAPI));
