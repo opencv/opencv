@@ -13,7 +13,7 @@ import onnx
 import onnxsim
 import google.protobuf.text_format
 import io
-
+from typing import Optional
 
 def assertExpected(s):
     if not (isinstance(s, str) or (sys.version_info[0] == 2 and isinstance(s, unicode))):
@@ -74,6 +74,41 @@ def save_onnx_data_and_model(input, output, name, operation, *args, **kwargs):
     graph = onnx.helper.make_graph([node], name, [X], [Y])
     model = onnx.helper.make_model(graph, producer_name=name)
     onnx.save(model, models_files)
+
+def save_data_and_onnx_model(name, input_np, output_np, onnx_model):
+    print(name + " input has sizes",  input_np.shape)
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, input_np.data)
+
+    print(name + " output has sizes", output_np.shape)
+    print()
+    output_files =  os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output_np.data))
+
+    models_files = os.path.join("models", name + ".onnx")
+
+    onnx_model_pb = onnx._serialize(onnx_model)
+    model_def = assertONNXExpected(onnx_model_pb)
+    with open(models_files, 'wb') as file:
+        file.write(model_def.SerializeToString())
+
+def save_data_and_onnx_model_multy_inputs(name, input_list, output_np, onnx_model):
+    for index in range(len(input_list)):
+        print(name + " input  "+str(index)+" has sizes",  input_list[index].shape)
+        input_files = os.path.join("data", "input_" + name + "_" + str(index))
+        np.save(input_files, input_list[index])
+
+    print(name + " output has sizes", output_np.shape)
+    print()
+    output_files =  os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output_np.data))
+
+    models_files = os.path.join("models", name + ".onnx")
+
+    onnx_model_pb = onnx._serialize(onnx_model)
+    model_def = assertONNXExpected(onnx_model_pb)
+    with open(models_files, 'wb') as file:
+        file.write(model_def.SerializeToString())
 
 def simplify(name, rename=False, **kwargs):
     model, check = onnxsim.simplify(name, **kwargs)
@@ -574,6 +609,66 @@ class Clip(nn.Module):
 model = Clip()
 input = Variable(torch.rand(1, 10, 2, 2))
 save_data_and_model('clip', input, model)
+
+########### clip_init ###########
+
+operation = "Clip"
+min = -0.5
+max = 0.5
+
+input = np.random.randn(3, 4, 5).astype(np.float32)
+output = np.clip(input, min, max)
+
+X = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, [3, 4, 5])
+MIN = onnx.helper.make_tensor_value_info('min', onnx.TensorProto.FLOAT, [1])
+MAX = onnx.helper.make_tensor_value_info('max', onnx.TensorProto.FLOAT, [1])
+Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, [3, 4, 5])
+MIN_INIT = onnx.helper.make_tensor("min", onnx.TensorProto.FLOAT, [1], np.array([min]))
+MAX_INIT = onnx.helper.make_tensor("max", onnx.TensorProto.FLOAT, [1], np.array([max]))
+
+name = "clip_init_min_max"
+input = np.random.randn(3, 4, 5).astype(np.float32)
+output = np.clip(input, min, max)
+
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, input.data)
+output_files = os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(output.data))
+
+node = onnx.helper.make_node(operation, inputs=['input', "min", "max"], outputs=['output'])
+graph = onnx.helper.make_graph([node], name, [X, MIN, MAX], [Y], [MIN_INIT, MAX_INIT])
+model = onnx.helper.make_model(graph, producer_name=name)
+onnx.save(model, os.path.join("models", name + ".onnx"))
+
+name = "clip_init_min"
+input = np.random.randn(3, 4, 5).astype(np.float32)
+output = np.clip(input, min, None)
+
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, input.data)
+output_files = os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(output.data))
+
+node = onnx.helper.make_node(operation, inputs=['input', "min", ""], outputs=['output'])
+graph = onnx.helper.make_graph([node], name, [X, MIN], [Y], [MIN_INIT])
+model = onnx.helper.make_model(graph, producer_name=name)
+onnx.save(model, os.path.join("models", name + ".onnx"))
+
+name = "clip_init_max"
+input = np.random.randn(3, 4, 5).astype(np.float32)
+output = np.clip(input, None, max)
+
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, input.data)
+output_files = os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(output.data))
+
+node = onnx.helper.make_node(operation, inputs=['input', "", "max"], outputs=['output'])
+graph = onnx.helper.make_graph([node], name, [X, MAX], [Y], [MAX_INIT])
+model = onnx.helper.make_model(graph, producer_name=name)
+onnx.save(model, os.path.join("models", name + ".onnx"))
+
+#################################
 
 input = Variable(torch.randn(1, 3, 6, 6, 6))
 deconv = nn.ConvTranspose3d(3, 3, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(0, 0, 0), bias=False)
@@ -1426,14 +1521,14 @@ model = ReduceMaxGlobal()
 save_data_and_model("reduce_max", x, model)
 
 class ReduceMax(nn.Module):
-      def __init__(self, axes):
-    super(ReduceMax, self).__init__()
-    self.axes = axes
+    def __init__(self, axes):
+        super(ReduceMax, self).__init__()
+        self.axes = axes
 
-  def forward(self, x):
-    # torch.return_types.max(values, indices)
-    out = torch.max(x, dim=self.axes, keepdim=False)[0]
-    return out
+    def forward(self, x):
+        # torch.return_types.max(values, indices)
+        out = torch.max(x, dim=self.axes, keepdim=False)[0]
+        return out
 
 x = Variable(torch.randn(1, 3, 2, 2))
 
@@ -1743,6 +1838,14 @@ x = Variable(torch.randn([1, 2, 2, 2]))
 model = Mish()
 save_data_and_model("mish", x, model)
 
+class Mish2(nn.Module):
+    def forward(self, x):
+        return x * (torch.tanh(torch.log(torch.exp(x) + 1)))
+
+x = Variable(torch.randn([1, 2, 2, 2]))
+model = Mish2()
+save_data_and_model("mish_no_softplus", x, model)
+
 class PadCalculation(nn.Module):
     def forward(self, x):
         y = F.max_pool2d(x, kernel_size=2)
@@ -1927,3 +2030,101 @@ models_files = os.path.join("models", name + ".onnx")
 onnx.save(model, models_files)
 
 ########################## const / x ##########################
+
+class OutputRegistration(nn.Module):
+    def __init__(self):
+        super(OutputRegistration, self).__init__()
+        self.c = torch.randn(2, 2)
+
+    def forward(self, a, b):
+        return (a + b) + self.c
+
+a = Variable(torch.randn(2, 2))
+b = Variable(torch.randn(2, 2))
+model = OutputRegistration()
+save_data_and_model_multy_inputs('output_registration', model, a, b)
+model = onnx.load('models/output_registration.onnx')
+model.graph.node[0].name = model.graph.output[0].name
+onnx.save(model, 'models/output_registration.onnx')
+
+# ########################## GEMM ##########################
+# The original code is : https://github.com/onnx/onnx/blob/main/onnx/backend/test/case/node/gemm.py
+def gemm_reference_implementation(A: np.ndarray, B: np.ndarray, C: Optional[np.ndarray] = None, alpha: float = 1., beta: float = 1., transA: int = 0,
+                                  transB: int = 0) -> np.ndarray:
+    A = A if transA == 0 else A.T
+    B = B if transB == 0 else B.T
+    C = C if C is not None else np.array(0)
+
+    Y = alpha * np.dot(A, B) + beta * C
+
+    return Y
+
+## gemm without transB
+input_np = np.random.rand(2, 10).astype("float32")
+inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=input_np.shape)]
+
+weight_np = np.random.rand(10, 3).astype("float32")
+weight_tensor = onnx.helper.make_tensor('weight_tensor', data_type=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[weight_np.dtype], dims=weight_np.shape, vals=weight_np)
+
+outputs = [onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, shape=(2, 3))]
+
+nodes = [onnx.helper.make_node("Gemm", ["input1", "weight_tensor"], ["output"])]
+
+graph = onnx.helper.make_graph(nodes,
+                            "gemm_test",
+                            inputs,
+                            outputs, initializer=[weight_tensor])
+gemm_model = onnx.helper.make_model(graph)
+output_np = gemm_reference_implementation(input_np, weight_np)
+save_data_and_onnx_model("gemm_no_transB", input_np, output_np, gemm_model)
+
+## gemm with transB = 0
+
+nodes2 = [onnx.helper.make_node("Gemm", ["input1", "weight_tensor"], ["output"], transB=0)]
+graph2 = onnx.helper.make_graph(nodes2,
+                            "gemm_test",
+                            inputs,
+                            outputs, initializer=[weight_tensor])
+gemm_model2 = onnx.helper.make_model(graph2)
+output_np = gemm_reference_implementation(input_np, weight_np)
+save_data_and_onnx_model("gemm_transB_0", input_np, output_np, gemm_model2)
+
+# ########################## ReduceSum with Dynamic Batch ##########################
+input_np = np.random.rand(2, 4, 4, 4).astype("float32")
+inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
+
+axis_np = np.array([1]).astype(np.int64)
+axis_tensor = onnx.helper.make_tensor('axis_tensor', data_type=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[axis_np.dtype], dims=axis_np.shape, vals=axis_np)
+
+outputs = [onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, shape=(2, 1, 4, 4))]
+
+nodes = [onnx.helper.make_node("ReduceSum", ["input1", "axis_tensor"], ["output"], keepdims=1)]
+
+graph = onnx.helper.make_graph(nodes,
+                            "reduce_sum",
+                            inputs,
+                            outputs, initializer=[axis_tensor])
+onnx_model = onnx.helper.make_model(graph)
+
+output_np = np.sum(input_np, axis=1, keepdims=1)
+save_data_and_onnx_model("reduce_sum_axis_dynamic_batch", input_np, output_np, onnx_model)
+
+
+# ########################## DivBroadcast ##########################
+input_np = np.random.rand(1, 4).astype("float32")
+input2_np = np.random.rand(1, 1).astype(np.float32)
+inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=input_np.shape), \
+    onnx.helper.make_tensor_value_info("input2", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input2_np.dtype], shape=input2_np.shape)]
+
+outputs = [onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, shape=(1, 4))]
+
+nodes = [onnx.helper.make_node("Div", ["input1", "input2"], ["output"])]
+
+graph = onnx.helper.make_graph(nodes,
+                            "div_test",
+                            inputs,
+                            outputs)
+onnx_model = onnx.helper.make_model(graph)
+
+output_np = input_np/input2_np
+save_data_and_onnx_model_multy_inputs("div_test_1x1", [input_np, input2_np], output_np, onnx_model)
