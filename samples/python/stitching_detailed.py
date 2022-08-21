@@ -368,7 +368,7 @@ def main():
         cam.R = cam.R.astype(np.float32)
 
     adjuster = BA_COST_CHOICES[args.ba]()
-    adjuster.setConfThresh(1)
+    adjuster.setConfThresh(conf_thresh)
     refine_mask = np.zeros((3, 3), np.uint8)
     if ba_refine_mask[0] == 'x':
         refine_mask[0, 0] = 1

@@ -11,6 +11,7 @@
 #include "streaming/onevpl/engine/transcode/transcode_engine_legacy.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_va_api.hpp"
 #include "streaming/onevpl/utils.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/data_provider_defines.hpp"
@@ -93,12 +94,12 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
          GAPI_Assert(cfg_inst && "MFXCreateConfig failed");
 
         if (!cfg_param_it->is_major()) {
-            GAPI_LOG_DEBUG(nullptr, "Skip not major param: " << cfg_param_it->get_name());
+            GAPI_LOG_DEBUG(nullptr, "Skip not major param: " << cfg_param_it->to_string());
             ++cfg_param_it;
             continue;
         }
 
-        GAPI_LOG_DEBUG(nullptr, "Apply major param: " << cfg_param_it->get_name());
+        GAPI_LOG_DEBUG(nullptr, "Apply major param: " << cfg_param_it->to_string());
         mfxVariant mfx_param = cfg_param_to_mfx_variant(*cfg_param_it);
         mfxStatus sts = MFXSetConfigFilterProperty(cfg_inst,
                                                    (mfxU8 *)cfg_param_it->get_name().c_str(),
@@ -188,8 +189,14 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // Extract the most suitable VPL implementation by max score
     auto max_match_it = matches_count.rbegin();
-    GAPI_Assert(max_match_it != matches_count.rend() &&
-                "Cannot find matched MFX implementation for requested configuration");
+    if (max_match_it == matches_count.rend()) {
+        std::stringstream ss;
+        for (const auto &p : cfg_params) {
+            ss << p.to_string() << std::endl;
+        }
+        GAPI_LOG_WARNING(nullptr, "No one suitable MFX implementation is found, requested params:\n" << ss.str());
+        throw std::runtime_error("Cannot find any suitable MFX implementation for requested configuration");
+    }
 
     // TODO impl_number is global for now
     impl_number = max_match_it->second;
@@ -294,6 +301,12 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
             ret = std::move(cand);
             break;
         }
+        case MFX_ACCEL_MODE_VIA_VAAPI:
+        {
+            std::unique_ptr<VPLVAAPIAccelerationPolicy> cand(new VPLVAAPIAccelerationPolicy(selector));
+            ret = std::move(cand);
+            break;
+        }
         case MFX_ACCEL_MODE_NA:
         {
             std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(selector));
@@ -314,11 +327,16 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
 
 const std::vector<CfgParam>& GSource::Priv::getDefaultCfgParams()
 {
+#ifdef __WIN32__
     static const std::vector<CfgParam> def_params =
         get_params_from_string<CfgParam>(
                     "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n"
                     "mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\n");
-
+#else
+    static const std::vector<CfgParam> def_params =
+        get_params_from_string<CfgParam>(
+                    "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n");
+#endif
     return def_params;
 }
 

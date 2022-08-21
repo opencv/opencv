@@ -1132,8 +1132,8 @@ protected:
         virtual void clear();
 
         const Mat& getDescriptors() const;
-        const Mat getDescriptor( int imgIdx, int localDescIdx ) const;
-        const Mat getDescriptor( int globalDescIdx ) const;
+        Mat getDescriptor( int imgIdx, int localDescIdx ) const;
+        Mat getDescriptor( int globalDescIdx ) const;
         void getLocalIdx( int globalDescIdx, int& imgIdx, int& localDescIdx ) const;
 
         int size() const;

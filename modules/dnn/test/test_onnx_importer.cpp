@@ -389,6 +389,13 @@ TEST_P(Test_ONNX_layers, Clip)
     testONNXModels("clip", npy);
 }
 
+TEST_P(Test_ONNX_layers, Clip_init)
+{
+    testONNXModels("clip_init_min_max");
+    testONNXModels("clip_init_min");
+    testONNXModels("clip_init_max");
+}
+
 TEST_P(Test_ONNX_layers, Shape)
 {
     testONNXModels("shape_of_constant");
@@ -404,6 +411,7 @@ TEST_P(Test_ONNX_layers, ReduceMean)
 TEST_P(Test_ONNX_layers, ReduceSum)
 {
     testONNXModels("reduce_sum");
+    testONNXModels("reduce_sum_axis_dynamic_batch");
 }
 
 TEST_P(Test_ONNX_layers, ReduceMax)
@@ -1052,6 +1060,8 @@ TEST_P(Test_ONNX_layers, Div)
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
     expectNoFallbacksFromCUDA(net);
+
+    testONNXModels("div_test_1x1",npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
@@ -1318,6 +1328,7 @@ TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 TEST_P(Test_ONNX_layers, Mish)
 {
     testONNXModels("mish");
+    testONNXModels("mish_no_softplus");
 }
 
 TEST_P(Test_ONNX_layers, CalculatePads)
@@ -1746,12 +1757,19 @@ TEST_P(Test_ONNX_layers, DivConst)
     testONNXModels("div_const");
 }
 
+TEST_P(Test_ONNX_layers, Gemm)
+{
+    testONNXModels("gemm_no_transB");
+    testONNXModels("gemm_transB_0");
+}
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
     testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
     testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+
+    testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
@@ -1851,6 +1869,11 @@ TEST_P(Test_ONNX_layers, Quantized_Concat)
 TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
     testONNXModels("quantized_constant", npy, 0.002, 0.008);
+}
+
+TEST_P(Test_ONNX_layers, OutputRegistration)
+{
+    testONNXModels("output_registration", npy, 0, 0, false, true, 2);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
@@ -2195,6 +2218,7 @@ TEST_P(Test_ONNX_nets, Shufflenet)
 
 TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Failed to allocate graph: MYRIAD device is not opened
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)

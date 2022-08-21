@@ -5,31 +5,27 @@
 
 namespace opencv_test { namespace {
 
-using PerfIntType = perf::TestBaseWithParam<std::tuple<int>>;
-PERF_TEST_P(PerfIntType, fisheye_undistortPoints,
-                                            (testing::Values(1e2, 1e3, 1e4)))
+PERF_TEST(Undistort, fisheye_undistortPoints_100k_10iter)
 {
-    const cv::Size imageSize(1280, 800);
+    const int pointsNumber = 100000;
+    const Size imageSize(1280, 800);
 
     /* Set camera matrix */
-    const cv::Matx33d K(558.478087865323,  0, 620.458515360843,
+    const Matx33d K(558.478087865323,  0, 620.458515360843,
                          0, 560.506767351568, 381.939424848348,
                          0,               0,                1);
 
     /* Set distortion coefficients */
-    Mat D(1, 4, CV_64F);
-    theRNG().fill(D, RNG::UNIFORM, -1.e-5, 1.e-5);
-
-    int pointsNumber = std::get<0>(GetParam());
+    const Matx14d D(2.81e-06, 1.31e-06, -4.42e-06, -1.25e-06);
 
     /* Create two-channel points matrix */
-    cv::Mat xy[2] = {};
+    Mat xy[2] = {};
     xy[0].create(pointsNumber, 1, CV_64F);
-    theRNG().fill(xy[0], cv::RNG::UNIFORM, 0, imageSize.width); // x
+    theRNG().fill(xy[0], RNG::UNIFORM, 0, imageSize.width); // x
     xy[1].create(pointsNumber, 1, CV_64F);
-    theRNG().fill(xy[1], cv::RNG::UNIFORM, 0, imageSize.height); // y
+    theRNG().fill(xy[1], RNG::UNIFORM, 0, imageSize.height); // y
 
-    cv::Mat points;
+    Mat points;
     merge(xy, 2, points);
 
     /* Set fixed iteration number to check only c++ code, not algo convergence */

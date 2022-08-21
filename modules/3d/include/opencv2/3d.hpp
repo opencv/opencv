@@ -1557,7 +1557,7 @@ unit length.
  */
 CV_EXPORTS_W void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
 
-/** @brief Recovers the relative camera rotation and the translation from corresponding points in two images from two different cameras, using cheirality check. Returns the number of
+/** @brief Recovers the relative camera rotation and the translation from corresponding points in two images from two different cameras, using chirality check. Returns the number of
 inliers that pass the check.
 
 @param points1 Array of N 2D points from the first image. The point coordinates should be
@@ -1589,11 +1589,11 @@ line in pixels, beyond which the point is considered an outlier and is not used 
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
 point localization, image resolution, and the image noise.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the chirality check.
 
 This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
-possible pose hypotheses by doing cheirality check. The cheirality check means that the
+possible pose hypotheses by doing chirality check. The chirality check means that the
 triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
 
 This function can be used to process the output E and mask from @ref findEssentialMat. In this
@@ -1628,7 +1628,7 @@ CV_EXPORTS_W int recoverPose( InputArray points1, InputArray points2,
                             InputOutputArray mask = noArray());
 
 /** @brief Recovers the relative camera rotation and the translation from an estimated essential
-matrix and the corresponding points in two images, using cheirality check. Returns the number of
+matrix and the corresponding points in two images, using chirality check. Returns the number of
 inliers that pass the check.
 
 @param E The input essential matrix.
@@ -1646,11 +1646,11 @@ described below.
 therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
 length.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the chirality check.
 
 This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
-possible pose hypotheses by doing cheirality check. The cheirality check means that the
+possible pose hypotheses by doing chirality check. The chirality check means that the
 triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
 
 This function can be used to process the output E and mask from @ref findEssentialMat. In this
@@ -1697,8 +1697,8 @@ length.
 are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the chirality check.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -1733,12 +1733,12 @@ length.
 @param distanceThresh threshold distance which is used to filter out far away points (i.e. infinite
 points).
 @param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
-inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
-recover pose. In the output mask only inliers which pass the cheirality check.
+inliers in points1 and points2 for the given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the chirality check.
 @param triangulatedPoints 3D points which were reconstructed by triangulation.
 
 This function differs from the one above that it outputs the triangulated 3D point that are used for
-the cheirality check.
+the chirality check.
  */
 CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             InputArray cameraMatrix, OutputArray R, OutputArray t,
@@ -2097,7 +2097,7 @@ Check @ref tutorial_homography "the corresponding tutorial" for more details.
 
 This function extracts relative camera motion between two views of a planar object and returns up to
 four mathematical solution tuples of rotation, translation, and plane normal. The decomposition of
-the homography matrix H is described in detail in @cite Malis.
+the homography matrix H is described in detail in @cite Malis2007.
 
 If the homography H, induced by the plane, gives the constraint
 \f[s_i \vecthree{x'_i}{y'_i}{1} \sim H \vecthree{x_i}{y_i}{1}\f] on the source image points
@@ -2125,7 +2125,7 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the #findHomography function
 
 This function is intended to filter the output of the #decomposeHomographyMat based on additional
-information as described in @cite Malis . The summary of the method: the #decomposeHomographyMat function
+information as described in @cite Malis2007 . The summary of the method: the #decomposeHomographyMat function
 returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
 sets of points visible in the camera frame before and after the homography transformation is applied,
 we can determine which are the true potential solutions and which are the opposites by verifying which
@@ -2463,6 +2463,20 @@ void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R = noArray(), InputArray P = noArray(),
                      TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
+
+
+/**
+ * @brief Compute undistorted image points position
+ *
+ * @param src Observed points position, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or vector\<Point2f\> ).
+ * @param dst Output undistorted points position (1xN/Nx1 2-channel or vector\<Point2f\> ).
+ * @param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+ * @param distCoeffs Distortion coefficients
+ */
+CV_EXPORTS_W
+void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
+                          InputArray distCoeffs,
+                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
 
 
 /** @brief Octree for 3D vision.

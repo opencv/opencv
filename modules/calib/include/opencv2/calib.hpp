@@ -6,6 +6,7 @@
 #define OPENCV_CALIB_HPP
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/types.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
 
@@ -389,6 +390,9 @@ R & t \\
 
     \f[u = f_x (x' + \alpha y') + c_x \\
     v = f_y y' + c_y\f]
+
+    Summary:
+    Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
 
     @defgroup calib3d_c C API
 
@@ -1455,8 +1459,7 @@ the number of points in the view.
 @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
 Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-This means if you want to transform back points undistorted with undistortPoints() you have to
-multiply them with \f$P^{-1}\f$.
+This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
  */
 CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
@@ -1541,7 +1544,7 @@ length. Balance is in range of [0, 1].
 CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
     OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
 
-/** @brief Performs camera calibaration
+/** @brief Performs camera calibration
 
 @param objectPoints vector of vectors of calibration pattern points in the calibration pattern
 coordinate space.

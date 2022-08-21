@@ -377,7 +377,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
     size_t n = distorted.total();
     int sdepth = distorted.depth();
 
-    const bool isEps = criteria.type & TermCriteria::EPS;
+    const bool isEps = (criteria.type & TermCriteria::EPS) != 0;
 
     /* Define max count for solver iterations */
     int maxCount = std::numeric_limits<int>::max();

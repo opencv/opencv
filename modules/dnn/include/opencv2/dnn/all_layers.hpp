@@ -263,6 +263,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
@@ -330,7 +334,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int reduceType;
-        std::vector<size_t> reduceDims;
+        // reduceDims contains the dimensions that need to be reduced, targetDims is the target output dimension.
+        std::vector<size_t> reduceDims, targetDims;
         static Ptr<ReduceLayer> create(const LayerParams& params);
     };
 
@@ -368,6 +373,10 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         int input_zp, output_zp;
         float input_sc, output_sc;
+
+        // quantization type flag. The perChannel default is true, that means it contains the parameters
+        // of per-Channel quantization. Otherwise, that means this layer contains per-Tensor quantized parameters.
+        bool per_channel;
         static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
     };
 
@@ -839,6 +848,12 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NaryEltwiseLayer : public Layer
+    {
+    public:
+        static Ptr<NaryEltwiseLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS BatchNormLayer : public ActivationLayer

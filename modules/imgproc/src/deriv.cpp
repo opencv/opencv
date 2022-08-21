@@ -384,7 +384,7 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s%s", borderMap[borderType],
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
@@ -684,7 +684,7 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType],
             ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
 
     ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);

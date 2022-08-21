@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <sstream>
 #include <opencv2/gapi/util/throw.hpp>
 
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
@@ -24,6 +25,15 @@ struct variant_comparator : cv::util::static_visitor<bool, variant_comparator> {
     }
 private:
     const CfgParam::value_t& rhs;
+};
+
+struct variant_stringifier : cv::util::static_visitor<std::string, variant_stringifier> {
+    template<typename ValueType>
+    std::string visit(const ValueType& lhs) const {
+        std::stringstream ss;
+        ss << lhs;
+        return ss.str();
+    }
 };
 } // namespace util
 
@@ -226,6 +236,11 @@ const CfgParam::value_t& CfgParam::get_value() const {
 
 bool CfgParam::is_major() const {
     return m_priv->is_major_impl();
+}
+
+std::string CfgParam::to_string() const {
+    return get_name() + ":" + cv::util::visit(util::variant_stringifier{},
+                                              get_value());
 }
 
 bool CfgParam::operator< (const CfgParam& rhs) const {

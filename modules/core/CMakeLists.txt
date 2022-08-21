@@ -6,7 +6,7 @@ ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
 ocv_add_dispatched_file(convert SSE2 AVX2 VSX3)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
-ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX)
+ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX NEON_DOTPROD)
 ocv_add_dispatched_file(mean SSE2 AVX2)
 ocv_add_dispatched_file(merge SSE2 AVX2)
 ocv_add_dispatched_file(split SSE2 AVX2)
@@ -146,6 +146,7 @@ ocv_create_module(${extra_libs})
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${OPENGL_LIBRARIES}"
+    "${GLX_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"

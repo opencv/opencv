@@ -58,7 +58,7 @@ typedef NSFont* (*FontGetter)();
 
 - (id)debugQuickLookObject {
     // for smallish Mat objects display as a matrix
-    if ([self dims] == 2 && [self rows] <= 10 && [self cols] <= 10) {
+    if ([self dims] == 2 && [self rows] <= 10 && [self cols] <= 10 && [self channels] == 1) {
         FontGetter fontGetters[] = { getCMU, getBodoni72, getAnySerif, getSystemFont };
         NSFont* font = nil;
         for (int fontGetterIndex = 0; font==nil && fontGetterIndex < (sizeof(fontGetters)) / (sizeof(fontGetters[0])); fontGetterIndex++) {

@@ -20,6 +20,7 @@ namespace onevpl {
 enum class AccelType: uint8_t {
     HOST,
     DX11,
+    VAAPI,
 
     LAST_VALUE = std::numeric_limits<uint8_t>::max()
 };
@@ -64,6 +65,9 @@ GAPI_EXPORTS Device create_dx11_device(Device::Ptr device_ptr,
                                        const std::string& device_name);
 GAPI_EXPORTS Context create_dx11_context(Context::Ptr ctx_ptr);
 
+GAPI_EXPORTS Device create_vaapi_device(Device::Ptr device_ptr,
+                                        const std::string& device_name);
+GAPI_EXPORTS Context create_vaapi_context(Context::Ptr ctx_ptr);
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

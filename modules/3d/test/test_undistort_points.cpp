@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
+#include "opencv2/core/types.hpp"
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
@@ -14,6 +15,7 @@ protected:
     -1, 5), Point3f pmax = Point3f(1, 1, 10));
     void generateCameraMatrix(Mat& cameraMatrix);
     void generateDistCoeffs(Mat& distCoeffs, int count);
+    cv::Mat generateRotationVector();
 
     double thresh = 1.0e-2;
 };
@@ -50,6 +52,14 @@ void UndistortPointsTest::generateDistCoeffs(Mat& distCoeffs, int count)
         distCoeffs.at<double>(i,0) = theRNG().uniform(-0.1, 0.1);
 }
 
+cv::Mat UndistortPointsTest::generateRotationVector()
+{
+    Mat rvec(1, 3, CV_64F);
+    theRNG().fill(rvec, RNG::UNIFORM, -0.2, 0.2);
+
+    return rvec;
+}
+
 TEST_F(UndistortPointsTest, accuracy)
 {
     Mat intrinsics, distCoeffs;
@@ -58,33 +68,72 @@ TEST_F(UndistortPointsTest, accuracy)
     vector<Point3f> points(500);
     generate3DPointCloud(points);
 
-    vector<Point2f> projectedPoints;
-    projectedPoints.resize(points.size());
+    Mat rvec = generateRotationVector();
+    Mat R;
+    cv::Rodrigues(rvec, R);
+
 
     int modelMembersCount[] = {4,5,8};
     for (int idx = 0; idx < 3; idx++)
     {
         generateDistCoeffs(distCoeffs, modelMembersCount[idx]);
 
+        /* Project points with distortion */
+        vector<Point2f> projectedPoints;
         projectPoints(Mat(points), Mat::zeros(3,1,CV_64FC1),
                       Mat::zeros(3,1,CV_64FC1), intrinsics,
                       distCoeffs, projectedPoints);
 
+        /* Project points without distortion */
         vector<Point2f> realUndistortedPoints;
-        projectPoints(Mat(points), Mat::zeros(3,1,CV_64FC1),
+        projectPoints(Mat(points), rvec,
                       Mat::zeros(3,1,CV_64FC1), intrinsics,
                       Mat::zeros(4,1,CV_64FC1), realUndistortedPoints);
 
+        /* Undistort points */
         Mat undistortedPoints;
-        undistortPoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs);
-
-        Mat p;
-        perspectiveTransform(undistortedPoints, p, intrinsics);
-        undistortedPoints = p;
+        undistortPoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs, R, intrinsics);
 
         EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
     }
 }
+
+TEST_F(UndistortPointsTest, undistortImagePointsAccuracy)
+{
+    Mat intrinsics, distCoeffs;
+    generateCameraMatrix(intrinsics);
+
+    vector<Point3f> points(500);
+    generate3DPointCloud(points);
+
+
+    int modelMembersCount[] = {4,5,8};
+    for (int idx = 0; idx < 3; idx++)
+    {
+        generateDistCoeffs(distCoeffs, modelMembersCount[idx]);
+
+        /* Project points with distortion */
+        vector<Point2f> projectedPoints;
+        projectPoints(Mat(points), Mat::zeros(3,1,CV_64FC1),
+                      Mat::zeros(3,1,CV_64FC1), intrinsics,
+                      distCoeffs, projectedPoints);
+
+        /* Project points without distortion */
+        vector<Point2f> realUndistortedPoints;
+        projectPoints(Mat(points), Mat::zeros(3, 1, CV_64FC1),
+                      Mat::zeros(3,1,CV_64FC1), intrinsics,
+                      Mat::zeros(4,1,CV_64FC1), realUndistortedPoints);
+
+        /* Undistort points */
+        Mat undistortedPoints;
+        TermCriteria termCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, thresh / 2);
+        undistortImagePoints(Mat(projectedPoints), undistortedPoints, intrinsics, distCoeffs,
+                             termCriteria);
+
+        EXPECT_MAT_NEAR(realUndistortedPoints, undistortedPoints.t(), thresh);
+    }
+}
+
 
 TEST_F(UndistortPointsTest, stop_criteria)
 {
@@ -103,13 +152,17 @@ TEST_F(UndistortPointsTest, stop_criteria)
     TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 100, maxError);
 
     std::vector<Point2d> pt_undist_vec;
-    undistortPoints(pt_distorted_vec, pt_undist_vec, cameraMatrix, distCoeffs, noArray(), noArray(), criteria);
+    Mat rVec = Mat(Matx31d(0.1, -0.2, 0.2));
+    Mat R;
+    cv::Rodrigues(rVec, R);
+
+    undistortPoints(pt_distorted_vec, pt_undist_vec, cameraMatrix, distCoeffs, R, noArray(), criteria);
 
     std::vector<Point3d> pt_undist_vec_homogeneous;
     pt_undist_vec_homogeneous.emplace_back(pt_undist_vec[0].x, pt_undist_vec[0].y, 1.0 );
 
     std::vector<Point2d> pt_redistorted_vec;
-    projectPoints(pt_undist_vec_homogeneous, Mat::zeros(3,1,CV_64F),
+    projectPoints(pt_undist_vec_homogeneous, -rVec,
                   Mat::zeros(3,1,CV_64F), cameraMatrix, distCoeffs, pt_redistorted_vec);
 
     const double obtainedError = sqrt( pow(pt_distorted.x - pt_redistorted_vec[0].x, 2) + pow(pt_distorted.y - pt_redistorted_vec[0].y, 2) );

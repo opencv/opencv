@@ -123,6 +123,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto)
      };
 
 /** @brief cv::VideoCapture generic properties identifier.
@@ -202,6 +203,7 @@ enum VideoCaptureProperties {
        CAP_PROP_AUDIO_SYNCHRONIZE = 66, //!< (open, read) Enables audio synchronization.
        CAP_PROP_LRF_HAS_KEY_FRAME = 67, //!< FFmpeg back-end only - Indicates whether the Last Raw Frame (LRF), output from VideoCapture::read() when VideoCapture is initialized with VideoCapture::open(CAP_FFMPEG, {CAP_PROP_FORMAT, -1}) or VideoCapture::set(CAP_PROP_FORMAT,-1) is called before the first call to VideoCapture::read(), contains encoded data for a key frame.
        CAP_PROP_CODEC_EXTRADATA_INDEX = 68, //!< Positive index indicates that returning extra data is supported by the video back end.  This can be retrieved as cap.retrieve(data, <returned index>).  E.g. When reading from a h264 encoded RTSP stream, the FFmpeg backend could return the SPS and/or PPS if available (if sent in reply to a DESCRIBE request), from calls to cap.retrieve(data, <returned index>).
+       CAP_PROP_FRAME_TYPE = 69, //!< (read-only) FFmpeg back-end only - Frame type ascii code (73 = 'I', 80 = 'P', 66 = 'B' or 63 = '?' if unknown) of the most recently read frame.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -652,6 +654,35 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
      };
 
 //! @} Images
+
+/** @name OBSENSOR (for Orbbec 3D-Sensor device/module )
+    @{
+*/
+//! OBSENSOR data given from image generator
+enum VideoCaptureOBSensorDataType{
+    CAP_OBSENSOR_DEPTH_MAP = 0, //!< Depth values in mm (CV_16UC1)
+    CAP_OBSENSOR_BGR_IMAGE = 1, //!< Data given from BGR stream generator
+    CAP_OBSENSOR_IR_IMAGE = 2   //!< Data given from IR stream generator(CV_16UC1)
+};
+
+//! OBSENSOR stream generator
+enum VideoCaptureOBSensorGenerators{
+    CAP_OBSENSOR_DEPTH_GENERATOR = 1 << 29,
+    CAP_OBSENSOR_IMAGE_GENERATOR = 1 << 28,
+    CAP_OBSENSOR_IR_GENERATOR    = 1 << 27,
+    CAP_OBSENSOR_GENERATORS_MASK = CAP_OBSENSOR_DEPTH_GENERATOR + CAP_OBSENSOR_IMAGE_GENERATOR + CAP_OBSENSOR_IR_GENERATOR
+};
+
+//!OBSENSOR properties
+enum VideoCaptureOBSensorProperties{
+    // INTRINSIC
+    CAP_PROP_OBSENSOR_INTRINSIC_FX=26001,
+    CAP_PROP_OBSENSOR_INTRINSIC_FY=26002,
+    CAP_PROP_OBSENSOR_INTRINSIC_CX=26003,
+    CAP_PROP_OBSENSOR_INTRINSIC_CY=26004,
+};
+
+//! @} OBSENSOR
 
 //! @} videoio_flags_others
 

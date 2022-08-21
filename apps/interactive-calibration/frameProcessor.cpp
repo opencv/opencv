@@ -109,6 +109,16 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
     return false;
 }
 
+bool CalibProcessor::detectAndParseCircles(const cv::Mat &frame)
+{
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_SYMMETRIC_GRID, mBlobDetectorPtr);
+    if(isTemplateFound) {
+        mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
+        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+    }
+    return isTemplateFound;
+}
+
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 {
     bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
@@ -161,6 +171,14 @@ void CalibProcessor::saveFrameData()
         mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
         break;
+    case CirclesGrid:
+        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
+        for( int i = 0; i < mBoardSize.height; i++ )
+            for( int j = 0; j < mBoardSize.width; j++ )
+                objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
+        mCalibData->imagePoints.push_back(mCurrentImagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
+        break;
     case AcirclesGrid:
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
         for( int i = 0; i < mBoardSize.height; i++ )
@@ -202,7 +220,16 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
     cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::imshow(mainWindowName, frame);
+    cv::Mat resized;
+    if (std::fabs(mZoom - 1.) > 0.001f)
+    {
+        cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
+    }
+    else
+    {
+        resized = frame;
+    }
+    cv::imshow(mainWindowName, resized);
     cv::waitKey(300);
 }
 
@@ -267,6 +294,8 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                    static_cast<float>(mCalibData->imageSize.width * mCalibData->imageSize.width)) / 20.0;
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
+    mSaveFrames = capParams.saveFrames;
+    mZoom = capParams.zoom;
 
     switch(mBoardType)
     {
@@ -278,6 +307,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                                         capParams.charucoMarkerSize, mArucoDictionary);
 #endif
         break;
+    case CirclesGrid:
     case AcirclesGrid:
         mBlobDetectorPtr = cv::SimpleBlobDetector::create();
         break;
@@ -292,9 +322,13 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
 cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
 {
     cv::Mat frameCopy;
+    cv::Mat frameCopyToSave;
     frame.copyTo(frameCopy);
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
+
+    if(mSaveFrames)
+        frame.copyTo(frameCopyToSave);
 
     switch(mBoardType)
     {
@@ -303,6 +337,9 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         break;
     case chAruco:
         isTemplateFound = detectAndParseChAruco(frameCopy);
+        break;
+    case CirclesGrid:
+        isTemplateFound = detectAndParseCircles(frameCopy);
         break;
     case AcirclesGrid:
         isTemplateFound = detectAndParseACircles(frameCopy);
@@ -323,6 +360,10 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);
+
+                if(mSaveFrames)
+                    mCalibData->allFrames.push_back(frameCopyToSave);
+
                 mCapuredFrames++;
             }
             else {

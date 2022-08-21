@@ -223,7 +223,7 @@ Before the example, is worth consider first how files are handled in emscripten 
 
 These C++ sources use standard APIs to access the filesystem and the implementation often ends up in system calls that read a file in the hard drive. Since JavaScript applications in the browser don't have access to the local filesystem, [emscripten emulates a standard filesystem](https://emscripten.org/docs/api_reference/Filesystem-API.html) so compiled C++ code works out of the box.
 
-In the browser, this filesystem is emulated in memory while in Node.js there's also the possibility of using the local filesystem directly. This is often preferable since there's no need of copy file's content in memory. This section is explains how to do do just that, this is, configuring emscripten so files are accessed directly from our local filesystem and relative paths match files relative to the current local directory as expected.
+In the browser, this filesystem is emulated in memory while in Node.js there's also the possibility of using the local filesystem directly. This is often preferable since there's no need of copy file's content in memory. This section explains how to do just that, this is, configuring emscripten so files are accessed directly from our local filesystem and relative paths match files relative to the current local directory as expected.
 
 ### The example ###
 
@@ -232,7 +232,7 @@ The following is an adaptation of @ref tutorial_js_face_detection.
 @code{.js}
 const { Canvas, createCanvas, Image, ImageData, loadImage } = require('canvas');
 const { JSDOM } = require('jsdom');
-const { writeFileSync, readFileSync } = require('fs');
+const { writeFileSync, existsSync, mkdirSync } = require('fs');
 
 (async () => {
   await loadOpenCV();

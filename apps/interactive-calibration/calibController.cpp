@@ -11,6 +11,7 @@
 #include <opencv2/3d.hpp>
 #include <opencv2/calib.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 using namespace cv;
 
@@ -215,6 +216,9 @@ void calib::calibDataController::filterFrames()
         }
         showOverlayMessage(cv::format("Frame %zu is worst", worstElemIndex + 1));
 
+        if(mCalibData->allFrames.size())
+            mCalibData->allFrames.erase(mCalibData->allFrames.begin() + worstElemIndex);
+
         if(mCalibData->imagePoints.size()) {
             mCalibData->imagePoints.erase(mCalibData->imagePoints.begin() + worstElemIndex);
             mCalibData->objectPoints.erase(mCalibData->objectPoints.begin() + worstElemIndex);
@@ -242,6 +246,11 @@ void calib::calibDataController::setParametersFileName(const std::string &name)
 
 void calib::calibDataController::deleteLastFrame()
 {
+    if(!mCalibData->allFrames.empty())
+    {
+        mCalibData->allFrames.pop_back();
+    }
+
     if( !mCalibData->imagePoints.empty()) {
         mCalibData->imagePoints.pop_back();
         mCalibData->objectPoints.pop_back();
@@ -272,6 +281,7 @@ void calib::calibDataController::rememberCurrentParameters()
 
 void calib::calibDataController::deleteAllData()
 {
+    mCalibData->allFrames.clear();
     mCalibData->imagePoints.clear();
     mCalibData->objectPoints.clear();
     mCalibData->allCharucoCorners.clear();
@@ -283,6 +293,10 @@ void calib::calibDataController::deleteAllData()
 
 bool calib::calibDataController::saveCurrentCameraParameters() const
 {
+
+    for(size_t i = 0; i < mCalibData->allFrames.size(); i++)
+        cv::imwrite(cv::format("calibration_%zu.png", i), mCalibData->allFrames[i]);
+
     bool success = false;
     if(mCalibData->cameraMatrix.total()) {
             cv::FileStorage parametersWriter(mParamsFileName, cv::FileStorage::WRITE);

@@ -452,8 +452,10 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-protot
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
                                    -Wmisleading-indentation
                                    -Wimplicit-fallthrough
+                                   -Wunused-parameter  # clang
+                                   -Warray-parameter
+                                   -Wstrict-prototypes  # clang15
 )
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter -Wmissing-prototypes
     -Wundef  # tiffiop.h: #if __clang_major__ >= 4
 )

@@ -71,6 +71,8 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+#include "fast_convolution/fast_convolution.hpp"
+
 namespace cv
 {
 namespace dnn
@@ -253,10 +255,13 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    Mat weightsMat;
+    Mat weightsMat;  // Used to store weight params. It will be used for layer fusion and memory alignment.
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
+
+    Mat fastWeights; // Used to store weight params. It will be used for layer fusion and without memory alignment.
+    Ptr<FastConv2d> fastConv2dImpl;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
@@ -433,6 +438,7 @@ public:
                 wm.copyTo(wm_aligned);
                 wm = wm_aligned;
             }
+            fastWeights = blobs[0].reshape(1, numOutput);
             weightsMat = wm;
         }
         else
@@ -628,14 +634,26 @@ public:
             if (weightsMat.data == blobs[0].data)
                 weightsMat = weightsMat.clone();
 
+            // If fastWeights is the same as weightsMat, we don't need to allocate more space for fastWeights.
+            bool sameFastWeights = false;
+            if (fastWeights.step1() == weightsMat.step1()) // If weightsMat is realigned, it is not the same as fastWeights.
+                sameFastWeights = true;
+
+            if (!sameFastWeights && fastWeights.data == blobs[0].data)
+                fastWeights = fastWeights.clone();
+
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
                 double wi = w.at<float>(i);
                 weightsMultipliers[i] *= wi;
                 cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
+                if (!sameFastWeights)
+                    cv::multiply(originWeights.row(i), weightsMultipliers[i], fastWeights.row(i));
                 biasvec[i] *= wi;
             }
+            if (sameFastWeights)
+                fastWeights = weightsMat;
         }
 
         if (!b.empty())
@@ -1948,8 +1966,13 @@ public:
 
         int outCn = blobs.empty() ? inputs[1].size[0] : blobs[0].size[0];
         // Need to align non-const blobs
+        bool variableWeight = false;
         if (blobs.empty())
         {
+            variableWeight = true;
+            if (fastWeights.data != inputs[1].data)
+                fastWeights = inputs[1].clone();
+
             Mat wm = inputs[1].reshape(1, outCn);
             if (wm.data != weightsMat.data)
             {
@@ -2066,8 +2089,37 @@ public:
         {
             int nstripes = std::max(getNumThreads(), 1);
 
+            // Initialization of FastCovn2d
+            if ((!fastConv2dImpl || variableWeight) && inputs[0].dims == 4)
+            {
+                int K = outputs[0].size[1];
+                int C = inputs[0].size[1];
+                int Hk = kernel_size[kernel_size.size() - 2];
+                int Wk = kernel_size.back();
+
+                CV_Assert(outputs[0].size[1] % ngroups == 0);
+                int stride_h = strides[strides.size() - 2];
+                int stride_w = strides.back();
+
+                int dilation_h = dilations[dilations.size() - 2];
+                int dilation_w = dilations.back();
+                float* weightsPtr = fastWeights.ptr<float>();
+                CV_Assert(weightsPtr);
+
+                fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h,
+                                              dilation_w, dilation_h, pads_begin, pads_end, weightsPtr, &biasvec[0]);
+            }
+
+            if (fastConv2dImpl)
+            {
+                runFastConv2d(inputs[0], outputs[0], fastConv2dImpl, nstripes, activ);
+                return;
+            }
+
+            // Use only for Conv1D and Conv3D.
             ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                             kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
+
         }
     }
 
@@ -2174,26 +2226,36 @@ public:
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);
         Mat outputMultiplier(1, numOutput, CV_32F);
-        double realMin, realMax, weightsScale;
+        bool perChannel = params.get<bool>("per_channel", true);
 
-        for( int i = 0; i < numOutput; i++ )
+        if (perChannel) // per-Channel quantization.
         {
-            // Quantize weights
-            cv::minMaxIdx(weightsMat.row(i), &realMin, &realMax);
-            realMin = std::min(realMin, 0.0);
-            realMax = std::max(realMax, 0.0);
-            weightsScale = (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
-            weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+            for (int i = 0; i < numOutput; i++)
+            {
+                double weightsScale = getWeightScale(weightsMat.row(i));
 
-            // Quantize biases
+                weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+                float biasScale = inputScale * weightsScale;
+                biasQuantized.at<int>(i) = cvRound(biasvec[i]/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
+        }
+        else // per-Tensor quantization.
+        {
+            double weightsScale = getWeightScale(weightsMat);
+
+            weightsMat.convertTo(weightsQuantized, CV_8S, 1.f/weightsScale);
             float biasScale = inputScale * weightsScale;
-            biasQuantized.at<int>(i) = (int)std::round(biasvec[i]/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
 
-            // Store multiplier
-            outputMultiplier.at<float>(i) = biasScale / outputScale;
+            for (int i = 0; i < numOutput; i++)
+            {
+                biasQuantized.at<int>(i) = cvRound(biasvec[i]/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
         }
 
         params.blobs.clear();
+        params.set("per_channel", perChannel);
         params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
         params.blobs.push_back(biasQuantized);
         params.blobs.push_back(outputMultiplier);

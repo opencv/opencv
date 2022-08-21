@@ -89,6 +89,9 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     mCapParams.captureDelay = parser.get<float>("d");
     mCapParams.squareSize = parser.get<float>("sz");
     mCapParams.templDst = parser.get<float>("dst");
+    mCapParams.saveFrames = parser.get<bool>("save_frames");
+    mCapParams.zoom = parser.get<float>("zoom");
+    mCapParams.forceReopen = parser.get<bool>("force_reopen");
 
     if(!checkAssertion(mCapParams.squareSize > 0, "Distance between corners or circles must be positive"))
         return false;
@@ -106,7 +109,11 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     std::string templateType = parser.get<std::string>("t");
 
-    if(templateType.find("circles", 0) == 0) {
+    if(templateType.find("symcircles", 0) == 0) {
+        mCapParams.board = CirclesGrid;
+        mCapParams.boardSize = cv::Size(4, 11);
+    }
+    else if(templateType.find("circles", 0) == 0) {
         mCapParams.board = AcirclesGrid;
         mCapParams.boardSize = cv::Size(4, 11);
     }

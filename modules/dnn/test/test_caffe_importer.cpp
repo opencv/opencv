@@ -653,7 +653,7 @@ TEST_P(opencv_face_detector, Accuracy)
                                     0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
+    normAssertDetections(ref, out, "", 0.5, 1e-4, 2e-4);
 }
 
 // False positives bug for large faces: https://github.com/opencv/opencv/issues/15106
@@ -695,7 +695,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
         CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
 #else
-        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_MEMORY_2GB,
 #endif
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG

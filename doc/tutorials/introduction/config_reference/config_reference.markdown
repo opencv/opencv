@@ -205,11 +205,12 @@ cmake -DCV_DISABLE_OPTIMIZATION=ON ../opencv
 More details on CPU optimization options can be found in wiki: https://github.com/opencv/opencv/wiki/CPU-optimizations-build-options
 
 
-## Profiling, coverage, sanitize, hardening, size optimization
+## Profiling, coverage, sanitize, hardening, size optimization {#profiling_coverage_sanitize_hardening_size_optimization}
 
 Following options can be used to produce special builds with instrumentation or improved security. All options are disabled by default.
 
 | Option | Compiler | Description |
+| -------| -------- | ----------- |
 | `ENABLE_PROFILING` | GCC or Clang | Enable profiling compiler and linker options. |
 | `ENABLE_COVERAGE` | GCC or Clang | Enable code coverage support. |
 | `OPENCV_ENABLE_MEMORY_SANITIZER` | N/A | Enable several quirks in code to assist memory sanitizer. |

@@ -78,10 +78,14 @@ Input depth (src.depth()) | Output depth (ddepth)
 --------------------------|----------------------
 CV_8U                     | -1/CV_16S/CV_32F/CV_64F
 CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F/CV_64F
+CV_32F                    | -1/CV_32F
 CV_64F                    | -1/CV_64F
 
 @note when ddepth=-1, the output image will have the same depth as the source.
+
+@note if you need double floating-point accuracy and using single floating-point input data
+(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
@@ -118,7 +122,7 @@ sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_
 where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
 f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-resize for details.
+#resize for details.
 
 @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
@@ -1578,7 +1582,7 @@ CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
 For every pixel \f$ (x, y) \f$ in the source image, the function calculates the sum of squares of those neighboring
 pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
 
-The unnormalized square box filter can be useful in computing local image statistics such as the the local
+The unnormalized square box filter can be useful in computing local image statistics such as the local
 variance and standard deviation around the neighborhood of a pixel.
 
 @param src input image
@@ -1809,7 +1813,7 @@ with the following \f$3 \times 3\f$ aperture:
 
 @param src Source image.
 @param dst Destination image of the same size and the same number of channels as src .
-@param ddepth Desired depth of the destination image.
+@param ddepth Desired depth of the destination image, see @ref filter_depths "combinations".
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
 details. The size must be positive and odd.
 @param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
@@ -2296,7 +2300,7 @@ case of multi-channel images, each channel is processed independently.
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
 CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
-@param kernel structuring element used for dilation; if elemenat=Mat(), a 3 x 3 rectangular
+@param kernel structuring element used for dilation; if element=Mat(), a 3 x 3 rectangular
 structuring element is used. Kernel can be created using #getStructuringElement
 @param anchor position of the anchor within the element; default value (-1, -1) means that the
 anchor is at the element center.
@@ -2362,7 +2366,7 @@ way:
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
 @endcode
 To shrink an image, it will generally look best with #INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with c#INTER_CUBIC (slow) or #INTER_LINEAR
+enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
 @param src input image.
@@ -2454,7 +2458,7 @@ The function remap transforms the source image using the specified map:
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using convertMaps. The reason you might want to
+\f$map_1\f$, or fixed-point maps created by using #convertMaps. The reason you might want to
 convert from floating to fixed-point representations of a map is that they can yield much faster
 (\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
@@ -2464,7 +2468,7 @@ This function cannot operate in-place.
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
-CV_32FC1, or CV_32FC2. See convertMaps for details on converting a floating point
+CV_32FC1, or CV_32FC2. See #convertMaps for details on converting a floating point
 representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
@@ -2489,7 +2493,7 @@ options ( (map1.type(), map2.type()) \f$\rightarrow\f$ (dstmap1.type(), dstmap2.
 supported:
 
 - \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. This is the
-most frequently used conversion operation, in which the original floating-point maps (see remap )
+most frequently used conversion operation, in which the original floating-point maps (see #remap)
 are converted to a more compact and much faster fixed-point representation. The first output array
 contains the rounded coordinates and the second array (created only when nninterpolation=false )
 contains indices in the interpolation tables.
@@ -2826,7 +2830,7 @@ It makes possible to do a fast blurring or fast block correlation with a variabl
 example. In case of multi-channel images, sums for each channel are accumulated independently.
 
 As a practical example, the next figure shows the calculation of the integral of a straight
-rectangle Rect(3,3,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
+rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
 original image are shown, as well as the relative pixels in the integral images sum and tilted .
 
 ![integral calculation example](pics/integral.png)
@@ -3191,7 +3195,14 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           const int* histSize, const float** ranges,
                           bool uniform = true, bool accumulate = false );
 
-/** @overload */
+/** @overload
+
+this variant supports only uniform histograms.
+
+ranges argument is either empty vector or a flattened vector of histSize.size()*2 elements
+(histSize.size() element pairs). The first and second elements of each pair specify the lower and
+upper boundaries.
+*/
 CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
                             const std::vector<int>& channels,
                             InputArray mask, OutputArray hist,

@@ -5,6 +5,16 @@
 #include "test_precomp.hpp"
 namespace opencv_test { namespace {
 
+#if !defined CV_CXX11
+// Wrapper for generating seeded random number via std::rand.
+template<unsigned Seed>
+class SeededRandFunctor {
+public:
+    SeededRandFunctor() { std::srand(Seed); }
+    int operator()(int i) { return std::rand() % (i + 1); }
+};
+#endif
+
 std::string encode_qrcode_images_name[] = {
         "version1_mode1.png", "version1_mode2.png", "version1_mode4.png",
         "version2_mode1.png", "version2_mode2.png", "version2_mode4.png",
@@ -380,8 +390,15 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
         std::string symbol_set = config["symbols_set"];
 
         std::string input_info = symbol_set;
-        std::random_shuffle(input_info.begin(), input_info.end());
-
+#if defined CV_CXX11
+        // std::random_shuffle is deprecated since C++11 and removed in C++17.
+        // Use manually constructed RNG with a fixed seed and std::shuffle instead.
+        std::mt19937 rand_gen {1};
+        std::shuffle(input_info.begin(), input_info.end(), rand_gen);
+#else
+        SeededRandFunctor<1> rand_gen;
+        std::random_shuffle(input_info.begin(), input_info.end(), rand_gen);
+#endif
         for (int j = min_stuctures_num; j < max_stuctures_num; j++)
         {
             QRCodeEncoder::Params params;
@@ -432,5 +449,83 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
 }
 
 #endif // UPDATE_QRCODE_TEST_DATA
+
+TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
+{
+    const cv::String msg = "OpenCV";
+    const int min_version = 1;
+    const int max_version = 40;
+
+    for ( int v = min_version ; v <= max_version ; v++ )
+    {
+        SCOPED_TRACE(cv::format("version=%d",v));
+
+        Mat qrimg;
+        QRCodeEncoder::Params params;
+        params.version = v;
+        Ptr<QRCodeEncoder> qrcode_enc = cv::QRCodeEncoder::create(params);
+        qrcode_enc->encode(msg, qrimg);
+
+        const int white_margin = 2;
+        const int finder_width = 7;
+
+        const int timing_pos = white_margin + 6;
+        int i;
+
+        // Horizontal Check
+        // (1) White margin(Left)
+        for(i = 0; i < white_margin ; i++ )
+        {
+            ASSERT_EQ((uint8_t)255, qrimg.at<uint8_t>(i, timing_pos)) << "i=" << i;
+        }
+        // (2) Finder pattern(Left)
+        for(     ; i < white_margin + finder_width ; i++ )
+        {
+            ASSERT_EQ((uint8_t)0, qrimg.at<uint8_t>(i, timing_pos)) << "i=" << i;
+        }
+        // (3) Timing pattern
+        for(     ; i < qrimg.rows - finder_width - white_margin; i++ )
+        {
+            ASSERT_EQ((uint8_t)(i % 2 == 0)?0:255, qrimg.at<uint8_t>(i, timing_pos)) << "i=" << i;
+        }
+        // (4) Finder pattern(Right)
+        for(     ; i < qrimg.rows - white_margin; i++ )
+        {
+            ASSERT_EQ((uint8_t)0, qrimg.at<uint8_t>(i, timing_pos)) << "i=" << i;
+        }
+        // (5) White margin(Right)
+        for(     ; i < qrimg.rows ; i++ )
+        {
+            ASSERT_EQ((uint8_t)255, qrimg.at<uint8_t>(i, timing_pos)) << "i=" << i;
+        }
+
+        // Vertical Check
+        // (1) White margin(Top)
+        for(i = 0; i < white_margin ; i++ )
+        {
+            ASSERT_EQ((uint8_t)255, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
+        }
+        // (2) Finder pattern(Top)
+        for(     ; i < white_margin + finder_width ; i++ )
+        {
+            ASSERT_EQ((uint8_t)0, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
+        }
+        // (3) Timing pattern
+        for(     ; i < qrimg.rows - finder_width - white_margin; i++ )
+        {
+            ASSERT_EQ((uint8_t)(i % 2 == 0)?0:255, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
+        }
+        // (4) Finder pattern(Bottom)
+        for(     ; i < qrimg.rows - white_margin; i++ )
+        {
+            ASSERT_EQ((uint8_t)0, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
+        }
+        // (5) White margin(Bottom)
+        for(     ; i < qrimg.rows ; i++ )
+        {
+            ASSERT_EQ((uint8_t)255, qrimg.at<uint8_t>(timing_pos, i)) << "i=" << i;
+        }
+    }
+}
 
 }} // namespace

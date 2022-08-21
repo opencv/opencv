@@ -619,26 +619,36 @@ public:
         Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
         Mat biasQuantized(1, numOutput, CV_32S);
         Mat outputMultiplier(1, numOutput, CV_32F);
+        bool perChannel = params.get<bool>("per_channel", true);
 
-        double realMin, realMax, weightsScale;
-        for( int i = 0; i < numOutput; i++ )
+        if (perChannel) // per-Channel quantization.
         {
-            // Quantize weights
-            cv::minMaxIdx(weightsMat.row(i), &realMin, &realMax);
-            realMin = std::min(realMin, 0.0);
-            realMax = std::max(realMax, 0.0);
-            weightsScale = (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
-            weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+            for (int i = 0; i < numOutput; i++)
+            {
+                double weightsScale = getWeightScale(weightsMat.row(i));
 
-            // Quantize biases
+                weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+                float biasScale = inputScale * weightsScale;
+                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
+        }
+        else // per-Tensor quantization.
+        {
+            double weightsScale = getWeightScale(weightsMat);
+
+            weightsMat.convertTo(weightsQuantized, CV_8S, 1.f/weightsScale);
             float biasScale = inputScale * weightsScale;
-            biasQuantized.at<int>(i) = (int)std::round(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
 
-            // Store multiplier
-            outputMultiplier.at<float>(i) = biasScale / outputScale;
+            for (int i = 0; i < numOutput; i++)
+            {
+                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+                outputMultiplier.at<float>(i) = biasScale / outputScale;
+            }
         }
 
         params.blobs.clear();
+        params.set("per_channel", perChannel);
         params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
         params.blobs.push_back(biasQuantized);
         params.blobs.push_back(outputMultiplier);
