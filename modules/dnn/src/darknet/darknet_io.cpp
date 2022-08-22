@@ -229,7 +229,7 @@ namespace cv {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
-                    else if (type == "swish")
+                    else if (type == "swish" || type == "silu") // swish is an extension of silu.
                     {
                         activation_param.type = "Swish";
                     }
