@@ -605,6 +605,8 @@ TEST_P(RenderedNormals, check)
 
     Mat cmpMask = srcMask & dstMask;
 
+    EXPECT_GT(countNonZero(cmpMask), 0);
+
     double nrml2 = cv::norm(absdot, NORM_L2, cmpMask);
 
     if (!dstNormalsDepth.empty())
