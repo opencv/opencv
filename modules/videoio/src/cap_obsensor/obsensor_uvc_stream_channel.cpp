@@ -61,7 +61,7 @@ StreamType parseUvcDeviceNameToStreamType(const std::string& devName)
     std::string uvcDevName = devName;
     for (size_t i = 0; i < uvcDevName.length(); i++)
     {
-        uvcDevName[i] = (char)tolower(uvcDevName[i]); 
+        uvcDevName[i] = (char)tolower(uvcDevName[i]);
     }
     if (uvcDevName.find(" depth") != std::string::npos)
     {
