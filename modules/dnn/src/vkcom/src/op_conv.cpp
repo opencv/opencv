@@ -124,13 +124,19 @@ bool OpConv::forward(std::vector<Tensor>& ins,
                      std::vector<Tensor>& blobs,
                      std::vector<Tensor>& outs)
 {
-    std::vector<int> shape = {1};
+    std::vector<int> shape = blobs[0].getShape();
     Tensor bias(0, shape);
 
     if (has_bias_)
     {
         assert(blobs.size() == 2);
         bias = blobs[1];
+    }
+    else
+    {
+        void *p = bias.map();
+        memset(p, 0, bias.size());
+        bias.unMap();
     }
 
     return forward(ins[0], blobs[0], bias, outs[0]);
