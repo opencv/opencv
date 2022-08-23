@@ -503,6 +503,34 @@ template<typename R> struct TheTest
 
         return *this;
     }
+    TheTest & test_interleave_pq()
+    {
+        Data<R> dataA;
+        R a = dataA;
+        Data<R> resP = v_interleave_pairs(a);
+        Data<R> resQ = v_interleave_quads(a);
+        for (int i = 0; i < VTraits<R>::vlanes()/4; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(resP[4*i],     dataA[4*i  ]);
+            EXPECT_EQ(resP[4*i + 1], dataA[4*i+2]);
+            EXPECT_EQ(resP[4*i + 2], dataA[4*i+1]);
+            EXPECT_EQ(resP[4*i + 3], dataA[4*i+3]);
+        }
+        for (int i = 0; i < VTraits<R>::vlanes()/8; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(resQ[8*i],     dataA[8*i  ]);
+            EXPECT_EQ(resQ[8*i + 1], dataA[8*i+4]);
+            EXPECT_EQ(resQ[8*i + 2], dataA[8*i+1]);
+            EXPECT_EQ(resQ[8*i + 3], dataA[8*i+5]);
+            EXPECT_EQ(resQ[8*i + 4], dataA[8*i+2]);
+            EXPECT_EQ(resQ[8*i + 5], dataA[8*i+6]);
+            EXPECT_EQ(resQ[8*i + 6], dataA[8*i+3]);
+            EXPECT_EQ(resQ[8*i + 7], dataA[8*i+7]);
+        }
+        return *this;
+    }
 
     // float32x4 only
     TheTest & test_interleave_2channel()
@@ -578,16 +606,18 @@ template<typename R> struct TheTest
 
     TheTest & test_addsub()
     {
-        Data<R> dataA, dataB;
+        Data<R> dataA, dataB, dataC;
         dataB.reverse();
-        R a = dataA, b = dataB;
+        dataA[1] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
+        R a = dataA, b = dataB, c = dataC;
 
-        Data<R> resC = v_add(a, b), resD = v_sub(a, b);
+        Data<R> resD = v_add(a, b), resE = v_add(a, b, c), resF = v_sub(a, b);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i]), resC[i]);
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] - dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] + dataB[i] + dataC[i]), resE[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] - dataB[i]), resF[i]);
         }
 
         return *this;
@@ -614,16 +644,18 @@ template<typename R> struct TheTest
 
     TheTest & test_mul()
     {
-        Data<R> dataA, dataB;
+        Data<R> dataA, dataB, dataC;
         dataA[1] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
         dataB.reverse();
-        R a = dataA, b = dataB;
+        R a = dataA, b = dataB, c = dataC;
 
-        Data<R> resC = v_mul(a, b);
+        Data<R> resD = v_mul(a, b);
+        Data<R> resE = v_mul(a, b, c);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i]), resC[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i]), resD[i]);
+            EXPECT_EQ(saturate_cast<LaneType>(dataA[i] * dataB[i] * dataC[i]), resE[i]);
         }
 
         return *this;
@@ -699,7 +731,7 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<Ru>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
-            R_type ssub = dataA[i] - dataB[i] < std::numeric_limits<R_type>::min() ? std::numeric_limits<R_type>::min() : dataA[i] - dataB[i];
+            R_type ssub = dataA[i] - dataB[i] < std::numeric_limits<R_type>::lowest() ? std::numeric_limits<R_type>::lowest() : dataA[i] - dataB[i];
             EXPECT_EQ((u_type)std::abs(ssub), resC[i]);
         }
 
@@ -1573,19 +1605,27 @@ template<typename R> struct TheTest
         v_transpose4x4(a, b, c, d,
                        e, f, g, h);
 
-        Data<R> res[4] = {e, f, g, h};
-        // for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
-        // {
-            int i = 0;
-            for (int j = 0; j < 4; ++j)
-            {
-                SCOPED_TRACE(cv::format("i=%d j=%d", i, j));
-                EXPECT_EQ(dataA[i + j], res[j][i]);
-                EXPECT_EQ(dataB[i + j], res[j][i + 1]);
-                EXPECT_EQ(dataC[i + j], res[j][i + 2]);
-                EXPECT_EQ(dataD[i + j], res[j][i + 3]);
-            }
-        // }
+        // Data<R> res[4] = {e, f, g, h}; // Generates incorrect data in certain RVV case.
+        Data<R> res0 = e, res1 = f, res2 = g, res3 = h;
+        EXPECT_EQ(dataA[0], res0[0]);
+        EXPECT_EQ(dataB[0], res0[1]);
+        EXPECT_EQ(dataC[0], res0[2]);
+        EXPECT_EQ(dataD[0], res0[3]);
+
+        EXPECT_EQ(dataA[1], res1[0]);
+        EXPECT_EQ(dataB[1], res1[1]);
+        EXPECT_EQ(dataC[1], res1[2]);
+        EXPECT_EQ(dataD[1], res1[3]);
+
+        EXPECT_EQ(dataA[2], res2[0]);
+        EXPECT_EQ(dataB[2], res2[1]);
+        EXPECT_EQ(dataC[2], res2[2]);
+        EXPECT_EQ(dataD[2], res2[3]);
+
+        EXPECT_EQ(dataA[3], res3[0]);
+        EXPECT_EQ(dataB[3], res3[1]);
+        EXPECT_EQ(dataC[3], res3[2]);
+        EXPECT_EQ(dataD[3], res3[3]);
         return *this;
     }
 
@@ -1737,7 +1777,34 @@ void test_hal_intrin_uint8()
     // typedef v_uint8 R;
     TheTest<v_uint8>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_unpack()
+        .test_reverse()
+#if 0 // not implemented in rvv backend yet.
+        .test_interleave()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
+        .test_pack_b()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1747,7 +1814,34 @@ void test_hal_intrin_int8()
     // typedef v_int8 R;
     TheTest<v_int8>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_expand_q()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_absdiffs()
+        .test_abs()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_unpack()
+        .test_reverse()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1759,7 +1853,35 @@ void test_hal_intrin_uint16()
     // typedef v_uint16 R;
     TheTest<v_uint16>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_mul_hi()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_unpack()
+        .test_reverse()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1769,7 +1891,38 @@ void test_hal_intrin_int16()
     // typedef v_int16 R;
     TheTest<v_int16>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_addsub()
+        .test_arithm_wrap()
+        .test_mul()
+        .test_mul_expand()
+        .test_mul_hi()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_absdiffs()
+        .test_abs()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_unpack()
+        .test_reverse()
+#if 0
+        .test_interleave()
+
+        .test_cmp()
+        .test_dotprod()
+        .test_dotprod_expand()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1781,7 +1934,34 @@ void test_hal_intrin_uint32()
     // typedef v_uint32 R;
     TheTest<v_uint32>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_mul_expand()
+        .test_shift<1>()
+        .test_shift<8>()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+        .test_unpack()
+        .test_transpose()
+        .test_reverse()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1791,7 +1971,37 @@ void test_hal_intrin_int32()
     // typedef v_int32 R;
     TheTest<v_int32>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_expand()
+        .test_addsub()
+        .test_mul()
+        .test_abs()
+        .test_shift<1>().test_shift<8>()
+        .test_dotprod_expand_f64()
+        .test_logic()
         .test_min_max()
+        .test_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+        .test_unpack()
+        .test_transpose()
+        .test_reverse()
+#if 0
+        .test_interleave()
+        .test_cmp()
+        .test_dotprod()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
+        .test_float_cvt32()
+        .test_float_cvt64()
+        .test_popcount()
+#endif
         ;
 }
 
@@ -1803,7 +2013,20 @@ void test_hal_intrin_uint64()
     // typedef v_uint64 R;
     TheTest<v_uint64>()
         .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_reverse()
         ;
+#if 0
+    #if CV_SIMD_64F
+       .test_cmp64()
+    #endif
+#endif
 }
 
 void test_hal_intrin_int64()
@@ -1812,7 +2035,21 @@ void test_hal_intrin_int64()
     // typedef v_int64 R;
     TheTest<v_int64>()
         .test_loadstore()
+        .test_addsub()
+        .test_shift<1>().test_shift<8>()
+        .test_logic()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_cvt64_double()
+        .test_reverse()
         ;
+#if 0
+    #if CV_SIMD_64F
+       .test_cmp64()
+    #endif
+#endif
 }
 
 //============= Floating point =====================================================================
@@ -1822,18 +2059,64 @@ void test_hal_intrin_float32()
     // typedef v_float32 R;
     TheTest<v_float32>()
         .test_loadstore()
+        .test_interleave_pq()
+        .test_addsub()
+        .test_abs()
+        .test_mul()
+        .test_div()
+        .test_sqrt_abs()
         .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
+        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
+        .test_unpack()
+        .test_transpose()
+        .test_reverse()
+#if 0
+        .test_interleave()
+        .test_interleave_2channel()
+        .test_cmp()
+        .test_reduce()
+        .test_reduce_sad()
+        .test_float_math()
+        .test_float_cvt64()
+        .test_matmul()
+        .test_reduce_sum4()
+#endif
         ;
 }
 
 void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
-#if CV_SIMD_64F
+#if CV_SIMD_SCALABLE_64F
     // typedef v_float64 R;
     TheTest<v_float64>()
         .test_loadstore()
+        .test_addsub()
+        .test_mul()
+        .test_div()
+        .test_abs()
+        .test_sqrt_abs()
         .test_min_max()
+        .test_float_absdiff()
+        .test_mask()
+        .test_extract<0>().test_extract<1>()
+        .test_rotate<0>().test_rotate<1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_extract_highest()
+        .test_reverse()
+#if 0
+        .test_cmp()
+        .test_unpack()
+        .test_float_cvt32()
+        .test_float_math()
+#endif
         ;
 
 #endif
@@ -1851,6 +2134,7 @@ void test_hal_intrin_uint8()
     TheTest<v_uint8>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_pq()
         .test_expand()
         .test_expand_q()
         .test_addsub()
@@ -1874,6 +2158,7 @@ void test_hal_intrin_uint8()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
@@ -1891,6 +2176,7 @@ void test_hal_intrin_int8()
     TheTest<v_int8>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_pq()
         .test_expand()
         .test_expand_q()
         .test_addsub()
@@ -1914,6 +2200,7 @@ void test_hal_intrin_int8()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1927,6 +2214,7 @@ void test_hal_intrin_uint16()
     TheTest<v_uint16>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_pq()
         .test_expand()
         .test_addsub()
         .test_arithm_wrap()
@@ -1951,6 +2239,7 @@ void test_hal_intrin_uint16()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1962,6 +2251,7 @@ void test_hal_intrin_int16()
     TheTest<v_int16>()
         .test_loadstore()
         .test_interleave()
+        .test_interleave_pq()
         .test_expand()
         .test_addsub()
         .test_arithm_wrap()
@@ -1988,6 +2278,7 @@ void test_hal_intrin_int16()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -2001,6 +2292,7 @@ void test_hal_intrin_uint32()
     TheTest<v_uint32>()
         .test_loadstore()
         .test_interleave()
+        // .test_interleave_pq() //not implemented in AVX
         .test_expand()
         .test_addsub()
         .test_mul()
@@ -2022,6 +2314,8 @@ void test_hal_intrin_uint32()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
         .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
         .test_transpose()
         ;
 }
@@ -2033,6 +2327,7 @@ void test_hal_intrin_int32()
     TheTest<v_int32>()
         .test_loadstore()
         .test_interleave()
+        // .test_interleave_pq() //not implemented in AVX
         .test_expand()
         .test_addsub()
         .test_mul()
@@ -2058,6 +2353,8 @@ void test_hal_intrin_int32()
         .test_float_cvt32()
         .test_float_cvt64()
         .test_transpose()
+        .test_extract_highest()
+        .test_broadcast_highest()
         ;
 }
 
@@ -2079,6 +2376,7 @@ void test_hal_intrin_uint64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -2099,6 +2397,7 @@ void test_hal_intrin_int64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_cvt64_double()
         ;
@@ -2113,9 +2412,11 @@ void test_hal_intrin_float32()
         .test_loadstore()
         .test_interleave()
         .test_interleave_2channel()
+        // .test_interleave_pq() //not implemented in AVX
         .test_addsub()
         .test_mul()
         .test_div()
+        .test_abs()
         .test_cmp()
         .test_sqrt_abs()
         .test_min_max()
@@ -2134,6 +2435,8 @@ void test_hal_intrin_float32()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
         .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_highest()
+        .test_broadcast_highest()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -2151,6 +2454,7 @@ void test_hal_intrin_float64()
         .test_addsub()
         .test_mul()
         .test_div()
+        .test_abs()
         .test_cmp()
         .test_sqrt_abs()
         .test_min_max()
@@ -2163,6 +2467,7 @@ void test_hal_intrin_float64()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
