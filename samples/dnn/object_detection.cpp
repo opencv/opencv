@@ -5,7 +5,11 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#ifdef CV_CXX11
+#if defined(CV_CXX11) && defined(HAVE_THREADS)
+#define USE_THREADS 1
+#endif
+
+#ifdef USE_THREADS
 #include <mutex>
 #include <thread>
 #include <queue>
@@ -56,7 +60,7 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
 
 void callback(int pos, void* userdata);
 
-#ifdef CV_CXX11
+#ifdef USE_THREADS
 template <typename T>
 class QueueFPS : public std::queue<T>
 {
@@ -106,7 +110,7 @@ private:
     TickMeter tm;
     std::mutex mutex;
 };
-#endif  // CV_CXX11
+#endif  // USE_THREADS
 
 int main(int argc, char** argv)
 {
@@ -171,7 +175,7 @@ int main(int argc, char** argv)
     else
         cap.open(parser.get<int>("device"));
 
-#ifdef CV_CXX11
+#ifdef USE_THREADS
     bool process = true;
 
     // Frames capturing thread
@@ -271,7 +275,7 @@ int main(int argc, char** argv)
     framesThread.join();
     processingThread.join();
 
-#else  // CV_CXX11
+#else  // USE_THREADS
     if (asyncNumReq)
         CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
 
@@ -302,7 +306,7 @@ int main(int argc, char** argv)
 
         imshow(kWinName, frame);
     }
-#endif  // CV_CXX11
+#endif  // USE_THREADS
     return 0;
 }
 

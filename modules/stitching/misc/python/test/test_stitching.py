@@ -28,6 +28,9 @@ class stitching_detail_test(NewOpenCVTests):
         imgFea = cv.detail.computeImageFeatures2(finder,img)
         self.assertIsNotNone(imgFea)
 
+        # Added Test for PR #21180
+        self.assertIsNotNone(imgFea.keypoints)
+
         matcher = cv.detail_BestOf2NearestMatcher(False, 0.3)
         self.assertIsNotNone(matcher)
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, False, 0.3)
@@ -113,6 +116,23 @@ class stitching_compose_panorama_args(NewOpenCVTests):
         result, _ = stitcher.composePanorama((img1, img2))
 
         assert result == 0
+
+
+class stitching_matches_info_test(NewOpenCVTests):
+
+    def test_simple(self):
+        finder = cv.ORB.create()
+        img1 = self.get_sample('stitching/a1.png')
+        img2 = self.get_sample('stitching/a2.png')
+
+        img_feat1 = cv.detail.computeImageFeatures2(finder, img1)
+        img_feat2 = cv.detail.computeImageFeatures2(finder, img2)
+
+        matcher = cv.detail.BestOf2NearestMatcher_create()
+        matches_info = matcher.apply(img_feat1, img_feat2)
+
+        self.assertIsNotNone(matches_info.matches)
+        self.assertIsNotNone(matches_info.inliers_mask)
 
 
 if __name__ == '__main__':

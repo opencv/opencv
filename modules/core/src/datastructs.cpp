@@ -97,7 +97,7 @@ icvInitMemStorage( CvMemStorage* storage, int block_size )
         block_size = CV_STORAGE_BLOCK_SIZE;
 
     block_size = cvAlign( block_size, CV_STRUCT_ALIGN );
-    assert( sizeof(CvMemBlock) % CV_STRUCT_ALIGN == 0 );
+    CV_Assert( sizeof(CvMemBlock) % CV_STRUCT_ALIGN == 0 );
 
     memset( storage, 0, sizeof( *storage ));
     storage->signature = CV_STORAGE_MAGIC_VAL;
@@ -133,8 +133,6 @@ cvCreateChildMemStorage( CvMemStorage * parent )
 static void
 icvDestroyMemStorage( CvMemStorage* storage )
 {
-    int k = 0;
-
     CvMemBlock *block;
     CvMemBlock *dst_top = 0;
 
@@ -144,7 +142,7 @@ icvDestroyMemStorage( CvMemStorage* storage )
     if( storage->parent )
         dst_top = storage->parent->top;
 
-    for( block = storage->bottom; block != 0; k++ )
+    for( block = storage->bottom; block != 0; )
     {
         CvMemBlock *temp = block;
 
@@ -240,7 +238,7 @@ icvGoNextMemBlock( CvMemStorage * storage )
 
             if( block == parent->top )  /* the single allocated block */
             {
-                assert( parent->bottom == block );
+                CV_Assert( parent->bottom == block );
                 parent->top = parent->bottom = 0;
                 parent->free_space = 0;
             }
@@ -266,7 +264,7 @@ icvGoNextMemBlock( CvMemStorage * storage )
     if( storage->top->next )
         storage->top = storage->top->next;
     storage->free_space = storage->block_size - sizeof(CvMemBlock);
-    assert( storage->free_space % CV_STRUCT_ALIGN == 0 );
+    CV_Assert( storage->free_space % CV_STRUCT_ALIGN == 0 );
 }
 
 
@@ -331,7 +329,7 @@ cvMemStorageAlloc( CvMemStorage* storage, size_t size )
     if( size > INT_MAX )
         CV_Error( CV_StsOutOfRange, "Too large memory block is requested" );
 
-    assert( storage->free_space % CV_STRUCT_ALIGN == 0 );
+    CV_Assert( storage->free_space % CV_STRUCT_ALIGN == 0 );
 
     if( (size_t)storage->free_space < size )
     {
@@ -343,7 +341,7 @@ cvMemStorageAlloc( CvMemStorage* storage, size_t size )
     }
 
     ptr = ICV_FREE_PTR(storage);
-    assert( (size_t)ptr % CV_STRUCT_ALIGN == 0 );
+    CV_Assert( (size_t)ptr % CV_STRUCT_ALIGN == 0 );
     storage->free_space = cvAlignLeft(storage->free_space - (int)size, CV_STRUCT_ALIGN );
 
     return ptr;
@@ -683,7 +681,7 @@ icvGrowSeq( CvSeq *seq, int in_front_of )
                 else
                 {
                     icvGoNextMemBlock( storage );
-                    assert( storage->free_space >= delta );
+                    CV_Assert( storage->free_space >= delta );
                 }
             }
 
@@ -716,7 +714,7 @@ icvGrowSeq( CvSeq *seq, int in_front_of )
      * For used blocks it means current number
      * of sequence elements in the block:
      */
-    assert( block->count % seq->elem_size == 0 && block->count > 0 );
+    CV_Assert( block->count % seq->elem_size == 0 && block->count > 0 );
 
     if( !in_front_of )
     {
@@ -732,7 +730,7 @@ icvGrowSeq( CvSeq *seq, int in_front_of )
 
         if( block != block->prev )
         {
-            assert( seq->first->start_index == 0 );
+            CV_Assert( seq->first->start_index == 0 );
             seq->first = block;
         }
         else
@@ -760,7 +758,7 @@ icvFreeSeqBlock( CvSeq *seq, int in_front_of )
 {
     CvSeqBlock *block = seq->first;
 
-    assert( (in_front_of ? block : block->prev)->count == 0 );
+    CV_Assert( (in_front_of ? block : block->prev)->count == 0 );
 
     if( block == block->prev )  /* single block case */
     {
@@ -775,7 +773,7 @@ icvFreeSeqBlock( CvSeq *seq, int in_front_of )
         if( !in_front_of )
         {
             block = block->prev;
-            assert( seq->ptr == block->data );
+            CV_Assert( seq->ptr == block->data );
 
             block->count = (int)(seq->block_max - seq->ptr);
             seq->block_max = seq->ptr = block->prev->data +
@@ -804,7 +802,7 @@ icvFreeSeqBlock( CvSeq *seq, int in_front_of )
         block->next->prev = block->prev;
     }
 
-    assert( block->count > 0 && block->count % seq->elem_size == 0 );
+    CV_Assert( block->count > 0 && block->count % seq->elem_size == 0 );
     block->next = seq->free_blocks;
     seq->free_blocks = block;
 }
@@ -861,7 +859,7 @@ cvFlushSeqWriter( CvSeqWriter * writer )
         CvSeqBlock *block = first_block;
 
         writer->block->count = (int)((writer->ptr - writer->block->data) / seq->elem_size);
-        assert( writer->block->count > 0 );
+        CV_Assert( writer->block->count > 0 );
 
         do
         {
@@ -891,7 +889,7 @@ cvEndWriteSeq( CvSeqWriter * writer )
         CvMemStorage *storage = seq->storage;
         schar *storage_block_max = (schar *) storage->top + storage->block_size;
 
-        assert( writer->block->count > 0 );
+        CV_Assert( writer->block->count > 0 );
 
         if( (unsigned)((storage_block_max - storage->free_space)
             - seq->block_max) < CV_STRUCT_ALIGN )
@@ -1147,7 +1145,7 @@ cvSeqPush( CvSeq *seq, const void *element )
         icvGrowSeq( seq, 0 );
 
         ptr = seq->ptr;
-        assert( ptr + elem_size <= seq->block_max /*&& ptr == seq->block_min */  );
+        CV_Assert( ptr + elem_size <= seq->block_max /*&& ptr == seq->block_min */  );
     }
 
     if( element )
@@ -1183,7 +1181,7 @@ cvSeqPop( CvSeq *seq, void *element )
     if( --(seq->first->prev->count) == 0 )
     {
         icvFreeSeqBlock( seq, 0 );
-        assert( seq->ptr == seq->block_max );
+        CV_Assert( seq->ptr == seq->block_max );
     }
 }
 
@@ -1207,7 +1205,7 @@ cvSeqPushFront( CvSeq *seq, const void *element )
         icvGrowSeq( seq, 1 );
 
         block = seq->first;
-        assert( block->start_index > 0 );
+        CV_Assert( block->start_index > 0 );
     }
 
     ptr = block->data -= elem_size;
@@ -1289,7 +1287,7 @@ cvSeqInsert( CvSeq *seq, int before_index, const void *element )
                 icvGrowSeq( seq, 0 );
 
                 ptr = seq->ptr + elem_size;
-                assert( ptr <= seq->block_max );
+                CV_Assert( ptr <= seq->block_max );
             }
 
             delta_index = seq->first->start_index;
@@ -1307,7 +1305,7 @@ cvSeqInsert( CvSeq *seq, int before_index, const void *element )
                 block = prev_block;
 
                 /* Check that we don't fall into an infinite loop: */
-                assert( block != seq->first->prev );
+                CV_Assert( block != seq->first->prev );
             }
 
             before_index = (before_index - block->start_index + delta_index) * elem_size;
@@ -1346,7 +1344,7 @@ cvSeqInsert( CvSeq *seq, int before_index, const void *element )
                 block = next_block;
 
                 /* Check that we don't fall into an infinite loop: */
-                assert( block != seq->first );
+                CV_Assert( block != seq->first );
             }
 
             before_index = (before_index - block->start_index + delta_index) * elem_size;
@@ -1502,7 +1500,7 @@ cvSeqPushMulti( CvSeq *seq, const void *_elements, int count, int front )
                 icvGrowSeq( seq, 1 );
 
                 block = seq->first;
-                assert( block->start_index > 0 );
+                CV_Assert( block->start_index > 0 );
             }
 
             delta = MIN( block->start_index, count );
@@ -1543,7 +1541,7 @@ cvSeqPopMulti( CvSeq *seq, void *_elements, int count, int front )
             int delta = seq->first->prev->count;
 
             delta = MIN( delta, count );
-            assert( delta > 0 );
+            CV_Assert( delta > 0 );
 
             seq->first->prev->count -= delta;
             seq->total -= delta;
@@ -1568,7 +1566,7 @@ cvSeqPopMulti( CvSeq *seq, void *_elements, int count, int front )
             int delta = seq->first->count;
 
             delta = MIN( delta, count );
-            assert( delta > 0 );
+            CV_Assert( delta > 0 );
 
             seq->first->count -= delta;
             seq->total -= delta;
@@ -2418,7 +2416,7 @@ cvSeqPartition( const CvSeq* seq, CvMemStorage* storage, CvSeq** labels,
                         root2->rank += root->rank == root2->rank;
                         root = root2;
                     }
-                    assert( root->parent == 0 );
+                    CV_Assert( root->parent == 0 );
 
                     // Compress path from node2 to the root:
                     while( node2->parent )
@@ -2521,7 +2519,7 @@ cvSetAdd( CvSet* set, CvSetElem* element, CvSetElem** inserted_element )
             ((CvSetElem*)ptr)->flags = count | CV_SET_ELEM_FREE_FLAG;
             ((CvSetElem*)ptr)->next_free = (CvSetElem*)(ptr + elem_size);
         }
-        assert( count <= CV_SET_ELEM_IDX_MASK+1 );
+        CV_Assert( count <= CV_SET_ELEM_IDX_MASK+1 );
         ((CvSetElem*)(ptr - elem_size))->next_free = 0;
         set->first->prev->count += count - set->total;
         set->total = count;
@@ -2720,7 +2718,7 @@ cvFindGraphEdgeByPtr( const CvGraph* graph,
     for( ; edge; edge = edge->next[ofs] )
     {
         ofs = start_vtx == edge->vtx[1];
-        assert( ofs == 1 || start_vtx == edge->vtx[0] );
+        CV_Assert( ofs == 1 || start_vtx == edge->vtx[0] );
         if( edge->vtx[1] == end_vtx )
             break;
     }
@@ -2784,7 +2782,7 @@ cvGraphAddEdgeByPtr( CvGraph* graph,
         "vertex pointers coincide (or set to NULL)" );
 
     edge = (CvGraphEdge*)cvSetNew( (CvSet*)(graph->edges) );
-    assert( edge->flags >= 0 );
+    CV_Assert( edge->flags >= 0 );
 
     edge->vtx[0] = start_vtx;
     edge->vtx[1] = end_vtx;
@@ -2861,7 +2859,7 @@ cvGraphRemoveEdgeByPtr( CvGraph* graph, CvGraphVtx* start_vtx, CvGraphVtx* end_v
          prev_ofs = ofs, prev_edge = edge, edge = edge->next[ofs] )
     {
         ofs = start_vtx == edge->vtx[1];
-        assert( ofs == 1 || start_vtx == edge->vtx[0] );
+        CV_Assert( ofs == 1 || start_vtx == edge->vtx[0] );
         if( edge->vtx[1] == end_vtx )
             break;
     }
@@ -2879,7 +2877,7 @@ cvGraphRemoveEdgeByPtr( CvGraph* graph, CvGraphVtx* start_vtx, CvGraphVtx* end_v
          prev_ofs = ofs, prev_edge = edge, edge = edge->next[ofs] )
     {
         ofs = end_vtx == edge->vtx[1];
-        assert( ofs == 1 || end_vtx == edge->vtx[0] );
+        CV_Assert( ofs == 1 || end_vtx == edge->vtx[0] );
         if( edge->vtx[0] == start_vtx )
             break;
     }
@@ -3396,7 +3394,7 @@ cvInsertNodeIntoTree( void* _node, void* _parent, void* _frame )
     node->v_prev = _parent != _frame ? parent : 0;
     node->h_next = parent->v_next;
 
-    assert( parent->v_next != node );
+    CV_Assert( parent->v_next != node );
 
     if( parent->v_next )
         parent->v_next->h_prev = node;
@@ -3430,7 +3428,7 @@ cvRemoveNodeFromTree( void* _node, void* _frame )
 
         if( parent )
         {
-            assert( parent->v_next == node );
+            CV_Assert( parent->v_next == node );
             parent->v_next = node->h_next;
         }
     }

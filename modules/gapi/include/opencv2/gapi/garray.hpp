@@ -236,7 +236,7 @@ namespace detail
     class VectorRef
     {
         std::shared_ptr<BasicVectorRef> m_ref;
-        cv::detail::OpaqueKind m_kind;
+        cv::detail::OpaqueKind m_kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
         template<typename T> inline void check() const
         {
@@ -381,7 +381,7 @@ public:
      *
      * @note The value of `cv::GArray<T>` may be overwritten by assigning some
      * other `cv::GArray<T>` to the object using `operator=` -- on the
-     * assigment, the old association or value is discarded.
+     * assignment, the old association or value is discarded.
      *
      * @param v a std::vector<T> to associate with this
      * `cv::GArray<T>` object. Vector data is copied into the

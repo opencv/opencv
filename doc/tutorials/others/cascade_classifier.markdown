@@ -96,7 +96,7 @@ more details or check out the references in the Additional Resources section.
 Haar-cascade Detection in OpenCV
 --------------------------------
 OpenCV provides a training method (see @ref tutorial_traincascade) or pretrained models, that can be read using the @ref cv::CascadeClassifier::load method.
-The pretrained models are located in the data folder in the OpenCV installation or can be found [here](https://github.com/opencv/opencv/tree/master/data).
+The pretrained models are located in the data folder in the OpenCV installation or can be found [here](https://github.com/opencv/opencv/tree/4.x/data).
 
 The following code example will use pretrained Haar cascade models to detect faces and eyes in an image.
 First, a @ref cv::CascadeClassifier is created and the necessary XML file is loaded using the @ref cv::CascadeClassifier::load method.
@@ -104,19 +104,19 @@ Afterwards, the detection is done using the @ref cv::CascadeClassifier::detectMu
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp)
 @include samples/cpp/tutorial_code/objectDetection/objectDetection.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/objectDetection/cascade_classifier/ObjectDetectionDemo.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/objectDetection/cascade_classifier/ObjectDetectionDemo.java)
 @include samples/java/tutorial_code/objectDetection/cascade_classifier/ObjectDetectionDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/objectDetection/cascade_classifier/objectDetection.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/objectDetection/cascade_classifier/objectDetection.py)
 @include samples/python/tutorial_code/objectDetection/cascade_classifier/objectDetection.py
 @end_toggle
 

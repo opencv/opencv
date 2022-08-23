@@ -9,60 +9,23 @@
 #include "logger.hpp"
 
 #ifdef HAVE_ONEVPL
-
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
+#include "streaming/onevpl/onevpl_export.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
 
-VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surface):
-    parent_surface_ptr(surface) {
-
-    GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
-    parent_surface_ptr->obtain_lock();
-
-    GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
-                            ", w: " << parent_surface_ptr->get_info().Width <<
-                            ", h: " << parent_surface_ptr->get_info().Height <<
-                            ", p: " << parent_surface_ptr->get_data().Pitch);
+VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surface,
+                                                 SessionHandle assoc_handle):
+    BaseFrameAdapter(surface, assoc_handle, AccelType::HOST) {
 }
 
-VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
-
-    // Each VPLMediaFrameCPUAdapter releases mfx surface counter
-    // The last VPLMediaFrameCPUAdapter releases shared Surface pointer
-    // The last surface pointer releases workspace memory
-    parent_surface_ptr->release_lock();
-}
-
-cv::GFrameDesc VPLMediaFrameCPUAdapter::meta() const {
-    GFrameDesc desc;
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    switch(info.FourCC)
-    {
-        case MFX_FOURCC_I420:
-            throw std::runtime_error("MediaFrame doesn't support I420 type");
-            break;
-        case MFX_FOURCC_NV12:
-            desc.fmt = MediaFormat::NV12;
-            break;
-        default:
-            throw std::runtime_error("MediaFrame unknown 'fmt' type: " + std::to_string(info.FourCC));
-    }
-
-    desc.size = cv::Size{info.Width, info.Height};
-    return desc;
-}
+VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() = default;
 
 MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
-    const Surface::data_t& data = parent_surface_ptr->get_data();
-    const Surface::info_t& info = parent_surface_ptr->get_info();
+    const Surface::data_t& data = get_surface()->get_data();
+    const Surface::info_t& info = get_surface()->get_info();
     using stride_t = typename cv::MediaFrame::View::Strides::value_type;
 
     stride_t pitch = static_cast<stride_t>(data.Pitch);
@@ -101,7 +64,7 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
 }
 
 cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
-    GAPI_Assert("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
+    throw std::runtime_error("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
     return {};
 }
 

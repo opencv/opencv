@@ -252,8 +252,8 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
             fs << "}";
         }
         // save current stage
-        char buf[10];
-        sprintf(buf, "%s%d", "stage", i );
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%s%d", "stage", i );
         string stageFilename = dirName + buf + ".xml";
         FileStorage fs( stageFilename, FileStorage::WRITE );
         if ( !fs.isOpened() )
@@ -369,7 +369,7 @@ void CvCascadeClassifier::writeStages( FileStorage &fs, const Mat& featureMap ) 
     for( vector< Ptr<CvCascadeBoost> >::const_iterator it = stageClassifiers.begin();
         it != stageClassifiers.end();++it, ++i )
     {
-        sprintf( cmnt, "stage %d", i );
+        snprintf( cmnt, sizeof(cmnt), "stage %d", i );
         cvWriteComment( fs.fs, cmnt, 0 );
         fs << "{";
         (*it)->write( fs, featureMap );
@@ -460,7 +460,7 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
         for( size_t si = 0; si < stageClassifiers.size(); si++ )
         {
             fs << "{"; //stage
-            /*sprintf( buf, "stage %d", si );
+            /*snprintf( buf, sizeof(buf), "stage %d", si );
             CV_CALL( cvWriteComment( fs, buf, 1 ) );*/
             weak = stageClassifiers[si]->get_weak_predictors();
             fs << ICV_HAAR_TREES_NAME << "[";
@@ -471,7 +471,7 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
                 CvCascadeBoostTree* tree = *((CvCascadeBoostTree**) cvGetSeqElem( weak, wi ));
 
                 fs << "[";
-                /*sprintf( buf, "tree %d", wi );
+                /*snprintf( buf, sizeof(buf), "tree %d", wi );
                 CV_CALL( cvWriteComment( fs, buf, 1 ) );*/
 
                 const CvDTreeNode* tempNode;
@@ -535,10 +535,10 @@ bool CvCascadeClassifier::load( const string cascadeDirName )
     featureEvaluator->init( featureParams, numPos + numNeg, cascadeParams.winSize );
     fs.release();
 
-    char buf[16] = {0};
+    char buf[5+10+1] = {0};
     for ( int si = 0; si < numStages; si++ )
     {
-        sprintf( buf, "%s%d", "stage", si);
+        snprintf( buf, sizeof(buf), "%s%d", "stage", si);
         fs.open( cascadeDirName + buf + ".xml", FileStorage::READ );
         node = fs.getFirstTopLevelNode();
         if ( !fs.isOpened() )

@@ -62,7 +62,6 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
-#include <assert.h>
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
@@ -366,7 +365,12 @@ extern CV_EXPORTS
 bool __termination;  // skip some cleanups, because process is terminating
                      // (for example, if ExitProcess() was already called)
 
+CV_EXPORTS
 cv::Mutex& getInitializationMutex();
+
+/// @brief Returns timestamp in nanoseconds since program launch
+int64 getTimestampNS();
+
 
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
     static TYPE* const instance = INITIALIZER; \

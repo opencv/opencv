@@ -142,7 +142,7 @@ Graph execution is triggered in two ways:
 
 Both methods are polimorphic and take a variadic number of arguments,
 with validity checks performed in runtime. If a number, shapes, and
-formats of passed data objects differ from expected, a run-time
+formats of passed data objects differ from expected, a runtime
 exception is thrown. G-API also provides _typed_ wrappers to move
 these checks to the compile time -- see `cv::GComputationT<>`.
 

@@ -55,7 +55,7 @@
 #  ifdef _MSC_VER
 #    include <nmmintrin.h>
 #    if defined(_M_X64)
-#      define CV_POPCNT_U64 _mm_popcnt_u64
+#      define CV_POPCNT_U64 (int)_mm_popcnt_u64
 #    endif
 #    define CV_POPCNT_U32 _mm_popcnt_u32
 #  else
@@ -78,6 +78,10 @@
 #    include <immintrin.h>
 #  endif
 #  define CV_FP16 1
+#endif
+#ifdef CV_CPU_COMPILE_NEON_DOTPROD
+#  include <arm_neon.h>
+#  define CV_NEON_DOT 1
 #endif
 #ifdef CV_CPU_COMPILE_AVX2
 #  include <immintrin.h>

@@ -14,12 +14,17 @@ ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX)
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
-if(HAVE_TENGINE)
-  add_definitions(-DHAVE_TENGINE=1)
-endif()
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
+endif()
+
+if(WITH_WEBNN AND HAVE_WEBNN)
+  add_definitions(-DHAVE_WEBNN=1)
+endif()
+
+if(HAVE_TIMVX)
+  add_definitions(-DHAVE_TIMVX=1)
 endif()
 
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
@@ -44,12 +49,23 @@ endif()
 
 ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
+if(HAVE_TENGINE)
+  add_definitions(-DHAVE_TENGINE=1)
+endif()
+
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
                                        /wd4305 /wd4127 /wd4100 /wd4512 /wd4125 /wd4389 /wd4510 /wd4610
                                        /wd4702 /wd4456 /wd4457 /wd4065 /wd4310 /wd4661 /wd4506
   )
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017, .pb.cc generated files
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4309)  # 'static_cast': truncation of constant value
+  endif()
+  if(MSVC_VERSION LESS 1920)  # <MSVS2019, .pb.cc generated files
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4189)  # local variable is initialized but not referenced
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4592)  # symbol will be dynamically initialized (implementation limitation)
+  endif()
 else()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
                                        -Wunused-parameter -Wsign-compare
@@ -134,6 +150,21 @@ if(HAVE_TENGINE)
 	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
+if(HAVE_TIMVX)
+    list(APPEND include_dirs ${TIMVX_INCLUDE_DIR})
+    list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
+endif()
+
+set(webnn_srcs "")
+if(NOT EMSCRIPTEN)
+  if(HAVE_WEBNN)
+    list(APPEND include_dirs ${WEBNN_HEADER_DIRS})
+    list(APPEND include_dirs ${WEBNN_INCLUDE_DIRS})
+    list(APPEND libs -Wl,--whole-archive ${WEBNN_LIBRARIES} -Wl,--no-whole-archive)
+    list(APPEND webnn_srcs $ENV{WEBNN_NATIVE_DIR}/gen/src/webnn/webnn_cpp.cpp)
+  endif()
+endif()
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
@@ -143,27 +174,16 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 set(dnn_runtime_libs "")
-if(INF_ENGINE_TARGET)
-  set(use_nn_builder OFF)
-  if(TARGET inference_engine_nn_builder OR # custom imported target
-     TARGET IE::inference_engine_nn_builder OR # default imported target via InferenceEngineConfig.cmake
-     INF_ENGINE_RELEASE VERSION_LESS "2020000000") # compatibility with older versions on IE
-    set(use_nn_builder ON)
+
+ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
+if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
+  if(NOT HAVE_OPENVINO AND NOT HAVE_NGRAPH)
+    message(FATAL_ERROR "DNN: Inference Engine is not supported without enabled 'nGraph'. Check build configuration.")
   endif()
-  ocv_option(OPENCV_DNN_IE_NN_BUILDER_2019 "Build with Inference Engine NN Builder API support" ${use_nn_builder})  # future: NOT HAVE_NGRAPH
-  if(OPENCV_DNN_IE_NN_BUILDER_2019)
-    message(STATUS "DNN: Enabling Inference Engine NN Builder API support")
-    add_definitions(-DHAVE_DNN_IE_NN_BUILDER_2019=1)
-  endif()
-  list(APPEND dnn_runtime_libs ${INF_ENGINE_TARGET})
-endif()
-if(HAVE_NGRAPH)
-  message(STATUS "DNN: Enabling Inference Engine nGraph API support")
-  add_definitions(-DHAVE_DNN_NGRAPH)
-  list(APPEND dnn_runtime_libs ngraph::ngraph)
+  list(APPEND dnn_runtime_libs ocv.3rdparty.openvino)
 endif()
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs})
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
@@ -171,7 +191,7 @@ ocv_add_accuracy_tests(${dnn_runtime_libs})
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
-ocv_add_perf_tests(${INF_ENGINE_TARGET}
+ocv_add_perf_tests(${dnn_runtime_libs}
     FILES test_common "${CMAKE_CURRENT_LIST_DIR}/test/test_common.hpp" "${CMAKE_CURRENT_LIST_DIR}/test/test_common.impl.hpp"
     FILES Src ${perf_srcs}
     FILES Include ${perf_hdrs}

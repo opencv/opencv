@@ -719,7 +719,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
   v2i64 _c;                                     \
   _b = __builtin_msa_hadd_s_w(__a, __a);        \
   _c = __builtin_msa_hadd_s_d(_b, _b);          \
-  (int16_t)(_c[0] + _c[1]);                     \
+  (int32_t)(_c[0] + _c[1]);                     \
 })
 
 
@@ -736,7 +736,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 ({                                             \
   v2i64 _b;                                    \
   _b = __builtin_msa_hadd_s_d(__a, __a);       \
-  (int32_t)(_b[0] + _b[1]);                    \
+  (int64_t)(_b[0] + _b[1]);                    \
 })
 
 /* uint8_t msa_sum_u8(v16u8 __a)*/
@@ -756,7 +756,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
   v4i32 _c32;                                    \
   _b16 = __builtin_msa_hadd_s_h(__a, __a);       \
   _c32 = __builtin_msa_hadd_s_w(_b16, _b16);         \
-  (int8_t)msa_sum_s32(_c32);                     \
+  (int16_t)msa_sum_s32(_c32);                     \
 })
 
 /* float msa_sum_f32(v4f32 __a)*/

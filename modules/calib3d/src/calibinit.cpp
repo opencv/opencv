@@ -1232,7 +1232,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         centers[i] = ci;
         center += ci;
     }
-    center.x *= (1.0f / quad_count);
+    center *= (1.0f / quad_count);
 
     // If we still have more quadrangles than we should,
     // we try to eliminate bad ones based on minimizing the bounding box.
@@ -1256,7 +1256,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
             Mat points(1, quad_count, CV_32FC2, &centers[0]);
             cv::convexHull(points, hull, true);
             centers[skip] = temp;
-            double hull_area = contourArea(hull, true);
+            double hull_area = contourArea(hull, false);
 
             // remember smallest box area
             if (hull_area < min_box_area)
@@ -1298,6 +1298,7 @@ int ChessBoardDetector::cleanFoundConnectedQuads(std::vector<ChessBoardQuad*>& q
         quad_group[min_box_area_index] = quad_group[quad_count];
         centers[min_box_area_index] = centers[quad_count];
     }
+    quad_group.resize(quad_count);
 
     return quad_count;
 }
@@ -1469,7 +1470,7 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
     first = below; // remember the first corner in the next row
 
     // find and store the first row (or column)
-    for (int j = 1; ; ++j)
+    while( 1 )
     {
         right->row = 0;
         out_corners.push_back(right);

@@ -245,10 +245,20 @@ class ClassProp(object):
             self.readonly = False
 
 class ClassInfo(object):
-    def __init__(self, name, decl=None):
+    def __init__(self, name, decl=None, codegen=None):
+        # Scope name can be a module or other class e.g. cv::SimpleBlobDetector::Params
+        scope_name, self.original_name = name.rsplit(".", 1)
+
+        # In case scope refer the outer class exported with different name
+        if codegen:
+            scope_name = codegen.get_export_scope_name(scope_name)
+        self.scope_name = re.sub(r"^cv\.?", "", scope_name)
+
+        self.export_name = self.original_name
+
+        self.class_id = normalize_class_name(name)
+
         self.cname = name.replace(".", "::")
-        self.name = self.wname = normalize_class_name(name)
-        self.sname = name[name.rfind('.') + 1:]
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
@@ -258,12 +268,11 @@ class ClassInfo(object):
         self.consts = {}
         self.base = None
         self.constructor = None
-        customname = False
 
         if decl:
             bases = decl[1].split()[1:]
             if len(bases) > 1:
-                print("Note: Class %s has more than 1 base class (not supported by Python C extensions)" % (self.name,))
+                print("Note: Class %s has more than 1 base class (not supported by Python C extensions)" % (self.cname,))
                 print("      Bases: ", " ".join(bases))
                 print("      Only the first base class will be used")
                 #return sys.exit(-1)
@@ -277,21 +286,43 @@ class ClassInfo(object):
 
             for m in decl[2]:
                 if m.startswith("="):
-                    wname = m[1:]
-                    npos = name.rfind('.')
-                    if npos >= 0:
-                        self.wname = normalize_class_name(name[:npos] + '.' + wname)
-                    else:
-                        self.wname = wname
-                    customname = True
+                    # Aliasing only affects the exported class name, not class identifier
+                    self.export_name = m[1:]
                 elif m == "/Map":
                     self.ismap = True
                 elif m == "/Simple":
                     self.issimple = True
             self.props = [ClassProp(p) for p in decl[3]]
 
-        if not customname and self.wname.startswith("Cv"):
-            self.wname = self.wname[2:]
+        if not self.has_export_alias and self.original_name.startswith("Cv"):
+            self.export_name = self.export_name[2:]
+
+    @property
+    def wname(self):
+        if len(self.scope_name) > 0:
+            return self.scope_name.replace(".", "_") + "_" + self.export_name
+
+        return self.export_name
+
+    @property
+    def name(self):
+        return self.class_id
+
+    @property
+    def full_scope_name(self):
+        return "cv." + self.scope_name if len(self.scope_name) else "cv"
+
+    @property
+    def full_export_name(self):
+        return self.full_scope_name + "." + self.export_name
+
+    @property
+    def full_original_name(self):
+        return self.full_scope_name + "." + self.original_name
+
+    @property
+    def has_export_alias(self):
+        return self.export_name != self.original_name
 
     def gen_map_code(self, codegen):
         all_classes = codegen.classes
@@ -345,9 +376,11 @@ class ClassInfo(object):
             methods_code.write(m.gen_code(codegen))
             methods_inits.write(m.get_tab_entry())
 
-        code = gen_template_type_impl.substitute(name=self.name, wname=self.wname, cname=self.cname,
-            getset_code=getset_code.getvalue(), getset_inits=getset_inits.getvalue(),
-            methods_code=methods_code.getvalue(), methods_inits=methods_inits.getvalue())
+        code = gen_template_type_impl.substitute(name=self.name,
+                                                 getset_code=getset_code.getvalue(),
+                                                 getset_inits=getset_inits.getvalue(),
+                                                 methods_code=methods_code.getvalue(),
+                                                 methods_inits=methods_inits.getvalue())
 
         return code
 
@@ -361,13 +394,15 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return "CVPY_TYPE({}, {}, {}, {}, {}, {});\n".format(
-            self.wname,
-            self.name,
+        return 'CVPY_TYPE({}, {}, {}, {}, {}, {}, "{}");\n'.format(
+            self.export_name,
+            self.class_id,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
-            self.sname if self.issimple else "Ptr",
+            self.original_name if self.issimple else "Ptr",
             baseptr,
-            constructor_name
+            constructor_name,
+            # Leading dot is required to provide correct class naming
+            "." + self.scope_name if len(self.scope_name) > 0 else self.scope_name
         )
 
 
@@ -823,12 +858,12 @@ class FuncInfo(object):
             classinfo = all_classes[self.classname]
             #if dump: pprint(vars(classinfo))
             if self.isconstructor:
-                py_name = 'cv.' + classinfo.wname
-            elif self.is_static:
-                py_name = '.'.join([self.namespace, classinfo.sname + '_' + self.variants[0].wname])
+                py_name = classinfo.full_export_name
             else:
+                py_name = classinfo.full_export_name + "." + self.variants[0].wname
+
+            if not self.is_static:
                 cname = classinfo.cname + '::' + cname
-                py_name = 'cv.' + classinfo.wname + '.' + self.variants[0].wname
         else:
             py_name = '.'.join([self.namespace, self.variants[0].wname])
         #if dump: print(cname + " => " + py_name)
@@ -870,7 +905,7 @@ class PythonWrapperGenerator(object):
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
-        classinfo = ClassInfo(name, decl)
+        classinfo = ClassInfo(name, decl, self)
         classinfo.decl_idx = self.class_idx
         self.class_idx += 1
 
@@ -880,15 +915,29 @@ class PythonWrapperGenerator(object):
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
 
-        # Add Class to json file.
-        namespace, classes, name = self.split_decl_name(name)
+        namespace, _, _ = self.split_decl_name(name)
         namespace = '.'.join(namespace)
-        name = '_'.join(classes+[name])
+        # Registering a namespace if it is not already handled or
+        # doesn't have anything except classes defined in it
+        self.namespaces.setdefault(namespace, Namespace())
 
-        py_name = 'cv.' + classinfo.wname  # use wrapper name
+        # Add Class to json file.
+        py_name = classinfo.full_export_name  # use wrapper name
         py_signatures = self.py_signatures.setdefault(classinfo.cname, [])
         py_signatures.append(dict(name=py_name))
         #print('class: ' + classinfo.cname + " => " + py_name)
+
+    def get_export_scope_name(self, original_scope_name):
+        # Outer classes should be registered before their content - inner classes in this case
+        class_scope = self.classes.get(normalize_class_name(original_scope_name), None)
+
+        if class_scope:
+            return class_scope.full_export_name
+
+        # Otherwise it is a namespace.
+        # If something is messed up at this point - it will be revelead during
+        # library import
+        return original_scope_name
 
     def split_decl_name(self, name):
         chunks = name.split('.')
@@ -979,6 +1028,7 @@ class PythonWrapperGenerator(object):
                 w_classes.append(w_classname)
             g_wname = "_".join(w_classes+[name])
             func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
+            # Exports static function with internal name (backward compatibility)
             func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace_str, False))
             func.add_variant(decl, isphantom)
             if g_wname != g_name:  # TODO OpenCV 5.0
@@ -1142,10 +1192,25 @@ class PythonWrapperGenerator(object):
         classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]
         classlist1.sort()
 
+        published_types = set()  # ensure toposort with base classes
         for decl_idx, name, classinfo in classlist1:
             if classinfo.ismap:
                 continue
-            self.code_type_publish.write(classinfo.gen_def(self))
+            def _registerType(classinfo):
+                if classinfo.decl_idx in published_types:
+                    #print(classinfo.decl_idx, classinfo.name, ' - already published')
+                    return
+                published_types.add(classinfo.decl_idx)
+
+                if classinfo.base and classinfo.base in self.classes:
+                    base_classinfo = self.classes[classinfo.base]
+                    #print(classinfo.decl_idx, classinfo.name, ' - request publishing of base type ', base_classinfo.decl_idx, base_classinfo.name)
+                    _registerType(base_classinfo)
+
+                #print(classinfo.decl_idx, classinfo.name, ' - published!')
+                self.code_type_publish.write(classinfo.gen_def(self))
+
+            _registerType(classinfo)
 
 
         # step 3: generate the code for all the global functions

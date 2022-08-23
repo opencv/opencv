@@ -153,6 +153,17 @@ static bool isRaiseError()
 }
 #endif
 
+static void onOpenCLKernelBuildError()
+{
+    // NB: no need to cache this value
+    bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_ABORT_ON_BUILD_ERROR", false);
+    if (value)
+    {
+        fprintf(stderr, "Abort on OpenCL kernel build failure!\n");
+        abort();
+    }
+}
+
 #if CV_OPENCL_TRACE_CHECK
 static inline
 void traceOpenCLCheck(cl_int status, const char* message)
@@ -220,7 +231,7 @@ static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = utils::getConfigura
 #endif
 );
 
-static const String getBuildExtraOptions()
+static String getBuildExtraOptions()
 {
     static String param_buildExtraOptions;
     static bool initialized = false;
@@ -4592,6 +4603,12 @@ struct Program::Impl
                 {
                     CV_OCL_DBG_CHECK(clReleaseProgram(handle));
                     handle = NULL;
+                }
+                if (retval != CL_SUCCESS &&
+                    sourceName_ != "dummy"  // used for testing of compilation flags
+                )
+                {
+                    onOpenCLKernelBuildError();
                 }
             }
 #if CV_OPENCL_VALIDATE_BINARY_PROGRAMS

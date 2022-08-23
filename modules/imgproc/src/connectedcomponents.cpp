@@ -287,9 +287,898 @@ namespace cv{
         return LT((y /*+ 1*/) / 2) * LT((w + 1) / 2) + 1;
     }
 
-    //Implementation of Spaghetti algorithm, as described in "Spaghetti Labeling: Directed Acyclic Graphs for Block-Based
-    //Connected Components Labeling" (only for 8-connectivity)
-    //Federico Bolelli et. al.
+    //Parallel implementation of Spaghetti algorithm, described in "Spaghetti Labeling: Directed Acyclic Graphs
+    //for Block-Based Connected Components Labeling", IEEE Transactions on Image Processing, Federico Bolelli et. al.
+    //Parallelization method described in "Two More Strategies to Speed Up Connected Components Labeling Algorithms",
+    //Image Analysis and Processing - ICIAP 2017, Federico Bolelli et. al.
+    template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
+    struct LabelingBolelliParallel {
+
+        class FirstScan : public cv::ParallelLoopBody {
+        private:
+            const cv::Mat& img_;
+            cv::Mat& imgLabels_;
+            LabelT* P_;
+            int* chunksSizeAndLabels_;
+
+        public:
+            FirstScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, int* chunksSizeAndLabels)
+                : img_(img), imgLabels_(imgLabels), P_(P), chunksSizeAndLabels_(chunksSizeAndLabels) {}
+
+            FirstScan& operator=(const FirstScan&) { return *this; }
+
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
+            {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
+
+                const int startR = range.start;
+                chunksSizeAndLabels_[startR] = range.end;
+
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(startR, imgLabels_.cols);
+
+                const LabelT firstLabel = label;
+                //const int h = img_.rows;
+                const int w = img_.cols;
+                const int stripe_h = range.end - range.start;
+                //const int limitLine = startR + 1;
+
+                const int e_rows = stripe_h & -2;
+                const bool o_rows = stripe_h % 2 == 1;
+                //const int e_cols = w & -2;
+                //const bool o_cols = w % 2 == 1;
+
+                {
+#define CONDITION_B img_row_prev_prev[c-1]>0
+#define CONDITION_C img_row_prev_prev[c]>0
+#define CONDITION_D img_row_prev_prev[c+1]>0
+#define CONDITION_E img_row_prev_prev[c+2]>0
+
+#define CONDITION_G img_row_prev[c-2]>0
+#define CONDITION_H img_row_prev[c-1]>0
+#define CONDITION_I img_row_prev[c]>0
+#define CONDITION_J img_row_prev[c+1]>0
+#define CONDITION_K img_row_prev[c+2]>0
+
+#define CONDITION_M img_row[c-2]>0
+#define CONDITION_N img_row[c-1]>0
+#define CONDITION_O img_row[c]>0
+#define CONDITION_P img_row[c+1]>0
+
+#define CONDITION_R img_row_fol[c-1]>0
+#define CONDITION_S img_row_fol[c]>0
+#define CONDITION_T img_row_fol[c+1]>0
+
+                    // Action 1: No action
+#define ACTION_1 img_labels_row[c] = 0;
+// Action 2: New label (the block has foreground pixels and is not connected to anything else)
+#define ACTION_2 img_labels_row[c] = label; \
+                    P_[label] = label; \
+                    label = label + 1;
+//Action 3: Assign label of block P
+#define ACTION_3 img_labels_row[c] = img_labels_row_prev_prev[c - 2];
+// Action 4: Assign label of block Q
+#define ACTION_4 img_labels_row[c] = img_labels_row_prev_prev[c];
+// Action 5: Assign label of block R
+#define ACTION_5 img_labels_row[c] = img_labels_row_prev_prev[c + 2];
+// Action 6: Assign label of block S
+#define ACTION_6 img_labels_row[c] = img_labels_row[c - 2];
+// Action 7: Merge labels of block P and Q
+#define ACTION_7 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]);
+//Action 8: Merge labels of block P and R
+#define ACTION_8 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c + 2]);
+// Action 9 Merge labels of block P and S
+#define ACTION_9 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row[c - 2]);
+// Action 10 Merge labels of block Q and R
+#define ACTION_10 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c], img_labels_row_prev_prev[c + 2]);
+// Action 11: Merge labels of block Q and S
+#define ACTION_11 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c], img_labels_row[c - 2]);
+// Action 12: Merge labels of block R and S
+#define ACTION_12 img_labels_row[c] = set_union(P_, img_labels_row_prev_prev[c + 2], img_labels_row[c - 2]);
+// Action 13: Merge labels of block P, Q and R
+#define ACTION_13 img_labels_row[c] = set_union(P_, set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]), img_labels_row_prev_prev[c + 2]);
+// Action 14: Merge labels of block P, Q and S
+#define ACTION_14 img_labels_row[c] = set_union(P_, set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]), img_labels_row[c - 2]);
+//Action 15: Merge labels of block P, R and S
+#define ACTION_15 img_labels_row[c] = set_union(P_, set_union(P_, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c + 2]), img_labels_row[c - 2]);
+//Action 16: labels of block Q, R and S
+#define ACTION_16 img_labels_row[c] = set_union(P_, set_union(P_, img_labels_row_prev_prev[c], img_labels_row_prev_prev[c + 2]), img_labels_row[c - 2]);
+                }
+                // The following Directed Rooted Acyclic Graphs (DAGs) allow to choose which action to
+                // perform, checking as few conditions as possible. Special DAGs are used for the first/last
+                // line of the image and for single line images. Actions: the blocks label are provisionally
+                // stored in the top left pixel of the block in the labels image.
+                if (stripe_h == 1) {
+                    // Single line
+                    const PixelT* const img_row = img_.ptr<PixelT>(startR);
+                    LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(startR);
+                    int c = -2;
+#include "ccl_bolelli_forest_singleline.inc.hpp"
+                }
+                else {
+                    // More than one line
+
+                    // First couple of lines
+                    {
+                        const PixelT* const img_row = img_.ptr<PixelT>(startR);
+                        const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                        LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(startR);
+                        int c = -2;
+#include "ccl_bolelli_forest_firstline.inc.hpp"
+                    }
+
+                    // Every other line but the last one if image has an odd number of rows
+                    for (int r = startR + 2; r < startR + e_rows; r += 2) {
+                        // Get rows pointer
+                        const PixelT* const img_row = img_.ptr<PixelT>(r);
+                        const PixelT* const img_row_prev = (PixelT*)(((char*)img_row) - img_.step.p[0]);
+                        const PixelT* const img_row_prev_prev = (PixelT*)(((char*)img_row_prev) - img_.step.p[0]);
+                        const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                        LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(r);
+                        LabelT* const img_labels_row_prev_prev = (LabelT*)(((char*)img_labels_row) - imgLabels_.step.p[0] - imgLabels_.step.p[0]);
+
+                        int c = -2;
+                        goto tree_0;
+
+#include "ccl_bolelli_forest.inc.hpp"
+                    }
+
+                    // Last line (in case the rows are odd)
+                    if (o_rows) {
+                        const int r = startR + stripe_h - 1;
+                        const PixelT* const img_row = img_.ptr<PixelT>(r);
+                        const PixelT* const img_row_prev = (PixelT*)(((char*)img_row) - img_.step.p[0]);
+                        const PixelT* const img_row_prev_prev = (PixelT*)(((char*)img_row_prev) - img_.step.p[0]);
+                        LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(r);
+                        LabelT* const img_labels_row_prev_prev = (LabelT*)(((char*)img_labels_row) - imgLabels_.step.p[0] - imgLabels_.step.p[0]);
+                        int c = -2;
+#include "ccl_bolelli_forest_lastline.inc.hpp"
+                    }
+                }
+
+                //write in the follower memory location
+                chunksSizeAndLabels_[startR + 1] = label - firstLabel;
+
+                // undef conditions and actions
+                {
+#undef ACTION_1
+#undef ACTION_2
+#undef ACTION_3
+#undef ACTION_4
+#undef ACTION_5
+#undef ACTION_6
+#undef ACTION_7
+#undef ACTION_8
+#undef ACTION_9
+#undef ACTION_10
+#undef ACTION_11
+#undef ACTION_12
+#undef ACTION_13
+#undef ACTION_14
+#undef ACTION_15
+#undef ACTION_16
+
+#undef CONDITION_B
+#undef CONDITION_C
+#undef CONDITION_D
+#undef CONDITION_E
+
+#undef CONDITION_G
+#undef CONDITION_H
+#undef CONDITION_I
+#undef CONDITION_J
+#undef CONDITION_K
+
+#undef CONDITION_M
+#undef CONDITION_N
+#undef CONDITION_O
+#undef CONDITION_P
+
+#undef CONDITION_R
+#undef CONDITION_S
+#undef CONDITION_T
+                }
+            }
+        };
+
+        class SecondScan : public cv::ParallelLoopBody {
+        private:
+            const cv::Mat& img_;
+            cv::Mat& imgLabels_;
+            LabelT* P_;
+            StatsOp& sop_;
+            StatsOp* sopArray_;
+            LabelT& nLabels_;
+
+        public:
+            SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, StatsOp& sop, StatsOp* sopArray, LabelT& nLabels)
+                : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels) {}
+
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
+            {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
+                int r = range.start;
+
+                const int rowBegin = r;
+                const int rowEnd = range.end;
+
+                if (rowBegin > 0) {
+                    sopArray_[rowBegin].initElement(nLabels_);
+                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+
+                    if (imgLabels_.rows & 1) {
+                        if (imgLabels_.cols & 1) {
+                            //Case 1: both rows and cols odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sopArray_[rowBegin](r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sopArray_[rowBegin](r, c, 0);
+                                        }
+                                        if (c + 1 < imgLabels_.cols) {
+                                            if (img_row[c + 1] > 0) {
+                                                imgLabels_row[c + 1] = iLabel;
+                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row[c + 1] = 0;
+                                                sopArray_[rowBegin](r, c + 1, 0);
+                                            }
+                                            if (r + 1 < imgLabels_.rows) {
+                                                if (img_row_fol[c] > 0) {
+                                                    imgLabels_row_fol[c] = iLabel;
+                                                    sopArray_[rowBegin](r + 1, c, iLabel);
+                                                }
+                                                else {
+                                                    imgLabels_row_fol[c] = 0;
+                                                    sopArray_[rowBegin](r + 1, c, 0);
+                                                }
+                                                if (img_row_fol[c + 1] > 0) {
+                                                    imgLabels_row_fol[c + 1] = iLabel;
+                                                    sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                                }
+                                                else {
+                                                    imgLabels_row_fol[c + 1] = 0;
+                                                    sopArray_[rowBegin](r + 1, c + 1, 0);
+                                                }
+                                            }
+                                        }
+                                        else if (r + 1 < imgLabels_.rows) {
+                                            if (img_row_fol[c] > 0) {
+                                                imgLabels_row_fol[c] = iLabel;
+                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c] = 0;
+                                                sopArray_[rowBegin](r + 1, c, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        sopArray_[rowBegin](r, c, 0);
+                                        if (c + 1 < imgLabels_.cols) {
+                                            imgLabels_row[c + 1] = 0;
+                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            if (r + 1 < imgLabels_.rows) {
+                                                imgLabels_row_fol[c] = 0;
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sopArray_[rowBegin](r + 1, c, 0);
+                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            }
+                                        }
+                                        else if (r + 1 < imgLabels_.rows) {
+                                            imgLabels_row_fol[c] = 0;
+                                            sopArray_[rowBegin](r + 1, c, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }//END Case 1
+                        else {
+                            //Case 2: only rows odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sopArray_[rowBegin](r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sopArray_[rowBegin](r, c, 0);
+                                        }
+                                        if (img_row[c + 1] > 0) {
+                                            imgLabels_row[c + 1] = iLabel;
+                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c + 1] = 0;
+                                            sopArray_[rowBegin](r, c + 1, 0);
+                                        }
+                                        if (r + 1 < imgLabels_.rows) {
+                                            if (img_row_fol[c] > 0) {
+                                                imgLabels_row_fol[c] = iLabel;
+                                                sopArray_[rowBegin](r + 1, c, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c] = 0;
+                                                sopArray_[rowBegin](r + 1, c, 0);
+                                            }
+                                            if (img_row_fol[c + 1] > 0) {
+                                                imgLabels_row_fol[c + 1] = iLabel;
+                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row[c + 1] = 0;
+                                        sopArray_[rowBegin](r, c, 0);
+                                        sopArray_[rowBegin](r, c + 1, 0);
+                                        if (r + 1 < imgLabels_.rows) {
+                                            imgLabels_row_fol[c] = 0;
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sopArray_[rowBegin](r + 1, c, 0);
+                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }// END Case 2
+                    }
+                    else {
+                        if (imgLabels_.cols & 1) {
+                            //Case 3: only cols odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sopArray_[rowBegin](r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sopArray_[rowBegin](r, c, 0);
+                                        }
+                                        if (img_row_fol[c] > 0) {
+                                            imgLabels_row_fol[c] = iLabel;
+                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c] = 0;
+                                            sopArray_[rowBegin](r + 1, c, 0);
+                                        }
+                                        if (c + 1 < imgLabels_.cols) {
+                                            if (img_row[c + 1] > 0) {
+                                                imgLabels_row[c + 1] = iLabel;
+                                                sopArray_[rowBegin](r, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row[c + 1] = 0;
+                                                sopArray_[rowBegin](r, c + 1, 0);
+                                            }
+                                            if (img_row_fol[c + 1] > 0) {
+                                                imgLabels_row_fol[c + 1] = iLabel;
+                                                sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sopArray_[rowBegin](r + 1, c + 1, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row_fol[c] = 0;
+                                        sopArray_[rowBegin](r, c, 0);
+                                        sopArray_[rowBegin](r + 1, c, 0);
+                                        if (c + 1 < imgLabels_.cols) {
+                                            imgLabels_row[c + 1] = 0;
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sopArray_[rowBegin](r, c + 1, 0);
+                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }// END case 3
+                        else {
+                            //Case 4: nothing odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sopArray_[rowBegin](r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sopArray_[rowBegin](r, c, 0);
+                                        }
+                                        if (img_row[c + 1] > 0) {
+                                            imgLabels_row[c + 1] = iLabel;
+                                            sopArray_[rowBegin](r, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c + 1] = 0;
+                                            sopArray_[rowBegin](r, c + 1, 0);
+                                        }
+                                        if (img_row_fol[c] > 0) {
+                                            imgLabels_row_fol[c] = iLabel;
+                                            sopArray_[rowBegin](r + 1, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c] = 0;
+                                            sopArray_[rowBegin](r + 1, c, 0);
+                                        }
+                                        if (img_row_fol[c + 1] > 0) {
+                                            imgLabels_row_fol[c + 1] = iLabel;
+                                            sopArray_[rowBegin](r + 1, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sopArray_[rowBegin](r + 1, c + 1, 0);
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row[c + 1] = 0;
+                                        imgLabels_row_fol[c] = 0;
+                                        imgLabels_row_fol[c + 1] = 0;
+                                        sopArray_[rowBegin](r, c, 0);
+                                        sopArray_[rowBegin](r, c + 1, 0);
+                                        sopArray_[rowBegin](r + 1, c, 0);
+                                        sopArray_[rowBegin](r + 1, c + 1, 0);
+                                    }
+                                }
+                            }//END case 4
+                        }
+                    }
+                }
+                else {
+                    //the first thread uses sop in order to make less merges
+                    sop_.setNextLoc(rowEnd);
+                    if (imgLabels_.rows & 1) {
+                        if (imgLabels_.cols & 1) {
+                            //Case 1: both rows and cols odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sop_(r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sop_(r, c, 0);
+                                        }
+                                        if (c + 1 < imgLabels_.cols) {
+                                            if (img_row[c + 1] > 0) {
+                                                imgLabels_row[c + 1] = iLabel;
+                                                sop_(r, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row[c + 1] = 0;
+                                                sop_(r, c + 1, 0);
+                                            }
+                                            if (r + 1 < imgLabels_.rows) {
+                                                if (img_row_fol[c] > 0) {
+                                                    imgLabels_row_fol[c] = iLabel;
+                                                    sop_(r + 1, c, iLabel);
+                                                }
+                                                else {
+                                                    imgLabels_row_fol[c] = 0;
+                                                    sop_(r + 1, c, 0);
+                                                }
+                                                if (img_row_fol[c + 1] > 0) {
+                                                    imgLabels_row_fol[c + 1] = iLabel;
+                                                    sop_(r + 1, c + 1, iLabel);
+                                                }
+                                                else {
+                                                    imgLabels_row_fol[c + 1] = 0;
+                                                    sop_(r + 1, c + 1, 0);
+                                                }
+                                            }
+                                        }
+                                        else if (r + 1 < imgLabels_.rows) {
+                                            if (img_row_fol[c] > 0) {
+                                                imgLabels_row_fol[c] = iLabel;
+                                                sop_(r + 1, c, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c] = 0;
+                                                sop_(r + 1, c, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        sop_(r, c, 0);
+                                        if (c + 1 < imgLabels_.cols) {
+                                            imgLabels_row[c + 1] = 0;
+                                            sop_(r, c + 1, 0);
+                                            if (r + 1 < imgLabels_.rows) {
+                                                imgLabels_row_fol[c] = 0;
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sop_(r + 1, c, 0);
+                                                sop_(r + 1, c + 1, 0);
+                                            }
+                                        }
+                                        else if (r + 1 < imgLabels_.rows) {
+                                            imgLabels_row_fol[c] = 0;
+                                            sop_(r + 1, c, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }//END Case 1
+                        else {
+                            //Case 2: only rows odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sop_(r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sop_(r, c, 0);
+                                        }
+                                        if (img_row[c + 1] > 0) {
+                                            imgLabels_row[c + 1] = iLabel;
+                                            sop_(r, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c + 1] = 0;
+                                            sop_(r, c + 1, 0);
+                                        }
+                                        if (r + 1 < imgLabels_.rows) {
+                                            if (img_row_fol[c] > 0) {
+                                                imgLabels_row_fol[c] = iLabel;
+                                                sop_(r + 1, c, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c] = 0;
+                                                sop_(r + 1, c, 0);
+                                            }
+                                            if (img_row_fol[c + 1] > 0) {
+                                                imgLabels_row_fol[c + 1] = iLabel;
+                                                sop_(r + 1, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sop_(r + 1, c + 1, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row[c + 1] = 0;
+                                        sop_(r, c, 0);
+                                        sop_(r, c + 1, 0);
+                                        if (r + 1 < imgLabels_.rows) {
+                                            imgLabels_row_fol[c] = 0;
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sop_(r + 1, c, 0);
+                                            sop_(r + 1, c + 1, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }// END Case 2
+                    }
+                    else {
+                        if (imgLabels_.cols & 1) {
+                            //Case 3: only cols odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sop_(r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sop_(r, c, 0);
+                                        }
+                                        if (img_row_fol[c] > 0) {
+                                            imgLabels_row_fol[c] = iLabel;
+                                            sop_(r + 1, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c] = 0;
+                                            sop_(r + 1, c, 0);
+                                        }
+                                        if (c + 1 < imgLabels_.cols) {
+                                            if (img_row[c + 1] > 0) {
+                                                imgLabels_row[c + 1] = iLabel;
+                                                sop_(r, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row[c + 1] = 0;
+                                                sop_(r, c + 1, 0);
+                                            }
+                                            if (img_row_fol[c + 1] > 0) {
+                                                imgLabels_row_fol[c + 1] = iLabel;
+                                                sop_(r + 1, c + 1, iLabel);
+                                            }
+                                            else {
+                                                imgLabels_row_fol[c + 1] = 0;
+                                                sop_(r + 1, c + 1, 0);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row_fol[c] = 0;
+                                        sop_(r, c, 0);
+                                        sop_(r + 1, c, 0);
+                                        if (c + 1 < imgLabels_.cols) {
+                                            imgLabels_row[c + 1] = 0;
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sop_(r, c + 1, 0);
+                                            sop_(r + 1, c + 1, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }// END case 3
+                        else {
+                            //Case 4: nothing odd
+                            for (; r < rowEnd; r += 2) {
+                                // Get rows pointer
+                                const PixelT* const img_row = img_.ptr<PixelT>(r);
+                                const PixelT* const img_row_fol = (PixelT*)(((char*)img_row) + img_.step.p[0]);
+                                LabelT* const imgLabels_row = imgLabels_.ptr<LabelT>(r);
+                                LabelT* const imgLabels_row_fol = (LabelT*)(((char*)imgLabels_row) + imgLabels_.step.p[0]);
+                                // Get rows pointer
+                                for (int c = 0; c < imgLabels_.cols; c += 2) {
+                                    LabelT iLabel = imgLabels_row[c];
+                                    if (iLabel > 0) {
+                                        iLabel = P_[iLabel];
+                                        if (img_row[c] > 0) {
+                                            imgLabels_row[c] = iLabel;
+                                            sop_(r, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c] = 0;
+                                            sop_(r, c, 0);
+                                        }
+                                        if (img_row[c + 1] > 0) {
+                                            imgLabels_row[c + 1] = iLabel;
+                                            sop_(r, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row[c + 1] = 0;
+                                            sop_(r, c + 1, 0);
+                                        }
+                                        if (img_row_fol[c] > 0) {
+                                            imgLabels_row_fol[c] = iLabel;
+                                            sop_(r + 1, c, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c] = 0;
+                                            sop_(r + 1, c, 0);
+                                        }
+                                        if (img_row_fol[c + 1] > 0) {
+                                            imgLabels_row_fol[c + 1] = iLabel;
+                                            sop_(r + 1, c + 1, iLabel);
+                                        }
+                                        else {
+                                            imgLabels_row_fol[c + 1] = 0;
+                                            sop_(r + 1, c + 1, 0);
+                                        }
+                                    }
+                                    else {
+                                        imgLabels_row[c] = 0;
+                                        imgLabels_row[c + 1] = 0;
+                                        imgLabels_row_fol[c] = 0;
+                                        imgLabels_row_fol[c + 1] = 0;
+                                        sop_(r, c, 0);
+                                        sop_(r, c + 1, 0);
+                                        sop_(r + 1, c, 0);
+                                        sop_(r + 1, c + 1, 0);
+                                    }
+                                }
+                            }//END case 4
+                        }
+                    }
+                }
+            }
+        };
+
+        inline static
+            void mergeLabels(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, int* chunksSizeAndLabels) {
+
+            // Merge Mask
+            // +---+---+---+
+            // |P -|Q -|R -|
+            // |- -|- -|- -|
+            // +---+---+---+
+            //     |X -|
+            //     |- -|
+            //     +---+
+            const int w = imgLabels.cols, h = imgLabels.rows;
+
+            for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]) {
+
+                LabelT* const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                LabelT* const  imgLabels_row_prev_prev = (LabelT*)(((char*)imgLabels_row) - imgLabels.step.p[0] - imgLabels.step.p[0]);
+                const PixelT* const img_row = img.ptr<PixelT>(r);
+                const PixelT* const img_row_prev = (PixelT*)(((char*)img_row) - img.step.p[0]);
+
+                for (int c = 0; c < w; c += 2) {
+
+#define condition_x imgLabels_row[c] > 0
+#define condition_pppr c > 1 && imgLabels_row_prev_prev[c - 2] > 0
+#define condition_qppr imgLabels_row_prev_prev[c] > 0
+#define condition_qppr1 c < w - 1
+#define condition_qppr2 c < w
+#define condition_rppr c < w - 2 && imgLabels_row_prev_prev[c + 2] > 0
+
+                    if (condition_x) {
+                        if (condition_pppr) {
+                            //check in img
+                            if (img_row[c] > 0 && img_row_prev[c - 1] > 0)
+                                //assign the same label
+                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c - 2], imgLabels_row[c]);
+                        }
+                        if (condition_qppr) {
+                            if (condition_qppr1) {
+                                if ((img_row[c] > 0 && img_row_prev[c] > 0) || (img_row[c + 1] > 0 && img_row_prev[c] > 0) ||
+                                    (img_row[c] > 0 && img_row_prev[c + 1] > 0) || (img_row[c + 1] > 0 && img_row_prev[c + 1] > 0)) {
+                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c]);
+                                }
+                            }
+                            else /*if (condition_qppr2)*/ {
+                                if (img_row[c] > 0 && img_row_prev[c] > 0)
+                                    imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c], imgLabels_row[c]);
+                            }
+                        }
+                        if (condition_rppr) {
+                            if (img_row[c + 1] > 0 && img_row_prev[c + 2] > 0)
+                                imgLabels_row[c] = set_union(P, imgLabels_row_prev_prev[c + 2], imgLabels_row[c]);
+                        }
+                    }
+
+#undef condition_x
+#undef condition_pppr
+#undef condition_qppr
+#undef condition_qppr1
+#undef condition_qppr2
+#undef condition_rppr
+
+                }
+            }
+        }
+
+        LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop) {
+            CV_Assert(img.rows == imgLabels.rows);
+            CV_Assert(img.cols == imgLabels.cols);
+            CV_Assert(connectivity == 8);
+
+            const int h = img.rows;
+            const int w = img.cols;
+
+            //A quick and dirty upper bound for the maximum number of labels.
+            //Following formula comes from the fact that a 2x2 block in 8-connectivity case
+            //can never have more than 1 new label and 1 label for background.
+            //Worst case image example pattern:
+            //1 0 1 0 1...
+            //0 0 0 0 0...
+            //1 0 1 0 1...
+            //............
+            const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
+
+            //Array used to store info and labeled pixel by each thread.
+            //Different threads affect different memory location of chunksSizeAndLabels
+            const int chunksSizeAndLabelsSize = roundUp(h, 2);
+            std::vector<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
+
+            //Tree of labels
+            std::vector<LabelT> P(Plength, 0);
+            //First label is for background
+            //P[0] = 0;
+
+            cv::Range range2(0, divUp(h, 2));
+            const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads() * 4));
+
+            //First scan
+            cv::parallel_for_(range2, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
+
+            //merge labels of different chunks
+            mergeLabels(img, imgLabels, P.data(), chunksSizeAndLabels.data());
+
+            LabelT nLabels = 1;
+            for (int i = 0; i < h; i = chunksSizeAndLabels[i]) {
+                CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
+                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+            }
+
+            //Array for statistics data
+            std::vector<StatsOp> sopArray(h);
+            sop.init(nLabels);
+
+            //Second scan
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
+
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            sop.finish();
+
+            return nLabels;
+        }
+    };//End struct LabelingBolelliParallel
+
+    //Implementation of Spaghetti algorithm, as described in "Spaghetti Labeling: Directed Acyclic Graphs
+    //for Block-Based Connected Components Labeling", IEEE Transactions on Image Processing, Federico Bolelli et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingBolelli
     {
@@ -644,9 +1533,440 @@ namespace cv{
         }//End function LabelingBolelli operator()
     };//End struct LabelingBolelli
 
+    //Parallel implementation of Spaghetti algorithm for 4-way connectivity, generated with the tool described in "One DAG to
+    //Rule Them All", IEEE Transactions on Pattern Analysis and Machine Intelligence, Federico Bolelli et. al.
+    //Parallelization method described in "Two More Strategies to Speed Up Connected Components Labeling Algorithms",
+    //Image Analysis and Processing - ICIAP 2017, Federico Bolelli et. al.
+    template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
+    struct LabelingBolelli4CParallel {
+
+        class FirstScan : public cv::ParallelLoopBody {
+            const cv::Mat& img_;
+            cv::Mat& imgLabels_;
+            LabelT* P_;
+            int* chunksSizeAndLabels_;
+
+        public:
+            FirstScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT* P, int* chunksSizeAndLabels)
+                : img_(img), imgLabels_(imgLabels), P_(P), chunksSizeAndLabels_(chunksSizeAndLabels) {}
+
+            FirstScan& operator=(const FirstScan&) { return *this; }
+
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
+            {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
+                int r = range.start;
+
+                chunksSizeAndLabels_[r] = range.end;
+
+                LabelT label = stripeFirstLabel4Connectivity<LabelT>(r, imgLabels_.cols);
+
+                const LabelT firstLabel = label;
+                const int w = img_.cols;
+                const int startR = r;
+
+                {
+#define CONDITION_Q img_row_prev[c] > 0
+#define CONDITION_S img_row[c - 1] > 0
+#define CONDITION_X img_row[c] > 0
+
+#define ACTION_1 img_labels_row[c] = 0;
+#define ACTION_2 img_labels_row[c] = label; \
+                    P_[label] = label; \
+                    label = label + 1;
+#define ACTION_3 img_labels_row[c] = img_labels_row_prev[c]; // x <- q
+#define ACTION_4 img_labels_row[c] = img_labels_row[c - 1]; // x <- s
+#define ACTION_5 img_labels_row[c] = set_union(P_, img_labels_row_prev[c], img_labels_row[c - 1]); // x <- q + s
+                }
+
+                // First row
+                {
+                    const PixelT* const img_row = img_.ptr<PixelT>(r);
+                    LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(r);
+                    int c = -1;
+
+                    goto fl_tree_0;
+                fl_tree_0: if ((c += 1) >= w) goto fl_break;
+                    if (CONDITION_X) {
+                        ACTION_2
+                            goto fl_tree_1;
+                    }
+                    else {
+                        ACTION_1
+                            goto fl_tree_0;
+                    }
+                fl_tree_1: if ((c += 1) >= w) goto fl_break;
+                    if (CONDITION_X) {
+                        ACTION_4
+                            goto fl_tree_1;
+                    }
+                    else {
+                        ACTION_1
+                            goto fl_tree_0;
+                    }
+                fl_break:;
+                }
+
+                // Other rows
+                ++r;
+                for (; r < range.end; ++r) {
+                    // Get row pointers
+                    const PixelT* const img_row = img_.ptr<PixelT>(r);
+                    const PixelT* const img_row_prev = (PixelT*)(((char*)img_row) - img_.step.p[0]);
+                    LabelT* const img_labels_row = imgLabels_.ptr<LabelT>(r);
+                    LabelT* const img_labels_row_prev = (LabelT*)(((char*)img_labels_row) - imgLabels_.step.p[0]);
+                    int c = -1;
+
+                    goto cl_tree_0;
+                cl_tree_0: if ((c += 1) >= w) goto cl_break;
+                    if (CONDITION_X) {
+                        if (CONDITION_Q) {
+                            ACTION_3
+                                goto cl_tree_1;
+                        }
+                        else {
+                            ACTION_2
+                                goto cl_tree_1;
+                        }
+                    }
+                    else {
+                        ACTION_1
+                            goto cl_tree_0;
+                    }
+                cl_tree_1: if ((c += 1) >= w) goto cl_break;
+                    if (CONDITION_X) {
+                        if (CONDITION_Q) {
+                            ACTION_5
+                                goto cl_tree_1;
+                        }
+                        else {
+                            ACTION_4
+                                goto cl_tree_1;
+                        }
+                    }
+                    else {
+                        ACTION_1
+                            goto cl_tree_0;
+                    }
+                cl_break:;
+                }
+
+                // undef conditions and actions
+                {
+#undef ACTION_1
+#undef ACTION_2
+#undef ACTION_3
+#undef ACTION_4
+#undef ACTION_5
+
+#undef CONDITION_Q
+#undef CONDITION_S
+#undef CONDITION_X
+                }
+
+                //write in the following memory location
+                chunksSizeAndLabels_[startR + 1] = label - firstLabel;
+            }
+        };
+
+        class SecondScan : public cv::ParallelLoopBody {
+            cv::Mat& imgLabels_;
+            const LabelT* P_;
+            StatsOp& sop_;
+            StatsOp* sopArray_;
+            LabelT& nLabels_;
+        public:
+            SecondScan(cv::Mat& imgLabels, const LabelT* P, StatsOp& sop, StatsOp* sopArray, LabelT& nLabels)
+                : imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels) {}
+
+            SecondScan& operator=(const SecondScan&) { return *this; }
+
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
+            {
+                const Range range(range2.start * 2, std::min(range2.end * 2, imgLabels_.rows));
+                int r = range.start;
+                const int rowBegin = r;
+                const int rowEnd = range.end;
+
+                if (rowBegin > 0) {
+                    sopArray_[rowBegin].initElement(nLabels_);
+                    sopArray_[rowBegin].setNextLoc(rowEnd); //_nextLoc = rowEnd;
+
+                    for (; r < rowEnd; ++r) {
+                        LabelT* img_row_start = imgLabels_.ptr<LabelT>(r);
+                        LabelT* const img_row_end = img_row_start + imgLabels_.cols;
+                        for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c) {
+                            *img_row_start = P_[*img_row_start];
+                            sopArray_[rowBegin](r, c, *img_row_start);
+                        }
+                    }
+                }
+                else {
+                    //the first thread uses sop in order to make less merges
+                    sop_.setNextLoc(rowEnd);
+                    for (; r < rowEnd; ++r) {
+                        LabelT* img_row_start = imgLabels_.ptr<LabelT>(r);
+                        LabelT* const img_row_end = img_row_start + imgLabels_.cols;
+                        for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c) {
+                            *img_row_start = P_[*img_row_start];
+                            sop_(r, c, *img_row_start);
+                        }
+                    }
+                }
+            }
+        };
+
+        inline static
+            void mergeLabels(cv::Mat& imgLabels, LabelT* P, const int* chunksSizeAndLabels) {
+
+            // Merge Mask
+            // +-+-+-+
+            // |-|q|-|
+            // +-+-+-+
+            //   |x|
+            //   +-+
+            const int w = imgLabels.cols, h = imgLabels.rows;
+
+            for (int r = chunksSizeAndLabels[0]; r < h; r = chunksSizeAndLabels[r]) {
+
+                LabelT* const imgLabels_row = imgLabels.ptr<LabelT>(r);
+                LabelT* const imgLabels_row_prev = (LabelT*)(((char*)imgLabels_row) - imgLabels.step.p[0]);
+
+                for (int c = 0; c < w; ++c) {
+
+#define condition_q imgLabels_row_prev[c] > 0
+#define condition_x imgLabels_row[c] > 0
+
+                    if (condition_x) {
+                        if (condition_q) {
+                            //merge of two label
+                            imgLabels_row[c] = set_union(P, imgLabels_row_prev[c], imgLabels_row[c]);
+                        }
+                    }
+                }
+            }
+#undef condition_q
+#undef condition_x
+        }
+
+        LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop) {
+            CV_Assert(img.rows == imgLabels.rows);
+            CV_Assert(img.cols == imgLabels.cols);
+            CV_Assert(connectivity == 4);
+
+            const int h = img.rows;
+            const int w = img.cols;
+
+            //A quick and dirty upper bound for the maximum number of labels.
+            //Following formula comes from the fact that a 2x2 block in 4-way connectivity
+            //labeling can never have more than 2 new labels and 1 label for background.
+            //Worst case image example pattern:
+            //1 0 1 0 1...
+            //0 1 0 1 0...
+            //1 0 1 0 1...
+            //............
+            const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
+
+            //Array used to store info and labeled pixel by each thread.
+            //Different threads affect different memory location of chunksSizeAndLabels
+            std::vector<int> chunksSizeAndLabels(roundUp(h, 2));
+
+            //Tree of labels
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT* P = P_.data();
+            //First label is for background
+            //P[0] = 0;
+
+            cv::Range range2(0, divUp(h, 2));
+            const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads() * 4));
+
+            LabelT nLabels = 1;
+
+            //First scan
+            cv::parallel_for_(range2, FirstScan(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
+
+            //merge labels of different chunks
+            mergeLabels(imgLabels, P, chunksSizeAndLabels.data());
+
+            for (int i = 0; i < h; i = chunksSizeAndLabels[i]) {
+                flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+            }
+
+            //Array for statistics dataof threads
+            std::vector<StatsOp> sopArray(h);
+
+            sop.init(nLabels);
+            //Second scan
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
+            sop.finish();
+
+            return nLabels;
+        }
+    };//End struct LabelingBolelli4CParallel
+
+    //Implementation of Spaghetti algorithm for 4-way connectivity, generated with the tool described in "One DAG to
+    //Rule Them All", IEEE Transactions on Pattern Analysis and Machine Intelligence, Federico Bolelli et. al.
+    template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
+    struct LabelingBolelli4C
+    {
+        LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop)
+        {
+            CV_Assert(img.rows == imgLabels.rows);
+            CV_Assert(img.cols == imgLabels.cols);
+            CV_Assert(connectivity == 4);
+
+            const int h = img.rows;
+            const int w = img.cols;
+
+            // A quick and dirty upper bound for the maximum number of labels.
+            // Following formula comes from the fact that a 2x2 block in 4-connectivity case
+            // can never have more than 2 new labels and 1 label for background.
+            // Worst case image example pattern:
+            // 1 0 1 0 1...
+            // 0 1 0 1 0...
+            // 1 0 1 0 1...
+            // ............
+            const size_t Plength = size_t((size_t(h) * size_t(w) + 1) / 2) + 1;
+
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT* P = P_.data();
+            P[0] = 0;
+            LabelT lunique = 1;
+
+            // First scan
+
+            // We work with the 4-conn Rosenfeld mask
+            //   +-+
+            //   |q|
+            // +-+-+
+            // |s|x|
+            // +-+-+
+
+            // A bunch of defines is used to check if the pixels are foreground
+            // and to define actions to be performed
+            {
+
+#define CONDITION_Q img_row_prev[c] > 0
+#define CONDITION_S img_row[c - 1] > 0
+#define CONDITION_X img_row[c] > 0
+
+#define ACTION_1 img_labels_row[c] = 0;
+#define ACTION_2 img_labels_row[c] = lunique; \
+                                     P[lunique] = lunique;        \
+                                     lunique = lunique + 1; // new label
+#define ACTION_3 img_labels_row[c] = img_labels_row_prev[c]; // x <- q
+#define ACTION_4 img_labels_row[c] = img_labels_row[c - 1]; // x <- s
+#define ACTION_5 img_labels_row[c] = set_union(P, img_labels_row_prev[c], img_labels_row[c - 1]); // x <- q + s
+            }
+
+            // First row
+            {
+                const PixelT* const img_row = img.ptr<PixelT>(0);
+                LabelT* const img_labels_row = imgLabels.ptr<LabelT>(0);
+                int c = -1;
+
+                goto fl_tree_0;
+            fl_tree_0: if ((c += 1) >= w) goto fl_break;
+                if (CONDITION_X) {
+                    ACTION_2
+                        goto fl_tree_1;
+                }
+                else {
+                    ACTION_1
+                        goto fl_tree_0;
+                }
+            fl_tree_1: if ((c += 1) >= w) goto fl_break;
+                if (CONDITION_X) {
+                    ACTION_4
+                        goto fl_tree_1;
+                }
+                else {
+                    ACTION_1
+                        goto fl_tree_0;
+                }
+            fl_break:;
+            }
+
+
+            // Other rows
+            for (int r = 1; r < h; ++r) {
+                // Get row pointers
+                const PixelT* const img_row = img.ptr<PixelT>(r);
+                const PixelT* const img_row_prev = (PixelT*)(((char*)img_row) - img.step.p[0]);
+                LabelT* const img_labels_row = imgLabels.ptr<LabelT>(r);
+                LabelT* const img_labels_row_prev = (LabelT*)(((char*)img_labels_row) - imgLabels.step.p[0]);
+                int c = -1;
+
+                goto cl_tree_0;
+            cl_tree_0: if ((c += 1) >= w) goto cl_break;
+                if (CONDITION_X) {
+                    if (CONDITION_Q) {
+                        ACTION_3
+                            goto cl_tree_1;
+                    }
+                    else {
+                        ACTION_2
+                            goto cl_tree_1;
+                    }
+                }
+                else {
+                    ACTION_1
+                        goto cl_tree_0;
+                }
+            cl_tree_1: if ((c += 1) >= w) goto cl_break;
+                if (CONDITION_X) {
+                    if (CONDITION_Q) {
+                        ACTION_5
+                            goto cl_tree_1;
+                    }
+                    else {
+                        ACTION_4
+                            goto cl_tree_1;
+                    }
+                }
+                else {
+                    ACTION_1
+                        goto cl_tree_0;
+                }
+            cl_break:;
+            }
+
+            // undef conditions and actions
+            {
+#undef ACTION_1
+#undef ACTION_2
+#undef ACTION_3
+#undef ACTION_4
+#undef ACTION_5
+
+#undef CONDITION_Q
+#undef CONDITION_S
+#undef CONDITION_X
+            }
+
+        // Second scan + analysis
+            LabelT nLabels = flattenL(P, lunique);
+            sop.init(nLabels);
+
+            for (int r = 0; r < h; ++r) {
+                LabelT* img_row_start = imgLabels.ptr<LabelT>(r);
+                LabelT* const img_row_end = img_row_start + w;
+                for (int c = 0; img_row_start != img_row_end; ++img_row_start, ++c) {
+                    *img_row_start = P[*img_row_start];
+                    sop(r, c, *img_row_start);
+                }
+            }
+
+            sop.finish();
+
+            return nLabels;
+
+        }//End function LabelingBolelli4C operator()
+    };//End struct LabelingBolelli4C
+
     //Parallel implementation of Scan Array-based Union Find (SAUF) algorithm, as described in "Two More Strategies to Speed
-    //Up Connected Components Labeling Algorithms"
-    //Federico Bolelli et. al.
+    //Up Connected Components Labeling Algorithms", Image Analysis and Processing - ICIAP 2017, Federico Bolelli et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWuParallel{
 
@@ -1029,8 +2349,7 @@ namespace cv{
     };//End struct LabelingWuParallel
 
     //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan Array-based Union Find) variant
-    //using decision trees
-    //Kesheng Wu et. al.
+    //using decision trees, Kesheng Wu et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWu{
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
@@ -1199,8 +2518,7 @@ namespace cv{
     };//End struct LabelingWu
 
     //Parallel implementation of BBDT (Block-Based with Decision Tree) algorithm, as described in "Two More Strategies to Speed
-    //Up Connected Components Labeling Algorithms"
-    //Federico Bolelli et. al.
+    //Up Connected Components Labeling Algorithms", Image Analysis and Processing - ICIAP 2017, Federico Bolelli et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGranaParallel{
 
@@ -2960,8 +4278,7 @@ namespace cv{
     };//End struct LabelingGranaParallel
 
     //Implementation of BBDT (Block-Based with Decision Tree) algorithm, as described in "Optimized Block-based Connected
-    //Components Labeling with Decision Trees" (only for 8-connectivity)
-    //Costantino Grana et. al.
+    //Components Labeling with Decision Trees", IEEE Transactions on Image Processing, Costantino Grana et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
@@ -3022,8 +4339,8 @@ namespace cv{
                     // without going outside the image limits.
                     #define condition_b c-1>=0 && r-2>=0 && img_row_prev_prev[c-1]>0
                     #define condition_c r-2>=0 && img_row_prev_prev[c]>0
-                    #define condition_d c+1<w&& r-2>=0 && img_row_prev_prev[c+1]>0
-                    #define condition_e c+2<w  && r-1>=0 && img_row_prev[c-1]>0
+                    #define condition_d c+1<w && r-2>=0 && img_row_prev_prev[c+1]>0
+                    #define condition_e c+2<w && r-2>=0 && img_row_prev_prev[c+2]>0
 
                     #define condition_g c-2>=0 && r-1>=0 && img_row_prev[c-2]>0
                     #define condition_h c-1>=0 && r-1>=0 && img_row_prev[c-1]>0
@@ -4317,7 +5634,7 @@ namespace cv{
         //Run parallel labeling only if the rows of the image are at least twice the number of available threads
         const bool is_parallel = currentParallelFramework != NULL && nThreads > 1 && L.rows / nThreads >= 2;
 
-        if (ccltype == CCL_SAUF || ccltype == CCL_WU || connectivity == 4){
+        if (ccltype == CCL_SAUF || ccltype == CCL_WU || ((ccltype == CCL_BBDT || ccltype == CCL_GRANA) && connectivity == 4)){
             // SAUF algorithm is used
             using connectedcomponents::LabelingWu;
             using connectedcomponents::LabelingWuParallel;
@@ -4337,7 +5654,7 @@ namespace cv{
                     return (int)LabelingWuParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
             }
         }
-        else if ((ccltype == CCL_BBDT || ccltype == CCL_GRANA || ccltype == CCL_DEFAULT) && connectivity == 8){
+        else if ((ccltype == CCL_BBDT || ccltype == CCL_GRANA) && connectivity == 8){
             // BBDT algorithm is used
             using connectedcomponents::LabelingGrana;
             using connectedcomponents::LabelingGranaParallel;
@@ -4357,21 +5674,45 @@ namespace cv{
                     return (int)LabelingGranaParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
             }
         }
-        else if ((ccltype == CCL_SPAGHETTI || ccltype == CCL_BOLELLI) && connectivity == 8) {
+        else if (ccltype == CCL_SPAGHETTI || ccltype == CCL_BOLELLI || ccltype == CCL_DEFAULT) {
             // Spaghetti algorithm is used
-            using connectedcomponents::LabelingBolelli;
-            //using connectedcomponents::LabelingBolelliParallel; // Not implemented
-            //warn if L's depth is not sufficient?
-            if (lDepth == CV_8U) {
-                //Not supported yet
+            if (connectivity == 8) {
+                using connectedcomponents::LabelingBolelli;
+                using connectedcomponents::LabelingBolelliParallel;
+                //warn if L's depth is not sufficient?
+                if (lDepth == CV_8U) {
+                    //Not supported yet
+                }
+                else if (lDepth == CV_16U) {
+                    return (int)LabelingBolelli<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
+                }
+                else if (lDepth == CV_32S) {
+                    //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
+                    //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
+                    if (!is_parallel)
+                        return (int)LabelingBolelli<int, uchar, StatsOp>()(I, L, connectivity, sop);
+                    else
+                        return (int)LabelingBolelliParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
+                }
             }
-            else if (lDepth == CV_16U) {
-                return (int)LabelingBolelli<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
-            }
-            else if (lDepth == CV_32S) {
-                //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
-                //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
-                return (int)LabelingBolelli<int, uchar, StatsOp>()(I, L, connectivity, sop);
+            else {
+                using connectedcomponents::LabelingBolelli4C;
+                using connectedcomponents::LabelingBolelli4CParallel;
+                //warn if L's depth is not sufficient?
+                if (lDepth == CV_8U) {
+                    //Not supported yet
+                }
+                else if (lDepth == CV_16U) {
+                    return (int)LabelingBolelli4C<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
+                }
+                else if (lDepth == CV_32S) {
+                    //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
+                    //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
+                    if (!is_parallel)
+                        return (int)LabelingBolelli4C<int, uchar, StatsOp>()(I, L, connectivity, sop);
+                    else
+                        return (int)LabelingBolelli4CParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
+                }
             }
         }
 

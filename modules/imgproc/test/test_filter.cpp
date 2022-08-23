@@ -992,8 +992,8 @@ static void test_medianFilter( const Mat& src, Mat& dst, int m )
     median_pair *buf0 = &_buf0[0], *buf1 = &_buf1[0];
     int step = (int)(src.step/src.elemSize());
 
-    assert( src.rows == dst.rows + m - 1 && src.cols == dst.cols + m - 1 &&
-            src.type() == dst.type() && src.type() == CV_8UC1 );
+    CV_Assert( src.rows == dst.rows + m - 1 && src.cols == dst.cols + m - 1 &&
+               src.type() == dst.type() && src.type() == CV_8UC1 );
 
     for( i = 0; i < dst.rows; i++ )
     {
@@ -1050,7 +1050,7 @@ static void test_medianFilter( const Mat& src, Mat& dst, int m )
                     *buf1++ = buf0[k++];
                 else
                 {
-                    assert( col_buf[l] < INT_MAX );
+                    CV_Assert( col_buf[l] < INT_MAX );
                     *buf1++ = median_pair(ins_col,col_buf[l++]);
                 }
             }
@@ -1061,7 +1061,7 @@ static void test_medianFilter( const Mat& src, Mat& dst, int m )
             if( del_col < 0 )
                 n += m;
             buf1 -= n;
-            assert( n == m2 );
+            CV_Assert( n == m2 );
             dst1[j] = (uchar)buf1[n/2].val;
             median_pair* tbuf;
             CV_SWAP( buf0, buf1, tbuf );
@@ -2353,6 +2353,17 @@ TEST(Imgproc, filter_empty_src_16857)
     EXPECT_TRUE(src.empty());
     EXPECT_TRUE(dst.empty());
     EXPECT_TRUE(dst2.empty());
+}
+
+TEST(Imgproc_GaussianBlur, regression_11303)
+{
+    cv::Mat dst;
+    int width = 2115;
+    int height = 211;
+    double sigma = 8.64421;
+    cv::Mat src(cv::Size(width, height), CV_32F, 1);
+    cv::GaussianBlur(src, dst, cv::Size(), sigma, sigma);
+    EXPECT_LE(cv::norm(src, dst, NORM_L2), 1e-3);
 }
 
 

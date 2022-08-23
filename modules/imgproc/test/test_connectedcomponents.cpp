@@ -42,7 +42,8 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace {
+namespace opencv_test {
+namespace {
 
 class CV_ConnectedComponentsTest : public cvtest::BaseTest
 {
@@ -61,10 +62,10 @@ void normalizeLabels(Mat1i& imgLabels, int iNumLabels) {
     vector<int> vecNewLabels(iNumLabels + 1, 0);
     int iMaxNewLabel = 0;
 
-    for (int r = 0; r<imgLabels.rows; ++r) {
-        for (int c = 0; c<imgLabels.cols; ++c) {
+    for (int r = 0; r < imgLabels.rows; ++r) {
+        for (int c = 0; c < imgLabels.cols; ++c) {
             int iCurLabel = imgLabels(r, c);
-            if (iCurLabel>0) {
+            if (iCurLabel > 0) {
                 if (vecNewLabels[iCurLabel] == 0) {
                     vecNewLabels[iCurLabel] = ++iMaxNewLabel;
                 }
@@ -74,7 +75,7 @@ void normalizeLabels(Mat1i& imgLabels, int iNumLabels) {
     }
 }
 
-void CV_ConnectedComponentsTest::run( int /* start_from */)
+void CV_ConnectedComponentsTest::run(int /* start_from */)
 {
 
     int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
@@ -91,7 +92,7 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 
     Mat bw = orig > 128;
 
-    for (uint cclt = 0; cclt < sizeof(ccltype)/sizeof(int); ++cclt)
+    for (uint cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt)
     {
 
         Mat1i labelImage;
@@ -100,11 +101,11 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
         normalizeLabels(labelImage, nLabels);
 
         // Validate test results
-        for (int r = 0; r < labelImage.rows; ++r){
-            for (int c = 0; c < labelImage.cols; ++c){
+        for (int r = 0; r < labelImage.rows; ++r) {
+            for (int c = 0; c < labelImage.cols; ++c) {
                 int l = labelImage.at<int>(r, c);
                 bool pass = l >= 0 && l <= nLabels;
-                if (!pass){
+                if (!pass) {
                     ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
                     return;
                 }
@@ -166,12 +167,12 @@ static cv::Mat createCrashMat(int numThreads) {
     for (int s = stripeRange.start; s < stripeRange.end; s++) {
         cv::Range sr(s, s + 1);
         cv::Range r;
-        r.start = (int) (wholeRange.start +
-                         ((uint64) sr.start * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
+        r.start = (int)(wholeRange.start +
+            ((uint64)sr.start * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
         r.end = sr.end >= nstripes ?
-                    wholeRange.end :
-                    (int) (wholeRange.start +
-                           ((uint64) sr.end * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
+            wholeRange.end :
+            (int)(wholeRange.start +
+                ((uint64)sr.end * (wholeRange.end - wholeRange.start) + nstripes / 2) / nstripes);
 
         if (r.start > 0 && r.start % 2 == 1 && r.end % 2 == 0 && r.end >= r.start + 2) {
             bugRange = r;
@@ -203,7 +204,7 @@ static cv::Mat createCrashMat(int numThreads) {
 TEST(Imgproc_ConnectedComponents, parallel_wu_labels)
 {
     cv::Mat mat = createCrashMat(cv::getNumThreads());
-    if(mat.empty()) {
+    if (mat.empty()) {
         return;
     }
 
@@ -213,10 +214,10 @@ TEST(Imgproc_ConnectedComponents, parallel_wu_labels)
     cv::Mat stats;
     cv::Mat centroids;
     int nb = 0;
-    EXPECT_NO_THROW( nb = cv::connectedComponentsWithStats(mat, labels, stats, centroids, 8, CV_32S, cv::CCL_WU) );
+    EXPECT_NO_THROW(nb = cv::connectedComponentsWithStats(mat, labels, stats, centroids, 8, CV_32S, cv::CCL_WU));
 
     int area = 0;
-    for(int i=1; i<nb; ++i) {
+    for (int i = 1; i < nb; ++i) {
         area += stats.at<int32_t>(i, cv::CC_STAT_AREA);
     }
 
@@ -229,7 +230,7 @@ TEST(Imgproc_ConnectedComponents, missing_background_pixels)
     cv::Mat labels;
     cv::Mat stats;
     cv::Mat centroids;
-    EXPECT_NO_THROW(cv::connectedComponentsWithStats(m, labels, stats, centroids, 8, CV_32S, cv::CCL_WU) );
+    EXPECT_NO_THROW(cv::connectedComponentsWithStats(m, labels, stats, centroids, 8, CV_32S, cv::CCL_WU));
     EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_WIDTH), 0);
     EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_HEIGHT), 0);
     EXPECT_EQ(stats.at<int32_t>(0, cv::CC_STAT_LEFT), -1);
@@ -241,21 +242,21 @@ TEST(Imgproc_ConnectedComponents, spaghetti_bbdt_sauf_stats)
 {
     cv::Mat1b img(16, 16);
     img << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
-           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
-           0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
-           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
-           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
-           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-           0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-           0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
-           0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
-           0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
-           0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1,
-           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
+        0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+        0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
+        0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
+        0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
+        0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
 
     cv::Mat1i labels;
     cv::Mat1i stats;
@@ -357,4 +358,447 @@ TEST(Imgproc_ConnectedComponents, spaghetti_bbdt_sauf_stats)
     }
 }
 
-}} // namespace
+TEST(Imgproc_ConnectedComponents, chessboard_even)
+{
+    cv::Size size(16, 16);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    // Chessboard image with even number of rows and cols
+    // Note that this is the maximum number of labels for 4-way connectivity
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+        output_8c <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0,
+            0, 9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16,
+            17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0, 24, 0,
+            0, 25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32,
+            33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38, 0, 39, 0, 40, 0,
+            0, 41, 0, 42, 0, 43, 0, 44, 0, 45, 0, 46, 0, 47, 0, 48,
+            49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0, 56, 0,
+            0, 57, 0, 58, 0, 59, 0, 60, 0, 61, 0, 62, 0, 63, 0, 64,
+            65, 0, 66, 0, 67, 0, 68, 0, 69, 0, 70, 0, 71, 0, 72, 0,
+            0, 73, 0, 74, 0, 75, 0, 76, 0, 77, 0, 78, 0, 79, 0, 80,
+            81, 0, 82, 0, 83, 0, 84, 0, 85, 0, 86, 0, 87, 0, 88, 0,
+            0, 89, 0, 90, 0, 91, 0, 92, 0, 93, 0, 94, 0, 95, 0, 96,
+            97, 0, 98, 0, 99, 0, 100, 0, 101, 0, 102, 0, 103, 0, 104, 0,
+            0, 105, 0, 106, 0, 107, 0, 108, 0, 109, 0, 110, 0, 111, 0, 112,
+            113, 0, 114, 0, 115, 0, 116, 0, 117, 0, 118, 0, 119, 0, 120, 0,
+            0, 121, 0, 122, 0, 123, 0, 124, 0, 125, 0, 126, 0, 127, 0, 128;
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+TEST(Imgproc_ConnectedComponents, chessboard_odd)
+{
+    cv::Size size(15, 15);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    // Chessboard image with odd number of rows and cols
+    // Note that this is the maximum number of labels for 4-way connectivity
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+        output_8c <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8,
+            0, 9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0,
+            16, 0, 17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23,
+            0, 24, 0, 25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0,
+            31, 0, 32, 0, 33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38,
+            0, 39, 0, 40, 0, 41, 0, 42, 0, 43, 0, 44, 0, 45, 0,
+            46, 0, 47, 0, 48, 0, 49, 0, 50, 0, 51, 0, 52, 0, 53,
+            0, 54, 0, 55, 0, 56, 0, 57, 0, 58, 0, 59, 0, 60, 0,
+            61, 0, 62, 0, 63, 0, 64, 0, 65, 0, 66, 0, 67, 0, 68,
+            0, 69, 0, 70, 0, 71, 0, 72, 0, 73, 0, 74, 0, 75, 0,
+            76, 0, 77, 0, 78, 0, 79, 0, 80, 0, 81, 0, 82, 0, 83,
+            0, 84, 0, 85, 0, 86, 0, 87, 0, 88, 0, 89, 0, 90, 0,
+            91, 0, 92, 0, 93, 0, 94, 0, 95, 0, 96, 0, 97, 0, 98,
+            0, 99, 0, 100, 0, 101, 0, 102, 0, 103, 0, 104, 0, 105, 0,
+            106, 0, 107, 0, 108, 0, 109, 0, 110, 0, 111, 0, 112, 0, 113;
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+TEST(Imgproc_ConnectedComponents, maxlabels_8conn_even)
+{
+    cv::Size size(16, 16);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+        output_8c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0, 24, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38, 0, 39, 0, 40, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            41, 0, 42, 0, 43, 0, 44, 0, 45, 0, 46, 0, 47, 0, 48, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0, 56, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            57, 0, 58, 0, 59, 0, 60, 0, 61, 0, 62, 0, 63, 0, 64, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0, 24, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38, 0, 39, 0, 40, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            41, 0, 42, 0, 43, 0, 44, 0, 45, 0, 46, 0, 47, 0, 48, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0, 56, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            57, 0, 58, 0, 59, 0, 60, 0, 61, 0, 62, 0, 63, 0, 64, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+TEST(Imgproc_ConnectedComponents, maxlabels_8conn_odd)
+{
+    cv::Size size(15, 15);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+        output_8c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0, 24,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38, 0, 39, 0, 40,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            41, 0, 42, 0, 43, 0, 44, 0, 45, 0, 46, 0, 47, 0, 48,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0, 56,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            57, 0, 58, 0, 59, 0, 60, 0, 61, 0, 62, 0, 63, 0, 64;
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            9, 0, 10, 0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            17, 0, 18, 0, 19, 0, 20, 0, 21, 0, 22, 0, 23, 0, 24,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            25, 0, 26, 0, 27, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            33, 0, 34, 0, 35, 0, 36, 0, 37, 0, 38, 0, 39, 0, 40,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            41, 0, 42, 0, 43, 0, 44, 0, 45, 0, 46, 0, 47, 0, 48,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0, 56,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            57, 0, 58, 0, 59, 0, 60, 0, 61, 0, 62, 0, 63, 0, 64;
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+TEST(Imgproc_ConnectedComponents, single_row)
+{
+    cv::Size size(1, 15);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+
+        output_8c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8;
+
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8;
+
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+TEST(Imgproc_ConnectedComponents, single_column)
+{
+    cv::Size size(15, 1);
+    cv::Mat1b input(size);
+    cv::Mat1i output_8c(size);
+    cv::Mat1i output_4c(size);
+
+    {
+        input <<
+            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1;
+
+
+        output_8c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8;
+
+
+        output_4c <<
+            1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8;
+
+    }
+
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    cv::Mat1i labels;
+    cv::Mat diff;
+    int nLabels = 0;
+    for (size_t cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 8, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_8c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+
+
+        EXPECT_NO_THROW(nLabels = cv::connectedComponents(input, labels, 4, CV_32S, ccltype[cclt]));
+        normalizeLabels(labels, nLabels);
+
+        diff = labels != output_4c;
+        EXPECT_EQ(cv::countNonZero(diff), 0);
+    }
+
+}
+
+
+TEST(Imgproc_ConnectedComponents, 4conn_regression_21366)
+{
+    Mat src = Mat::zeros(Size(10, 10), CV_8UC1);
+    {
+        Mat labels, stats, centroids;
+        EXPECT_NO_THROW(cv::connectedComponentsWithStats(src, labels, stats, centroids, 4));
+    }
+}
+
+
+
+}
+} // namespace

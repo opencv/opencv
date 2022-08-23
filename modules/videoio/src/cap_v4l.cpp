@@ -220,7 +220,6 @@ make & enjoy!
 
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <limits>
@@ -267,6 +266,13 @@ typedef uint32_t __u32;
 
 #ifndef V4L2_PIX_FMT_Y12
 #define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
+#endif
+
+#ifndef V4L2_PIX_FMT_ABGR32
+#define V4L2_PIX_FMT_ABGR32  v4l2_fourcc('A', 'R', '2', '4')
+#endif
+#ifndef V4L2_PIX_FMT_XBGR32
+#define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
@@ -565,6 +571,8 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_NV21,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_XBGR32,
+            V4L2_PIX_FMT_ABGR32,
             V4L2_PIX_FMT_SN9C10X,
 #ifdef HAVE_JPEG
             V4L2_PIX_FMT_MJPEG,
@@ -633,6 +641,8 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_Y10:
     case V4L2_PIX_FMT_GREY:
     case V4L2_PIX_FMT_BGR24:
+    case V4L2_PIX_FMT_XBGR32:
+    case V4L2_PIX_FMT_ABGR32:
         return true;
     default:
         break;
@@ -652,6 +662,8 @@ void CvCaptureCAM_V4L::v4l2_create_frame()
         switch (palette) {
         case V4L2_PIX_FMT_BGR24:
         case V4L2_PIX_FMT_RGB24:
+        case V4L2_PIX_FMT_XBGR32:
+        case V4L2_PIX_FMT_ABGR32:
             break;
         case V4L2_PIX_FMT_YUYV:
         case V4L2_PIX_FMT_UYVY:
@@ -938,8 +950,8 @@ bool CvCaptureCAM_V4L::read_frame_v4l2()
         return false;
     }
 
-    assert(buf.index < req.count);
-    assert(buffers[buf.index].length == buf.length);
+    CV_Assert(buf.index < req.count);
+    CV_Assert(buffers[buf.index].length == buf.length);
 
     //We shouldn't use this buffer in the queue while not retrieve frame from it.
     buffers[buf.index].buffer = buf;
@@ -1613,6 +1625,10 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     }
     case V4L2_PIX_FMT_GREY:
         cv::cvtColor(cv::Mat(imageSize, CV_8UC1, currentBuffer.start), destination, COLOR_GRAY2BGR);
+        break;
+    case V4L2_PIX_FMT_XBGR32:
+    case V4L2_PIX_FMT_ABGR32:
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC4, currentBuffer.start), destination, COLOR_BGRA2BGR);
         break;
     case V4L2_PIX_FMT_BGR24:
     default:

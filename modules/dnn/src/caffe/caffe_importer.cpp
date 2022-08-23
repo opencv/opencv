@@ -49,16 +49,18 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/reflection.h>
 #include "caffe_io.hpp"
 #endif
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
 
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
-using ::google::protobuf::RepeatedField;
-using ::google::protobuf::RepeatedPtrField;
+using ::google::protobuf::RepeatedFieldRef;
 using ::google::protobuf::Message;
 using ::google::protobuf::Descriptor;
 using ::google::protobuf::FieldDescriptor;
@@ -88,6 +90,8 @@ MatShape parseBlobShape(const caffe::BlobShape& _input_shape)
 
 class CaffeImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     caffe::NetParameter net;
     caffe::NetParameter netBinary;
 
@@ -136,7 +140,7 @@ public:
 
         #define SET_UP_FILED(getter, arrayConstr, gtype)                                    \
             if (isRepeated) {                                                               \
-                const RepeatedField<gtype> &v = refl->GetRepeatedField<gtype>(msg, field);  \
+                const RepeatedFieldRef<gtype> v = refl->GetRepeatedFieldRef<gtype>(msg, field);  \
                 params.set(name, DictValue::arrayConstr(v.begin(), (int)v.size()));                  \
             }                                                                               \
             else {                                                                          \
@@ -168,7 +172,7 @@ public:
             break;
         case FieldDescriptor::CPPTYPE_STRING:
             if (isRepeated) {
-                const RepeatedPtrField<std::string> &v = refl->GetRepeatedPtrField<std::string>(msg, field);
+                const RepeatedFieldRef<std::string> v = refl->GetRepeatedFieldRef<std::string>(msg, field);
                 params.set(name, DictValue::arrayString(v.begin(), (int)v.size()));
             }
             else {

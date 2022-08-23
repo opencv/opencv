@@ -78,7 +78,7 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
 
     auto customKernel  = gapi::kernels<GCPUMinScalar>();
     auto kernels       = gapi::combine(customKernel,
-                                       params.compileArgs[0].get<gapi::GKernelPackage>());
+                                       params.compileArgs[0].get<GKernelPackage>());
     params.compileArgs = compile_args(kernels);
 
     OptFlowLKTestOutput outOCV  { outPtsOCV,  outStatusOCV,  outErrOCV };
@@ -92,8 +92,6 @@ TEST_P(BuildPyr_CalcOptFlow_PipelineTest, AccuracyTest)
 #ifdef HAVE_OPENCV_VIDEO
 TEST_P(BackgroundSubtractorTest, AccuracyTest)
 {
-    initTestDataPath();
-
     cv::gapi::video::BackgroundSubtractorType opType;
     double thr = -1;
     std::tie(opType, thr) = typeAndThreshold;

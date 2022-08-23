@@ -20,6 +20,7 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+#include <opencv2/gapi/streaming/onevpl/accel_types.hpp> // Preproc Dev & Ctx
 
 namespace cv {
 namespace gapi {
@@ -79,6 +80,14 @@ struct ParamDesc {
 
     // NB: An optional config to setup RemoteContext for IE
     cv::util::any context_config;
+
+    // NB: batch_size can't be equal to 1 by default, because some of models
+    // have 2D (Layout::NC) input and if the first dimension not equal to 1
+    // net.setBatchSize(1) will overwrite it.
+    cv::optional<size_t> batch_size;
+
+    cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
+    cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 };
 } // namespace detail
 
@@ -120,6 +129,9 @@ public:
               , {}
               , {}
               , 1u
+              , {}
+              , {}
+              , {}
               , {}} {
     };
 
@@ -141,6 +153,9 @@ public:
               , {}
               , {}
               , 1u
+              , {}
+              , {}
+              , {}
               , {}} {
     };
 
@@ -316,6 +331,26 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the inference batch size.
+
+    The function is used to specify inference batch size.
+    Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1CNNNetwork.html#a8e9d19270a48aab50cb5b1c43eecb8e9 for additional information
+
+    @param size batch size which will be used.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgBatchSize(const size_t size) {
+        desc.batch_size = cv::util::make_optional(size);
+        return *this;
+    }
+
+    Params<Net>& cfgPreprocessingParams(const cv::gapi::wip::onevpl::Device &device,
+                                        const cv::gapi::wip::onevpl::Context &ctx) {
+        desc.vpl_preproc_device = cv::util::make_optional(device);
+        desc.vpl_preproc_ctx = cv::util::make_optional(ctx);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -350,7 +385,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -368,7 +403,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}},
+                {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -432,6 +467,12 @@ public:
     /** @overload */
     Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
+        return *this;
+    }
+
+    /** @see ie::Params::cfgBatchSize */
+    Params& cfgBatchSize(const size_t size) {
+        desc.batch_size = cv::util::make_optional(size);
         return *this;
     }
 

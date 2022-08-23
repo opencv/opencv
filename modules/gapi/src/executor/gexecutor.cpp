@@ -30,10 +30,11 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
     // 2. Put input/output GComputation arguments to the storage
     // 3. For every Island, prepare vectors of input/output parameter descs
-    // 4. Iterate over a list of operations (sorted in the topological order)
-    // 5. For every operation, form a list of input/output data objects
-    // 6. Run GIslandExecutable
-    // 7. writeBack
+    // 4. Ask every GIslandExecutable to prepare its internal states for a new stream
+    // 5. Iterate over a list of operations (sorted in the topological order)
+    // 6. For every operation, form a list of input/output data objects
+    // 7. Run GIslandExecutable
+    // 8. writeBack
 
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
@@ -82,6 +83,9 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
         } // switch(kind)
     } // for(gim nodes)
+
+    // (4)
+    prepareForNewStream();
 }
 
 namespace cv {
@@ -100,7 +104,7 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
     switch (arg.index())
     {
     case GRunArg::index_of<Mat>() :
-        mag_rmat = make_rmat<RMatAdapter>(util::get<Mat>(arg)); break;
+        mag_rmat = make_rmat<RMatOnMat>(util::get<Mat>(arg)); break;
     case GRunArg::index_of<cv::RMat>() :
         mag_rmat = util::get<cv::RMat>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
@@ -121,7 +125,7 @@ void bindOutArgExec(Mag& mag, const RcDesc &rc, const GRunArgP &arg)
     switch (arg.index())
     {
     case GRunArgP::index_of<Mat*>() :
-        mag_rmat = make_rmat<RMatAdapter>(*util::get<Mat*>(arg)); break;
+        mag_rmat = make_rmat<RMatOnMat>(*util::get<Mat*>(arg)); break;
     case GRunArgP::index_of<cv::RMat*>() :
         mag_rmat = *util::get<cv::RMat*>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
@@ -149,18 +153,17 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     {
     case GRunArgP::index_of<cv::Mat*>() : {
         // If there is a copy intrinsic at the end of the graph
-        // we need to actualy copy the data to the user buffer
+        // we need to actually copy the data to the user buffer
         // since output runarg was optimized to simply point
         // to the input of the copy kernel
         // FIXME:
         // Rework, find a better way to check if there should be
         // a real copy (add a pass to StreamingBackend?)
-        // NB: In case RMat adapter not equal to "RMatAdapter" need to
+        // NB: In case RMat adapter not equal to "RMatOnMat" need to
         // copy data back to the host as well.
-        // FIXME: Rename "RMatAdapter" to "OpenCVAdapter".
         auto& out_mat = *util::get<cv::Mat*>(g_arg);
         const auto& rmat = mag.template slot<cv::RMat>().at(rc.id);
-        auto* adapter = rmat.get<RMatAdapter>();
+        auto* adapter = rmat.get<RMatOnMat>();
         if ((adapter != nullptr && out_mat.data != adapter->data()) ||
             (adapter == nullptr)) {
             auto view = rmat.access(RMat::Access::R);
@@ -221,7 +224,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
             } else {
                 Mat mat;
                 createMat(desc, mat);
-                rmat = make_rmat<RMatAdapter>(mat);
+                rmat = make_rmat<RMatOnMat>(mat);
             }
         }
         break;
@@ -271,6 +274,7 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
 {
     cv::gimpl::Mag &mag;
     std::unordered_map<const void*, int> out_idx;
+    std::exception_ptr eptr;
 
     GRunArgP get(int idx) override
     {
@@ -279,8 +283,18 @@ class cv::gimpl::GExecutor::Output final: public cv::gimpl::GIslandExecutable::I
         out_idx[cv::gimpl::proto::ptr(r)] = idx;
         return r;
     }
-    void post(GRunArgP&&) override { } // Do nothing here
+    void post(GRunArgP&&, const std::exception_ptr& e) override
+    {
+        if (e)
+        {
+            eptr = e;
+        }
+    }
     void post(EndOfStream&&) override {} // Do nothing here too
+    void post(Exception&& ex) override
+    {
+        eptr = std::move(ex.eptr);
+    }
     void meta(const GRunArgP &out, const GRunArg::Meta &m) override
     {
         const auto idx = out_idx.at(cv::gimpl::proto::ptr(out));
@@ -291,6 +305,14 @@ public:
         : mag(m)
     {
         set(rcs);
+    }
+
+    void verify()
+    {
+        if (eptr)
+        {
+            std::rethrow_exception(eptr);
+        }
     }
 };
 
@@ -383,16 +405,18 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         magazine::resetInternalData(m_res, data);
     }
 
-    // Run the script
+    // Run the script (5)
     for (auto &op : m_ops)
     {
-        // (5), (6)
+        // (6), (7)
         Input i{m_res, op.in_objects};
         Output o{m_res, op.out_objects};
         op.isl_exec->run(i, o);
+        // NB: Check if execution finished without exception.
+        o.verify();
     }
 
-    // (7)
+    // (8)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {

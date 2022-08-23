@@ -354,7 +354,7 @@ static bool ocl_GaussianBlur_8UC1(InputArray _src, OutputArray _dst, Size ksize,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s%s", borderMap[borderType & ~BORDER_ISOLATED],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s%s", borderMap[borderType & ~BORDER_ISOLATED],
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
@@ -566,7 +566,7 @@ static bool ipp_GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
         if (IPP_DISABLE_GAUSSIAN_BLUR_32FC4_1TH && (threads == 1 && src.type() == CV_32FC4))
             return false;
 
-        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1) {
+        if(IPP_GAUSSIANBLUR_PARALLEL && threads > 1 && iwSrc.m_size.height/(threads * 4) >= ksize.height/2) {
             bool ok;
             ipp_gaussianBlurParallel invoker(iwSrc, iwDst, ksize.width, (float) sigma1, ippBorder, &ok);
 

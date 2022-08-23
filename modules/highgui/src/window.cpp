@@ -399,13 +399,13 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #endif
 }
 
-cv::Rect cvGetWindowImageRect(const char* name)
+cv::Rect cv::getWindowImageRect(const String& winname)
 {
     CV_TRACE_FUNCTION();
-    CV_Assert(name);
+    CV_Assert(!winname.empty());
 
     {
-        auto window = findWindow_(name);
+        auto window = findWindow_(winname);
         if (window)
         {
             return window->getImageRect();
@@ -416,7 +416,7 @@ cv::Rect cvGetWindowImageRect(const char* name)
     auto backend = getCurrentUIBackend();
     if (backend)
     {
-        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
         CV_NOT_FOUND_DEPRECATION;
     }
     else
@@ -427,24 +427,18 @@ cv::Rect cvGetWindowImageRect(const char* name)
 #else
 
     #if defined (HAVE_QT)
-        return cvGetWindowRect_QT(name);
+        return cvGetWindowRect_QT(winname.c_str());
     #elif defined(HAVE_WIN32UI)
-        return cvGetWindowRect_W32(name);
+        return cvGetWindowRect_W32(winname.c_str());
     #elif defined (HAVE_GTK)
-        return cvGetWindowRect_GTK(name);
+        return cvGetWindowRect_GTK(winname.c_str());
     #elif defined (HAVE_COCOA)
-        return cvGetWindowRect_COCOA(name);
+        return cvGetWindowRect_COCOA(winname.c_str());
     #else
         return Rect(-1, -1, -1, -1);
     #endif
 
 #endif
-}
-
-cv::Rect cv::getWindowImageRect(const String& winname)
-{
-    CV_TRACE_FUNCTION();
-    return cvGetWindowImageRect(winname.c_str());
 }
 
 void cv::namedWindow( const String& winname, int flags )
@@ -619,6 +613,8 @@ void cv::setWindowTitle(const String& winname, const String& title)
     return setWindowTitle_QT(winname, title);
 #elif defined (HAVE_COCOA)
     return setWindowTitle_COCOA(winname, title);
+#elif defined (HAVE_WAYLAND)
+    return setWindowTitle_WAYLAND(winname, title);
 #else
     CV_Error(Error::StsNotImplemented, "The function is not implemented. "
         "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
@@ -969,6 +965,8 @@ void cv::imshow( const String& winname, InputArray _img )
 {
     CV_TRACE_FUNCTION();
 
+    const Size size = _img.size();
+    CV_Assert(size.width>0 && size.height>0);
     {
         cv::AutoLock lock(cv::getWindowMutex());
         cleanupClosedWindows_();
@@ -1001,9 +999,7 @@ void cv::imshow( const String& winname, InputArray _img )
         }
     }
 
-    const Size size = _img.size();
 #ifndef HAVE_OPENGL
-    CV_Assert(size.width>0 && size.height>0);
     {
         Mat img = _img.getMat();
         CvMat c_img = cvMat(img);
@@ -1011,7 +1007,6 @@ void cv::imshow( const String& winname, InputArray _img )
     }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
-    CV_Assert(size.width>0 && size.height>0);
 
     if (useGl <= 0)
     {
@@ -1233,6 +1228,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
 #elif defined (HAVE_QT)       // see window_QT.cpp
+#elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
 #elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
 #else

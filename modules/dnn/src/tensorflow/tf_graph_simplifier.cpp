@@ -19,6 +19,16 @@ CV__DNN_INLINE_NS_BEGIN
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::MapPair;
 
+static Mat getTensorContentRef_(const tensorflow::TensorProto& tensor);
+static inline
+bool isAlignedMat(const Mat& m)
+{
+    int depth = m.depth();
+    int alignment = CV_ELEM_SIZE1(depth);
+    return (((size_t)m.data) & (alignment - 1)) == 0;
+}
+
+
 class TFNodeWrapper : public ImportNodeWrapper
 {
 public:
@@ -719,8 +729,19 @@ public:
     {
         if (!negativeScales)
         {
-            Mat scales = getTensorContent(inputNodes[1]->attr().at("value").tensor(), /*copy*/false);
-            scales *= -1;
+            Mat scalesRef = getTensorContentRef_(inputNodes[1]->attr().at("value").tensor());
+            // FIXME: This breaks the const guarantees of tensor() by writing to scalesRef
+            if (isAlignedMat(scalesRef))
+            {
+                scalesRef *= -1;
+            }
+            else
+            {
+                Mat scales = scalesRef.clone() * -1;
+                CV_Assert(scalesRef.isContinuous());
+                CV_Assert(scales.isContinuous());
+                memcpy(scalesRef.data, scales.data, scales.total() * scales.elemSize());
+            }
         }
     }
 
@@ -832,7 +853,8 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
     }
 }
 
-Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy)
+// NB: returned Mat::data pointer may be unaligned
+Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
 {
     const std::string& content = tensor.tensor_content();
     Mat m;
@@ -904,7 +926,18 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy)
             CV_Error(Error::StsError, "Tensor's data type is not supported");
             break;
     }
-    return copy ? m.clone() : m;
+
+    return m;
+}
+
+Mat getTensorContent(const tensorflow::TensorProto& tensor, bool forceCopy)
+{
+    // If necessary clone m to have aligned data pointer
+    Mat m = getTensorContentRef_(tensor);
+    if (forceCopy || !isAlignedMat(m))
+        return m.clone();
+    else
+        return m;
 }
 
 void releaseTensor(tensorflow::TensorProto* tensor)
@@ -957,6 +990,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
         nodesMap.insert(std::make_pair(node.name(), i));
     }
 
+    CV_CheckEQ(nodesMap.size(), (size_t)net.node_size(), "Node names must be unique");
     // Indices of nodes which use specific node as input.
     std::vector<std::vector<int> > edges(nodesMap.size());
     std::vector<int> numRefsToAdd(nodesMap.size(), 0);
@@ -974,7 +1008,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             nodesMapIt = nodesMap.find(inpName);
             if (nodesMapIt != nodesMap.end())
             {
-                edges[nodesMapIt->second].push_back(i);
+                edges.at(nodesMapIt->second).push_back(i);
                 numInputsInGraph += 1;
             }
         }
@@ -986,11 +1020,11 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             {
                 int numControlEdges = 0;
                 for (int j = 0; j < numInputsInGraph; ++j)
-                    numControlEdges += node.input(j)[0] == '^';
-                numRefsToAdd[i] = numControlEdges + 1;
+                    numControlEdges += node.input(j).at(0) == '^';
+                numRefsToAdd.at(i) = numControlEdges + 1;
             }
             else
-                numRefsToAdd[i] = numInputsInGraph;
+                numRefsToAdd.at(i) = numInputsInGraph;
         }
     }
 
@@ -1002,17 +1036,16 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
         nodesToAdd.pop_back();
 
         permIds.push_back(nodeToAdd);
-
-        for (int i = 0; i < edges[nodeToAdd].size(); ++i)
+        for (int i = 0; i < edges.at(nodeToAdd).size(); ++i)
         {
-            int consumerId = edges[nodeToAdd][i];
-            if (numRefsToAdd[consumerId] > 0)
+            int consumerId = edges.at(nodeToAdd).at(i);
+            if (numRefsToAdd.at(consumerId) > 0)
             {
-                if (numRefsToAdd[consumerId] == 1)
+                if (numRefsToAdd.at(consumerId) == 1)
                     nodesToAdd.push_back(consumerId);
                 else
-                    CV_Assert(numRefsToAdd[consumerId] >= 0);
-                numRefsToAdd[consumerId] -= 1;
+                    CV_Assert(numRefsToAdd.at(consumerId) >= 0);
+                numRefsToAdd.at(consumerId) -= 1;
             }
         }
     }

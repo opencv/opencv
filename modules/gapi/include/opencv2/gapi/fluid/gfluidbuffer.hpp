@@ -25,7 +25,7 @@ namespace fluid {
 struct Border
 {
     // This constructor is required to support existing kernels which are part of G-API
-    Border(int _type, cv::Scalar _val) : type(_type), value(_val) {};
+    Border(int _type, cv::Scalar _val) : type(_type), value(_val) {}
 
     int type;
     cv::Scalar value;

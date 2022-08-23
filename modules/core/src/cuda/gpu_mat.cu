@@ -184,11 +184,8 @@ void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;
 
-        int64 _nettosize = static_cast<int64>(step) * rows;
-        size_t nettosize = static_cast<size_t>(_nettosize);
-
         datastart = data;
-        dataend = data + nettosize;
+        dataend = data + step * (rows - 1) + cols * esz;
 
         if (refcount)
             *refcount = 1;

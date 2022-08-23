@@ -48,7 +48,7 @@ void __wrap_printf_func(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     char buffer[256];
-    vsprintf (buffer, fmt, args);
+    vsnprintf (buffer, sizeof(buffer), fmt, args);
     cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
     va_end(args);
 }
@@ -935,7 +935,7 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
     else if (interpolation == INTER_LANCZOS4)
         ksize = 8;
     else if (interpolation != INTER_LINEAR)
-        assert(0);
+        CV_Assert(0);
     int ofs = (ksize / 2) - 1;
 
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());

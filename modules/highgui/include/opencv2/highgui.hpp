@@ -383,10 +383,12 @@ cv::WINDOW_AUTOSIZE flag, the image is shown with its original size, however it 
 Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
--   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
+-   If the image is 16-bit unsigned, the pixels are divided by 256. That is, the
     value range [0,255\*256] is mapped to [0,255].
 -   If the image is 32-bit or 64-bit floating-point, the pixel values are multiplied by 255. That is, the
     value range [0,1] is mapped to [0,255].
+-   32-bit integer images are not processed anymore due to ambiguouty of required transform.
+    Convert to 8-bit unsigned matrix using a custom preprocessing specific to image's context.
 
 If window was created with OpenGL support, cv::imshow also support ogl::Buffer , ogl::Texture2D and
 cuda::GpuMat as input.

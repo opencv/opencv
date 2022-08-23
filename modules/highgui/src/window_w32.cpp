@@ -2132,6 +2132,7 @@ cvDestroyAllWindows(void)
 
 static void showSaveDialog(CvWindow& window)
 {
+#ifdef HAVE_OPENCV_IMGCODECS
     if (!window.image)
         return;
 
@@ -2193,6 +2194,11 @@ static void showSaveDialog(CvWindow& window)
         cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
         cv::imwrite(szFileName, tmp);
     }
+#else
+    CV_UNUSED(window);
+    CV_LOG_WARNING("Save dialog requires enabled 'imgcodecs' module.");
+    return;
+#endif
 }
 
 /*
@@ -2984,7 +2990,7 @@ public:
         CvTrackbar& trackbar = *trackbar_ptr;
         CV_CheckLE(range.start, range.end, "Invalid trackbar range");
         trackbar.minval = range.start;
-        trackbar.maxval = range.start;
+        trackbar.maxval = range.end;
         SendMessage(trackbar.hwnd, TBM_SETRANGEMIN, (WPARAM)TRUE, (LPARAM)trackbar.minval);
         SendMessage(trackbar.hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)trackbar.maxval);
     }

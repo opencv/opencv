@@ -102,10 +102,10 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
-            if (INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) && isMyriad)
+            if (isMyriad)
                 return dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0;
 
             return (dstRanges.size() <= 4 || !isArmComputePlugin());
@@ -140,12 +140,13 @@ public:
                 outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
         }
-        else if (paddingType == "reflect")
+        else if (paddingType == "reflect" || paddingType == "edge")
         {
             CV_Assert(inputs.size() == 1);
             CV_Assert(outputs.size() == 1);
             CV_Assert(inputs[0].dims == 4);
             CV_Assert(outputs[0].dims == 4);
+            int borderType = paddingType == "reflect" ? BORDER_REFLECT_101 : BORDER_REPLICATE;
 
             if (inputs[0].size[0] != outputs[0].size[0] || inputs[0].size[1] != outputs[0].size[1])
                 CV_Error(Error::StsNotImplemented, "Only spatial reflection padding is supported.");
@@ -158,8 +159,8 @@ public:
             const int padBottom = outHeight - dstRanges[2].end;
             const int padLeft = dstRanges[3].start;
             const int padRight = outWidth - dstRanges[3].end;
-            CV_CheckLT(padTop, inpHeight, ""); CV_CheckLT(padBottom, inpHeight, "");
-            CV_CheckLT(padLeft, inpWidth, ""); CV_CheckLT(padRight, inpWidth, "");
+            CV_CheckLE(padTop, inpHeight, ""); CV_CheckLE(padBottom, inpHeight, "");
+            CV_CheckLE(padLeft, inpWidth, ""); CV_CheckLE(padRight, inpWidth, "");
 
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
@@ -168,7 +169,7 @@ public:
                     copyMakeBorder(getPlane(inputs[0], n, ch),
                                    getPlane(outputs[0], n, ch),
                                    padTop, padBottom, padLeft, padRight,
-                                   BORDER_REFLECT_101);
+                                   borderType);
                 }
             }
         }
@@ -218,30 +219,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        ieLayer.setType("Pad");
-
-        std::vector<int> begins(paddings.size(), 0), ends(paddings.size(), 0);
-        for (int i = 0; i < paddings.size(); ++i)
-        {
-            begins[i] = paddings[i].first;
-            ends[i] = paddings[i].second;
-        }
-        ieLayer.getParameters()["pads_begin"] = begins;
-        ieLayer.getParameters()["pads_end"] = ends;
-        ieLayer.getParameters()["pad_mode"] = paddingType;
-        if (paddingType == "constant")
-            ieLayer.getParameters()["pad_value"] = paddingValue;
-
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(1));
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,

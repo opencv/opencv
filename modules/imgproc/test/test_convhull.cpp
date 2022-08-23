@@ -301,7 +301,7 @@ void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
@@ -310,7 +310,7 @@ void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
     n = CV_MAT_CN(point_type);
     point_type = CV_MAT_DEPTH(point_type);
 
-    assert( (point_type == CV_32S || point_type == CV_32F) && n <= 4 );
+    CV_Assert( (point_type == CV_32S || point_type == CV_32F) && n <= 4 );
 
     for( i = 0; i < total; i++ )
     {
@@ -1015,7 +1015,7 @@ int CV_MinCircleTest::validate_test_results( int test_case_idx )
     if( point_count >= 2 && (j < 2 || (j == 2 && cvTsDist(v[0],v[1]) < (radius-1)*2/eps)) )
     {
         ts->printf( cvtest::TS::LOG,
-            "There should be at at least 3 points near the circle boundary or 2 points on the diameter\n" );
+            "There should be at least 3 points near the circle boundary or 2 points on the diameter\n" );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
         goto _exit_;
     }
@@ -1335,7 +1335,7 @@ void CV_FitEllipseTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
@@ -1621,7 +1621,7 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
     else
     {
         CvMat* ptm = (CvMat*)pointsSet;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_DEPTH(CV_MAT_TYPE(ptm->type));
         data = ptm->data.ptr;
@@ -1788,13 +1788,13 @@ cvTsGenerateTousledBlob( CvPoint2D32f center, CvSize2D32f axes,
     else
     {
         CvMat* ptm = (CvMat*)points;
-        assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
+        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
         total = ptm->rows + ptm->cols - 1;
         point_type = CV_MAT_TYPE(ptm->type);
         data = ptm->data.ptr;
     }
 
-    assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
+    CV_Assert( point_type == CV_32SC2 || point_type == CV_32FC2 );
 
     for( i = 0; i < total; i++ )
     {
@@ -1874,8 +1874,8 @@ void CV_ContourMomentsTest::generate_point_set( void* pointsSet )
     center.x = (float)(img_size.width*0.5 + (cvtest::randReal(rng)-0.5)*(img_size.width - max_sz*2)*0.8);
     center.y = (float)(img_size.height*0.5 + (cvtest::randReal(rng)-0.5)*(img_size.height - max_sz*2)*0.8);
 
-    assert( 0 < center.x - max_sz && center.x + max_sz < img_size.width &&
-        0 < center.y - max_sz && center.y + max_sz < img_size.height );
+    CV_Assert( 0 < center.x - max_sz && center.x + max_sz < img_size.width &&
+               0 < center.y - max_sz && center.y + max_sz < img_size.height );
 
     max_r_scale = cvtest::randReal(rng)*max_max_r_scale*0.01;
     angle = cvtest::randReal(rng)*360;
@@ -2455,6 +2455,39 @@ TEST(Imgproc_minAreaRect, reproducer_19769)
     RotatedRect rr = cv::minAreaRect(contour);
 
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_17585)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points(N, 2, CV_32FC1, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_20890)
+{
+    vector<Point> points;
+    points.push_back(Point(0, 0));
+    points.push_back(Point(0, 1));
+    points.push_back(Point(1, 1));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points1xN(1, N, CV_32FC2, static_cast<void*>(pts_));
+    cv::Mat pointsNx1(N, 1, CV_32FC2, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points1xN, triangle));
+    EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
 }
 
 }} // namespace

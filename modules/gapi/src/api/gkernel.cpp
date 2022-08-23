@@ -18,7 +18,7 @@
 #include "api/gbackend_priv.hpp"
 
 // GKernelPackage public implementation ////////////////////////////////////////
-void cv::gapi::GKernelPackage::remove(const cv::gapi::GBackend& backend)
+void cv::GKernelPackage::remove(const cv::gapi::GBackend& backend)
 {
     std::vector<std::string> id_deleted_kernels;
     for (const auto& p : m_id_kernels)
@@ -35,27 +35,38 @@ void cv::gapi::GKernelPackage::remove(const cv::gapi::GBackend& backend)
     }
 }
 
-bool cv::gapi::GKernelPackage::includesAPI(const std::string &id) const
+void cv::GKernelPackage::include(const cv::gapi::GFunctor& functor)
+{
+    m_id_kernels[functor.id()] = std::make_pair(functor.backend(), functor.impl());
+}
+
+void cv::GKernelPackage::include(const cv::gapi::GBackend& backend, const std::string& kernel_id)
+{
+    removeAPI(kernel_id);
+    m_id_kernels[kernel_id] = std::make_pair(backend, GKernelImpl{{}, {}});
+}
+
+bool cv::GKernelPackage::includesAPI(const std::string &id) const
 {
     return ade::util::contains(m_id_kernels, id);
 }
 
-void cv::gapi::GKernelPackage::removeAPI(const std::string &id)
+void cv::GKernelPackage::removeAPI(const std::string &id)
 {
     m_id_kernels.erase(id);
 }
 
-std::size_t cv::gapi::GKernelPackage::size() const
+std::size_t cv::GKernelPackage::size() const
 {
     return m_id_kernels.size();
 }
 
-const std::vector<cv::GTransform> &cv::gapi::GKernelPackage::get_transformations() const
+const std::vector<cv::GTransform> &cv::GKernelPackage::get_transformations() const
 {
     return m_transformations;
 }
 
-std::vector<std::string> cv::gapi::GKernelPackage::get_kernel_ids() const
+std::vector<std::string> cv::GKernelPackage::get_kernel_ids() const
 {
     std::vector<std::string> ids;
     for (auto &&id : m_id_kernels)
@@ -65,13 +76,13 @@ std::vector<std::string> cv::gapi::GKernelPackage::get_kernel_ids() const
     return ids;
 }
 
-cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
-                                           const GKernelPackage  &rhs)
+cv::GKernelPackage cv::gapi::combine(const cv::GKernelPackage  &lhs,
+                                     const cv::GKernelPackage  &rhs)
 {
 
         // If there is a collision, prefer RHS to LHS
         // since RHS package has a precedense, start with its copy
-        GKernelPackage result(rhs);
+        cv::GKernelPackage result(rhs);
         // now iterate over LHS package and put kernel if and only
         // if there's no such one
         for (const auto& kernel : lhs.m_id_kernels)
@@ -88,7 +99,7 @@ cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
 }
 
 std::pair<cv::gapi::GBackend, cv::GKernelImpl>
-cv::gapi::GKernelPackage::lookup(const std::string &id) const
+cv::GKernelPackage::lookup(const std::string &id) const
 {
     auto kernel_it = m_id_kernels.find(id);
     if (kernel_it != m_id_kernels.end())
@@ -99,7 +110,7 @@ cv::gapi::GKernelPackage::lookup(const std::string &id) const
     util::throw_error(std::logic_error("Kernel " + id + " was not found"));
 }
 
-std::vector<cv::gapi::GBackend> cv::gapi::GKernelPackage::backends() const
+std::vector<cv::gapi::GBackend> cv::GKernelPackage::backends() const
 {
     using kernel_type = std::pair<std::string, std::pair<cv::gapi::GBackend, cv::GKernelImpl>>;
     std::unordered_set<cv::gapi::GBackend> unique_set;

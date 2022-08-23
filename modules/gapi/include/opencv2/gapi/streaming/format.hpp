@@ -13,7 +13,7 @@ namespace cv {
 namespace gapi {
 namespace streaming {
 
-GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
+GAPI_EXPORTS cv::GKernelPackage kernels();
 
 G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
 {

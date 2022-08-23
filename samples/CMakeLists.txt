@@ -103,12 +103,12 @@ if(MSVC)
     endforeach(flag_var)
 
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:msvcrtd.lib")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
+    if(NOT BUILD_WITH_STATIC_CRT)
+      set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:libcmt.lib")
+      set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:libcmtd.lib")
+    endif()
   endif()
 endif()
-
-add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
 
 if(OPENCV_EXAMPLES_DISABLE_THREADS)
   # nothing
@@ -118,6 +118,7 @@ else()
   find_package(Threads)
 endif()
 if((TARGET Threads::Threads OR HAVE_THREADS) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  set(HAVE_THREADS 1)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 

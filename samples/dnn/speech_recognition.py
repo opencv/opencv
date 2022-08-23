@@ -2,7 +2,6 @@ import numpy as np
 import cv2 as cv
 import argparse
 import os
-import soundfile as sf # Temporary import to load audio files
 
 '''
  You can download the converted onnx model from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing
@@ -45,7 +44,7 @@ import soundfile as sf # Temporary import to load audio files
             model.graph.initializer.insert(i,init)
         ```
 
-     6. Add an additional reshape node to handle the inconsistant input from python and c++ of openCV.
+     6. Add an additional reshape node to handle the inconsistent input from python and c++ of openCV.
         see https://github.com/opencv/opencv/issues/19091
         Make & insert a new node with 'Reshape' operation & required initializer
         ```
@@ -257,7 +256,7 @@ class FilterbankFeatures:
         weights *= enorm[:, np.newaxis]
         return weights
 
-    # STFT preperation
+    # STFT preparation
     def pad_window_center(self, data, size, axis=-1, **kwargs):
         '''
             Centers the data and pads.
@@ -330,7 +329,7 @@ class FilterbankFeatures:
                     then padded with zeros to match n_fft
                 fft_window : a vector or array of length `n_fft` having values computed by a
                     window function
-                pad_mode : mode while padding the singnal
+                pad_mode : mode while padding the signal
                 return_complex : returns array with complex data type if `True`
             return : Matrix of short-term Fourier transform coefficients.
         '''
@@ -399,11 +398,6 @@ def predict(features, net, decoder):
             decoder : Decoder object
         return : Predicted text
     '''
-    # This is a workaround https://github.com/opencv/opencv/issues/19091
-    # expanding 1 dimentions allows us to pass it to the network
-    # from python. This should be resolved in the future.
-    features = np.expand_dims(features,axis=3)
-
     # make prediction
     net.setInput(features)
     output = net.forward()
@@ -411,6 +405,63 @@ def predict(features, net, decoder):
     # decode output to transcript
     prediction = decoder.decode(output.squeeze(0))
     return prediction[0]
+
+def readAudioFile(file, audioStream):
+    cap = cv.VideoCapture(file)
+    samplingRate = 16000
+    params = np.asarray([cv.CAP_PROP_AUDIO_STREAM, audioStream,
+              cv.CAP_PROP_VIDEO_STREAM, -1,
+              cv.CAP_PROP_AUDIO_DATA_DEPTH, cv.CV_32F,
+              cv.CAP_PROP_AUDIO_SAMPLES_PER_SECOND, samplingRate
+              ])
+    cap.open(file, cv.CAP_ANY, params)
+    if cap.isOpened() is False:
+        print("Error : Can't read audio file:", file, "with audioStream = ", audioStream)
+        return
+    audioBaseIndex = int (cap.get(cv.CAP_PROP_AUDIO_BASE_INDEX))
+    inputAudio = []
+    while(1):
+        if (cap.grab()):
+            frame = np.asarray([])
+            frame = cap.retrieve(frame, audioBaseIndex)
+            for i in range(len(frame[1][0])):
+                inputAudio.append(frame[1][0][i])
+        else:
+            break
+    inputAudio = np.asarray(inputAudio, dtype=np.float64)
+    return inputAudio, samplingRate
+
+def readAudioMicrophone(microTime):
+    cap = cv.VideoCapture()
+    samplingRate = 16000
+    params = np.asarray([cv.CAP_PROP_AUDIO_STREAM, 0,
+              cv.CAP_PROP_VIDEO_STREAM, -1,
+              cv.CAP_PROP_AUDIO_DATA_DEPTH, cv.CV_32F,
+              cv.CAP_PROP_AUDIO_SAMPLES_PER_SECOND, samplingRate
+              ])
+    cap.open(0, cv.CAP_ANY, params)
+    if cap.isOpened() is False:
+        print("Error: Can't open microphone")
+        print("Error: problems with audio reading, check input arguments")
+        return
+    audioBaseIndex = int(cap.get(cv.CAP_PROP_AUDIO_BASE_INDEX))
+    cvTickFreq = cv.getTickFrequency()
+    sysTimeCurr = cv.getTickCount()
+    sysTimePrev = sysTimeCurr
+    inputAudio = []
+    while ((sysTimeCurr - sysTimePrev) / cvTickFreq < microTime):
+        if (cap.grab()):
+            frame = np.asarray([])
+            frame = cap.retrieve(frame, audioBaseIndex)
+            for i in range(len(frame[1][0])):
+                inputAudio.append(frame[1][0][i])
+            sysTimeCurr = cv.getTickCount()
+        else:
+            print("Error: Grab error")
+            break
+    inputAudio = np.asarray(inputAudio, dtype=np.float64)
+    print("Number of samples: ", len(inputAudio))
+    return inputAudio, samplingRate
 
 if __name__ == '__main__':
 
@@ -421,7 +472,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input_audio', type=str, required=True, help='Path to input audio file. OR Path to a txt file with relative path to multiple audio files in different lines')
+    parser.add_argument('--input_type', type=str, required=True, help='file or microphone')
+    parser.add_argument('--micro_time', type=int, default=15, help='Duration of microphone work in seconds. Must be more than 6 sec')
+    parser.add_argument('--input_audio', type=str, help='Path to input audio file. OR Path to a txt file with relative path to multiple audio files in different lines')
+    parser.add_argument('--audio_stream', type=int, default=0, help='CAP_PROP_AUDIO_STREAM value')
     parser.add_argument('--show_spectrogram', action='store_true', help='Whether to show a spectrogram of the input audio.')
     parser.add_argument('--model', type=str, default='jasper.onnx', help='Path to the onnx file of Jasper. default="jasper.onnx"')
     parser.add_argument('--output', type=str, help='Path to file where recognized audio transcript must be saved. Leave this to print on console.')
@@ -442,28 +496,35 @@ if __name__ == '__main__':
         raise OSError("Input audio file does not exist")
     if not os.path.isfile(args.model):
         raise OSError("Jasper model file does not exist")
-    if args.input_audio.endswith('.txt'):
-        with open(args.input_audio) as f:
-            content = f.readlines()
-            content = [x.strip() for x in content]
-            audio_file_paths = content
-        for audio_file_path in audio_file_paths:
-            if not os.path.isfile(audio_file_path):
-                raise OSError("Audio file({audio_file_path}) does not exist")
-    else:
-        audio_file_paths = [args.input_audio]
-    audio_file_paths = [os.path.abspath(x) for x in audio_file_paths]
 
-    # Read audio Files
     features = []
-    try:
+    if args.input_type == "file":
+        if args.input_audio.endswith('.txt'):
+            with open(args.input_audio) as f:
+                content = f.readlines()
+                content = [x.strip() for x in content]
+                audio_file_paths = content
+            for audio_file_path in audio_file_paths:
+                if not os.path.isfile(audio_file_path):
+                    raise OSError("Audio file({audio_file_path}) does not exist")
+        else:
+            audio_file_paths = [args.input_audio]
+        audio_file_paths = [os.path.abspath(x) for x in audio_file_paths]
+
+        # Read audio Files
         for audio_file_path in audio_file_paths:
-            audio = sf.read(audio_file_path)
-            # If audio is stereo, just take one channel.
-            X = audio[0] if audio[0].ndim==1 else audio[0][:,0]
-            features.append(X)
-    except:
-        raise Exception(f"Soundfile cannot read {args.input_audio}. Try a different format")
+            audio = readAudioFile(audio_file_path, args.audio_stream)
+            if audio is None:
+                raise Exception(f"Can't read {args.input_audio}. Try a different format")
+            features.append(audio[0])
+    elif args.input_type == "microphone":
+        # Read audio from microphone
+        audio = readAudioMicrophone(args.micro_time)
+        if audio is None:
+            raise Exception(f"Can't open microphone. Try a different format")
+        features.append(audio[0])
+    else:
+        raise Exception(f"input_type {args.input_type} doesn't exist. Please enter 'file' or 'microphone'")
 
     # Get Filterbank Features
     feature_extractor = FilterbankFeatures()

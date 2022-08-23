@@ -23,7 +23,8 @@ ProcessingEngineBase::ProcessingEngineBase(std::unique_ptr<VPLAccelerationPolicy
 }
 
 ProcessingEngineBase::~ProcessingEngineBase() {
-    GAPI_LOG_INFO(nullptr, "destroyed");
+    GAPI_LOG_INFO(nullptr, "destroyed, elapsed sessions count: " << sessions.size());
+    sessions.clear();
 }
 
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession session) {
@@ -35,17 +36,18 @@ ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession s
     session_ptr processing_session = sess_it->second;
     ExecutionData& exec_data = execution_table[session];
 
-    GAPI_LOG_DEBUG(nullptr, "[" << session <<"] start op id: " << exec_data.op_id);
+    GAPI_LOG_DEBUG(nullptr, "[" << session << "] start op id: " << exec_data.op_id);
     ExecutionStatus status = execute_op(pipeline.at(exec_data.op_id), *processing_session);
     size_t old_op_id = exec_data.op_id++;
     if (exec_data.op_id == pipeline.size())
     {
         exec_data.op_id = 0;
     }
-    GAPI_LOG_DEBUG(nullptr, "[" << session <<"] finish op id: " << old_op_id <<
-                                    ", " << processing_session->error_code_to_str() <<
-                                    ", " << ProcessingEngineBase::status_to_string(status) <<
-                                    ", next op id: " << exec_data.op_id);
+    cv::util::suppress_unused_warning(old_op_id);
+    GAPI_LOG_DEBUG(nullptr, "[" << session << "] finish op id: " << old_op_id <<
+                            ", " << processing_session->error_code_to_str() <<
+                            ", " << ProcessingEngineBase::status_to_string(status) <<
+                            ", next op id: " << exec_data.op_id);
 
     if (status == ExecutionStatus::Failed) {
 
@@ -57,6 +59,7 @@ ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession s
     }
 
     if (status == ExecutionStatus::Processed) {
+        GAPI_LOG_INFO(nullptr, "Processed [" << session << "]");
         sessions.erase(sess_it);
         execution_table.erase(session);
     }
@@ -78,7 +81,7 @@ const char* ProcessingEngineBase::status_to_string(ExecutionStatus status)
 
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::execute_op(operation_t& op, EngineSession& sess)
 {
-     return op(sess);
+    return op(sess);
 }
 
 size_t ProcessingEngineBase::get_ready_frames_count() const
@@ -90,6 +93,7 @@ void ProcessingEngineBase::get_frame(Data &data)
 {
     data = ready_frames.front();
     ready_frames.pop();
+    GAPI_LOG_DEBUG(nullptr, " elapsed ready frames count: " << ready_frames.size());
 }
 
 const VPLAccelerationPolicy* ProcessingEngineBase::get_accel() const {
@@ -98,34 +102,6 @@ const VPLAccelerationPolicy* ProcessingEngineBase::get_accel() const {
 
 VPLAccelerationPolicy* ProcessingEngineBase::get_accel() {
     return const_cast<VPLAccelerationPolicy*>(static_cast<const ProcessingEngineBase*>(this)->get_accel());
-}
-
-
-// Read encoded stream from file
-mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& data_provider) {
-
-    if (!data_provider) {
-        return MFX_ERR_MORE_DATA;
-    }
-
-    mfxU8 *p0 = bs.Data;
-    mfxU8 *p1 = bs.Data + bs.DataOffset;
-    if (bs.DataOffset > bs.MaxLength - 1) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-    if (bs.DataLength + bs.DataOffset > bs.MaxLength) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-
-    std::copy_n(p0, bs.DataLength, p1);
-
-    bs.DataOffset = 0;
-    bs.DataLength += static_cast<mfxU32>(data_provider->fetch_data(bs.MaxLength - bs.DataLength,
-                                                                   bs.Data + bs.DataLength));
-    if (bs.DataLength == 0)
-        return MFX_ERR_MORE_DATA;
-
-    return MFX_ERR_NONE;
 }
 } // namespace onevpl
 } // namespace wip

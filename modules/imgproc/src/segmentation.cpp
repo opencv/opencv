@@ -155,7 +155,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         dr = std::abs((ptr1)[2] - (ptr2)[2]);\
         diff = ws_max(db,dg);                \
         diff = ws_max(diff,dr);              \
-        assert( 0 <= diff && diff <= 255 );  \
+        CV_Assert( 0 <= diff && diff <= 255 );  \
     }
 
     CV_Assert( src.type() == CV_8UC3 && dst.type() == CV_32SC1 );
@@ -215,7 +215,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
                 }
 
                 // Add to according queue
-                assert( 0 <= idx && idx <= 255 );
+                CV_Assert( 0 <= idx && idx <= 255 );
                 ws_push( idx, i*mstep + j, i*istep + j*3 );
                 m[0] = IN_QUEUE;
             }
@@ -286,7 +286,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         }
 
         // Set label to current pixel in marker image
-        assert( lab != 0 );
+        CV_Assert( lab != 0 );
         m[0] = lab;
 
         if( lab == WSHED )

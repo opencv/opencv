@@ -8,6 +8,7 @@ set(VIDEOIO_ENABLE_PLUGINS "${VIDEOIO_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow
 mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS)
 
 string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
+string(TOLOWER "${VIDEOIO_PLUGIN_LIST}" VIDEOIO_PLUGIN_LIST)
 if(NOT VIDEOIO_ENABLE_PLUGINS)
   if(VIDEOIO_PLUGIN_LIST)
     message(WARNING "VideoIO: plugins are disabled through VIDEOIO_ENABLE_PLUGINS, so VIDEOIO_PLUGIN_LIST='${VIDEOIO_PLUGIN_LIST}' is ignored")
@@ -232,6 +233,30 @@ if(TARGET ocv.3rdparty.android_native_camera)
   list(APPEND videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_camera.cpp)
   list(APPEND tgts ocv.3rdparty.android_native_camera)
+endif()
+
+if(TARGET ocv.3rdparty.obsensor)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_capture.cpp)
+  list(APPEND videoio_hdrs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_capture.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_interface.hpp)
+  if(HAVE_OBSENSOR_MSMF)
+    list(APPEND videoio_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_msmf.cpp)
+    list(APPEND videoio_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_msmf.hpp)
+  elseif(HAVE_OBSENSOR_V4L2)
+    list(APPEND videoio_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_v4l2.cpp)
+    list(APPEND videoio_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_v4l2.hpp)
+  endif()
+  list(APPEND tgts ocv.3rdparty.obsensor)
 endif()
 
 if(tgts STREQUAL "PRIVATE")

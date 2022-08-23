@@ -12,6 +12,7 @@ TEST(Features2d_BlobDetector, bug_6667)
     SimpleBlobDetector::Params params;
     params.minThreshold = 250;
     params.maxThreshold = 260;
+    params.minRepeatability = 1;  // https://github.com/opencv/opencv/issues/6667
     std::vector<KeyPoint> keypoints;
 
     Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);

@@ -33,7 +33,7 @@ namespace util
         // Constructors
         // NB.: there were issues with Clang 3.8 when =default() was used
         // instead {}
-        optional() {};
+        optional() {}
         optional(const optional&) = default;
         explicit optional(T&&) noexcept;
         explicit optional(const T&) noexcept;

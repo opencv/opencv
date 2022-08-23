@@ -224,6 +224,9 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
             continue;
         std::vector<std::string> candidates;
         cv::glob(utils::fs::join(path, plugin_expr), candidates);
+        // Prefer candisates with higher versions
+        // TODO: implemented accurate versions-based comparator
+        std::sort(candidates.begin(), candidates.end(), std::greater<std::string>());
         CV_LOG_DEBUG(NULL, "    - " << path << ": " << candidates.size());
         copy(candidates.begin(), candidates.end(), back_inserter(results));
     }
@@ -232,12 +235,15 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     return results;
 }
 
-// NB: require loading of imgcodecs module
+#ifdef HAVE_OPENCV_IMGCODECS // NB: require loading of imgcodecs module
 static void* g_imwrite = (void*)imwrite;
+#endif
 
 void PluginUIBackendFactory::loadPlugin()
 {
+#ifdef HAVE_OPENCV_IMGCODECS
     CV_Assert(g_imwrite);
+#endif
     for (const FileSystemPath_t& plugin : getPluginCandidates(baseName_))
     {
         auto lib = std::make_shared<cv::plugin::impl::DynamicLib>(plugin);

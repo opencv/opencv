@@ -20,7 +20,7 @@ int main(void)
     // Number of experiment runs
     int no_runs = 2;
 
-    // https://docs.opencv.org/master/d3/d63/classcv_1_1Mat.html
+    // https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html
     cv::Mat src_new(IMG_ROWS, IMG_COLS, CV_8UC1, (void *)raw_pixels);
 
     // Set parameters

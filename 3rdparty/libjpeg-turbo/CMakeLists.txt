@@ -4,9 +4,9 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-6
 
 set(VERSION_MAJOR 2)
 set(VERSION_MINOR 1)
-set(VERSION_REVISION 0)
+set(VERSION_REVISION 3)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
-set(LIBJPEG_TURBO_VERSION_NUMBER 2001000)
+set(LIBJPEG_TURBO_VERSION_NUMBER 2001003)
 
 string(TIMESTAMP BUILD "opencv-${OPENCV_VERSION}-libjpeg-turbo")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -79,14 +79,13 @@ configure_file(jconfigint.h.in jconfigint.h)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(JPEG_SOURCES
-  jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c jcicc.c
-  jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c jcphuff.c
-  jcprepct.c jcsample.c jctrans.c jdapimin.c jdapistd.c jdatadst.c jdatasrc.c
-  jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdicc.c jdinput.c jdmainct.c jdmarker.c
-  jdmaster.c jdmerge.c jdphuff.c jdpostct.c jdsample.c jdtrans.c jerror.c
-  jfdctflt.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c jidctint.c jidctred.c
-  jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c)
+set(JPEG_SOURCES jcapimin.c jcapistd.c jccoefct.c jccolor.c jcdctmgr.c jchuff.c
+        jcicc.c jcinit.c jcmainct.c jcmarker.c jcmaster.c jcomapi.c jcparam.c
+        jcphuff.c jcprepct.c jcsample.c jctrans.c jdapimin.c jdapistd.c jdatadst.c
+        jdatasrc.c jdcoefct.c jdcolor.c jddctmgr.c jdhuff.c jdicc.c jdinput.c
+        jdmainct.c jdmarker.c jdmaster.c jdmerge.c jdphuff.c jdpostct.c jdsample.c
+        jdtrans.c jerror.c jfdctflt.c jfdctfst.c jfdctint.c jidctflt.c jidctfst.c
+        jidctint.c jidctred.c jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c)
 
 if(WITH_ARITH_ENC OR WITH_ARITH_DEC)
   set(JPEG_SOURCES ${JPEG_SOURCES} jaricom.c)

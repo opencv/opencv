@@ -24,8 +24,17 @@ namespace gimpl {
 
     inline cv::Mat asMat(RMat::View& v) {
 #if !defined(GAPI_STANDALONE)
-        return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
-                                : cv::Mat(v.dims(), v.type(), v.ptr(), v.steps().data());
+        if (v.dims().empty()) {
+            return cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step());
+        } else {
+            cv::Mat m(v.dims(), v.type(), v.ptr(), v.steps().data());
+            if (v.dims().size() == 1) {
+                // FIXME: cv::Mat() constructor will set m.dims to 2;
+                // To obtain 1D Mat, we have to set m.dims back to 1 manually
+                m.dims = 1;
+            }
+            return m;
+        }
 #else
         // FIXME: add a check that steps are default
         return v.dims().empty() ? cv::Mat(v.rows(), v.cols(), v.type(), v.ptr(), v.step())
@@ -41,15 +50,18 @@ namespace gimpl {
         }
         return RMat::View(cv::descr_of(m), m.data, steps, std::move(cb));
 #else
-        return RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb));
+        return m.dims.empty()
+            ? RMat::View(cv::descr_of(m), m.data, m.step, std::move(cb))
+            // Own Mat doesn't support n-dimensional steps so default ones are used in this case
+            : RMat::View(cv::descr_of(m), m.data, RMat::View::stepsT{}, std::move(cb));
 #endif
     }
 
-    class RMatAdapter : public RMat::Adapter {
+    class RMatOnMat : public RMat::IAdapter {
         cv::Mat m_mat;
     public:
         const void* data() const { return m_mat.data; }
-        RMatAdapter(cv::Mat m) : m_mat(m) {}
+        RMatOnMat(cv::Mat m) : m_mat(m) {}
         virtual RMat::View access(RMat::Access) override { return asView(m_mat); }
         virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
     };
@@ -58,7 +70,7 @@ namespace gimpl {
     struct Data;
     struct RcDesc;
 
-    struct GAPI_EXPORTS RMatMediaFrameAdapter final: public cv::RMat::Adapter
+    struct GAPI_EXPORTS RMatMediaFrameAdapter final: public cv::RMat::IAdapter
     {
         using MapDescF = std::function<cv::GMatDesc(const GFrameDesc&)>;
         using MapDataF = std::function<cv::Mat(const GFrameDesc&, const cv::MediaFrame::View&)>;
@@ -161,7 +173,7 @@ namespace magazine
     // without utilizing magazine at all
     void GAPI_EXPORTS bindInArg (Mag& mag, const RcDesc &rc, const GRunArg  &arg, HandleRMat handleRMat = HandleRMat::BIND);
 
-    // Extracts a memory object reference fro GRunArgP, stores it in appropriate slot in a magazine
+    // Extracts a memory object reference from GRunArgP, stores it in appropriate slot in a magazine
     // Note on RMat handling from bindInArg above is also applied here
     void GAPI_EXPORTS bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, HandleRMat handleRMat = HandleRMat::BIND);
 

@@ -172,6 +172,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
         return;
     }
 
+    GAPI_DbgAssert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
     GAPI_Assert(in_args.size() == 1u);
 
@@ -193,7 +194,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
     out.post(std::move(out_arg));
 }
 
-cv::gapi::GKernelPackage cv::gimpl::streaming::kernels()
+cv::GKernelPackage cv::gimpl::streaming::kernels()
 {
     return cv::gapi::kernels<Copy>();
 }
@@ -212,6 +213,7 @@ public:
             return;
         }
 
+        GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
         const cv::GRunArgs &in_args = cv::util::get<cv::GRunArgs>(in_msg);
         GAPI_Assert(in_args.size() == 1u);
         auto frame = cv::util::get<cv::MediaFrame>(in_args[0]);
@@ -279,9 +281,26 @@ void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             cv::Mat y_plane (desc.size,     CV_8UC1, view.ptr[0], view.stride[0]);
             cv::Mat uv_plane(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
             cv::cvtColorTwoPlane(y_plane, uv_plane, bgr, cv::COLOR_YUV2BGR_NV12);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(bgr);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(bgr);
             break;
         }
+        case cv::MediaFormat::GRAY:
+        {
+            std::call_once(m_warnFlag,
+                []() {
+                    GAPI_LOG_WARNING(NULL, "\nOn-the-fly conversion from GRAY to BGR will happen.\n"
+                        "Conversion may cost a lot for images with high resolution.\n"
+                        "To retrieve cv::Mat from GRAY cv::MediaFrame for free, you may use "
+                        "cv::gapi::streaming::Y.\n");
+                });
+            cv::Mat bgr;
+            auto view = frame.access(cv::MediaFrame::Access::R);
+            cv::Mat gray(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            cv::cvtColor(gray, bgr, cv::COLOR_GRAY2BGR);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(bgr);
+            break;
+        }
+
         default:
             cv::util::throw_error(
                     std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::BGR"));
@@ -327,7 +346,7 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             cv::Mat tmp_bgr(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
             cv::Mat yuv;
             cvtColor(tmp_bgr, yuv, cv::COLOR_BGR2YUV_I420);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(yuv.rowRange(0, desc.size.height));
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(yuv.rowRange(0, desc.size.height));
             break;
         }
         case cv::MediaFormat::NV12:
@@ -335,6 +354,15 @@ void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
             [](const cv::GFrameDesc& d){ return cv::GMatDesc(CV_8U, 1, d.size); },
             [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v){
+                return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
+            });
+            break;
+        }
+        case cv::MediaFormat::GRAY:
+        {
+            rmat = cv::make_rmat<cv::gimpl::RMatMediaFrameAdapter>(frame,
+            [](const cv::GFrameDesc& d) { return cv::GMatDesc(CV_8U, 1, d.size); },
+            [](const cv::GFrameDesc& d, const cv::MediaFrame::View& v) {
                 return cv::Mat(d.size, CV_8UC1, v.ptr[0], v.stride[0]);
             });
             break;
@@ -396,7 +424,7 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
                 yuv.rowRange(start + range_h, start + range_h * 2).reshape(0, dims)
             };
             cv::merge(uv_planes, uv);
-            rmat = cv::make_rmat<cv::gimpl::RMatAdapter>(uv);
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(uv);
             break;
         }
         case cv::MediaFormat::NV12:
@@ -408,20 +436,26 @@ void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
             });
             break;
         }
+        case cv::MediaFormat::GRAY:
+        {
+            cv::Mat uv(desc.size / 2, CV_8UC2, cv::Scalar::all(127));
+            rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(uv);
+            break;
+        }
         default:
             cv::util::throw_error(
                     std::logic_error("Unsupported MediaFormat for cv::gapi::streaming::UV"));
     }
 }
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+cv::GKernelPackage cv::gapi::streaming::kernels()
 {
     return cv::gapi::kernels<GOCVBGR, GOCVY, GOCVUV>();
 }
 
 #else
 
-cv::gapi::GKernelPackage cv::gapi::streaming::kernels()
+cv::GKernelPackage cv::gapi::streaming::kernels()
 {
     // Still provide this symbol to avoid linking issues
     util::throw_error(std::runtime_error("cv::gapi::streaming::kernels() isn't supported in standalone"));

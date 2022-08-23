@@ -23,6 +23,7 @@
     @defgroup gapi_colorconvert Graph API: Converting image from one color space to another
     @defgroup gapi_feature Graph API: Image Feature Detection
     @defgroup gapi_shape Graph API: Image Structural Analysis and Shape Descriptors
+    @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
 
@@ -56,7 +57,7 @@ namespace imgproc {
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GFindContoursOutput = std::tuple<GArray<GArray<Point>>,GArray<Vec4i>>;
 
-    G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>,"org.opencv.imgproc.filters.filter2D") {
+    G_TYPED_KERNEL(GFilter2D, <GMat(GMat,int,Mat,Point,Scalar,int,Scalar)>, "org.opencv.imgproc.filters.filter2D") {
         static GMatDesc outMeta(GMatDesc in, int ddepth, Mat, Point, Scalar, int, Scalar) {
             return in.withDepth(ddepth);
         }
@@ -74,7 +75,7 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GBlur, <GMat(GMat,Size,Point,int,Scalar)>,         "org.opencv.imgproc.filters.blur"){
+    G_TYPED_KERNEL(GBlur, <GMat(GMat,Size,Point,int,Scalar)>, "org.opencv.imgproc.filters.blur") {
         static GMatDesc outMeta(GMatDesc in, Size, Point, int, Scalar) {
             return in;
         }
@@ -138,13 +139,13 @@ namespace imgproc {
         }
     };
 
-    G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist"){
+    G_TYPED_KERNEL(GEqHist, <GMat(GMat)>, "org.opencv.imgproc.equalizeHist") {
         static GMatDesc outMeta(GMatDesc in) {
             return in.withType(CV_8U, 1);
         }
     };
 
-    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny"){
+    G_TYPED_KERNEL(GCanny, <GMat(GMat,double,double,int,bool)>, "org.opencv.imgproc.feature.canny") {
         static GMatDesc outMeta(GMatDesc in, double, double, int, bool) {
             return in.withType(CV_8U, 1);
         }
@@ -492,6 +493,32 @@ namespace imgproc {
             GAPI_Assert(inY.size.width  == 2 * inUV.size.width);
             GAPI_Assert(inY.size.height == 2 * inUV.size.height);
             return inY.withType(CV_8U, 3).asPlanar();
+        }
+    };
+
+    G_TYPED_KERNEL(GResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.imgproc.transform.resize") {
+        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int /*interp*/) {
+            if (sz.width != 0 && sz.height != 0)
+            {
+                return in.withSize(sz);
+            }
+            else
+            {
+                int outSz_w = saturate_cast<int>(in.size.width  * fx);
+                int outSz_h = saturate_cast<int>(in.size.height * fy);
+                GAPI_Assert(outSz_w > 0 && outSz_h > 0);
+                return in.withSize(Size(outSz_w, outSz_h));
+            }
+        }
+    };
+
+    G_TYPED_KERNEL(GResizeP, <GMatP(GMatP,Size,int)>, "org.opencv.imgproc.transform.resizeP") {
+        static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
+            GAPI_Assert(in.depth == CV_8U);
+            GAPI_Assert(in.chan == 3);
+            GAPI_Assert(in.planar);
+            GAPI_Assert(interp == cv::INTER_LINEAR);
+            return in.withSize(sz);
         }
     };
 
@@ -1214,7 +1241,7 @@ or column if there are N channels, or have N columns if there is a single channe
 @param src Input set of 2D points stored in one of possible containers: Mat,
 std::vector<cv::Point2i>, std::vector<cv::Point2f>, std::vector<cv::Point2d>.
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
-and @ref DIST_C are not suppored.
+and @ref DIST_C are not supported.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
 is chosen.
 @param reps Sufficient accuracy for the radius (distance between the coordinate origin and the
@@ -1286,7 +1313,7 @@ or column if there are N channels, or have N columns if there is a single channe
 @param src Input set of 3D points stored in one of possible containers: Mat,
 std::vector<cv::Point3i>, std::vector<cv::Point3f>, std::vector<cv::Point3d>.
 @param distType Distance used by the M-estimator, see #DistanceTypes. @ref DIST_USER
-and @ref DIST_C are not suppored.
+and @ref DIST_C are not supported.
 @param param Numerical parameter ( C ) for some types of distances. If it is 0, an optimal value
 is chosen.
 @param reps Sufficient accuracy for the radius (distance between the coordinate origin and the
@@ -1676,6 +1703,66 @@ image type is @ref CV_8UC1.
 GAPI_EXPORTS GMatP NV12toBGRp(const GMat &src_y, const GMat &src_uv);
 
 //! @} gapi_colorconvert
+//! @addtogroup gapi_transform
+//! @{
+/** @brief Resizes an image.
+
+The function resizes the image src down to or up to the specified size.
+
+Output image size will have the size dsize (when dsize is non-zero) or the size computed from
+src.size(), fx, and fy; the depth of output is the same as of src.
+
+If you want to resize src so that it fits the pre-created dst,
+you may call the function as follows:
+@code
+    // explicitly specify dsize=dst.size(); fx and fy will be computed from that.
+    resize(src, dst, dst.size(), 0, 0, interpolation);
+@endcode
+If you want to decimate the image by factor of 2 in each direction, you can call the function this
+way:
+@code
+    // specify fx and fy and let the function compute the destination image size.
+    resize(src, dst, Size(), 0.5, 0.5, interpolation);
+@endcode
+To shrink an image, it will generally look best with cv::INTER_AREA interpolation, whereas to
+enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv::INTER_LINEAR
+(faster but still looks OK).
+
+@note Function textual ID is "org.opencv.imgproc.transform.resize"
+
+@param src input image.
+@param dsize output image size; if it equals zero, it is computed as:
+ \f[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\f]
+ Either dsize or both fx and fy must be non-zero.
+@param fx scale factor along the horizontal axis; when it equals 0, it is computed as
+\f[\texttt{(double)dsize.width/src.cols}\f]
+@param fy scale factor along the vertical axis; when it equals 0, it is computed as
+\f[\texttt{(double)dsize.height/src.rows}\f]
+@param interpolation interpolation method, see cv::InterpolationFlags
+
+@sa  warpAffine, warpPerspective, remap, resizeP
+ */
+GAPI_EXPORTS_W GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+
+/** @brief Resizes a planar image.
+
+The function resizes the image src down to or up to the specified size.
+Planar image memory layout is three planes laying in the memory contiguously,
+so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
+
+Output image size will have the size dsize, the depth of output is the same as of src.
+
+@note Function textual ID is "org.opencv.imgproc.transform.resizeP"
+
+@param src input image, must be of @ref CV_8UC1 type;
+@param dsize output image size;
+@param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
+
+@sa  warpAffine, warpPerspective, remap, resize
+ */
+GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
+
+//! @} gapi_transform
 } //namespace gapi
 } //namespace cv
 

@@ -6,7 +6,7 @@ ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
 ocv_add_dispatched_file(convert SSE2 AVX2 VSX3)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
-ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX)
+ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX NEON_DOTPROD)
 ocv_add_dispatched_file(mean SSE2 AVX2)
 ocv_add_dispatched_file(merge SSE2 AVX2)
 ocv_add_dispatched_file(split SSE2 AVX2)
@@ -27,6 +27,7 @@ set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "All
 # TODO building plugins with OpenCV is not supported yet
 #set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
 #string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+#string(TOLOWER "${PARALLEL_PLUGIN_LIST}" PARALLEL_PLUGIN_LIST)
 
 
 ocv_add_module(core
@@ -144,6 +145,8 @@ ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
+    "${OPENGL_LIBRARIES}"
+    "${GLX_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"

@@ -1102,7 +1102,7 @@ struct InferList2: public cv::detail::KernelTag {
                 } else {
                     GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
                 }
-                // }}} (Preapre input)
+                // }}} (Prepare input)
             } // }}} (For every input of the net)
 
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());
@@ -1147,7 +1147,7 @@ namespace {
             return EPtr{new cv::gimpl::onnx::GONNXExecutable(graph, nodes)};
         }
 
-        virtual cv::gapi::GKernelPackage auxiliaryKernels() const override {
+        virtual cv::GKernelPackage auxiliaryKernels() const override {
             return cv::gapi::kernels< cv::gimpl::onnx::Infer
                                     , cv::gimpl::onnx::InferROI
                                     , cv::gimpl::onnx::InferList

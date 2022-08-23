@@ -45,6 +45,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wunused-function -Wshadow 
     -Wmissing-prototypes  # clang
     -Wmissing-declarations # gcc
     -Wimplicit-fallthrough
+    -Wunused-but-set-variable # clang15
 )
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 

@@ -61,24 +61,24 @@ Code
 This tutorial code's is shown lines below.
 
 @add_toggle_cpp
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp).
 @include samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp
 @end_toggle
 
 @add_toggle_java
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java).
 @include samples/java/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.java
 @end_toggle
 
 @add_toggle_python
-You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py).
+You can also download it from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py).
 @include samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py
 @end_toggle
 
 Explanation / Result
 --------------------
 
-Get image from [here](https://raw.githubusercontent.com/opencv/opencv/master/doc/tutorials/imgproc/morph_lines_detection/images/src.png) .
+Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/imgproc/morph_lines_detection/images/src.png) .
 
 #### Load Image
 
@@ -130,7 +130,7 @@ Get image from [here](https://raw.githubusercontent.com/opencv/opencv/master/doc
 
 #### Output images
 
-Now we are ready to apply morphological operations in order to extract the horizontal and vertical lines and as a consequence to separate the the music notes from the music sheet, but first let's initialize the output images that we will use for that reason:
+Now we are ready to apply morphological operations in order to extract the horizontal and vertical lines and as a consequence to separate the music notes from the music sheet, but first let's initialize the output images that we will use for that reason:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp init

@@ -205,11 +205,12 @@ cmake -DCV_DISABLE_OPTIMIZATION=ON ../opencv
 More details on CPU optimization options can be found in wiki: https://github.com/opencv/opencv/wiki/CPU-optimizations-build-options
 
 
-## Profiling, coverage, sanitize, hardening, size optimization
+## Profiling, coverage, sanitize, hardening, size optimization {#profiling_coverage_sanitize_hardening_size_optimization}
 
 Following options can be used to produce special builds with instrumentation or improved security. All options are disabled by default.
 
 | Option | Compiler | Description |
+| -------| -------- | ----------- |
 | `ENABLE_PROFILING` | GCC or Clang | Enable profiling compiler and linker options. |
 | `ENABLE_COVERAGE` | GCC or Clang | Enable code coverage support. |
 | `OPENCV_ENABLE_MEMORY_SANITIZER` | N/A | Enable several quirks in code to assist memory sanitizer. |
@@ -339,7 +340,7 @@ Integration with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg) library for deco
 - _swscale_
 - _avresample_ (optional)
 
-Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/master) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
+Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/4.x) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
 
 @note [Libav](https://en.wikipedia.org/wiki/Libav) library can be used instead of FFmpeg, but this combination is not actively supported.
 
@@ -476,9 +477,10 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `BUILD_PROTOBUF` | _ON_ | Build own copy of _protobuf_. Must be disabled if you want to use external library. |
 | `PROTOBUF_UPDATE_FILES` | _OFF_ | Re-generate all .proto files. _protoc_ compiler compatible with used version of _protobuf_ must be installed. |
 | `OPENCV_DNN_OPENCL` | _ON_ | Enable built-in OpenCL inference backend. |
-| `WITH_INF_ENGINE` | _OFF_ | Enables [Intel Inference Engine (IE)](https://github.com/openvinotoolkit/openvino) backend. Allows to execute networks in IE format (.xml + .bin). Inference Engine must be installed either as part of [OpenVINO toolkit](https://en.wikipedia.org/wiki/OpenVINO), either as a standalone library built from sources. |
-| `INF_ENGINE_RELEASE` | _2020040000_ | Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
-| `WITH_NGRAPH` | _OFF_ | Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
+| `WITH_INF_ENGINE` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables [Intel Inference Engine (IE)](https://github.com/openvinotoolkit/openvino) backend. Allows to execute networks in IE format (.xml + .bin). Inference Engine must be installed either as part of [OpenVINO toolkit](https://en.wikipedia.org/wiki/OpenVINO), either as a standalone library built from sources. |
+| `INF_ENGINE_RELEASE` | _2020040000_ | **Deprecated since OpenVINO 2022.1** Defines version of Inference Engine library which is tied to OpenVINO toolkit version. Must be a 10-digit string, e.g. _2020040000_ for OpenVINO 2020.4. |
+| `WITH_NGRAPH` | _OFF_ | **Deprecated since OpenVINO 2022.1** Enables Intel NGraph library support. This library is part of Inference Engine backend which allows executing arbitrary networks read from files in multiple formats supported by OpenCV: Caffe, TensorFlow, PyTorch, Darknet, etc.. NGraph library must be installed, it is included into Inference Engine. |
+| `WITH_OPENVINO` | _OFF_ | Enable Intel OpenVINO Toolkit support. Should be used for OpenVINO>=2022.1 instead of `WITH_INF_ENGINE` and `WITH_NGRAPH`. |
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |

@@ -169,16 +169,20 @@ struct SigmoidFunctor {
 template <class T>
 struct ELUFunctor {
     struct Params {
-        CUDA4DNN_HOST_DEVICE Params() { }
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
     };
 
-    CUDA4DNN_DEVICE ELUFunctor() { }
-    CUDA4DNN_DEVICE ELUFunctor(const Params& params) { }
+    CUDA4DNN_DEVICE ELUFunctor() : ELUFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ELUFunctor(const Params& params) : alpha{params.alpha} { }
 
     CUDA4DNN_DEVICE T operator()(T value) {
         using csl::device::expm1;
-        return value >= T(0) ? value : expm1(value);
+        return value >= T(0) ? value : alpha * expm1(value);
     }
+
+    T alpha;
 };
 
 template <class T>
@@ -207,6 +211,399 @@ struct BNLLFunctor {
         using csl::device::log1pexp;
         return value > T(0) ? value + log1pexp(-value) : log1pexp(value);
     }
+};
+
+template <class T>
+struct CeilFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE CeilFunctor() { }
+    CUDA4DNN_DEVICE CeilFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::ceil;
+        return ceil(value);
+    }
+};
+
+template <class T>
+struct FloorFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE FloorFunctor() { }
+    CUDA4DNN_DEVICE FloorFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::floor;
+        return floor(value);
+    }
+};
+
+template <class T>
+struct LogFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE LogFunctor() { }
+    CUDA4DNN_DEVICE LogFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::log;
+        return log(value);
+    }
+};
+
+template <class T>
+struct RintFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE RintFunctor() { }
+    CUDA4DNN_DEVICE RintFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::rint;
+        return rint(value);
+    }
+};
+
+template <class T>
+struct SqrtFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SqrtFunctor() { }
+    CUDA4DNN_DEVICE SqrtFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::sqrt;
+        return sqrt(value);
+    }
+};
+
+template <class T>
+struct NotFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE NotFunctor() { }
+    CUDA4DNN_DEVICE NotFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::floor;
+        return floor(static_cast<T>(1.) - value);
+    }
+};
+
+template <class T>
+struct AcosFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AcosFunctor() { }
+    CUDA4DNN_DEVICE AcosFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::acos;
+        return acos(value);
+    }
+};
+
+template <class T>
+struct AcoshFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AcoshFunctor() { }
+    CUDA4DNN_DEVICE AcoshFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::acosh;
+        return acosh(value);
+    }
+};
+
+template <class T>
+struct AsinFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AsinFunctor() { }
+    CUDA4DNN_DEVICE AsinFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::asin;
+        return asin(value);
+    }
+};
+
+template <class T>
+struct AsinhFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AsinhFunctor() { }
+    CUDA4DNN_DEVICE AsinhFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::asinh;
+        return asinh(value);
+    }
+};
+
+template <class T>
+struct AtanFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AtanFunctor() { }
+    CUDA4DNN_DEVICE AtanFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::atan;
+        return atan(value);
+    }
+};
+
+template <class T>
+struct AtanhFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE AtanhFunctor() { }
+    CUDA4DNN_DEVICE AtanhFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::atanh;
+        return atanh(value);
+    }
+};
+
+template <class T>
+struct CosFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE CosFunctor() { }
+    CUDA4DNN_DEVICE CosFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::cos;
+        return cos(value);
+    }
+};
+
+template <class T>
+struct CoshFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE CoshFunctor() { }
+    CUDA4DNN_DEVICE CoshFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::cosh;
+        return cosh(value);
+    }
+};
+
+template <class T>
+struct ErfFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE ErfFunctor() { }
+    CUDA4DNN_DEVICE ErfFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::erf;
+        return erf(value);
+    }
+};
+
+template <class T>
+struct HardSwishFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE HardSwishFunctor() { }
+    CUDA4DNN_DEVICE HardSwishFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::clamp; // saturate?
+        return value * clamp(value / static_cast<T>(6.f) + static_cast<T>(0.5f), static_cast<T>(0.f), static_cast<T>(1.f));
+    }
+};
+
+template <class T>
+struct SinFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SinFunctor() { }
+    CUDA4DNN_DEVICE SinFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::sin;
+        return sin(value);
+    }
+};
+
+template <class T>
+struct SinhFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SinhFunctor() { }
+    CUDA4DNN_DEVICE SinhFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::sinh;
+        return sinh(value);
+    }
+};
+
+template <class T>
+struct SoftplusFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SoftplusFunctor() { }
+    CUDA4DNN_DEVICE SoftplusFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::log1pexp;
+        return log1pexp(value);
+    }
+};
+
+template <class T>
+struct SoftsignFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE SoftsignFunctor() { }
+    CUDA4DNN_DEVICE SoftsignFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::abs;
+        return value / (static_cast<T>(1.f) + abs(value));
+    }
+};
+
+template <class T>
+struct TanFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE TanFunctor() { }
+    CUDA4DNN_DEVICE TanFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::tan;
+        return tan(value);
+    }
+};
+
+template <class T>
+struct CeluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
+    };
+
+    CUDA4DNN_DEVICE CeluFunctor() : CeluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE CeluFunctor(const Params& params) : alpha{params.alpha} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::min;
+        using csl::device::max;
+        using csl::device::expm1;
+        return max(T(0), value) + min(T(0), alpha * expm1(value / alpha));
+    }
+
+    T alpha;
+};
+
+template <class T>
+struct HardSigmoidFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(0.2), beta(0.5) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_, T beta_) : alpha(alpha_), beta(beta_) { }
+        T alpha, beta;
+    };
+
+    CUDA4DNN_DEVICE HardSigmoidFunctor() : HardSigmoidFunctor(Params{}) { }
+    CUDA4DNN_DEVICE HardSigmoidFunctor(const Params& params): alpha{params.alpha}, beta{params.beta} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::clamp;
+        return clamp(alpha * value + beta, T(0), T(1));
+    }
+
+    T alpha, beta;
+};
+
+template <class T>
+struct SeluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1.6732632423543772848170429916717),
+                                        gamma(1.0507009873554804934193349852946) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_, T gamma_) : alpha(alpha_), gamma(gamma_) { }
+        T alpha, gamma;
+    };
+
+    CUDA4DNN_DEVICE SeluFunctor() : SeluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE SeluFunctor(const Params& params): alpha{params.alpha}, gamma{params.gamma} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::expm1;
+        return gamma * (value > T(0) ? value : alpha * expm1(value));
+    }
+
+    T alpha, gamma;
+};
+
+template <class T>
+struct ThresholdedReluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }
+        CUDA4DNN_HOST_DEVICE Params(T alpha_) : alpha(alpha_) { }
+        T alpha;
+    };
+
+    CUDA4DNN_DEVICE ThresholdedReluFunctor() : ThresholdedReluFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ThresholdedReluFunctor(const Params& params) : alpha{params.alpha} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return (value > alpha) ? value : T(0);
+    }
+
+    T alpha;
 };
 
 template <class T>
@@ -327,6 +724,52 @@ struct DivFunctor {
     CUDA4DNN_DEVICE DivFunctor(const Params& params) { }
 
     CUDA4DNN_DEVICE T operator()(T x, T y) { return x / y; }
+};
+
+template <class T>
+struct SignFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE SignFunctor() { }
+    CUDA4DNN_DEVICE SignFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return value > T(0) ? T(1) : (value < T(0) ? T(-1) : T(0));
+    }
+};
+
+template <class T>
+struct ShrinkFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : bias(0), lambd(0.5) { }
+        CUDA4DNN_HOST_DEVICE Params(T bias_, T lambd_) : bias(bias_), lambd(lambd_) { }
+        T bias, lambd;
+    };
+
+    CUDA4DNN_DEVICE ShrinkFunctor() : ShrinkFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ShrinkFunctor(const Params& params) : bias{params.bias}, lambd{params.lambd} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return value > lambd ? value - bias : (value < -lambd ? value + bias : T(0));
+    }
+
+    T bias, lambd;
+};
+
+template <class T>
+struct ReciprocalFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() {}
+    };
+
+    CUDA4DNN_DEVICE ReciprocalFunctor() { }
+    CUDA4DNN_DEVICE ReciprocalFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        return T(1.f)/value;
+    }
 };
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

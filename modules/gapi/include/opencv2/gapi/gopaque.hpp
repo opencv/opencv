@@ -232,7 +232,7 @@ namespace detail
     class OpaqueRef
     {
         std::shared_ptr<BasicOpaqueRef> m_ref;
-        cv::detail::OpaqueKind m_kind;
+        cv::detail::OpaqueKind m_kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
         template<typename T> inline void check() const
         {

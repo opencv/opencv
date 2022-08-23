@@ -29,7 +29,7 @@ string vec2str( const string& sep, const int* v, size_t nelems )
     string result = "";
     for( size_t i = 0; i < nelems; i++ )
     {
-        sprintf(buf, "%d", v[i]);
+        snprintf(buf, sizeof(buf), "%d", v[i]);
         result += string(buf);
         if( i < nelems - 1 )
             result += sep;
@@ -2122,7 +2122,7 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
             return CMP_EPS_BIG_DIFF;
         }
         if(_realmaxdiff)
@@ -2154,15 +2154,15 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
     switch( code )
     {
     case CMP_EPS_BIG_DIFF:
-        sprintf( msg, "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
+        snprintf( msg, sizeof(msg), "%s: Too big difference (=%g > %g)", desc, diff, success_err_level );
         code = TS::FAIL_BAD_ACCURACY;
         break;
     case CMP_EPS_INVALID_TEST_DATA:
-        sprintf( msg, "%s: Invalid output", desc );
+        snprintf( msg, sizeof(msg), "%s: Invalid output", desc );
         code = TS::FAIL_INVALID_OUTPUT;
         break;
     case CMP_EPS_INVALID_REF_DATA:
-        sprintf( msg, "%s: Invalid reference output", desc );
+        snprintf( msg, sizeof(msg), "%s: Invalid reference output", desc );
         code = TS::FAIL_INVALID_OUTPUT;
         break;
     default:
@@ -2733,7 +2733,7 @@ static void calcSobelKernel1D( int order, int _aperture_size, int size, vector<i
     if( _aperture_size < 0 )
     {
         static const int scharr[8] = { 3, 10, 3, -1, 0, 1, 0, 0 };  // extra elements to eliminate "-Warray-bounds" bogus warning
-        assert( size == 3 );
+        CV_Assert( size == 3 && order < 2 );
         for( i = 0; i < size; i++ )
             kernel[i] = scharr[order*3 + i];
         return;
@@ -3057,7 +3057,7 @@ void threshold( const Mat& _src, Mat& _dst,
         imaxval = cvRound(maxval);
     }
 
-    assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
+    CV_Assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
 
     switch( thresh_type )
     {
@@ -3219,7 +3219,7 @@ void threshold( const Mat& _src, Mat& _dst,
         }
         break;
     default:
-        assert(0);
+        CV_Assert(0);
     }
 }
 

@@ -18,8 +18,9 @@
 #define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
-
+#define CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND      "dnn_skip_opencv_backend"
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
+#define CV_TEST_TAG_DNN_SKIP_CPU                 "dnn_skip_cpu"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER       "dnn_skip_ie_nn_builder"
@@ -44,6 +45,10 @@
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP32           "dnn_skip_cuda_fp32"
 
+#define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
+#define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
+
+#define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -135,7 +140,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withCpuOCV = true,
         bool withVkCom = true,
         bool withCUDA = true,
-        bool withNgraph = true
+        bool withNgraph = true,
+        bool withWebnn = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
@@ -171,16 +177,19 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
+        CV_UNUSED(backend); CV_UNUSED(target); CV_UNUSED(inp); CV_UNUSED(ref);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021000000)
         if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
             {
+                std::cout << "Inconsistent batch size of input and output blobs for Myriad plugin" << std::endl;
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-                throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
             }
         }
+#endif
     }
 
     void expectNoFallbacks(Net& net, bool raiseError = true)

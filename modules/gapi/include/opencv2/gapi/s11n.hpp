@@ -241,7 +241,7 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Scalar &s);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Mat &m);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Mat &m);
 
-// FIXME: for GRunArgs serailization
+// FIXME: for GRunArgs serialization
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat & um);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat & um);
@@ -431,7 +431,7 @@ struct deserialize_runarg {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     if (idx == GRunArg::index_of<RMat>()) {
         // Type or void (if not found)
-        using TA = typename cv::util::find_adapter_impl<RMat::Adapter, Types...>::type;
+        using TA = typename cv::util::find_adapter_impl<RMat::IAdapter, Types...>::type;
         return deserialize_arg_with_adapter<RMat, TA>::exec(is);
     } else if (idx == GRunArg::index_of<MediaFrame>()) {
         // Type or void (if not found)

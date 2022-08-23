@@ -68,7 +68,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                     }
                 }
             });
-            /* std::shared_ptr<T>::reset invokves the deleter if an exception occurs; hence, we don't
+            /* std::shared_ptr<T>::reset invokes the deleter if an exception occurs; hence, we don't
              * need to have a try-catch block to free the allocated device memory
              */
 

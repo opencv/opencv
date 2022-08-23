@@ -91,6 +91,12 @@ ocv_cmake_hook(CMAKE_INIT)
 
 # must go before the project()/enable_language() commands
 ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
+if(NOT DEFINED CMAKE_BUILD_TYPE
+    AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE
+)
+  message(STATUS "'Release' build type is used by default. Use CMAKE_BUILD_TYPE to specify build type (Release or Debug)")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build")
+endif()
 if(DEFINED CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${CMAKE_CONFIGURATION_TYPES}")
 endif()
@@ -100,7 +106,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
-# Bootstap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+# Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
@@ -217,7 +223,7 @@ OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
@@ -237,7 +243,7 @@ OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/Mac)" ON
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
   VERIFY HAVE_CAP_IOS)
-OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" ON
+OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS)
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
@@ -275,6 +281,9 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
+        VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
+        VERIFY HAVE_WAYLAND)
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS
   VERIFY HAVE_IPP)
@@ -284,12 +293,13 @@ OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
-OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
+# replacement for deprecated options: WITH_INF_ENGINE, WITH_NGRAPH
+OCV_OPTION(WITH_OPENVINO "Include Intel OpenVINO toolkit support" (WITH_INF_ENGINE)
   VISIBLE_IF TRUE
-  VERIFY INF_ENGINE_TARGET)
-OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
+  VERIFY TARGET ocv.3rdparty.openvino)
+OCV_OPTION(WITH_WEBNN "Include WebNN support" OFF
   VISIBLE_IF TRUE
-  VERIFY TARGET ngraph::ngraph)
+  VERIFY HAVE_WEBNN)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support (Jasper)" ON
   VISIBLE_IF NOT IOS
   VERIFY HAVE_JASPER)
@@ -302,7 +312,7 @@ OCV_OPTION(WITH_JPEG "Include JPEG support" ON
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
-OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" BUILD_OPENEXR OR NOT CMAKE_CROSSCOMPILING
+OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR APPLE) OR BUILD_OPENEXR) OR NOT CMAKE_CROSSCOMPILING
   VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
@@ -446,6 +456,12 @@ OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
 OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_ONNX)
+OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_TIMVX)
+OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
+  VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
+  VERIFY HAVE_OBSENSOR)
 
 # OpenCV build components
 # ===================================================
@@ -610,10 +626,6 @@ endif()
 # ----------------------------------------------------------------------------
 # OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
-# In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
-if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
-  set(CMAKE_BUILD_TYPE Release)
-endif()
 
 ocv_cmake_hook(POST_CMAKE_BUILD_OPTIONS)
 
@@ -629,7 +641,7 @@ ocv_cmake_hook(POST_COMPILER_OPTIONS)
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
-if(UNIX)
+if(UNIX OR MINGW)
   if(NOT APPLE_FRAMEWORK OR OPENCV_ENABLE_PKG_CONFIG)
     if(CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{PKG_CONFIG_LIBDIR} AND NOT DEFINED ENV{PKG_CONFIG_SYSROOT_DIR}
         AND NOT OPENCV_ENABLE_PKG_CONFIG
@@ -661,6 +673,8 @@ if(UNIX)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+    elseif(MINGW)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
     endif()
@@ -730,6 +744,9 @@ include(cmake/OpenCVFindProtobuf.cmake)
 if(WITH_TENGINE)
   include(cmake/OpenCVFindTengine.cmake)
 endif()
+if(WITH_TIMVX)
+  include(cmake/OpenCVFindTIMVX.cmake)
+endif()
 
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
@@ -791,8 +808,13 @@ if(WITH_VULKAN)
   include(cmake/OpenCVDetectVulkan.cmake)
 endif()
 
+# --- WebNN ---
+if(WITH_WEBNN)
+  include(cmake/OpenCVDetectWebNN.cmake)
+endif()
+
 # --- Inference Engine ---
-if(WITH_INF_ENGINE)
+if(WITH_INF_ENGINE OR WITH_OPENVINO)
   include(cmake/OpenCVDetectInferenceEngine.cmake)
 endif()
 
@@ -1246,6 +1268,24 @@ endif(WIN32)
 status("")
 status("  GUI: " "${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
 
+if(WITH_WAYLAND OR HAVE_WAYLAND)
+  if(HAVE_WAYLAND_CLIENT)
+    status("    Wayland Client:" "YES (ver ${WAYLAND_CLIENT_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_CURSOR)
+    status("    Wayland Cursor:" "YES (ver ${WAYLAND_CURSOR_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_PROTOCOL)
+    status("    Wayland Protocol:" "YES (ver ${WAYLAND_PROTOCOL_VERSION})")
+  endif()
+  if(HAVE_WAYLAND_EGL)
+    status("    Wayland EGL:" "YES (ver ${WAYLAND_EGL_VERSION})")
+  endif()
+  if(HAVE_XKBCOMMON)
+    status("    Xkbcommon:" "YES (ver ${XKBCOMMON_VERSION})")
+  endif()
+endif()
+
 if(WITH_QT OR HAVE_QT)
   if(HAVE_QT)
     status("    QT:" "YES (ver ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} ${QT_EDITION})")
@@ -1527,55 +1567,61 @@ if(WITH_HALIDE OR HAVE_HALIDE)
   status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
 endif()
 
-if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
-  if(INF_ENGINE_TARGET)
-    list(GET INF_ENGINE_TARGET 0 ie_target)
-    set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
-    ocv_get_imported_target(ie_target "${ie_target}")
-    get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
-    ocv_build_features_string(_lib
-      IF _lib THEN "${_lib}"
-      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
-      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
-      IF _lib_rel  THEN "${_lib_rel}"
-      IF _lib_dbg  THEN "${_lib_dbg}"
-      ELSE "unknown"
-    )
-    get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
-    status("    Inference Engine:" "${__msg}")
-    status("        * libs:" "${_lib}")
-    status("        * includes:" "${_inc}")
-  else()
-    status("    Inference Engine:"     "NO")
+if(HAVE_OPENVINO
+    OR (WITH_OPENVINO AND NOT WITH_INF_ENGINE AND NOT INF_ENGINE_TARGET)
+)
+  status("    OpenVINO:" TARGET openvino::runtime THEN "YES (${OpenVINO_VERSION})" ELSE "NO")
+else()
+  if(WITH_INF_ENGINE OR INF_ENGINE_TARGET)
+    if(INF_ENGINE_TARGET)
+      list(GET INF_ENGINE_TARGET 0 ie_target)
+      set(__msg "YES (${INF_ENGINE_RELEASE} / ${INF_ENGINE_VERSION})")
+      ocv_get_imported_target(ie_target "${ie_target}")
+      get_target_property(_lib ${ie_target} IMPORTED_LOCATION)
+      get_target_property(_lib_imp_rel ${ie_target} IMPORTED_IMPLIB_RELEASE)
+      get_target_property(_lib_imp_dbg ${ie_target} IMPORTED_IMPLIB_DEBUG)
+      get_target_property(_lib_rel ${ie_target} IMPORTED_LOCATION_RELEASE)
+      get_target_property(_lib_dbg ${ie_target} IMPORTED_LOCATION_DEBUG)
+      ocv_build_features_string(_lib
+        IF _lib THEN "${_lib}"
+        IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+        IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+        IF _lib_rel  THEN "${_lib_rel}"
+        IF _lib_dbg  THEN "${_lib_dbg}"
+        ELSE "unknown"
+      )
+      get_target_property(_inc ${ie_target} INTERFACE_INCLUDE_DIRECTORIES)
+      status("    Inference Engine:" "${__msg}")
+      status("        * libs:" "${_lib}")
+      status("        * includes:" "${_inc}")
+    else()
+      status("    Inference Engine:"     "NO")
+    endif()
   endif()
-endif()
-if(WITH_NGRAPH OR HAVE_NGRAPH)
-  if(HAVE_NGRAPH)
-    ocv_get_imported_target(__target ngraph::ngraph)
-    set(__msg "YES (${ngraph_VERSION})")
-    get_target_property(_lib ${__target} IMPORTED_LOCATION)
-    get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
-    get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
-    get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
-    get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
-    ocv_build_features_string(_lib
-      IF _lib THEN "${_lib}"
-      IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
-      IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
-      IF _lib_rel  THEN "${_lib_rel}"
-      IF _lib_dbg  THEN "${_lib_dbg}"
-      ELSE "unknown"
-    )
-    get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
-    status("    nGraph:" "${__msg}")
-    status("        * libs:" "${_lib}")
-    status("        * includes:" "${_inc}")
-  else()
-    status("    nGraph:"     "NO")
+  if(WITH_NGRAPH OR HAVE_NGRAPH)
+    if(HAVE_NGRAPH)
+      ocv_get_imported_target(__target ngraph::ngraph)
+      set(__msg "YES (${ngraph_VERSION})")
+      get_target_property(_lib ${__target} IMPORTED_LOCATION)
+      get_target_property(_lib_imp_rel ${__target} IMPORTED_IMPLIB_RELEASE)
+      get_target_property(_lib_imp_dbg ${__target} IMPORTED_IMPLIB_DEBUG)
+      get_target_property(_lib_rel ${__target} IMPORTED_LOCATION_RELEASE)
+      get_target_property(_lib_dbg ${__target} IMPORTED_LOCATION_DEBUG)
+      ocv_build_features_string(_lib
+        IF _lib THEN "${_lib}"
+        IF _lib_imp_rel AND _lib_imp_dbg THEN "${_lib_imp_rel} / ${_lib_imp_dbg}"
+        IF _lib_rel AND _lib_dbg THEN "${_lib_rel} / ${_lib_dbg}"
+        IF _lib_rel  THEN "${_lib_rel}"
+        IF _lib_dbg  THEN "${_lib_dbg}"
+        ELSE "unknown"
+      )
+      get_target_property(_inc ${__target} INTERFACE_INCLUDE_DIRECTORIES)
+      status("    nGraph:" "${__msg}")
+      status("        * libs:" "${_lib}")
+      status("        * includes:" "${_inc}")
+    else()
+      status("    nGraph:"     "NO")
+    endif()
   endif()
 endif()
 
@@ -1619,6 +1665,25 @@ if(WITH_VULKAN OR HAVE_VULKAN)
   if(HAVE_VULKAN)
     status("    Include path:"  VULKAN_INCLUDE_DIRS THEN "${VULKAN_INCLUDE_DIRS}" ELSE "NO")
     status("    Link libraries:" VULKAN_LIBRARIES THEN "${VULKAN_LIBRARIES}" ELSE "Dynamic load")
+  endif()
+endif()
+
+if(WITH_WEBNN OR HAVE_WEBNN)
+  status("")
+  status("  WebNN:"     HAVE_WEBNN THEN "YES" ELSE "NO")
+  if(HAVE_WEBNN AND NOT EMSCRIPTEN)
+    status("    Include path:"  WEBNN_HEADER_DIRS THEN "${WEBNN_HEADER_DIRS}" ELSE "NO")
+    status("    Link libraries:" WEBNN_LIBRARIES THEN "${WEBNN_LIBRARIES}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_TIMVX)
+  status("")
+  status("  Tim-VX:"     HAVE_TIMVX THEN "YES" ELSE "NO")
+  if(HAVE_TIMVX)
+    status("    Include path"  TIMVX_INCLUDE_DIR THEN "${TIMVX_INCLUDE_DIR}" ELSE "NO")
+    status("    Link libraries:" TIMVX_LIBRARY THEN "${TIMVX_LIBRARY}" ELSE "NO")
+    status("    VIVANTE SDK path" VIVANTE_SDK_DIR THEN "${VIVANTE_SDK_DIR}" ELSE "NO")
   endif()
 endif()
 

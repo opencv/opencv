@@ -1,3 +1,4 @@
+#include <opencv2/gapi/own/assert.hpp>
 #include "streaming/onevpl/accelerators/surface/surface_pool.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "logger.hpp"
@@ -9,11 +10,15 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+CachedPool::CachedPool(size_t reserved_size/* = 0 */) {
+    reserve(reserved_size);
+}
+
 void CachedPool::reserve(size_t size) {
     surfaces.reserve(size);
 }
 
-size_t CachedPool::size() const {
+size_t CachedPool::total_size() const {
     return surfaces.size();
 }
 
@@ -29,12 +34,22 @@ void CachedPool::push_back(surface_ptr_t &&surf) {
     next_free_it = surfaces.begin();
 }
 
+size_t CachedPool::available_size() const {
+    size_t free_surf_count =
+        std::count_if(surfaces.begin(), surfaces.end(),
+                     [](const surface_ptr_t& val) {
+            GAPI_DbgAssert(val && "Pool contains empty surface");
+            return (val->get_locks_count() == 0);
+        });
+    return free_surf_count;
+}
+
 CachedPool::surface_ptr_t CachedPool::find_free() {
     auto it =
         std::find_if(next_free_it, surfaces.end(),
                      [](const surface_ptr_t& val) {
             GAPI_DbgAssert(val && "Pool contains empty surface");
-            return !val->get_locks_count();
+            return (val->get_locks_count() == 0);
         });
 
     // Limitation realloc pool might be a future extension
@@ -42,7 +57,7 @@ CachedPool::surface_ptr_t CachedPool::find_free() {
         it = std::find_if(surfaces.begin(), next_free_it,
                           [](const surface_ptr_t& val) {
                 GAPI_DbgAssert(val && "Pool contains empty surface");
-                return !val->get_locks_count();
+                return (val->get_locks_count() == 0);
             });
         if (it == next_free_it) {
             std::stringstream ss;

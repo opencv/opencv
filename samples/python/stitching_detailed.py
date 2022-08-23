@@ -36,7 +36,7 @@ except (AttributeError, cv.error) as e:
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
 try:
-    FEATURES_FIND_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
+    FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
 except AttributeError:
     print("SIFT not available")
 try:
@@ -246,9 +246,9 @@ def get_matcher(args):
     if matcher_type == "affine":
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
     elif range_width == -1:
-        matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestMatcher(try_cuda, match_conf)
     else:
-        matcher = cv.detail.BestOf2NearestRangeMatcher_create(range_width, try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestRangeMatcher(range_width, try_cuda, match_conf)
     return matcher
 
 
@@ -324,7 +324,10 @@ def main():
                 is_work_scale_set = True
             img = cv.resize(src=full_img, dsize=None, fx=work_scale, fy=work_scale, interpolation=cv.INTER_LINEAR_EXACT)
         if is_seam_scale_set is False:
-            seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            if seam_megapix > 0:
+                seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            else:
+                seam_scale = 1.0
             seam_work_aspect = seam_scale / work_scale
             is_seam_scale_set = True
         img_feat = cv.detail.computeImageFeatures2(finder, img)
@@ -345,9 +348,9 @@ def main():
     img_names_subset = []
     full_img_sizes_subset = []
     for i in range(len(indices)):
-        img_names_subset.append(img_names[indices[i, 0]])
-        img_subset.append(images[indices[i, 0]])
-        full_img_sizes_subset.append(full_img_sizes[indices[i, 0]])
+        img_names_subset.append(img_names[indices[i]])
+        img_subset.append(images[indices[i]])
+        full_img_sizes_subset.append(full_img_sizes[indices[i]])
     images = img_subset
     img_names = img_names_subset
     full_img_sizes = full_img_sizes_subset
@@ -365,7 +368,7 @@ def main():
         cam.R = cam.R.astype(np.float32)
 
     adjuster = BA_COST_CHOICES[args.ba]()
-    adjuster.setConfThresh(1)
+    adjuster.setConfThresh(conf_thresh)
     refine_mask = np.zeros((3, 3), np.uint8)
     if ba_refine_mask[0] == 'x':
         refine_mask[0, 0] = 1
@@ -436,7 +439,7 @@ def main():
     sizes = []
     blender = None
     timelapser = None
-    # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
+    # https://github.com/opencv/opencv/blob/4.x/samples/cpp/stitching_detailed.cpp#L725 ?
     for idx, name in enumerate(img_names):
         full_img = cv.imread(name)
         if not is_compose_scale_set:
@@ -479,7 +482,7 @@ def main():
                 blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
             elif blend_type == "multiband":
                 blender = cv.detail_MultiBandBlender()
-                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
+                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int32))
             elif blend_type == "feather":
                 blender = cv.detail_FeatherBlender()
                 blender.setSharpness(1. / blend_width)
@@ -513,6 +516,5 @@ def main():
 
 
 if __name__ == '__main__':
-    print(__doc__)
     main()
     cv.destroyAllWindows()

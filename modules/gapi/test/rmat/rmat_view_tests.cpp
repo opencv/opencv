@@ -132,7 +132,7 @@ TEST_P(RMatViewNDTest, StepFromView) {
 
 INSTANTIATE_TEST_CASE_P(Test, RMatViewNDTest,
                         Combine(Values(CV_8U, CV_32F), // depth
-                                Values(1,2,3,4,7)));   // ndims
+                                Values(1,2,3,4,5)));   // ndims
 
 struct RMatViewNDTestNegative : public TestWithParam<
     std::tuple<int /*depth*/, int /*chan*/, int /*ndims*/>>{};
@@ -153,7 +153,7 @@ TEST_P(RMatViewNDTestNegative, DefaultStep) {
 INSTANTIATE_TEST_CASE_P(Test, RMatViewNDTestNegative,
                         Combine(Values(CV_8U, CV_32F), // depth
                                 Values(1,2,3,4),       // chan
-                                Values(2,4,7)));       // ndims
+                                Values(2,4,5)));       // ndims
 
 TEST_P(RMatViewTest, NonDefaultStepInput) {
     auto type = GetParam();
@@ -267,5 +267,14 @@ TEST_F(RMatViewCallbackTest, MagazineInteraction) {
     EXPECT_EQ(0, callbackCalls);
     mag.slot<View>().erase(rc);
     EXPECT_EQ(1, callbackCalls);
+}
+
+TEST(RMatView, Access1DMat) {
+    cv::Mat m({1}, CV_32FC1);
+    m.dims = 1;
+    auto rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(m);
+    auto view = rmat.access(cv::RMat::Access::R);
+    auto out = cv::gimpl::asMat(view);
+    EXPECT_EQ(1, out.dims);
 }
 } // namespace opencv_test

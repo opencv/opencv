@@ -148,7 +148,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, value, false ) );
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ) );
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -387,7 +387,7 @@ public:
 
                 if( c == '-' )
                 {
-                    assert( ptr[1] == '-' && ptr[2] == '>' );
+                    CV_Assert( ptr[1] == '-' && ptr[2] == '>' );
                     mode = 0;
                     ptr += 3;
                 }
@@ -694,7 +694,7 @@ public:
         else if( *ptr == '!' )
         {
             tag_type = CV_XML_DIRECTIVE_TAG;
-            assert( ptr[1] != '-' || ptr[2] != '-' );
+            CV_Assert( ptr[1] != '-' || ptr[2] != '-' );
             ptr++;
         }
         else

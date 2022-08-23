@@ -30,7 +30,7 @@ const std::string keys  =
         "{v        |         | Input from video file }"
         "{ci       | 0       | Default camera id }"
         "{flip     | false   | Vertical flip of input frames }"
-        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco) }"
+        "{t        | circles | Template for calibration (circles, chessboard, dualCircles, charuco, symcircles) }"
         "{sz       | 16.3    | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
@@ -40,6 +40,9 @@ const std::string keys  =
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
         "{d        | 0.8     | Min delay between captures}"
         "{pf       | defaultConfig.xml| Advanced application parameters}"
+        "{save_frames | false   | Save frames that contribute to final calibration}"
+        "{zoom     | 1       | Zoom factor applied to the preview image}"
+        "{force_reopen | false   | Forcefully reopen camera in case of errors}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)

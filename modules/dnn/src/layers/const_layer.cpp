@@ -10,6 +10,7 @@
 #include "../op_cuda.hpp"
 #include "layers_common.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_webnn.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -33,9 +34,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CUDA;
     }
 
@@ -76,16 +80,6 @@ public:
     }
 
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::ConstLayer ieLayer(name);
-        ieLayer.setData(wrapToInfEngineBlob(blobs[0]));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -97,6 +91,16 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        ml::Operand operand = nullptr;
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnGraphBuilder = node->net->builder;
+        operand = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(

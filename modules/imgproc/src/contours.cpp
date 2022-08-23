@@ -97,7 +97,7 @@ cvReadChainPoint( CvChainPtReader * reader )
 
         reader->ptr = ptr;
         reader->code = (schar)code;
-        assert( (code & ~7) == 0 );
+        CV_Assert( (code & ~7) == 0 );
         reader->pt.x = pt.x + icvCodeDeltas[code].x;
         reader->pt.y = pt.y + icvCodeDeltas[code].y;
     }
@@ -1187,7 +1187,7 @@ cvFindNextContour( CvContourScanner scanner )
                     }
 
                     /* hole flag of the parent must differ from the flag of the contour */
-                    assert( par_info->is_hole != is_hole );
+                    CV_Assert( par_info->is_hole != is_hole );
                     if( par_info->contour == 0 )        /* removed contour */
                         goto resume_scan;
                 }

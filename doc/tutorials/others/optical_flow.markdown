@@ -100,7 +100,7 @@ below:
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/optical_flow/optical_flow.cpp
@@ -108,7 +108,7 @@ below:
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/video/optical_flow/optical_flow.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow.py
@@ -117,7 +117,7 @@ below:
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDemo.java
@@ -139,9 +139,9 @@ Dense Optical Flow in OpenCV
 
 Lucas-Kanade method computes optical flow for a sparse feature set (in our example, corners detected
 using Shi-Tomasi algorithm). OpenCV provides another algorithm to find the dense optical flow. It
-computes the optical flow for all the points in the frame. It is based on Gunner Farneback's
+computes the optical flow for all the points in the frame. It is based on Gunnar Farneback's
 algorithm which is explained in "Two-Frame Motion Estimation Based on Polynomial Expansion" by
-Gunner Farneback in 2003.
+Gunnar Farneback in 2003.
 
 Below sample shows how to find the dense optical flow using above algorithm. We get a 2-channel
 array with optical flow vectors, \f$(u,v)\f$. We find their magnitude and direction. We color code the
@@ -150,7 +150,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/video/optical_flow/optical_flow_dense.cpp
@@ -158,7 +158,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/video/optical_flow/optical_flow_dense.py
@@ -167,7 +167,7 @@ corresponds to Value plane. See the code below:
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/video/optical_flow/OpticalFlowDenseDemo.java

@@ -529,6 +529,9 @@ static int icvInitSystem(int* c, char** v)
     //"For any GUI application using Qt, there is precisely one QApplication object"
     if (!QApplication::instance())
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+#endif
         new QApplication(*c, v);
         setlocale(LC_NUMERIC,"C");
 
@@ -2195,23 +2198,58 @@ void CvWindow::displayPropertiesWin()
         global_control_panel->hide();
 }
 
+static bool isTranslatableKey(Qt::Key key)
+{
+    // https://github.com/opencv/opencv/issues/21899
+    // https://doc.qt.io/qt-5/qt.html#Key-enum
+    // https://doc.qt.io/qt-6/qt.html#Key-enum
+    // https://github.com/qt/qtbase/blob/dev/src/testlib/qasciikey.cpp
+
+    bool ret = false;
+
+    switch ( key )
+    {
+        // Special keys
+        case Qt::Key_Escape:
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+        case Qt::Key_Backspace:
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            ret = true;
+            break;
+
+        // latin-1 keys.
+        default:
+        ret = (
+            ( ( Qt::Key_Space        <= key ) && ( key <= Qt::Key_AsciiTilde ) ) // 0x20--0x7e
+            ||
+            ( ( Qt::Key_nobreakspace <= key ) && ( key <= Qt::Key_ssharp     ) ) // 0x0a0--0x0de
+            ||
+            ( key == Qt::Key_division )                                          // 0x0f7
+            ||
+            ( key == Qt::Key_ydiaeresis )                                        // 0x0ff
+        );
+        break;
+    }
+
+    return ret;
+}
 
 //Need more test here !
 void CvWindow::keyPressEvent(QKeyEvent *evnt)
 {
-    //see http://doc.trolltech.com/4.6/qt.html#Key-enum
     int key = evnt->key();
+    const Qt::Key qtkey = static_cast<Qt::Key>(key);
 
-        Qt::Key qtkey = static_cast<Qt::Key>(key);
-        char asciiCode = QTest::keyToAscii(qtkey);
-        if (asciiCode != 0)
-            key = static_cast<int>(asciiCode);
-        else
-            key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
+    if ( isTranslatableKey( qtkey ) )
+        key = static_cast<int>( QTest::keyToAscii( qtkey ) );
+    else
+        key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
 
     //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
-        if (evnt->modifiers() != Qt::ControlModifier)
-        {
+    if (evnt->modifiers() != Qt::ControlModifier)
+    {
         mutexKey.lock();
         last_key = key;
         mutexKey.unlock();
@@ -3227,7 +3265,9 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 
 #ifdef HAVE_QT_OPENGL
 
-OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), OCVViewPort(), size(-1, -1)
+
+// QOpenGLWidget vs QGLWidget info: https://www.qt.io/blog/2014/09/10/qt-weekly-19-qopenglwidget
+OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : OpenCVQtWidgetBase(_parent), OCVViewPort(), size(-1, -1)
 {
     glDrawCallback = 0;
     glDrawData = 0;
@@ -3281,7 +3321,11 @@ void OpenGlViewPort::makeCurrentOpenGlContext()
 
 void OpenGlViewPort::updateGl()
 {
+    #ifdef HAVE_QT6
+    QOpenGLWidget::update();
+    #else
     QGLWidget::updateGL();
+    #endif
 }
 
 void OpenGlViewPort::initializeGL()
@@ -3308,31 +3352,31 @@ void OpenGlViewPort::paintGL()
 void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
-    QGLWidget::wheelEvent(evnt);
+    OpenCVQtWidgetBase::wheelEvent(evnt);
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_down);
-    QGLWidget::mousePressEvent(evnt);
+    OpenCVQtWidgetBase::mousePressEvent(evnt);
 }
 
 void OpenGlViewPort::mouseReleaseEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_up);
-    QGLWidget::mouseReleaseEvent(evnt);
+    OpenCVQtWidgetBase::mouseReleaseEvent(evnt);
 }
 
 void OpenGlViewPort::mouseDoubleClickEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_dbclick);
-    QGLWidget::mouseDoubleClickEvent(evnt);
+    OpenCVQtWidgetBase::mouseDoubleClickEvent(evnt);
 }
 
 void OpenGlViewPort::mouseMoveEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_move);
-    QGLWidget::mouseMoveEvent(evnt);
+    OpenCVQtWidgetBase::mouseMoveEvent(evnt);
 }
 
 
@@ -3340,8 +3384,7 @@ QSize OpenGlViewPort::sizeHint() const
 {
     if (size.width() > 0 && size.height() > 0)
         return size;
-
-    return QGLWidget::sizeHint();
+    return OpenCVQtWidgetBase::sizeHint();
 }
 
 void OpenGlViewPort::setSize(QSize size_)
@@ -3350,6 +3393,6 @@ void OpenGlViewPort::setSize(QSize size_)
     updateGeometry();
 }
 
-#endif
+#endif //HAVE_QT_OPENGL
 
 #endif // HAVE_QT

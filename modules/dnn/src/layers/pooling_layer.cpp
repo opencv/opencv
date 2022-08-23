@@ -46,6 +46,7 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_webnn.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -85,6 +86,7 @@ typedef int HALIDE_DIFF_T;
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
+#include <opencv2/core/utils/logger.hpp>
 
 
 namespace cv
@@ -197,34 +199,13 @@ public:
         {
             return type == MAX || type == AVE || type == ROI;
         }
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        {
-            if (computeMaxIdx)
-                return false;
-            if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
-            if (kernel_size.size() == 1)
-                return false;
-            if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL) {
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2019R1)
-                if (type == MAX && (pads_begin[1] == 1 && pads_begin[0] == 1) && (strides[0] == 2 && strides[1] == 2)) {
-                    return !isMyriadX();
-                }
-#endif
-                return type == MAX || type == AVE;
-            }
-            else
-                return type != STOCHASTIC && type != SUM;
-        }
-#endif
+#ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-#ifdef HAVE_DNN_NGRAPH
             return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
-#endif
         }
-        else if (backendId == DNN_BACKEND_OPENCV)
+#endif
+        if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
                 return preferableTarget == DNN_TARGET_CPU;
@@ -244,6 +225,62 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return haveVulkan() &&
                            (type == MAX || type == AVE);
+            return false;
+        }
+        else if (backendId == DNN_BACKEND_WEBNN)
+        {
+            if (kernel_size.empty() || kernel_size.size() == 2)
+            {
+                if (!haveWebnn())
+                {
+                    return false;
+                }
+                else
+                {
+                    if (!ceilMode)
+                    {
+                        CV_LOG_WARNING(NULL, "ceilMode is not supported by WebNN backend.");
+                        return false;
+                    }
+                    if (computeMaxIdx)
+                    {
+                        CV_LOG_WARNING(NULL, "Mask is not supported by WebNN backend.");
+                        return false;
+                    }
+                    if (type != MAX && type != AVE)
+                    {
+                        if (type == STOCHASTIC)
+                        {
+                            CV_LOG_WARNING(NULL, "Stochastic Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == SUM)
+                        {
+                            CV_LOG_WARNING(NULL, "Sum Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == ROI)
+                        {
+                            CV_LOG_WARNING(NULL, "ROI Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == PSROI)
+                        {
+                            CV_LOG_WARNING(NULL, "Position-sensitive ROI Pooling is not supported by WebNN backend.");
+                        }
+                        CV_LOG_WARNING(NULL, "WebNN backend only supports MaxPooling and AveragePooling currently.");
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        else if (backendId == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            if (kernel_size.size() == 3)
+            {
+                // fallback to CPU implementation.
+                preferableTarget = DNN_TARGET_CPU;
+            }
+#endif
             return false;
         }
         return false;
@@ -503,54 +540,6 @@ public:
             return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        if (type == MAX || type == AVE)
-        {
-            InferenceEngine::Builder::PoolingLayer ieLayer(name);
-
-            ieLayer.setKernel(kernel_size);
-            ieLayer.setStrides(strides);
-            ieLayer.setPaddingsBegin(pads_begin);
-            ieLayer.setPaddingsEnd(pads_end);
-
-            ieLayer.setPoolingType(type == MAX ?
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::MAX :
-                                   InferenceEngine::Builder::PoolingLayer::PoolingType::AVG);
-            ieLayer.setRoundingType(ceilMode ?
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::CEIL :
-                                    InferenceEngine::Builder::PoolingLayer::RoundingType::FLOOR);
-            ieLayer.setExcludePad(!avePoolPaddedArea);
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            if (!padMode.empty())
-                l.getParameters()["auto_pad"] = padMode == "VALID" ? std::string("valid") : std::string("same_upper");
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else if (type == ROI)
-        {
-            InferenceEngine::Builder::ROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setPooled({pooledSize.height, pooledSize.width});
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else if (type == PSROI)
-        {
-            InferenceEngine::Builder::PSROIPoolingLayer ieLayer(name);
-            ieLayer.setSpatialScale(spatialScale);
-            ieLayer.setOutputDim(psRoiOutChannels);
-            ieLayer.setGroupSize(pooledSize.width);
-            ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(2));
-            return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-        return Ptr<BackendNode>();
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -607,6 +596,45 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        // std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        webnn::Pool2dOptions options;
+        std::vector<int32_t> kernelSize(kernel_size.begin(), kernel_size.end());
+        std::vector<int32_t> Strides(strides.begin(), strides.end());
+        std::vector<int32_t> Padding;
+        if (padMode.empty()) {
+            Padding = {static_cast<int32_t>(pads_begin[0]),
+                      static_cast<int32_t>(pads_end[0]),
+                      static_cast<int32_t>(pads_begin[1]),
+                      static_cast<int32_t>(pads_end[1])};
+        } else if (padMode == "VALID") {
+            Padding = {0, 0, 0, 0};
+        } else if (padMode == "SAME") {
+            options.autoPad = ml::AutoPad::SameUpper;
+        }
+        // std::cout << "padMode: " << padMode << std::endl;
+        options.windowDimensions = kernelSize;
+        options.strides = Strides;
+        options.padding = Padding;
+        if (type == MAX)
+        {
+            auto operand = webnnGraphBuilder.MaxPool2d(webnnInpOperand, options.AsPtr());
+            return Ptr<BackendNode>(new WebnnBackendNode(operand));
+        }
+        else if (type == AVE)
+        {
+            auto operand = webnnGraphBuilder.AveragePool2d(webnnInpOperand, options.AsPtr());
+            return Ptr<BackendNode>(new WebnnBackendNode(operand));
+        } else {
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+        }
+    }
+#endif // HAVE_WEBNN
 
     class PoolingInvoker : public ParallelLoopBody
     {
@@ -1280,9 +1308,16 @@ public:
             }
             else if (padMode.empty())
             {
-                int addedDims = isPool1D? inpShape.size() : local_kernel.size();
-                for (int i = 0; i < addedDims; i++) {
+                size_t addedDims = isPool1D? inpShape.size() : local_kernel.size();
+                CV_CheckLE(addedDims, inpShape.size(), "");
+                CV_CheckLE(addedDims, pads_begin.size(), "");
+                CV_CheckLE(addedDims, pads_end.size(), "");
+                CV_CheckLE(addedDims, local_kernel.size(), "");
+                CV_CheckLE(addedDims, strides.size(), "");
+                for (int i = 0; i < addedDims; i++)
+                {
                     float dst = (float) (inpShape[i] + pads_begin[i] + pads_end[i] - local_kernel[i]) / strides[i];
+                    CV_CheckGE(dst, 0.0f, "");
                     outShape.push_back(1 + (ceilMode ? ceil(dst) : floor(dst)));
                 }
 

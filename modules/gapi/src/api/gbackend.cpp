@@ -62,7 +62,7 @@ void cv::gapi::GBackend::Priv::addMetaSensitiveBackendPasses(ade::ExecutionEngin
     // which are sensitive to metadata
 }
 
-cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
+cv::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
 {
     return {};
 }
@@ -411,6 +411,12 @@ void createMat(const cv::GMatDesc &desc, cv::Mat& mat)
     {
         GAPI_Assert(!desc.planar);
         mat.create(desc.dims, desc.depth);
+#if !defined(GAPI_STANDALONE)
+        // NB: WA for 1D mats.
+        if (desc.dims.size() == 1u) {
+            mat.dims = 1;
+        }
+#endif
     }
 }
 

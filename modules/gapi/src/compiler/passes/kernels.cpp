@@ -157,7 +157,7 @@ void cv::gimpl::passes::bindNetParams(ade::passes::PassContext &ctx,
 // kernels, but if not, they are handled by the framework itself in
 // its optimization/execution passes.
 void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
-                                       const gapi::GKernelPackage &kernels)
+                                       const GKernelPackage &kernels)
 {
     std::unordered_set<cv::gapi::GBackend> active_backends;
 
@@ -212,7 +212,7 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
                 GAPI_Assert(op.k.outMeta == nullptr);
                 const_cast<cv::GKernel::M&>(op.k.outMeta) = selected_impl.outMeta;
             } else {
-                // Sanity check: the metadata funciton must be present
+                // Sanity check: the metadata function must be present
                 GAPI_Assert(op.k.outMeta != nullptr);
             }
         }
@@ -220,7 +220,7 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
     gr.metadata().set(ActiveBackends{active_backends});
 }
 
-void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const gapi::GKernelPackage &kernels)
+void cv::gimpl::passes::expandKernels(ade::passes::PassContext &ctx, const GKernelPackage &kernels)
 {
     GModel::Graph gr(ctx.graph);
 

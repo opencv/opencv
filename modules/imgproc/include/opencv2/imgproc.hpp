@@ -78,10 +78,14 @@ Input depth (src.depth()) | Output depth (ddepth)
 --------------------------|----------------------
 CV_8U                     | -1/CV_16S/CV_32F/CV_64F
 CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F/CV_64F
+CV_32F                    | -1/CV_32F
 CV_64F                    | -1/CV_64F
 
 @note when ddepth=-1, the output image will have the same depth as the source.
+
+@note if you need double floating-point accuracy and using single floating-point input data
+(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
@@ -118,7 +122,7 @@ sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_
 where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
 f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
 interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-resize for details.
+#resize for details.
 
 @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
@@ -405,10 +409,10 @@ enum ConnectedComponentsTypes {
 
 //! connected components algorithm
 enum ConnectedComponentsAlgorithmsTypes {
-    CCL_DEFAULT   = -1, //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
+    CCL_DEFAULT   = -1, //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity.
     CCL_WU        = 0,  //!< SAUF @cite Wu2009 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for SAUF.
     CCL_GRANA     = 1,  //!< BBDT @cite Grana2010 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both BBDT and SAUF.
-    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, SAUF algorithm for 4-way connectivity.
+    CCL_BOLELLI   = 2,  //!< Spaghetti @cite Bolelli2019 algorithm for 8-way connectivity, Spaghetti4C @cite Bolelli2021 algorithm for 4-way connectivity. The parallel implementation described in @cite Bolelli2017 is available for both Spaghetti and Spaghetti4C.
     CCL_SAUF      = 3,  //!< Same as CCL_WU. It is preferable to use the flag with the name of the algorithm (CCL_SAUF) rather than the one with the name of the first author (CCL_WU).
     CCL_BBDT      = 4,  //!< Same as CCL_GRANA. It is preferable to use the flag with the name of the algorithm (CCL_BBDT) rather than the one with the name of the first author (CCL_GRANA).
     CCL_SPAGHETTI = 5,  //!< Same as CCL_BOLELLI. It is preferable to use the flag with the name of the algorithm (CCL_SPAGHETTI) rather than the one with the name of the first author (CCL_BOLELLI).
@@ -744,54 +748,99 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YV12 = 133,
     COLOR_BGRA2YUV_YV12 = 134,
 
-    //! Demosaicing
-    COLOR_BayerBG2BGR = 46,
-    COLOR_BayerGB2BGR = 47,
-    COLOR_BayerRG2BGR = 48,
-    COLOR_BayerGR2BGR = 49,
+    //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
+    COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR = 47, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR = 48, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR = 49, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR,
-    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR,
-    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR,
-    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR,
+    COLOR_BayerRGGB2BGR = COLOR_BayerBG2BGR,
+    COLOR_BayerGRBG2BGR = COLOR_BayerGB2BGR,
+    COLOR_BayerBGGR2BGR = COLOR_BayerRG2BGR,
+    COLOR_BayerGBRG2BGR = COLOR_BayerGR2BGR,
 
-    COLOR_BayerBG2GRAY = 86,
-    COLOR_BayerGB2GRAY = 87,
-    COLOR_BayerRG2GRAY = 88,
-    COLOR_BayerGR2GRAY = 89,
+    COLOR_BayerRGGB2RGB = COLOR_BayerBGGR2BGR,
+    COLOR_BayerGRBG2RGB = COLOR_BayerGBRG2BGR,
+    COLOR_BayerBGGR2RGB = COLOR_BayerRGGB2BGR,
+    COLOR_BayerGBRG2RGB = COLOR_BayerGRBG2BGR,
+
+    COLOR_BayerBG2RGB = COLOR_BayerRG2BGR, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB = COLOR_BayerGR2BGR, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB = COLOR_BayerBG2BGR, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB = COLOR_BayerGB2BGR, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerBG2GRAY = 86, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2GRAY = 87, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2GRAY = 88, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2GRAY = 89, //!< equivalent to GBRG Bayer pattern
+
+    COLOR_BayerRGGB2GRAY = COLOR_BayerBG2GRAY,
+    COLOR_BayerGRBG2GRAY = COLOR_BayerGB2GRAY,
+    COLOR_BayerBGGR2GRAY = COLOR_BayerRG2GRAY,
+    COLOR_BayerGBRG2GRAY = COLOR_BayerGR2GRAY,
 
     //! Demosaicing using Variable Number of Gradients
-    COLOR_BayerBG2BGR_VNG = 62,
-    COLOR_BayerGB2BGR_VNG = 63,
-    COLOR_BayerRG2BGR_VNG = 64,
-    COLOR_BayerGR2BGR_VNG = 65,
+    COLOR_BayerBG2BGR_VNG = 62, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_VNG = 63, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_VNG = 64, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_VNG = 65, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG,
-    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG,
-    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG,
-    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerRGGB2BGR_VNG = COLOR_BayerBG2BGR_VNG,
+    COLOR_BayerGRBG2BGR_VNG = COLOR_BayerGB2BGR_VNG,
+    COLOR_BayerBGGR2BGR_VNG = COLOR_BayerRG2BGR_VNG,
+    COLOR_BayerGBRG2BGR_VNG = COLOR_BayerGR2BGR_VNG,
+
+    COLOR_BayerRGGB2RGB_VNG = COLOR_BayerBGGR2BGR_VNG,
+    COLOR_BayerGRBG2RGB_VNG = COLOR_BayerGBRG2BGR_VNG,
+    COLOR_BayerBGGR2RGB_VNG = COLOR_BayerRGGB2BGR_VNG,
+    COLOR_BayerGBRG2RGB_VNG = COLOR_BayerGRBG2BGR_VNG,
+
+    COLOR_BayerBG2RGB_VNG = COLOR_BayerRG2BGR_VNG, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_VNG = COLOR_BayerGR2BGR_VNG, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_VNG = COLOR_BayerBG2BGR_VNG, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_VNG = COLOR_BayerGB2BGR_VNG, //!< equivalent to GBRG Bayer pattern
 
     //! Edge-Aware Demosaicing
-    COLOR_BayerBG2BGR_EA  = 135,
-    COLOR_BayerGB2BGR_EA  = 136,
-    COLOR_BayerRG2BGR_EA  = 137,
-    COLOR_BayerGR2BGR_EA  = 138,
+    COLOR_BayerBG2BGR_EA  = 135, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGR_EA  = 136, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGR_EA  = 137, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGR_EA  = 138, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA,
-    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA,
-    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA,
-    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerRGGB2BGR_EA  = COLOR_BayerBG2BGR_EA,
+    COLOR_BayerGRBG2BGR_EA  = COLOR_BayerGB2BGR_EA,
+    COLOR_BayerBGGR2BGR_EA  = COLOR_BayerRG2BGR_EA,
+    COLOR_BayerGBRG2BGR_EA  = COLOR_BayerGR2BGR_EA,
+
+    COLOR_BayerRGGB2RGB_EA  = COLOR_BayerBGGR2BGR_EA,
+    COLOR_BayerGRBG2RGB_EA  = COLOR_BayerGBRG2BGR_EA,
+    COLOR_BayerBGGR2RGB_EA  = COLOR_BayerRGGB2BGR_EA,
+    COLOR_BayerGBRG2RGB_EA  = COLOR_BayerGRBG2BGR_EA,
+
+    COLOR_BayerBG2RGB_EA  = COLOR_BayerRG2BGR_EA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGB_EA  = COLOR_BayerGR2BGR_EA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGB_EA  = COLOR_BayerBG2BGR_EA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGB_EA  = COLOR_BayerGB2BGR_EA, //!< equivalent to GBRG Bayer pattern
 
     //! Demosaicing with alpha channel
-    COLOR_BayerBG2BGRA = 139,
-    COLOR_BayerGB2BGRA = 140,
-    COLOR_BayerRG2BGRA = 141,
-    COLOR_BayerGR2BGRA = 142,
+    COLOR_BayerBG2BGRA = 139, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2BGRA = 140, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2BGRA = 141, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2BGRA = 142, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA,
-    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA,
-    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA,
-    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA,
+    COLOR_BayerRGGB2BGRA = COLOR_BayerBG2BGRA,
+    COLOR_BayerGRBG2BGRA = COLOR_BayerGB2BGRA,
+    COLOR_BayerBGGR2BGRA = COLOR_BayerRG2BGRA,
+    COLOR_BayerGBRG2BGRA = COLOR_BayerGR2BGRA,
+
+    COLOR_BayerRGGB2RGBA = COLOR_BayerBGGR2BGRA,
+    COLOR_BayerGRBG2RGBA = COLOR_BayerGBRG2BGRA,
+    COLOR_BayerBGGR2RGBA = COLOR_BayerRGGB2BGRA,
+    COLOR_BayerGBRG2RGBA = COLOR_BayerGRBG2BGRA,
+
+    COLOR_BayerBG2RGBA = COLOR_BayerRG2BGRA, //!< equivalent to RGGB Bayer pattern
+    COLOR_BayerGB2RGBA = COLOR_BayerGR2BGRA, //!< equivalent to GRBG Bayer pattern
+    COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
+    COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
     COLOR_COLORCVT_MAX  = 143
 };
@@ -1531,7 +1580,7 @@ CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
 For every pixel \f$ (x, y) \f$ in the source image, the function calculates the sum of squares of those neighboring
 pixel values which overlap the filter placed over the pixel \f$ (x, y) \f$.
 
-The unnormalized square box filter can be useful in computing local image statistics such as the the local
+The unnormalized square box filter can be useful in computing local image statistics such as the local
 variance and standard deviation around the neighborhood of a pixel.
 
 @param src input image
@@ -1747,7 +1796,7 @@ with the following \f$3 \times 3\f$ aperture:
 
 @param src Source image.
 @param dst Destination image of the same size and the same number of channels as src .
-@param ddepth Desired depth of the destination image.
+@param ddepth Desired depth of the destination image, see @ref filter_depths "combinations".
 @param ksize Aperture size used to compute the second-derivative filters. See #getDerivKernels for
 details. The size must be positive and odd.
 @param scale Optional scale factor for the computed Laplacian values. By default, no scaling is
@@ -2112,12 +2161,12 @@ The function finds lines in a set of points using a modification of the Hough tr
 @param point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
 @param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
-@param lines_max Max count of hough lines.
+@param lines_max Max count of Hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
-votes ( \f$>\texttt{threshold}\f$ )
-@param min_rho Minimum Distance value of the accumulator in pixels.
-@param max_rho Maximum Distance value of the accumulator in pixels.
-@param rho_step Distance resolution of the accumulator in pixels.
+votes ( \f$>\texttt{threshold}\f$ ).
+@param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
+@param max_rho Maximum value for \f$\rho\f$ for the accumulator.
+@param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.
@@ -2234,7 +2283,7 @@ case of multi-channel images, each channel is processed independently.
 @param src input image; the number of channels can be arbitrary, but the depth should be one of
 CV_8U, CV_16U, CV_16S, CV_32F or CV_64F.
 @param dst output image of the same size and type as src.
-@param kernel structuring element used for dilation; if elemenat=Mat(), a 3 x 3 rectangular
+@param kernel structuring element used for dilation; if element=Mat(), a 3 x 3 rectangular
 structuring element is used. Kernel can be created using #getStructuringElement
 @param anchor position of the anchor within the element; default value (-1, -1) means that the
 anchor is at the element center.
@@ -2300,7 +2349,7 @@ way:
     resize(src, dst, Size(), 0.5, 0.5, interpolation);
 @endcode
 To shrink an image, it will generally look best with #INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with c#INTER_CUBIC (slow) or #INTER_LINEAR
+enlarge an image, it will generally look best with #INTER_CUBIC (slow) or #INTER_LINEAR
 (faster but still looks OK).
 
 @param src input image.
@@ -2392,7 +2441,7 @@ The function remap transforms the source image using the specified map:
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
-\f$map_1\f$, or fixed-point maps created by using convertMaps. The reason you might want to
+\f$map_1\f$, or fixed-point maps created by using #convertMaps. The reason you might want to
 convert from floating to fixed-point representations of a map is that they can yield much faster
 (\~2x) remapping operations. In the converted case, \f$map_1\f$ contains pairs (cvFloor(x),
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
@@ -2402,7 +2451,7 @@ This function cannot operate in-place.
 @param src Source image.
 @param dst Destination image. It has the same size as map1 and the same type as src .
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2 ,
-CV_32FC1, or CV_32FC2. See convertMaps for details on converting a floating point
+CV_32FC1, or CV_32FC2. See #convertMaps for details on converting a floating point
 representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
@@ -2427,7 +2476,7 @@ options ( (map1.type(), map2.type()) \f$\rightarrow\f$ (dstmap1.type(), dstmap2.
 supported:
 
 - \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. This is the
-most frequently used conversion operation, in which the original floating-point maps (see remap )
+most frequently used conversion operation, in which the original floating-point maps (see #remap)
 are converted to a more compact and much faster fixed-point representation. The first output array
 contains the rounded coordinates and the second array (created only when nninterpolation=false )
 contains indices in the interpolation tables.
@@ -2745,13 +2794,6 @@ CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @overload */
-CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
-
-/** @overload */
-CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
-                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
-
 /** @brief Calculates the integral of an image.
 
 The function calculates one or more integral images for the source image as follows:
@@ -2771,7 +2813,7 @@ It makes possible to do a fast blurring or fast block correlation with a variabl
 example. In case of multi-channel images, sums for each channel are accumulated independently.
 
 As a practical example, the next figure shows the calculation of the integral of a straight
-rectangle Rect(3,3,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
+rectangle Rect(4,4,3,2) and of a tilted rectangle Rect(5,1,2,3) . The selected pixels in the
 original image are shown, as well as the relative pixels in the integral images sum and tilted .
 
 ![integral calculation example](pics/integral.png)
@@ -2789,6 +2831,13 @@ CV_64F.
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
                                         int sdepth = -1, int sqdepth = -1 );
+
+/** @overload */
+CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
+
+/** @overload */
+CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
 
 //! @} imgproc_misc
 
@@ -3129,7 +3178,14 @@ CV_EXPORTS void calcHist( const Mat* images, int nimages,
                           const int* histSize, const float** ranges,
                           bool uniform = true, bool accumulate = false );
 
-/** @overload */
+/** @overload
+
+this variant supports only uniform histograms.
+
+ranges argument is either empty vector or a flattened vector of histSize.size()*2 elements
+(histSize.size() element pairs). The first and second elements of each pair specify the lower and
+upper boundaries.
+*/
 CV_EXPORTS_W void calcHist( InputArrayOfArrays images,
                             const std::vector<int>& channels,
                             InputArray mask, OutputArray hist,
@@ -3472,19 +3528,6 @@ the first variant of the function and distanceType == #DIST_L1.
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
                                      int distanceType, int maskSize, int dstType=CV_32F);
 
-/** @example samples/cpp/ffilldemo.cpp
-An example using the FloodFill technique
-*/
-
-/** @overload
-
-variant without `mask` parameter
-*/
-CV_EXPORTS int floodFill( InputOutputArray image,
-                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect = 0,
-                          Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
-                          int flags = 4 );
-
 /** @brief Fills a connected component with the given color.
 
 The function cv::floodFill fills a connected component starting from the seed point with the specified
@@ -3527,10 +3570,11 @@ a mask and then extract the contour, or copy the region to another image, and so
 function unless the #FLOODFILL_MASK_ONLY flag is set in the second variant of the function. See
 the details below.
 @param mask Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels
-taller than image. Since this is both an input and output parameter, you must take responsibility
-of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example,
+taller than image. If an empty Mat is passed it will be created automatically. Since this is both an
+input and output parameter, you must take responsibility of initializing it.
+Flood-filling cannot go across non-zero pixels in the input mask. For example,
 an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the
-mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags
+mask corresponding to filled pixels in the image are set to 1 or to the specified value in flags
 as described below. Additionally, the function fills the border of the mask with ones to simplify
 internal processing. It is therefore possible to use the same mask in multiple calls to the function
 to make sure the filled areas do not overlap.
@@ -3560,6 +3604,19 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Point seedPoint, Scalar newVal, CV_OUT Rect* rect=0,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
+
+/** @example samples/cpp/ffilldemo.cpp
+An example using the FloodFill technique
+*/
+
+/** @overload
+
+variant without `mask` parameter
+*/
+CV_EXPORTS int floodFill( InputOutputArray image,
+                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect = 0,
+                          Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
+                          int flags = 4 );
 
 //! Performs linear blending of two images:
 //! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
@@ -3813,9 +3870,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
@@ -3845,9 +3903,10 @@ image with 4 or 8 way connectivity - returns N, the total number of labels [0, N
 represents the background label. ltype specifies the output label image type, an important
 consideration based on the total number of labels or alternatively the total number of pixels in
 the source image. ccltype specifies the connected components labeling algorithm to use, currently
-Grana's (BBDT) and Wu's (SAUF) @cite Wu2009 algorithms are supported, see the #ConnectedComponentsAlgorithmsTypes
-for details. Note that SAUF algorithm forces a row major ordering of labels while BBDT does not.
-This function uses parallel version of both Grana and Wu's algorithms (statistics included) if at least one allowed
+Bolelli (Spaghetti) @cite Bolelli2019, Grana (BBDT) @cite Grana2010 and Wu's (SAUF) @cite Wu2009 algorithms
+are supported, see the #ConnectedComponentsAlgorithmsTypes for details. Note that SAUF algorithm forces
+a row major ordering of labels while Spaghetti and BBDT do not.
+This function uses parallel version of the algorithms (statistics included) if at least one allowed
 parallel framework is enabled and if the rows of the image are at least twice the number returned by #getNumberOfCPUs.
 
 @param image the 8-bit single-channel image to be labeled
@@ -4399,7 +4458,7 @@ lines are drawn using Gaussian filtering.
 CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
                      int thickness = 1, int lineType = LINE_8, int shift = 0);
 
-/** @brief Draws a arrow segment pointing from the first point to the second one.
+/** @brief Draws an arrow segment pointing from the first point to the second one.
 
 The function cv::arrowedLine draws an arrow between pt1 and pt2 points in the image. See also #line.
 
@@ -4529,11 +4588,6 @@ CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar&
 /* END OF MARKER SECTION */
 /* ----------------------------------------------------------------------------------------- */
 
-/** @overload */
-CV_EXPORTS void fillConvexPoly(InputOutputArray img, const Point* pts, int npts,
-                               const Scalar& color, int lineType = LINE_8,
-                               int shift = 0);
-
 /** @brief Fills a convex polygon.
 
 The function cv::fillConvexPoly draws a filled convex polygon. This function is much faster than the
@@ -4552,10 +4606,9 @@ CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
                                  int shift = 0);
 
 /** @overload */
-CV_EXPORTS void fillPoly(InputOutputArray img, const Point** pts,
-                         const int* npts, int ncontours,
-                         const Scalar& color, int lineType = LINE_8, int shift = 0,
-                         Point offset = Point() );
+CV_EXPORTS void fillConvexPoly(InputOutputArray img, const Point* pts, int npts,
+                               const Scalar& color, int lineType = LINE_8,
+                               int shift = 0);
 
 /** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 An example using drawing functions
@@ -4580,9 +4633,10 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset = Point() );
 
 /** @overload */
-CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const int* npts,
-                          int ncontours, bool isClosed, const Scalar& color,
-                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
+CV_EXPORTS void fillPoly(InputOutputArray img, const Point** pts,
+                         const int* npts, int ncontours,
+                         const Scalar& color, int lineType = LINE_8, int shift = 0,
+                         Point offset = Point() );
 
 /** @brief Draws several polygonal curves.
 
@@ -4600,6 +4654,11 @@ The function cv::polylines draws one or more polygonal curves.
 CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
+
+/** @overload */
+CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const int* npts,
+                          int ncontours, bool isClosed, const Scalar& color,
+                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 /** @example samples/cpp/contours2.cpp
 An example program illustrates the use of cv::findContours and cv::drawContours
@@ -4633,7 +4692,7 @@ parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
 @note When thickness=#FILLED, the function is designed to handle connected components with holes correctly
-even when no hierarchy date is provided. This is done by analyzing all the outlines together
+even when no hierarchy data is provided. This is done by analyzing all the outlines together
 using even-odd rule. This may give incorrect results if you have a joint collection of separately retrieved
 contours. In order to solve this problem, you need to call #drawContours separately for each sub-group
 of contours, or iterate over the collection using contourIdx parameter.
@@ -4647,7 +4706,7 @@ CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays conto
 /** @brief Clips the line against the image rectangle.
 
 The function cv::clipLine calculates a part of the line segment that is entirely within the specified
-rectangle. it returns false if the line segment is completely outside the rectangle. Otherwise,
+rectangle. It returns false if the line segment is completely outside the rectangle. Otherwise,
 it returns true .
 @param imgSize Image size. The image rectangle is Rect(0, 0, imgSize.width, imgSize.height) .
 @param pt1 First line point.
@@ -4785,13 +4844,11 @@ CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
 
-/** @brief Line iterator
+/** @brief Class for iterating over all pixels on a raster line segment.
 
-The class is used to iterate over all the pixels on the raster line
-segment connecting two specified points.
-
-The class LineIterator is used to get each pixel of a raster line. It
-can be treated as versatile implementation of the Bresenham algorithm
+The class LineIterator is used to get each pixel of a raster line connecting
+two specified points.
+It can be treated as a versatile implementation of the Bresenham algorithm
 where you can stop at each pixel and do some extra processing, for
 example, grab pixel values along the line or draw a line with an effect
 (for example, with XOR operation).
@@ -4820,14 +4877,19 @@ for(int i = 0; i < it2.count; i++, ++it2)
 class CV_EXPORTS LineIterator
 {
 public:
-    /** @brief initializes the iterator
+    /** @brief Initializes iterator object for the given line and image.
 
-    creates iterators for the line connecting pt1 and pt2
-    the line will be clipped on the image boundaries
-    the line is 8-connected or 4-connected
-    If leftToRight=true, then the iteration is always done
-    from the left-most point to the right most,
-    not to depend on the ordering of pt1 and pt2 parameters;
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped on the image boundaries.
+
+    @param img Underlying image.
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
@@ -4860,16 +4922,23 @@ public:
     }
     void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
 
-    /** @brief returns pointer to the current pixel
+    /** @brief Returns pointer to the current pixel.
     */
     uchar* operator *();
-    /** @brief prefix increment operator (++it). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the prefix version (++it).
     */
     LineIterator& operator ++();
-    /** @brief postfix increment operator (it++). shifts iterator to the next pixel
+
+    /** @brief Moves iterator to the next pixel on the line.
+
+    This is the postfix version (it++).
     */
     LineIterator operator ++(int);
-    /** @brief returns coordinates of the current pixel
+
+    /** @brief Returns coordinates of the current pixel.
     */
     Point pos() const;
 

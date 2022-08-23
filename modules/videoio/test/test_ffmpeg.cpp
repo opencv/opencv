@@ -235,8 +235,8 @@ static void generateFrame(Mat &frame, unsigned int i, const Point &center, const
     frame = Scalar::all(i % 255);
     stringstream buf(ios::out);
     buf << "frame #" << i;
-    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, CV_AA);
-    circle(frame, center, i + 2, color, 2, CV_AA);
+    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, LINE_AA);
+    circle(frame, center, i + 2, color, 2, LINE_AA);
 }
 
 TEST(videoio_ffmpeg, parallel)
@@ -413,6 +413,11 @@ TEST(videoio, mp4_orientation_meta_auto)
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
 
+#ifndef _WIN32 // TODO: FFmpeg wrapper update
+    // related issue: https://github.com/opencv/opencv/issues/22088
+    EXPECT_EQ(90, cap.get(CAP_PROP_ORIENTATION_META));
+#endif
+
     cap.set(CAP_PROP_ORIENTATION_AUTO, true);
     if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
         throw SkipTestException("FFmpeg frame rotation metadata is not supported");
@@ -476,6 +481,27 @@ static void ffmpeg_check_read_raw(VideoCapture& cap)
     EXPECT_EQ((size_t)37118, data.total());
 }
 
+TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = findDataFile("video/big_buck_bunny.mp4");
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
+    const int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
+#ifdef _WIN32  // handle old FFmpeg backend
+    if (codecExtradataIdx <= 0)
+        throw SkipTestException("Codec extra data is not supported by backend or video stream");
+#endif
+    Mat data;
+    ASSERT_TRUE(cap.retrieve(data, codecExtradataIdx));
+    EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
+    EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
+    EXPECT_EQ((size_t)45, data.total());
+}
+
 TEST(videoio_ffmpeg, open_with_property)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
@@ -515,5 +541,17 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
     EXPECT_FALSE(cap.isOpened());
 }
 
+// related issue: https://github.com/opencv/opencv/issues/16821
+TEST(videoio_ffmpeg, DISABLED_open_from_web)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    VideoCapture cap(video_file, CAP_FFMPEG);
+    int n_frames = -1;
+    EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
+    EXPECT_EQ((int)14315, n_frames);
+}
 
 }} // namespace

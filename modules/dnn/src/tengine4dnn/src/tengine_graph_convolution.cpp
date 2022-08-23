@@ -331,7 +331,7 @@ teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int g
             teg_weight = kernel_;
         }
 
-        /* initial the resoruce of tengine */
+        /* initial the resource of tengine */
         if(false == tengine_init_flag)
         {
             init_tengine();

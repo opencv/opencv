@@ -41,15 +41,17 @@
 //M*/
 
 #include "cap_ffmpeg_legacy_api.hpp"
+#include "opencv2/core/utils/logger.hpp"
+#include "cap_interface.hpp"
 
 using namespace cv;
 
 #if !(defined(_WIN32) || defined(WINCE))
 # include <pthread.h>
 #endif
-#include <assert.h>
 #include <algorithm>
 #include <limits>
+#include <string.h>
 
 #ifndef __OPENCV_BUILD
 #define CV_FOURCC(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
@@ -80,6 +82,7 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 #include <libavutil/opt.h>
+#include <libavutil/display.h>
 
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(51, 63, 100) : CALC_FFMPEG_VERSION(54, 6, 0))
@@ -89,8 +92,70 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L602-L605
+#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(58, 9, 100)
+#  define CV_FFMPEG_REGISTER
+#endif
+
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L654-L657
+#if LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(58, 9, 100)
+#  define CV_FFMPEG_LOCKMGR
+#endif
+
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L390-L392
+#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(58, 87, 100)
+#include <libavcodec/bsf.h>
+#endif
+
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L208-L210
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(59, 0, 100)
+#  define CV_FFMPEG_FMT_CONST const
+#else
+#  define CV_FFMPEG_FMT_CONST
+#endif
+
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L623-L624
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 7, 100)
+#  define CV_FFMPEG_URL
+#endif
+
+// AVStream.codec deprecated in favor of AVStream.codecpar
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L1039-L1040
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(59, 16, 100)
+//#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 33, 100)
+#  define CV_FFMPEG_CODECPAR
+#  define CV_FFMPEG_CODEC_FIELD codecpar
+#else
+#  define CV_FFMPEG_CODEC_FIELD codec
+#endif
+
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(59, 16, 100)
+#  define CV_FFMPEG_PTS_FIELD pts
+#else
+#  define CV_FFMPEG_PTS_FIELD pkt_pts
+#endif
+
+// https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L1757-L1758
+#if LIBAVUTIL_BUILD < CALC_FFMPEG_VERSION(52, 63, 100)
+inline static AVRational av_make_q(int num, int den)
+{
+    AVRational res;
+    res.num = num;
+    res.den = den;
+    return res;
+}
+#endif
+
+
+
 #ifdef __cplusplus
 }
+#endif
+
+// GCC 4.x compilation bug. Details: https://github.com/opencv/opencv/issues/20292
+#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)
+#undef USE_AV_HW_CODECS
+#define USE_AV_HW_CODECS 0
 #endif
 
 //#define USE_AV_HW_CODECS 0
@@ -394,7 +459,7 @@ static
 inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
 {
     AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
-    assert(metadata);
+    CV_Assert(metadata);
 
     if (metadata->timeout_after_ms == 0)
     {
@@ -466,6 +531,15 @@ static AVRational _opencv_ffmpeg_get_sample_aspect_ratio(AVStream *stream)
 #endif
 }
 
+inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
+{
+    char buf[255] = {0};
+    const int err = av_strerror(error_code, buf, 254);
+    if (err == 0)
+        return std::string(buf);
+    else
+        return std::string("Unknown error");
+}
 
 struct CvCapture_FFMPEG
 {
@@ -475,7 +549,7 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
-    bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
@@ -497,6 +571,7 @@ struct CvCapture_FFMPEG
 
     AVFormatContext * ic;
     AVCodec         * avcodec;
+    AVCodecContext  * context;
     int               video_stream;
     AVStream        * video_st;
     AVFrame         * picture;
@@ -541,6 +616,7 @@ struct CvCapture_FFMPEG
     VideoAccelerationType va_type;
     int hw_device;
     int use_opencl;
+    int extraDataIdx;
 };
 
 void CvCapture_FFMPEG::init()
@@ -559,6 +635,7 @@ void CvCapture_FFMPEG::init()
     img_convert_ctx = 0;
 
     avcodec = 0;
+    context = 0;
     frame_number = 0;
     eps_zero = 0.000025;
 
@@ -584,6 +661,7 @@ void CvCapture_FFMPEG::init()
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
     use_opencl = 0;
+    extraDataIdx = 1;
 }
 
 
@@ -610,8 +688,17 @@ void CvCapture_FFMPEG::close()
 
     if( video_st )
     {
-        avcodec_close( video_st->codec );
+#ifdef CV_FFMPEG_CODECPAR
+        avcodec_close( context );
+#endif
         video_st = NULL;
+    }
+
+    if (context)
+    {
+#ifdef CV_FFMPEG_CODECPAR
+        avcodec_free_context(&context);
+#endif
     }
 
     if( ic )
@@ -791,8 +878,10 @@ private:
 };
 #endif
 
+
 static ImplMutex _mutex;
 
+#ifdef CV_FFMPEG_LOCKMGR
 static int LockCallBack(void **mutex, AVLockOp op)
 {
     ImplMutex* localMutex = reinterpret_cast<ImplMutex*>(*mutex);
@@ -823,13 +912,14 @@ static int LockCallBack(void **mutex, AVLockOp op)
     }
     return 0;
 }
-
+#endif
 
 static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
 {
     static bool skip_header = false;
     static int prev_level = -1;
     CV_UNUSED(ptr);
+    if (level>av_log_get_level()) return;
     if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
     vprintf(fmt, vargs);
     size_t fmt_len = strlen(fmt);
@@ -850,9 +940,15 @@ public:
     {
 #ifndef NO_GETENV
         char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-        if (debug_option != NULL)
+        char* level_option = getenv("OPENCV_FFMPEG_LOGLEVEL");
+        int level = AV_LOG_VERBOSE;
+        if (level_option != NULL)
         {
-            av_log_set_level(AV_LOG_VERBOSE);
+            level = atoi(level_option);
+        }
+        if ( (debug_option != NULL) || (level_option != NULL) )
+        {
+            av_log_set_level(level);
             av_log_set_callback(ffmpeg_log_callback);
         }
         else
@@ -867,18 +963,58 @@ public:
     {
         avformat_network_init();
 
+#ifdef CV_FFMPEG_REGISTER
         /* register all codecs, demux and protocols */
         av_register_all();
+#endif
 
+#ifdef CV_FFMPEG_LOCKMGR
         /* register a callback function for synchronization */
         av_lockmgr_register(&LockCallBack);
+#endif
     }
     ~InternalFFMpegRegister()
     {
+#ifdef CV_FFMPEG_LOCKMGR
         av_lockmgr_register(NULL);
+#endif
         av_log_set_callback(NULL);
     }
 };
+
+inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
+{
+//#ifdef FF_API_THREAD_INIT
+//  avcodec_thread_init(enc, get_number_of_cpus());
+//#else
+    enc->thread_count = get_number_of_cpus();
+//#endif
+
+    AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
+
+    if (avdiscard_entry)
+    {
+        if(strcmp(avdiscard_entry->value, "all") == 0)
+            enc->skip_frame = AVDISCARD_ALL;
+        else if (strcmp(avdiscard_entry->value, "bidir") == 0)
+            enc->skip_frame = AVDISCARD_BIDIR;
+        else if (strcmp(avdiscard_entry->value, "default") == 0)
+            enc->skip_frame = AVDISCARD_DEFAULT;
+        else if (strcmp(avdiscard_entry->value, "none") == 0)
+            enc->skip_frame = AVDISCARD_NONE;
+        // NONINTRA flag was introduced with version bump at revision:
+        // https://github.com/FFmpeg/FFmpeg/commit/b152152df3b778d0a86dcda5d4f5d065b4175a7b
+        // This key is supported only for FFMPEG version
+#if LIBAVCODEC_VERSION_MICRO >= 100 && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 67, 100)
+        else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
+            enc->skip_frame = AVDISCARD_NONINTRA;
+#endif
+        else if (strcmp(avdiscard_entry->value, "nonkey") == 0)
+            enc->skip_frame = AVDISCARD_NONKEY;
+        else if (strcmp(avdiscard_entry->value, "nonref") == 0)
+            enc->skip_frame = AVDISCARD_NONREF;
+    }
+}
 
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
@@ -966,7 +1102,11 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if(options == NULL)
     {
+#if LIBAVFORMAT_VERSION_MICRO >= 100  && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
+        av_dict_set(&dict, "rtsp_flags", "prefer_tcp", 0);
+#else
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+#endif
     }
     else
     {
@@ -979,7 +1119,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
-    AVInputFormat* input_format = NULL;
+    CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
     if (entry != 0)
     {
@@ -997,60 +1137,44 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     err = avformat_find_stream_info(ic, NULL);
     if (err < 0)
     {
-        CV_WARN("Could not find codec parameters");
+        CV_LOG_WARNING(NULL, "Unable to read codec parameters from stream (" << _opencv_ffmpeg_get_error_string(err) << ")");
         goto exit_func;
     }
     for(i = 0; i < ic->nb_streams; i++)
     {
-        AVCodecContext* enc = ic->streams[i]->codec;
-
-//#ifdef FF_API_THREAD_INIT
-//        avcodec_thread_init(enc, get_number_of_cpus());
-//#else
-        enc->thread_count = get_number_of_cpus();
-//#endif
-
-        AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
-
-        if (avdiscard_entry) {
-            if(strcmp(avdiscard_entry->value, "all") == 0)
-                enc->skip_frame = AVDISCARD_ALL;
-            else if (strcmp(avdiscard_entry->value, "bidir") == 0)
-                enc->skip_frame = AVDISCARD_BIDIR;
-            else if (strcmp(avdiscard_entry->value, "default") == 0)
-                enc->skip_frame = AVDISCARD_DEFAULT;
-            else if (strcmp(avdiscard_entry->value, "none") == 0)
-                enc->skip_frame = AVDISCARD_NONE;
-            // NONINTRA flag was introduced with version bump at revision:
-            // https://github.com/FFmpeg/FFmpeg/commit/b152152df3b778d0a86dcda5d4f5d065b4175a7b
-            // This key is supported only for FFMPEG version
-#if LIBAVCODEC_VERSION_MICRO >= 100 && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 67, 100)
-            else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
-                enc->skip_frame = AVDISCARD_NONINTRA;
+#ifndef CV_FFMPEG_CODECPAR
+        context = ic->streams[i]->codec;
+        AVCodecID codec_id = context->codec_id;
+        AVMediaType codec_type = context->codec_type;
+#else
+        AVCodecParameters* par = ic->streams[i]->codecpar;
+        AVCodecID codec_id = par->codec_id;
+        AVMediaType codec_type = par->codec_type;
 #endif
-            else if (strcmp(avdiscard_entry->value, "nonkey") == 0)
-                enc->skip_frame = AVDISCARD_NONKEY;
-            else if (strcmp(avdiscard_entry->value, "nonref") == 0)
-                enc->skip_frame = AVDISCARD_NONREF;
-        }
 
-        if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
+        if( AVMEDIA_TYPE_VIDEO == codec_type && video_stream < 0)
         {
-            CV_LOG_DEBUG(NULL, "FFMPEG: stream[" << i << "] is video stream with codecID=" << (int)enc->codec_id
-                    << " width=" << enc->width
-                    << " height=" << enc->height
+            // backup encoder' width/height
+#ifndef CV_FFMPEG_CODECPAR
+            int enc_width = context->width;
+            int enc_height = context->height;
+#else
+            int enc_width = par->width;
+            int enc_height = par->height;
+#endif
+
+            CV_LOG_DEBUG(NULL, "FFMPEG: stream[" << i << "] is video stream with codecID=" << (int)codec_id
+                    << " width=" << enc_width
+                    << " height=" << enc_height
             );
 
-            // backup encoder' width/height
-            int enc_width = enc->width;
-            int enc_height = enc->height;
 
 #if !USE_AV_HW_CODECS
             va_type = VIDEO_ACCELERATION_NONE;
 #endif
 
             // find and open decoder, try HW acceleration types specified in 'hw_acceleration' list (in order)
-            AVCodec *codec = NULL;
+            const AVCodec *codec = NULL;
             err = -1;
 #if USE_AV_HW_CODECS
             HWAccelIterator accel_iter(va_type, false/*isEncoder*/, dict);
@@ -1062,21 +1186,27 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #if USE_AV_HW_CODECS
                 accel_iter.parse_next();
                 AVHWDeviceType hw_type = accel_iter.hw_type();
-                enc->get_format = avcodec_default_get_format;
-                if (enc->hw_device_ctx) {
-                    av_buffer_unref(&enc->hw_device_ctx);
-                }
                 if (hw_type != AV_HWDEVICE_TYPE_NONE)
                 {
                     CV_LOG_DEBUG(NULL, "FFMPEG: trying to configure H/W acceleration: '" << accel_iter.hw_type_device_string() << "'");
                     AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                    codec = hw_find_codec(enc->codec_id, hw_type, av_codec_is_decoder, accel_iter.disabled_codecs().c_str(), &hw_pix_fmt);
-                    if (codec) {
+                    codec = hw_find_codec(codec_id, hw_type, av_codec_is_decoder, accel_iter.disabled_codecs().c_str(), &hw_pix_fmt);
+                    if (codec)
+                    {
+#ifdef CV_FFMPEG_CODECPAR
+                        context = avcodec_alloc_context3(codec);
+#endif
+                        CV_Assert(context);
+                        context->get_format = avcodec_default_get_format;
+                        if (context->hw_device_ctx) {
+                            av_buffer_unref(&context->hw_device_ctx);
+                        }
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
-                            enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
-                        enc->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
-                        if (!enc->hw_device_ctx)
+                            context->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
+                        context->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
+                        if (!context->hw_device_ctx)
                         {
+                            context->get_format = avcodec_default_get_format;
                             CV_LOG_DEBUG(NULL, "FFMPEG: ... can't create H/W device: '" << accel_iter.hw_type_device_string() << "'");
                             codec = NULL;
                         }
@@ -1088,10 +1218,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     AVDictionaryEntry* video_codec_param = av_dict_get(dict, "video_codec", NULL, 0);
                     if (video_codec_param == NULL)
                     {
-                        codec = avcodec_find_decoder(enc->codec_id);
+                        codec = avcodec_find_decoder(codec_id);
                         if (!codec)
                         {
-                            CV_LOG_ERROR(NULL, "Could not find decoder for codec_id=" << (int)enc->codec_id);
+                            CV_LOG_ERROR(NULL, "Could not find decoder for codec_id=" << (int)codec_id);
                         }
                     }
                     else
@@ -1103,10 +1233,26 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                             CV_LOG_ERROR(NULL, "Could not find decoder '" << video_codec_param->value << "'");
                         }
                     }
+                    if (codec)
+                    {
+#ifdef CV_FFMPEG_CODECPAR
+                        context = avcodec_alloc_context3(codec);
+#endif
+                        CV_Assert(context);
+                    }
                 }
                 if (!codec)
+                {
+#ifdef CV_FFMPEG_CODECPAR
+                    avcodec_free_context(&context);
+#endif
                     continue;
-                err = avcodec_open2(enc, codec, NULL);
+                }
+                fill_codec_context(context, dict);
+#ifdef CV_FFMPEG_CODECPAR
+                avcodec_parameters_to_context(context, par);
+#endif
+                err = avcodec_open2(context, codec, NULL);
                 if (err >= 0) {
 #if USE_AV_HW_CODECS
                     va_type = hw_type_to_va_type(hw_type);
@@ -1128,10 +1274,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             }
 
             // checking width/height (since decoder can sometimes alter it, eg. vp6f)
-            if (enc_width && (enc->width != enc_width))
-                enc->width = enc_width;
-            if (enc_height && (enc->height != enc_height))
-                enc->height = enc_height;
+            if (enc_width && (context->width != enc_width))
+                context->width = enc_width;
+            if (enc_height && (context->height != enc_height))
+                context->height = enc_height;
 
             video_stream = i;
             video_st = ic->streams[i];
@@ -1142,8 +1288,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             picture = avcodec_alloc_frame();
 #endif
 
-            frame.width = enc->width;
-            frame.height = enc->height;
+            frame.width = context->width;
+            frame.height = context->height;
             frame.cn = 3;
             frame.step = 0;
             frame.data = NULL;
@@ -1288,7 +1434,7 @@ bool CvCapture_FFMPEG::grabFrame()
     int count_errs = 0;
     const int max_number_of_attempts = 1 << 9;
 
-    if( !ic || !video_st )  return false;
+    if( !ic || !video_st || !context )  return false;
 
     if( ic->streams[video_stream]->nb_frames > 0 &&
         frame_number > ic->streams[video_stream]->nb_frames )
@@ -1304,7 +1450,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
 #if USE_AV_SEND_FRAME_API
     // check if we can receive frame from previously decoded packet
-    valid = avcodec_receive_frame(video_st->codec, picture) >= 0;
+    valid = avcodec_receive_frame(context, picture) >= 0;
 #endif
 
     // get the next frame
@@ -1354,19 +1500,19 @@ bool CvCapture_FFMPEG::grabFrame()
 
         // Decode video frame
 #if USE_AV_SEND_FRAME_API
-        if (avcodec_send_packet(video_st->codec, &packet) < 0) {
+        if (avcodec_send_packet(context, &packet) < 0) {
             break;
         }
-        ret = avcodec_receive_frame(video_st->codec, picture);
+        ret = avcodec_receive_frame(context, picture);
 #else
         int got_picture = 0;
-        avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
+        avcodec_decode_video2(context, picture, &got_picture, &packet);
         ret = got_picture ? 0 : -1;
 #endif
         if (ret >= 0) {
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = picture->pkt_pts != AV_NOPTS_VALUE_ && picture->pkt_pts != 0 ? picture->pkt_pts : picture->pkt_dts;
+                picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
 
             valid = true;
         } else if (ret == AVERROR(EAGAIN)) {
@@ -1395,20 +1541,28 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn)
+bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
-    if (!video_st)
+    if (!video_st || !context)
         return false;
 
-    if (rawMode)
+    if (rawMode || flag == extraDataIdx)
     {
-        AVPacket& p = bsfc ? packet_filtered : packet;
-        *data = p.data;
-        *step = p.size;
-        *width = p.size;
+        bool ret = true;
+        if (flag == 0) {
+            AVPacket& p = bsfc ? packet_filtered : packet;
+            *data = p.data;
+            *step = p.size;
+            ret = p.data != NULL;
+        }
+        else if (flag == extraDataIdx) {
+            *data = ic->streams[video_stream]->CV_FFMPEG_CODEC_FIELD->extradata;
+            *step = ic->streams[video_stream]->CV_FFMPEG_CODEC_FIELD->extradata_size;
+        }
+        *width = *step;
         *height = 1;
         *cn = 1;
-        return p.data != NULL;
+        return  ret;
     }
 
     AVFrame* sw_picture = picture;
@@ -1428,13 +1582,13 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         return false;
 
     if( img_convert_ctx == NULL ||
-        frame.width != video_st->codec->width ||
-        frame.height != video_st->codec->height ||
+        frame.width != video_st->CV_FFMPEG_CODEC_FIELD->width ||
+        frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
         frame.data == NULL )
     {
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
-        int buffer_width = video_st->codec->coded_width, buffer_height = video_st->codec->coded_height;
+        int buffer_width = context->coded_width, buffer_height = context->coded_height;
 
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
@@ -1468,8 +1622,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         _opencv_ffmpeg_av_image_fill_arrays(&rgb_picture, rgb_picture.data[0],
                         AV_PIX_FMT_BGR24, buffer_width, buffer_height );
 #endif
-        frame.width = video_st->codec->width;
-        frame.height = video_st->codec->height;
+        frame.width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+        frame.height = video_st->CV_FFMPEG_CODEC_FIELD->height;
         frame.cn = 3;
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
@@ -1479,7 +1633,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             img_convert_ctx,
             sw_picture->data,
             sw_picture->linesize,
-            0, video_st->codec->coded_height,
+            0, sw_picture->height,
             rgb_picture.data,
             rgb_picture.linesize
             );
@@ -1493,7 +1647,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 #if USE_AV_HW_CODECS
     if (sw_picture != picture)
     {
-        av_frame_unref(sw_picture);
+        av_frame_free(&sw_picture);
     }
 #endif
     return true;
@@ -1503,12 +1657,12 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 {
 #if USE_AV_HW_CODECS
     // check that we have HW frame in GPU memory
-    if (!picture || !picture->hw_frames_ctx) {
+    if (!picture || !picture->hw_frames_ctx || !context) {
         return false;
     }
 
     // GPU color conversion NV12->BGRA, from GPU media buffer to GPU OpenCL buffer
-    return hw_copy_frame_to_umat(video_st->codec->hw_device_ctx, picture, output);
+    return hw_copy_frame_to_umat(context->hw_device_ctx, picture, output);
 #else
     CV_UNUSED(output);
     return false;
@@ -1517,7 +1671,7 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
-    if( !video_st ) return 0;
+    if( !video_st || !context ) return 0;
 
     double codec_tag = 0;
     CV_CODEC_ID codec_id = AV_CODEC_ID_NONE;
@@ -1541,11 +1695,13 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
     case CAP_PROP_FRAME_HEIGHT:
         return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
+    case CAP_PROP_FRAME_TYPE:
+        return (double)av_get_picture_type_char(picture->pict_type);
     case CAP_PROP_FPS:
         return get_fps();
     case CAP_PROP_FOURCC:
-        codec_id = video_st->codec->codec_id;
-        codec_tag = (double) video_st->codec->codec_tag;
+        codec_id = video_st->CV_FFMPEG_CODEC_FIELD->codec_id;
+        codec_tag = (double) video_st->CV_FFMPEG_CODEC_FIELD->codec_tag;
 
         if(codec_tag || codec_id == AV_CODEC_ID_NONE)
         {
@@ -1565,7 +1721,11 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).den;
     case CAP_PROP_CODEC_PIXEL_FORMAT:
     {
+#ifdef CV_FFMPEG_CODECPAR
+        AVPixelFormat pix_fmt = (AVPixelFormat)video_st->codecpar->format;
+#else
         AVPixelFormat pix_fmt = video_st->codec->pix_fmt;
+#endif
         unsigned int fourcc_tag = avcodec_pix_fmt_to_codec_tag(pix_fmt);
         return (fourcc_tag == 0) ? (double)-1 : (double)fourcc_tag;
     }
@@ -1573,6 +1733,12 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (rawMode)
             return -1;
         break;
+    case CAP_PROP_LRF_HAS_KEY_FRAME: {
+        const AVPacket& p = bsfc ? packet_filtered : packet;
+        return ((p.flags & AV_PKT_FLAG_KEY) != 0) ? 1 : 0;
+    }
+    case CAP_PROP_CODEC_EXTRADATA_INDEX:
+            return extraDataIdx;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:
@@ -1639,7 +1805,7 @@ double CvCapture_FFMPEG::get_fps() const
 
     if (fps < eps_zero)
     {
-        fps = 1.0 / r2d(ic->streams[video_stream]->codec->time_base);
+        fps = 1.0 / r2d(ic->streams[video_stream]->time_base);
     }
 #endif
     return fps;
@@ -1671,7 +1837,16 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 void CvCapture_FFMPEG::get_rotation_angle()
 {
     rotation_angle = 0;
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
+    const uint8_t *data = 0;
+    data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+    if (data)
+    {
+        rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
+        if (rotation_angle < 0)
+            rotation_angle += 360;
+    }
+#elif LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
     AVDictionaryEntry *rotate_tag = av_dict_get(video_st->metadata, "rotate", NULL, 0);
     if (rotate_tag != NULL)
         rotation_angle = atoi(rotate_tag->value);
@@ -1680,6 +1855,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
+    CV_Assert(context);
     _frame_number = std::min(_frame_number, get_total_frames());
     int delta = 16;
 
@@ -1696,7 +1872,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
         time_stamp += (int64_t)(sec / time_base + 0.5);
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
-        avcodec_flush_buffers(ic->streams[video_stream]->codec);
+        avcodec_flush_buffers(context);
         if( _frame_number > 0 )
         {
             grabFrame();
@@ -1801,7 +1977,7 @@ struct CvVideoWriter_FFMPEG
 
     void init();
 
-    AVOutputFormat  * fmt;
+    CV_FFMPEG_FMT_CONST AVOutputFormat  * fmt;
     AVFormatContext * oc;
     uint8_t         * outbuf;
     uint32_t          outbuf_size;
@@ -1810,6 +1986,7 @@ struct CvVideoWriter_FFMPEG
     AVFrame         * input_picture;
     uint8_t         * picbuf;
     AVStream        * video_st;
+    AVCodecContext  * context;
     AVPixelFormat     input_pix_fmt;
     unsigned char   * aligned_input;
     size_t            aligned_input_size;
@@ -1874,6 +2051,7 @@ void CvVideoWriter_FFMPEG::init()
     input_picture = 0;
     picbuf = 0;
     video_st = 0;
+    context = 0;
     input_pix_fmt = AV_PIX_FMT_NONE;
     aligned_input = NULL;
     aligned_input_size = 0;
@@ -1925,23 +2103,32 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
 }
 
 /* configure video stream */
-static bool icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
+static AVCodecContext * icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
                                                    AVStream *st,
                                                    const AVCodec* codec,
                                                    int w, int h, int bitrate,
-                                                   double fps, AVPixelFormat pixel_format)
+                                                   double fps, AVPixelFormat pixel_format, int fourcc)
 {
+#ifdef CV_FFMPEG_CODECPAR
+    AVCodecContext *c = avcodec_alloc_context3(codec);
+#else
     AVCodecContext *c = st->codec;
+#endif
+    CV_Assert(c);
+
     int frame_rate, frame_rate_base;
 
     c->codec_id = codec->id;
     c->codec_type = AVMEDIA_TYPE_VIDEO;
+    c->codec_tag = fourcc;
 
+#ifndef CV_FFMPEG_CODECPAR
     // Set per-codec defaults
     CV_CODEC_ID c_id = c->codec_id;
     avcodec_get_context_defaults3(c, codec);
     // avcodec_get_context_defaults3 erases codec_id for some reason
     c->codec_id = c_id;
+#endif
 
     /* put sample parameters */
     int64_t lbit_rate = (int64_t)bitrate;
@@ -1984,7 +2171,12 @@ static bool icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
             }
         }
         if (best == NULL)
-            return false;
+        {
+#ifdef CV_FFMPEG_CODECPAR
+            avcodec_free_context(&c);
+#endif
+            return NULL;
+        }
         c->time_base.den= best->num;
         c->time_base.num= best->den;
     }
@@ -2027,26 +2219,20 @@ static bool icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
 #endif
     }
 
-#if defined(_MSC_VER)
-    AVRational avg_frame_rate = {frame_rate, frame_rate_base};
-    st->avg_frame_rate = avg_frame_rate;
-#else
-    st->avg_frame_rate = (AVRational){frame_rate, frame_rate_base};
-#endif
+    st->avg_frame_rate = av_make_q(frame_rate, frame_rate_base);
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 20, 0)
     st->time_base = c->time_base;
 #endif
 
-    return true;
+    return c;
 }
 
 static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 
-static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
+static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st, AVCodecContext * c,
                                       uint8_t *, uint32_t,
                                       AVFrame * picture, int frame_idx)
 {
-    AVCodecContext* c = video_st->codec;
     int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
 
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
@@ -2136,16 +2322,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
     }
     else {
-        assert(false);
+        CV_Assert(false);
     }
 
     if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
         return false;
     width = frame_width;
     height = frame_height;
-
-    // typecast from opaque data type to implemented struct
-    AVCodecContext* c = video_st->codec;
 
     // FFmpeg contains SIMD optimizations which can sometimes read data past
     // the supplied input buffer.
@@ -2183,13 +2366,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         step = aligned_step;
     }
 
-    AVPixelFormat sw_pix_fmt = c->pix_fmt;
+    AVPixelFormat sw_pix_fmt = context->pix_fmt;
 #if USE_AV_HW_CODECS
-    if (c->hw_frames_ctx)
-        sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
+    if (context->hw_frames_ctx)
+        sw_pix_fmt = ((AVHWFramesContext*)context->hw_frames_ctx->data)->sw_format;
 #endif
     if ( sw_pix_fmt != input_pix_fmt ) {
-        assert( input_picture );
+        CV_Assert( input_picture );
         // let input_picture point to the raw data buffer of 'image'
         _opencv_ffmpeg_av_image_fill_arrays(input_picture, (uint8_t *) data,
                        (AVPixelFormat)input_pix_fmt, width, height);
@@ -2200,8 +2383,8 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             img_convert_ctx = sws_getContext(width,
                                              height,
                                              (AVPixelFormat)input_pix_fmt,
-                                             c->width,
-                                             c->height,
+                                             context->width,
+                                             context->height,
                                              sw_pix_fmt,
                                              SWS_BICUBIC,
                                              NULL, NULL, NULL);
@@ -2223,14 +2406,14 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 
     bool ret;
 #if USE_AV_HW_CODECS
-    if (video_st->codec->hw_device_ctx) {
+    if (context->hw_device_ctx) {
         // copy data to HW frame
         AVFrame* hw_frame = av_frame_alloc();
         if (!hw_frame) {
             CV_LOG_ERROR(NULL, "Error allocating AVFrame (av_frame_alloc)");
             return false;
         }
-        if (av_hwframe_get_buffer(video_st->codec->hw_frames_ctx, hw_frame, 0) < 0) {
+        if (av_hwframe_get_buffer(context->hw_frames_ctx, hw_frame, 0) < 0) {
             CV_LOG_ERROR(NULL, "Error obtaining HW frame (av_hwframe_get_buffer)");
             av_frame_free(&hw_frame);
             return false;
@@ -2241,14 +2424,14 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             return false;
         }
         hw_frame->pts = frame_idx;
-        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
         ret = ret_write >= 0 ? true : false;
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
-        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture, frame_idx);
+        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, picture, frame_idx);
         ret = ret_write >= 0 ? true : false;
     }
 
@@ -2259,7 +2442,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 
 bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
 #if USE_AV_HW_CODECS
-    if (!video_st->codec->hw_frames_ctx)
+    if (!video_st || !context || !context->hw_frames_ctx || !context->hw_device_ctx)
         return false;
 
     // Get hardware frame from frame pool
@@ -2267,20 +2450,20 @@ bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
     if (!hw_frame) {
         return false;
     }
-    if (av_hwframe_get_buffer(video_st->codec->hw_frames_ctx, hw_frame, 0) < 0) {
+    if (av_hwframe_get_buffer(context->hw_frames_ctx, hw_frame, 0) < 0) {
         av_frame_free(&hw_frame);
         return false;
     }
 
     // GPU to GPU copy
-    if (!hw_copy_umat_to_frame(video_st->codec->hw_device_ctx, input, hw_frame)) {
+    if (!hw_copy_umat_to_frame(context->hw_device_ctx, input, hw_frame)) {
         av_frame_free(&hw_frame);
         return false;
     }
 
     // encode
     hw_frame->pts = frame_idx;
-    icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+    icv_av_write_frame_FFMPEG( oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
     frame_idx++;
 
     av_frame_free(&hw_frame);
@@ -2315,17 +2498,13 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
 /// close video output stream and free associated memory
 void CvVideoWriter_FFMPEG::close()
 {
-    // nothing to do if already released
-    if ( !picture )
-        return;
-
     /* no more frame to compress. The codec has a latency of a few
        frames if using B frames, so we get the last frames by
        passing the same picture again */
     // TODO -- do we need to account for latency here?
 
     /* write the trailer, if any */
-    if(ok && oc)
+    if (picture && ok && oc)
     {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
         if (!(oc->oformat->flags & AVFMT_RAWPICTURE))
@@ -2333,7 +2512,7 @@ void CvVideoWriter_FFMPEG::close()
         {
             for(;;)
             {
-                int ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, NULL, frame_idx);
+                int ret = icv_av_write_frame_FFMPEG( oc, video_st, context, outbuf, outbuf_size, NULL, frame_idx);
                 if( ret == OPENCV_NO_FRAMES_WRITTEN_CODE || ret < 0 )
                     break;
             }
@@ -2348,7 +2527,7 @@ void CvVideoWriter_FFMPEG::close()
     }
 
     // free pictures
-    if( video_st->codec->pix_fmt != input_pix_fmt)
+    if (picture && context && context->pix_fmt != input_pix_fmt)
     {
         if(picture->data[0])
             free(picture->data[0]);
@@ -2359,8 +2538,14 @@ void CvVideoWriter_FFMPEG::close()
     if (input_picture)
         av_free(input_picture);
 
+#ifdef CV_FFMPEG_CODECPAR
+    avcodec_free_context(&context);
+#else
     /* close codec */
-    avcodec_close(video_st->codec);
+    if (context)  // fixed after https://github.com/FFmpeg/FFmpeg/commit/3e1f507f3e8f16b716aa115552d243b48ae809bd
+        avcodec_close(context);
+    context = NULL;
+#endif
 
     av_free(outbuf);
 
@@ -2563,12 +2748,19 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     // alloc memory for context
     oc = avformat_alloc_context();
-    assert (oc);
+    CV_Assert(oc);
 
     /* set file name */
     oc->oformat = fmt;
+#ifndef CV_FFMPEG_URL
     snprintf(oc->filename, sizeof(oc->filename), "%s", filename);
-
+#else
+    size_t name_len = strlen(filename);
+    oc->url = (char*)av_malloc(name_len + 1);
+    CV_Assert(oc->url);
+    memcpy((void*)oc->url, filename, name_len + 1);
+    oc->url[name_len] = '\0';
+#endif
     /* set some options */
     oc->max_delay = (int)(0.7*AV_TIME_BASE);  /* This reduces buffer underrun warnings with MPEG */
 
@@ -2683,7 +2875,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     double bitrate = std::min(bitrate_scale*fps*width*height, (double)INT_MAX/2);
 
     if (codec_id == AV_CODEC_ID_NONE) {
-        codec_id = av_guess_codec(oc->oformat, NULL, oc->filename, NULL, AVMEDIA_TYPE_VIDEO);
+        codec_id = av_guess_codec(oc->oformat, NULL, filename, NULL, AVMEDIA_TYPE_VIDEO);
     }
 
     // Add video stream to output file
@@ -2701,11 +2893,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 #endif
 
-    AVCodecContext *c = video_st->codec;
-
     // find and open encoder, try HW acceleration types specified in 'hw_acceleration' list (in order)
     int err = -1;
-    AVCodec* codec = NULL;
+    const AVCodec* codec = NULL;
 #if USE_AV_HW_CODECS
     AVBufferRef* hw_device_ctx = NULL;
     HWAccelIterator accel_iter(va_type, true/*isEncoder*/, dict);
@@ -2748,9 +2938,14 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         AVPixelFormat format = codec_pix_fmt;
 #endif
 
-        if (!icv_configure_video_stream_FFMPEG(oc, video_st, codec,
-                                               width, height, (int) (bitrate + 0.5),
-                                               fps, format)) {
+#ifdef CV_FFMPEG_CODECPAR
+        avcodec_free_context(&context);
+#endif
+        context = icv_configure_video_stream_FFMPEG(oc, video_st, codec,
+                                              width, height, (int) (bitrate + 0.5),
+                                              fps, format, fourcc);
+        if (!context)
+        {
             continue;
         }
 
@@ -2762,27 +2957,25 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
 #endif
 
-        c->codec_tag = fourcc;
-
 #if USE_AV_HW_CODECS
         if (hw_device_ctx) {
-            c->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+            context->hw_device_ctx = av_buffer_ref(hw_device_ctx);
             if (hw_format != AV_PIX_FMT_NONE) {
-                c->hw_frames_ctx = hw_create_frames(NULL, hw_device_ctx, width, height, hw_format);
-                if (!c->hw_frames_ctx)
+                context->hw_frames_ctx = hw_create_frames(NULL, hw_device_ctx, width, height, hw_format);
+                if (!context->hw_frames_ctx)
                     continue;
             }
         }
 #endif
 
-        int64_t lbit_rate = (int64_t) c->bit_rate;
+        int64_t lbit_rate = (int64_t) context->bit_rate;
         lbit_rate += (int64_t)(bitrate / 2);
         lbit_rate = std::min(lbit_rate, (int64_t) INT_MAX);
-        c->bit_rate_tolerance = (int) lbit_rate;
-        c->bit_rate = (int) lbit_rate;
+        context->bit_rate_tolerance = (int) lbit_rate;
+        context->bit_rate = (int) lbit_rate;
 
         /* open the codec */
-        err = avcodec_open2(c, codec, NULL);
+        err = avcodec_open2(context, codec, NULL);
         if (err >= 0) {
 #if USE_AV_HW_CODECS
             va_type = hw_type_to_va_type(hw_type);
@@ -2791,7 +2984,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
             break;
         } else {
-            CV_LOG_ERROR(NULL, "Could not open codec " << codec->name << ", error: " << icvFFMPEGErrStr(err));
+            CV_LOG_ERROR(NULL, "Could not open codec " << codec->name << ", error: " << icvFFMPEGErrStr(err) << " (" << err << ")");
         }
 #if USE_AV_HW_CODECS
     }  // while (accel_iter.good())
@@ -2812,6 +3005,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         return false;
     }
 
+#ifdef CV_FFMPEG_CODECPAR
+    // Copy all to codecpar...
+    // !!! https://stackoverflow.com/questions/15897849/c-ffmpeg-not-writing-avcc-box-information
+    avcodec_parameters_from_context(video_st->codecpar, context);
+#endif
+
     outbuf = NULL;
 
 
@@ -2826,16 +3025,16 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     bool need_color_convert;
-    AVPixelFormat sw_pix_fmt = c->pix_fmt;
+    AVPixelFormat sw_pix_fmt = context->pix_fmt;
 #if USE_AV_HW_CODECS
-    if (c->hw_frames_ctx)
-        sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
+    if (context->hw_frames_ctx)
+        sw_pix_fmt = ((AVHWFramesContext*)context->hw_frames_ctx->data)->sw_format;
 #endif
 
     need_color_convert = (sw_pix_fmt != input_pix_fmt);
 
     /* allocate the encoded raw picture */
-    picture = icv_alloc_picture_FFMPEG(sw_pix_fmt, c->width, c->height, need_color_convert);
+    picture = icv_alloc_picture_FFMPEG(sw_pix_fmt, context->width, context->height, need_color_convert);
     if (!picture) {
         return false;
     }
@@ -2845,7 +3044,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
    to the required output format */
     input_picture = NULL;
     if ( need_color_convert ) {
-        input_picture = icv_alloc_picture_FFMPEG(input_pix_fmt, c->width, c->height, false);
+        input_picture = icv_alloc_picture_FFMPEG(input_pix_fmt, context->width, context->height, false);
         if (!input_picture) {
             return false;
         }

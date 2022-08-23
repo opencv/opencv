@@ -49,7 +49,25 @@ namespace
          static GMatDesc outMeta(GMatDesc in) { return in; }
     };
 
-    // These definitons test the correct macro work if the kernel has multiple output values
+    G_TYPED_KERNEL(GZeros, <GMat(GMat, GMatDesc)>, "org.opencv.test.zeros")
+    {
+        static GMatDesc outMeta(GMatDesc /*in*/, GMatDesc user_desc)
+        {
+            return user_desc;
+        }
+    };
+
+    GAPI_OCV_KERNEL(GOCVZeros, GZeros)
+    {
+        static void run(const cv::Mat&      /*in*/,
+                        const cv::GMatDesc& /*desc*/,
+                        cv::Mat&            out)
+        {
+            out.setTo(0);
+        }
+    };
+
+    // These definitions test the correct macro work if the kernel has multiple output values
     G_TYPED_KERNEL(GRetGArrayTupleOfGMat2Kernel,  <GArray<std::tuple<GMat, GMat>>(GMat, Scalar)>,                                         "org.opencv.test.retarrayoftupleofgmat2kernel")  {};
     G_TYPED_KERNEL(GRetGArraTupleyOfGMat3Kernel,  <GArray<std::tuple<GMat, GMat, GMat>>(GMat)>,                                           "org.opencv.test.retarrayoftupleofgmat3kernel")  {};
     G_TYPED_KERNEL(GRetGArraTupleyOfGMat4Kernel,  <GArray<std::tuple<GMat, GMat, GMat, GMat>>(GMat)>,                                     "org.opencv.test.retarrayoftupleofgmat4kernel")  {};
@@ -428,6 +446,71 @@ TEST(GAPI_Pipeline, ReplaceDefaultByFunctor)
 
     EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
     EXPECT_TRUE(f.is_called);
+}
+
+TEST(GAPI_Pipeline, GraphOutputIs1DMat)
+{
+    int dim = 100;
+    cv::Mat in_mat(1, 1, CV_8UC3);
+    cv::Mat out_mat;
+
+    cv::GMat in;
+    auto cc = cv::GComputation(in, GZeros::on(in, cv::GMatDesc(CV_8U, {dim})))
+        .compile(cv::descr_of(in_mat), cv::compile_args(cv::gapi::kernels<GOCVZeros>()));
+
+    // NB: Computation is able to write 1D output cv::Mat to empty out_mat.
+    ASSERT_NO_THROW(cc(cv::gin(in_mat), cv::gout(out_mat)));
+    ASSERT_EQ(1, out_mat.size.dims());
+    ASSERT_EQ(dim, out_mat.size[0]);
+
+    // NB: Computation is able to write 1D output cv::Mat
+    // to pre-allocated with the same meta out_mat.
+    ASSERT_NO_THROW(cc(cv::gin(in_mat), cv::gout(out_mat)));
+    ASSERT_EQ(1, out_mat.size.dims());
+    ASSERT_EQ(dim, out_mat.size[0]);
+}
+
+TEST(GAPI_Pipeline, 1DMatBetweenIslands)
+{
+    int dim = 100;
+    cv::Mat in_mat(1, 1, CV_8UC3);
+    cv::Mat out_mat;
+
+    cv::Mat ref_mat({dim}, CV_8U);
+    ref_mat.dims = 1;
+    ref_mat.setTo(0);
+
+    cv::GMat in;
+    auto out = cv::gapi::copy(GZeros::on(cv::gapi::copy(in), cv::GMatDesc(CV_8U, {dim})));
+    auto cc = cv::GComputation(in, out)
+        .compile(cv::descr_of(in_mat), cv::compile_args(cv::gapi::kernels<GOCVZeros>()));
+
+    cc(cv::gin(in_mat), cv::gout(out_mat));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
+}
+
+TEST(GAPI_Pipeline, 1DMatWithinSingleIsland)
+{
+    int dim = 100;
+    cv::Size blur_sz(3, 3);
+    cv::Mat in_mat(10, 10, CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+    cv::Mat out_mat;
+
+    cv::Mat ref_mat({dim}, CV_8U);
+    ref_mat.dims = 1;
+    ref_mat.setTo(0);
+
+    cv::GMat in;
+    auto out = cv::gapi::blur(
+            GZeros::on(cv::gapi::blur(in, blur_sz), cv::GMatDesc(CV_8U, {dim})), blur_sz);
+    auto cc = cv::GComputation(in, out)
+        .compile(cv::descr_of(in_mat), cv::compile_args(cv::gapi::kernels<GOCVZeros>()));
+
+    cc(cv::gin(in_mat), cv::gout(out_mat));
+
+    EXPECT_EQ(0, cv::norm(out_mat, ref_mat));
 }
 
 } // namespace opencv_test

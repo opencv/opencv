@@ -13,10 +13,15 @@
 #endif
 #include <sstream>
 
+#if defined(HAVE_MFX) && defined(HAVE_ONEVPL)
+#undef HAVE_MFX  // libav's hwcontext_qsv.h doesn't expect oneVPL headers
+#endif
+
 #ifdef HAVE_D3D11
 #define D3D11_NO_HELPERS
 #include <d3d11.h>
 #include <codecvt>
+#include <locale>
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>
