@@ -17,7 +17,7 @@ int main()
     double cx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
     double cy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CY);
     std::cout << "obsensor camera intrinsic params: fx=" << fx << ", fy=" << fy << ", cx=" << cx << ", cy=" << cy << std::endl;
-   
+
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
