@@ -1,4 +1,61 @@
-import pdb, sys, traceback, cv2 as cv, numpy as np, os, json, argparse
+import pdb, sys, traceback, cv as cv, numpy as np, os, json, argparse
+
+def getDimBox(pts):
+    return np.array([[pts[...,k].min(), pts[...,k].max()] for k in range(pts.shape[-1])])
+
+def plotCamerasPosition(R, t, image_sizes):
+    cam_box = np.array([[1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0]],dtype=np.float32); cam_box[:,2] = 3.0
+    cam_box *= 0.15
+    fig = plt.figure(figsize=(13.0, 15.0))
+    ax = fig.add_subplot(111, projection='3d')
+    ax_lines = [None for i in range(len(R))]
+    ax.set_title('Cameras and board position', fontsize=40)
+    all_pts = []
+    colors = np.random.rand(len(R),3)
+    for i, cam in enumerate(R):
+        cam_box_i = cam_box.copy()
+        cam_box_i[:,0] *= image_sizes[0] / max(image_sizes[1], image_sizes[0])
+        cam_box_i[:,1] *= image_sizes[1] / max(image_sizes[1], image_sizes[0])
+        cam_box_Rt = (R[i] @ cam_box_i.T + t[i]).T
+        all_pts.append(np.concatenate((cam_box_Rt, t[i].T)).T)
+
+        ax_lines[i] = ax.plot([t[i][0,0], cam_box_Rt[0,0]], [t[i][1,0], cam_box_Rt[0,1]], [t[i][2,0], cam_box_Rt[0,2]], '-', color=colors[i])[0]
+        ax.plot([t[i][0,0], cam_box_Rt[1,0]], [t[i][1,0], cam_box_Rt[1,1]], [t[i][2,0], cam_box_Rt[1,2]], '-', color=colors[i])
+        ax.plot([t[i][0,0], cam_box_Rt[2,0]], [t[i][1,0], cam_box_Rt[2,1]], [t[i][2,0], cam_box_Rt[2,2]], '-', color=colors[i])
+        ax.plot([t[i][0,0], cam_box_Rt[3,0]], [t[i][1,0], cam_box_Rt[3,1]], [t[i][2,0], cam_box_Rt[3,2]], '-', color=colors[i])
+
+        ax.plot([cam_box_Rt[0,0], cam_box_Rt[1,0]], [cam_box_Rt[0,1], cam_box_Rt[1,1]], [cam_box_Rt[0,2], cam_box_Rt[1,2]], '-', color=colors[i])
+        ax.plot([cam_box_Rt[1,0], cam_box_Rt[2,0]], [cam_box_Rt[1,1], cam_box_Rt[2,1]], [cam_box_Rt[1,2], cam_box_Rt[2,2]], '-', color=colors[i])
+        ax.plot([cam_box_Rt[2,0], cam_box_Rt[3,0]], [cam_box_Rt[2,1], cam_box_Rt[3,1]], [cam_box_Rt[2,2], cam_box_Rt[3,2]], '-', color=colors[i])
+        ax.plot([cam_box_Rt[3,0], cam_box_Rt[0,0]], [cam_box_Rt[3,1], cam_box_Rt[0,1]], [cam_box_Rt[3,2], cam_box_Rt[0,2]], '-', color=colors[i])
+
+    ax.legend(ax_lines, [str(i) for i in range(len(R))], fontsize=20)
+    dim_box = getDimBox(np.concatenate((all_pts),1))
+    ax.set_xlim(dim_box[0]); ax.set_ylim(dim_box[1]); ax.set_zlim(dim_box[2])
+    ax.set_box_aspect((dim_box[0, 1] - dim_box[0, 0], dim_box[1, 1] - dim_box[1, 0], dim_box[2, 1] - dim_box[2, 0]))
+
+def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dist_coeff, is_fisheye, image_size, image=None):
+    rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)
+    if is_fisheye:
+        points_2d_est = cv.fisheye.projectPoints(pts_3d.T[None,:], rvec2, tvec2, K, dist.flatten())[0]
+    else:
+        points_2d_est = cv.projectPoints(pts_3d, rvec2, tvec2, K, dist)[0]
+
+    if image is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(points_2d[:,0], points_2d[:,1], 'r.')
+        ax.scatter(points_2d_est[:,0], points_2d_est[:,1], color='green', marker='o')
+        dim_box = getDimBox(points_2d)
+        ax.set_aspect('equal', 'box')
+        ax.set_xlim(0, image_size[0]); ax.set_ylim(0, image_size[1])
+        ax.set_xlabel('x', fontsize=fontsize); ax.set_ylabel('y', fontsize=fontsize)
+    else:
+        circle_sz = 5
+        for i in range(points_2d_est):
+            cv.circle(image, (int(points_2d[i,0]), int(points_2d[i,1])), circle_sz, (0, 0, 255), -1)
+            cv.circle(image, (int(points_2d_est[i,0]), int(points_2d_est[i,1])), circle_sz, (0, 255, 0), -1)
+        plt.imshow(image)
 
 def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye):
     """
@@ -16,23 +73,37 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye):
         for j in range(num_frames):
             visibility[i,j] = len(image_points[i][j]) != 0
 
-    success, Rs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = cv.calibrateMultiview(pattern_points_all,
-                image_points, image_sizes, visibility, is_fisheye, cv.USE_INTRINSICS_GUESS=False)
-    print(Rs)
-    print(Ts)
-    print(Ks)
-    print(distortions)
+    success, Rs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
+        cv.calibrateMultiview(pattern_points_all, image_points, image_sizes, visibility,
+        is_fisheye, USE_INTRINSICS_GUESS=False)
+    print('rvecs', Rs)
+    print('tvecs', Ts)
+    print('K', Ks)
+    print('distortion', distortions)
+    print('mean RMS error over all visible frames %.3E' % errors_per_frame.mean())
 
-def calibrateFromImages(files_with_images, grid_size, is_fisheye, dist_m):
+    visibility_idxs = np.stack(np.where(visibility))
+    plotCamerasPosition(Rs, Ts, image_sizes)
+    def plot(cam_idx, frame_idx):
+        plotProjection(image_points[cam_idx,frame_idx], pattern_points, rvecs0[frame_idx], 
+            tvecs0[frame_idx], Rs[cam_idx], Ts[cam_idx], Ks[cam_idx], distortions[cam_idx], is_fisheye[cam_idx], image_sizes[cam_idx])
+    plot(visibility_idxs[0,0], visibility[0,1])
+    plt.show()
+
+def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m):
     """
     files_with_images: NUM_CAMERAS x NUM_FRAMES x string - path to image file
     grid_size: [width, height] -- size of grid pattern
     dist_m: length of a grid cell
     is_fisheye: NUM_CAMERAS (bool)
     """
-    pattern = np.zeros((grid_size[0]*grid_size[1],3), np.float32)
-    pattern[:,:2] = np.mgrid[0:grid_size[0],0:grid_size[1]].T.reshape(-1,2)*dist_m # only for (x,y,z=0)
-
+    if pattern_type.lower() == 'checkerboard':
+        pattern = np.zeros((grid_size[0]*grid_size[1],3), np.float32)
+        pattern[:,:2] = np.mgrid[0:grid_size[0],0:grid_size[1]].T.reshape(-1,2)*dist_m # only for (x,y,z=0)
+    else:
+        raise "Pattern type is not implemented!"
+    pdb.set_trace()
+    assert len(files_with_images) == len(is_fisheye) and len(grid_size) == 2
     image_points_cameras = []
     image_sizes = []
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 50, 0.001)
@@ -47,14 +118,18 @@ def calibrateFromImages(files_with_images, grid_size, is_fisheye, dist_m):
                 img_size = img.shape[:2][::-1]
             gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
             window = (11,11)
-            scale = min(1.0, 1000 / max(img.shape[0], img.shape[1]))
+            scale = 1000.0 / max(img.shape[0], img.shape[1])
             if scale < 1.0:
-                gray = cv.resize(gray, (int(scale * gray.shape[1]), int(scale * gray.shape[0])), interpolation=cv.INTER_AREA)
-                window = (16, 16) # increase refinement window
+                ret, corners = cv.findChessboardCorners(
+                    cv.resize(gray, (int(scale * gray.shape[1]), int(scale * gray.shape[0])),
+                    interpolation=cv.INTER_AREA), grid_size, None)
+                corners /= scale
+                # increase refinement window for the original image resolution
+                window = (16, 16)
+            else:
+                ret, corners = cv.findChessboardCorners(gray, grid_size, None)
 
-            ret, corners = cv.findChessboardCorners(gray, grid_size, None)
             if ret:
-                if scale < 1.0: corners /= scale
                 corners2 = cv.cornerSubPix(gray, corners, window, (-1,-1), criteria)
                 image_points_camera.append([corners2])
             else:
@@ -67,15 +142,28 @@ def calibrateFromImages(files_with_images, grid_size, is_fisheye, dist_m):
 def calibrateFromJSON(json_file):
     assert os.path.exists(json_file)
     data = json.load(open(json_file, 'r'))
-    calibrateFromPoints(data['pattern'], data['image_points'], data['image_sizes'], data['is_fisheye'])
+    calibrateFromPoints(data['object_points'], data['image_points'], data['image_sizes'], data['is_fisheye'])
 
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser()
-        parser.add_argument('--json_file', type=str)
+        parser.add_argument('--json_file', type=str, default=None, help="json file with all data. Must have keys: 'object_points', 'image_points', 'image_sizes', 'is_fisheye'")
+        parser.add_argument('--filenames', type=str, default=None, help='files containg images, e.g., file1,file2,...,fileN for N cameras')
+        parser.add_argument('--pattern_size', type=str, default=None, help='pattern size: width,height')
+        parser.add_argument('--pattern_type', type=str, default=None, help='currently supported only checkeboard')
+        parser.add_argument('--fisheye', type=str, default=None, help='fisheye mask, e.g., 0,1,...')
+        parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
         params, _ = parser.parse_known_args()
-        calibrateFromJSON(params.json_file)
+        if params.json_file is not None:
+            calibrateFromJSON(params.json_file)
+        else:
+            if (params.fisheye is None and params.filenames is None and params.pattern_type is None and \
+                    params.pattern_size is None and params.pattern_distance is None):
+                assert False and 'Either json file or all other parameters must be set'
+            calibrateFromImages(params.filenames.split(','), [int(v) for v in params.pattern_size.split(',')], 
+                params.pattern_type, [bool(int(v)) for v in params.fisheye.split(',')], params.pattern_distance)
+
     except:
         extype, value, tb = sys.exc_info()
         traceback.print_exc()
-        pdb.post_mortem(tb)    
+        pdb.post_mortem(tb)
