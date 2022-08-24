@@ -42,7 +42,7 @@
 #include <mutex>
 #include <vidcap.h> //IKsTopologyInfo
 #include <ksproxy.h> //IKsControl
-#include <ksmedia.h> 
+#include <ksmedia.h>
 
 namespace cv {
 namespace obsensor {
