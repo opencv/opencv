@@ -1125,7 +1125,7 @@ CV_EXPORTS_W bool calibrateMultiview (InputArrayOfArrays objPoints, const std::v
         const std::vector<Size> &imageSize, const Mat &visibility,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
-        OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS=false);
+        OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS=false, int flags_intrinsics=0);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
