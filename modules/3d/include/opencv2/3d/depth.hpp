@@ -30,7 +30,8 @@ public:
     {
       RGBD_NORMALS_METHOD_FALS = 0,
       RGBD_NORMALS_METHOD_LINEMOD = 1,
-      RGBD_NORMALS_METHOD_SRI = 2
+      RGBD_NORMALS_METHOD_SRI = 2,
+      RGBD_NORMALS_METHOD_CROSS_PRODUCT = 3
     };
 
     RgbdNormals() { }
@@ -42,9 +43,11 @@ public:
      * @param depth the depth of the normals (only CV_32F or CV_64F)
      * @param K the calibration matrix to use
      * @param window_size the window size to compute the normals: can only be 1,3,5 or 7
+     * @param diff_threshold threshold in depth difference, used in LINEMOD algirithm
      * @param method one of the methods to use: RGBD_NORMALS_METHOD_SRI, RGBD_NORMALS_METHOD_FALS
      */
     CV_WRAP static Ptr<RgbdNormals> create(int rows = 0, int cols = 0, int depth = 0, InputArray K = noArray(), int window_size = 5,
+                                           float diff_threshold = 50.f,
                                            RgbdNormals::RgbdNormalsMethod method = RgbdNormals::RgbdNormalsMethod::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
@@ -68,7 +71,6 @@ public:
     CV_WRAP virtual void getK(OutputArray val) const = 0;
     CV_WRAP virtual void setK(InputArray val) = 0;
     CV_WRAP virtual RgbdNormals::RgbdNormalsMethod getMethod() const = 0;
-    CV_WRAP virtual void setMethod(RgbdNormals::RgbdNormalsMethod val) = 0;
 };
 
 
@@ -146,7 +148,7 @@ enum RgbdPlaneMethod
 
 /** Find the planes in a depth image
  * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
- * @param normals the normals for every point in the depth image
+ * @param normals the normals for every point in the depth image; optional, can be empty
  * @param mask An image where each pixel is labeled with the plane it belongs to
  *        and 255 if it does not belong to any plane
  * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
