@@ -343,17 +343,29 @@ LevMarq::Report detail::LevMarqBase::optimize()
     CV_LOG_DEBUG(NULL, "Finished: " << (found ? "" : "not ") << "found");
     std::string fr = "Finish reason: ";
     if (settings.checkMinGradient && smallGradient)
+    {
         CV_LOG_DEBUG(NULL, fr + "gradient max val dropped below threshold");
+    }
     if (settings.checkStepNorm && smallStep)
+    {
         CV_LOG_DEBUG(NULL, fr + "step size dropped below threshold");
+    }
     if (settings.checkRelEnergyChange && smallEnergyDelta)
+    {
         CV_LOG_DEBUG(NULL, fr + "relative energy change between iterations dropped below threshold");
+    }
     if (smallEnergy)
+    {
         CV_LOG_DEBUG(NULL, fr + "energy dropped below threshold");
+    }
     if (tooLong)
+    {
         CV_LOG_DEBUG(NULL, fr + "max number of iterations reached");
+    }
     if (bigLambda)
+    {
         CV_LOG_DEBUG(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
+    }
 
     return LevMarq::Report(found, iter, oldEnergy);
 }
