@@ -176,7 +176,7 @@ if(NOT ${found})
     endif()
 
     if(NOT ANDROID AND NOT IOS)
-      if(CMAKE_HOST_UNIX)
+      if(CMAKE_HOST_UNIX OR MINGW)
         execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
                         OUTPUT_VARIABLE _std_packages_path

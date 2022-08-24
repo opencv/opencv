@@ -1018,7 +1018,7 @@ if(NOT OPENCV_LICENSE_FILE)
 endif()
 
 # for UNIX it does not make sense as LICENSE and readme will be part of the package automatically
-if(ANDROID OR NOT UNIX)
+if((ANDROID OR NOT UNIX) AND NOT MINGW)
   install(FILES ${OPENCV_LICENSE_FILE}
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
         DESTINATION ./ COMPONENT libs)
