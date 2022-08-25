@@ -109,9 +109,9 @@ template <> struct wAdd<s32>
         vgamma = vdupq_n_f32(_gamma + 0.5);
     }
 
-    void operator() (const typename VecTraits<s32>::vec128 & v_src0,
-                     const typename VecTraits<s32>::vec128 & v_src1,
-                     typename VecTraits<s32>::vec128 & v_dst) const
+    void operator() (const VecTraits<s32>::vec128 & v_src0,
+                     const VecTraits<s32>::vec128 & v_src1,
+                     VecTraits<s32>::vec128 & v_dst) const
     {
         float32x4_t vs1 = vcvtq_f32_s32(v_src0);
         float32x4_t vs2 = vcvtq_f32_s32(v_src1);
@@ -121,9 +121,9 @@ template <> struct wAdd<s32>
         v_dst = vcvtq_s32_f32(vs1);
     }
 
-    void operator() (const typename VecTraits<s32>::vec64 & v_src0,
-                     const typename VecTraits<s32>::vec64 & v_src1,
-                     typename VecTraits<s32>::vec64 & v_dst) const
+    void operator() (const VecTraits<s32>::vec64 & v_src0,
+                     const VecTraits<s32>::vec64 & v_src1,
+                     VecTraits<s32>::vec64 & v_dst) const
     {
         float32x2_t vs1 = vcvt_f32_s32(v_src0);
         float32x2_t vs2 = vcvt_f32_s32(v_src1);
@@ -153,9 +153,9 @@ template <> struct wAdd<u32>
         vgamma = vdupq_n_f32(_gamma + 0.5);
     }
 
-    void operator() (const typename VecTraits<u32>::vec128 & v_src0,
-                     const typename VecTraits<u32>::vec128 & v_src1,
-                     typename VecTraits<u32>::vec128 & v_dst) const
+    void operator() (const VecTraits<u32>::vec128 & v_src0,
+                     const VecTraits<u32>::vec128 & v_src1,
+                     VecTraits<u32>::vec128 & v_dst) const
     {
         float32x4_t vs1 = vcvtq_f32_u32(v_src0);
         float32x4_t vs2 = vcvtq_f32_u32(v_src1);
@@ -165,9 +165,9 @@ template <> struct wAdd<u32>
         v_dst = vcvtq_u32_f32(vs1);
     }
 
-    void operator() (const typename VecTraits<u32>::vec64 & v_src0,
-                     const typename VecTraits<u32>::vec64 & v_src1,
-                     typename VecTraits<u32>::vec64 & v_dst) const
+    void operator() (const VecTraits<u32>::vec64 & v_src0,
+                     const VecTraits<u32>::vec64 & v_src1,
+                     VecTraits<u32>::vec64 & v_dst) const
     {
         float32x2_t vs1 = vcvt_f32_u32(v_src0);
         float32x2_t vs2 = vcvt_f32_u32(v_src1);
@@ -197,17 +197,17 @@ template <> struct wAdd<f32>
         vgamma = vdupq_n_f32(_gamma + 0.5);
     }
 
-    void operator() (const typename VecTraits<f32>::vec128 & v_src0,
-                     const typename VecTraits<f32>::vec128 & v_src1,
-                     typename VecTraits<f32>::vec128 & v_dst) const
+    void operator() (const VecTraits<f32>::vec128 & v_src0,
+                     const VecTraits<f32>::vec128 & v_src1,
+                     VecTraits<f32>::vec128 & v_dst) const
     {
         float32x4_t vs1 = vmlaq_f32(vgamma, v_src0, valpha);
         v_dst = vmlaq_f32(vs1, v_src1, vbeta);
     }
 
-    void operator() (const typename VecTraits<f32>::vec64 & v_src0,
-                     const typename VecTraits<f32>::vec64 & v_src1,
-                     typename VecTraits<f32>::vec64 & v_dst) const
+    void operator() (const VecTraits<f32>::vec64 & v_src0,
+                     const VecTraits<f32>::vec64 & v_src1,
+                     VecTraits<f32>::vec64 & v_dst) const
     {
         float32x2_t vs1 = vmla_f32(vget_low(vgamma), v_src0, vget_low(valpha));
         v_dst = vmla_f32(vs1, v_src1, vget_low(vbeta));
