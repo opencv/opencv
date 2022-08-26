@@ -37,6 +37,47 @@ enum
 };
 
 #if CV_NEON
+
+#undef _FAST_CONV_T4x4
+#define _FAST_CONV_T4x4(a, b, c, d, tr0, tr1) \
+    tr0 = vtrnq_f32(a, b); \
+    tr1 = vtrnq_f32(c, d); \
+    a = vcombine_f32(vget_low_f32(tr0.val[0]), vget_low_f32(tr1.val[0])); \
+    b = vcombine_f32(vget_low_f32(tr0.val[1]), vget_low_f32(tr1.val[1])); \
+    c = vcombine_f32(vget_high_f32(tr0.val[0]), vget_high_f32(tr1.val[0])); \
+    d = vcombine_f32(vget_high_f32(tr0.val[1]), vget_high_f32(tr1.val[1]))
+
+// The input is the pack4 data, and the output is unpack4 data.
+static void transpose12x4(float* src, float* dst, const int cn)
+{
+    float32x4_t r00, r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11;
+    float32x4x2_t tr0, tr1;
+    for (int i = 0; i < cn; i++, src += 48, dst += 48)
+    {
+        r00 = vld1q_f32(src);
+        r01 = vld1q_f32(src + 4);
+        r02 = vld1q_f32(src + 8);
+        r03 = vld1q_f32(src + 12);
+        r04 = vld1q_f32(src + 16);
+        r05 = vld1q_f32(src + 20);
+        r06 = vld1q_f32(src + 24);
+        r07 = vld1q_f32(src + 28);
+        r08 = vld1q_f32(src + 32);
+        r09 = vld1q_f32(src + 36);
+        r10 = vld1q_f32(src + 40);
+        r11 = vld1q_f32(src + 44);
+
+        _FAST_CONV_T4x4(r00, r01, r02, r03, tr0, tr1);
+        _FAST_CONV_T4x4(r04, r05, r06, r07, tr0, tr1);
+        _FAST_CONV_T4x4(r08, r09, r10, r11, tr0, tr1);
+
+        vst1q_f32(dst, r00), vst1q_f32(dst + 4, r04), vst1q_f32(dst + 8, r08);
+        vst1q_f32(dst + 12, r01), vst1q_f32(dst + 16, r05), vst1q_f32(dst + 20, r09);
+        vst1q_f32(dst + 24, r02), vst1q_f32(dst + 28, r06), vst1q_f32(dst + 32, r10);
+        vst1q_f32(dst + 36, r03), vst1q_f32(dst + 40, r07), vst1q_f32(dst + 44, r11);
+    }
+}
+
 static void winograd_trans_input_F63(float* src, float* dst, int Channle_div4, const int tiles, const int big_step, const int line_step, const int* ofstab0)
 {
     // const float itm[8][8] = {
@@ -192,15 +233,14 @@ static void winograd_trans_input_F63(float* src, float* dst, int Channle_div4, c
         float* input0 = input_buf0 + 4 * tiles * r;
 
         // TODO! support tiles > 12
-//#if CV_NEON_AARCH64
-//        for (; ti + 11 < tiles; ti += 12)
-//        {
-//            float* out1 = out0 + line_step * ofstab0[ti * 2] + Channle_div4 * ofstab0[ti * 2 + 1] * 4;
-////            std::cout<<"ofstab0[ti * 2] = "<<ofstab0[ti * 2]<<", ofstab0[ti * 2 + 1] = "<<ofstab0[ti * 2 + 1]<<std::endl;
-//            float* input1 = input0 + ti * 4;
-//            memcpy(out1, input1, 12 * 4 * sizeof(float ));
-//        }
-//#endif
+#if CV_NEON_AARCH64
+        for (; ti + 11 < tiles; ti += 12)
+        {
+            float* out1 = out0 + line_step * ofstab0[ti * 2] + Channle_div4 * ofstab0[ti * 2 + 1] * 4;
+            float* input1 = input0 + ti * 4;
+            memcpy(out1, input1, 12 * 4 * sizeof(float ));
+        }
+#endif
         for (; ti + 7 < tiles; ti += 8)
         {
             float* out1 = out0 + line_step * ofstab0[ti * 2] + Channle_div4 * ofstab0[ti * 2 + 1] * 4;
@@ -231,7 +271,7 @@ static void winograd_trans_input_F63(float* src, float* dst, int Channle_div4, c
     }
 }
 
-static void winograd_trans_output_F63(float* src_, float* bias_, float minval, float maxval, bool ifMinMaxAct)
+static void winograd_trans_output_F63(float* src_, float* bias_, float* fAbuf0, float minval, float maxval, bool ifMinMaxAct)
 {
     // const float otm[6][8] = {
     //     {1.0f,  1.0f,   1.0f,   1.0f,   1.0f,  32.0f, 32.0f, 0.0f},
@@ -292,6 +332,7 @@ static void winograd_trans_output_F63(float* src_, float* bias_, float minval, f
     for (int m = 0; m < 6; m++)
     {
         float* output0 = src_ + 6 * m * FAST_VEC_NLANES;
+        float* fAbuf = fAbuf0 ? fAbuf0 + 6 * m * FAST_VEC_NLANES : 0;
 
         float32x4_t _tmp00 = vld1q_f32(tmp[m][0]);
         float32x4_t _tmp01 = vld1q_f32(tmp[m][1]);
@@ -319,6 +360,16 @@ static void winograd_trans_output_F63(float* src_, float* bias_, float minval, f
         float32x4_t _out03 = vaddq_f32(bias0, vmlaq_n_f32(vmlaq_n_f32(_tmp135a, _tmp135b, 8.f), _tmp135c, 4.f));
         float32x4_t _out05 = vaddq_f32(bias0, vaddq_f32(vaddq_f32(_tmp07, _tmp135a), vmlaq_n_f32(_tmp135c, _tmp135b, 32.f)));
 
+        if (fAbuf)
+        {
+            _out00 = vaddq_f32(_out00, vld1q_f32(fAbuf));
+            _out01 = vaddq_f32(_out01, vld1q_f32(fAbuf + 4));
+            _out02 = vaddq_f32(_out02, vld1q_f32(fAbuf + 8));
+            _out03 = vaddq_f32(_out03, vld1q_f32(fAbuf + 12));
+            _out04 = vaddq_f32(_out04, vld1q_f32(fAbuf + 16));
+            _out05 = vaddq_f32(_out05, vld1q_f32(fAbuf + 20));
+        }
+
         if (ifMinMaxAct)
         {
             float32x4_t vmin = vdupq_n_f32(minval), vmax = vdupq_n_f32(maxval);
@@ -339,7 +390,7 @@ static void winograd_trans_output_F63(float* src_, float* bias_, float minval, f
     }
 }
 
-void initWinograd63(Ptr<FastConv2d>& conv, float* srcWeight, int K, int C)
+void initWinograd63(Ptr<FastConv2d>& conv, InputArray _weightsMat, int K, int C)
 {
     static const float ktm[8][3] = {
             {1.0f,      0.0f,      0.0f},
@@ -352,11 +403,14 @@ void initWinograd63(Ptr<FastConv2d>& conv, float* srcWeight, int K, int C)
             {0.0f, 0.0f, 1.0f}
     };
 
+    Mat weightsMat = _weightsMat.getMat();
+    float* srcWeight = weightsMat.ptr<float>();
+    size_t wstep = weightsMat.step1();
+
     int K_aligned = ((K + FAST_VEC_NLANES - 1)/FAST_VEC_NLANES) * FAST_VEC_NLANES;
     int C_aligned = ((C + FAST_VEC_NLANES - 1)/FAST_VEC_NLANES) * FAST_VEC_NLANES;
     const int winoSize = C * WINO_AREA;
     const int kArea = WINO_KSIZE * WINO_KSIZE;
-    const int kSize = C * kArea;
 
     // Allocate memory for winograd.
     int nweights = K_aligned * C_aligned * WINO_AREA;
@@ -379,7 +433,7 @@ void initWinograd63(Ptr<FastConv2d>& conv, float* srcWeight, int K, int C)
             for (int inc = 0; inc < C; inc++)
             {
                 float *kernel_tm0 = kernelTm + outc * winoSize + inc * WINO_AREA;
-                const float *kernel0 = srcWeight + outc * kSize + inc * kArea;
+                const float *kernel0 = srcWeight + outc * wstep + inc * kArea;
 
                 // transform kernel, transposed
                 const float *k0 = kernel0;
@@ -472,16 +526,16 @@ void initWinograd63(Ptr<FastConv2d>& conv, float* srcWeight, int K, int C)
                     out1[inc * 4] = tmp1[inc * 64];
                 }
             }
-
         }
     }
 }
 
-int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks, float minval,
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks, float minval,
         float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
     Mat input = _input.getMat();
     Mat output = _output.getMat();
+    Mat fusedAddMat = _fusedAddMat.getMat();
 
     MatShape inputShape = shape(input);
     MatShape outputShape = shape(output);
@@ -517,15 +571,14 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
     int inpPack = 0;
     int lineNum =0;
 
-    // TODO! tiles > 12
-//#if CV_NEON_AARCH64
-//    if (tiles >= 12)
-//    {
-//        inpPack = 12;
-//        lineNum = tiles / 12 + (tiles % 12) / 8 + (tiles % 12 % 8) / 4 + (tiles % 12 % 4) / 2 + tiles % 12 % 2;
-//    }
-//    else
-//#endif
+#if CV_NEON_AARCH64
+    if (tiles >= 12)
+    {
+        inpPack = 12;
+        lineNum = tiles / 12 + (tiles % 12) / 8 + (tiles % 12 % 8) / 4 + (tiles % 12 % 4) / 2 + tiles % 12 % 2;
+    }
+    else
+#endif
     if (tiles >= 8)
     {
         inpPack = 8;
@@ -586,6 +639,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         }
     }
 
+    const size_t inp_planesize = (size_t)Hi*Wi;
     const size_t out_planesize = (size_t)H0*W0;
 
     size_t inputbuf_size = inpPack * C_aligned * lineNum * 64;
@@ -594,36 +648,33 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
     size_t outputbuf_size = tiles * K_aligned * 8 * 8;
     size_t outputCnbuf_size = ntasks * 8 * 8 * 4;
 
-    AutoBuffer<float> inputbuf0_, inputCnbuf0_, outputbuf0_, outputCnbuf0_;
+    size_t part0_size = std::max(inputbuf_size, outputCnbuf_size);
+    size_t allbuf_size = part0_size + std::max(inputbufCn_size, outputbuf_size);
 
-    inputbuf0_.allocate(inputbuf_size);
-    float* inputbuf0 = alignPtr(inputbuf0_.data(), (int)(sizeof(float)));
-    memset(inputbuf0, 0, inputbuf_size * sizeof(float ));
-
-    inputCnbuf0_.allocate(inputbufCn_size);
-    float* inputCnbuf0 = inputCnbuf0_.data();
-
-    outputbuf0_.allocate(outputbuf_size);
-    float* outputbuf0 = outputbuf0_.data();
-
-    outputCnbuf0_.allocate(outputCnbuf_size);
-    float* outputCnbuf0 = outputCnbuf0_.data();
+    AutoBuffer<float> allbuf_;
+    allbuf_.allocate(allbuf_size);
+    float* inputbuf0 = alignPtr(allbuf_.data(), (int)(sizeof(float)));
+    float* inputCnbuf0 = inputbuf0 + inputbuf_size;
+    float* outputbuf0 = inputCnbuf0;
+    float* outputCnbuf0 = inputbuf0;
 
     // Input Parallel For
     float* weight_ptr0 = conv->weightsWino63Buf.data();
+
     for (int bn = 0; bn < N; bn++)
     {
-        float* input_ptr0 = input.ptr<float>() + bn * Hi * Wi * C;
+        float* input_ptr0 = input.ptr<float>() + bn * inp_planesize * C;
         float* output_ptr0 = output.ptr<float>() + bn * out_planesize * K;
+        float* fusedAddPtr0 = fusedAddMat.empty() ? 0 : fusedAddMat.ptr<float>() + bn * out_planesize * K;
 
         // Transform Input
         int C_aligned_div4 = C_aligned/4;
+        const int tiStep = 8 * 8 * FAST_VEC_NLANES;
 
-        parallel_for_(Range(0, ntasks), [&](const Range& range)
-        {
-            for (int task_i = range.start; task_i < range.end; task_i++)
+        parallel_for_(Range(0, ntasks), [&](const Range& range){
+        for (int task_i = range.start; task_i < range.end; task_i++)
             {
-                float *inpCnbuf = inputCnbuf0 + tiles * 256 * task_i;
+                float *inpCnbuf = inputCnbuf0 + tiles * tiStep * task_i;
                 for (int inc4 = task_i; inc4 < C_aligned_div4; inc4 += ntasks)
                 {
                     for (int cn = 0; cn < 4; cn++)
@@ -699,31 +750,225 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                         }
                     }
 
-                    // Transfor Compute BdB^T
+                    // Transform Compute BdB^T
                     winograd_trans_input_F63(inpCnbuf, inputbuf0, inc4, tiles, big_step, line_step, ofstab0);
                 }
             }
         });
-
         // Matrix multiplication 8 channel
         int K_div8 = 0;
-
 #if CV_NEON_AARCH64
         K_div8 = K_aligned/8;
-
-        parallel_for_(Range(0, K_div8), [&](const Range &range){
-        for (int outcn = range.start; outcn < range.end; outcn ++)
+        // Transpose 12
+        if (inpPack == 12)
         {
-            float* output_tmp = outputbuf0 + tiles * outcn * 8;
-            float* kernel_tmp = weight_ptr0 + outcn * 8 * C_aligned;
-            for (int r = 0; r < 64; r++)
+            int C_div4 = C_aligned/4;
+            parallel_for_(Range(0, 64), [&](const Range &range){
+            for (int r = range.start; r < range.end; r++)
             {
                 float* input_tm = inputbuf0 + r * big_step;
-                float* output0_tm = output_tmp + tiles * K_aligned * r;
+
+                for (int ti = 0; ti + 11 < tiles; ti += 12)
+                {
+                    float* r0 = input_tm + ofstab0[ti * 2] * line_step;
+                    transpose12x4(r0, r0, C_div4);
+                }
+            }
+            });
+        }
+
+        parallel_for_(Range(0, 64), [&](const Range &range){
+        for (int r = range.start; r < range.end; r++)
+        {
+            float* input_tm = inputbuf0 + r * big_step;
+            float* output_tmp = outputbuf0 + tiles * K_aligned * r;
+            float* kernel_tmp = weight_ptr0 + r * C_aligned * K_aligned;
+
+            for (int out_div8 = 0; out_div8 < K_div8; out_div8 ++)
+            {
+                float* output0_tm = output_tmp + tiles * out_div8 * 8;
                 float* output1_tm = output0_tm + tiles * 4;
-                float* kernel_tm_i = kernel_tmp + r * C_aligned * K_aligned;
+                float* kernel_tm_i = kernel_tmp + out_div8 * 8 * C_aligned;
 
                 int ti = 0;
+                for (; ti + 11 < tiles; ti += 12)
+                {
+                    float* r0 = input_tm + ofstab0[ti * 2] * line_step;
+                    const float* k01 = kernel_tm_i;
+
+                    int nn = C_aligned/4;
+                    r0 = input_tm + ofstab0[ti * 2] * line_step;
+
+                    // init 32 registers. FMA/load ratio = 96/20
+                    float32x4_t r00 = vdupq_n_f32(0.0f), r01 = r00, r02 = r00, r03 = r00;
+                    float32x4_t r04 = r00, r05 = r00, r06 = r00, r07 = r00;
+                    float32x4_t r08 = r00, r09 = r00, r10 = r00, r11 = r00;
+                    float32x4_t r12 = r00, r13 = r00, r14 = r00, r15 = r00;
+                    float32x4_t r16 = r00, r17 = r00, r18 = r00, r19 = r00;
+                    float32x4_t r20 = r00, r21 = r00, r22 = r00, r23 = r00;
+                    float32x4_t r24 = r00, r25 = r00, r26 = r00, r27 = r00;
+                    float32x4_t r28 = r00, r29 = r00, r30 = r00, r31 = r00;
+
+                    for(;nn > 0; nn--)
+                    {
+                        r00 = vld1q_f32(r0), r01 = vld1q_f32(r0+4), r02 = vld1q_f32(r0+8), r03 = vld1q_f32(r0+12);
+                        r04 = vld1q_f32(k01), r05 = vld1q_f32(k01+4), r06 = vld1q_f32(k01+8), r07 = vld1q_f32(k01+12);
+                        r0 += 16, k01 += 16;
+
+                        // Cn0
+                        // 8 ~ 19
+                        r08 = vfmaq_laneq_f32(r08, r04, r00, 0);
+                        r09 = vfmaq_laneq_f32(r09, r04, r00, 1);
+                        r10 = vfmaq_laneq_f32(r10, r04, r00, 2);
+                        r11 = vfmaq_laneq_f32(r11, r04, r00, 3);
+
+                        r12 = vfmaq_laneq_f32(r12, r04, r01, 0);
+                        r13 = vfmaq_laneq_f32(r13, r04, r01, 1);
+                        r14 = vfmaq_laneq_f32(r14, r04, r01, 2);
+                        r15 = vfmaq_laneq_f32(r15, r04, r01, 3);
+
+                        r16 = vfmaq_laneq_f32(r16, r04, r02, 0);
+                        r17 = vfmaq_laneq_f32(r17, r04, r02, 1);
+                        r18 = vfmaq_laneq_f32(r18, r04, r02, 2);
+                        r19 = vfmaq_laneq_f32(r19, r04, r02, 3);
+
+                        // 20 ~ 31
+                        r20 = vfmaq_laneq_f32(r20, r05, r00, 0);
+                        r21 = vfmaq_laneq_f32(r21, r05, r00, 1);
+                        r22 = vfmaq_laneq_f32(r22, r05, r00, 2);
+                        r23 = vfmaq_laneq_f32(r23, r05, r00, 3);
+
+                        r24 = vfmaq_laneq_f32(r24, r05, r01, 0);
+                        r25 = vfmaq_laneq_f32(r25, r05, r01, 1);
+                        r26 = vfmaq_laneq_f32(r26, r05, r01, 2);
+                        r27 = vfmaq_laneq_f32(r27, r05, r01, 3);
+
+                        r28 = vfmaq_laneq_f32(r28, r05, r02, 0);
+                        r29 = vfmaq_laneq_f32(r29, r05, r02, 1);
+                        r30 = vfmaq_laneq_f32(r30, r05, r02, 2);
+                        r31 = vfmaq_laneq_f32(r31, r05, r02, 3);
+
+                        // Cn1
+                        r08 = vfmaq_laneq_f32(r08, r06, r03, 0);
+                        r09 = vfmaq_laneq_f32(r09, r06, r03, 1);
+                        r10 = vfmaq_laneq_f32(r10, r06, r03, 2);
+                        r11 = vfmaq_laneq_f32(r11, r06, r03, 3);
+
+                        r20 = vfmaq_laneq_f32(r20, r07, r03, 0);
+                        r21 = vfmaq_laneq_f32(r21, r07, r03, 1);
+                        r22 = vfmaq_laneq_f32(r22, r07, r03, 2);
+                        r23 = vfmaq_laneq_f32(r23, r07, r03, 3);
+
+                        r00 = vld1q_f32(r0), r01 = vld1q_f32(r0+4), r02 = vld1q_f32(r0+8), r03 = vld1q_f32(r0+12);
+                        r0 += 16;
+
+                        r12 = vfmaq_laneq_f32(r12, r06, r00, 0);
+                        r13 = vfmaq_laneq_f32(r13, r06, r00, 1);
+                        r14 = vfmaq_laneq_f32(r14, r06, r00, 2);
+                        r15 = vfmaq_laneq_f32(r15, r06, r00, 3);
+
+                        r16 = vfmaq_laneq_f32(r16, r06, r01, 0);
+                        r17 = vfmaq_laneq_f32(r17, r06, r01, 1);
+                        r18 = vfmaq_laneq_f32(r18, r06, r01, 2);
+                        r19 = vfmaq_laneq_f32(r19, r06, r01, 3);
+
+                        r24 = vfmaq_laneq_f32(r24, r07, r00, 0);
+                        r25 = vfmaq_laneq_f32(r25, r07, r00, 1);
+                        r26 = vfmaq_laneq_f32(r26, r07, r00, 2);
+                        r27 = vfmaq_laneq_f32(r27, r07, r00, 3);
+
+                        r28 = vfmaq_laneq_f32(r28, r07, r01, 0);
+                        r29 = vfmaq_laneq_f32(r29, r07, r01, 1);
+                        r30 = vfmaq_laneq_f32(r30, r07, r01, 2);
+                        r31 = vfmaq_laneq_f32(r31, r07, r01, 3);
+
+                        r04 = vld1q_f32(k01), r05 = vld1q_f32(k01+4), r06 = vld1q_f32(k01+8), r07 = vld1q_f32(k01+12);
+                        k01 += 16;
+
+                        // Cn2
+                        r08 = vfmaq_laneq_f32(r08, r04, r02, 0);
+                        r09 = vfmaq_laneq_f32(r09, r04, r02, 1);
+                        r10 = vfmaq_laneq_f32(r10, r04, r02, 2);
+                        r11 = vfmaq_laneq_f32(r11, r04, r02, 3);
+
+                        r12 = vfmaq_laneq_f32(r12, r04, r03, 0);
+                        r13 = vfmaq_laneq_f32(r13, r04, r03, 1);
+                        r14 = vfmaq_laneq_f32(r14, r04, r03, 2);
+                        r15 = vfmaq_laneq_f32(r15, r04, r03, 3);
+
+                        r20 = vfmaq_laneq_f32(r20, r05, r02, 0);
+                        r21 = vfmaq_laneq_f32(r21, r05, r02, 1);
+                        r22 = vfmaq_laneq_f32(r22, r05, r02, 2);
+                        r23 = vfmaq_laneq_f32(r23, r05, r02, 3);
+
+                        r24 = vfmaq_laneq_f32(r24, r05, r03, 0);
+                        r25 = vfmaq_laneq_f32(r25, r05, r03, 1);
+                        r26 = vfmaq_laneq_f32(r26, r05, r03, 2);
+                        r27 = vfmaq_laneq_f32(r27, r05, r03, 3);
+
+                        r00 = vld1q_f32(r0), r01 = vld1q_f32(r0+4), r02 = vld1q_f32(r0+8), r03 = vld1q_f32(r0+12);
+                        r0 += 16;
+
+                        r16 = vfmaq_laneq_f32(r16, r04, r00, 0);
+                        r17 = vfmaq_laneq_f32(r17, r04, r00, 1);
+                        r18 = vfmaq_laneq_f32(r18, r04, r00, 2);
+                        r19 = vfmaq_laneq_f32(r19, r04, r00, 3);
+
+                        r28 = vfmaq_laneq_f32(r28, r05, r00, 0);
+                        r29 = vfmaq_laneq_f32(r29, r05, r00, 1);
+                        r30 = vfmaq_laneq_f32(r30, r05, r00, 2);
+                        r31 = vfmaq_laneq_f32(r31, r05, r00, 3);
+
+                        // Cn3
+                        // 8 ~ 19
+                        r08 = vfmaq_laneq_f32(r08, r06, r01, 0);
+                        r09 = vfmaq_laneq_f32(r09, r06, r01, 1);
+                        r10 = vfmaq_laneq_f32(r10, r06, r01, 2);
+                        r11 = vfmaq_laneq_f32(r11, r06, r01, 3);
+
+                        r12 = vfmaq_laneq_f32(r12, r06, r02, 0);
+                        r13 = vfmaq_laneq_f32(r13, r06, r02, 1);
+                        r14 = vfmaq_laneq_f32(r14, r06, r02, 2);
+                        r15 = vfmaq_laneq_f32(r15, r06, r02, 3);
+
+                        r16 = vfmaq_laneq_f32(r16, r06, r03, 0);
+                        r17 = vfmaq_laneq_f32(r17, r06, r03, 1);
+                        r18 = vfmaq_laneq_f32(r18, r06, r03, 2);
+                        r19 = vfmaq_laneq_f32(r19, r06, r03, 3);
+
+                        // 20 ~ 31
+                        r20 = vfmaq_laneq_f32(r20, r07, r01, 0);
+                        r21 = vfmaq_laneq_f32(r21, r07, r01, 1);
+                        r22 = vfmaq_laneq_f32(r22, r07, r01, 2);
+                        r23 = vfmaq_laneq_f32(r23, r07, r01, 3);
+
+                        r24 = vfmaq_laneq_f32(r24, r07, r02, 0);
+                        r25 = vfmaq_laneq_f32(r25, r07, r02, 1);
+                        r26 = vfmaq_laneq_f32(r26, r07, r02, 2);
+                        r27 = vfmaq_laneq_f32(r27, r07, r02, 3);
+
+                        r28 = vfmaq_laneq_f32(r28, r07, r03, 0);
+                        r29 = vfmaq_laneq_f32(r29, r07, r03, 1);
+                        r30 = vfmaq_laneq_f32(r30, r07, r03, 2);
+                        r31 = vfmaq_laneq_f32(r31, r07, r03, 3);
+                    }
+
+                    vst1q_f32(output0_tm, r08), vst1q_f32(output0_tm + 4, r09), vst1q_f32(output0_tm + 8, r10), vst1q_f32(output0_tm + 12, r11);
+                    output0_tm += 16;
+                    vst1q_f32(output1_tm, r20), vst1q_f32(output1_tm + 4, r21), vst1q_f32(output1_tm + 8, r22), vst1q_f32(output1_tm + 12, r23);
+                    output1_tm += 16;
+
+                    vst1q_f32(output0_tm, r12), vst1q_f32(output0_tm + 4, r13), vst1q_f32(output0_tm + 8, r14), vst1q_f32(output0_tm + 12, r15);
+                    output0_tm += 16;
+                    vst1q_f32(output1_tm, r24), vst1q_f32(output1_tm + 4, r25), vst1q_f32(output1_tm + 8, r26), vst1q_f32(output1_tm + 12, r27);
+                    output1_tm += 16;
+
+                    vst1q_f32(output0_tm, r16), vst1q_f32(output0_tm + 4, r17), vst1q_f32(output0_tm + 8, r18), vst1q_f32(output0_tm + 12, r19);
+                    output0_tm += 16;
+                    vst1q_f32(output1_tm, r28), vst1q_f32(output1_tm + 4, r29), vst1q_f32(output1_tm + 8, r30), vst1q_f32(output1_tm + 12, r31);
+                    output1_tm += 16;
+                }
+
                 for (; ti + 7 < tiles; ti += 8)
                 {
                     const float* r0 = input_tm + ofstab0[ti * 2] * line_step;
@@ -1009,17 +1254,17 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
 
         // Matrix multiplication, 4 output channel.
         int Ock_div4 = (K_aligned - K_div8 * 8) / 4;
-        parallel_for_(Range(0, Ock_div4), [&](const Range &range){
-            for (int outcn = range.start; outcn < range.end; outcn++)
+        parallel_for_(Range(0, 64), [&](const Range &range){
+            for (int r = range.start; r < range.end; r++)
             {
-                float* output_tmp = outputbuf0 + tiles * (outcn + K_div8 * 2)* 4;
-                float* kernel_tmp = weight_ptr0 + (outcn + K_div8 * 2) * 4 * C_aligned;
+                float* input_tm = inputbuf0 + r * big_step;
+                float* output_tmp = outputbuf0 + tiles * K_aligned * r;
+                float* kernel_tmp = weight_ptr0 + r * C_aligned * K_aligned;
 
-                for (int r = 0; r < 64; r++)
+                for (int out_div4 = 0; out_div4 < Ock_div4; out_div4 ++)
                 {
-                    float *input_tm = inputbuf0 + r * big_step;
-                    float *output0_tm = output_tmp + tiles * K_aligned * r;
-                    float *kernel_tm_i = kernel_tmp + r * C_aligned * K_aligned;
+                    float* output0_tm = output_tmp + tiles * (out_div4 + K_div8 * 2) * 4 ;
+                    float* kernel_tm_i = kernel_tmp + (out_div4 + K_div8 * 2) * 4 * C_aligned;
 
                     int ti = 0;
                     for (; ti + 7 < tiles; ti += 8)
@@ -1345,12 +1590,20 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         });
 
         int bigStepOut = tiles * K_aligned;
+        AutoBuffer<float> _fAbuf;
+        float* fAbuf0 = 0;
+        if (fusedAddPtr0)
+        {
+            _fAbuf.allocate(6 * 6 * 4 * ntasks);
+            fAbuf0 = _fAbuf.data();
+        }
 
         // Transfor Ouput
         parallel_for_(Range(0, ntasks), [&](const Range& range)
         {
             for (int task_i = range.start; task_i < range.end; task_i++)
             {
+                float* fAbuf = fAbuf0 ? fAbuf0 + task_i * 6 * 6 * 4 : 0;
                 float* outputCnbuf = outputCnbuf0 + task_i * 8 * 8 * 4;
                 for (int outCn4 = task_i; outCn4 < K_aligned / 4; outCn4 += ntasks)
                 {
@@ -1358,6 +1611,7 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                     int outCn = outCn4 * 4;
                     float* output_buf = outputbuf0 + outCn * tiles;
                     float* output_ptr = output_ptr0 + outCn * W0 * H0;
+                    float* fusedAddPtr = fusedAddPtr0 + outCn * W0 * H0;
 
                     for (int ti = 0; ti < tiles; ti++)
                     {
@@ -1365,6 +1619,9 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                         float* outputCnbuf_i = outputCnbuf;
                         int hi = ti / W_tiles;
                         int wi = ti % W_tiles;
+
+                        int wEnd = (wi + 1) * 6 > W0 ? W0 - (wi * 6) : 6;
+                        int hEnd = (hi + 1) * 6 > H0 ? H0 - (hi * 6) : 6;
 
                         // construct the output tile.
                         for (int r = 0; r < 64; r++)
@@ -1374,11 +1631,26 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
                             outputCnbuf_i += FAST_VEC_NLANES;
                         }
 
-                        winograd_trans_output_F63(outputCnbuf, conv->biasBuf.data() + outCn,
-                                                  minval, maxval, ifMinMaxAct);
+                        // construct the fusedAdd buffer.
+                        if (fAbuf && fusedAddPtr0)
+                        {
+                            memset(fAbuf, 0, sizeof(fAbuf[0]) * 6 * 6 * 4);
+                            float* fAPtr = fusedAddPtr + (hi * W0 + wi) * 6;
+                            for (int outCni = 0; outCni < FAST_VEC_NLANES; outCni++)
+                            {
+                                float* fAbufCnPtr = fAPtr + outCni * out_planesize; // skip channel
+                                for (int i = 0; i < hEnd; i++)
+                                {
+                                    for (int j = 0; j < wEnd; j++)
+                                    {
+                                        fAbuf[(i * 6 + j) * FAST_VEC_NLANES + outCni] = fAbufCnPtr[i * W0 + j];
+                                    }
+                                }
+                            }
+                        }
 
-                        int wEnd = (wi + 1) * 6 > W0 ? W0 - (wi * 6) : 6;
-                        int hEnd = (hi + 1) * 6 > H0 ? H0 - (hi * 6) : 6;
+                        winograd_trans_output_F63(outputCnbuf, conv->biasBuf.data() + outCn, fAbuf,
+                                                  minval, maxval, ifMinMaxAct);
 
                         float* output_ptr_i = output_ptr + (hi * W0 + wi) * 6;
 
@@ -1411,13 +1683,11 @@ int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
             }
         });
     }
-
     return 1;
 }
-
 #else
 
-void initWinograd63(Ptr<FastConv2d>& conv, float* src_weight, int K, int C)
+void initWinograd63(Ptr<FastConv2d>& conv, InputArray _weightsMat, int K, int C)
 {
     conv->ifWinograd63 = false;
 }

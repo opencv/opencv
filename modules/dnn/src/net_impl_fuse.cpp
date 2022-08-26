@@ -162,6 +162,178 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
             }
 
+            // CPU: fuse Convolution 2D layer followed by Add + activation.
+            while (nextData && (IS_DNN_CPU_TARGET(preferableTarget)) && ld.layerInstance->type == "Convolution")
+            {
+                // Note that we can only deal with conv + Add + activ here.
+                // To avoid the order like: conv + activ + add, if we found the conv has been fused with activ, we break.
+                Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
+
+                // Only Conv2D without fusion Activation supports this fusion, other-wise, we skip.
+                if (!convLayer->isConv2D || convLayer->fusedActivation)
+                    break;
+
+                // For now, there are currently two layers in OpenCV that run the Add operator.
+                Ptr<NaryEltwiseLayer> nextNaryEltwiseLayer = nextData->layerInstance.dynamicCast<NaryEltwiseLayer>();
+                Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                if (nextNaryEltwiseLayer.empty() && nextEltwiseLayer.empty())
+                    break;
+
+                if (nextData->inputBlobsId.size() != 2)
+                    break;
+
+                if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) != "add")
+                {
+                    CV_LOG_DEBUG(NULL, "DNN/CPU: fusion with NaryEltwise or Eltwise Layer operation is not supported: "
+                        << nextData->params.get<String>("operation"));
+                    break;
+                }
+
+                // This optimization is for cases like
+                // some_layer                      conv
+                //   |                              |
+                //   +-- eltwise or (naryEltwise) --+
+                //               |
+                //             activ
+                // This way all the element-wise computations
+                // (i.e. some_layer+conv) would be done at [conv] layer.
+                // So we need to replace [conv]'s output blob to [eltwise]'s one
+                // considering that [activ] is an in-place layer.
+                // Also we need to move all the consumers' references.
+                // To prevent memory collisions (i.e. when input of
+                // [conv] and output of [eltwise or naryEltwise] is the same blob)
+                // we allocate a new blob.
+                {
+                    LayerData *naryOrEltwiseData = nextData;
+
+                    // Eltwise or NaryEltwise layer has two inputs. We need to determine which
+                    // is a base convolution layer and which could be used as it's bias.
+                    LayerData* biasLayerData = 0;
+                    for (int i = 0; i < 2; ++i)
+                    {
+                        LayerData *downLayerData = &layers[naryOrEltwiseData->inputBlobsId[i].lid];
+                        CV_Assert(downLayerData);
+                        // If the current downLayerData is skip, it means it is fused into the parent node.
+                        while (downLayerData->skip)
+                        {
+                            if (downLayerData->inputBlobsId.size() == 1)
+                                downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
+                            else
+                            {
+                                downLayerData = 0;
+                                break;
+                            }
+                        }
+
+                        if (downLayerData && ld.id == downLayerData->id)
+                        {
+                            biasLayerData = &layers[naryOrEltwiseData->inputBlobsId[1 - i].lid];
+                            break;
+                        }
+                    }
+
+                    // We check if biasLayerData is expected layer.
+                    if (!biasLayerData)
+                        break;
+
+                    // We check if the bias output shape and the ld output shape are the same.
+                    MatShape biasOutShape = shape(biasLayerData->outputBlobs[0]);
+                    MatShape ldOutShape = shape(ld.outputBlobs[0]);
+                    if (biasOutShape != ldOutShape)
+                        break;
+
+                    CV_Assert(biasLayerData);
+                    {
+                        // fuse naryEltwise layer
+                        // bias must already be computed to fuse => bias layer must appear before convolution
+                        if (biasLayerData->id < ld.id)
+                        {
+                            // conv + naryEltwise.
+                            CV_Assert_N(biasLayerData->outputBlobs.size() == 1, ld.inputBlobs.size() == 1);
+                            CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
+
+                            printf_(("\tfused with %s\n", nextNaryEltwiseLayer->name.c_str()));
+                            naryOrEltwiseData->skip = true;
+
+
+                            CV_Assert_N(ld.outputBlobs.size() == 1, ld.outputBlobsWrappers.size() == 1);
+                            // Note: Here's a trick. We set the output of conv as the output of biasLayer.
+                            ld.outputBlobs[0] = ld.outputBlobs[0].clone();
+                            ld.outputBlobsWrappers[0] = wrap(ld.outputBlobs[0]);
+
+                            // Recursively modifies the output data of biasLayerData and its parent.
+                            std::vector<LayerData*> skipDataList;
+                            skipDataList.push_back(biasLayerData);
+
+                            while (!skipDataList.empty())
+                            {
+                                LayerData* skipData = skipDataList.back();
+                                skipDataList.pop_back();
+
+                                CV_Assert(skipData->outputBlobs.size() == 1);
+                                skipData->outputBlobs[0] = ld.outputBlobs[0];
+                                skipData->outputBlobsWrappers[0] = ld.outputBlobsWrappers[0];
+                                if (skipData->skip)
+                                {
+                                    for (auto& inputLayerId : skipData->inputLayersId)
+                                    {
+                                        LayerData* inputld = &layers[inputLayerId];
+
+                                        if (inputld && inputld->outputBlobs.size() == 1)
+                                            skipDataList.push_back(inputld);
+                                    }
+                                }
+                            }
+
+                            naryOrEltwiseData->outputBlobs = ld.outputBlobs;
+                            naryOrEltwiseData->outputBlobsWrappers = ld.outputBlobsWrappers;
+
+                            // set the fusedAdd flag in [Conv];
+                            convLayer->fusedAdd = true;
+                            LayerData* finalData = naryOrEltwiseData;
+                            /* After fused Conv + naryEltwise or eltwise, we can fuse activation if:
+                             * => activation layer that follows is the only consumer of eltwise output
+                             * => activation layer does not process multiple inputs
+                             * => we do not require to keep the output of eltwise
+                             */
+                            if (naryOrEltwiseData->consumers.size() == 1)
+                            {
+                                Ptr<ActivationLayer> nextFusabeleActivLayer;
+                                LayerData* nextAct = &layers[naryOrEltwiseData->consumers[0].lid];
+
+                                if (nextData->outputBlobs.size() == 1)
+                                    nextFusabeleActivLayer = nextAct->layerInstance.dynamicCast<ActivationLayer>();
+
+                                if (!nextFusabeleActivLayer.empty())
+                                {
+                                    convLayer->setActivation(nextFusabeleActivLayer);
+                                    nextAct->skip = true;
+
+                                    nextAct->outputBlobs = ld.outputBlobs;
+                                    nextAct->outputBlobsWrappers = ld.outputBlobsWrappers;
+                                }
+                            }
+
+                            // Move references of finalData (eltwise or activation) layer consumers to the newly allocated blob.
+                            for (int i = 0; i < finalData->consumers.size(); ++i)
+                            {
+                                LayerData& consumer = layers[finalData->consumers[i].lid];
+                                for (int j = 0; j < consumer.inputBlobsId.size(); ++j)
+                                {
+                                    if (consumer.inputBlobsId[j].lid == finalData->id)
+                                    {
+                                        consumer.inputBlobs[j] = &ld.outputBlobs[0];
+                                        consumer.inputBlobsWrappers[j] = ld.outputBlobsWrappers[0];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+
             // OpenCL: fuse convolution layer followed by eltwise + relu
             // CUDA: fuse convolution layer followed by eltwise (and optional activation)
             while (nextData &&
@@ -398,7 +570,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                                 // (i.e. some_layer+conv or some_layer*conv)
                                 // would be done at [conv] layer. So we need to
                                 // replace [conv]'s output blob to [eltwise]'s one.
-                                // Also we need to move all the consumers' references.
+                                // Also, we need to move all the consumers' references.
                                 // To prevent memory collisions (i.e. when input of
                                 // [conv] and output of [eltwise] is the same blob)
                                 // we allocate a new blob.

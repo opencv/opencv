@@ -284,7 +284,7 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssertDetections(ref, out, "", FLT_MIN);
+    normAssertDetections(ref, out, "", 0.06);
 }
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
