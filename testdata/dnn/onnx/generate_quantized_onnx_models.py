@@ -278,4 +278,4 @@ class Gemm(nn.Module):
 
 input = Variable(torch.randn(1, 3))
 model = Gemm()
-quantize_and_save_model("quantized_gemm", input, model, ops_version = 13)
+quantize_and_save_model("quantized_gemm", input, model, act_type="int8", wt_type="int8", per_channel=False)
