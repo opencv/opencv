@@ -464,7 +464,27 @@ inline v_uint64 v_lut_pairs(const uint64* tab, const int* idx) { return v_reinte
 inline v_uint64 v_lut_quads(const uint64* tab, const int* idx) { return v_reinterpret_as_u64(v_lut_quads((const int64_t*)tab, idx)); }
 
 ////////////// Pack boolean ////////////////////
-/* TODO */
+inline v_uint8 v_pack_b(const v_uint16& a, const v_uint16& b)
+{
+    return vnsrl(vset(vlmul_ext_u16m2(a),1,b), 0, VTraits<v_uint8>::vlanes());
+}
+
+inline v_uint8 v_pack_b(const v_uint32& a, const v_uint32& b,
+                           const v_uint32& c, const v_uint32& d)
+{
+
+    return vnsrl(vnsrl(vset(vset(vset(vlmul_ext_u32m4(a),1,b),2,c),3,d), 0, VTraits<v_uint8>::vlanes()), 0, VTraits<v_uint8>::vlanes());
+}
+
+inline v_uint8 v_pack_b(const v_uint64& a, const v_uint64& b, const v_uint64& c,
+                           const v_uint64& d, const v_uint64& e, const v_uint64& f,
+                           const v_uint64& g, const v_uint64& h)
+{
+    return vnsrl(vnsrl(vnsrl(
+        vset(vset(vset(vset(vset(vset(vset(vlmul_ext_u64m8(a),
+        1,b),2,c),3,d),4,e),5,f),6,g),7,h),
+        0, VTraits<v_uint8>::vlanes()), 0, VTraits<v_uint8>::vlanes()), 0, VTraits<v_uint8>::vlanes());
+}
 
 ////////////// Arithmetics //////////////
 #define OPENCV_HAL_IMPL_RVV_BIN_OP(_Tpvec, ocv_intrin, rvv_intrin) \
@@ -645,7 +665,65 @@ OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_SIGNED_SHIFT_OP(v_int64, VTraits<v_int64>::vlanes())
 
 ////////////// Comparison //////////////
-// TODO
+#define OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, op, intrin, suffix, vl) \
+inline _Tpvec v_##op(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    uint64_t ones = -1; \
+    return vmerge(intrin(a, b, vl), vmv_v_x_##suffix##m1(0, vl), ones, vl); \
+}
+
+#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, op, intrin, suffix, vl) \
+inline _Tpvec v_##op (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    union { uint64 u; double d; } ones; ones.u = -1; \
+    return _Tpvec(vfmerge(intrin(a, b, vl), vfmv_v_f_##suffix##m1(0, vl), ones.d, vl)); \
+} //TODO
+
+#define OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(_Tpvec, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmsltu, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgtu, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsleu, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsgeu, suffix, vl)
+
+#define OPENCV_HAL_IMPL_RVV_SIGNED_CMP(_Tpvec, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, eq, vmseq, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ne, vmsne, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, lt, vmslt, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, gt, vmsgt, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, le, vmsle, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_INT_CMP_OP(_Tpvec, ge, vmsge, suffix, vl)
+
+#define OPENCV_HAL_IMPL_RVV_FLOAT_CMP(_Tpvec, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, eq, vmfeq, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ne, vmfne, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, lt, vmflt, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, gt, vmfgt, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, le, vmfle, suffix, vl) \
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP_OP(_Tpvec, ge, vmfge, suffix, vl)
+
+
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint8, u8, VTraits<v_uint8>::vlanes())
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint16, u16, VTraits<v_uint16>::vlanes())
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint32, u32, VTraits<v_uint32>::vlanes())
+OPENCV_HAL_IMPL_RVV_UNSIGNED_CMP(v_uint64, u64, VTraits<v_uint64>::vlanes())
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int8, i8, VTraits<v_int8>::vlanes())
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int16, i16, VTraits<v_int16>::vlanes())
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int32, i32, VTraits<v_int32>::vlanes())
+OPENCV_HAL_IMPL_RVV_SIGNED_CMP(v_int64, i64, VTraits<v_int64>::vlanes())
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float32, f32, VTraits<v_float32>::vlanes())
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_FLOAT_CMP(v_float64, f64, VTraits<v_float64>::vlanes())
+#endif
+
+inline v_float32 v_not_nan(const v_float32& a)
+{ return v_eq(a, a); }
+
+#if CV_SIMD_SCALABLE_64F
+inline v_float64 v_not_nan(const v_float64& a)
+{ return v_eq(a, a); }
+#endif
 
 ////////////// Min/Max //////////////
 
@@ -674,6 +752,95 @@ OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float64, v_min, vfmin, VTraits<v_float64>::vlanes
 OPENCV_HAL_IMPL_RVV_BIN_FUNC(v_float64, v_max, vfmax, VTraits<v_float64>::vlanes())
 #endif
 
+////////////// Transpose4x4 //////////////
+#define OPENCV_HAL_IMPL_RVV_ZIP4(_Tpvec, _wTpvec, suffix, convert2u, convert) \
+inline void v_zip4(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1) { \
+    int vl = 4; \
+    _wTpvec temp = vreinterpret_##suffix##m2(convert2u( \
+        vor(vzext_vf2(convert(a0), vl), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(convert(a1), vl)), 0, vl*2)), \
+            vl))); \
+    b0 = vget_##suffix##m1(temp, 0); \
+    b1 = vget_##suffix##m1(vrgather(temp, vadd(vid_v_u32m2(vl), 4, vl)/*{4,5,6,7} */, vl) ,0); \
+}
+
+OPENCV_HAL_IMPL_RVV_ZIP4(v_uint32, vuint32m2_t, u32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_ZIP4(v_int32, vint32m2_t, i32, vreinterpret_u32m2, vreinterpret_u32m1)
+OPENCV_HAL_IMPL_RVV_ZIP4(v_float32, vfloat32m2_t, f32, vreinterpret_u32m2, vreinterpret_u32m1)
+
+#if 0
+// this is v_zip4 and v_tranpose4x4 for scalable VLEN, costs more instruction than current 128-bit only version.
+inline void v_zip4(const v_float32& a0, const v_float32& a1, v_float32& b0, v_float32& b1) {
+    vuint64m1_t vid1 = vid_v_u64m1(VTraits<vuint64m1_t>::vlanes());
+    vuint16m1_t t1 = vreinterpret_u16m1(vid1);
+    vuint16m1_t t2 = vslide1up(t1, 0, VTraits<vuint16m1_t>::vlanes());
+    vuint16m1_t t3 = vslide1up(t2, 0, VTraits<vuint16m1_t>::vlanes());
+    vuint16m1_t t4 = vslide1up(t3, 0, VTraits<vuint16m1_t>::vlanes());
+    t1 = vor(
+        vor(t1, t2, VTraits<vuint16m1_t>::vlanes()),
+        vor(t3, t4, VTraits<vuint16m1_t>::vlanes()),
+        VTraits<vuint16m1_t>::vlanes()
+    );
+    vuint32m2_t vidx0 = vwmulu(t1, 4, VTraits<vuint32m1_t>::vlanes());
+    vidx0 = vadd(vidx0, vid_v_u32m2(VTraits<vuint32m1_t>::vlanes()), VTraits<vuint32m1_t>::vlanes());
+    vuint32m2_t vidx1 = vadd(vidx0, 4, VTraits<vuint32m1_t>::vlanes());
+    vfloat32m2_t temp = vreinterpret_f32m2(vreinterpret_u32m2(
+        vor(vzext_vf2(vreinterpret_u32m1(a0), VTraits<vuint16m1_t>::vlanes()),
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(vreinterpret_u32m1(a1), VTraits<vuint16m1_t>::vlanes())), 0, VTraits<vfloat32m1_t>::vlanes()*2)),
+            VTraits<vfloat32m1_t>::vlanes())));
+    b0 = vlmul_trunc_f32m1(vrgather(temp, vidx0, VTraits<vuint16m1_t>::vlanes()));
+    b1 = vlmul_trunc_f32m1(vrgather(temp, vidx1, VTraits<vuint16m1_t>::vlanes()));
+}
+
+inline void v_transpose4x4(const v_float32& a0, const v_float32& a1, const v_float32& a2, const v_float32& a3,\
+                            v_float32& b0, v_float32& b1, v_float32& b2, v_float32& b3) { \
+    vuint64m2_t vid1 = vid_v_u64m2(VTraits<vuint32m1_t>::vlanes());
+    vuint16m2_t t1 = vreinterpret_u16m2(vid1);
+    vuint16m2_t t2 = vslide1up(t1, 0, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t t3 = vslide1up(t2, 0, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t t4 = vslide1up(t3, 0, VTraits<vuint8m1_t>::vlanes());
+    t1 = vor(
+        vor(t1, t2, VTraits<vuint8m1_t>::vlanes()),
+        vor(t3, t4, VTraits<vuint8m1_t>::vlanes()),
+        VTraits<vuint8m1_t>::vlanes()
+    );
+    vuint16m2_t vidx0 = vmul(t1, 12, VTraits<vuint8m1_t>::vlanes());
+    vidx0 = vadd(vidx0, vid_v_u16m2(VTraits<vuint8m1_t>::vlanes()), VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx1 = vadd(vidx0, 4, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx2 = vadd(vidx0, 8, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx3 = vadd(vidx0, 12, VTraits<vuint8m1_t>::vlanes());
+    vuint32m2_t tempA = vreinterpret_u32m2( \
+        vor(vzext_vf2(vreinterpret_u32m1(a0), VTraits<vuint16m1_t>::vlanes()), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(vreinterpret_u32m1(a2), VTraits<vuint16m1_t>::vlanes())), 0, VTraits<vuint16m1_t>::vlanes())), \
+            VTraits<vuint32m1_t>::vlanes())); \
+    vuint32m2_t tempB = vreinterpret_u32m2( \
+        vor(vzext_vf2(vreinterpret_u32m1(a1), VTraits<vuint16m1_t>::vlanes()), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(vreinterpret_u32m1(a3), VTraits<vuint16m1_t>::vlanes())), 0, VTraits<vuint16m1_t>::vlanes())), \
+            VTraits<vuint32m1_t>::vlanes())); \
+    vfloat32m4_t temp = vreinterpret_f32m4(vreinterpret_u32m4( \
+        vor(vzext_vf2(tempA, VTraits<vuint8m1_t>::vlanes()), \
+            vreinterpret_u64m4(vslide1up(vreinterpret_u32m4(vzext_vf2(tempB, VTraits<vuint8m1_t>::vlanes())), 0, VTraits<vuint8m1_t>::vlanes())), \
+            VTraits<vuint16m1_t>::vlanes()))); \
+    b0 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx0, VTraits<vuint8m1_t>::vlanes()));
+    b1 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx1, VTraits<vuint8m1_t>::vlanes()));
+    b2 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx2, VTraits<vuint8m1_t>::vlanes()));
+    b3 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx3, VTraits<vuint8m1_t>::vlanes()));
+}
+#endif
+
+#define OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(_Tpvec, suffix) \
+inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1, const _Tpvec& a2, const _Tpvec& a3, _Tpvec& b0, _Tpvec& b1, _Tpvec& b2, _Tpvec& b3) { \
+    _Tpvec t0,t1,t2,t3; \
+    v_zip4(a0, a2, t0, t2); \
+    v_zip4(a1, a3, t1, t3); \
+    v_zip4(t0, t1, b0, b1); \
+    v_zip4(t2, t3, b2, b3); \
+}
+
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_uint32, u32)
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_int32, i32)
+OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_float32, f32)
+
 ////////////// Reduce //////////////
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE_SUM(_Tpvec, _wTpvec, _nwTpvec, scalartype, wsuffix, vl, red) \
@@ -690,6 +857,9 @@ OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint16, v_uint32, vuint32m1_t, unsigned, u32, V
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int16, v_int32, vint32m1_t, int, i32, VTraits<v_int16>::vlanes(), wredsum)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint32, v_uint64, vuint64m1_t, unsigned, u64, VTraits<v_uint32>::vlanes(), wredsumu)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int32, v_int64, vint64m1_t, int, i64, VTraits<v_int32>::vlanes(), wredsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint64, v_uint64, vuint64m1_t, uint64, u64, VTraits<v_uint64>::vlanes(), redsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int64, v_int64, vint64m1_t, int64, i64, VTraits<v_int64>::vlanes(), redsum)
+
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(_Tpvec, _wTpvec, _nwTpvec, scalartype, wsuffix, vl) \
 inline scalartype v_reduce_sum(const _Tpvec& a)  \
@@ -723,7 +893,56 @@ OPENCV_HAL_IMPL_RVV_REDUCE(v_uint32, max, unsigned, u32, VTraits<v_uint32>::vlan
 OPENCV_HAL_IMPL_RVV_REDUCE(v_int32, max, int, i32, VTraits<v_int32>::vlanes(), redmax)
 OPENCV_HAL_IMPL_RVV_REDUCE(v_float32, max, float, f32, VTraits<v_float32>::vlanes(), fredmax)
 
-//TODO: v_reduce_sum4
+inline v_float32 v_reduce_sum4(const v_float32& a, const v_float32& b,
+                                 const v_float32& c, const v_float32& d)
+{
+    // 0000 1111 2222 3333 ....
+    vuint64m2_t vid1 = vid_v_u64m2(VTraits<vuint32m1_t>::vlanes());
+    vuint16m2_t t1 = vreinterpret_u16m2(vid1);
+    vuint16m2_t t2 = vslide1up(t1, 0, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t t3 = vslide1up(t2, 0, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t t4 = vslide1up(t3, 0, VTraits<vuint8m1_t>::vlanes());
+    t1 = vor(
+        vor(t1, t2, VTraits<vuint8m1_t>::vlanes()),
+        vor(t3, t4, VTraits<vuint8m1_t>::vlanes()),
+        VTraits<vuint8m1_t>::vlanes()
+    );
+
+    // index for transpose4X4
+    vuint16m2_t vidx0 = vmul(t1, 12, VTraits<vuint8m1_t>::vlanes());
+    vidx0 = vadd(vidx0, vid_v_u16m2(VTraits<vuint8m1_t>::vlanes()), VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx1 = vadd(vidx0, 4, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx2 = vadd(vidx0, 8, VTraits<vuint8m1_t>::vlanes());
+    vuint16m2_t vidx3 = vadd(vidx0, 12, VTraits<vuint8m1_t>::vlanes());
+
+    // zip
+    vuint32m2_t tempA = vreinterpret_u32m2( \
+        vor(vzext_vf2(vreinterpret_u32m1(a), VTraits<vuint16m1_t>::vlanes()), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(vreinterpret_u32m1(c), VTraits<vuint16m1_t>::vlanes())), 0, VTraits<vuint16m1_t>::vlanes())), \
+            VTraits<vuint32m1_t>::vlanes())); \
+    vuint32m2_t tempB = vreinterpret_u32m2( \
+        vor(vzext_vf2(vreinterpret_u32m1(b), VTraits<vuint16m1_t>::vlanes()), \
+            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(vreinterpret_u32m1(d), VTraits<vuint16m1_t>::vlanes())), 0, VTraits<vuint16m1_t>::vlanes())), \
+            VTraits<vuint32m1_t>::vlanes())); \
+    vfloat32m4_t temp = vreinterpret_f32m4(vreinterpret_u32m4( \
+        vor(vzext_vf2(tempA, VTraits<vuint8m1_t>::vlanes()), \
+            vreinterpret_u64m4(vslide1up(vreinterpret_u32m4(vzext_vf2(tempB, VTraits<vuint8m1_t>::vlanes())), 0, VTraits<vuint8m1_t>::vlanes())), \
+            VTraits<vuint16m1_t>::vlanes())));
+
+    // transpose
+    vfloat32m1_t b0 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx0, VTraits<vuint8m1_t>::vlanes()));
+    vfloat32m1_t b1 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx1, VTraits<vuint8m1_t>::vlanes()));
+    vfloat32m1_t b2 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx2, VTraits<vuint8m1_t>::vlanes()));
+    vfloat32m1_t b3 = vlmul_trunc_f32m1(vrgatherei16(temp, vidx3, VTraits<vuint8m1_t>::vlanes()));
+
+    // vector add
+    v_float32 res = vfadd(
+        vfadd(b0, b1, VTraits<vfloat32m1_t>::vlanes()),
+        vfadd(b2, b3, VTraits<vfloat32m1_t>::vlanes()),
+        VTraits<vfloat32m1_t>::vlanes()
+    );
+    return res;
+}
 
 ////////////// Square-Root //////////////
 
@@ -1003,7 +1222,47 @@ OPENCV_HAL_IMPL_RVV_ROTATE_FP(v_float64, f64,  VTraits<v_float64>::vlanes())
 #endif
 
 ////////////// Convert to float //////////////
-// TODO
+inline v_float32 v_cvt_f32(const v_int32& a)
+{
+    return vfcvt_f_x_v_f32m1(a, VTraits<v_float32>::vlanes());
+}
+
+#if CV_SIMD_SCALABLE_64F
+inline v_float32 v_cvt_f32(const v_float64& a)
+{
+    return vfncvt_f(vlmul_ext_f64m2(a), VTraits<v_float64>::vlanes());
+}
+
+inline v_float32 v_cvt_f32(const v_float64& a, const v_float64& b)
+{
+    return vfncvt_f(vset(vlmul_ext_f64m2(a),1,b), VTraits<v_float32>::vlanes());
+}
+
+inline v_float64 v_cvt_f64(const v_int32& a)
+{
+    return vget_f64m1(vfwcvt_f(a, VTraits<v_int32>::vlanes()), 0);
+}
+
+inline v_float64 v_cvt_f64_high(const v_int32& a)
+{
+    return vget_f64m1(vfwcvt_f(a, VTraits<v_int32>::vlanes()), 1);
+}
+
+inline v_float64 v_cvt_f64(const v_float32& a)
+{
+    return vget_f64m1(vfwcvt_f(a, VTraits<v_float32>::vlanes()), 0);
+}
+
+inline v_float64 v_cvt_f64_high(const v_float32& a)
+{
+    return vget_f64m1(vfwcvt_f(a, VTraits<v_float32>::vlanes()), 1);
+}
+
+inline v_float64 v_cvt_f64(const v_int64& a)
+{
+    return vfcvt_f(a, VTraits<v_int64>::vlanes());
+}
+#endif
 
 //////////// Broadcast //////////////
 
@@ -1083,6 +1342,56 @@ inline v_int32 v_load_expand_q(const schar* ptr)
     return vwcvt_x(vwcvt_x(vle8_v_i8mf4(ptr, VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes());
 }
 
+#define OPENCV_HAL_IMPL_RVV_PACK(_Tpvec, _Tp, _wTpvec, hwidth, hsuffix, suffix, rshr, shr) \
+inline _Tpvec v_pack(const _wTpvec& a, const _wTpvec& b) \
+{ \
+    return shr(vset(vlmul_ext_##suffix##m2(a), 1, b), 0, VTraits<_Tpvec>::vlanes()); \
+} \
+inline void v_pack_store(_Tp* ptr, const _wTpvec& a) \
+{ \
+    vse##hwidth##_v_##hsuffix##mf2(ptr, shr(a, 0, VTraits<_Tpvec>::vlanes()), VTraits<_wTpvec>::vlanes()); \
+} \
+template<int n = 0> inline \
+_Tpvec v_rshr_pack(const _wTpvec& a, const _wTpvec& b, int N = n) \
+{ \
+    return rshr(vset(vlmul_ext_##suffix##m2(a), 1, b), N, VTraits<_Tpvec>::vlanes()); \
+} \
+template<int n = 0> inline \
+void v_rshr_pack_store(_Tp* ptr, const _wTpvec& a, int N = n) \
+{ \
+    vse##hwidth##_v_##hsuffix##mf2(ptr, rshr(a, N, VTraits<_Tpvec>::vlanes()), VTraits<_wTpvec>::vlanes()); \
+}
+
+OPENCV_HAL_IMPL_RVV_PACK(v_uint8, uchar, v_uint16, 8, u8, u16, vnclipu, vnclipu)
+OPENCV_HAL_IMPL_RVV_PACK(v_int8, schar, v_int16, 8,  i8, i16, vnclip, vnclip)
+OPENCV_HAL_IMPL_RVV_PACK(v_uint16, ushort, v_uint32, 16, u16, u32, vnclipu, vnclipu)
+OPENCV_HAL_IMPL_RVV_PACK(v_int16, short, v_int32, 16, i16, i32, vnclip, vnclip)
+OPENCV_HAL_IMPL_RVV_PACK(v_uint32, unsigned, v_uint64, 32, u32, u64, vnclipu, vnsrl)
+OPENCV_HAL_IMPL_RVV_PACK(v_int32, int, v_int64, 32, i32, i64, vnclip, vnsra)
+
+#define OPENCV_HAL_IMPL_RVV_PACK_U(_Tpvec, _Tp, _wTpvec, _wTp, hwidth, width, hsuffix, suffix, rshr, cast, hvl, vl) \
+inline _Tpvec v_pack_u(const _wTpvec& a, const _wTpvec& b) \
+{ \
+    return vnclipu(cast(vmax(vset(vlmul_ext_##suffix##m2(a), 1, b), 0, vl)), 0, vl); \
+} \
+inline void v_pack_u_store(_Tp* ptr, const _wTpvec& a) \
+{ \
+    vse##hwidth##_v_##hsuffix##mf2(ptr, vnclipu(vreinterpret_u##width##m1(vmax(a, 0, vl)), 0, vl), hvl); \
+} \
+template<int N = 0> inline \
+_Tpvec v_rshr_pack_u(const _wTpvec& a, const _wTpvec& b, int n = N) \
+{ \
+    return vnclipu(cast(vmax(vset(vlmul_ext_##suffix##m2(a), 1, b), 0, vl)), n, vl); \
+} \
+template<int N = 0> inline \
+void v_rshr_pack_u_store(_Tp* ptr, const _wTpvec& a, int n = N) \
+{ \
+    vse##hwidth##_v_##hsuffix##mf2(ptr, vnclipu(vreinterpret_u##width##m1(vmax(a, 0, vl)), n, vl), hvl); \
+}
+
+OPENCV_HAL_IMPL_RVV_PACK_U(v_uint8, uchar, v_int16, short, 8, 16, u8, i16, vnclipu_wx_u8m1, vreinterpret_v_i16m2_u16m2, VTraits<v_int16>::vlanes(), VTraits<v_uint8>::vlanes())
+OPENCV_HAL_IMPL_RVV_PACK_U(v_uint16, ushort, v_int32, int, 16, 32, u16, i32, vnclipu_wx_u16m1, vreinterpret_v_i32m2_u32m2, VTraits<v_int32>::vlanes(), VTraits<v_uint16>::vlanes())
+
 
 /* void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1)
   a0 = {A1 A2 A3 A4}
@@ -1138,6 +1447,63 @@ OPENCV_HAL_IMPL_RVV_UNPACKS(v_float32, 32)
 OPENCV_HAL_IMPL_RVV_UNPACKS(v_float64, 64)
 #endif
 
+#define OPENCV_HAL_IMPL_RVV_INTERLEAVED(_Tpvec, _Tp, suffix, width, hwidth, vl) \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \
+{ \
+    a = vlse##width##_v_##suffix##m1(ptr  , sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
+    b = vlse##width##_v_##suffix##m1(ptr+1, sizeof(_Tp)*2, VTraits<v_##_Tpvec>::vlanes()); \
+}\
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, v_##_Tpvec& c) \
+{ \
+    a = vlse##width##_v_##suffix##m1(ptr  , sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+    b = vlse##width##_v_##suffix##m1(ptr+1, sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+    c = vlse##width##_v_##suffix##m1(ptr+2, sizeof(_Tp)*3, VTraits<v_##_Tpvec>::vlanes()); \
+} \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b, \
+                                v_##_Tpvec& c, v_##_Tpvec& d) \
+{ \
+    \
+    a = vlse##width##_v_##suffix##m1(ptr  , sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    b = vlse##width##_v_##suffix##m1(ptr+1, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    c = vlse##width##_v_##suffix##m1(ptr+2, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+    d = vlse##width##_v_##suffix##m1(ptr+3, sizeof(_Tp)*4, VTraits<v_##_Tpvec>::vlanes()); \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    vsse##width(ptr, sizeof(_Tp)*2, a, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+1, sizeof(_Tp)*2, b, VTraits<v_##_Tpvec>::vlanes()); \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
+                                const v_##_Tpvec& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    vsse##width(ptr, sizeof(_Tp)*3, a, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+1, sizeof(_Tp)*3, b, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+2, sizeof(_Tp)*3, c, VTraits<v_##_Tpvec>::vlanes()); \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec& b, \
+                                const v_##_Tpvec& c, const v_##_Tpvec& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+{ \
+    vsse##width(ptr, sizeof(_Tp)*4, a, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+1, sizeof(_Tp)*4, b, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+2, sizeof(_Tp)*4, c, VTraits<v_##_Tpvec>::vlanes()); \
+    vsse##width(ptr+3, sizeof(_Tp)*4, d, VTraits<v_##_Tpvec>::vlanes()); \
+}
+
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint8, uchar, u8, 8, 4, VTraits<v_uint8>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int8, schar, i8, 8, 4, VTraits<v_int8>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint16, ushort, u16, 16, 8, VTraits<v_uint16>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int16, short, i16, 16, 8, VTraits<v_int16>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint32, unsigned, u32, 32, 16, VTraits<v_uint32>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int32, int, i32, 32, 16, VTraits<v_int32>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(float32, float, f32, 32, 16, VTraits<v_float32>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(uint64, uint64, u64, 64, 32, VTraits<v_uint64>::vlanes())
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(int64, int64, i64, 64, 32, VTraits<v_int64>::vlanes())
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_INTERLEAVED(float64, double, f64, 64, 32, VTraits<v_float64>::vlanes())
+#endif
+
 static uint64_t idx_interleave_pairs[] = { \
     0x0705060403010200, 0x0f0d0e0c0b090a08, 0x1715161413111210, 0x1f1d1e1c1b191a18, \
     0x2725262423212220, 0x2f2d2e2c2b292a28, 0x3735363433313230, 0x3f3d3e3c3b393a38, \
@@ -1182,37 +1548,69 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_uint32, 32, vzext_vf4, quads)
 OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_int32, 32, vzext_vf4, quads)
 OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ(v_float32, 32, vzext_vf4, quads)
 
-////////////// Transpose4x4 //////////////
-#define OPENCV_HAL_IMPL_RVV_ZIP4(_Tpvec, _wTpvec, suffix, convert2u, convert) \
-static inline void v_zip4(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1) { \
-    int vl = 4; \
-    _wTpvec temp = vreinterpret_##suffix##m2(convert2u( \
-        vor(vzext_vf2(convert(a0), vl), \
-            vreinterpret_u64m2(vslide1up(vreinterpret_u32m2(vzext_vf2(convert(a1), vl)), 0, vl*2)), \
-            vl))); \
-    b0 = vget_##suffix##m1(temp, 0); \
-    b1 = vget_##suffix##m1(vrgather(temp, vadd(vid_v_u32m2(vl), 4, vl)/*{4,5,6,7} */, vl) ,0); \
-}
-
-OPENCV_HAL_IMPL_RVV_ZIP4(v_uint32, vuint32m2_t, u32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
-OPENCV_HAL_IMPL_RVV_ZIP4(v_int32, vint32m2_t, i32, vreinterpret_u32m2, vreinterpret_u32m1)
-OPENCV_HAL_IMPL_RVV_ZIP4(v_float32, vfloat32m2_t, f32, vreinterpret_u32m2, vreinterpret_u32m1)
-
-#define OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(_Tpvec, suffix) \
-inline void v_transpose4x4(const _Tpvec& a0, const _Tpvec& a1, const _Tpvec& a2, const _Tpvec& a3, _Tpvec& b0, _Tpvec& b1, _Tpvec& b2, _Tpvec& b3) { \
-    _Tpvec t0,t1,t2,t3= vundefined_##suffix##m1(); \
-    v_zip4(a0, a2, t0, t2); \
-    v_zip4(a1, a3, t1, t3); \
-    v_zip4(t0, t1, b0, b1); \
-    v_zip4(t2, t3, b2, b3); \
-}
-
-OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_uint32, u32)
-OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_int32, i32)
-OPENCV_HAL_IMPL_RVV_TRANSPOSE4x4(v_float32, f32)
-
 //////////// PopCount //////////
-// TODO
+static const unsigned char popCountTable[256] =
+{
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
+};
+#define OPENCV_HAL_IMPL_RVV_HADD(_Tpvec, _Tpvec2, _Tm2, width, width2, suffix, add) \
+static inline _Tpvec2 v_hadd(_Tpvec a) { \
+    vuint##width2##m1_t oneX2 = vmv_v_x_u##width2##m1(1, VTraits<v_uint##width2>::vlanes()); \
+    vuint##width##m1_t one = vreinterpret_u##width##m1(oneX2); \
+    _Tm2 res = add(a, vslide1down(a, 0, VTraits<v_uint##width>::vlanes()), VTraits<v_uint##width>::vlanes()); \
+    return vget_##suffix##m1(vcompress(vmseq(one, 1, VTraits<v_uint##width>::vlanes()), res, res, VTraits<v_uint##width>::vlanes()), 0); \
+}
+OPENCV_HAL_IMPL_RVV_HADD(v_uint8, v_uint16, vuint16m2_t, 8, 16, u16, vwaddu_vv)
+OPENCV_HAL_IMPL_RVV_HADD(v_uint16, v_uint32, vuint32m2_t, 16, 32, u32, vwaddu_vv)
+OPENCV_HAL_IMPL_RVV_HADD(v_uint32, v_uint64, vuint64m2_t, 32, 64, u64, vwaddu_vv)
+OPENCV_HAL_IMPL_RVV_HADD(v_int8, v_int16, vint16m2_t, 8, 16, i16, vwadd_vv)
+OPENCV_HAL_IMPL_RVV_HADD(v_int16, v_int32, vint32m2_t, 16, 32, i32, vwadd_vv)
+OPENCV_HAL_IMPL_RVV_HADD(v_int32, v_int64, vint64m2_t, 32, 64, i64, vwadd_vv)
+
+OPENCV_HAL_IMPL_RVV_HADD(vint32m2_t, v_int32, vint32m2_t, 16, 32, i32, vadd)
+OPENCV_HAL_IMPL_RVV_HADD(vint64m2_t, v_int64, vint64m2_t, 32, 64, i64, vadd)
+
+inline v_uint8 v_popcount(const v_uint8& a)
+{
+    return vloxei8(popCountTable, a, VTraits<v_uint8>::vlanes());
+}
+inline v_uint16 v_popcount(const v_uint16& a)
+{
+    return v_hadd(v_popcount(vreinterpret_u8m1(a)));
+}
+inline v_uint32 v_popcount(const v_uint32& a)
+{
+    return v_hadd(v_hadd(v_popcount(vreinterpret_u8m1(a))));
+}
+
+inline v_uint8 v_popcount(const v_int8& a)
+{
+    return v_popcount(v_abs(a));\
+}
+inline v_uint16 v_popcount(const v_int16& a)
+{
+    return v_popcount(v_abs(a));\
+}
+inline v_uint32 v_popcount(const v_int32& a)
+{
+    return v_popcount(v_abs(a));\
+}
+
 
 //////////// SignMask ////////////
 #define OPENCV_HAL_IMPL_RVV_SIGNMASK_OP(_Tpvec) \
@@ -1264,25 +1662,372 @@ inline int v_scan_forward(const v_float64& a)
 #endif
 
 //////////// Pack triplets ////////////
-// TODO
+// {A0, A1, A2, A3, B0, B1, B2, B3, C0 ...} --> {A0, A1, A2, B0, B1, B2, C0 ...}
+// mask: {0,0,0,1, ...} -> {T,T,T,F, ...}
+#define OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(_Tpvec, v_trunc) \
+inline _Tpvec v_pack_triplets(const _Tpvec& vec) { \
+    size_t vl = vsetvlmax_e8m1(); \
+    vuint32m1_t one = vmv_v_x_u32m1(1, vl/4); \
+    vuint8m1_t zero = vmv_v_x_u8m1(0, vl); \
+    vuint8m1_t mask = vreinterpret_u8m1(one); \
+    return vcompress(vmseq(v_trunc(vslideup(zero, mask, 3, vl)), 0, vl), vec, vec, VTraits<_Tpvec>::vlanes()); \
+}
+
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_uint8, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_int8, OPENCV_HAL_NOP)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_uint16, vlmul_trunc_u8mf2)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_int16, vlmul_trunc_u8mf2)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_uint32, vlmul_trunc_u8mf4)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_int32, vlmul_trunc_u8mf4)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float32, vlmul_trunc_u8mf4)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_uint64, vlmul_trunc_u8mf8)
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_int64, vlmul_trunc_u8mf8)
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float64, vlmul_trunc_u8mf8)
+#endif
 
 
 ////// FP16 support ///////
 
+#if __riscv_zfh
 inline v_float32 v_load_expand(const float16_t* ptr)
 {
-    // TODO
-    return vundefined_f32m1();
+    return vfwcvt_f(vle16_v_f16mf2((_Float16*)ptr, VTraits<v_float32>::vlanes()) ,VTraits<v_float32>::vlanes());;
 }
 
+inline void v_pack_store(float16_t* ptr, const v_float32& v)
+{
+    vse16_v_f16mf2((_Float16*)ptr, vfncvt_f_f_w_f16mf2(v, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
+}
+#else
+inline v_float32 v_load_expand(const float16_t* ptr)
+{
+    float buf[32];
+    for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) buf[i] = (float)ptr[i];
+    return v_load(buf);
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32& v)
+{
+    float buf[32];
+    v_store(buf, v);
+    for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) ptr[i] = float16_t(buf[i]);
+}
+#endif
 ////////////// Rounding //////////////
-// TODO
+inline v_int32 v_round(const v_float32& a)
+{
+    // return vfcvt_x(vfadd(a, 1e-6, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
+    return vfcvt_x(a, VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_floor(const v_float32& a)
+{
+    return vfcvt_x(vfsub(a, 0.5f - 1e-5, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
+    // return vfcvt_x(a, VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_ceil(const v_float32& a)
+{
+    return vfcvt_x(vfadd(a, 0.5f - 1e-5, VTraits<v_float32>::vlanes()), VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_trunc(const v_float32& a)
+{
+    return vfcvt_rtz_x(a, VTraits<v_float32>::vlanes());
+}
+#if CV_SIMD_SCALABLE_64F
+inline v_int32 v_round(const v_float64& a)
+{
+    return vfncvt_x(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_round(const v_float64& a, const v_float64& b)
+{
+    return vfncvt_x(vset(vlmul_ext_f64m2(vfadd(a, 1e-6, VTraits<v_float64>::vlanes())), 1, b), VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_floor(const v_float64& a)
+{
+    return vfncvt_x(vlmul_ext_f64m2(vfsub(a, 0.5f - 1e-6, VTraits<v_float64>::vlanes())), VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_ceil(const v_float64& a)
+{
+    return vfncvt_x(vlmul_ext_f64m2(vfadd(a, 0.5f - 1e-6, VTraits<v_float64>::vlanes())), VTraits<v_float32>::vlanes());
+}
+
+inline v_int32 v_trunc(const v_float64& a)
+{
+    return vfncvt_rtz_x(vlmul_ext_f64m2(a), VTraits<v_float32>::vlanes());
+}
+#endif
 
 //////// Dot Product ////////
-// TODO
+
+// 16 >> 32
+inline v_int32 v_dotprod(const v_int16& a, const v_int16& b)
+{
+    vint32m2_t temp1 = vwmul(a, b, VTraits<v_int16>::vlanes());
+    return v_hadd(temp1);
+}
+
+inline v_int32 v_dotprod(const v_int16& a, const v_int16& b, const v_int32& c)
+{
+    vint32m2_t temp1 = vwmul(a, b, VTraits<v_int16>::vlanes());
+    return vadd(v_hadd(temp1), c, VTraits<v_int32>::vlanes());
+}
+
+// 32 >> 64
+inline v_int64 v_dotprod(const v_int32& a, const v_int32& b)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint32m1_t one32 = vreinterpret_u32m1(one64); \
+    vbool32_t mask = vmseq(one32, 1, VTraits<v_uint32>::vlanes()); \
+    vint64m2_t temp1 = vwmul(a, b, VTraits<v_int32>::vlanes()); \
+    vint64m2_t temp2 = vslide1down(temp1, 0, VTraits<v_int32>::vlanes());
+    vint64m2_t res = vadd(temp1, temp2, VTraits<v_int32>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int32>::vlanes()); \
+    return vlmul_trunc_i64m1(res); \
+}
+inline v_int64 v_dotprod(const v_int32& a, const v_int32& b, const v_int64& c)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint32m1_t one32 = vreinterpret_u32m1(one64); \
+    vbool32_t mask = vmseq(one32, 1, VTraits<v_uint32>::vlanes()); \
+    vint64m2_t temp1 = vwmul(a, b, VTraits<v_int32>::vlanes()); \
+    vint64m2_t temp2 = vslide1down(temp1, 0, VTraits<v_int32>::vlanes());
+    vint64m2_t res = vadd(temp1, temp2, VTraits<v_int32>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int32>::vlanes()); \
+    return vadd(vlmul_trunc_i64m1(res), c, VTraits<v_int64>::vlanes()); \
+}
+
+// 8 >> 32
+inline v_uint32 v_dotprod_expand(const v_uint8& a, const v_uint8& b)
+{
+    vuint32m1_t one32 = vmv_v_x_u32m1(1, VTraits<v_uint32>::vlanes()); \
+    vuint8m1_t one8 = vreinterpret_u8m1(one32); \
+    vbool8_t mask = vmseq(one8, 1, VTraits<v_uint8>::vlanes()); \
+    vuint16m2_t t0 = vwmulu(a, b, VTraits<v_uint8>::vlanes()); \
+    vuint16m2_t t1= vslide1down(t0, 0, VTraits<v_uint8>::vlanes());
+    vuint16m2_t t2= vslide1down(t1, 0, VTraits<v_uint8>::vlanes());
+    vuint16m2_t t3= vslide1down(t2, 0, VTraits<v_uint8>::vlanes());
+    vuint32m4_t res = vadd(vwaddu_vv(t2, t3, VTraits<v_uint8>::vlanes()), vwaddu_vv(t0, t1, VTraits<v_uint8>::vlanes()), VTraits<v_uint8>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_uint8>::vlanes()); \
+    return vlmul_trunc_u32m1(res);
+}
+
+inline v_uint32 v_dotprod_expand(const v_uint8& a, const v_uint8& b,
+                                  const v_uint32& c)
+{
+    vuint32m1_t one32 = vmv_v_x_u32m1(1, VTraits<v_uint32>::vlanes()); \
+    vuint8m1_t one8 = vreinterpret_u8m1(one32); \
+    vbool8_t mask = vmseq(one8, 1, VTraits<v_uint8>::vlanes()); \
+    vuint16m2_t t0 = vwmulu(a, b, VTraits<v_uint8>::vlanes()); \
+    vuint16m2_t t1= vslide1down(t0, 0, VTraits<v_uint8>::vlanes());
+    vuint16m2_t t2= vslide1down(t1, 0, VTraits<v_uint8>::vlanes());
+    vuint16m2_t t3= vslide1down(t2, 0, VTraits<v_uint8>::vlanes());
+    vuint32m4_t res = vadd(vwaddu_vv(t2, t3, VTraits<v_uint8>::vlanes()), vwaddu_vv(t0, t1, VTraits<v_uint8>::vlanes()), VTraits<v_uint8>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_uint8>::vlanes()); \
+    return vadd(vlmul_trunc_u32m1(res), c, VTraits<v_uint8>::vlanes());
+}
+
+inline v_int32 v_dotprod_expand(const v_int8& a, const v_int8& b)
+{
+    vuint32m1_t one32 = vmv_v_x_u32m1(1, VTraits<v_uint32>::vlanes()); \
+    vuint8m1_t one8 = vreinterpret_u8m1(one32); \
+    vbool8_t mask = vmseq(one8, 1, VTraits<v_uint8>::vlanes()); \
+    vint16m2_t t0 = vwmul(a, b, VTraits<v_int8>::vlanes()); \
+    vint16m2_t t1= vslide1down(t0, 0, VTraits<v_int8>::vlanes());
+    vint16m2_t t2= vslide1down(t1, 0, VTraits<v_int8>::vlanes());
+    vint16m2_t t3= vslide1down(t2, 0, VTraits<v_int8>::vlanes());
+    vint32m4_t res = vadd(vwadd_vv(t2, t3, VTraits<v_int8>::vlanes()), vwadd_vv(t0, t1, VTraits<v_int8>::vlanes()), VTraits<v_int8>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int8>::vlanes()); \
+    return vlmul_trunc_i32m1(res);
+}
+
+inline v_int32 v_dotprod_expand(const v_int8& a, const v_int8& b,
+                                  const v_int32& c)
+{
+    vuint32m1_t one32 = vmv_v_x_u32m1(1, VTraits<v_uint32>::vlanes()); \
+    vuint8m1_t one8 = vreinterpret_u8m1(one32); \
+    vbool8_t mask = vmseq(one8, 1, VTraits<v_uint8>::vlanes()); \
+    vint16m2_t t0 = vwmul(a, b, VTraits<v_int8>::vlanes()); \
+    vint16m2_t t1= vslide1down(t0, 0, VTraits<v_int8>::vlanes());
+    vint16m2_t t2= vslide1down(t1, 0, VTraits<v_int8>::vlanes());
+    vint16m2_t t3= vslide1down(t2, 0, VTraits<v_int8>::vlanes());
+    vint32m4_t res = vadd(vwadd_vv(t2, t3, VTraits<v_int8>::vlanes()), vwadd_vv(t0, t1, VTraits<v_int8>::vlanes()), VTraits<v_int8>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int8>::vlanes()); \
+    return vadd(vlmul_trunc_i32m1(res), c, VTraits<v_int8>::vlanes());
+}
+
+
+// // 16 >> 64
+inline v_uint64 v_dotprod_expand(const v_uint16& a, const v_uint16& b)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint16m1_t one16 = vreinterpret_u16m1(one64); \
+    vbool16_t mask = vmseq(one16, 1, VTraits<v_uint16>::vlanes()); \
+    vuint32m2_t t0 = vwmulu(a, b, VTraits<v_uint16>::vlanes()); \
+    vuint32m2_t t1= vslide1down(t0, 0, VTraits<v_uint16>::vlanes());
+    vuint32m2_t t2= vslide1down(t1, 0, VTraits<v_uint16>::vlanes());
+    vuint32m2_t t3= vslide1down(t2, 0, VTraits<v_uint16>::vlanes());
+    vuint64m4_t res = vadd(vwaddu_vv(t2, t3, VTraits<v_uint16>::vlanes()), vwaddu_vv(t0, t1, VTraits<v_uint16>::vlanes()), VTraits<v_uint16>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_uint16>::vlanes()); \
+    return vlmul_trunc_u64m1(res);
+}
+inline v_uint64 v_dotprod_expand(const v_uint16& a, const v_uint16& b, const v_uint64& c)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint16m1_t one16 = vreinterpret_u16m1(one64); \
+    vbool16_t mask = vmseq(one16, 1, VTraits<v_uint16>::vlanes()); \
+    vuint32m2_t t0 = vwmulu(a, b, VTraits<v_uint16>::vlanes()); \
+    vuint32m2_t t1= vslide1down(t0, 0, VTraits<v_uint16>::vlanes());
+    vuint32m2_t t2= vslide1down(t1, 0, VTraits<v_uint16>::vlanes());
+    vuint32m2_t t3= vslide1down(t2, 0, VTraits<v_uint16>::vlanes());
+    vuint64m4_t res = vadd(vwaddu_vv(t2, t3, VTraits<v_uint16>::vlanes()), vwaddu_vv(t0, t1, VTraits<v_uint16>::vlanes()), VTraits<v_uint16>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_uint16>::vlanes()); \
+    return vadd(vlmul_trunc_u64m1(res), c, VTraits<v_uint16>::vlanes());
+}
+
+inline v_int64 v_dotprod_expand(const v_int16& a, const v_int16& b)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint16m1_t one16 = vreinterpret_u16m1(one64); \
+    vbool16_t mask = vmseq(one16, 1, VTraits<v_uint16>::vlanes()); \
+    vint32m2_t t0 = vwmul(a, b, VTraits<v_int16>::vlanes()); \
+    vint32m2_t t1= vslide1down(t0, 0, VTraits<v_int16>::vlanes());
+    vint32m2_t t2= vslide1down(t1, 0, VTraits<v_int16>::vlanes());
+    vint32m2_t t3= vslide1down(t2, 0, VTraits<v_int16>::vlanes());
+    vint64m4_t res = vadd(vwadd_vv(t2, t3, VTraits<v_int16>::vlanes()), vwadd_vv(t0, t1, VTraits<v_int16>::vlanes()), VTraits<v_int16>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int16>::vlanes()); \
+    return vlmul_trunc_i64m1(res);
+}
+inline v_int64 v_dotprod_expand(const v_int16& a, const v_int16& b,
+                                  const v_int64& c)
+{
+    vuint64m1_t one64 = vmv_v_x_u64m1(1, VTraits<v_uint64>::vlanes()); \
+    vuint16m1_t one16 = vreinterpret_u16m1(one64); \
+    vbool16_t mask = vmseq(one16, 1, VTraits<v_uint16>::vlanes()); \
+    vint32m2_t t0 = vwmul(a, b, VTraits<v_int16>::vlanes()); \
+    vint32m2_t t1= vslide1down(t0, 0, VTraits<v_int16>::vlanes());
+    vint32m2_t t2= vslide1down(t1, 0, VTraits<v_int16>::vlanes());
+    vint32m2_t t3= vslide1down(t2, 0, VTraits<v_int16>::vlanes());
+    vint64m4_t res = vadd(vwadd_vv(t2, t3, VTraits<v_int16>::vlanes()), vwadd_vv(t0, t1, VTraits<v_int16>::vlanes()), VTraits<v_int16>::vlanes());
+    res = vcompress(mask, res, res, VTraits<v_int16>::vlanes()); \
+    return vadd(vlmul_trunc_i64m1(res), c, VTraits<v_int16>::vlanes());
+}
+
+// // 32 >> 64f
+#if CV_SIMD_SCALABLE_64F
+inline v_float64 v_dotprod_expand(const v_int32& a, const v_int32& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64 v_dotprod_expand(const v_int32& a,   const v_int32& b,
+                                    const v_float64& c)
+{ return v_add(v_dotprod_expand(a, b) , c); }
+#endif
 
 //////// Fast Dot Product ////////
-// TODO
+// 16 >> 32
+inline v_int32 v_dotprod_fast(const v_int16& a, const v_int16& b)
+{
+    v_int32 zero = v_setzero_s32();
+    return vredsum(zero, vwmul(a, b, VTraits<v_int16>::vlanes()), zero,  VTraits<v_int16>::vlanes());
+}
+inline v_int32 v_dotprod_fast(const v_int16& a, const v_int16& b, const v_int32& c)
+{
+    v_int32 zero = v_setzero_s32();
+    return vredsum(zero, vwmul(a, b, VTraits<v_int16>::vlanes()), vredsum(zero, c, zero, VTraits<v_int32>::vlanes()),  VTraits<v_int16>::vlanes());
+}
+
+// 32 >> 64
+inline v_int64 v_dotprod_fast(const v_int32& a, const v_int32& b)
+{
+    v_int64 zero = v_setzero_s64();
+    return vredsum(zero, vwmul(a, b, VTraits<v_int32>::vlanes()), zero,  VTraits<v_int32>::vlanes());
+}
+inline v_int64 v_dotprod_fast(const v_int32& a, const v_int32& b, const v_int64& c)
+{
+    v_int64 zero = v_setzero_s64();
+    return vadd(vredsum(zero, vwmul(a, b, VTraits<v_int32>::vlanes()), zero,  VTraits<v_int32>::vlanes()) , vredsum(zero, c, zero, VTraits<v_int64>::vlanes()), VTraits<v_int64>::vlanes());
+}
+
+
+// 8 >> 32
+inline v_uint32 v_dotprod_expand_fast(const v_uint8& a, const v_uint8& b)
+{
+    v_uint32 zero = v_setzero_u32();
+    return vwredsumu(zero, vwmulu(a, b, VTraits<v_uint8>::vlanes()), zero,  VTraits<v_uint8>::vlanes());
+}
+inline v_uint32 v_dotprod_expand_fast(const v_uint8& a, const v_uint8& b, const v_uint32& c)
+{
+    v_uint32 zero = v_setzero_u32();
+    return vadd(vwredsumu(zero, vwmulu(a, b, VTraits<v_uint8>::vlanes()), zero,  VTraits<v_uint8>::vlanes()) , vredsum(zero, c, zero, VTraits<v_uint32>::vlanes()), VTraits<v_uint32>::vlanes());
+}
+inline v_int32 v_dotprod_expand_fast(const v_int8& a, const v_int8& b)
+{
+    v_int32 zero = v_setzero_s32();
+    return vwredsum(zero, vwmul(a, b, VTraits<v_int8>::vlanes()), zero,  VTraits<v_int8>::vlanes());
+}
+inline v_int32 v_dotprod_expand_fast(const v_int8& a, const v_int8& b, const v_int32& c)
+{
+    v_int32 zero = v_setzero_s32();
+    return vadd(vwredsum(zero, vwmul(a, b, VTraits<v_int8>::vlanes()), zero,  VTraits<v_int8>::vlanes()) , vredsum(zero, c, zero, VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes());
+}
+
+// 16 >> 64
+inline v_uint64 v_dotprod_expand_fast(const v_uint16& a, const v_uint16& b)
+{
+    v_uint64 zero = v_setzero_u64();
+    return vwredsumu(zero, vwmulu(a, b, VTraits<v_uint16>::vlanes()), zero,  VTraits<v_uint16>::vlanes());
+}
+inline v_uint64 v_dotprod_expand_fast(const v_uint16& a, const v_uint16& b, const v_uint64& c)
+{
+    v_uint64 zero = v_setzero_u64();
+    return vadd(vwredsumu(zero, vwmulu(a, b, VTraits<v_uint16>::vlanes()), zero,  VTraits<v_uint16>::vlanes()), vredsum(zero, c, zero, VTraits<v_uint64>::vlanes()), VTraits<v_uint64>::vlanes());
+}
+inline v_int64 v_dotprod_expand_fast(const v_int16& a, const v_int16& b)
+{
+    v_int64 zero = v_setzero_s64();
+    return vwredsum(zero, vwmul(a, b, VTraits<v_int16>::vlanes()), zero,  VTraits<v_int16>::vlanes());
+}
+inline v_int64 v_dotprod_expand_fast(const v_int16& a, const v_int16& b, const v_int64& c)
+{
+    v_int64 zero = v_setzero_s64();
+    return vadd(vwredsum(zero, vwmul(a, b, VTraits<v_int16>::vlanes()), zero,  VTraits<v_int16>::vlanes()), vredsum(zero, c, zero, VTraits<v_int64>::vlanes()), VTraits<v_int64>::vlanes());
+}
+
+// 32 >> 64f
+#if CV_SIMD_SCALABLE_64F
+inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b)
+{ return v_cvt_f64(v_dotprod_fast(a, b)); }
+inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b, const v_float64& c)
+{ return v_add(v_dotprod_expand_fast(a, b) , c); }
+#endif
+
+// TODO: only 128 bit now.
+inline v_float32 v_matmul(const v_float32& v, const v_float32& m0,
+                            const v_float32& m1, const v_float32& m2,
+                            const v_float32& m3)
+{
+    vfloat32m1_t res;
+    res = vfmul_vf_f32m1(m0, v_extract_n(v, 0), VTraits<v_float32>::vlanes());
+    res = vfmacc_vf_f32m1(res, v_extract_n(v, 1), m1, VTraits<v_float32>::vlanes());
+    res = vfmacc_vf_f32m1(res, v_extract_n(v, 2), m2, VTraits<v_float32>::vlanes());
+    res = vfmacc_vf_f32m1(res, v_extract_n(v, 3), m3, VTraits<v_float32>::vlanes());
+    return res;
+}
+
+// TODO: only 128 bit now.
+inline v_float32 v_matmuladd(const v_float32& v, const v_float32& m0,
+                               const v_float32& m1, const v_float32& m2,
+                               const v_float32& a)
+{
+    vfloat32m1_t res = vfmul_vf_f32m1(m0, v_extract_n(v,0), VTraits<v_float32>::vlanes());
+    res = vfmacc_vf_f32m1(res, v_extract_n(v,1), m1, VTraits<v_float32>::vlanes());
+    res = vfmacc_vf_f32m1(res, v_extract_n(v,2), m2, VTraits<v_float32>::vlanes());
+    return vfadd(res, a, VTraits<v_float32>::vlanes());
+}
 
 inline void v_cleanup() {}
 

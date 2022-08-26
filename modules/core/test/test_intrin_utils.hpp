@@ -1163,6 +1163,22 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_pack_triplets()
+    {
+        Data<R> dataA;
+        R a = dataA;
+        Data<R> res = v_pack_triplets(a);
+
+        for (int i = 0; i < VTraits<R>::vlanes()/4; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ(dataA[4*i],   res[3*i]);
+            EXPECT_EQ(dataA[4*i+1], res[3*i+1]);
+            EXPECT_EQ(dataA[4*i+2], res[3*i+2]);
+        }
+        return *this;
+    }
+
     template <int s>
     TheTest & test_pack_u()
     {
@@ -1639,15 +1655,14 @@ template<typename R> struct TheTest
         R a = dataA, b = dataB, c = dataC, d = dataD;
         Data<R> res = v_reduce_sum4(a, b, c, d);
 
-        // for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
-        // {
-            int i = 0;
+        for (int i = 0; i < VTraits<R>::vlanes(); i += 4)
+        {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_COMPARE_EQ(dataA.sum(i, 4), res[i]);
             EXPECT_COMPARE_EQ(dataB.sum(i, 4), res[i + 1]);
             EXPECT_COMPARE_EQ(dataC.sum(i, 4), res[i + 2]);
             EXPECT_COMPARE_EQ(dataD.sum(i, 4), res[i + 3]);
-        // }
+        }
         return *this;
     }
 
@@ -1765,372 +1780,12 @@ template<typename R> struct TheTest
 #endif
 };
 
-#if CV_SIMD_SCALABLE //Temporary
-#define DUMP_ENTRY(type) printf("SIMD: %s\n", CV__TRACE_FUNCTION);
-
-
+#define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
 //=============  8-bit integer =====================================================================
 
 void test_hal_intrin_uint8()
 {
     DUMP_ENTRY(v_uint8);
-    // typedef v_uint8 R;
-    TheTest<v_uint8>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_expand_q()
-        .test_addsub()
-        .test_arithm_wrap()
-        .test_mul()
-        .test_mul_expand()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_unpack()
-        .test_reverse()
-#if 0 // not implemented in rvv backend yet.
-        .test_interleave()
-        .test_cmp()
-        .test_dotprod_expand()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
-        .test_pack_u<1>().test_pack_u<2>().test_pack_u<3>().test_pack_u<8>()
-        .test_pack_b()
-        .test_popcount()
-#endif
-        ;
-}
-
-void test_hal_intrin_int8()
-{
-    DUMP_ENTRY(v_int8);
-    // typedef v_int8 R;
-    TheTest<v_int8>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_expand_q()
-        .test_addsub()
-        .test_arithm_wrap()
-        .test_mul()
-        .test_mul_expand()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_absdiffs()
-        .test_abs()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_unpack()
-        .test_reverse()
-#if 0
-        .test_interleave()
-        .test_cmp()
-        .test_dotprod_expand()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<3>().test_pack<8>()
-        .test_popcount()
-#endif
-        ;
-}
-
-//============= 16-bit integer =====================================================================
-
-void test_hal_intrin_uint16()
-{
-    DUMP_ENTRY(v_uint16);
-    // typedef v_uint16 R;
-    TheTest<v_uint16>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_addsub()
-        .test_arithm_wrap()
-        .test_mul()
-        .test_mul_expand()
-        .test_mul_hi()
-        .test_shift<1>()
-        .test_shift<8>()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_unpack()
-        .test_reverse()
-#if 0
-        .test_interleave()
-        .test_cmp()
-        .test_dotprod_expand()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
-        .test_pack_u<1>().test_pack_u<2>().test_pack_u<7>().test_pack_u<16>()
-        .test_popcount()
-#endif
-        ;
-}
-
-void test_hal_intrin_int16()
-{
-    DUMP_ENTRY(v_int16);
-    // typedef v_int16 R;
-    TheTest<v_int16>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_addsub()
-        .test_arithm_wrap()
-        .test_mul()
-        .test_mul_expand()
-        .test_mul_hi()
-        .test_shift<1>()
-        .test_shift<8>()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_absdiffs()
-        .test_abs()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_unpack()
-        .test_reverse()
-#if 0
-        .test_interleave()
-
-        .test_cmp()
-        .test_dotprod()
-        .test_dotprod_expand()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<7>().test_pack<16>()
-        .test_popcount()
-#endif
-        ;
-}
-
-//============= 32-bit integer =====================================================================
-
-void test_hal_intrin_uint32()
-{
-    DUMP_ENTRY(v_uint32);
-    // typedef v_uint32 R;
-    TheTest<v_uint32>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_addsub()
-        .test_mul()
-        .test_mul_expand()
-        .test_shift<1>()
-        .test_shift<8>()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>()
-        .test_extract_highest()
-        .test_broadcast_highest()
-        .test_unpack()
-        .test_transpose()
-        .test_reverse()
-#if 0
-        .test_interleave()
-        .test_cmp()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
-        .test_popcount()
-#endif
-        ;
-}
-
-void test_hal_intrin_int32()
-{
-    DUMP_ENTRY(v_int32);
-    // typedef v_int32 R;
-    TheTest<v_int32>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_expand()
-        .test_addsub()
-        .test_mul()
-        .test_abs()
-        .test_shift<1>().test_shift<8>()
-        .test_dotprod_expand_f64()
-        .test_logic()
-        .test_min_max()
-        .test_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>()
-        .test_extract_highest()
-        .test_broadcast_highest()
-        .test_unpack()
-        .test_transpose()
-        .test_reverse()
-#if 0
-        .test_interleave()
-        .test_cmp()
-        .test_dotprod()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_pack<1>().test_pack<2>().test_pack<15>().test_pack<32>()
-        .test_float_cvt32()
-        .test_float_cvt64()
-        .test_popcount()
-#endif
-        ;
-}
-
-//============= 64-bit integer =====================================================================
-
-void test_hal_intrin_uint64()
-{
-    DUMP_ENTRY(v_uint64);
-    // typedef v_uint64 R;
-    TheTest<v_uint64>()
-        .test_loadstore()
-        .test_addsub()
-        .test_shift<1>().test_shift<8>()
-        .test_logic()
-        .test_extract<0>().test_extract<1>()
-        .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_reverse()
-        ;
-#if 0
-    #if CV_SIMD_64F
-       .test_cmp64()
-    #endif
-#endif
-}
-
-void test_hal_intrin_int64()
-{
-    DUMP_ENTRY(v_int64);
-    // typedef v_int64 R;
-    TheTest<v_int64>()
-        .test_loadstore()
-        .test_addsub()
-        .test_shift<1>().test_shift<8>()
-        .test_logic()
-        .test_extract<0>().test_extract<1>()
-        .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_cvt64_double()
-        .test_reverse()
-        ;
-#if 0
-    #if CV_SIMD_64F
-       .test_cmp64()
-    #endif
-#endif
-}
-
-//============= Floating point =====================================================================
-void test_hal_intrin_float32()
-{
-    DUMP_ENTRY(v_float32);
-    // typedef v_float32 R;
-    TheTest<v_float32>()
-        .test_loadstore()
-        .test_interleave_pq()
-        .test_addsub()
-        .test_abs()
-        .test_mul()
-        .test_div()
-        .test_sqrt_abs()
-        .test_min_max()
-        .test_float_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
-        .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>()
-        .test_extract_highest()
-        .test_broadcast_highest()
-        .test_unpack()
-        .test_transpose()
-        .test_reverse()
-#if 0
-        .test_interleave()
-        .test_interleave_2channel()
-        .test_cmp()
-        .test_reduce()
-        .test_reduce_sad()
-        .test_float_math()
-        .test_float_cvt64()
-        .test_matmul()
-        .test_reduce_sum4()
-#endif
-        ;
-}
-
-void test_hal_intrin_float64()
-{
-    DUMP_ENTRY(v_float64);
-#if CV_SIMD_SCALABLE_64F
-    // typedef v_float64 R;
-    TheTest<v_float64>()
-        .test_loadstore()
-        .test_addsub()
-        .test_mul()
-        .test_div()
-        .test_abs()
-        .test_sqrt_abs()
-        .test_min_max()
-        .test_float_absdiff()
-        .test_mask()
-        .test_extract<0>().test_extract<1>()
-        .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>()
-        .test_extract_highest()
-        .test_reverse()
-#if 0
-        .test_cmp()
-        .test_unpack()
-        .test_float_cvt32()
-        .test_float_math()
-#endif
-        ;
-
-#endif
-}
-
-#else
-
-#define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*(int)sizeof(v_uint8), CV__TRACE_FUNCTION);
-//=============  8-bit integer =====================================================================
-
-void test_hal_intrin_uint8()
-{
-    DUMP_ENTRY(v_uint8);
-    typedef v_uint8 R;
     TheTest<v_uint8>()
         .test_loadstore()
         .test_interleave()
@@ -2157,9 +1812,10 @@ void test_hal_intrin_uint8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_pack_triplets()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
         .test_pack_u<9>().test_pack_u<10>().test_pack_u<13>().test_pack_u<15>()
@@ -2172,7 +1828,6 @@ void test_hal_intrin_uint8()
 void test_hal_intrin_int8()
 {
     DUMP_ENTRY(v_int8);
-    typedef v_int8 R;
     TheTest<v_int8>()
         .test_loadstore()
         .test_interleave()
@@ -2199,9 +1854,10 @@ void test_hal_intrin_int8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_pack_triplets()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
 
@@ -2210,7 +1866,6 @@ void test_hal_intrin_int8()
 void test_hal_intrin_uint16()
 {
     DUMP_ENTRY(v_uint16);
-    typedef v_uint16 R;
     TheTest<v_uint16>()
         .test_loadstore()
         .test_interleave()
@@ -2238,16 +1893,16 @@ void test_hal_intrin_uint16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_pack_triplets()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
 
 void test_hal_intrin_int16()
 {
     DUMP_ENTRY(v_int16);
-    typedef v_int16 R;
     TheTest<v_int16>()
         .test_loadstore()
         .test_interleave()
@@ -2277,9 +1932,10 @@ void test_hal_intrin_int16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_pack_triplets()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
 
@@ -2288,7 +1944,6 @@ void test_hal_intrin_int16()
 void test_hal_intrin_uint32()
 {
     DUMP_ENTRY(v_uint32);
-    typedef v_uint32 R;
     TheTest<v_uint32>()
         .test_loadstore()
         .test_interleave()
@@ -2312,18 +1967,18 @@ void test_hal_intrin_uint32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
         .test_extract_highest()
         .test_broadcast_highest()
         .test_transpose()
+        .test_pack_triplets()
         ;
 }
 
 void test_hal_intrin_int32()
 {
     DUMP_ENTRY(v_int32);
-    typedef v_int32 R;
     TheTest<v_int32>()
         .test_loadstore()
         .test_interleave()
@@ -2348,13 +2003,14 @@ void test_hal_intrin_int32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
         .test_float_cvt32()
         .test_float_cvt64()
         .test_transpose()
         .test_extract_highest()
         .test_broadcast_highest()
+        .test_pack_triplets()
         ;
 }
 
@@ -2363,7 +2019,6 @@ void test_hal_intrin_int32()
 void test_hal_intrin_uint64()
 {
     DUMP_ENTRY(v_uint64);
-    typedef v_uint64 R;
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
@@ -2375,16 +2030,15 @@ void test_hal_intrin_uint64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
 
 void test_hal_intrin_int64()
 {
     DUMP_ENTRY(v_int64);
-    typedef v_int64 R;
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
@@ -2396,9 +2050,9 @@ void test_hal_intrin_int64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
         .test_cvt64_double()
         ;
 }
@@ -2407,7 +2061,6 @@ void test_hal_intrin_int64()
 void test_hal_intrin_float32()
 {
     DUMP_ENTRY(v_float32);
-    typedef v_float32 R;
     TheTest<v_float32>()
         .test_loadstore()
         .test_interleave()
@@ -2433,10 +2086,11 @@ void test_hal_intrin_float32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>()
         .test_extract_highest()
         .test_broadcast_highest()
+        .test_pack_triplets()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -2448,7 +2102,6 @@ void test_hal_intrin_float64()
 {
     DUMP_ENTRY(v_float64);
 #if CV_SIMD_64F
-    typedef v_float64 R;
     TheTest<v_float64>()
         .test_loadstore()
         .test_addsub()
@@ -2466,9 +2119,9 @@ void test_hal_intrin_float64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
-        //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
         .test_rotate<2>().test_rotate<3>()
@@ -2493,8 +2146,6 @@ void test_hal_intrin_float16()
     std::cout << "SKIP: CV_FP16 is not available" << std::endl;
 #endif
 }
-
-#endif
 
 
 /*#if defined(CV_CPU_DISPATCH_MODE_FP16) && CV_CPU_DISPATCH_MODE == FP16
