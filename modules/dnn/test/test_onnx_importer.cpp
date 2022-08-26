@@ -2098,6 +2098,11 @@ TEST_P(Test_ONNX_nets, MobileNet_v2)
     testONNXModels("mobilenetv2", pb, default_l1, default_lInf, true);
 }
 
+TEST_P(Test_ONNX_nets, MobileNet_v2_FP16)
+{
+    testONNXModels("mobilenetv2_fp16", npy, default_l1, default_lInf, true);
+}
+
 TEST_P(Test_ONNX_nets, LResNet100E_IR)
 {
     applyTestTag(
