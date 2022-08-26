@@ -416,6 +416,12 @@ The homography matrices are similar. If we compare the image 1 warped using both
 
 Visually, it is hard to distinguish a difference between the result image from the homography computed from the camera displacement and the one estimated with @ref cv::findHomography function.
 
+#### Exercise
+
+This demo shows you how to compute the homography transformation from two camera poses. Try to perform the same operations, but by computing N inter homography this time. Instead of computing one homography to directly warp the source image to the desired camera viewpoint, perform N warping operations to the see the different transformations operating.
+
+You should get something similar to this video:
+
 ### Demo 4: Decompose the homography matrix {#tutorial_homography_Demo4}
 
 OpenCV 3 contains the function @ref cv::decomposeHomographyMat which allows to decompose the homography matrix to a set of rotations, translations and plane normals.
