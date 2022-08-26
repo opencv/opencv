@@ -9,67 +9,67 @@ namespace cv {
 namespace opt_AVX2
 {
 #if CV_TRY_AVX2
-void convBlock_AVX2(int k, const float *a, const float *b,
-                float *c, int ldc, const float *bias,
-                float minval, float maxval, bool ifActiv)
+void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
 {
-#if FAST_CONV_MR == 4 && FAST_CONV_NR == 24
-    __m256 vminval = _mm256_set1_ps(minval), vmaxval = _mm256_set1_ps(maxval);
-    __m256 c0 = _mm256_set1_ps(bias[0]), c1 = c0, c2 = c0;
-    __m256 c3 = _mm256_set1_ps(bias[1]), c4 = c3, c5 = c3;
-    __m256 c6 = _mm256_set1_ps(bias[2]), c7 = c6, c8 = c6;
-    __m256 c9 = _mm256_set1_ps(bias[3]), c10 = c9, c11 = c9;
+#if CONV_MR == 4 && CONV_NR == 24
+    __m256 c00 = _mm256_set1_ps(0.f), c01 = c00, c02 = c00;
+    __m256 c10 = c00, c11 = c00, c12 = c00;
+    __m256 c20 = c00, c21 = c00, c22 = c00;
+    __m256 c30 = c00, c31 = c00, c32 = c00;
 
     __m256 a0 = _mm256_setzero_ps(), a1 = _mm256_setzero_ps();
     __m256 b0 = _mm256_setzero_ps(), b1 = _mm256_setzero_ps(), b2 = _mm256_setzero_ps();
 
-    for (int p = 0; p < k; p++, a += FAST_CONV_MR, b += FAST_CONV_NR)
+    for (int p = 0; p < np; p++, a += CONV_MR, b += CONV_NR)
     {
         a0 = _mm256_set1_ps(a[0]), a1 = _mm256_set1_ps(a[1]);
         b0 = _mm256_load_ps(b), b1 = _mm256_load_ps(b + 8), b2 = _mm256_load_ps(b + 16);
 
-        c0 = _mm256_fmadd_ps(b0, a0, c0);
-        c1 = _mm256_fmadd_ps(b1, a0, c1);
-        c2 = _mm256_fmadd_ps(b2, a0, c2);
+        c00 = _mm256_fmadd_ps(b0, a0, c00);
+        c01 = _mm256_fmadd_ps(b1, a0, c01);
+        c02 = _mm256_fmadd_ps(b2, a0, c02);
 
-        c3 = _mm256_fmadd_ps(b0, a1, c3);
-        a0 = _mm256_set1_ps(a[2]);
-        c4 = _mm256_fmadd_ps(b1, a1, c4);
-        c5 = _mm256_fmadd_ps(b2, a1, c5);
+        c10 = _mm256_fmadd_ps(b0, a1, c10);
+        c11 = _mm256_fmadd_ps(b1, a1, c11);
+        c12 = _mm256_fmadd_ps(b2, a1, c12);
 
-        c6 = _mm256_fmadd_ps(b0, a0, c6);
-        a1 = _mm256_set1_ps(a[3]);
-        c7 = _mm256_fmadd_ps(b1, a0, c7);
-        c8 = _mm256_fmadd_ps(b2, a0, c8);
+        a0 = _mm256_set1_ps(a[2]), a1 = _mm256_set1_ps(a[3]);
 
-        c9 = _mm256_fmadd_ps(b0, a1, c9);
-        c10 = _mm256_fmadd_ps(b1, a1, c10);
-        c11 = _mm256_fmadd_ps(b2, a1, c11);
+        c20 = _mm256_fmadd_ps(b0, a0, c20);
+        c21 = _mm256_fmadd_ps(b1, a0, c21);
+        c22 = _mm256_fmadd_ps(b2, a0, c22);
+
+        c30 = _mm256_fmadd_ps(b0, a1, c30);
+        c31 = _mm256_fmadd_ps(b1, a1, c31);
+        c32 = _mm256_fmadd_ps(b2, a1, c32);
     }
 
-    if (ifActiv)
+    if (!init_c)
     {
-        c0 = _mm256_min_ps(_mm256_max_ps(c0, vminval), vmaxval);
-        c1 = _mm256_min_ps(_mm256_max_ps(c1, vminval), vmaxval);
-        c2 = _mm256_min_ps(_mm256_max_ps(c2, vminval), vmaxval);
-        c3 = _mm256_min_ps(_mm256_max_ps(c3, vminval), vmaxval);
-        c4 = _mm256_min_ps(_mm256_max_ps(c4, vminval), vmaxval);
-        c5 = _mm256_min_ps(_mm256_max_ps(c5, vminval), vmaxval);
-        c6 = _mm256_min_ps(_mm256_max_ps(c6, vminval), vmaxval);
-        c7 = _mm256_min_ps(_mm256_max_ps(c7, vminval), vmaxval);
-        c8 = _mm256_min_ps(_mm256_max_ps(c8, vminval), vmaxval);
-        c9 = _mm256_min_ps(_mm256_max_ps(c9, vminval), vmaxval);
-        c10 = _mm256_min_ps(_mm256_max_ps(c10, vminval), vmaxval);
-        c11 = _mm256_min_ps(_mm256_max_ps(c11, vminval), vmaxval);
+        c00 = _mm256_add_ps(c00, _mm256_load_ps(c));
+        c01 = _mm256_add_ps(c01, _mm256_load_ps(c + 8));
+        c02 = _mm256_add_ps(c02, _mm256_load_ps(c + 16));
+
+        c10 = _mm256_add_ps(c10, _mm256_load_ps(c + ldc));
+        c11 = _mm256_add_ps(c11, _mm256_load_ps(c + ldc + 8));
+        c12 = _mm256_add_ps(c12, _mm256_load_ps(c + ldc + 16));
+
+        c20 = _mm256_add_ps(c20, _mm256_load_ps(c + ldc*2));
+        c21 = _mm256_add_ps(c21, _mm256_load_ps(c + ldc*2 + 8));
+        c22 = _mm256_add_ps(c22, _mm256_load_ps(c + ldc*2 + 16));
+
+        c30 = _mm256_add_ps(c30, _mm256_load_ps(c + ldc*3));
+        c31 = _mm256_add_ps(c31, _mm256_load_ps(c + ldc*3 + 8));
+        c32 = _mm256_add_ps(c32, _mm256_load_ps(c + ldc*3 + 16));
     }
 
-    _mm256_storeu_ps(c, c0); _mm256_storeu_ps(c+8, c1); _mm256_storeu_ps(c+16, c2);
-    _mm256_storeu_ps(c + ldc, c3); _mm256_storeu_ps(c + ldc + 8, c4); _mm256_storeu_ps(c + ldc + 16, c5);
-    _mm256_storeu_ps(c + ldc*2, c6); _mm256_storeu_ps(c + ldc*2 + 8, c7); _mm256_storeu_ps(c + ldc*2 + 16, c8);
-    _mm256_storeu_ps(c + ldc*3, c9); _mm256_storeu_ps(c + ldc*3 + 8, c10); _mm256_storeu_ps(c + ldc*3 + 16, c11);
+    _mm256_storeu_ps(c, c00), _mm256_storeu_ps(c+8, c01), _mm256_storeu_ps(c+16, c02);
+    _mm256_storeu_ps(c + ldc, c10), _mm256_storeu_ps(c + ldc + 8, c11), _mm256_storeu_ps(c + ldc + 16, c12);
+    _mm256_storeu_ps(c + ldc*2, c20), _mm256_storeu_ps(c + ldc*2 + 8, c21), _mm256_storeu_ps(c + ldc*2 + 16, c22);
+    _mm256_storeu_ps(c + ldc*3, c30), _mm256_storeu_ps(c + ldc*3 + 8, c31), _mm256_storeu_ps(c + ldc*3 + 16, c32);
     _mm256_zeroupper();
 #else
-#error "unsupported FAST_CONV_MR and/or FAST_CONV_NR in convBlock_AVX2."
+#error "unsupported CONV_MR and/or CONV_NR in convBlock_AVX2."
 #endif
 }
 
@@ -78,7 +78,6 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                     int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                     int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
-    const int VECSZ = 8;
     __m256 vminval = _mm256_set1_ps(minval);
     __m256 vmaxval = _mm256_set1_ps(maxval);
 
@@ -175,7 +174,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                 {
                     if (dy0 == 3)
                     {
-                        for (; x0 <= x1 - VECSZ; x0 += VECSZ)
+                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -251,7 +250,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                     }
                     else
                     {
-                        for (; x0 <= x1 - VECSZ; x0 += VECSZ)
+                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -277,7 +276,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                 }
                 else
                 {
-                    for (; x0 <= x1 - VECSZ; x0 += VECSZ)
+                    for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
                     {
                         int xi_ = x0 * stride_x - pad_left, k = 0;
                         const float *inptr_xi = inptr + Wi * yi_ + xi_;

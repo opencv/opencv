@@ -22,7 +22,7 @@ Ptr<FastConv2d> initFastConv2d(
         int dilation_x, int dilation_y,
         const std::vector<size_t>& pads_begin,
         const std::vector<size_t>& pads_end,
-        float* srcWeights,
+        InputArray _weightsMat,
         float* srcBias)
 {
     Ptr<FastConv2d> conv = makePtr<FastConv2d>();
@@ -43,33 +43,27 @@ Ptr<FastConv2d> initFastConv2d(
     conv->pad_bottom = pads_end[0];
     conv->pad_left = pads_begin[1];
     conv->pad_right = pads_end[1];
-
-    // store bias; append some zero's to make sure that
-    // we can always read FAST_CONV_MR elements starting from any valid index
-    {
-        int k = 0, nbias = K + FAST_CONV_MR-1;
-        conv->biasBuf.reserve(nbias);
-        float* biasBufPtr = conv->biasBuf.data();
-        for(; k < K; k++)
-            biasBufPtr[k] = srcBias ? srcBias[k] : 0.f;
-        for(; k < nbias; k++)
-            biasBufPtr[k] = 0.f;
-    }
+    Mat weightsMat = _weightsMat.getMat();
+    auto wShape = shape(weightsMat);
+    const size_t wstep = weightsMat.step1();
 
 #if CV_NEON // For now, winograd is ARM platform only.
-    if (ngroups == 1 && Hk ==3 && Wk == 3 && stride_x == 1 && stride_y == 1 && dilation_x == 1 && dilation_y ==1
-        && K >= 16 && C >= 16 )
+    if (ngroups == 1 && Hk ==3 && Wk == 3 && stride_x == 1 && stride_y == 1 &&
+        dilation_x == 1 && dilation_y ==1 && K >= 16 && C >= 16)
         conv->ifWinograd63 = true;
 #else
     conv->ifWinograd63 = false;
 #endif
 
+    float *srcWeights = (float *)weightsMat.data;
     if (ngroups > 1 && ngroups == K && ngroups == C)
     {
         // for depth-wise convolutions on NCHW data we just preserve the weights in KCHW layout,
         // but add some padding to make the weights array layout more SIMD-friendly
         int ksize = Hk*Wk;
-        int padded_ksize = ((ksize + FAST_VEC_NLANES-1)/FAST_VEC_NLANES)*FAST_VEC_NLANES;  // this code aims to let memory fit with vector size.
+
+        // this code aims to let memory fit with vector size.
+        int padded_ksize = ((ksize + FAST_VEC_NLANES-1) / FAST_VEC_NLANES) * FAST_VEC_NLANES;
         int nweights = C*padded_ksize;
         conv->weightsBuf.reserve(nweights);
         float* weightsBufPtr = conv->weightsBuf.data();
@@ -77,340 +71,80 @@ Ptr<FastConv2d> initFastConv2d(
         for(int c = 0; c < C; c++)
         {
             for (int k = 0; k < ksize; k++)
-                weightsBufPtr[c*padded_ksize + k] = srcWeights[c*ksize + k];
+                weightsBufPtr[c*padded_ksize + k] = srcWeights[c*wstep + k];
         }
     }
     else
     {
         // The weights are packed as
-        // ngroups x (ceil((K/ngroups)/FAST_CONV_MR)*FAST_CONV_MR) x (Cg*Hk*Wk) x FAST_CONV_MR tensor
+        // ngroups x (ceil((K/ngroups)/CONV_MR)*CONV_MR) x (Cg*Hk*Wk) x CONV_MR tensor
         int Kg = K/ngroups, Cg = max(C/ngroups, 1);
-        int Kg_aligned = ((Kg + FAST_CONV_MR - 1)/FAST_CONV_MR)*FAST_CONV_MR;
-        size_t nweights = ngroups*Kg_aligned*Cg*Hk*Wk;
+        int numStripsMR = (Kg + CONV_MR - 1) / CONV_MR;
+        int Kg_aligned = numStripsMR * CONV_MR;
+        int HkWkCg = Hk*Wk*Cg;
+        size_t nweights = ngroups*Kg_aligned*HkWkCg;
         conv->weightsBuf.reserve(nweights);
         float* weightsBufPtr = conv->weightsBuf.data();
         memset(weightsBufPtr, 0, nweights*sizeof(weightsBufPtr[0]));
-        float* packed_wptr = weightsBufPtr;
 
-        // pack the weight.
-        for(int g = 0; g < ngroups; g++)
+        // Pack the weight.
+        parallel_for_(Range(0, ngroups * numStripsMR), [&](const Range& r0){
+        for (int gsi = r0.start; gsi < r0.end; gsi++)
         {
-            for(int k0 = 0; k0 < Kg_aligned; k0 += FAST_CONV_MR)
-            {
-                int dk = Kg - k0 < FAST_CONV_MR ? Kg - k0 : FAST_CONV_MR;
-                for(int c = 0; c < Cg; c++)
+            int g = gsi / numStripsMR;
+            int si = gsi - g * numStripsMR;
+
+            int startK = si * CONV_MR;
+            CV_Assert(startK < Kg_aligned);
+
+            float* packed_wptr = weightsBufPtr + HkWkCg * (startK + g * Kg_aligned);
+            int dk = Kg - startK < CONV_MR ? Kg - startK : CONV_MR; // check if we need zero padding.
+
+            int k_idx = g*Kg + startK;
+            for(int yx = 0; yx < Hk*Wk; yx++) {
+                for(int c = 0; c < Cg; c++, packed_wptr += CONV_MR)
                 {
-                    for(int yx = 0; yx < Hk*Wk; yx++, packed_wptr += FAST_CONV_MR)
-                    {
-                        const float* wptr = srcWeights + ((g*Kg + k0)*Cg + c)*Hk*Wk + yx;
-                        int k = 0;
-                        for(; k < dk; k++, wptr += Cg*Hk*Wk)
-                            packed_wptr[k] = *wptr;
-                        for(; k < FAST_CONV_MR; k++)
-                            packed_wptr[k] = 0.f;
-                    }
+                    const float* wptr = srcWeights + wstep * k_idx + c*Hk*Wk + yx;
+                    int k = 0;
+                    for(; k < dk; k++, wptr += wstep)
+                        packed_wptr[k] = *wptr;
+                    for(; k < CONV_MR; k++)
+                        packed_wptr[k] = 0.f;
                 }
             }
-        }
+        }});
 
         // Prepare Weight for Winograd F(6x6, 3x3)
         if (conv->ifWinograd63)
         {
-            initWinograd63(conv, srcWeights, K, C);
+            initWinograd63(conv, weightsMat, K, C);
         }
+    }
+
+    // store bias; append some zero's to make sure that
+    // we can always read MR elements starting from any valid index
+    {
+        int k = 0, nbias = K + CONV_MR - 1;
+        conv->biasBuf.reserve(nbias);
+        float* biasBufPtr = conv->biasBuf.data();
+        for(; k < K; k++)
+            biasBufPtr[k] = srcBias ? srcBias[k] : 0.f;
+        for(; k < nbias; k++)
+            biasBufPtr[k] = 0.f;
     }
     return conv;
 }
 
-static void packInput(float* inpbuf, const float* inptr, int* yxtab, int ksize, int Cg, int Hi, int Wi, int W0,
-                         int pad_top, int pad_left, int stride_x, int stride_y, int yx0, int slice_len,
-                         bool fast_1x1, bool partial0, bool s1d1p0, bool s1d1)
-{
-    const size_t inp_planesize = (size_t)Hi*Wi;
-
-    if (fast_1x1)
-    {
-        /*
-           super-fast branch for 1x1 convolutions with sy=sx=1.
-           in this case each feature plane can be safely treated
-           as 1D array and we just extract next portion
-           of FAST_CONV_NR elements from each feature plane and
-           put it together.
-        */
-        inptr += yx0;
-        if (!partial0)
-        {
-            // Make special branch where memcpy() is called with a constant buffer size.
-            // Compilers will likely unroll this loop properly.
-            for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += FAST_CONV_NR)
-                memcpy(inpbuf, inptr, FAST_CONV_NR * sizeof(inpbuf[0]));
-        }
-        else
-        {
-            for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += FAST_CONV_NR)
-            {
-                memcpy(inpbuf, inptr, slice_len * sizeof(inpbuf[0]));
-                memset(inpbuf + slice_len, 0, (FAST_CONV_NR - slice_len) * sizeof(inpbuf[0]));
-            }
-        }
-    }
-    else if (s1d1p0)
-    {
-        /*
-         slower, but still fast branch for sy=sx=1, dy=dx=1 and without padding,
-         in this case we copy data from input tensors by chunks.
-         */
-        for (int c = 0; c < Cg; c++)
-        {
-            float *inpbuf_c = inpbuf + c * (FAST_CONV_NR * ksize);
-            const float *inptr_c = inptr + c * inp_planesize;
-
-            for (int k = 0; k < ksize; k++)
-            {
-                int y0 = yx0 / W0, x0 = yx0 % W0;
-                int yi = y0 + yxtab[k * 2], xi = x0 + yxtab[k * 2 + 1];
-                float *inpbuf_k = inpbuf_c + k * FAST_CONV_NR;
-                int xi_0 = yxtab[k * 2 + 1];
-
-                int i = 0;
-                for (; i < slice_len;)
-                {
-                    const float *inptr_k = inptr_c + yi * Wi + xi;
-                    int copy_len = std::min(slice_len - i, W0 - x0);
-                    int di_z = (slice_len == i + copy_len) ? FAST_CONV_NR - slice_len : 0;
-
-                    memcpy(inpbuf_k + i,
-                           inptr_k,
-                           copy_len * sizeof(inpbuf_k[0]));
-
-                    memset(inpbuf_k + i + copy_len,
-                           0, di_z * sizeof(inpbuf_k[0]));
-
-                    i += copy_len;
-                    x0 = 0;
-                    xi = xi_0;
-                    yi++;
-                }
-            }
-        }
-    }
-    else if (s1d1)
-    {
-        /*
-         slower, but still fast branch for sy=sx=1, dy=dx=1.
-         in this case we copy data from input tensors by chunks and
-         interleave the data in inpbuf with 0's
-         (that correspond to the padding elements) when necessary
-         */
-        int y0 = yx0 / W0, x0 = yx0 % W0;
-        for (int c = 0; c < Cg; c++)
-        {
-            float *inpbuf_c = inpbuf + c * (FAST_CONV_NR * ksize);
-            const float *inptr_c = inptr + c * inp_planesize;
-
-            for (int k = 0; k < ksize; k++)
-            {
-                int x0_tmp = x0;
-
-                int xi_0 = yxtab[k * 2 + 1] - pad_left;
-
-                int yi = y0 + yxtab[k * 2] - pad_top, xi = x0_tmp + xi_0;
-                float *inpbuf_k = inpbuf_c + k * FAST_CONV_NR;
-
-                int i = 0;
-                for (; i < slice_len;) {
-                    int copyLen = std::min(slice_len - i, W0 - x0_tmp);
-
-                    int di_z = (i + copyLen == slice_len) ? FAST_CONV_NR - slice_len
-                                                          : 0; // The final padding.
-                    // pad_top or pad bottom
-                    if (yi < 0 || yi > Hi - 1)
-                    {
-                        memset(inpbuf_k + i,
-                               0, (copyLen + di_z) * sizeof(inpbuf_k[0]));
-                        i += copyLen + di_z;
-                    }
-                    else
-                    {
-                        int x_pad_left = 0, x_pad_right = 0;
-
-                        // pad_left
-                        if (xi < 0)
-                        {
-                            x_pad_left = std::min(-xi, copyLen);
-                            xi = 0;
-                            copyLen -= x_pad_left;
-                        }
-
-                        memset(inpbuf_k + i,
-                               0, x_pad_left * sizeof(inpbuf_k[0]));
-                        i += x_pad_left;
-
-                        // pad right
-                        if (xi + copyLen > Wi)
-                        {
-                            if (xi > Wi)
-                            {
-                                x_pad_right = copyLen;
-                                copyLen = 0;
-                            }
-                            else
-                            {
-                                x_pad_right = std::min(xi + copyLen - Wi, copyLen);
-                                copyLen -= x_pad_right;
-                            }
-                        }
-
-                        CV_Assert(copyLen >= 0);
-
-                        const float *inptr_k = inptr_c + yi * Wi + xi;
-                        memcpy(inpbuf_k + i,
-                               inptr_k,
-                               copyLen * sizeof(inpbuf_k[0]));
-
-                        i += copyLen;
-
-                        // pad_right and the final padding.
-                        memset(inpbuf_k + i,
-                               0, (di_z + x_pad_right) * sizeof(inpbuf_k[0]));
-                        i += x_pad_right + di_z;
-                    }
-
-                    x0_tmp = 0;
-                    xi = xi_0;
-                    yi++;
-                }
-            }
-        }
-    }
-    else
-    {
-        int y0_ = yx0 / W0, x0_ = yx0 - y0_ * W0;
-        for (int k = 0; k < ksize; k++)
-        {
-            int dy = yxtab[k * 2], dx = yxtab[k * 2 + 1];
-            int i = 0, y0 = y0_, x0 = x0_;
-            for (; i < FAST_CONV_NR;)
-            {
-                float *inpbuf_ki = inpbuf + k * FAST_CONV_NR + i;
-                int yi = y0 * stride_y + dy - pad_top;
-                int xi = x0 * stride_x + dx - pad_left;
-
-                if ((unsigned) yi < (unsigned) Hi &&
-                    (unsigned) xi < (unsigned) Wi)
-                {
-                    const float *inptr_ki = inptr + yi * Wi + xi;
-                    if (i + 4 <= FAST_CONV_NR && x0 + 4 <= W0 && xi + stride_x * 4 <= Wi)
-                    {
-                        if (stride_x == 2) {
-                            for (int c = 0; c < Cg; c++, inpbuf_ki += FAST_CONV_NR *
-                                                                      ksize, inptr_ki += inp_planesize)
-                            {
-                                float t0 = inptr_ki[0], t1 = inptr_ki[2];
-                                float t2 = inptr_ki[4], t3 = inptr_ki[6];
-                                inpbuf_ki[0] = t0;
-                                inpbuf_ki[1] = t1;
-                                inpbuf_ki[2] = t2;
-                                inpbuf_ki[3] = t3;
-                            }
-                        }
-                        else
-                        {
-                            for (int c = 0; c < Cg; c++, inpbuf_ki += FAST_CONV_NR *
-                                                                      ksize, inptr_ki += inp_planesize)
-                            {
-                                float t0 = inptr_ki[0], t1 = inptr_ki[stride_x];
-                                float t2 = inptr_ki[stride_x * 2], t3 = inptr_ki[stride_x * 3];
-                                inpbuf_ki[0] = t0;
-                                inpbuf_ki[1] = t1;
-                                inpbuf_ki[2] = t2;
-                                inpbuf_ki[3] = t3;
-                            }
-                        }
-                        i += 4;
-                        x0 += 4;
-                    }
-                    else
-                    {
-                        for (int c = 0; c < Cg; c++, inpbuf_ki += FAST_CONV_NR *
-                                                                  ksize, inptr_ki += inp_planesize)
-                            *inpbuf_ki = *inptr_ki;
-                        i++;
-                        x0++;
-                    }
-                }
-                else
-                {
-                    for (int c = 0; c < Cg; c++, inpbuf_ki += FAST_CONV_NR * ksize)
-                        inpbuf_ki[0] = 0.f;
-                    i++;
-                    x0++;
-                }
-                int mask = x0 >= W0;
-                y0 += mask;
-                x0 &= mask - 1;
-            }
-        }
-    }
-}
-
-static void matMulCompute(float* outptr0, float* inpbuf_task, float* cbuf, const Ptr<FastConv2d>& conv, int HkWkCg,
-                          int k0, int k1, int yx0, int yx1, size_t out_planesize, int g, int Kg, int Kg_aligned,
-                          bool partial0, ActivationLayer*& activ, float minval, float maxval, bool ifMinMaxAct)
-{
-    int outstep0 = out_planesize;
-
-    for (int k = k0; k < k1; k += FAST_CONV_MR, outptr0 += outstep0 * FAST_CONV_MR)
-    {
-        int dk = Kg - k < FAST_CONV_MR ? Kg - k : FAST_CONV_MR;
-        bool partial = partial0 || dk < FAST_CONV_MR;
-        float *outptr = outptr0;
-
-        int outstep = outstep0;
-        if (partial)
-        {
-            outptr = cbuf;
-            outstep = FAST_CONV_NR;
-        }
-
-
-#if CV_TRY_AVX2
-        if (conv->useAVX2)
-            opt_AVX2::convBlock_AVX2( HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
-                                  inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
-                                  minval, maxval, ifMinMaxAct);
-        else
-#endif
-#if CV_TRY_NEON
-        if (conv->useNEON)
-            opt_NEON::convBlock_NEON(HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
-                                 inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
-                                 minval, maxval, ifMinMaxAct);
-        else
-#endif
-            convBlock(HkWkCg, conv->weightsBuf.data() + (g * Kg_aligned + k) * HkWkCg,
-                            inpbuf_task, outptr, outstep, conv->biasBuf.data() + Kg * g + k,
-                            minval, maxval, ifMinMaxAct);
-
-        // activation
-        if (activ)
-            activ->forwardSlice(outptr, outptr, yx1 - yx0, outstep, Kg * g + k,
-                                Kg * g + k + dk);
-
-        if (partial)
-        {
-            for (int i = 0; i < dk; i++)
-                memcpy(outptr0 + i * outstep0, cbuf + i * FAST_CONV_NR,
-                       (yx1 - yx0) * sizeof(cbuf[0]));
-        }
-    }
-}
-
-void runFastConv2d(InputArray _input, OutputArray _output,
-                   const Ptr<FastConv2d>& conv, int ntasks, const Ptr<ActivationLayer>& actLayer)
+void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,
+                   const Ptr<ActivationLayer>& actLayer, bool fusedAdd)
 {
     Mat input = _input.getMat();
     Mat output = _output.getMat();
+
+    Mat fusedAddMat;
+    if (fusedAdd)
+        fusedAddMat = _output.getMat();
+
     MatShape inputShape = shape(input);
     MatShape outputShape = shape(output);
     CV_Assert(inputShape.size() == 4 && outputShape.size() == 4);
@@ -452,93 +186,69 @@ void runFastConv2d(InputArray _input, OutputArray _output,
 
     if (conv->ngroups  > 1 && conv->ngroups == conv->K && conv->ngroups == conv->C)
     {
+        CV_Assert(fusedAddMat.empty()); // Depthwise-Convolution layer should not be followed by Add layer.
         return runDepthwise(input, output, conv, minval, maxval, activ, ifMinMaxAct);
     }
 
 #if CV_NEON
-    if ( conv->ifWinograd63
+    if (conv->ifWinograd63
          && inputShape[2] > 12 && inputShape[3] > 12
-         && inputShape[2] < 120 && inputShape[3] < 120 )
+         && inputShape[2] < 120 && inputShape[3] < 120
+         )
     {
-        // In general, for winograd branch, more cores will give better performance.
-        int maxNumThread = std::max(getNumThreads(), 1);
-        if (runWinograd63(input, output, conv, maxNumThread, minval, maxval, activ, ifMinMaxAct))
+        if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
             return;
     }
 #endif
 
-    float* inp = input.ptr<float>();
-    float* out = output.ptr<float>();
-
     int N = inputShape[0], C = inputShape[1], Hi = inputShape[2], Wi = inputShape[3];  // [N, C, H, W]
     int K = conv->K, Hk = conv->Hk, Wk = conv->Wk;
-    int H0 = outputShape[2], W0 = outputShape[3], ngroups = conv->ngroups;         // ngroups
+    int H0 = outputShape[2], W0 = outputShape[3], ngroups = conv->ngroups;
     int Cg = C/ngroups, Kg = K/ngroups;
-    int Kg_nblocks = (Kg + FAST_CONV_MR-1)/FAST_CONV_MR, Kg_aligned = Kg_nblocks*FAST_CONV_MR; // align to MR
 
     const size_t inp_planesize = (size_t)Hi*Wi;
     const size_t out_planesize = (size_t)H0*W0;
 
-    int pad_top = conv->pad_top, pad_bottom = conv->pad_bottom;
+    int pad_top = conv->pad_top;
     int pad_left = conv->pad_left;
-    int pad_right = conv->pad_right;
 
     int stride_y = conv->stride_y, stride_x = conv->stride_x;
     int dilation_y = conv->dilation_y, dilation_x = conv->dilation_x;
 
     int ksize = Hk * Wk;
-    bool s1d1 = stride_x == 1 && stride_y == 1 && dilation_x == 1 && dilation_y == 1;
-    bool s1d1p0 = s1d1 && pad_top == 0 && pad_left ==0 && pad_bottom == 0 && pad_right == 0;
     bool fast_1x1 = stride_x == 1 && stride_y == 1 && ksize == 1;
     int HkWkCg = Hk*Wk*Cg;
 
-    enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
-    size_t taskbufsize = FAST_CONV_NR*HkWkCg; // input buffer
-    size_t taskbufsizeOutput = FAST_CONV_NR * FAST_CONV_MR;
-    size_t inputbufsize = 0;
-    size_t outbufsize = ntasks * taskbufsizeOutput;
+    enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F }; // Memory alignment.
+    int MAX_STRIPES = 2; // (56 + CONV_NR - 1)/CONV_NR;
 
-    int stripes_per_sample = (out_planesize + FAST_CONV_NR - 1)/FAST_CONV_NR; // align to NR
-    size_t hw_task = stripes_per_sample;
-    size_t hw_aligned = stripes_per_sample * FAST_CONV_NR;
+    // Friendly to L1 cache
+    const int K_BLOCK_SIZE = 32;
+    const int C_BLOCK_SIZE = 256;
 
-    bool separatedLoop = false;
+    int Kg_nblocks = (Kg + CONV_MR-1)/CONV_MR, Kg_aligned = Kg_nblocks * CONV_MR;
 
-    if (stripes_per_sample < 4 * ntasks)
+    int stripes_per_sample = (out_planesize + CONV_NR - 1) / CONV_NR;
+
+    if (stripes_per_sample < ntasks * 4)
     {
-        // If stripes_per_sample is small, we parallelize on K (output channel).
+        MAX_STRIPES = 1;
         stripes_per_sample = 1;
-
-        // Separated Parallelloop could save much time in packing input data. But it may cost more memory, we use it when batch size is 1.
-        if (N == 1)
-        {
-            separatedLoop = true;
-            inputbufsize = ngroups * hw_aligned * HkWkCg;
-        }
-
-        if (!separatedLoop)
-        {
-            inputbufsize = taskbufsize * ntasks;
-        }
     }
     else
-    {
-        // If stripes_per_sample is big, we parallelize on H0*W0.
         Kg_nblocks = 1;
-        inputbufsize = taskbufsize * ntasks;
-    }
 
     int Kstripes = Kg_nblocks*stripes_per_sample;
     int nsubtasks = N*ngroups*Kstripes;
 
-    AutoBuffer<float> inpbuf_all_, outputbuf_;
-    inputbufsize = alignSize(inputbufsize, VEC_ALIGN);
-    inpbuf_all_.allocate(inputbufsize + VEC_ALIGN);
-    float* inpbuf_all = alignPtr(inpbuf_all_.data(), (int)(VEC_ALIGN*sizeof(float)));
+    size_t stripesize = CONV_NR * ksize * Cg;
+    size_t taskbufsize = (stripesize + CONV_NR * K_BLOCK_SIZE) * MAX_STRIPES;
+    size_t totalbufsize = taskbufsize * ntasks;
 
-    outbufsize = alignSize(outbufsize, VEC_ALIGN);
-    outputbuf_.allocate(outbufsize + VEC_ALIGN);
-    float* output_buf = alignPtr(outputbuf_.data(), (int)(VEC_ALIGN*sizeof(float)));
+    AutoBuffer<float> inpbuf_all_;
+    totalbufsize = alignSize(totalbufsize, VEC_ALIGN);
+    inpbuf_all_.allocate(totalbufsize + VEC_ALIGN);
+    float* inpbuf_all = alignPtr(inpbuf_all_.data(), (int)(VEC_ALIGN*sizeof(inpbuf_all_[0])));
 
     std::vector<int> ofstab_(Hk*Wk*3, 0);
     int* ofstab = ofstab_.data();
@@ -554,141 +264,306 @@ void runFastConv2d(InputArray _input, OutputArray _output,
             ofstab[k] = dy*Wi + dx;
         }
 
-    if (ksize == 1)
-    {
-        CV_Assert(pad_left == 0 && pad_right == 0 && pad_top == 0 && pad_bottom == 0);
-        CV_Assert(stride_x != 1 || stride_y != 1 || (H0 == Hi && W0 == Wi));
-    }
+    float* inp = input.ptr<float>();
+    float* out = output.ptr<float>();
+    float* fusedAddPtr0 = fusedAddMat.empty() ? 0 : fusedAddMat.ptr<float>();
 
-    if (separatedLoop)
+    parallel_for_(Range(0, ntasks), [&](const Range& r0) {
+    for (int task_id = r0.start; task_id < r0.end; task_id++)
     {
-        // For now this branch only handles batch size = 1. Maybe we could support batch size < 10 in the future.
-        // Pack Input data
-        parallel_for_(Range(0, ngroups * hw_task), [&](const Range& r0)
+        float* inpbuf_task = &inpbuf_all[taskbufsize * task_id];
+        float* cbuf_task = inpbuf_task + stripesize * MAX_STRIPES;
+
+        int ngs0 = (int)((size_t)nsubtasks * task_id / ntasks);
+        int ngs1 = (int)((size_t)nsubtasks * (task_id+1) / ntasks);
+        for (int subtask = ngs0; subtask < ngs1; )
         {
-            for (int nhwi = r0.start; nhwi < r0.end; nhwi++)
+            int ng = subtask / Kstripes;
+            int kyx0 = subtask - ng * Kstripes;
+            int kyx1 = kyx0 + (ngs1 - subtask);
+            int n = ng / ngroups, g = ng % ngroups; // ng - n * ngroups;
+            size_t inp_plane_ofs = (size_t)(n * ngroups + g) * Cg * inp_planesize;
+            kyx1 = kyx1 <= Kstripes ? kyx1 : Kstripes;
+            subtask += kyx1 - kyx0;
+            int k0, k1;
+            int yx0, yx_limit, yx_block_limit = 0;
+
+            if (stripes_per_sample == 1)
             {
-                int g = nhwi/hw_task;
-                int hw_i = nhwi % hw_task;
-                int hw0 = hw_i * FAST_CONV_NR;
-                float* inpbuf = inpbuf_all + g * hw_aligned * HkWkCg + hw0 * HkWkCg;
-                const float* inptr = inp + g * Cg * inp_planesize;
-                bool partial0 = hw0 + FAST_CONV_NR > out_planesize? true: false;
-                int slice_len = FAST_CONV_NR;
-
-                if (partial0)
-                    slice_len = out_planesize - hw0;
-
-                packInput(inpbuf, inptr, yxtab, ksize, Cg, Hi, Wi, W0, pad_top, pad_left, stride_x, stride_y,
-                          hw0, slice_len, fast_1x1, partial0, s1d1p0, s1d1);
+                k0 = kyx0 * CONV_MR;
+                k1 = kyx1 * CONV_MR;
+                k1 = k1 <= Kg ? k1 : Kg;
+                yx0 = 0;
+                yx_limit = out_planesize;
             }
-        });
-
-        // Compute
-        parallel_for_(Range(0, ntasks), [&](const Range& r0)
-        {
-            for (int task_id = r0.start; task_id < r0.end; task_id++)
+            else
             {
-                float *cbuf = output_buf + task_id * taskbufsizeOutput;
-                int ngs0 = (int) ((size_t) nsubtasks * task_id / ntasks);
-                int ngs1 = (int) ((size_t) nsubtasks * (task_id + 1) / ntasks);
-                for (int subtask = ngs0; subtask < ngs1;)
-                {
-                    int ng = subtask / Kstripes;
-                    int kyx0 = subtask - ng * Kstripes;
-                    int kyx1 = kyx0 + (ngs1 - subtask);
-                    int n = ng / ngroups, g = ng - n * ngroups;
-
-                    CV_Assert(n <= 1);
-
-                    kyx1 = kyx1 <= Kstripes ? kyx1 : Kstripes; // Guarantee that maximum kyx1 is Kstripes.
-                    subtask += kyx1 - kyx0;
-
-                    int k0 = kyx0 * FAST_CONV_MR;
-                    int k1 = kyx1 * FAST_CONV_MR;
-                    k1 = k1 <= Kg ? k1 : Kg;
-
-
-                    for (int yx0 = 0; yx0 < out_planesize; yx0 += FAST_CONV_NR)
-                    {
-                        float* inpbuf_task = inpbuf_all + g * hw_aligned * HkWkCg + yx0 * HkWkCg;
-                        int yx1 = yx0 + FAST_CONV_NR;
-                        yx1 = yx1 <= out_planesize ? yx1 : out_planesize;
-                        int slice_len = yx1 - yx0;
-                        bool partial0 = slice_len < FAST_CONV_NR;
-
-                        int outstep0 = out_planesize;
-                        size_t outofs = ((n * ngroups + g) * Kg + k0) * outstep0 + yx0;
-                        float *outptr0 = out + outofs;
-
-                        matMulCompute(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
-                                      Kg, Kg_aligned, partial0, activ, minval, maxval, ifMinMaxAct);
-                    }
-                }
+                k0 = 0;
+                k1 = Kg;
+                yx0 = kyx0 * CONV_NR;
+                yx_limit = kyx1 * CONV_NR;
+                yx_limit = yx_limit < out_planesize ? yx_limit : out_planesize;
             }
-        });
-    }
-    else
-    {
-        parallel_for_(Range(0, ntasks), [&](const Range &r0) {
-            for (int task_id = r0.start; task_id < r0.end; task_id++) {
-                float *inpbuf_task = &inpbuf_all[taskbufsize * task_id];
-                float *cbuf = output_buf + task_id * taskbufsizeOutput;
-                int ngs0 = (int) ((size_t) nsubtasks * task_id / ntasks);
-                int ngs1 = (int) ((size_t) nsubtasks * (task_id + 1) / ntasks);
 
-                for (int subtask = ngs0; subtask < ngs1;)
+            for (; yx0 < yx_limit; yx0 = yx_block_limit)
+            {
+                // step 1. extract part of input tensor and represent it in zigzag form
+                yx_block_limit = yx0 + CONV_NR * MAX_STRIPES;
+                yx_block_limit = yx_block_limit < yx_limit ? yx_block_limit : yx_limit;
+
+                int nstripes = (yx_block_limit - yx0 + CONV_NR - 1) / CONV_NR;
+                int yx0_saved = yx0;
+
+                CV_Assert(nstripes <= MAX_STRIPES);
+
+                for (int stripe = 0; yx0 < yx_block_limit; stripe++, yx0 += CONV_NR)
                 {
-                    int ng = subtask / Kstripes;
-                    int kyx0 = subtask - ng * Kstripes;
-                    int kyx1 = kyx0 + (ngs1 - subtask);
-                    int n = ng / ngroups, g = ng - n * ngroups;
-                    size_t inp_plane_ofs = (size_t) (n * ngroups + g) * Cg * inp_planesize;
-                    kyx1 = kyx1 <= Kstripes ? kyx1 : Kstripes; // Guarantee that maximum kyx1 is Kstripes.
-                    subtask += kyx1 - kyx0;
-                    int k0, k1;
-                    int yx0, yx_limit;
+                    float* inpbuf = inpbuf_task + stripe * stripesize;
+                    float* inptr = inp + inp_plane_ofs;
 
-                    if (stripes_per_sample == 1)
+                    /*
+                        1. pack the data. Copy the HkxWk CONV_NR-wide slices from
+                           each feature plane of the input tensor to the input buffer.
+                    */
+                    if (fast_1x1)
                     {
-                        k0 = kyx0 * FAST_CONV_MR;
-                        k1 = kyx1 * FAST_CONV_MR;
-                        k1 = k1 <= Kg ? k1 : Kg;
-                        yx0 = 0;
-                        yx_limit = out_planesize;
+                        int slice_len = yx_block_limit - yx0;
+                        bool partial = slice_len < CONV_NR;
+                        // Superfast branch for 1x1 convolutions with sy=sx=1.
+                        // in this case each feature plane can be safely treated
+                        // as 1D array, and we just extract next portion
+                        // of CONV_NR elements from each feature plane and
+                        // put it together.
+                        inptr += yx0;
+                        if (!partial)
+                        {
+                            // Make special branch where memcpy() is called with a constant buffer size.
+                            // Compilers will likely unroll this loop properly.
+                            for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR)
+                                memcpy(inpbuf, inptr, CONV_NR*sizeof(inpbuf[0]));
+                        }
+                        else
+                        {
+                            for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR)
+                            {
+                                memcpy(inpbuf, inptr, slice_len * sizeof(inpbuf[0]));
+                                memset(inpbuf + slice_len, 0, (CONV_NR - slice_len) * sizeof(inpbuf[0]));
+                            }
+                        }
                     }
                     else
                     {
-                        k0 = 0;
-                        k1 = Kg;
-                        yx0 = kyx0 * FAST_CONV_NR;
-                        yx_limit = kyx1 * FAST_CONV_NR;
-                        yx_limit = yx_limit < out_planesize ? yx_limit : out_planesize;
+                        int y0_ = yx0 / W0, x0_ = yx0 - y0_ * W0;
+                        for (int k = 0; k < ksize; k++)
+                        {
+                            int dy = yxtab[k * 2], dx = yxtab[k * 2 + 1];
+                            int i = 0, y0 = y0_, x0 = x0_;
+                            for (; i < CONV_NR;)
+                            {
+                                float *inpbuf_ki = inpbuf + k * CONV_NR * Cg + i;
+                                int yi = y0 * stride_y + dy - pad_top;
+                                int xi = x0 * stride_x + dx - pad_left;
+
+                                if ((unsigned) yi < (unsigned) Hi && (unsigned) xi < (unsigned) Wi)
+                                {
+                                    const float *inptr_ki = inptr + yi * Wi + xi;
+                                    if (i + 8 <= CONV_NR && x0 + 8 <= W0 && xi + stride_x * 8 <= Wi)
+                                    {
+                                        if (stride_x == 1)
+                                        {
+                                            for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR, inptr_ki += inp_planesize)
+                                            {
+                                                float t0 = inptr_ki[0], t1 = inptr_ki[1];
+                                                float t2 = inptr_ki[2], t3 = inptr_ki[3];
+                                                float t4 = inptr_ki[4], t5 = inptr_ki[5];
+                                                float t6 = inptr_ki[6], t7 = inptr_ki[7];
+                                                inpbuf_ki[0] = t0; inpbuf_ki[1] = t1;
+                                                inpbuf_ki[2] = t2; inpbuf_ki[3] = t3;
+                                                inpbuf_ki[4] = t4; inpbuf_ki[5] = t5;
+                                                inpbuf_ki[6] = t6; inpbuf_ki[7] = t7;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR, inptr_ki += inp_planesize)
+                                            {
+                                                float t0 = inptr_ki[0], t1 = inptr_ki[stride_x];
+                                                float t2 = inptr_ki[stride_x*2], t3 = inptr_ki[stride_x*3];
+                                                float t4 = inptr_ki[stride_x*4], t5 = inptr_ki[stride_x*5];
+                                                float t6 = inptr_ki[stride_x*6], t7 = inptr_ki[stride_x*7];
+                                                inpbuf_ki[0] = t0; inpbuf_ki[1] = t1;
+                                                inpbuf_ki[2] = t2; inpbuf_ki[3] = t3;
+                                                inpbuf_ki[4] = t4; inpbuf_ki[5] = t5;
+                                                inpbuf_ki[6] = t6; inpbuf_ki[7] = t7;
+                                            }
+                                        }
+                                        i += 8;
+                                        x0 += 8;
+                                    }
+                                    else if (i + 4 <= CONV_NR && x0 + 4 <= W0 && xi + stride_x * 4 <= Wi)
+                                    {
+                                        if (stride_x == 1)
+                                        {
+                                            for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR, inptr_ki += inp_planesize)
+                                            {
+                                                float t0 = inptr_ki[0], t1 = inptr_ki[1];
+                                                float t2 = inptr_ki[2], t3 = inptr_ki[3];
+                                                inpbuf_ki[0] = t0; inpbuf_ki[1] = t1;
+                                                inpbuf_ki[2] = t2; inpbuf_ki[3] = t3;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR, inptr_ki += inp_planesize)
+                                            {
+                                                float t0 = inptr_ki[0], t1 = inptr_ki[stride_x];
+                                                float t2 = inptr_ki[stride_x*2], t3 = inptr_ki[stride_x*3];
+                                                inpbuf_ki[0] = t0; inpbuf_ki[1] = t1;
+                                                inpbuf_ki[2] = t2; inpbuf_ki[3] = t3;
+                                            }
+                                        }
+                                        i += 4;
+                                        x0 += 4;
+                                    }
+                                    else
+                                    {
+                                        for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR, inptr_ki += inp_planesize)
+                                            *inpbuf_ki = *inptr_ki;
+                                        i++;
+                                        x0++;
+                                    }
+                                }
+                                else
+                                {
+                                    for (int c = 0; c < Cg; c++, inpbuf_ki += CONV_NR)
+                                        inpbuf_ki[0] = 0.f;
+                                    i++;
+                                    x0++;
+                                }
+                                int mask = x0 >= W0;
+                                y0 += mask;
+                                x0 &= mask - 1;
+                            }
+                        }
+                    }
+                }
+
+                yx0 = yx0_saved;
+                float* weights = conv->weightsBuf.data() + g * Kg_aligned * HkWkCg;
+                const float* biasptr = conv->biasBuf.data() + Kg * g;
+                int ldc = nstripes * CONV_NR;
+
+                // 2. do convolution, compute Kg x (yx_block_limit - yx0) part of the output tensor
+                for (int k0_block = k0; k0_block < k1; k0_block += K_BLOCK_SIZE)
+                {
+                    int k1_block = k0_block + K_BLOCK_SIZE < k1 ? k0_block + K_BLOCK_SIZE : k1;
+                    for (int c0 = 0; c0 < HkWkCg; c0 += C_BLOCK_SIZE)
+                    {
+                        int c1 = c0 + C_BLOCK_SIZE < HkWkCg ? c0 + C_BLOCK_SIZE : HkWkCg;
+                        for (int stripe = 0; stripe < nstripes; stripe++)
+                        {
+                            float* wptr = weights + k0_block*HkWkCg + c0*CONV_MR;
+                            const float* inptr = inpbuf_task + stripe*stripesize + c0 * CONV_NR;
+                            float* cptr = cbuf_task + stripe * CONV_NR;
+                            for (int k = k0_block; k < k1_block; k += CONV_MR,
+                                    wptr += HkWkCg * CONV_MR, cptr += CONV_MR * ldc)
+                            {
+#if CV_TRY_AVX2
+                                if (conv->useAVX2)
+                                    opt_AVX2::convBlock_AVX2(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0);
+                                else
+#endif
+#if CV_TRY_NEON
+                                if (conv->useNEON)
+                                    opt_NEON::convBlock_NEON(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0);
+                                else
+#endif
+                                    convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0);
+                            }
+                        }
                     }
 
-                    for (; yx0 < yx_limit; yx0 += FAST_CONV_NR)
+                    size_t outofs = ((n*ngroups + g) * Kg + k0_block) * out_planesize + yx0;
+                    int out_width = yx_block_limit - yx0;
+                    const float* cptr = cbuf_task;
+
+                    float* outptr = out + outofs;
+                    const float* pbptr = fusedAddPtr0 ? fusedAddPtr0 + outofs : 0;
+
+                    for (int k = k0_block; k < k1_block; k++,
+                            cptr += ldc, outptr += out_planesize,
+                            pbptr += (pbptr ? out_planesize : 0))
                     {
-                        float *inpbuf = inpbuf_task;
-                        const float *inptr = inp + inp_plane_ofs;
-                        int yx1 = yx0 + FAST_CONV_NR;
-                        yx1 = yx1 <= yx_limit ? yx1 : yx_limit;
-                        int slice_len = yx1 - yx0;
-                        bool partial0 = slice_len < FAST_CONV_NR;
-                        packInput(inpbuf, inptr, yxtab, ksize, Cg, Hi, Wi, W0, pad_top, pad_left, stride_x, stride_y,
-                                     yx0, slice_len, fast_1x1, partial0, s1d1p0, s1d1);
+                        float biasval = biasptr[k];
+                        int j = 0;
+#if CV_SIMD128
+                        v_float32x4 vbias = v_setall_f32(biasval), vmax = v_setall_f32(maxval), vmin = v_setall_f32(minval);
+                        if (pbptr)
+                        {
+                            for (; j + 7 < out_width; j += 8)
+                            {
+                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
+                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
+                                v0 = v_add(v0, v_load(pbptr + j));
+                                v1 = v_add(v1, v_load(pbptr + j + 4));
 
-                        // 2. do convolution, compute Kg x (yx1 - yx0) part of the output tensor
-                        int outstep0 = out_planesize;
-                        size_t outofs = ((n * ngroups + g) * Kg + k0) * outstep0 + yx0;
-                        float *outptr0 = out + outofs;
+                                if (ifMinMaxAct)
+                                {
+                                    v0 = v_min(v_max(v0, vmin), vmax);
+                                    v1 = v_min(v_max(v1, vmin), vmax);
+                                }
 
-                        matMulCompute(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
-                                      Kg, Kg_aligned, partial0, activ, minval, maxval, ifMinMaxAct);
+                                v_store(outptr + j, v0);
+                                v_store(outptr + j + 4, v1);
+                            }
+                        }
+                        else
+                        {
+                            for (; j + 7 < out_width; j += 8)
+                            {
+                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
+                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
+
+                                if (ifMinMaxAct)
+                                {
+                                    v0 = v_min(v_max(v0, vmin), vmax);
+                                    v1 = v_min(v_max(v1, vmin), vmax);
+                                }
+
+                                v_store(outptr + j, v0);
+                                v_store(outptr + j + 4, v1);
+                            }
+                        }
+#endif
+                        if (pbptr) {
+                            for (; j < out_width; j++)
+                            {
+                                float v = cptr[j] + biasval;
+                                v += pbptr[j];
+                                if (ifMinMaxAct)
+                                    v = std::min(std::max(v, minval), maxval);
+                                outptr[j] = v;
+                            }
+                        }
+                        else
+                        {
+                            for (; j < out_width; j++)
+                            {
+                                float v = cptr[j] + biasval;
+
+                                if (ifMinMaxAct)
+                                    v = std::min(std::max(v, minval), maxval);
+                                outptr[j] = v;
+                            }
+                        }
+
+                        if (activ)
+                            activ->forwardSlice(outptr, outptr, out_width, out_planesize, Kg * g + k, Kg * g + k + 1);
                     }
                 }
             }
-        });
+        }
     }
+    });
 }
-
 }} // namespace cv::dnn
