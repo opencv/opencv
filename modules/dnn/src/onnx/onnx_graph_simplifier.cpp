@@ -18,17 +18,6 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
-static int isLittleEndianCPU()
-{
-    int x = 7;
-    char *ptr = (char *)&x;
-
-    if(ptr[0] == 0)
-        return 0;
-    else
-        return 1;
-}
-
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
 {
@@ -787,7 +776,10 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
         // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
         if (!tensor_proto.int32_data().empty())
         {
-            const int offset = isLittleEndianCPU() ? 0 : 1;
+            int offset = 0;
+#ifdef WORDS_BIGENDIAN
+            offset = 1;
+#endif
             const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
 
             AutoBuffer<float16_t, 16> aligned_val;
