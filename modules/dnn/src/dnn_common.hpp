@@ -13,6 +13,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 #define IS_DNN_OPENCL_TARGET(id) (id == DNN_TARGET_OPENCL || id == DNN_TARGET_OPENCL_FP16)
+#define IS_DNN_CPU_TARGET(id) (id == DNN_TARGET_CPU) // TODO: add DNN_TARGET_CPU_FP16
 Mutex& getInitializationMutex();
 void initializeLayerFactory();
 

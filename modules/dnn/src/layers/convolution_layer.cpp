@@ -118,6 +118,9 @@ public:
 
         fusedWeights = false;
         fusedBias = false;
+
+        if (kernel_size.size() == 2)
+            isConv2D = true;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -188,6 +191,9 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        if (fusedAdd)   // If the Conv layer has fused Add layer, it cannot fuse other layers.
+            return false;
+
         Ptr<BlankLayer> blank_layer = top.dynamicCast<BlankLayer>();
         if (blank_layer)
             return true;
@@ -260,7 +266,6 @@ public:
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
 
-    Mat fastWeights; // Used to store weight params. It will be used for layer fusion and without memory alignment.
     Ptr<FastConv2d> fastConv2dImpl;
 
 #ifdef HAVE_OPENCL
@@ -438,7 +443,6 @@ public:
                 wm.copyTo(wm_aligned);
                 wm = wm_aligned;
             }
-            fastWeights = blobs[0].reshape(1, numOutput);
             weightsMat = wm;
         }
         else
@@ -584,11 +588,15 @@ public:
             }
         }
 #endif
-        return !activ.empty();
+        fusedActivation = !activ.empty();
+        return fusedActivation;
     }
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        if (fusedAdd)   // If the Conv layer has fused Add layer, it cannot fuse other layers.
+            return false;
+
 #ifdef HAVE_CUDA
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
@@ -634,26 +642,14 @@ public:
             if (weightsMat.data == blobs[0].data)
                 weightsMat = weightsMat.clone();
 
-            // If fastWeights is the same as weightsMat, we don't need to allocate more space for fastWeights.
-            bool sameFastWeights = false;
-            if (fastWeights.step1() == weightsMat.step1()) // If weightsMat is realigned, it is not the same as fastWeights.
-                sameFastWeights = true;
-
-            if (!sameFastWeights && fastWeights.data == blobs[0].data)
-                fastWeights = fastWeights.clone();
-
             Mat originWeights = blobs[0].reshape(1, outCn);
             for (int i = 0; i < outCn; ++i)
             {
                 double wi = w.at<float>(i);
                 weightsMultipliers[i] *= wi;
                 cv::multiply(originWeights.row(i), weightsMultipliers[i], weightsMat.row(i));
-                if (!sameFastWeights)
-                    cv::multiply(originWeights.row(i), weightsMultipliers[i], fastWeights.row(i));
                 biasvec[i] *= wi;
             }
-            if (sameFastWeights)
-                fastWeights = weightsMat;
         }
 
         if (!b.empty())
@@ -1970,9 +1966,6 @@ public:
         if (blobs.empty())
         {
             variableWeight = true;
-            if (fastWeights.data != inputs[1].data)
-                fastWeights = inputs[1].clone();
-
             Mat wm = inputs[1].reshape(1, outCn);
             if (wm.data != weightsMat.data)
             {
@@ -2089,7 +2082,7 @@ public:
         {
             int nstripes = std::max(getNumThreads(), 1);
 
-            // Initialization of FastCovn2d
+            // Initialization of FastCovn2d, pack weight.
             if ((!fastConv2dImpl || variableWeight) && inputs[0].dims == 4)
             {
                 int K = outputs[0].size[1];
@@ -2103,23 +2096,22 @@ public:
 
                 int dilation_h = dilations[dilations.size() - 2];
                 int dilation_w = dilations.back();
-                float* weightsPtr = fastWeights.ptr<float>();
-                CV_Assert(weightsPtr);
 
-                fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h,
-                                              dilation_w, dilation_h, pads_begin, pads_end, weightsPtr, &biasvec[0]);
+                fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h, dilation_w,
+                                                dilation_h, pads_begin, pads_end, weightsMat, &biasvec[0]);
             }
 
             if (fastConv2dImpl)
             {
-                runFastConv2d(inputs[0], outputs[0], fastConv2dImpl, nstripes, activ);
+                runFastConv2d(inputs[0], outputs[0], fastConv2dImpl, nstripes, activ, fusedAdd);
                 return;
             }
 
+            //TODO: Add support of Conv1D and Conv3D to fastConv, and remove the old Conv branch.
             // Use only for Conv1D and Conv3D.
+            CV_Assert(!fusedAdd);
             ParallelConv::run(inputs[0], outputs[0], weightsMat, biasvec, reluslope,
                             kernel_size, strides, pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes);
-
         }
     }
 
