@@ -459,7 +459,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     const Mat obj_pts_0 = objPoints.getMat(0);
     CV_Assert((obj_pts_0.type() == CV_32F && (obj_pts_0.rows == 3 || obj_pts_0.cols == 3)) ||
               (obj_pts_0.type() == CV_32FC3 && (obj_pts_0.rows == 1 || obj_pts_0.cols == 1)));
-    const bool obj_points_in_rows = obj_pts_0.rows == 3;
+    const bool obj_points_in_rows = obj_pts_0.cols == 3;
     const int NUM_CAMERAS = (int)visibility.rows, NUM_FRAMES = (int)visibility.cols;
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
     const double scale_3d_pts = multiview::getScaleOfObjPoints(NUM_PATTERN_PTS, obj_pts_0, obj_points_in_rows);
@@ -481,10 +481,11 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
 
     std::vector<bool> is_fisheye_vec(NUM_CAMERAS);
     std::vector<std::vector<bool>> visibility_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
-    const auto * const visibility_ptr = (bool *) visibility.data;
-    Mat is_fisheye_mat = is_fisheye.getMat();
+    // convert to boolean
+    Mat visibility_ = visibility, is_fisheye_mat = is_fisheye.getMat();
+    visibility_.convertTo(visibility_, CV_8U);
     is_fisheye_mat.convertTo(is_fisheye_mat, CV_8U);
-    const auto * const is_fisheye_ptr = is_fisheye_mat.data;
+    const auto * const visibility_ptr = visibility_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
     int num_fisheye_cameras = 0;
     for (int c = 0; c < NUM_CAMERAS; c++) {
         is_fisheye_vec[c] = is_fisheye_ptr[c];
