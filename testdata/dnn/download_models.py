@@ -975,6 +975,26 @@ models = [
         member='mobilenetv2_fp16_v7/output_mobilenetv2_fp16.npy',
         sha='397560616c47b847340cec9561e12a13b29ae32e',
         filename='onnx/data/output_mobilenetv2_fp16.npy'),
+    Model(
+        name='wechat_qr_detect',
+        url='https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/detect.prototxt',
+        sha='a6936962139282d300ebbf15a54c2aa94b144bb7',
+        filename='wechat_2021-01/detect.prototxt'),
+    Model(
+        name='wechat_qr_detect',
+        url='https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/detect.caffemodel',
+        sha='d587623a055cbd58a648de62a8c703c7abb05f6d',
+        filename='wechat_2021-01/detect.caffemodel'),
+    Model(
+        name='wechat_super_resolution',
+        url='https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/sr.prototxt',
+        sha='39e1f1031c842766f1cc126615fea8e8256facd2',
+        filename='wechat_2021-01/sr.prototxt'),
+    Model(
+        name='wechat_super_resolution',
+        url='https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/sr.caffemodel',
+        sha='2b181b55d1d7af718eaca6cabdeb741217b64c73',
+        filename='wechat_2021-01/sr.caffemodel'),
 ]
 
 # Note: models will be downloaded to current working directory
