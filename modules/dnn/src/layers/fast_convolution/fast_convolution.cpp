@@ -502,10 +502,11 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
                         {
                             for (; j + 7 < out_width; j += 8)
                             {
-                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
-                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
-                                v0 = v_add(v0, v_load(pbptr + j));
-                                v1 = v_add(v1, v_load(pbptr + j + 4));
+                                v_float32x4 v0 = v_load(cptr + j) + vbias;
+                                v_float32x4 v1 = v_load(cptr + j + 4) + vbias;
+
+                                v0 += v_load(pbptr + j);
+                                v1 += v_load(pbptr + j + 4);
 
                                 if (ifMinMaxAct)
                                 {
@@ -521,8 +522,8 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
                         {
                             for (; j + 7 < out_width; j += 8)
                             {
-                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
-                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
+                                v_float32x4 v0 = v_load(cptr + j) + vbias;
+                                v_float32x4 v1 = v_load(cptr + j + 4) + vbias;
 
                                 if (ifMinMaxAct)
                                 {
