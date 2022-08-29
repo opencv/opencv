@@ -952,6 +952,29 @@ models = [
         url='https://drive.google.com/uc?export=dowload&id=1ClK9WiB492c5OZFKveF3XiHCejoOxINW',
         sha='12ff8b1f5c8bff62e8dd91eabdacdfc998be255e',
         filename='onnx/models/face_recognizer_fast.onnx'),
+    Model(
+        name='MobileNetv2 FP16 (ONNX)',
+        url='https://github.com/zihaomu/zihaomu/files/9393786/mobilenetv2_fp16_v7.tar.gz',
+        sha='018d42b1b1283e6025a0455deffe9f0e9930e839',
+        filename='mobilenetv2_fp16_v7.tar.gz'),
+    Model(
+        name='MobileNetv2 FP16 (ONNX)',
+        archive='mobilenetv2_fp16_v7.tar.gz',
+        member='mobilenetv2_fp16_v7/mobilenetv2_fp16.onnx',
+        sha='ab9352de8e07b798417922f23e97c8488bd50017',
+        filename='onnx/models/mobilenetv2_fp16.onnx'),
+    Model(
+        name='MobileNetv2 FP16 (ONNX)',
+        archive='mobilenetv2_fp16_v7.tar.gz',
+        member='mobilenetv2_fp16_v7/input_mobilenetv2_fp16.npy',
+        sha='cbb97c31abc07ff8c68f5028c634d79f8b83b560',
+        filename='onnx/data/input_mobilenetv2_fp16.npy'),
+    Model(
+        name='MobileNetv2 FP16 (ONNX)',
+        archive='mobilenetv2_fp16_v7.tar.gz',
+        member='mobilenetv2_fp16_v7/output_mobilenetv2_fp16.npy',
+        sha='397560616c47b847340cec9561e12a13b29ae32e',
+        filename='onnx/data/output_mobilenetv2_fp16.npy'),
 ]
 
 # Note: models will be downloaded to current working directory
