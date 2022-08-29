@@ -987,6 +987,7 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 h *= hscale;
+                h = fmodf(h, 6.f);
                 // We need both loops to clamp (e.g. for h == -1e-40).
                 while( h < 0 ) h += 6;
                 while( h >= 6 ) h -= 6;
