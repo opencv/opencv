@@ -988,9 +988,9 @@ struct HLS2RGB_f
 
                 h *= hscale;
                 h = fmodf(h, 6.f);
-                // We need both loops to clamp (e.g. for h == -1e-40).
-                while( h < 0 ) h += 6;
-                while( h >= 6 ) h -= 6;
+                // We need both conditions to clamp (e.g. for h == -1e-40).
+                if (h < 0) h += 6;
+                if (h >= 6) h -= 6;
 
                 CV_DbgAssert( 0 <= h && h < 6 );
                 sector = cvFloor(h);
