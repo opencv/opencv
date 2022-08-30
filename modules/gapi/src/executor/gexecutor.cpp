@@ -16,11 +16,7 @@
 #include "compiler/passes/passes.hpp"
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
-    : m_orig_graph(std::move(g_model))
-    , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
-                     .get<IslandModel>().model)
-    , m_gm(*m_orig_graph)
-    , m_gim(*m_island_graph)
+    : GAbstractExecutor(std::move(g_model))
 {
     // NB: Right now GIslandModel is acyclic, so for a naive execution,
     // simple unrolling to a list of triggers is enough
@@ -422,11 +418,6 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
     {
         magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
     }
-}
-
-const cv::gimpl::GModel::Graph& cv::gimpl::GExecutor::model() const
-{
-    return m_gm;
 }
 
 bool cv::gimpl::GExecutor::canReshape() const
