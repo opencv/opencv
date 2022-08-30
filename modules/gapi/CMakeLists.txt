@@ -114,6 +114,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gabstractexecutor.cpp
+    src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp
