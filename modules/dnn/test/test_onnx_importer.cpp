@@ -1083,6 +1083,7 @@ TEST_P(Test_ONNX_layers, Squeeze)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("squeeze");
+    testONNXModels("squeeze_axes_op13");
 }
 
 TEST_P(Test_ONNX_layers, ReduceL2)
@@ -1773,6 +1774,11 @@ TEST_P(Test_ONNX_layers, Quantized_MatMul)
     testONNXModels("quantized_matmul_uint8_weights", npy, 0.005, 0.007);
     testONNXModels("quantized_matmul_int8_weights", npy, 0.06, 0.2);
     testONNXModels("quantized_matmul_per_channel_weights", npy, 0.06, 0.22);
+}
+
+TEST_P(Test_ONNX_layers, Quantized_Gemm)
+{
+    testONNXModels("quantized_gemm", npy);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
