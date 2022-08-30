@@ -6,6 +6,11 @@
 #define OPENCV_CORE_DETAIL_UTIL_HPP
 #include <tuple>
 
+//Forward definition for type matching
+namespace  cv{
+class MatConstIterator;
+}
+
 namespace cv {
 namespace detail {
 
@@ -65,6 +70,19 @@ template<typename Iter>
 struct is_reverse_iterator<std::reverse_iterator<Iter>>
 : std::integral_constant<bool, !is_reverse_iterator<Iter>::value>
 { };
+
+template<class Base, class Derived, class Enable = void>
+struct is_base_of_reverse;
+
+template<class Base, class Derived>
+struct is_base_of_reverse<Base, Derived, typename std::enable_if<!is_reverse_iterator<Derived>::value>::type>
+        : std::is_base_of<Base,Derived>
+{}; // specialization for reverse_iterators
+
+template<class Base, class Derived>
+struct is_base_of_reverse<Base, Derived, typename std::enable_if<is_reverse_iterator<Derived>::value>::type>
+        : std::is_base_of<Base,decltype(std::declval<Derived&>().base())>
+{ }; // specialization for reverse_iterators
 
 
 }}

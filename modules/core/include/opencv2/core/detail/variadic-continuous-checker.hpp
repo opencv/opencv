@@ -108,6 +108,55 @@ template <typename... Args> bool __iterators__replaceable(Args &&... args) {
   return continuousPair.first && continuousPair.second;
 }
 
+
+//
+/// We loop through the touple and try to find if we can replace iterators by
+/// its pointers This is only valid, if there Mat matrices described by the
+/// iterators in there, that are all contiguous in memory!
+bool __it_replacable();
+bool __it_replacable()
+{
+    return true;
+}
+
+template <typename Arg, typename... Args,
+          enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool> = true>
+bool __it_replacable_rev_resolved(Arg &&, Args &&... args) ;
+template <typename Arg, typename... Args,
+          enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool> = true>
+bool __it_replacable_rev_resolved(Arg && it, Args &&... args);
+
+
+template <typename Arg, typename... Args,
+          enable_if_t<!is_reverse_iterator<Arg>::value, bool> = true>
+bool __it_replacable(Arg && arg, Args &&... args) {
+    return __it_replacable_rev_resolved(std::forward<Arg>(arg), std::forward<Args>(args)...);
+}
+
+template <typename Arg, typename... Args,
+          enable_if_t<is_reverse_iterator<Arg>::value, bool> = true>
+bool __it_replacable(Arg && arg, Args &&... args) {
+    return __it_replacable_rev_resolved(std::forward<Arg>(arg), std::forward<Args>(args)...);
+}
+
+//Those two work with already resolved reverse iterators
+template <typename Arg, typename... Args,
+          enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool>>
+bool __it_replacable_rev_resolved(Arg &&, Args &&... args) {
+    return __it_replacable(std::forward<Args>(args)...);
+}
+
+template <typename Arg, typename... Args,
+          enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool>>
+bool __it_replacable_rev_resolved(Arg && it, Args &&... args) {
+    if(!it.m->isContinuous())
+    {
+        return false;
+    }
+    return __it_replacable(std::forward<Args>(args)...);
+}
+
+
 //Find the first index of an openCV iterator in a tuple or return zero.
 //Thanks to https://stackoverflow.com/questions/26855322/how-do-i-get-the-index-of-a-type-matching-some-predicate
 template <template <class T> class, typename, long = 0>
@@ -122,22 +171,40 @@ struct find_if<Pred, std::tuple<T, tail...>, pos> :
 template <template <class T> class Pred>
 struct find_if<Pred, std::tuple<>> : std::integral_constant<int64_t, -1> {};
 
-template <template <class, class> class T, class U>
+template <template <class, class, class> class T, class U>
 struct bind
 {
     template <class X>
-    using first  = T<U, X>;
+    using first  = T<U, X, void>;
     template <class X>
-    using second = T<X, U>;
+    using second = T<X, U, void>;
 };
 
+
+/*
+template<class Base, class Derived, class Enable = void>
+struct is_base_of_reverse
+{
+    using base_of = std::is_base_of<Base, Derived>;
+    static constexpr auto value = base_of::value;
+};
+
+template<class Base, class Derived>
+struct is_base_of_reverse<Base, Derived, typename std::enable_if<is_reverse_iterator<Derived>::value>::type>
+{
+    using base_type_derived = decltype(std::declval<Derived&>().base()); //Use the trick of declval. Doesn't place any constraints on Derived
+    using base_of = std::is_base_of<Base, base_type_derived>;
+    static constexpr auto value = base_of::value;
+}; // specialization for reverse_iterators
+*/
 
 /// Helper function: Return the index of the first cv::MatConstIterator derived type.
 /// Extends the tuple with an iterator such that it will always be found, otherwise compilation fails
 template<typename ...Args> constexpr size_t __get_first_cv_it_index()
 {
-    return find_if<bind<std::is_base_of, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value == sizeof ...(Args) ? 0 : find_if<bind<std::is_base_of, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value;
+    return find_if<bind<is_base_of_reverse, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value == sizeof ...(Args) ? 0 : find_if<bind<is_base_of_reverse, cv::MatConstIterator>::first, std::tuple<Args...,cv::MatConstIterator>>::value;
 }
+
 
 
 } // namespace detail

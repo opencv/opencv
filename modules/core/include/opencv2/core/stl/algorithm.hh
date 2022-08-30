@@ -124,8 +124,8 @@ auto _find_impl_only_replace(std::tuple<Args...> tpl, cv::detail::index_sequence
 
 ///@brief Decide if an openCV iterator is returned. When this is not the case no special care needs to be taken
 template <typename ReturnType,  typename beginIt, typename... Args,
-    cv::detail::enable_if_t<!std::is_base_of<cv::MatConstIterator, ReturnType>::value,bool> = true>
-auto _find_impl(beginIt&&, Args&& ... args)
+    cv::detail::enable_if_t<!std::is_base_of<cv::MatConstIterator, ReturnType>::value, bool> = true>
+auto _find_impl_trampolin(beginIt&&, Args&& ... args)
   -> ReturnType {
     return _find_impl_only_replace(cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
                                    cv::detail::make_index_sequence_variadic<Args...>());
@@ -133,12 +133,30 @@ auto _find_impl(beginIt&&, Args&& ... args)
 
 ///@brief Decide if an openCV iterator is returned. When this is not the case we need to calculate the offset to the cv iterator we want to return
 template <typename ReturnType,  typename beginIt, typename... Args,
-    cv::detail::enable_if_t<std::is_base_of<cv::MatConstIterator, ReturnType>::value,bool> = true>
-auto _find_impl(beginIt&& it, Args&& ... args)
+    cv::detail::enable_if_t<std::is_base_of<cv::MatConstIterator, ReturnType>::value, bool> = true>
+auto _find_impl_trampolin(beginIt&& it, Args&& ... args)
   -> ReturnType {
     return _find_impl_calc_diff(std::forward<beginIt>(it),
                                 cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
                                 cv::detail::make_index_sequence_variadic<Args...>());
+}
+
+///@brief Decide if an openCV iterator is returned. When this is not the case we need to calculate the offset to the cv iterator we want to return
+template <typename ReturnType,  typename beginIt, typename... Args,
+    cv::detail::enable_if_t<!cv::detail::is_reverse_iterator<ReturnType>::value, bool> = true>
+auto _find_impl(beginIt&& it, Args&& ... args)
+  -> ReturnType {
+    return _find_impl_trampolin<ReturnType, beginIt, Args...>(it, std::forward<Args>(args)...);
+}
+
+
+///@brief Decide if an openCV iterator is returned. When this is not the case we need to calculate the offset to the cv iterator we want to return
+template <typename ReturnType,  typename beginIt, typename... Args,
+    cv::detail::enable_if_t<cv::detail::is_reverse_iterator<ReturnType>::value, bool> = true>
+auto _find_impl(beginIt&& it, Args&& ... args)
+  -> ReturnType {
+
+    return _find_impl_trampolin<ReturnType, beginIt, Args...>(it, std::forward<Args>(args)...);
 }
 
 ///@brief Forwarding for find stl algo. Decides at runtime if the iterators are replaced with pointers
@@ -154,6 +172,7 @@ auto find(Args&&... args)
       using ReturnType = decltype(std::find(std::forward<Args>(args)...));
       using beginIt = decltype(std::get<val>(tpl_frwd));
 
+      //Explicitely mention templates to avoid requireing ReturnType being default constructable
       return _find_impl<ReturnType, beginIt, Args...>(std::get<val>(tpl_frwd), std::forward<Args>(args)...);
   } else {
     return std::find(std::forward<Args>(args)...);
