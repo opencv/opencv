@@ -192,6 +192,7 @@ private:
     void parseQSigmoid             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQGemm                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // '???' domain or '???' layer type
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2149,17 +2150,39 @@ void ONNXImporter::parseTranspose(LayerParams& layerParams, const opencv_onnx::N
 
 void ONNXImporter::parseSqueeze(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert_N(node_proto.input_size() == 1, layerParams.has("axes"));
-    DictValue axes_dict = layerParams.get("axes");
-    MatShape inpShape = outShapes[node_proto.input(0)];
+    CV_Assert(node_proto.input_size() <= 2);
 
+    MatShape inpShape = outShapes[node_proto.input(0)];
     std::vector<bool> maskedAxes(inpShape.size(), false);
-    for (int i = 0; i < axes_dict.size(); ++i)
+    if (layerParams.has("axes"))
     {
-        int axis = axes_dict.getIntValue(i);
-        CV_CheckLE(axis, static_cast<int>(inpShape.size()), "Squeeze axis");
-        maskedAxes[axis] = inpShape[axis] == 1;
+        DictValue axes_dict = layerParams.get("axes");
+        for (int i = 0; i < axes_dict.size(); ++i)
+        {
+            int axis = axes_dict.getIntValue(i);
+            CV_CheckLE(axis, static_cast<int>(inpShape.size()), "Squeeze axis");
+            maskedAxes[axis] = inpShape[axis] == 1;
+        }
     }
+    else if (node_proto.input_size() == 2)
+    {
+        if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+        {
+            Mat axesMat = getBlob(node_proto, 1);
+            if (axesMat.depth() == CV_32F)
+                axesMat.convertTo(axesMat, CV_32S);
+            size_t axesLen = axesMat.total();
+            for (int i = 0; i < axesLen; i++)
+            {
+                int axis = axesMat.at<int>(i);
+                CV_CheckLE(axis, static_cast<int>(inpShape.size()), "Squeeze axis");
+                maskedAxes[axis] = inpShape[axis] == 1;
+            }
+        }
+        else
+            CV_Error(Error::StsNotImplemented, cv::format("ONNX/Squeeze: doesn't support non-constant 'axes' input"));
+    }
+
     MatShape outShape;
     for (int i = 0; i < inpShape.size(); ++i)
     {
@@ -3226,6 +3249,78 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+// A * B + C = Y, we require that the dimension of A is [m, k], and the dimension of B is [n, k].
+// And the dim of output Y is [m, n]
+void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int ninputs = node_proto.input_size();
+    CV_Assert(ninputs == 8 || ninputs == 9);
+
+    layerParams.type = "InnerProductInt8";
+
+    if (constBlobs.find(node_proto.input(3)) == constBlobs.end())
+        CV_Error(Error::StsNotImplemented, "Variable weights is not supported");
+
+    Mat weights = getBlob(node_proto, 3);
+
+    if (!layerParams.get<int>("transB", 0))
+    {
+        transpose(weights, weights);
+    }
+
+    CV_Assert(layerParams.get<float>("alpha", 1) == 1.0f);
+    CV_Assert(layerParams.get<int>("transA", 0) == 0);
+
+    int firstInpDims = outShapes[node_proto.input(0)].size();
+
+    Mat inp_sc = getBlob(node_proto, 1);
+    Mat inp_zp = getBlob(node_proto, 2);
+
+    int outCn = weights.size[0];
+    int secondInpDims = weights.dims;
+
+    Mat w_scale = getBlob(node_proto, 4);
+    CV_Assert(w_scale.total() == 1 || w_scale.total() == outCn);
+    bool per_channel = w_scale.total() == outCn;
+    Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
+
+    Mat w_zp = getBlob(node_proto, 5);
+    int8_t* ptrZp = w_zp.ptr<int8_t>(0);
+
+    for (int i = 0; i < w_zp.total(); i++)
+    {
+        if (ptrZp[i] != (int8_t)0)
+            CV_Error(Error::StsUnsupportedFormat, "The zero-point non-zero case of W is not supported!");
+    }
+
+    Mat out_sc, bias;
+    out_sc = getBlob(node_proto, 7);
+    if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
+        bias = getBlob(node_proto, 6);
+    else
+        bias = Mat::zeros(1, outCn, CV_32S);
+
+    Mat biasFused(1, outCn, CV_32S);
+    Mat outputMultiplier(1, outCn, CV_32F);
+    for (int i = 0; i < outCn; i++)
+    {
+        biasFused.at<int>(i) = bias.at<int>(i) - inp_zp.at<int8_t>(0)*(cv::sum(weights.row(i))[0]);
+        outputMultiplier.at<float>(i) = (inp_sc.at<float>(0) * wt_sc.at<float>(i)) / out_sc.at<float>(0);
+    }
+
+    layerParams.type = "InnerProductInt8";
+    layerParams.set("num_output", outCn);
+    layerParams.set("axis", firstInpDims - secondInpDims + 1);
+    layerParams.set("input_scale", inp_sc.at<float>(0));
+    layerParams.set("input_zeropoint", inp_zp.at<int8_t>(0));
+    layerParams.set("per_channel", per_channel);
+
+    layerParams.blobs.push_back(weights);
+    layerParams.blobs.push_back(biasFused);
+    layerParams.blobs.push_back(outputMultiplier);
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
@@ -3620,6 +3715,7 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
     dispatch["QLinearLeakyRelu"] = &ONNXImporter::parseQLeakyRelu;
     dispatch["QLinearSigmoid"] = &ONNXImporter::parseQSigmoid;
     dispatch["QLinearConcat"] = &ONNXImporter::parseQConcat;
+    dispatch["QGemm"] = &ONNXImporter::parseQGemm;
 
     domain_dispatch_map["com.microsoft"] = dispatch;
 }
