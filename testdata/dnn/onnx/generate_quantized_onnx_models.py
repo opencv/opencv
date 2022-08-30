@@ -270,3 +270,12 @@ model = nn.Sequential(
                 )
 input = Variable(torch.randn(1, 3, 32, 32))
 quantize_and_save_model("quantized_constant", input, model, wt_type="int8", per_channel=True)
+
+class Gemm(nn.Module):
+    def forward(self, x):
+        mat1 =torch.ones(3, 3)
+        return torch.mm(x, mat1)
+
+input = Variable(torch.randn(1, 3))
+model = Gemm()
+quantize_and_save_model("quantized_gemm", input, model, act_type="int8", wt_type="int8", per_channel=False)
