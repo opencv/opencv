@@ -13,7 +13,7 @@ namespace dnn {
 
 void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
 {
-#if 0 // CV_SIMD128 && CONV_MR == 4 && CONV_NR == 24
+#if CV_SIMD128 && CONV_MR == 4 && CONV_NR == 24
     v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0, c4 = c0, c5 = c0;
     v_float32x4 c6  = v_setzero_f32(), c7 = c6, c8 = c6, c9 = c6, c10 = c6, c11 = c6;
     v_float32x4 c12 = v_setzero_f32(), c13 = c12, c14 = c12, c15 = c12, c16 = c12, c17 = c12;
@@ -59,33 +59,33 @@ void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool i
 
     if (!init_c)
     {
-        c0 = v_add(c0, v_load(c));
-        c1 = v_add(c1, v_load(c + 4));
-        c2 = v_add(c2, v_load(c + 8));
-        c3 = v_add(c3, v_load(c + 12));
-        c4 = v_add(c4, v_load(c + 16));
-        c5 = v_add(c5, v_load(c + 20));
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+        c2 += v_load(c + 8);
+        c3 += v_load(c + 12);
+        c4 += v_load(c + 16);
+        c5 += v_load(c + 20);
 
-        c6  = v_add(c6 , v_load(c + ldc));
-        c7  = v_add(c7 , v_load(c + ldc + 4));
-        c8  = v_add(c8 , v_load(c + ldc + 8));
-        c9  = v_add(c9 , v_load(c + ldc + 12));
-        c10 = v_add(c10, v_load(c + ldc + 16));
-        c11 = v_add(c11, v_load(c + ldc + 20));
+        c6  += v_load(c + ldc);
+        c7  += v_load(c + ldc + 4);
+        c8  += v_load(c + ldc + 8);
+        c9  += v_load(c + ldc + 12);
+        c10 += v_load(c + ldc + 16);
+        c11 += v_load(c + ldc + 20);
 
-        c12 = v_add(c12, v_load(c + ldc*2));
-        c13 = v_add(c13, v_load(c + ldc*2 + 4));
-        c14 = v_add(c14, v_load(c + ldc*2 + 8));
-        c15 = v_add(c15, v_load(c + ldc*2 + 12));
-        c16 = v_add(c16, v_load(c + ldc*2 + 16));
-        c17 = v_add(c17, v_load(c + ldc*2 + 20));
+        c12 += v_load(c + ldc*2);
+        c13 += v_load(c + ldc*2 + 4);
+        c14 += v_load(c + ldc*2 + 8);
+        c15 += v_load(c + ldc*2 + 12);
+        c16 += v_load(c + ldc*2 + 16);
+        c17 += v_load(c + ldc*2 + 20);
 
-        c18 = v_add(c18, v_load(c + ldc*3));
-        c19 = v_add(c19, v_load(c + ldc*3 + 4));
-        c20 = v_add(c20, v_load(c + ldc*3 + 8));
-        c21 = v_add(c21, v_load(c + ldc*3 + 12));
-        c22 = v_add(c22, v_load(c + ldc*3 + 16));
-        c23 = v_add(c23, v_load(c + ldc*3 + 20));
+        c18 += v_load(c + ldc*3);
+        c19 += v_load(c + ldc*3 + 4);
+        c20 += v_load(c + ldc*3 + 8);
+        c21 += v_load(c + ldc*3 + 12);
+        c22 += v_load(c + ldc*3 + 16);
+        c23 += v_load(c + ldc*3 + 20);
     }
 
     v_store(c, c0);
