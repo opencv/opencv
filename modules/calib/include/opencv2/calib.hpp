@@ -1112,7 +1112,7 @@ Input:
 
 Output:
 @return: true if success, false - otherwise
-@Rs of size NUM_CAMERAS x 3 x 3 -- rotation matrices wrt camera 0, where Rs[0] = I
+@Rs of size NUM_CAMERAS x 3 x 1 -- rotation matrices wrt camera 0, where Rs[0] = 0
 @Ts of size NUM_CAMERAS x 3 x 1 -- translation vectors wrt camera 0, where Ts[0] = 0
 @rvecs0 of size NUM_FRAMES x 3 x 3 -- rotation vectors for camera 0 (may contain null Mat, if frame is not valid)
 @tvecs0 of size NUM_FRAMES x 3 x 1 -- translation vectors for camera 0  (may contain null Mat, if frame is not valid)
@@ -1123,7 +1123,7 @@ Output:
 
 CV_EXPORTS_W bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, const Mat &visibility,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
+        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_OUT std::vector<Mat> &Ks, CV_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
         OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS=false, int flags_intrinsics=0);
 
