@@ -14,148 +14,61 @@
 namespace cv {
 namespace detail {
 
-//Definitions
-template <typename Arg,
-          enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&arg);
-
-template <typename Arg,
-          enable_if_t<std::is_base_of<MatConstIterator, Arg>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it);
-
-//Reverse iterator
-template <typename Arg,
-          enable_if_t<std::is_base_of<MatConstIterator, typename Arg::base>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it);
-
-template <typename Arg, typename... Args,
-          enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&arg, Args &&... args);
-
-template <typename Arg, typename... Args,
-          enable_if_t<std::is_base_of<MatConstIterator, Arg>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it, Args &&... args);
-
-//Reverse Iterator
-template <typename Arg, typename... Args,
-          enable_if_t<std::is_base_of<MatConstIterator, typename Arg::base>::value,
-                           bool> = true>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it, Args &&... args);
-
-template <typename... Args> bool __iterators__replaceable(Args &&... args);
-
-/// This is how we loop through the tuple.
-/// We replace all instances of a MatIterator  with its pointer.
-/// Last round in the recursive call
-
-/// These two functions replace a c++17 if constexpr.
-/// We return true in the generic case because that's the neutral element of the
-/// && operation
-template <
-    typename Arg,
-    enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool>>
-std::pair<bool, bool> __iterator__replaceable(Arg && arg) {
-    (void)arg;
-  return std::make_pair(true, false);
-}
-
-/// These two functions replace a c++17 if constexpr.
-/// We return if the iterator is contiguous
-template <
-    typename Arg,
-    enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool>>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it) {
-  return std::make_pair(it.m->isContinuous(), true);
-}
-
-template <
-    typename Arg, typename... Args,
-    enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool>>
-std::pair<bool, bool> __iterator__replaceable(Arg && arg, Args &&... args) {
-(void) arg;
-  std::pair<bool, bool> continuousPair =
-      __iterator__replaceable(std::forward<Args>(args)...);
-  return std::make_pair(true && continuousPair.first,
-                        false || continuousPair.second);
-}
-
-/// These two functions replace a c++17 if constexpr.
-/// We return if the iterator is contiguous
-template <
-    typename Arg, typename... Args,
-    enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool>>
-std::pair<bool, bool> __iterator__replaceable(Arg &&it, Args &&... args) {
-
-  std::pair<bool, bool> continuousPair =
-      __iterator__replaceable(std::forward<Args>(args)...);
-
-  return std::make_pair(it.m->isContinuous() && continuousPair.first, true);
-}
-
-
 /// We loop through the touple and try to find if we can replace iterators by
-/// its pointers This is only valid, if there Mat matrices described by the
-/// iterators in there, that are all contiguous in memory!
-template <typename... Args> bool __iterators__replaceable(Args &&... args) {
-
-  std::pair<bool, bool> continuousPair =
-      __iterator__replaceable(std::forward<Args>(args)...);
-  return continuousPair.first && continuousPair.second;
-}
-
-
-//
-/// We loop through the touple and try to find if we can replace iterators by
-/// its pointers This is only valid, if there Mat matrices described by the
-/// iterators in there, that are all contiguous in memory!
-bool __it_replacable();
-bool __it_replacable()
+/// its pointers This is only valid, if
+/// 1) There is at least one opencvIt
+/// 2) All of the openCV iterators describe conitguous memory
+std::pair<bool, bool> ___it_replacable();
+std::pair<bool, bool> ___it_replacable()
 {
-    return true;
+    return {false, true};
 }
 
 template <typename Arg, typename... Args,
           enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool> = true>
-bool __it_replacable_rev_resolved(Arg &&, Args &&... args) ;
+std::pair<bool, bool> __it_replacable_rev_resolved(Arg &&, Args &&... args);
+
 template <typename Arg, typename... Args,
           enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool> = true>
-bool __it_replacable_rev_resolved(Arg && it, Args &&... args);
-
+std::pair<bool, bool> __it_replacable_rev_resolved(Arg && it, Args &&... args);
 
 template <typename Arg, typename... Args,
           enable_if_t<!is_reverse_iterator<Arg>::value, bool> = true>
-bool __it_replacable(Arg && arg, Args &&... args) {
+std::pair<bool, bool> ___it_replacable(Arg && arg, Args &&... args) {
     return __it_replacable_rev_resolved(std::forward<Arg>(arg), std::forward<Args>(args)...);
 }
 
 template <typename Arg, typename... Args,
           enable_if_t<is_reverse_iterator<Arg>::value, bool> = true>
-bool __it_replacable(Arg && arg, Args &&... args) {
-    return __it_replacable_rev_resolved(std::forward<Arg>(arg), std::forward<Args>(args)...);
+std::pair<bool, bool> ___it_replacable(Arg && arg, Args &&... args) {
+    return __it_replacable_rev_resolved(arg.base(), std::forward<Args>(args)...);
 }
 
 //Those two work with already resolved reverse iterators
 template <typename Arg, typename... Args,
           enable_if_t<!std::is_base_of<MatConstIterator, Arg>::value, bool>>
-bool __it_replacable_rev_resolved(Arg &&, Args &&... args) {
-    return __it_replacable(std::forward<Args>(args)...);
+std::pair<bool, bool> __it_replacable_rev_resolved(Arg &&, Args &&... args) {
+    return ___it_replacable(std::forward<Args>(args)...);
 }
 
 template <typename Arg, typename... Args,
           enable_if_t<std::is_base_of<MatConstIterator, Arg>::value, bool>>
-bool __it_replacable_rev_resolved(Arg && it, Args &&... args) {
+std::pair<bool, bool> __it_replacable_rev_resolved(Arg && it, Args &&... args) {
     if(!it.m->isContinuous())
     {
-        return false;
+        return {true, false};
     }
-    return __it_replacable(std::forward<Args>(args)...);
+
+     return {true, ___it_replacable(std::forward<Args>(args)...).second};
 }
 
+///Convienience function to decide if we can perform substitution with pointers
+///  for a given set of arguments
+template <typename... Args>
+bool __it_replacable(Args &&... args) {
+    const auto pair = ___it_replacable(std::forward<Args>(args)...);
+    return (pair.first && pair.second);
+}
 
 //Find the first index of an openCV iterator in a tuple or return zero.
 //Thanks to https://stackoverflow.com/questions/26855322/how-do-i-get-the-index-of-a-type-matching-some-predicate
@@ -179,24 +92,6 @@ struct bind
     template <class X>
     using second = T<X, U, void>;
 };
-
-
-/*
-template<class Base, class Derived, class Enable = void>
-struct is_base_of_reverse
-{
-    using base_of = std::is_base_of<Base, Derived>;
-    static constexpr auto value = base_of::value;
-};
-
-template<class Base, class Derived>
-struct is_base_of_reverse<Base, Derived, typename std::enable_if<is_reverse_iterator<Derived>::value>::type>
-{
-    using base_type_derived = decltype(std::declval<Derived&>().base()); //Use the trick of declval. Doesn't place any constraints on Derived
-    using base_of = std::is_base_of<Base, base_type_derived>;
-    static constexpr auto value = base_of::value;
-}; // specialization for reverse_iterators
-*/
 
 /// Helper function: Return the index of the first cv::MatConstIterator derived type.
 /// Extends the tuple with an iterator such that it will always be found, otherwise compilation fails

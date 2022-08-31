@@ -28,7 +28,7 @@ auto _all_of_impl(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>){
 template <typename... Args>
 auto all_of(Args&&... args) -> decltype(std::all_of(std::forward<Args>(args)...)){
 
-  if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
+  if (cv::detail::__it_replacable(std::forward<Args>(args)...)) {
     return _all_of_impl(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
         cv::detail::make_index_sequence_variadic<Args...>());
@@ -50,7 +50,7 @@ auto _any_of_impl(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>) {
 template <typename... Args>
 auto any_of(Args&&... args) -> decltype(std::any_of(std::forward<Args>(args)...)) {
 
-  if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
+  if (cv::detail::__it_replacable(std::forward<Args>(args)...)) {
     return _any_of_impl(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
         cv::detail::make_index_sequence_variadic<Args...>());
@@ -71,7 +71,7 @@ auto _none_of_impl(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>) {
 template <typename... Args>
 auto none_of(Args&&... args) -> decltype(std::none_of(std::forward<Args>(args)...)){
 
-  if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
+  if (cv::detail::__it_replacable(std::forward<Args>(args)...)) {
     return _none_of_impl(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
         cv::detail::make_index_sequence_variadic<Args...>());
@@ -93,7 +93,7 @@ template <typename... Args>
 auto count_if(Args&&... args)
     -> decltype(std::count_if(std::forward<Args>(args)...)) {
 
-  if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
+  if (cv::detail::__it_replacable(std::forward<Args>(args)...)) {
     return _count_if_impl(
         cv::detail::make_tpl_replaced(std::forward<Args>(args)...),
         cv::detail::make_index_sequence_variadic<Args...>());
@@ -165,7 +165,7 @@ template <typename... Args>
 auto find(Args&&... args)
     -> decltype(std::find(std::forward<Args>(args)...)) {
 
-  if (cv::detail::__iterators__replaceable(std::forward<Args>(args)...)) {
+  if (cv::detail::__it_replacable(std::forward<Args>(args)...)) {
       constexpr size_t val = cv::detail::__get_first_cv_it_index<Args...>();
       auto tpl_frwd = std::make_tuple(std::forward<Args>(args)...);
 

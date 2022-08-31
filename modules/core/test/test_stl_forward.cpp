@@ -57,46 +57,46 @@ TEST_F(CORE_stl_forward, iterators_replacable)
 {
         ///////////////////////////////////Contiguous Tests/////////////////////////////////
     //Test only one "span" where we can replace iterators. Lambda doesn't have an effect
-    EXPECT_TRUE(cv::detail::__iterators__replaceable(mat.begin<int>(), mat.end<int>(),[](int val){return val*2;}));
+    EXPECT_TRUE(cv::detail::__it_replacable(mat.begin<int>(), mat.end<int>(),[](int val){return val*2;}));
 
     //Should be false because there is no cv::Mat iterator. Lambda doesn't have an effect
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(),[](int val){return val*2;}));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.begin(), intVec.end(),[](int val){return val*2;}));
 
     //Should be true because there is only one cv::Mat iterator of a contiguous iterator. Lambda doesn't have an effect
-    EXPECT_TRUE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(), mat.begin<int>(),[](int val){return val*2;}));
+    EXPECT_TRUE(cv::detail::__it_replacable(intVec.begin(), intVec.end(), mat.begin<int>(),[](int val){return val*2;}));
 
     ///////////////////////////////////Submatrix Tests/////////////////////////////////
     //Test only one "span" where we can't replace iterators (not contiguous)
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(subMat.begin(), subMat.end()));
+    EXPECT_FALSE(cv::detail::__it_replacable(subMat.begin(), subMat.end()));
 
     //Should be false because there is a cv::Mat iterator of a non-contiguous matrix
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(), subMat.begin()));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.begin(), intVec.end(), subMat.begin()));
 
     //Should be false because there is a cv::Mat iterator of a non-contiguous matrix
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(), subMat.begin()));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.begin(), intVec.end(), subMat.begin()));
 }
 
-TEST_F(CORE_stl_forward, DISABLED_iterators_replacable_reverse_iterator)
+TEST_F(CORE_stl_forward, iterators_replacable_reverse_iterator)
 {
     ///////////////////////////////////Contiguous Tests/////////////////////////////////
     //Test only one "span" where we can replace iterators. Lambda doesn't have an effect
-    EXPECT_TRUE(cv::detail::__iterators__replaceable(mat.rbegin<int>(), mat.rend<int>(),[](uchar val){return val*2;}));
+    EXPECT_TRUE(cv::detail::__it_replacable(mat.rbegin<int>(), mat.rend<int>(),[](uchar val){return val*2;}));
 
     //Should be false because there is no cv::Mat iterator. Lambda doesn't have an effect
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.rbegin(), intVec.rend(),[](uchar val){return val*2;}));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.rbegin(), intVec.rend(),[](uchar val){return val*2;}));
 
     //Should be true because there is no cv::Mat iterator of a non contiguous iterator. Lambda doesn't have an effect
-    EXPECT_TRUE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(), mat.begin<int>(),[](uchar val){return val*2;}));
+    EXPECT_TRUE(cv::detail::__it_replacable(intVec.begin(), intVec.end(), mat.begin<int>(),[](uchar val){return val*2;}));
 
     ///////////////////////////////////Submatrix Tests/////////////////////////////////
     //Test only one "span" where we can't replace iterators (not contiguous)
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(subMat.rbegin(), subMat.rend()));
+    EXPECT_FALSE(cv::detail::__it_replacable(subMat.rbegin(), subMat.rend()));
 
     //Should be false because there is a cv::Mat iterator of a non-contiguous matrix
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.begin(), intVec.end(), subMat.rbegin()));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.begin(), intVec.end(), subMat.rbegin()));
 
     //Should be false because there is a cv::Mat iterator of a non-contiguous matrix
-    EXPECT_FALSE(cv::detail::__iterators__replaceable(intVec.rbegin(), intVec.end(), subMat.rbegin()));
+    EXPECT_FALSE(cv::detail::__it_replacable(intVec.rbegin(), intVec.end(), subMat.rbegin()));
 }
 
 TEST_F(CORE_stl_forward, tuple_replacer)
@@ -207,7 +207,7 @@ TEST_F(CORE_stl_forward, count_if_test)
     auto lambda = [](int val){return val >13 && val < 100;};
 
     //This test is with replacable iterators.
-    EXPECT_TRUE(cv::detail::__iterators__replaceable(mat.begin<int>(), mat.end<int>(),lambda));
+    EXPECT_TRUE(cv::detail::__it_replacable(mat.begin<int>(), mat.end<int>(),lambda));
 
     //Test replaced iterators vs. normal stl algo
     EXPECT_EQ(experimental::count_if(mat.begin<int>(), mat.end<int>(),lambda), std::count_if(mat.begin<int>(), mat.end<int>(),lambda));
