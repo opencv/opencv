@@ -121,7 +121,6 @@ bool SPngDecoder::readHeader()
     }
 
     m_ctx = ctx;
-    spng_set_crc_action(ctx, SPNG_CRC_USE, SPNG_CRC_USE);
 
     if (!m_buf.empty())
         spng_set_png_stream((struct spng_ctx *)m_ctx, (spng_rw_fn *)readDataFromBuf, this);
@@ -336,7 +335,7 @@ bool SPngDecoder::readData(Mat &img)
                     else
                     {
                         AutoBuffer<unsigned char> imageBuffer(image_size);
-                        spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0);
+                        ret = spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0);
                         int step = m_width * img.channels();
                         if (fmt == SPNG_FMT_RGB8)
                         {
@@ -469,16 +468,17 @@ bool SPngDecoder::readData(Mat &img)
 
             if (ret == SPNG_EOI)
             {
+                ret = spng_decode_chunks(png_ptr);
+                if(ret == SPNG_OK) result = true;
                 struct spng_exif exif_s{};
                 ret = spng_get_exif(png_ptr, &exif_s);
                 if (ret == SPNG_OK)
                 {
                     if (exif_s.data && exif_s.length > 0)
                     {
-                        m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
+                        result = m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
                     }
                 }
-                result = true;
             }
         }
     }
