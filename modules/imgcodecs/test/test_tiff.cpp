@@ -359,6 +359,16 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     ASSERT_EQ(CV_8UC3, img.type());
 }
 
+TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/4-bit_palette_color.tif";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
 TEST(Imgcodecs_Tiff, readWrite_predictor)
 {
     /* see issue #21871
