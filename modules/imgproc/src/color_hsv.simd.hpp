@@ -987,19 +987,14 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 if (h != h) {
-                    // Avoid computations in the NaN case.
+                    // Avoid throwing cvFloor computation in the NaN case.
                     b = g = r = h;
                 } else {
                     h *= hscale;
-                    h = fmodf(h, 6.f);
-                    // We need both conditions to clamp. E.g. for h == -1e-40,
-                    //  (-1e-40)+6 gives 6, which is >=6, hence the second condition.
-                    if (h < 0) h += 6;
-                    if (h >= 6) h -= 6;
-
-                    CV_DbgAssert( 0 <= h && h < 6 );
                     sector = cvFloor(h);
                     h -= sector;
+                    sector %= 6;
+                    sector += sector < 0 ? 6 : 0;
 
                     tab[0] = p2;
                     tab[1] = p1;
