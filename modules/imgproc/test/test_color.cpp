@@ -3217,4 +3217,11 @@ TEST(ImgProc_RGB2Lab, NaN_21111)
 #endif
 }
 
+TEST(ImgProc_HLS2RGB, NaN_22441)
+{
+    const float kNaN = std::numeric_limits<float>::quiet_NaN();
+    cv::Mat3f src(1, 2, Vec3f::all(kNaN)), dst;
+    src(0, 0) = cv::Vec3f(kNaN, 0, 0);
+    EXPECT_NO_THROW(cvtColor(src, dst, COLOR_HLS2RGB));
+}
 }} // namespace

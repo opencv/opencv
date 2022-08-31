@@ -986,24 +986,30 @@ struct HLS2RGB_f
                 float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
                 float p1 = 2*l - p2;
 
-                h *= hscale;
-                h = fmodf(h, 6.f);
-                // We need both conditions to clamp (e.g. for h == -1e-40).
-                if (h < 0) h += 6;
-                if (h >= 6) h -= 6;
+                if (h != h) {
+                    // Avoid computations in the NaN case.
+                    b = g = r = h;
+                } else {
+                    h *= hscale;
+                    h = fmodf(h, 6.f);
+                    // We need both conditions to clamp. E.g. for h == -1e-40,
+                    //  (-1e-40)+6 gives 6, which is >=6, hence the second condition.
+                    if (h < 0) h += 6;
+                    if (h >= 6) h -= 6;
 
-                CV_DbgAssert( 0 <= h && h < 6 );
-                sector = cvFloor(h);
-                h -= sector;
+                    CV_DbgAssert( 0 <= h && h < 6 );
+                    sector = cvFloor(h);
+                    h -= sector;
 
-                tab[0] = p2;
-                tab[1] = p1;
-                tab[2] = p1 + (p2 - p1)*(1-h);
-                tab[3] = p1 + (p2 - p1)*h;
+                    tab[0] = p2;
+                    tab[1] = p1;
+                    tab[2] = p1 + (p2 - p1)*(1-h);
+                    tab[3] = p1 + (p2 - p1)*h;
 
-                b = tab[sector_data[sector][0]];
-                g = tab[sector_data[sector][1]];
-                r = tab[sector_data[sector][2]];
+                    b = tab[sector_data[sector][0]];
+                    g = tab[sector_data[sector][1]];
+                    r = tab[sector_data[sector][2]];
+                }
             }
 
             dst[bidx] = b;
