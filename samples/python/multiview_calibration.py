@@ -157,6 +157,10 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
         img_size = None
         for img_name in images_names:
             print(img_name)
+            if img_name == '': # above we replace new line '\n' with ''
+                image_points_camera.append(np.array([], dtype=np.float32))
+                continue
+
             assert os.path.exists(img_name)
             img = cv.cvtColor(cv.imread(img_name), cv.COLOR_BGR2GRAY)
             if img_size is None:
@@ -201,7 +205,7 @@ def calibrateFromJSON(json_file):
             data['image_points'][i][j] = np.array(data['image_points'][i][j], dtype=np.float32)
     calibrateFromPoints(np.array(data['object_points'], dtype=np.float32).T, data['image_points'], data['image_sizes'], data['is_fisheye'])
 
-try:
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--json_file', type=str, default=None, help="json file with all data. Must have keys: 'object_points', 'image_points', 'image_sizes', 'is_fisheye'")
     parser.add_argument('--filenames', type=str, default=None, help='files containg images, e.g., file1,file2,...,fileN for N cameras')
