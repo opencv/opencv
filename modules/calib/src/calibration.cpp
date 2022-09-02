@@ -777,7 +777,7 @@ static double stereoCalibrateImpl(
 
     if( recomputeIntrinsics )
     {
-        uchar* imask = &mask[0] + nparams - NINTRINSIC*2;
+        size_t idx = nparams - NINTRINSIC*2;
         if( !(flags & CALIB_RATIONAL_MODEL) )
             flags |= CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6;
         if( !(flags & CALIB_THIN_PRISM_MODEL) )
@@ -785,36 +785,36 @@ static double stereoCalibrateImpl(
         if( !(flags & CALIB_TILTED_MODEL) )
             flags |= CALIB_FIX_TAUX_TAUY;
         if( flags & CALIB_FIX_ASPECT_RATIO )
-            imask[0] = imask[NINTRINSIC] = 0;
+            mask[idx + 0] = mask[idx + NINTRINSIC] = 0;
         if( flags & CALIB_FIX_FOCAL_LENGTH )
-            imask[0] = imask[1] = imask[NINTRINSIC] = imask[NINTRINSIC+1] = 0;
+            mask[idx + 0] = mask[idx + 1] = mask[idx + NINTRINSIC] = mask[idx + NINTRINSIC+1] = 0;
         if( flags & CALIB_FIX_PRINCIPAL_POINT )
-            imask[2] = imask[3] = imask[NINTRINSIC+2] = imask[NINTRINSIC+3] = 0;
+            mask[idx + 2] = mask[idx + 3] = mask[idx + NINTRINSIC+2] = mask[idx + NINTRINSIC+3] = 0;
         if( flags & (CALIB_ZERO_TANGENT_DIST|CALIB_FIX_TANGENT_DIST) )
-            imask[6] = imask[7] = imask[NINTRINSIC+6] = imask[NINTRINSIC+7] = 0;
+            mask[idx + 6] = mask[idx + 7] = mask[idx + NINTRINSIC+6] = mask[idx + NINTRINSIC+7] = 0;
         if( flags & CALIB_FIX_K1 )
-            imask[4] = imask[NINTRINSIC+4] = 0;
+            mask[idx + 4] = mask[idx + NINTRINSIC+4] = 0;
         if( flags & CALIB_FIX_K2 )
-            imask[5] = imask[NINTRINSIC+5] = 0;
+            mask[idx + 5] = mask[idx + NINTRINSIC+5] = 0;
         if( flags & CALIB_FIX_K3 )
-            imask[8] = imask[NINTRINSIC+8] = 0;
+            mask[idx + 8] = mask[idx + NINTRINSIC+8] = 0;
         if( flags & CALIB_FIX_K4 )
-            imask[9] = imask[NINTRINSIC+9] = 0;
+            mask[idx + 9] = mask[idx + NINTRINSIC+9] = 0;
         if( flags & CALIB_FIX_K5 )
-            imask[10] = imask[NINTRINSIC+10] = 0;
+            mask[idx + 10] = mask[idx + NINTRINSIC+10] = 0;
         if( flags & CALIB_FIX_K6 )
-            imask[11] = imask[NINTRINSIC+11] = 0;
+            mask[idx + 11] = mask[idx + NINTRINSIC+11] = 0;
         if( flags & CALIB_FIX_S1_S2_S3_S4 )
         {
-            imask[12] = imask[NINTRINSIC+12] = 0;
-            imask[13] = imask[NINTRINSIC+13] = 0;
-            imask[14] = imask[NINTRINSIC+14] = 0;
-            imask[15] = imask[NINTRINSIC+15] = 0;
+            mask[idx + 12] = mask[idx + NINTRINSIC+12] = 0;
+            mask[idx + 13] = mask[idx + NINTRINSIC+13] = 0;
+            mask[idx + 14] = mask[idx + NINTRINSIC+14] = 0;
+            mask[idx + 15] = mask[idx + NINTRINSIC+15] = 0;
         }
         if( flags & CALIB_FIX_TAUX_TAUY )
         {
-            imask[16] = imask[NINTRINSIC+16] = 0;
-            imask[17] = imask[NINTRINSIC+17] = 0;
+            mask[idx + 16] = mask[idx + NINTRINSIC+16] = 0;
+            mask[idx + 17] = mask[idx + NINTRINSIC+17] = 0;
         }
     }
 
@@ -902,19 +902,19 @@ static double stereoCalibrateImpl(
     if( recomputeIntrinsics )
         for(int k = 0; k < 2; k++ )
         {
-            double* iparam = &param[(nimages+1)*6 + k*NINTRINSIC];
+            size_t idx = (nimages+1)*6 + k*NINTRINSIC;
             if( flags & CALIB_ZERO_TANGENT_DIST )
                 dk[k][2] = dk[k][3] = 0;
-            iparam[0] = A[k](0, 0); iparam[1] = A[k](1, 1); iparam[2] = A[k](0, 2); iparam[3] = A[k](1, 2);
-            iparam[4] = dk[k][0]; iparam[5] = dk[k][1]; iparam[6] = dk[k][2];
-            iparam[7] = dk[k][3]; iparam[8] = dk[k][4]; iparam[9] = dk[k][5];
-            iparam[10] = dk[k][6]; iparam[11] = dk[k][7];
-            iparam[12] = dk[k][8];
-            iparam[13] = dk[k][9];
-            iparam[14] = dk[k][10];
-            iparam[15] = dk[k][11];
-            iparam[16] = dk[k][12];
-            iparam[17] = dk[k][13];
+            param[idx +  0] = A[k](0, 0); param[idx + 1] = A[k](1, 1); param[idx + 2] = A[k](0, 2); param[idx + 3] = A[k](1, 2);
+            param[idx +  4] = dk[k][0]; param[idx +  5] = dk[k][1]; param[idx + 6] = dk[k][2];
+            param[idx +  7] = dk[k][3]; param[idx +  8] = dk[k][4]; param[idx + 9] = dk[k][5];
+            param[idx + 10] = dk[k][6]; param[idx + 11] = dk[k][7];
+            param[idx + 12] = dk[k][8];
+            param[idx + 13] = dk[k][9];
+            param[idx + 14] = dk[k][10];
+            param[idx + 15] = dk[k][11];
+            param[idx + 16] = dk[k][12];
+            param[idx + 17] = dk[k][13];
         }
 
     A[0] = A[1] = Matx33d(1, 0, 0, 0, 1, 0, 0, 0, 1);
@@ -923,9 +923,9 @@ static double stereoCalibrateImpl(
 
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
-        double* param_p = _param.getMat().ptr<double>();
-        Vec3d om_LR(param_p[0], param_p[1], param_p[2]);
-        Vec3d T_LR(param_p[3], param_p[4], param_p[5]);
+        Mat_<double> param_m = _param.getMat();
+        Vec3d om_LR(param_m(0), param_m(1), param_m(2));
+        Vec3d T_LR(param_m(3), param_m(4), param_m(5));
         Vec3d om[2], T[2];
         Matx33d dr3dr1, dr3dr2, dt3dr2, dt3dt1, dt3dt2;
 
@@ -933,30 +933,25 @@ static double stereoCalibrateImpl(
 
         if( recomputeIntrinsics )
         {
-            double* iparam = param_p + (nimages+1)*6;
-            //double* ipparam = solver.prevParam->data.db + (nimages+1)*6;
+            size_t idx = (nimages+1)*6;
 
             if( flags & CALIB_SAME_FOCAL_LENGTH )
             {
-                iparam[NINTRINSIC] = iparam[0];
-                iparam[NINTRINSIC+1] = iparam[1];
-                //ipparam[NINTRINSIC] = ipparam[0];
-                //ipparam[NINTRINSIC+1] = ipparam[1];
+                param_m(idx + NINTRINSIC  ) = param_m(idx + 0);
+                param_m(idx + NINTRINSIC+1) = param_m(idx + 1);
             }
             if( flags & CALIB_FIX_ASPECT_RATIO )
             {
-                iparam[0] = iparam[1]*aspectRatio[0];
-                iparam[NINTRINSIC] = iparam[NINTRINSIC+1]*aspectRatio[1];
-                //ipparam[0] = ipparam[1]*aspectRatio[0];
-                //ipparam[NINTRINSIC] = ipparam[NINTRINSIC+1]*aspectRatio[1];
+                param_m(idx + 0)          = aspectRatio[0]*param_m(idx + 1             );
+                param_m(idx + NINTRINSIC) = aspectRatio[1]*param_m(idx + 1 + NINTRINSIC);
             }
             for(int k = 0; k < 2; k++ )
             {
-                A[k] = Matx33d(iparam[k*NINTRINSIC+0], 0, iparam[k*NINTRINSIC+2],
-                               0, iparam[k*NINTRINSIC+1], iparam[k*NINTRINSIC+3],
+                A[k] = Matx33d(param_m(idx + k*NINTRINSIC+0), 0, param_m(idx + k*NINTRINSIC+2),
+                               0, param_m(idx + k*NINTRINSIC+1), param_m(idx + k*NINTRINSIC+3),
                                0, 0, 1);
                 for(int j = 0; j < 14; j++)
-                    dk[k][j] = iparam[k*NINTRINSIC+4+j];
+                    dk[k][j] = param_m(idx + k*NINTRINSIC+4+j);
             }
         }
 
@@ -965,9 +960,9 @@ static double stereoCalibrateImpl(
         {
             int ni = _npoints.at<int>(i);
 
-            double* pi = param_p + (i+1)*6;
-            om[0] = Vec3d(pi[0], pi[1], pi[2]);
-            T[0] = Vec3d(pi[3], pi[4], pi[5]);
+            size_t idx = (i+1)*6;
+            om[0] = Vec3d(param_m(idx + 0), param_m(idx + 1), param_m(idx + 2));
+            T[0]  = Vec3d(param_m(idx + 3), param_m(idx + 4), param_m(idx + 5));
 
             if( JtJ_.needed() || JtErr_.needed() )
                 composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1], dr3dr1, noArray(),
@@ -1085,16 +1080,14 @@ static double stereoCalibrateImpl(
     else
         R_LR.convertTo(*matR, matR->depth());
     T_LR.convertTo(*matT, matT->depth());
-    for(int k = 0; k < 2; k++ )
-    {
-        double* iparam = &param[(nimages+1)*6 + k*NINTRINSIC];
-        A[k] = Matx33d(iparam[0], 0, iparam[2], 0, iparam[1], iparam[3], 0, 0, 1);
-    }
 
     if( recomputeIntrinsics )
     {
         for(int k = 0; k < 2; k++ )
         {
+            size_t idx = (nimages+1)*6 + k*NINTRINSIC;
+            A[k] = Matx33d(param[idx + 0], 0, param[idx + 2], 0, param[idx + 1], param[idx + 3], 0, 0, 1);
+
             Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
             Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
             A[k].convertTo(cameraMatrix, cameraMatrix.depth());
