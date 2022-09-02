@@ -917,10 +917,6 @@ static double stereoCalibrateImpl(
             param[idx + 17] = dk[k][13];
         }
 
-    A[0] = A[1] = Matx33d(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
-    //std::cout << "param before LM: " << Mat(param, false).t() << "\n";
-
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
         Mat_<double> param_m = _param.getMat();
