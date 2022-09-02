@@ -179,7 +179,7 @@ enum ImreadError {
 @param maxSize
 */
 struct CV_EXPORTS_W_PARAMS ImreadParams {
-      CV_PROP_RW int flags;
+      CV_PROP_RW int flags = IMREAD_COLOR;
       CV_PROP_RW size_t maxPixels = 0;
       CV_PROP_RW Size maxSize = {};
      };

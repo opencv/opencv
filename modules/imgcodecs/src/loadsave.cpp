@@ -600,7 +600,7 @@ imread_2( String const& filename, OutputArray image, ImreadParams params)
     // established the required input image size
     Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
 
-    if(params.maxPixels != 0 && params.maxPixels <= static_cast<size_t>(decoder->width()) * decoder->height())
+    if(params.maxPixels != 0 && params.maxPixels < static_cast<size_t>(decoder->width()) * decoder->height())
     {
         return IMREAD_ERROR_SIZE_LIMIT_EXCEEDED;
     }
