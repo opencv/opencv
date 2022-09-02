@@ -661,22 +661,14 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
 //////////////////////////////// Stereo Calibration ///////////////////////////////////
 
-static int dbCmp( const void* _a, const void* _b )
-{
-    double a = *(const double*)_a;
-    double b = *(const double*)_b;
-
-    return (a > b) - (a < b);
-}
-
 static double stereoCalibrateImpl(
         const Mat& _objectPoints, const Mat& _imagePoints1,
         const Mat& _imagePoints2, const Mat& _npoints,
         Mat& _cameraMatrix1, Mat& _distCoeffs1,
         Mat& _cameraMatrix2, Mat& _distCoeffs2,
-        Size imageSize, Mat* matR, Mat* matT,
-        Mat* matE, Mat* matF,
-        Mat* perViewErr, int flags,
+        Size imageSize, Mat matR, Mat matT,
+        Mat matE, Mat matF,
+        Mat perViewErr, int flags,
         TermCriteria termCrit )
 {
     const int NINTRINSIC = 18;
@@ -725,11 +717,12 @@ static double stereoCalibrateImpl(
         imagePoints[k] = imagePoints[k].reshape(2, 1);
 
         if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
-            CALIB_FIX_ASPECT_RATIO|CALIB_FIX_FOCAL_LENGTH) )
+                     CALIB_FIX_ASPECT_RATIO|CALIB_FIX_FOCAL_LENGTH) )
             cameraMatrix.convertTo(A[k], CV_64F);
 
         if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
-            CALIB_FIX_K1|CALIB_FIX_K2|CALIB_FIX_K3|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6|CALIB_FIX_TANGENT_DIST) )
+                     CALIB_FIX_K1|CALIB_FIX_K2|CALIB_FIX_K3|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6|
+                     CALIB_FIX_TANGENT_DIST) )
         {
             Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), dk[k] );
             distCoeffs.convertTo(tdist, CV_64F);
@@ -741,8 +734,6 @@ static double stereoCalibrateImpl(
             calibrateCameraInternal(objectPoints, imagePoints[k],
                                     _npoints, imageSize, 0, matA, Dist[k],
                                     0, 0, 0, 0, 0, flags, termCrit);
-            //std::cout << "K(" << k << "): " << A[k] << "\n";
-            //std::cout << "Dist(" << k << "): " << Dist[k] << "\n";
         }
     }
 
@@ -762,13 +753,12 @@ static double stereoCalibrateImpl(
 
     recomputeIntrinsics = (flags & CALIB_FIX_INTRINSIC) == 0;
 
-    Mat err( maxPoints*2, 1, CV_64F );
-    Mat Je( maxPoints*2, 6, CV_64F );
-    Mat J_LR( maxPoints*2, 6, CV_64F );
-    Mat Ji( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
-
     // we optimize for the inter-camera R(3),t(3), then, optionally,
     // for intrinisic parameters of each camera ((fx,fy,cx,cy,k1,k2,p1,p2) ~ 8 parameters).
+    // Param mapping is:
+    // - from 0 next 6: stereo pair Rt, from 6+i*6 next 6: Rt for each ith camera of nimages,
+    // - from 6*(nimages+1) next NINTRINSICS: intrinsics for 1st camera: fx, fy, cx, cy, 14 x dist
+    // - next NINTRINSICS: the same for for 2nd camera
     nparams = 6*(nimages+1) + (recomputeIntrinsics ? NINTRINSIC*2 : 0);
 
     std::vector<uchar> mask(nparams, (uchar)1);
@@ -819,8 +809,7 @@ static double stereoCalibrateImpl(
     }
 
     // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
-    Mat RT0(6, nimages, CV_64F);
-    double* RT0data = RT0.ptr<double>();
+    std::vector<double> rtsort(nimages*6);
     /*
        Compute initial estimate of pose
        For each image, compute:
@@ -836,19 +825,19 @@ static double stereoCalibrateImpl(
     for(int i = 0; i < nimages; i++ )
     {
         int ni = _npoints.at<int>(i);
-        Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + pos*3);
+        Mat objpt_i = objectPoints(Range::all(), Range(pos, pos + ni));
         Matx33d R[2];
         Vec3d rv, T[2];
         for(int k = 0; k < 2; k++ )
         {
-            Mat imgpt_ik = Mat(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + pos*2);
+            Mat imgpt_ik = imagePoints[k](Range::all(), Range(pos, pos + ni));
             solvePnP(objpt_i, imgpt_ik, A[k], Dist[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
             Rodrigues(rv, R[k]);
 
             if( k == 0 )
             {
                 // save initial om_left and T_left
-                param[(i+1)*6] = rv[0];
+                param[(i+1)*6 + 0] = rv[0];
                 param[(i+1)*6 + 1] = rv[1];
                 param[(i+1)*6 + 2] = rv[2];
                 param[(i+1)*6 + 3] = T[0][0];
@@ -861,12 +850,12 @@ static double stereoCalibrateImpl(
 
         Rodrigues(R[0], rv);
 
-        RT0data[i] = rv[0];
-        RT0data[i + nimages] = rv[1];
-        RT0data[i + nimages*2] = rv[2];
-        RT0data[i + nimages*3] = T[1][0];
-        RT0data[i + nimages*4] = T[1][1];
-        RT0data[i + nimages*5] = T[1][2];
+        rtsort[i + nimages*0] = rv[0];
+        rtsort[i + nimages*1] = rv[1];
+        rtsort[i + nimages*2] = rv[2];
+        rtsort[i + nimages*3] = T[1][0];
+        rtsort[i + nimages*4] = T[1][1];
+        rtsort[i + nimages*5] = T[1][2];
 
         pos += ni;
     }
@@ -874,12 +863,12 @@ static double stereoCalibrateImpl(
     if(flags & CALIB_USE_EXTRINSIC_GUESS)
     {
         Vec3d R, T;
-        matT->convertTo(T, CV_64F);
+        matT.convertTo(T, CV_64F);
 
-        if( matR->rows == 3 && matR->cols == 3 )
-            Rodrigues(*matR, R);
+        if( matR.rows == 3 && matR.cols == 3 )
+            Rodrigues(matR, R);
         else
-            matR->convertTo(R, CV_64F);
+            matR.convertTo(R, CV_64F);
 
         param[0] = R[0];
         param[1] = R[1];
@@ -893,29 +882,35 @@ static double stereoCalibrateImpl(
         // find the medians and save the first 6 parameters
         for(int i = 0; i < 6; i++ )
         {
-            double* rti = RT0data + i*nimages;
-            qsort( rti, nimages, sizeof(*rti), dbCmp );
-            param[i] = nimages % 2 != 0 ? rti[nimages/2] : (rti[nimages/2 - 1] + rti[nimages/2])*0.5;
+            size_t idx = i*nimages;
+            std::nth_element(rtsort.begin() + idx,
+                             rtsort.begin() + idx + nimages/2,
+                             rtsort.begin() + idx + nimages);
+            double h = rtsort[idx + nimages/2];
+            param[i] = (nimages % 2 == 0) ? (h + rtsort[idx + nimages/2 - 1]) * 0.5 : h;
         }
     }
 
     if( recomputeIntrinsics )
+    {
         for(int k = 0; k < 2; k++ )
         {
             size_t idx = (nimages+1)*6 + k*NINTRINSIC;
             if( flags & CALIB_ZERO_TANGENT_DIST )
                 dk[k][2] = dk[k][3] = 0;
             param[idx +  0] = A[k](0, 0); param[idx + 1] = A[k](1, 1); param[idx + 2] = A[k](0, 2); param[idx + 3] = A[k](1, 2);
-            param[idx +  4] = dk[k][0]; param[idx +  5] = dk[k][1]; param[idx + 6] = dk[k][2];
-            param[idx +  7] = dk[k][3]; param[idx +  8] = dk[k][4]; param[idx + 9] = dk[k][5];
-            param[idx + 10] = dk[k][6]; param[idx + 11] = dk[k][7];
-            param[idx + 12] = dk[k][8];
-            param[idx + 13] = dk[k][9];
-            param[idx + 14] = dk[k][10];
-            param[idx + 15] = dk[k][11];
-            param[idx + 16] = dk[k][12];
-            param[idx + 17] = dk[k][13];
+            for (int i = 0; i < 14; i++)
+            {
+                param[idx + 4 + i] = dk[k][i];
+            }
         }
+    }
+
+    // Preallocated place for callback calculations
+    Mat errBuf( maxPoints*2, 1, CV_64F );
+    Mat JeBuf( maxPoints*2, 6, CV_64F );
+    Mat J_LRBuf( maxPoints*2, 6, CV_64F );
+    Mat JiBuf( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
 
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
@@ -943,9 +938,11 @@ static double stereoCalibrateImpl(
             }
             for(int k = 0; k < 2; k++ )
             {
-                A[k] = Matx33d(param_m(idx + k*NINTRINSIC+0), 0, param_m(idx + k*NINTRINSIC+2),
-                               0, param_m(idx + k*NINTRINSIC+1), param_m(idx + k*NINTRINSIC+3),
-                               0, 0, 1);
+                double fx = param_m(idx + k*NINTRINSIC+0), fy = param_m(idx + k*NINTRINSIC+1);
+                double cx = param_m(idx + k*NINTRINSIC+2), cy = param_m(idx + k*NINTRINSIC+3);
+                A[k] = Matx33d(fx,  0, cx,
+                                0, fy, cy,
+                                0,  0,  1);
                 for(int j = 0; j < 14; j++)
                     dk[k][j] = param_m(idx + k*NINTRINSIC+4+j);
             }
@@ -966,8 +963,11 @@ static double stereoCalibrateImpl(
             else
                 composeRT( om[0], T[0], om_LR, T_LR, om[1], T[1] );
 
-            Mat objpt_i(1, ni, CV_64FC3, objectPoints.ptr<double>() + ptPos*3);
-            err.resize(ni*2); Je.resize(ni*2); J_LR.resize(ni*2); Ji.resize(ni*2);
+            Mat objpt_i = objectPoints(Range::all(), Range(ptPos, ptPos + ni));
+            Mat err  = errBuf (Range(0, ni*2), Range::all());
+            Mat Je   = JeBuf  (Range(0, ni*2), Range::all());
+            Mat J_LR = J_LRBuf(Range(0, ni*2), Range::all());
+            Mat Ji   = JiBuf  (Range(0, ni*2), Range::all());
 
             Mat tmpImagePoints = err.reshape(2, 1);
             Mat dpdf = Ji.colRange(0, 2);
@@ -978,7 +978,7 @@ static double stereoCalibrateImpl(
 
             for(int k = 0; k < 2; k++ )
             {
-                Mat imgpt_ik(1, ni, CV_64FC2, imagePoints[k].ptr<double>() + ptPos*2);
+                Mat imgpt_ik = imagePoints[k](Range::all(), Range(ptPos, ptPos + ni));
 
                 if( JtJ_.needed() || JtErr_.needed() )
                     projectPoints(objpt_i, om[k], T[k], A[k], Dist[k],
@@ -1001,23 +1001,35 @@ static double stereoCalibrateImpl(
                         // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
                         for(int p = 0; p < ni*2; p++ )
                         {
-                            Mat de3dr3( 1, 3, CV_64F, Je.ptr(p));
-                            Mat de3dt3( 1, 3, CV_64F, de3dr3.ptr<double>() + 3 );
-                            Mat de3dr2( 1, 3, CV_64F, J_LR.ptr(p) );
-                            Mat de3dt2( 1, 3, CV_64F, de3dr2.ptr<double>() + 3 );
-                            double _de3dr1[3], _de3dt1[3];
-                            Mat de3dr1( 1, 3, CV_64F, _de3dr1 );
-                            Mat de3dt1( 1, 3, CV_64F, _de3dt1 );
+                            Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
+                            for(int j = 0; j < 3; j++)
+                                de3dr3(j) = Je.at<double>(p, j);
 
-                            gemm(de3dr3, dr3dr1, 1, noArray(), 0, de3dr1);
-                            gemm(de3dt3, dt3dt1, 1, noArray(), 0, de3dt1);
+                            for(int j = 0; j < 3; j++)
+                                de3dt3(j) = Je.at<double>(p, 3+j);
 
-                            gemm(de3dr3, dr3dr2, 1, noArray(), 0, de3dr2);
-                            gemm(de3dt3, dt3dr2, 1, de3dr2, 1, de3dr2);
-                            gemm(de3dt3, dt3dt2, 1, noArray(), 0, de3dt2);
+                            for(int j = 0; j < 3; j++)
+                                de3dr2(j) = J_LR.at<double>(p, j);
 
-                            de3dr1.copyTo(de3dr3);
-                            de3dt1.copyTo(de3dt3);
+                            for(int j = 0; j < 3; j++)
+                                de3dt2(j) = J_LR.at<double>(p, 3+j);
+
+                            de3dr1 = de3dr3 * dr3dr1;
+                            de3dt1 = de3dt3 * dt3dt1;
+                            de3dr2  = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
+                            de3dt2  = de3dt3 * dt3dt2;
+
+                            for(int j = 0; j < 3; j++)
+                                Je.at<double>(p, j) = de3dr1(j);
+
+                            for(int j = 0; j < 3; j++)
+                                Je.at<double>(p, 3+j) = de3dt1(j);
+
+                            for(int j = 0; j < 3; j++)
+                                J_LR.at<double>(p, j) = de3dr2(j);
+
+                            for(int j = 0; j < 3; j++)
+                                J_LR.at<double>(p, 3+j) = de3dt2(j);
                         }
 
                         JtJ(Rect(0, 0, 6, 6)) += J_LR.t()*J_LR;
@@ -1041,8 +1053,8 @@ static double stereoCalibrateImpl(
                 }
 
                 double viewErr = norm(err, NORM_L2SQR);
-                if(perViewErr)
-                    perViewErr->at<double>(i, k) = std::sqrt(viewErr/ni);
+                if(!perViewErr.empty())
+                    perViewErr.at<double>(i, k) = std::sqrt(viewErr/ni);
                 reprojErr += viewErr;
             }
 
@@ -1071,11 +1083,11 @@ static double stereoCalibrateImpl(
     Vec3d T_LR(param[3], param[4], param[5]);
     Matx33d R_LR;
     Rodrigues( om_LR, R_LR );
-    if( matR->rows == 1 || matR->cols == 1 )
-        om_LR.convertTo(*matR, matR->depth());
+    if( matR.rows == 1 || matR.cols == 1 )
+        om_LR.convertTo(matR, matR.depth());
     else
-        R_LR.convertTo(*matR, matR->depth());
-    T_LR.convertTo(*matT, matT->depth());
+        R_LR.convertTo(matR, matR.depth());
+    T_LR.convertTo(matT, matT.depth());
 
     if( recomputeIntrinsics )
     {
@@ -1092,19 +1104,19 @@ static double stereoCalibrateImpl(
         }
     }
 
-    if( matE || matF )
+    if( !matE.empty() || !matF.empty() )
     {
         Matx33d Tx(0, -T_LR[2], T_LR[1],
                    T_LR[2], 0, -T_LR[0],
-                   -T_LR[1], T_LR[0], 0);
+                  -T_LR[1], T_LR[0], 0);
         Matx33d E = Tx*R_LR;
-        if (matE)
-            E.convertTo(*matE, matE->depth());
-        if( matF )
+        if( !matE.empty() )
+            E.convertTo(matE, matE.depth());
+        if( !matF.empty())
         {
             Matx33d iA0 = A[0].inv(), iA1 = A[1].inv();
-            Matx33d F = iA1.t()*E*iA0;
-            F.convertTo(*matF, matF->depth(), fabs(F(2,2)) > 0 ? 1./F(2,2) : 1.);
+            Matx33d F = iA1.t() * E * iA0;
+            F.convertTo(matF, matF.depth(), fabs(F(2,2)) > 0 ? 1./F(2,2) : 1.);
         }
     }
 
@@ -1581,8 +1593,8 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
 
     double err = stereoCalibrateImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
                                      distCoeffs1, cameraMatrix2, distCoeffs2, imageSize,
-                                     &matR, &matT, E_needed ? &matE : NULL, F_needed ? &matF : NULL,
-                                     errors_needed ? &matErr : NULL, flags, criteria);
+                                     matR, matT, matE, matF,
+                                     matErr, flags, criteria);
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);
     distCoeffs1.copyTo(_distCoeffs1);
