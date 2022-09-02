@@ -21,7 +21,7 @@ enum { FAST_VEC_NLANES=4 };
 #define CONV_MR 4
 #define CONV_NR 24
 
-#ifdef CV_AVX2
+#if CV_AVX2
 enum { FAST_VEC_NLANES=8 }; // AVX2
 #else
 enum { FAST_VEC_NLANES=4 }; // SIMD 128
