@@ -31,12 +31,11 @@
 #endif // HAVE_DIRECTX
 
 #ifdef __linux__
+#include <fcntl.h>
+#include <unistd.h>
 #if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #include "va/va.h"
 #include "va/va_drm.h"
-
-#include <fcntl.h>
-#include <unistd.h>
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 #endif // __linux__
 
