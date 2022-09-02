@@ -312,7 +312,7 @@ TEST(ImgCodecs_Imread, read_signature_fail)
     ImreadParams params;
     params.flags = IMREAD_COLOR;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_UNRECOGNIZED_FORMAT);
+    EXPECT_EQ(IMREAD_ERROR_UNRECOGNIZED_FORMAT, err);
 }
 
 TEST(ImgCodecs_Imread, read_header_fail)
@@ -324,7 +324,7 @@ TEST(ImgCodecs_Imread, read_header_fail)
     ImreadParams params;
     params.flags = IMREAD_COLOR;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_INVALID_HEADER);
+    EXPECT_EQ(IMREAD_ERROR_INVALID_HEADER, err);
     EXPECT_TRUE(m.empty());
 }
 
@@ -337,7 +337,7 @@ TEST(ImgCodecs_Imread, read_data_fail)
     ImreadParams params;
     params.flags = IMREAD_COLOR;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_INVALID_DATA);
+    EXPECT_EQ(IMREAD_ERROR_INVALID_DATA, err);
     EXPECT_TRUE(m.empty());
 }
 
@@ -350,7 +350,7 @@ TEST(ImgCodecs_Imread, file_not_found)
     ImreadParams params;
     params.flags = IMREAD_COLOR;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_FILE_NOT_FOUND);
+    EXPECT_EQ(IMREAD_ERROR_FILE_NOT_FOUND, err);
     EXPECT_TRUE(m.empty());
 }
 
@@ -364,7 +364,7 @@ TEST(ImgCodecs_Imread, max_pixels_exceeded)
     params.flags = IMREAD_COLOR;
     params.maxPixels = 1920*1080;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_SIZE_LIMIT_EXCEEDED);
+    EXPECT_EQ(IMREAD_ERROR_SIZE_LIMIT_EXCEEDED, err);
     EXPECT_TRUE(m.empty());
 }
 
@@ -378,7 +378,7 @@ TEST(ImgCodecs_Imread, max_size_exceed)
     params.flags = IMREAD_COLOR;
     params.maxSize = {2560, 1599};
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_ERROR_SIZE_LIMIT_EXCEEDED);
+    EXPECT_EQ(IMREAD_ERROR_SIZE_LIMIT_EXCEEDED, err);
     EXPECT_TRUE(m.empty());
 }
 
@@ -391,7 +391,7 @@ TEST(ImgCodecs_Imread, read_success)
     ImreadParams params;
     params.flags = IMREAD_COLOR;
     ImreadError err = imread2(filename, m, params);
-    EXPECT_EQ(err, IMREAD_OK);
+    EXPECT_EQ(IMREAD_OK, err);
     EXPECT_FALSE(m.empty());
 }
 

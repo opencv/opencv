@@ -13,19 +13,20 @@ from tests_common import NewOpenCVTests
 
 class imgcodecs_test(NewOpenCVTests):
     def test_imread2(self):
-        ret, img = cv.imread2('samples/data/lena.jpg', maxSize = (512, 512))
+        path = self.find_file('samples/data/lena.jpg')
+        ret, img = cv.imread2(path, maxSize = (512, 512))
         self.assertEqual(0, ret)
         self.assertTrue(img.size)
 
-        ret, img = cv.imread2('samples/data/lena.jpg', maxSize = (511, 512))
+        ret, img = cv.imread2(path, maxSize = (511, 512))
         self.assertEqual(3, ret)
         self.assertIsNone(img)
 
-        ret, img = cv.imread2('samples/data/lena.jpg', maxPixels = 512*512)
+        ret, img = cv.imread2(path, maxPixels = 512*512)
         self.assertEqual(0, ret)
         self.assertIsNotNone(img)
 
-        ret, img = cv.imread2('samples/data/lena.jpg', maxPixels = 512*512 - 1)
+        ret, img = cv.imread2(path, maxPixels = 512*512 - 1)
         self.assertEqual(3, ret)
         self.assertIsNone(img)
 
@@ -33,7 +34,7 @@ class imgcodecs_test(NewOpenCVTests):
         self.assertEqual(1, ret)
         self.assertIsNone(img)
 
-        ret, img = cv.imread2('samples/data/lena.jpg', flags = 1, maxPixels = 512*512, maxSize = (512,512))
+        ret, img = cv.imread2(path, flags = 1, maxPixels = 512*512, maxSize = (512,512))
         self.assertEqual(0, ret)
         self.assertIsNotNone(img)
 

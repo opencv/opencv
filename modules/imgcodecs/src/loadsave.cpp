@@ -257,7 +257,7 @@ static ImageDecoder findDecoder( const String& filename ) {
     return ImageDecoder();
 }
 
-static ImageDecoder findDecoder( const String& filename, ImreadError& error ) {
+static ImageDecoder findDecoder( const std::string& filename, ImreadError& error ) {
 
     size_t i, maxlen = 0;
 
@@ -280,8 +280,8 @@ static ImageDecoder findDecoder( const String& filename, ImreadError& error ) {
     }
 
     // read the file signature
-    String signature(maxlen, ' ');
-    maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
+    std::string signature(maxlen, ' ');
+    maxlen = fread( (void*)&signature[0], 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
 
