@@ -1566,7 +1566,7 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
     CV_INSTRUMENT_REGION();
 
     int dims = _img.dims();
-    CV_Assert(dims <= 2);
+    CV_CheckLE(dims, 2, "");
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
     if( minLoc )
