@@ -8,12 +8,13 @@ Test for imread2
 from __future__ import print_function
 
 import cv2 as cv
+import os
 
 from tests_common import NewOpenCVTests
 
 class imgcodecs_test(NewOpenCVTests):
     def test_imread2(self):
-        path = self.find_file('samples/data/lena.jpg')
+        path = self.find_file('python/images/baboon.jpg', [os.environ.get('OPENCV_TEST_DATA_PATH')])
         ret, img = cv.imread2(path, maxSize = (512, 512))
         self.assertEqual(0, ret)
         self.assertTrue(img.size)
