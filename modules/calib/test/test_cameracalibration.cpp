@@ -2007,6 +2007,63 @@ TEST(Calib3d_StereoCalibrate, regression_11131)
     EXPECT_GE(roi2.area(), 400*300) << roi2;
 }
 
+TEST(Calib_StereoCalibrate, regression_22421)
+{
+    cv::Mat K1, K2, dist1, dist2;
+    std::vector<Mat> image_points1, image_points2;
+    Mat desiredR, desiredT;
+
+    std::string fname = cvtest::TS::ptr()->get_data_path() + std::string("/cv/cameracalibration/regression22421.yaml.gz");
+    FileStorage fs(fname, FileStorage::Mode::READ);
+    ASSERT_TRUE(fs.isOpened());
+    fs["imagePoints1"] >> image_points1;
+    fs["imagePoints2"] >> image_points2;
+    fs["K1"] >> K1;
+    fs["K2"] >> K2;
+    fs["dist1"] >> dist1;
+    fs["dist2"] >> dist2;
+    fs["desiredR"] >> desiredR;
+    fs["desiredT"] >> desiredT;
+
+    std::vector<float> obj_points = {0, 0, 0,
+                                     0.5, 0, 0,
+                                     1, 0, 0,
+                                     1.5000001, 0, 0,
+                                     2, 0, 0,
+                                     0, 0.5, 0,
+                                     0.5, 0.5, 0,
+                                     1, 0.5, 0,
+                                     1.5000001, 0.5, 0,
+                                     2, 0.5, 0,
+                                     0, 1, 0,
+                                     0.5, 1, 0,
+                                     1, 1, 0,
+                                     1.5000001, 1, 0,
+                                     2, 1, 0,
+                                     0, 1.5000001, 0,
+                                     0.5, 1.5000001, 0,
+                                     1, 1.5000001, 0,
+                                     1.5000001, 1.5000001, 0,
+                                     2, 1.5000001, 0};
+
+    cv::Mat obj_points_mat(obj_points, true);
+    obj_points_mat = obj_points_mat.reshape(1, obj_points.size() / 3);
+    std::vector<cv::Mat> grid_points(image_points1.size(), obj_points_mat);
+
+    cv::Mat R, T;
+    double error = cv::stereoCalibrate(grid_points, image_points1, image_points2,
+                                       K1, dist1, K2, dist2, cv::Size(), R, T,
+                                       cv::noArray(), cv::noArray(), cv::noArray(), cv::CALIB_FIX_INTRINSIC);
+
+    EXPECT_LE(error, 0.071544);
+
+    double rerr = cv::norm(R, desiredR, NORM_INF);
+    double terr = cv::norm(T, desiredT, NORM_INF);
+
+    EXPECT_LE(rerr, 0.0000001);
+    EXPECT_LE(terr, 0.0000001);
+}
+
 TEST(Calib3d_Triangulate, accuracy)
 {
     // the testcase from http://code.opencv.org/issues/4334
