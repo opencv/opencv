@@ -42,7 +42,14 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
     GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 }
+#else // __linux__
+VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
+    VPLAccelerationPolicy(selector) {
+    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+}
+#endif // __linux__
 
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() {
     vaTerminate(va_handle);
     GAPI_LOG_INFO(nullptr, "destroyed");
@@ -90,12 +97,7 @@ cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool
     return cpu_dispatcher->create_frame_adapter(key, params);
 }
 
-#else // __linux__
-
-VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
-    VPLAccelerationPolicy(selector) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
-}
+#else // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() = default;
 
@@ -128,7 +130,7 @@ cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool
                                                                           const FrameConstructorArgs &) {
     GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
-#endif // __linux__
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
