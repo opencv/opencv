@@ -2293,6 +2293,9 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         break;
     case HOUGH_GRADIENT_ALT:
         {
+            if( param2 >= 1 )
+                CV_Error( Error::StsOutOfRange, "when using HOUGH_GRADIENT_ALT method, param2 parameter must be smaller than 1.0" );
+
             std::vector<EstimatedCircle> circles;
             Mat image = _image.getMat();
             HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1, param2);
@@ -2320,7 +2323,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         }
         break;
     default:
-        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
+        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually supported methods are HOUGH_GRADIENT and HOUGH_GRADIENT_ALT" );
     }
 }
 
