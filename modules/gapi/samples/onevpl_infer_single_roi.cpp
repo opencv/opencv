@@ -499,11 +499,11 @@ int main(int argc, char *argv[]) {
         std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
         gpu_accel_device = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_dx11_device(
-                                                        reinterpret_cast<void*>(dx11_dev.release()),
+                                                        reinterpret_cast<void*>(dx11_dev.get()),
                                                         "GPU"));
         gpu_accel_ctx = cv::util::make_optional(
                             cv::gapi::wip::onevpl::create_dx11_context(
-                                                        reinterpret_cast<void*>(dx11_ctx.release())));
+                                                        reinterpret_cast<void*>(dx11_ctx.get())));
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 #ifdef __linux__
