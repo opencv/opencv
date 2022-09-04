@@ -776,6 +776,8 @@ static double stereoCalibrateImpl(
             flags |= CALIB_FIX_TAUX_TAUY;
         if( flags & CALIB_FIX_ASPECT_RATIO )
             mask[idx + 0] = mask[idx + NINTRINSIC] = 0;
+        if ( flags & CALIB_SAME_FOCAL_LENGTH)
+            mask[idx + NINTRINSIC] = mask[idx + NINTRINSIC + 1] = 0;
         if( flags & CALIB_FIX_FOCAL_LENGTH )
             mask[idx + 0] = mask[idx + 1] = mask[idx + NINTRINSIC] = mask[idx + NINTRINSIC+1] = 0;
         if( flags & CALIB_FIX_PRINCIPAL_POINT )
