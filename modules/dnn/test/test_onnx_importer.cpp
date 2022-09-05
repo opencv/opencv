@@ -85,6 +85,11 @@ public:
     }
 };
 
+TEST_P(Test_ONNX_layers, NMS)
+{
+    testONNXModels("nms", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, InstanceNorm)
 {
     if(backend == DNN_BACKEND_CUDA)

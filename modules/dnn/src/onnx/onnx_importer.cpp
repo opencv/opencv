@@ -181,6 +181,7 @@ private:
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonMaxSuppression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -3689,7 +3690,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
                                           "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
-                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu"};
+                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "NonMaxSuppression"};
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;
