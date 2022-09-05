@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<s04i3p01 type_id="opencv-matrix">
+  <rows>4</rows>
+  <cols>4</cols>
+  <dt>"3u"</dt>
+  <data>
+    0 255 255 0 255 255 0 255 255 0 255 255 0 255 255 119 0 255 119 0
+    255 0 255 255 0 255 255 119 0 255 119 0 255 0 255 255 0 255 255 0
+    255 255 0 255 255 0 255 255</data></s04i3p01>
+</opencv_storage>
