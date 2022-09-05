@@ -221,8 +221,21 @@ if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   endif()
 endif()
 
+if(WITH_SPNG)
+  set(SPNG_LIBRARY libspng CACHE INTERNAL "")
+  set(SPNG_LIBRARIES ${SPNG_LIBRARY})
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libspng")
+  set(SPNG_INCLUDE_DIR "${${SPNG_LIBRARY}_SOURCE_DIR}" CACHE INTERNAL "")
+  set(SPNG_DEFINITIONS "")
+  ocv_parse_header("${SPNG_INCLUDE_DIR}/spng.h" SPNG_VERSION_LINES SPNG_VERSION_MAJOR SPNG_VERSION_MINOR SPNG_VERSION_PATCH)
+
+  set(HAVE_SPNG YES)
+  set(SPNG_VERSION "${SPNG_VERSION_MAJOR}.${SPNG_VERSION_MINOR}.${SPNG_VERSION_PATCH}")
+  message(STATUS "imgcodecs: PNG codec will use SPNG, version: ${SPNG_VERSION} ")
+endif()
+
 # --- libpng (optional, should be searched after zlib) ---
-if(WITH_PNG)
+if(NOT HAVE_SPNG AND WITH_PNG)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
@@ -253,6 +266,7 @@ if(WITH_PNG)
   set(HAVE_PNG YES)
   set(PNG_VERSION "${PNG_LIBPNG_VER_MAJOR}.${PNG_LIBPNG_VER_MINOR}.${PNG_LIBPNG_VER_RELEASE}")
 endif()
+
 
 # --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
