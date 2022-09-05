@@ -417,7 +417,7 @@ TEST_P(ffmpeg_get_fourcc, check_short_codecs)
     if(!fourcc && fileName == "../cv/tracking/faceocc2/data/faceocc2.webm")
         throw SkipTestException("Feature not yet supported by Windows FFmpeg shared library!");
 #endif
-    ASSERT_EQ(fourccToString(fourcc), fourcc_string);
+    ASSERT_EQ(fourcc_string, fourccToString((int)fourcc));
 }
 
 const ffmpeg_get_fourcc_param_t ffmpeg_get_fourcc_param[] =
