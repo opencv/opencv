@@ -452,8 +452,6 @@ class SVG:
     def interpret_fileName(self, fileName=None):
         if fileName is None:
             fileName = _default_fileName
-        if re.search("windows", platform.system(), re.I) and not os.path.isabs(fileName):
-            fileName = _default_directory + os.sep + fileName
         return fileName
 
     def save(self, fileName=None, encoding="utf-8", compresslevel=None):
