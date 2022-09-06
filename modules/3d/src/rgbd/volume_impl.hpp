@@ -26,11 +26,8 @@ public:
     virtual void integrate(InputArray depth, InputArray pose) = 0;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) = 0;
 
-    virtual void raycast(InputArray cameraPose, OdometryFrame& outFrame) const = 0;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
-
-    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const = 0;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const = 0;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const = 0;
@@ -40,8 +37,12 @@ public:
     virtual int getVisibleBlocks() const = 0;
     virtual size_t getTotalVolumeUnits() const = 0;
 
+    virtual void getBoundingBox(OutputArray bb, int precision) const = 0;
+    virtual void setEnableGrowth(bool v) = 0;
+    virtual bool getEnableGrowth() const = 0;
+
 public:
-    const VolumeSettings& settings;
+    VolumeSettings settings;
 #ifdef HAVE_OPENCL
     const bool useGPU;
 #endif
@@ -57,10 +58,8 @@ public:
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
-    virtual void raycast(InputArray cameraPose, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -69,6 +68,19 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
 
 public:
     Vec6f frameParams;
@@ -100,10 +112,8 @@ public:
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
-    virtual void raycast(InputArray cameraPose, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -112,11 +122,26 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
+
 public:
     int lastVolIndex;
     int lastFrameId;
     Vec6f frameParams;
     int volumeUnitDegree;
+    bool enableGrowth;
 
 #ifndef HAVE_OPENCL
     Mat volUnitsData;
@@ -151,10 +176,8 @@ public:
     virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
-    virtual void raycast(InputArray cameraPose, OdometryFrame& outFrame) const override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -163,6 +186,20 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
 private:
     Vec4i volStrides;
     Vec6f frameParams;
@@ -174,11 +211,6 @@ private:
 };
 
 
-Volume::Volume()
-{
-    VolumeSettings settings;
-    this->impl = makePtr<TsdfVolume>(settings);
-}
 Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     switch (vtype)
@@ -202,10 +234,11 @@ Volume::~Volume() {}
 void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray depth, InputArray pose) { this->impl->integrate(depth, pose); }
 void Volume::integrate(InputArray depth, InputArray image, InputArray pose) { this->impl->integrate(depth, image, pose); }
-void Volume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const { this->impl->raycast(cameraPose, outFrame); }
+void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, _points, _normals, noArray()); }
 void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, _points, _normals, _colors); }
-void Volume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const { this->impl->raycast(cameraPose, height, width, outFrame); }
-void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _points, _normals, _colors); }
+void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, noArray()); }
+void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, _colors); }
+
 void Volume::fetchNormals(InputArray points, OutputArray normals) const { this->impl->fetchNormals(points, normals); }
 void Volume::fetchPointsNormals(OutputArray points, OutputArray normals) const { this->impl->fetchPointsNormals(points, normals); }
 void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const { this->impl->fetchPointsNormalsColors(points, normals, colors); };
@@ -213,6 +246,10 @@ void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, O
 void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }
+
+void Volume::getBoundingBox(OutputArray bb, int precision) const { this->impl->getBoundingBox(bb, precision); }
+void Volume::setEnableGrowth(bool v) { this->impl->setEnableGrowth(v); }
+bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 
 
 }

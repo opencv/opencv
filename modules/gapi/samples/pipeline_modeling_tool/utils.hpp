@@ -1,6 +1,8 @@
 #ifndef OPENCV_GAPI_PIPELINE_MODELING_TOOL_UTILS_HPP
 #define OPENCV_GAPI_PIPELINE_MODELING_TOOL_UTILS_HPP
 
+#include <map>
+
 #include <opencv2/core.hpp>
 
 #if defined(_WIN32)
@@ -89,6 +91,38 @@ typename duration_t::rep timestamp() {
     using namespace std::chrono;
     auto now = high_resolution_clock::now();
     return duration_cast<duration_t>(now.time_since_epoch()).count();
+}
+
+template <typename K, typename V>
+void mergeMapWith(std::map<K, V>& target, const std::map<K, V>& second) {
+    for (auto&& item : second) {
+        auto it = target.find(item.first);
+        if (it != target.end()) {
+            throw std::logic_error("Error: key: " + it->first + " is already in target map");
+        }
+        target.insert(item);
+    }
+}
+
+template <typename T>
+double avg(const std::vector<T>& vec) {
+    return std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
+}
+
+template <typename T>
+T max(const std::vector<T>& vec) {
+    return *std::max_element(vec.begin(), vec.end());
+}
+
+template <typename T>
+T min(const std::vector<T>& vec) {
+    return *std::min_element(vec.begin(), vec.end());
+}
+
+template <typename T>
+int64_t ms_to_mcs(T ms) {
+    using namespace std::chrono;
+    return duration_cast<microseconds>(duration<T, std::milli>(ms)).count();
 }
 
 } // namespace utils

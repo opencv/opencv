@@ -735,25 +735,3 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         }
     }
 }
-
-CV_IMPL void
-cvCornerMinEigenVal( const CvArr* srcarr, CvArr* dstarr,
-                     int block_size, int aperture_size )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert( src.size() == dst.size() && dst.type() == CV_32FC1 );
-    cv::cornerMinEigenVal( src, dst, block_size, aperture_size, cv::BORDER_REPLICATE );
-}
-
-CV_IMPL void
-cvCornerEigenValsAndVecs( const void* srcarr, void* dstarr,
-                          int block_size, int aperture_size )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert( src.rows == dst.rows && src.cols*6 == dst.cols*dst.channels() && dst.depth() == CV_32F );
-    cv::cornerEigenValsAndVecs( src, dst, block_size, aperture_size, cv::BORDER_REPLICATE );
-}
-
-/* End of file */

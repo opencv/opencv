@@ -643,12 +643,6 @@ TEST_P(NoParamActivation, Accuracy)
     Target targetId = get<1>(get<1>(GetParam()));
     std::string layer_type = get<0>(GetParam());
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_CPU && layer_type == "BNLL")
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
     LayerParams lp;
     lp.type = layer_type;
     lp.name = "testLayer";

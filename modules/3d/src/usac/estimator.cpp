@@ -24,7 +24,7 @@ public:
     int estimateModelNonMinimalSample(const std::vector<int> &sample, int sample_size,
             std::vector<Mat> &models, const std::vector<double> &weights) const override {
         return non_min_solver->estimate (sample, sample_size, models, weights);
-    };
+    }
     int getMaxNumSolutions () const override {
         return min_solver->getMaxNumberOfSolutions();
     }
@@ -119,7 +119,7 @@ public:
     int estimateModelNonMinimalSample(const std::vector<int> &sample, int sample_size,
             std::vector<Mat> &models, const std::vector<double> &weights) const override {
         return non_min_solver->estimate(sample, sample_size, models, weights);
-    };
+    }
     int getMaxNumSolutions () const override {
         return min_solver->getMaxNumberOfSolutions();
     }

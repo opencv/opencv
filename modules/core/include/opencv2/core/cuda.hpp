@@ -155,7 +155,7 @@ public:
     CV_WRAP void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
-    void release();
+    CV_WRAP void release();
 
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
@@ -609,8 +609,8 @@ Below is an example that utilizes BufferPool with StackAllocator:
         GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
         GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
 
-        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+        cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
     }
 @endcode
 
@@ -675,8 +675,8 @@ and the corresponding memory is automatically returned to the pool for later usa
             d_src1.setTo(Scalar(i), stream1);
             d_src2.setTo(Scalar(i), stream2);
 
-            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+            cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
                                                                     // The order of destruction of the local variables is:
                                                                     //   d_dst2 => d_src2 => d_dst1 => d_src1
                                                                     // LIFO rule is satisfied, this code runs without error
@@ -689,13 +689,21 @@ class CV_EXPORTS_W BufferPool
 public:
 
     //! Gets the BufferPool for the given stream.
-    explicit BufferPool(Stream& stream);
+    CV_WRAP explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     //! Returns the allocator associated with the stream.
     CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }

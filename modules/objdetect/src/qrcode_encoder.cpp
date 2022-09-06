@@ -975,7 +975,7 @@ void QRCodeEncoderImpl::writeReservedArea()
     original.at<uint8_t>(x, y) = INVALID_REGION_VALUE;
     if (version_level >= 7)
     {
-        for (int i = 0; i <= 6; i++)
+        for (int i = 0; i <= 5; i++)
         {
             for (int j = version_size - 11; j <= version_size - 8; j++)
             {

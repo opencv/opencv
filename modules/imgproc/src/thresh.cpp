@@ -1545,18 +1545,18 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
     Mat src = _src.getMat();
-    int automatic_thresh = (type & ~CV_THRESH_MASK);
+    int automatic_thresh = (type & ~cv::THRESH_MASK);
     type &= THRESH_MASK;
 
-    CV_Assert( automatic_thresh != (CV_THRESH_OTSU | CV_THRESH_TRIANGLE) );
-    if( automatic_thresh == CV_THRESH_OTSU )
+    CV_Assert( automatic_thresh != (cv::THRESH_OTSU | cv::THRESH_TRIANGLE) );
+    if( automatic_thresh == cv::THRESH_OTSU )
     {
         int src_type = src.type();
         CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
         thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
                                        : getThreshVal_Otsu_16u( src );
     }
-    else if( automatic_thresh == CV_THRESH_TRIANGLE )
+    else if( automatic_thresh == cv::THRESH_TRIANGLE )
     {
         CV_Assert( src.type() == CV_8UC1 );
         thresh = getThreshVal_Triangle_8u( src );
@@ -1711,10 +1711,10 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
     int idelta = type == THRESH_BINARY ? cvCeil(delta) : cvFloor(delta);
     uchar tab[768];
 
-    if( type == CV_THRESH_BINARY )
+    if( type == cv::THRESH_BINARY )
         for( i = 0; i < 768; i++ )
             tab[i] = (uchar)(i - 255 > -idelta ? imaxval : 0);
-    else if( type == CV_THRESH_BINARY_INV )
+    else if( type == cv::THRESH_BINARY_INV )
         for( i = 0; i < 768; i++ )
             tab[i] = (uchar)(i - 255 <= -idelta ? imaxval : 0);
     else
@@ -1736,19 +1736,3 @@ void cv::adaptiveThreshold( InputArray _src, OutputArray _dst, double maxValue,
             ddata[j] = tab[sdata[j] - mdata[j] + 255];
     }
 }
-
-CV_IMPL double
-cvThreshold( const void* srcarr, void* dstarr, double thresh, double maxval, int type )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
-
-    CV_Assert( src.size == dst.size && src.channels() == dst.channels() &&
-        (src.depth() == dst.depth() || dst.depth() == CV_8U));
-
-    thresh = cv::threshold( src, dst, thresh, maxval, type );
-    if( dst0.data != dst.data )
-        dst.convertTo( dst0, dst0.depth() );
-    return thresh;
-}
-
-/* End of file. */

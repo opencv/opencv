@@ -48,26 +48,21 @@
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 /*** begin IPhone OS Stubs ***/
 // When highgui functions are referred to on iPhone OS, they will fail silently.
-CV_IMPL int cvInitSystem( int argc, char** argv) { return 0;}
-CV_IMPL int cvStartWindowThread(){ return 0; }
-CV_IMPL void cvDestroyWindow( const char* name) {}
-CV_IMPL void cvDestroyAllWindows( void ) {}
-CV_IMPL void cvShowImage( const char* name, const CvArr* arr) {}
-CV_IMPL void cvResizeWindow( const char* name, int width, int height) {}
-CV_IMPL void cvMoveWindow( const char* name, int x, int y){}
-CV_IMPL int cvCreateTrackbar (const char* trackbar_name,const char* window_name,
-                              int* val, int count, CvTrackbarCallback on_notify) {return  0;}
-CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,const char* window_name,
+static int cocoa_InitSystem( int argc, char** argv) { return 0;}
+void destroyWindowImpl( const char* name) {}
+void destroyAllWindowsImpl( void ) {}
+void showImageImpl( const char* name, const CvArr* arr) {}
+void resizeWindowImpl( const char* name, int width, int height) {}
+void moveWindowImpl( const char* name, int x, int y){}
+int createTrackbar2Impl(const char* trackbar_name,const char* window_name,
                               int* val, int count, CvTrackbarCallback2 on_notify2, void* userdata) {return 0;}
-CV_IMPL void cvSetMouseCallback( const char* name, CvMouseCallback function, void* info) {}
-CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name ) {return 0;}
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos) {}
-CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval) {}
-CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval) {}
-CV_IMPL void* cvGetWindowHandle( const char* name ) {return NULL;}
-CV_IMPL const char* cvGetWindowName( void* window_handle ) {return NULL;}
-CV_IMPL int cvNamedWindow( const char* name, int flags ) {return 0; }
-CV_IMPL int cvWaitKey (int maxWait) {return 0;}
+void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* info) {}
+int getTrackbarPosImpl( const char* trackbar_name, const char* window_name ) {return 0;}
+void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos) {}
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval) {}
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval) {}
+int namedWindowImpl( const char* name, int flags ) {return 0; }
+int waitKeyImpl (int maxWait) {return 0;}
 //*** end IphoneOS Stubs ***/
 #else
 
@@ -92,6 +87,7 @@ static bool wasInitialized = false;
 @interface CVSlider : NSView {
     NSSlider *slider;
     NSTextField *name;
+    NSString *initialName;
     int *value;
     void *userData;
     CvTrackbarCallback callback;
@@ -99,6 +95,7 @@ static bool wasInitialized = false;
 }
 @property(retain) NSSlider *slider;
 @property(retain) NSTextField *name;
+@property(retain) NSString *initialName;
 @property(assign) int *value;
 @property(assign) void *userData;
 @property(assign) CvTrackbarCallback callback;
@@ -107,6 +104,7 @@ static bool wasInitialized = false;
 
 @interface CVWindow : NSWindow {
     NSMutableDictionary *sliders;
+    NSMutableArray *slidersKeys;
     CvMouseCallback mouseCallback;
     void *mouseParam;
     BOOL autosize;
@@ -121,6 +119,7 @@ static bool wasInitialized = false;
 @property(assign) int x0;
 @property(assign) int y0;
 @property(retain) NSMutableDictionary *sliders;
+@property(retain) NSMutableArray *slidersKeys;
 @property(readwrite) int status;
 - (CVView *)contentView;
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags;
@@ -133,16 +132,16 @@ static bool wasInitialized = false;
     //cout << "icvCocoaCleanup" << endl;
     if( application )
     {
-        cvDestroyAllWindows();
+        destroyAllWindowsImpl();
         //[application terminate:nil];
         application = 0;
         [pool release];
     }
 }*/
 
-CV_IMPL int cvInitSystem( int , char** )
+static int cocoa_InitSystem( int , char** )
 {
-    //cout << "cvInitSystem" << endl;
+    //cout << "cocoa_InitSystem" << endl;
     wasInitialized = true;
 
     pool = [[NSAutoreleasePool alloc] init];
@@ -178,17 +177,11 @@ static CVWindow *cvGetWindow(const char *name) {
     return retval;
 }
 
-CV_IMPL int cvStartWindowThread()
-{
-    //cout << "cvStartWindowThread" << endl;
-    return 0;
-}
-
-CV_IMPL void cvDestroyWindow( const char* name)
+void destroyWindowImpl( const char* name)
 {
 
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    //cout << "cvDestroyWindow" << endl;
+    //cout << "destroyWindowImpl" << endl;
     CVWindow *window = cvGetWindow(name);
     if(window) {
         [window close];
@@ -198,26 +191,26 @@ CV_IMPL void cvDestroyWindow( const char* name)
 }
 
 
-CV_IMPL void cvDestroyAllWindows( void )
+void destroyAllWindowsImpl( void )
 {
-    //cout << "cvDestroyAllWindows" << endl;
+    //cout << "destroyAllWindowsImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     NSDictionary* list = [NSDictionary dictionaryWithDictionary:windows];
     for(NSString *key in list) {
-        cvDestroyWindow([key cStringUsingEncoding:NSASCIIStringEncoding]);
+        destroyWindowImpl([key cStringUsingEncoding:NSASCIIStringEncoding]);
     }
     [localpool drain];
 }
 
 
-CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
+void showImageImpl( const char* name, const CvArr* arr)
 {
-    //cout << "cvShowImage" << endl;
+    //cout << "showImageImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if(!window)
     {
-        cvNamedWindow(name, CV_WINDOW_AUTOSIZE);
+        namedWindowImpl(name, cv::WINDOW_AUTOSIZE);
         window = cvGetWindow(name);
     }
 
@@ -272,10 +265,10 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     [localpool drain];
 }
 
-CV_IMPL void cvResizeWindow( const char* name, int width, int height)
+void resizeWindowImpl( const char* name, int width, int height)
 {
 
-    //cout << "cvResizeWindow" << endl;
+    //cout << "resizeWindowImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if(window && ![window autosize]) {
@@ -286,9 +279,9 @@ CV_IMPL void cvResizeWindow( const char* name, int width, int height)
     [localpool drain];
 }
 
-CV_IMPL void cvMoveWindow( const char* name, int x, int y)
+void moveWindowImpl( const char* name, int x, int y)
 {
-    CV_FUNCNAME("cvMoveWindow");
+    CV_FUNCNAME("moveWindowImpl");
     __BEGIN__;
 
     NSAutoreleasePool* localpool1 = [[NSAutoreleasePool alloc] init];
@@ -296,7 +289,7 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y)
 
     if(name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL window name" );
-    //cout << "cvMoveWindow"<< endl;
+    //cout << "moveWindowImpl"<< endl;
     window = cvGetWindow(name);
     if(window) {
         if([window firstContent]) {
@@ -313,12 +306,12 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y)
     __END__;
 }
 
-CV_IMPL int cvCreateTrackbar (const char* trackbar_name,
+static int cocoa_CreateTrackbar (const char* trackbar_name,
                               const char* window_name,
                               int* val, int count,
                               CvTrackbarCallback on_notify)
 {
-    CV_FUNCNAME("cvCreateTrackbar");
+    CV_FUNCNAME("cocoa_CreateTrackbar");
 
 
     int result = 0;
@@ -332,7 +325,7 @@ CV_IMPL int cvCreateTrackbar (const char* trackbar_name,
     if(window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL window name" );
 
-    //cout << "cvCreateTrackbar" << endl ;
+    //cout << "cocoa_CreateTrackbar" << endl ;
     window = cvGetWindow(window_name);
     if(window) {
         [window createSliderWithName:trackbar_name
@@ -347,15 +340,15 @@ CV_IMPL int cvCreateTrackbar (const char* trackbar_name,
 }
 
 
-CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,
+int createTrackbar2Impl(const char* trackbar_name,
                               const char* window_name,
                               int* val, int count,
                               CvTrackbarCallback2 on_notify2,
                               void* userdata)
 {
-    //cout <<"cvCreateTrackbar2" << endl;
+    //cout <<"createTrackbar2Impl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    int res = cvCreateTrackbar(trackbar_name, window_name, val, count, NULL);
+    int res = cocoa_CreateTrackbar(trackbar_name, window_name, val, count, NULL);
     if(res) {
         CVWindow *window = cvGetWindow(window_name);
         if (window && [window respondsToSelector:@selector(sliders)]) {
@@ -369,15 +362,14 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,
 }
 
 
-CV_IMPL void
-cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
+void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* info)
 {
-    CV_FUNCNAME("cvSetMouseCallback");
+    CV_FUNCNAME("setMouseCallbackImpl");
 
     CVWindow *window = nil;
     NSAutoreleasePool* localpool3 = nil;
     __BEGIN__;
-    //cout << "cvSetMouseCallback" << endl;
+    //cout << "setMouseCallbackImpl" << endl;
 
     if (localpool3 != nil) [localpool3 drain];
     localpool3 = [[NSAutoreleasePool alloc] init];
@@ -395,16 +387,16 @@ cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
     __END__;
 }
 
- CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
+ int getTrackbarPosImpl( const char* trackbar_name, const char* window_name )
 {
-    CV_FUNCNAME("cvGetTrackbarPos");
+    CV_FUNCNAME("getTrackbarPosImpl");
 
     CVWindow *window = nil;
     int pos = -1;
     NSAutoreleasePool* localpool4 = nil;
     __BEGIN__;
 
-    //cout << "cvGetTrackbarPos" << endl;
+    //cout << "getTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
 
@@ -423,16 +415,16 @@ cvSetMouseCallback( const char* name, CvMouseCallback function, void* info)
     return pos;
 }
 
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos)
+void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("cvSetTrackbarPos");
+    CV_FUNCNAME("setTrackbarPosImpl");
 
     CVWindow *window = nil;
     CVSlider *slider = nil;
     NSAutoreleasePool* localpool5 = nil;
 
     __BEGIN__;
-    //cout << "cvSetTrackbarPos" << endl;
+    //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
 
@@ -447,6 +439,9 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             [[slider slider] setIntValue:pos];
+            if([slider respondsToSelector:@selector(handleSlider)]) {
+                [slider performSelector:@selector(handleSlider)];
+            }
         }
     }
     [localpool5 drain];
@@ -454,16 +449,16 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("cvSetTrackbarMax");
+    CV_FUNCNAME("setTrackbarMaxImpl");
 
     CVWindow *window = nil;
     CVSlider *slider = nil;
     NSAutoreleasePool* localpool5 = nil;
 
     __BEGIN__;
-    //cout << "cvSetTrackbarPos" << endl;
+    //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL trackbar or window name" );
 
@@ -486,9 +481,9 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("cvSetTrackbarMin");
+    CV_FUNCNAME("setTrackbarMinImpl");
 
     CVWindow *window = nil;
     CVSlider *slider = nil;
@@ -517,38 +512,17 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void* cvGetWindowHandle( const char* name )
-{
-    //cout << "cvGetWindowHandle" << endl;
-    return cvGetWindow(name);
-}
-
-
-CV_IMPL const char* cvGetWindowName( void* window_handle )
-{
-    //cout << "cvGetWindowName" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    for(NSString *key in windows) {
-        if([windows valueForKey:key] == window_handle) {
-            [localpool drain];
-            return [key UTF8String];
-        }
-    }
-    [localpool drain];
-    return 0;
-}
-
-CV_IMPL int cvNamedWindow( const char* name, int flags )
+int namedWindowImpl( const char* name, int flags )
 {
     if( !wasInitialized )
-        cvInitSystem(0, 0);
+        cocoa_InitSystem(0, 0);
 
-    //cout << "cvNamedWindow" << endl;
+    //cout << "namedWindowImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if( window )
     {
-        [window setAutosize:(flags == CV_WINDOW_AUTOSIZE)];
+        [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
         [localpool drain];
         return 0;
     }
@@ -580,13 +554,15 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     [window setContentView:[[CVView alloc] init]];
 
+    [NSApp activateIgnoringOtherApps:YES];
+
     [window setHasShadow:YES];
     [window setAcceptsMouseMovedEvents:YES];
     [window useOptimizedDrawing:YES];
     [window setTitle:windowName];
     [window makeKeyAndOrderFront:nil];
 
-    [window setAutosize:(flags == CV_WINDOW_AUTOSIZE)];
+    [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
 
     [windows setValue:window forKey:windowName];
 
@@ -594,9 +570,9 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     return [windows count]-1;
 }
 
-CV_IMPL int cvWaitKey (int maxWait)
+int waitKeyImpl (int maxWait)
 {
-    //cout << "cvWaitKey" << endl;
+    //cout << "waitKeyImpl" << endl;
     int returnCode = -1;
     NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
     double start = [[NSDate date] timeIntervalSince1970];
@@ -717,20 +693,45 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     localpool = [[NSAutoreleasePool alloc] init];
 
     fullscreenOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSFullScreenModeSetting];
-    if ( [[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_NORMAL )
+    if ( [[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_NORMAL )
     {
         [[window contentView] exitFullScreenModeWithOptions:fullscreenOptions];
-        window.status=CV_WINDOW_NORMAL;
+        window.status=cv::WINDOW_NORMAL;
     }
-    else if( ![[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_FULLSCREEN )
+    else if( ![[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_FULLSCREEN )
     {
         [[window contentView] enterFullScreenMode:[NSScreen mainScreen] withOptions:fullscreenOptions];
-        window.status=CV_WINDOW_FULLSCREEN;
+        window.status=cv::WINDOW_FULLSCREEN;
     }
 
     [localpool drain];
 
     __END__;
+}
+
+double cvGetPropVisible_COCOA(const char* name)
+{
+    double    result = -1;
+    CVWindow* window = nil;
+
+    CV_FUNCNAME("cvGetPropVisible_COCOA");
+
+    __BEGIN__;
+    if (name == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+    }
+
+    window = cvGetWindow(name);
+    if (window == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL window");
+    }
+
+    result = window.isVisible ? 1 : 0;
+
+    __END__;
+    return result;
 }
 
 double cvGetPropTopmost_COCOA(const char* name)
@@ -842,6 +843,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 @synthesize x0;
 @synthesize y0;
 @synthesize sliders;
+@synthesize slidersKeys;
 @synthesize status;
 
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
@@ -874,20 +876,20 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
         return;
 
     int flags = 0;
-    if([event modifierFlags] & NSShiftKeyMask)		flags |= CV_EVENT_FLAG_SHIFTKEY;
-    if([event modifierFlags] & NSControlKeyMask)	flags |= CV_EVENT_FLAG_CTRLKEY;
-    if([event modifierFlags] & NSAlternateKeyMask)	flags |= CV_EVENT_FLAG_ALTKEY;
+    if([event modifierFlags] & NSShiftKeyMask)		flags |= cv::EVENT_FLAG_SHIFTKEY;
+    if([event modifierFlags] & NSControlKeyMask)	flags |= cv::EVENT_FLAG_CTRLKEY;
+    if([event modifierFlags] & NSAlternateKeyMask)	flags |= cv::EVENT_FLAG_ALTKEY;
 
-    if([event type] == NSLeftMouseDown)	{[self cvSendMouseEvent:event type:CV_EVENT_LBUTTONDOWN flags:flags | CV_EVENT_FLAG_LBUTTON];}
-    if([event type] == NSLeftMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_LBUTTONUP   flags:flags | CV_EVENT_FLAG_LBUTTON];}
-    if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONDOWN flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONUP   flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_MBUTTONDOWN flags:flags];}
-    if([event type] == NSOtherMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_MBUTTONUP   flags:flags];}
-    if([event type] == NSMouseMoved)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags];}
-    if([event type] == NSLeftMouseDragged) {[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_LBUTTON];}
-    if([event type] == NSRightMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSOtherMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_MBUTTON];}
+    if([event type] == NSLeftMouseDown)	{[self cvSendMouseEvent:event type:cv::EVENT_LBUTTONDOWN flags:flags | cv::EVENT_FLAG_LBUTTON];}
+    if([event type] == NSLeftMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_LBUTTONUP   flags:flags | cv::EVENT_FLAG_LBUTTON];}
+    if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONDOWN flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONUP   flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_MBUTTONDOWN flags:flags];}
+    if([event type] == NSOtherMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_MBUTTONUP   flags:flags];}
+    if([event type] == NSMouseMoved)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags];}
+    if([event type] == NSLeftMouseDragged) {[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_LBUTTON];}
+    if([event type] == NSRightMouseDragged)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSOtherMouseDragged)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_MBUTTON];}
 }
 - (void)keyDown:(NSEvent *)theEvent {
     //cout << "keyDown" << endl;
@@ -933,6 +935,9 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if(sliders == nil)
         sliders = [[NSMutableDictionary alloc] init];
 
+    if(slidersKeys == nil)
+        slidersKeys = [[NSMutableArray alloc] init];
+
     NSString *cvname = [NSString stringWithFormat:@"%s", name];
 
     // Avoid overwriting slider
@@ -942,18 +947,23 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     // Create slider
     CVSlider *slider = [[CVSlider alloc] init];
     [[slider name] setStringValue:cvname];
+    slider.initialName = [NSString stringWithFormat:@"%s", name];
     [[slider slider] setMaxValue:max];
     [[slider slider] setMinValue:0];
     if(value)
     {
         [[slider slider] setIntValue:*value];
         [slider setValue:value];
+        NSString *temp = [slider initialName];
+        NSString *text = [NSString stringWithFormat:@"%@ %d", temp, *value];
+        [[slider name] setStringValue: text];
     }
     if(callback)
         [slider setCallback:callback];
 
     // Save slider
     [sliders setValue:slider forKey:cvname];
+    [slidersKeys addObject:cvname];
     [[self contentView] addSubview:slider];
 
 
@@ -1092,7 +1102,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     CVWindow *cvwindow = (CVWindow *)[self window];
     if ([cvwindow respondsToSelector:@selector(sliders)]) {
-        for(NSString *key in [cvwindow sliders]) {
+        for(NSString *key in [cvwindow slidersKeys]) {
             CVSlider *slider = [[cvwindow sliders] valueForKey:key];
             NSRect r = [slider frame];
             r.origin.y = height - r.size.height;
@@ -1144,6 +1154,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
 @synthesize slider;
 @synthesize name;
+@synthesize initialName;
 @synthesize value;
 @synthesize userData;
 @synthesize callback;
@@ -1173,7 +1184,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [slider setMaxValue:100];
     [slider setContinuous:YES];
     [slider setTarget:self];
-    [slider setAction:@selector(sliderChanged:)];
+    [slider setAction:@selector(handleSliderNotification:)];
     [self addSubview:slider];
 
     [self setAutoresizingMask:NSViewWidthSizable];
@@ -1183,9 +1194,16 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     return self;
 }
 
-- (void)sliderChanged:(NSNotification *)notification {
+- (void)handleSliderNotification:(NSNotification *)notification {
     (void)notification;
+    [self handleSlider];
+}
+
+- (void)handleSlider {
     int pos = [slider intValue];
+    NSString *temp = [self initialName];
+    NSString *text = [NSString stringWithFormat:@"%@ %d", temp, pos];
+    [name setStringValue: text];
     if(value)
         *value = pos;
     if(callback)

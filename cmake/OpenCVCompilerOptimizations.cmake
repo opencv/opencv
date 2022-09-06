@@ -20,6 +20,9 @@
 # VSX  (always available on Power8)
 # VSX3 (always available on Power9)
 
+# RISC-V arch:
+# RVV
+
 # CPU_{opt}_SUPPORTED=ON/OFF - compiler support (possibly with additional flag)
 # CPU_{opt}_IMPLIES=<list>
 # CPU_{opt}_FORCE=<list> - subset of "implies" list
@@ -46,10 +49,11 @@
 
 set(CPU_ALL_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;SSE4_2;POPCNT;AVX;FP16;AVX2;FMA3;AVX_512F")
 list(APPEND CPU_ALL_OPTIMIZATIONS "AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
-list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16)
+list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16 NEON_DOTPROD)
 list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX VSX3)
 list(APPEND CPU_ALL_OPTIMIZATIONS RVV)
+list(APPEND CPU_ALL_OPTIMIZATIONS LASX)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
 
 ocv_update(CPU_VFPV3_FEATURE_ALIAS "")
@@ -102,8 +106,6 @@ ocv_optimization_process_obsolete_option(ENABLE_VFPV3 VFPV3 OFF)
 ocv_optimization_process_obsolete_option(ENABLE_NEON NEON OFF)
 
 ocv_optimization_process_obsolete_option(ENABLE_VSX VSX ON)
-
-ocv_optimization_process_obsolete_option(ENABLE_RVV RVV OFF)
 
 macro(ocv_is_optimization_in_list resultvar check_opt)
   set(__checked "")
@@ -329,6 +331,7 @@ if(X86 OR X86_64)
 elseif(ARM OR AARCH64)
   ocv_update(CPU_NEON_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_neon.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
+  ocv_update(CPU_NEON_DOTPROD_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_dotprod.cpp")
   if(NOT AARCH64)
     ocv_update(CPU_KNOWN_OPTIMIZATIONS "VFPV3;NEON;FP16")
     if(NOT MSVC)
@@ -340,9 +343,11 @@ elseif(ARM OR AARCH64)
     endif()
     ocv_update(CPU_FP16_IMPLIES "NEON")
   else()
-    ocv_update(CPU_KNOWN_OPTIMIZATIONS "NEON;FP16")
+    ocv_update(CPU_KNOWN_OPTIMIZATIONS "NEON;FP16;NEON_DOTPROD")
     ocv_update(CPU_NEON_FLAGS_ON "")
     ocv_update(CPU_FP16_IMPLIES "NEON")
+    ocv_update(CPU_NEON_DOTPROD_FLAGS_ON "-march=armv8.2-a+dotprod")
+    ocv_update(CPU_NEON_DOTPROD_IMPLIES "NEON")
     set(CPU_BASELINE "NEON;FP16" CACHE STRING "${HELP_CPU_BASELINE}")
   endif()
 elseif(MIPS)
@@ -371,11 +376,24 @@ elseif(PPC64LE)
   set(CPU_BASELINE "VSX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 elseif(RISCV)
+  option(RISCV_RVV_SCALABLE "Use scalable RVV API on RISC-V" ON)
+
   ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
-  ocv_update(CPU_RVV_FLAGS_ON "")
-  set(CPU_DISPATCH "RVV" CACHE STRING "${HELP_CPU_DISPATCH}")
-  set(CPU_BASELINE "RVV" CACHE STRING "${HELP_CPU_BASELINE}")
+  ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gcv")
+  if(RISCV_RVV_SCALABLE)
+    set(CPU_RVV_FLAGS_ON "${CPU_RVV_FLAGS_ON} -DCV_RVV_SCALABLE")
+  endif()
+  ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
+
+  set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")
+  set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
+
+elseif(LOONGARCH64)
+  ocv_update(CPU_LASX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_lasx.cpp")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "LASX")
+  ocv_update(CPU_LASX_FLAGS_ON "-mlasx")
+  set(CPU_BASELINE "LASX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 endif()
 
@@ -688,7 +706,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
           if(fname_LOWER MATCHES "\\.${OPT_LOWER}\\.cpp$")
 #message("${fname} BASELINE-${OPT}")
             set(__opt_found 1)
-            list(APPEND __result "${fname}")
+            list(APPEND __result_${OPT} "${fname}")
             break()
           endif()
         endforeach()
@@ -722,7 +740,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
     endif()
   endforeach()
 
-  foreach(OPT ${CPU_DISPATCH_FINAL})
+  foreach(OPT ${CPU_BASELINE_FINAL} ${CPU_DISPATCH_FINAL})
     if(__result_${OPT})
 #message("${OPT}: ${__result_${OPT}}")
       if(CMAKE_GENERATOR MATCHES "^Visual"

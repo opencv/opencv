@@ -13,7 +13,6 @@
 namespace cv
 {
 
-
  /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
   * a limit. For a float/double, we just check if it is a NaN
   * @param depth the depth to check for validity
@@ -46,39 +45,10 @@ inline bool isValidDepth(const int& depth)
            (depth != std::numeric_limits<int>::max());
 }
 
-
 inline bool isValidDepth(const unsigned int& depth)
 {
     return (depth != std::numeric_limits<unsigned int>::min()) &&
            (depth != std::numeric_limits<unsigned int>::max());
-}
-
-/** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
- * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
- * Otherwise, the image is simply converted to floats
- * @param in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
- *              (as done with the Microsoft Kinect), it is assumed in meters)
- * @param the desired output depth (floats or double)
- * @param out The rescaled float depth image
- */
-/* void rescaleDepth(InputArray in_in, int depth, OutputArray out_out); */
-
-template<typename T>
-void
-rescaleDepthTemplated(const Mat& in, Mat& out);
-
-template<>
-inline void
-rescaleDepthTemplated<float>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_32F, out);
-}
-
-template<>
-inline void
-rescaleDepthTemplated<double>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_64F, out);
 }
 
 
@@ -104,18 +74,6 @@ static inline bool isNaN(const cv::v_float32x4& p)
     return cv::v_check_any(p != p);
 }
 #endif
-
-template<typename TMat>
-inline TMat getTMat(InputArray, int = -1);
-template<>
-Mat getTMat<Mat>(InputArray a, int i);
-template<>
-UMat getTMat<UMat>(InputArray a, int i);
-
-template<typename TMat>
-inline TMat& getTMatRef(InputOutputArray, int = -1);
-template<>
-Mat& getTMatRef<Mat>(InputOutputArray a, int i);
 
 inline size_t roundDownPow2(size_t x)
 {
@@ -278,6 +236,33 @@ struct Intr
     inline cv::Matx33f getMat() const { return Matx33f(fx, 0, cx, 0, fy, cy, 0, 0, 1); }
 
     float fx, fy, cx, cy;
+};
+
+class OdometryFrame::Impl
+{
+public:
+    Impl() : pyramids(OdometryFramePyramidType::N_PYRAMIDS) { }
+    virtual ~Impl() {}
+
+    virtual void getImage(OutputArray image) const ;
+    virtual void getGrayImage(OutputArray image) const ;
+    virtual void getDepth(OutputArray depth) const ;
+    virtual void getProcessedDepth(OutputArray depth) const ;
+    virtual void getMask(OutputArray mask) const ;
+    virtual void getNormals(OutputArray normals) const ;
+
+    virtual int getPyramidLevels() const ;
+
+    virtual void getPyramidAt(OutputArray img,
+                              OdometryFramePyramidType pyrType, size_t level) const ;
+
+    UMat imageGray;
+    UMat image;
+    UMat depth;
+    UMat scaledDepth;
+    UMat mask;
+    UMat normals;
+    std::vector< std::vector<UMat> > pyramids;
 };
 
 } // namespace cv

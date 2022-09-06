@@ -111,7 +111,7 @@ class XINECapture : public IVideoCapture
         char configfile[2048] = {0};
 
         xine = xine_new();
-        sprintf(configfile, "%s%s", xine_get_homedir(), "/.xine/config");
+        snprintf(configfile, sizeof(configfile), "%s%s", xine_get_homedir(), "/.xine/config");
         xine_config_load(xine, configfile);
         xine_init(xine);
         xine_engine_set_param(xine, 0, 0);

@@ -20,125 +20,121 @@ enum class VolumeType
 };
 
 
-class CV_EXPORTS_W VolumeSettings
+class CV_EXPORTS_W_SIMPLE VolumeSettings
 {
 public:
-    /** @brief Constructor of settings for common TSDF volume type.
-    */
-    VolumeSettings();
-
     /** @brief Constructor of settings for custom Volume type.
     * @param volumeType volume type.
     */
-    VolumeSettings(VolumeType volumeType);
+    CV_WRAP explicit VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
+
+    VolumeSettings(const VolumeSettings& vs);
+    VolumeSettings& operator=(const VolumeSettings&);
     ~VolumeSettings();
 
     /** @brief Sets the width of the image for integration.
     * @param val input value.
     */
-    void  setIntegrateWidth(int val);
+    CV_WRAP void setIntegrateWidth(int val);
 
     /** @brief Returns the width of the image for integration.
     */
-    int   getIntegrateWidth() const;
+    CV_WRAP int getIntegrateWidth() const;
 
     /** @brief Sets the height of the image for integration.
     * @param val input value.
     */
-    void  setIntegrateHeight(int val);
+    CV_WRAP void setIntegrateHeight(int val);
 
     /** @brief Returns the height of the image for integration.
     */
-    int   getIntegrateHeight() const;
+    CV_WRAP int getIntegrateHeight() const;
 
-
-    /** @brief Sets the width of the raycasted image.
+    /** @brief Sets the width of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
-    void  setRaycastWidth(int val);
+    CV_WRAP void setRaycastWidth(int val);
 
-    /** @brief Returns the width of the raycasted image.
+    /** @brief Returns the width of the raycasted image, used when user does not provide it at raycast() call.
     */
-    int   getRaycastWidth() const;
+    CV_WRAP int getRaycastWidth() const;
 
-    /** @brief Sets the height of the raycasted image.
+    /** @brief Sets the height of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
-    void  setRaycastHeight(int val);
+    CV_WRAP void setRaycastHeight(int val);
 
-    /** @brief Returns the height of the raycasted image.
+    /** @brief Returns the height of the raycasted image, used when user does not provide it at raycast() call.
     */
-    int   getRaycastHeight() const;
-
+    CV_WRAP int getRaycastHeight() const;
 
     /** @brief Sets depth factor, witch is the number for depth scaling.
     * @param val input value.
     */
-    void  setDepthFactor(float val);
+    CV_WRAP void setDepthFactor(float val);
 
     /** @brief Returns depth factor, witch is the number for depth scaling.
     */
-    float getDepthFactor() const;
+    CV_WRAP float getDepthFactor() const;
 
     /** @brief Sets the size of voxel.
     * @param val input value.
     */
-    void  setVoxelSize(float val);
+    CV_WRAP void setVoxelSize(float val);
 
     /** @brief Returns the size of voxel.
     */
-    float getVoxelSize() const;
-
+    CV_WRAP float getVoxelSize() const;
 
     /** @brief Sets TSDF truncation distance. Distances greater than value from surface will be truncated to 1.0.
     * @param val input value.
     */
-    void  setTsdfTruncateDistance(float val);
+    CV_WRAP void setTsdfTruncateDistance(float val);
 
     /** @brief Returns TSDF truncation distance. Distances greater than value from surface will be truncated to 1.0.
     */
-    float getTsdfTruncateDistance() const;
+    CV_WRAP float getTsdfTruncateDistance() const;
 
     /** @brief Sets threshold for depth truncation in meters. Truncates the depth greater than threshold to 0.
     * @param val input value.
     */
-    void  setMaxDepth(float val);
+    CV_WRAP void setMaxDepth(float val);
 
     /** @brief Returns threshold for depth truncation in meters. Truncates the depth greater than threshold to 0.
     */
-    float getMaxDepth() const;
+    CV_WRAP float getMaxDepth() const;
 
     /** @brief Sets max number of frames to integrate per voxel.
         Represents the max number of frames over which a running average of the TSDF is calculated for a voxel.
     * @param val input value.
     */
-    void  setMaxWeight(int val);
+    CV_WRAP void setMaxWeight(int val);
 
     /** @brief Returns max number of frames to integrate per voxel.
         Represents the max number of frames over which a running average of the TSDF is calculated for a voxel.
     */
-    int   getMaxWeight() const;
+    CV_WRAP int getMaxWeight() const;
 
     /** @brief Sets length of single raycast step.
         Describes the percentage of voxel length that is skipped per march.
     * @param val input value.
     */
-    void  setRaycastStepFactor(float val);
+    CV_WRAP void setRaycastStepFactor(float val);
 
     /** @brief Returns length of single raycast step.
         Describes the percentage of voxel length that is skipped per march.
     */
-    float getRaycastStepFactor() const;
+    CV_WRAP float getRaycastStepFactor() const;
 
     /** @brief Sets volume pose.
     * @param val input value.
     */
-    void setVolumePose(InputArray val);
+    CV_WRAP void setVolumePose(InputArray val);
 
     /** @brief Sets volume pose.
     * @param val output value.
     */
-    void getVolumePose(OutputArray val) const;
+    CV_WRAP void getVolumePose(OutputArray val) const;
 
     /** @brief Resolution of voxel space.
         Number of voxels in each dimension.
@@ -146,7 +142,7 @@ public:
         HashTSDF volume only supports equal resolution in all three dimensions.
     * @param val input value.
     */
-    void setVolumeResolution(InputArray val);
+    CV_WRAP void setVolumeResolution(InputArray val);
 
     /** @brief Resolution of voxel space.
         Number of voxels in each dimension.
@@ -154,13 +150,13 @@ public:
         HashTSDF volume only supports equal resolution in all three dimensions.
     * @param val output value.
     */
-    void getVolumeResolution(OutputArray val) const;
+    CV_WRAP void getVolumeResolution(OutputArray val) const;
 
     /** @brief Returns 3 integers representing strides by x, y and z dimension.
-        Can be used to iterate over volume unit raw data.
+        Can be used to iterate over raw volume unit data.
     * @param val output value.
     */
-    void getVolumeDimensions(OutputArray val) const;
+    CV_WRAP void getVolumeStrides(OutputArray val) const;
 
     /** @brief Sets intrinsics of camera for integrations.
     * Format of input:
@@ -170,7 +166,7 @@ public:
     * where fx and fy are focus points of Ox and Oy axises, and cx and cy are central points of Ox and Oy axises.
     * @param val input value.
     */
-    void setCameraIntegrateIntrinsics(InputArray val);
+    CV_WRAP void setCameraIntegrateIntrinsics(InputArray val);
 
     /** @brief Returns intrinsics of camera for integrations.
     * Format of output:
@@ -180,9 +176,9 @@ public:
     * where fx and fy are focus points of Ox and Oy axises, and cx and cy are central points of Ox and Oy axises.
     * @param val output value.
     */
-    void getCameraIntegrateIntrinsics(OutputArray val) const;
+    CV_WRAP void getCameraIntegrateIntrinsics(OutputArray val) const;
 
-    /** @brief Sets intrinsics of camera for raycast image.
+    /** @brief Sets camera intrinsics for raycast image which, used when user does not provide them at raycast() call.
     * Format of input:
     * [ fx  0 cx ]
     * [  0 fy cy ]
@@ -190,9 +186,9 @@ public:
     * where fx and fy are focus points of Ox and Oy axises, and cx and cy are central points of Ox and Oy axises.
     * @param val input value.
     */
-    void setCameraRaycastIntrinsics(InputArray val);
+    CV_WRAP void setCameraRaycastIntrinsics(InputArray val);
 
-    /** @brief Returns intrinsics of camera for raycast image.
+    /** @brief Returns camera intrinsics for raycast image, used when user does not provide them at raycast() call.
     * Format of output:
     * [ fx  0 cx ]
     * [  0 fy cy ]
@@ -200,8 +196,7 @@ public:
     * where fx and fy are focus points of Ox and Oy axises, and cx and cy are central points of Ox and Oy axises.
     * @param val output value.
     */
-    void getCameraRaycastIntrinsics(OutputArray val) const;
-
+    CV_WRAP void getCameraRaycastIntrinsics(OutputArray val) const;
 
     class Impl;
 private:

@@ -49,7 +49,7 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
         _C(OCL);
         _C(OCL_FLUID);
 #undef _C
-    default: GAPI_Assert(false);
+    default: GAPI_Error("InternalError");
     }
     return os;
 }
@@ -298,7 +298,7 @@ void checkPullOverload(const cv::Mat& ref,
             out_mat = *opt_mat;
             break;
         }
-        default: GAPI_Assert(false && "Incorrect type of Args");
+        default: GAPI_Error("Incorrect type of Args");
     }
 
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
@@ -2420,7 +2420,7 @@ TEST(GAPI_Streaming, TestPythonAPI)
     switch (args.index()) {
         case RunArgs::index_of<cv::GRunArgs>():
             out_args = util::get<cv::GRunArgs>(args); break;
-        default: GAPI_Assert(false && "Incorrect type of return value");
+        default: GAPI_Error("Incorrect type of return value");
     }
 
     ASSERT_EQ(1u, out_args.size());
@@ -2440,7 +2440,11 @@ TEST(OneVPL_Source, Init)
 
     std::vector<CfgParam> src_params;
     src_params.push_back(CfgParam::create_implementation(MFX_IMPL_TYPE_HARDWARE));
+#ifdef _WIN32
     src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+#elif defined(__linux__)
+    src_params.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_VAAPI));
+#endif
     src_params.push_back(CfgParam::create_decoder_id(MFX_CODEC_HEVC));
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 

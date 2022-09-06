@@ -175,7 +175,7 @@ void integrateTsdfVolumeUnit(
     InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
 
-void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr,
                        InputArray _volume, OutputArray _points, OutputArray _normals);
 
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
@@ -191,7 +191,7 @@ void ocl_integrateTsdfVolumeUnit(
     InputArray _depth, InputArray _pixNorms, InputArray _volume);
 
 void ocl_raycastTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr,
     InputArray _volume, OutputArray _points, OutputArray _normals);
 
 void ocl_fetchNormalsFromTsdfVolumeUnit(

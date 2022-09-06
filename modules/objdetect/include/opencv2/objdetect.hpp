@@ -105,6 +105,26 @@ using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is availa
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
 Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
     @defgroup objdetect_common Common functions and classes
+    @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
+    @{
+        ArUco Marker Detection
+        Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
+        fast and robust camera pose estimation.
+
+        The main functionality of ArucoDetector class is detection of markers in an image. If the markers are grouped
+        as a board, then you can try to recover the missing markers with ArucoDetector::refineDetectedMarkers().
+        ArUco markers can also be used for advanced chessboard corner finding. To do this, group the markers in the
+        CharucoBoard and find the corners of the chessboard with the CharucoDetector::detectBoard().
+
+        The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
+
+        Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
+
+        @sa @cite Aruco2014
+        This code has been originally developed by Sergio Garrido-Jurado as a project
+        for Google Summer of Code 2015 (GSoC 15).
+    @}
+
 @}
  */
 
@@ -374,7 +394,7 @@ http://www.learnopencv.com/histogram-of-oriented-gradients
 http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-tutorial
 
  */
-struct CV_EXPORTS_W HOGDescriptor
+class CV_EXPORTS_W HOGDescriptor
 {
 public:
     enum HistogramNormType { L2Hys = 0 //!< Default histogramNormType
@@ -385,15 +405,6 @@ public:
 
     /**@brief Creates the HOG descriptor and detector with default parameters.
 
-    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
-    */
-    CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
-        cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
-        histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true),
-        free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS), signedGradient(false)
-    {}
-
-    /** @overload
     @param _winSize sets winSize with given value.
     @param _blockSize sets blockSize with given value.
     @param _blockStride sets blockStride with given value.
@@ -407,11 +418,11 @@ public:
     @param _nlevels sets nlevels with given value.
     @param _signedGradient sets signedGradient with given value.
     */
-    CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
-                  Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  HOGDescriptor::HistogramNormType _histogramNormType=HOGDescriptor::L2Hys,
-                  double _L2HysThreshold=0.2, bool _gammaCorrection=false,
-                  int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
+    CV_WRAP HOGDescriptor(Size _winSize = Size(64, 128), Size _blockSize = Size(16, 16), Size _blockStride = Size(8, 8),
+                  Size _cellSize = Size(8, 8), int _nbins = 9, int _derivAperture = 1, double _winSigma = -1,
+                  HOGDescriptor::HistogramNormType _histogramNormType = HOGDescriptor::L2Hys,
+                  double _L2HysThreshold = 0.2, bool _gammaCorrection = true,
+                  int _nlevels = HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient = false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
     nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
     histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
@@ -760,6 +771,12 @@ public:
      */
     CV_WRAP void setEpsY(double epsY);
 
+    /** @brief use markers to improve the position of the corners of the QR code
+     *
+     * alignmentMarkers using by default
+     */
+    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
+
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
@@ -845,5 +862,7 @@ protected:
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
 #include "opencv2/objdetect/face.hpp"
+#include "opencv2/objdetect/aruco_detector.hpp"
+#include "opencv2/objdetect/charuco_detector.hpp"
 
 #endif

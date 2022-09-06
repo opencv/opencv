@@ -3,7 +3,7 @@
 @tableofcontents
 
 @prev_tutorial{tutorial_dnn_halide}
-@next_tutorial{tutorial_dnn_android}
+@next_tutorial{tutorial_dnn_openvino}
 
 |    |    |
 | -: | :- |

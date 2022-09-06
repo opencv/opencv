@@ -59,7 +59,7 @@ ocv_module_include_directories()
 #message(STATUS "${OPENCV_MODULE_${the_module}_SOURCES}")
 ocv_create_module(${link_deps})
 
-if(";${OPENCV_MODULES_BUILD};" MATCHES ";opencv_viz;" AND OPENCV_MODULE_opencv_viz_IS_PART_OF_WORLD AND VTK_VERSION VERSION_GREATER_EQUAL "8.90.0")
+if(";${OPENCV_MODULES_BUILD};" MATCHES ";opencv_viz;" AND OPENCV_MODULE_opencv_viz_IS_PART_OF_WORLD AND NOT (VTK_VERSION VERSION_LESS "8.90.0"))
   vtk_module_autoinit(TARGETS opencv_world MODULES ${VTK_LIBRARIES})
 endif()
 

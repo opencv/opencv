@@ -30,7 +30,8 @@ public:
     {
       RGBD_NORMALS_METHOD_FALS = 0,
       RGBD_NORMALS_METHOD_LINEMOD = 1,
-      RGBD_NORMALS_METHOD_SRI = 2
+      RGBD_NORMALS_METHOD_SRI = 2,
+      RGBD_NORMALS_METHOD_CROSS_PRODUCT = 3
     };
 
     RgbdNormals() { }
@@ -42,9 +43,11 @@ public:
      * @param depth the depth of the normals (only CV_32F or CV_64F)
      * @param K the calibration matrix to use
      * @param window_size the window size to compute the normals: can only be 1,3,5 or 7
+     * @param diff_threshold threshold in depth difference, used in LINEMOD algirithm
      * @param method one of the methods to use: RGBD_NORMALS_METHOD_SRI, RGBD_NORMALS_METHOD_FALS
      */
     CV_WRAP static Ptr<RgbdNormals> create(int rows = 0, int cols = 0, int depth = 0, InputArray K = noArray(), int window_size = 5,
+                                           float diff_threshold = 50.f,
                                            RgbdNormals::RgbdNormalsMethod method = RgbdNormals::RgbdNormalsMethod::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
@@ -68,7 +71,6 @@ public:
     CV_WRAP virtual void getK(OutputArray val) const = 0;
     CV_WRAP virtual void setK(InputArray val) = 0;
     CV_WRAP virtual RgbdNormals::RgbdNormalsMethod getMethod() const = 0;
-    CV_WRAP virtual void setMethod(RgbdNormals::RgbdNormalsMethod val) = 0;
 };
 
 
@@ -102,13 +104,14 @@ CV_EXPORTS_W void registerDepth(InputArray unregisteredCameraMatrix, InputArray 
  */
 CV_EXPORTS_W void depthTo3dSparse(InputArray depth, InputArray in_K, InputArray in_points, OutputArray points3d);
 
-/** Converts a depth image to an organized set of 3d points.
+/** Converts a depth image to 3d points. If the mask is empty then the resulting array has the same dimensions as `depth`,
+ * otherwise it is 1d vector containing mask-enabled values only.
  * The coordinate system is x pointing left, y down and z away from the camera
  * @param depth the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
  *              (as done with the Microsoft Kinect), otherwise, if given as CV_32F or CV_64F, it is assumed in meters)
  * @param K The calibration matrix
- * @param points3d the resulting 3d points (point is represented by 4 chanels value [x, y, z, 0]). They are of depth the same as `depth` if it is CV_32F or CV_64F, and the
- *        depth of `K` if `depth` is of depth CV_U
+ * @param points3d the resulting 3d points (point is represented by 4 channels value [x, y, z, 0]). They are of the same depth as `depth` if it is CV_32F or CV_64F, and the
+ *        depth of `K` if `depth` is of depth CV_16U or CV_16S
  * @param mask the mask of the points to consider (can be empty)
  */
 CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d, InputArray mask = noArray());
@@ -146,7 +149,7 @@ enum RgbdPlaneMethod
 
 /** Find the planes in a depth image
  * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
- * @param normals the normals for every point in the depth image
+ * @param normals the normals for every point in the depth image; optional, can be empty
  * @param mask An image where each pixel is labeled with the plane it belongs to
  *        and 255 if it does not belong to any plane
  * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1

@@ -45,5 +45,29 @@ class cuda_test(NewOpenCVTests):
         asyncstream = cv.cuda_Stream(1)  # cudaStreamNonBlocking
         self.assertTrue(asyncstream.cudaPtr() != 0)
 
+    def test_cuda_buffer_pool(self):
+        cv.cuda.setBufferPoolUsage(True)
+        cv.cuda.setBufferPoolConfig(cv.cuda.getDevice(), 1024 * 1024 * 64, 2)
+        stream_a = cv.cuda.Stream()
+        pool_a = cv.cuda.BufferPool(stream_a)
+        cuMat = pool_a.getBuffer(1024, 1024, cv.CV_8UC3)
+        cv.cuda.setBufferPoolUsage(False)
+        self.assertEqual(cuMat.size(), (1024, 1024))
+        self.assertEqual(cuMat.type(), cv.CV_8UC3)
+
+    def test_cuda_release(self):
+        npMat = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(npMat)
+        cuMat.release()
+        self.assertTrue(cuMat.cudaPtr() == 0)
+        self.assertTrue(cuMat.step == 0)
+        self.assertTrue(cuMat.size() == (0, 0))
+
+    def test_cuda_denoising(self):
+        self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoising'))
+        self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
+        self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

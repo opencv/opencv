@@ -60,7 +60,7 @@ private:
         return ret;
     }
     mfxVariant create_impl(const std::string&, const std::string&) {
-        GAPI_Assert(false && "Something wrong: you should not create mfxVariant "
+        GAPI_Error("Something wrong: you should not create mfxVariant "
                              "from string directly - native type is lost in this case");
     }
 };
@@ -87,15 +87,15 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
 
         ParamCreator<ValueType> creator;
         if (name == CfgParam::implementation_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
         } else if (name == CfgParam::decoder_id_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
         } else if (name == CfgParam::acceleration_mode_name()) {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
         } else if (name == "mfxImplDescription.ApiVersion.Version") {
-            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
+            ret.push_back(creator.template create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else if ((name == CfgParam::frames_pool_size_name()) || (name == CfgParam::vpp_frames_pool_size_name())) {
-            ret.push_back(creator.create(name, strtoull_or_throw(value.c_str()), false));
+            ret.push_back(creator.create(name, static_cast<mfxU32>(strtoull_or_throw(value.c_str()), false)));
         } else if ((name == CfgParam::vpp_in_width_name()) || (name == CfgParam::vpp_in_height_name()) ||
                    (name == CfgParam::vpp_in_crop_w_name()) || (name == CfgParam::vpp_in_crop_h_name()) ||
                    (name == CfgParam::vpp_in_crop_x_name()) || (name == CfgParam::vpp_in_crop_y_name()) ||
@@ -173,7 +173,7 @@ void extract_optional_param_by_name(const std::string &name,
             [&out_param](int64_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
             [&out_param](float_t value)   { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
             [&out_param](double_t value)  { out_param = cv::util::make_optional(static_cast<size_t>(value));   },
-            [&out_param](void*)     { GAPI_Assert(false && "`void*` is unsupported type");  },
+            [&out_param](void*)     { GAPI_Error("`void*` is unsupported type");  },
             [&out_param](const std::string& value) {
                 out_param = cv::util::make_optional(strtoull_or_throw(value.c_str()));
             }),
@@ -186,10 +186,10 @@ unsigned long strtoul_or_throw(const char* str) {
     errno = 0;
     unsigned long ret = strtoul(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == ULONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoul failed for: " << str);
-        GAPI_Assert(false && "strtoul_or_throw");
+        GAPI_Error("strtoul_or_throw");
     }
     return ret;
 }
@@ -199,10 +199,10 @@ size_t strtoull_or_throw(const char* str) {
     errno = 0;
     size_t ret = strtoull(str, &end_ptr, 10);
     if ((end_ptr == str) ||
-        ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
+        ((ret == ULLONG_MAX) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoull failed for: " << str);
-        GAPI_Assert(false && "strtoull_or_throw");
+        GAPI_Error("strtoull_or_throw");
     }
     return ret;
 }
@@ -215,7 +215,7 @@ int64_t strtoll_or_throw(const char* str) {
         ((ret == LONG_MAX || ret == LONG_MIN) && errno == ERANGE)) {
             // nothing parsed from the string, handle errors or exit
         GAPI_LOG_WARNING(nullptr, "strtoll failed for: " << str);
-        GAPI_Assert(false && "strtoll_or_throw");
+        GAPI_Error("strtoll_or_throw");
     }
     return ret;
 }

@@ -829,12 +829,19 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
             IdentityOpsMap::iterator it = identity_ops.find(input_op_name);
 
             if (it != identity_ops.end()) {
+                std::set<String> loopCheckSet;
                 // In case of Identity after Identity
                 while (true)
                 {
                     IdentityOpsMap::iterator nextIt = identity_ops.find(it->second);
                     if (nextIt != identity_ops.end())
+                    {
+                        // Loop check
+                        if (loopCheckSet.find(it->second) != loopCheckSet.end())
+                            CV_Error(Error::StsError, "Found a loop in your input Tensorflow model, which is illegal!");
+                        loopCheckSet.insert(it->second);
                         it = nextIt;
+                    }
                     else
                         break;
                 }
@@ -990,6 +997,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
         nodesMap.insert(std::make_pair(node.name(), i));
     }
 
+    CV_CheckEQ(nodesMap.size(), (size_t)net.node_size(), "Node names must be unique");
     // Indices of nodes which use specific node as input.
     std::vector<std::vector<int> > edges(nodesMap.size());
     std::vector<int> numRefsToAdd(nodesMap.size(), 0);
@@ -1007,7 +1015,7 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             nodesMapIt = nodesMap.find(inpName);
             if (nodesMapIt != nodesMap.end())
             {
-                edges[nodesMapIt->second].push_back(i);
+                edges.at(nodesMapIt->second).push_back(i);
                 numInputsInGraph += 1;
             }
         }
@@ -1019,11 +1027,11 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
             {
                 int numControlEdges = 0;
                 for (int j = 0; j < numInputsInGraph; ++j)
-                    numControlEdges += node.input(j)[0] == '^';
-                numRefsToAdd[i] = numControlEdges + 1;
+                    numControlEdges += node.input(j).at(0) == '^';
+                numRefsToAdd.at(i) = numControlEdges + 1;
             }
             else
-                numRefsToAdd[i] = numInputsInGraph;
+                numRefsToAdd.at(i) = numInputsInGraph;
         }
     }
 
@@ -1035,17 +1043,16 @@ void sortByExecutionOrder(tensorflow::GraphDef& net)
         nodesToAdd.pop_back();
 
         permIds.push_back(nodeToAdd);
-        CV_Assert(nodeToAdd < edges.size());
-        for (int i = 0; i < edges[nodeToAdd].size(); ++i)
+        for (int i = 0; i < edges.at(nodeToAdd).size(); ++i)
         {
-            int consumerId = edges[nodeToAdd][i];
-            if (numRefsToAdd[consumerId] > 0)
+            int consumerId = edges.at(nodeToAdd).at(i);
+            if (numRefsToAdd.at(consumerId) > 0)
             {
-                if (numRefsToAdd[consumerId] == 1)
+                if (numRefsToAdd.at(consumerId) == 1)
                     nodesToAdd.push_back(consumerId);
                 else
-                    CV_Assert(numRefsToAdd[consumerId] >= 0);
-                numRefsToAdd[consumerId] -= 1;
+                    CV_Assert(numRefsToAdd.at(consumerId) >= 0);
+                numRefsToAdd.at(consumerId) -= 1;
             }
         }
     }

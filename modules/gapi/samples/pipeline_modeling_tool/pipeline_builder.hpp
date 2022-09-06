@@ -258,7 +258,68 @@ struct InferParams {
     std::vector<std::string> input_layers;
     std::vector<std::string> output_layers;
     std::map<std::string, std::string> config;
+    cv::gapi::ie::InferMode mode;
+    cv::util::optional<int> out_precision;
 };
+
+class ElapsedTimeCriterion : public StopCriterion {
+public:
+    ElapsedTimeCriterion(int64_t work_time_mcs);
+
+    void start() override;
+    void iter()  override;
+    bool done()  override;
+
+private:
+    int64_t m_work_time_mcs;
+    int64_t m_start_ts = -1;
+    int64_t m_curr_ts  = -1;
+};
+
+ElapsedTimeCriterion::ElapsedTimeCriterion(int64_t work_time_mcs)
+    : m_work_time_mcs(work_time_mcs) {
+};
+
+void ElapsedTimeCriterion::start() {
+    m_start_ts = m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+}
+
+void ElapsedTimeCriterion::iter() {
+    m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+}
+
+bool ElapsedTimeCriterion::done() {
+    return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
+}
+
+class NumItersCriterion : public StopCriterion {
+public:
+    NumItersCriterion(int64_t num_iters);
+
+    void start() override;
+    void iter()  override;
+    bool done()  override;
+
+private:
+    int64_t m_num_iters;
+    int64_t m_curr_iters = 0;
+};
+
+NumItersCriterion::NumItersCriterion(int64_t num_iters)
+    : m_num_iters(num_iters) {
+}
+
+void NumItersCriterion::start() {
+    m_curr_iters = 0;
+}
+
+void NumItersCriterion::iter() {
+    ++m_curr_iters;
+}
+
+bool NumItersCriterion::done() {
+    return m_curr_iters == m_num_iters;
+}
 
 class PipelineBuilder {
 public:
@@ -277,6 +338,7 @@ public:
     void setDumpFilePath(const std::string& dump);
     void setQueueCapacity(const size_t qc);
     void setName(const std::string& name);
+    void setStopCriterion(StopCriterion::Ptr stop_criterion);
 
     Pipeline::Ptr build();
 
@@ -295,15 +357,16 @@ private:
             std::vector<Edge> output_edges;
         };
 
-        M<std::string, Node::Ptr>         calls_map;
-        std::vector<Node::Ptr>            all_calls;
+        M<std::string, Node::Ptr>    calls_map;
+        std::vector<Node::Ptr>       all_calls;
 
-        cv::gapi::GNetPackage             networks;
-        cv::gapi::GKernelPackage          kernels;
-        cv::GCompileArgs                  compile_args;
-        cv::gapi::wip::IStreamSource::Ptr src;
-        PLMode                            mode = PLMode::STREAMING;
-        std::string                       name;
+        cv::gapi::GNetPackage        networks;
+        cv::gapi::GKernelPackage     kernels;
+        cv::GCompileArgs             compile_args;
+        std::shared_ptr<DummySource> src;
+        PLMode                       mode = PLMode::STREAMING;
+        std::string                  name;
+        StopCriterion::Ptr           stop_criterion;
     };
 
     std::unique_ptr<State> m_state;
@@ -362,6 +425,10 @@ void PipelineBuilder::addInfer(const CallParams&  call_params,
     }
 
     pp->pluginConfig(infer_params.config);
+    pp->cfgInferMode(infer_params.mode);
+    if (infer_params.out_precision) {
+        pp->cfgOutputPrecision(infer_params.out_precision.value());
+    }
     m_state->networks += cv::gapi::networks(*pp);
 
     addCall(call_params,
@@ -424,6 +491,10 @@ void PipelineBuilder::setQueueCapacity(const size_t qc) {
 
 void PipelineBuilder::setName(const std::string& name) {
     m_state->name = name;
+}
+
+void PipelineBuilder::setStopCriterion(StopCriterion::Ptr stop_criterion) {
+    m_state->stop_criterion = std::move(stop_criterion);
 }
 
 static bool visit(Node::Ptr node,
@@ -584,6 +655,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
         }
     }
 
+    GAPI_Assert(m_state->stop_criterion);
     if (m_state->mode == PLMode::STREAMING) {
         GAPI_Assert(graph_inputs.size() == 1);
         GAPI_Assert(cv::util::holds_alternative<cv::GMat>(graph_inputs[0]));
@@ -599,6 +671,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                        cv::GProtoInputArgs{graph_inputs},
                                                        cv::GProtoOutputArgs{graph_outputs}),
                                                    std::move(m_state->src),
+                                                   std::move(m_state->stop_criterion),
                                                    std::move(m_state->compile_args),
                                                    graph_outputs.size());
     }
@@ -608,6 +681,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                  cv::GProtoInputArgs{graph_inputs},
                                                  cv::GProtoOutputArgs{graph_outputs}),
                                              std::move(m_state->src),
+                                             std::move(m_state->stop_criterion),
                                              std::move(m_state->compile_args),
                                              graph_outputs.size());
 }

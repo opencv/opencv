@@ -57,6 +57,11 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4459)  // declaration of '...' hides global declaration
+#endif
+
 namespace cv
 {
 
@@ -954,10 +959,6 @@ public:
     //! the full constructor
     Moments(double m00, double m10, double m01, double m20, double m11,
             double m02, double m30, double m21, double m12, double m03 );
-    ////! the conversion from CvMoments
-    //Moments( const CvMoments& moments );
-    ////! the conversion to CvMoments
-    //operator CvMoments() const;
 
     //! @name spatial moments
     //! @{
@@ -2018,6 +2019,15 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
     return 1.0 - Aab / (Aa + Ab - Aab);
 }
 
+/** @brief Finds out if there is any intersection between two rectangles
+ *
+ * mainly useful for language bindings
+ * @param rect1 First rectangle
+ * @param rect2 Second rectangle
+ * @return the area of the intersection
+ */
+CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }
+
 ////////////////////////////// RotatedRect //////////////////////////////
 
 inline
@@ -2456,5 +2466,9 @@ inline TermCriteria::TermCriteria(int _maxCount, double _epsilon)
 //! @endcond
 
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif //OPENCV_CORE_TYPES_HPP

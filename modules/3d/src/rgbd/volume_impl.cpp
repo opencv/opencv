@@ -66,8 +66,8 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        intrinsics.fx, intrinsics.fy,
-        intrinsics.cx, intrinsics.cy);
+                    intrinsics.fx, intrinsics.fy,
+                    intrinsics.cx, intrinsics.cy);
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
@@ -96,49 +96,16 @@ void TsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void TsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 
 void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
-}
-
-void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-#ifndef HAVE_OPENCL
-    Mat points, normals;
-    raycast(cameraPose, height, width, points, normals, noArray());
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-#else
-    if (useGPU)
-    {
-        UMat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-    else
-    {
-        Mat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-#endif
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
 
-void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     if (_colors.needed())
         CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -148,12 +115,12 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
 
     const Matx44f cameraPose = _cameraPose.getMat();
 #ifndef HAVE_OPENCL
-    raycastTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+    raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, volume, _points, _normals);
 #else
     if (useGPU)
-        ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, gpu_volume, _points, _normals);
+        ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, gpu_volume, _points, _normals);
     else
-        raycastTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
+        raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, cpu_volume, _points, _normals);
 #endif
 }
 
@@ -178,7 +145,6 @@ void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) con
         ocl_fetchPointsNormalsFromTsdfVolumeUnit(settings, gpu_volume, points, normals);
     else
         fetchPointsNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
-
 #endif
 }
 
@@ -199,7 +165,7 @@ void TsdfVolume::reset()
         });
 #else
     if (useGPU)
-        gpu_volume.setTo(Scalar(0, 0));
+        gpu_volume.setTo(Scalar(floatToTsdf(0.0f), 0));
     else
         //TODO: use setTo(Scalar(0, 0))
         cpu_volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
@@ -212,6 +178,29 @@ void TsdfVolume::reset()
 int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
+
+void TsdfVolume::getBoundingBox(OutputArray bb, int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        float sz = this->settings.getVoxelSize();
+        Vec3f res;
+        this->settings.getVolumeResolution(res);
+        Vec3f volSize = res * sz;
+        Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]).copyTo(bb);
+    }
+}
+
+void TsdfVolume::setEnableGrowth(bool /*v*/) { }
+
+bool TsdfVolume::getEnableGrowth() const
+{
+    return false;
+}
 
 
 // HASH_TSDF
@@ -281,16 +270,18 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #endif
     }
 #ifndef HAVE_OPENCL
-    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, pixNorms, volUnitsData, volumeUnits);
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
 #else
     if (useGPU)
     {
-        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, enableGrowth, depth, gpu_pixNorms,
+                                        lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
     }
     else
     {
-        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth,
+                                    cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
         lastFrameId++;
     }
 #endif
@@ -301,48 +292,16 @@ void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void HashTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 
 void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
-void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-#ifndef HAVE_OPENCL
-    Mat points, normals;
-    raycast(cameraPose, height, width, points, normals, noArray());
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-#else
-    if (useGPU)
-    {
-        UMat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-    else
-    {
-        Mat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
 
-    }
-#endif
-}
-void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     if (_colors.needed())
         CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -350,12 +309,12 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
-    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
 #else
     if (useGPU)
-        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
+        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
     else
-        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
+        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
 }
 
@@ -365,7 +324,7 @@ void HashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
     fetchNormalsFromHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals);
 #else
     if (useGPU)
-        olc_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
+        ocl_fetchNormalsFromHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals);
     else
         fetchNormalsFromHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals);
 
@@ -393,6 +352,7 @@ void HashTsdfVolume::reset()
     CV_TRACE_FUNCTION();
     lastVolIndex = 0;
     lastFrameId = 0;
+    enableGrowth = true;
 #ifndef HAVE_OPENCL
     volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
@@ -432,6 +392,92 @@ void HashTsdfVolume::reset()
 
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+void HashTsdfVolume::setEnableGrowth(bool v)
+{
+    enableGrowth = v;
+}
+
+bool HashTsdfVolume::getEnableGrowth() const
+{
+    return enableGrowth;
+}
+
+void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        Vec3i res;
+        this->settings.getVolumeResolution(res);
+        float voxelSize = this->settings.getVoxelSize();
+        float side = res[0] * voxelSize;
+
+        std::vector<Vec3i> vi;
+#ifndef HAVE_OPENCL
+        for (const auto& keyvalue : volumeUnits)
+        {
+            vi.push_back(keyvalue.first);
+        }
+#else
+        if (useGPU)
+        {
+            for (int row = 0; row < hashTable.last; row++)
+            {
+                Vec4i idx4 = hashTable.data[row];
+                vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
+            }
+        }
+        else
+        {
+            for (const auto& keyvalue : cpu_volumeUnits)
+            {
+                vi.push_back(keyvalue.first);
+            }
+        }
+#endif
+
+        if (vi.empty())
+        {
+            boundingBox.setZero();
+        }
+        else
+        {
+            std::vector<Point3f> pts;
+            for (Vec3i idx : vi)
+            {
+                Point3f base = Point3f((float)idx[0], (float)idx[1], (float)idx[2]) * side;
+                pts.push_back(base);
+                pts.push_back(base + Point3f(side, 0, 0));
+                pts.push_back(base + Point3f(0, side, 0));
+                pts.push_back(base + Point3f(0, 0, side));
+                pts.push_back(base + Point3f(side, side, 0));
+                pts.push_back(base + Point3f(side, 0, side));
+                pts.push_back(base + Point3f(0, side, side));
+                pts.push_back(base + Point3f(side, side, side));
+            }
+
+            const float mval = std::numeric_limits<float>::max();
+            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+            for (auto p : pts)
+            {
+                // pt in local coords
+                Point3f pg = p;
+                bb[0] = min(bb[0], pg.x);
+                bb[1] = min(bb[1], pg.y);
+                bb[2] = min(bb[2], pg.z);
+                bb[3] = max(bb[3], pg.x);
+                bb[4] = max(bb[4], pg.y);
+                bb[5] = max(bb[5], pg.z);
+            }
+
+            bb.copyTo(boundingBox);
+        }
+    }
+}
 
 // COLOR_TSDF
 
@@ -481,31 +527,17 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
     integrateColorTsdfVolumeUnit(settings, cameraPose, depth, image, pixNorms, volume);
 }
 
-void ColorTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
-void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-    Mat points, normals, colors;
-    raycast(cameraPose, height, width, points, normals, colors);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_IMAGE);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    outFrame.setPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-}
-
-void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     const Matx44f cameraPose = _cameraPose.getMat();
-    raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals, _colors);
+    raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, intr, volume, _points, _normals, _colors);
 }
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
@@ -536,5 +568,28 @@ void ColorTsdfVolume::reset()
 
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t ColorTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+void ColorTsdfVolume::getBoundingBox(OutputArray bb, int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        float sz = this->settings.getVoxelSize();
+        Vec3f res;
+        this->settings.getVolumeResolution(res);
+        Vec3f volSize = res * sz;
+        Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]).copyTo(bb);
+    }
+}
+
+void ColorTsdfVolume::setEnableGrowth(bool /*v*/) { }
+
+bool ColorTsdfVolume::getEnableGrowth() const
+{
+    return false;
+}
 
 }

@@ -128,8 +128,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    OdometryFrame frame_prev = odometry.createOdometryFrame(),
-                  frame_curr = odometry.createOdometryFrame();
+    OdometryFrame frame_prev, frame_curr;
 
     TickMeter gtm;
     int count = 0;
@@ -182,8 +181,7 @@ int main(int argc, char** argv)
         {
             Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            frame_curr.setImage(gray);
-            frame_curr.setDepth(depth);
+            frame_curr = OdometryFrame(depth, gray);
 
             Mat Rt;
             if(!Rts.empty())
@@ -216,7 +214,7 @@ int main(int argc, char** argv)
             //if (!frame_prev.empty())
             //    frame_prev.release();
             frame_prev = frame_curr;
-            frame_curr = odometry.createOdometryFrame();
+            frame_curr = OdometryFrame();
             //std::swap(frame_prev, frame_curr);
         }
     }

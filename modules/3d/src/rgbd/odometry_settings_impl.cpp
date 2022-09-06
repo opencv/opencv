@@ -31,8 +31,13 @@ public:
     virtual int  getSobelSize() const = 0;
     virtual void   setSobelScale(double val) = 0;
     virtual double getSobelScale() const = 0;
+
     virtual void setNormalWinSize(int val) = 0;
     virtual int  getNormalWinSize() const = 0;
+    virtual void setNormalDiffThreshold(float val) = 0;
+    virtual float getNormalDiffThreshold() const = 0;
+    virtual void setNormalMethod(RgbdNormals::RgbdNormalsMethod nm) = 0;
+    virtual RgbdNormals::RgbdNormalsMethod getNormalMethod() const = 0;
 
     virtual void  setAngleThreshold(float val) = 0;
     virtual float getAngleThreshold() const = 0;
@@ -70,8 +75,13 @@ public:
     virtual int  getSobelSize() const override;
     virtual void   setSobelScale(double val) override;
     virtual double getSobelScale() const override;
+
     virtual void setNormalWinSize(int val) override;
     virtual int  getNormalWinSize() const override;
+    virtual void setNormalDiffThreshold(float val) override;
+    virtual float getNormalDiffThreshold() const override;
+    virtual void setNormalMethod(RgbdNormals::RgbdNormalsMethod nm) override;
+    virtual RgbdNormals::RgbdNormalsMethod getNormalMethod() const override;
 
     virtual void  setAngleThreshold(float val) override;
     virtual float getAngleThreshold() const override;
@@ -96,7 +106,10 @@ private:
 
     int sobelSize;
     double sobelScale;
+
     int normalWinSize;
+    float normalDiffThreshold;
+    RgbdNormals::RgbdNormalsMethod normalMethod;
 
     float angleThreshold;
     float maxTranslation;
@@ -124,7 +137,10 @@ public:
 
         static const int defaultSobelSize = 3;
         static constexpr double defaultSobelScale = 1. / 8.;
+
         static const int defaultNormalWinSize = 5;
+        static const RgbdNormals::RgbdNormalsMethod defaultNormalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+        static constexpr float defaultNormalDiffThreshold = 50.f;
 
         static constexpr float defaultAngleThreshold = (float)(30. * CV_PI / 180.);
         static constexpr float defaultMaxTranslation = 0.15f;
@@ -139,6 +155,17 @@ public:
 OdometrySettings::OdometrySettings()
 {
     this->impl = makePtr<OdometrySettingsImplCommon>();
+}
+
+OdometrySettings::OdometrySettings(const OdometrySettings& s)
+{
+    this->impl = makePtr<OdometrySettingsImplCommon>(*s.impl.dynamicCast<OdometrySettingsImplCommon>());
+}
+
+OdometrySettings& OdometrySettings::operator=(const OdometrySettings& s)
+{
+    this->impl = makePtr<OdometrySettingsImplCommon>(*s.impl.dynamicCast<OdometrySettingsImplCommon>());
+    return *this;
 }
 
 void OdometrySettings::setCameraMatrix(InputArray val) { this->impl->setCameraMatrix(val); }
@@ -159,8 +186,13 @@ void OdometrySettings::setSobelSize(int val) { this->impl->setSobelSize(val); }
 int  OdometrySettings::getSobelSize() const { return this->impl->getSobelSize(); }
 void   OdometrySettings::setSobelScale(double val) { this->impl->setSobelScale(val); }
 double OdometrySettings::getSobelScale() const { return this->impl->getSobelScale(); }
-void OdometrySettings::setNormalWinSize(int val) { this->impl->setNormalWinSize(val); }
-int  OdometrySettings::getNormalWinSize() const { return this->impl->getNormalWinSize(); }
+
+void  OdometrySettings::setNormalWinSize(int val) { this->impl->setNormalWinSize(val); }
+int   OdometrySettings::getNormalWinSize() const { return this->impl->getNormalWinSize(); }
+void  OdometrySettings::setNormalDiffThreshold(float val) { this->impl->setNormalDiffThreshold(val); }
+float OdometrySettings::getNormalDiffThreshold() const { return this->impl->getNormalDiffThreshold(); }
+void  OdometrySettings::setNormalMethod(RgbdNormals::RgbdNormalsMethod nm) { this->impl->setNormalMethod(nm); }
+RgbdNormals::RgbdNormalsMethod OdometrySettings::getNormalMethod() const { return this->impl->getNormalMethod(); }
 
 void  OdometrySettings::setAngleThreshold(float val) { this->impl->setAngleThreshold(val); }
 float OdometrySettings::getAngleThreshold() const { return this->impl->getAngleThreshold(); }
@@ -188,7 +220,10 @@ OdometrySettingsImplCommon::OdometrySettingsImplCommon()
 
     this->sobelSize = ds.defaultSobelSize;
     this->sobelScale = ds.defaultSobelScale;
+
     this->normalWinSize = ds.defaultNormalWinSize;
+    this->normalDiffThreshold = ds.defaultNormalDiffThreshold;
+    this->normalMethod = ds.defaultNormalMethod;
 
     this->angleThreshold = ds.defaultAngleThreshold;
     this->maxTranslation = ds.defaultMaxTranslation;
@@ -298,7 +333,22 @@ int  OdometrySettingsImplCommon::getNormalWinSize() const
 {
     return this->normalWinSize;
 }
-
+void OdometrySettingsImplCommon::setNormalDiffThreshold(float val)
+{
+    this->normalDiffThreshold = val;
+}
+float OdometrySettingsImplCommon::getNormalDiffThreshold() const
+{
+    return this->normalDiffThreshold;
+}
+void OdometrySettingsImplCommon::setNormalMethod(RgbdNormals::RgbdNormalsMethod nm)
+{
+    this->normalMethod = nm;
+}
+RgbdNormals::RgbdNormalsMethod OdometrySettingsImplCommon::getNormalMethod() const
+{
+    return this->normalMethod;
+}
 void  OdometrySettingsImplCommon::setAngleThreshold(float val)
 {
     this->angleThreshold = val;

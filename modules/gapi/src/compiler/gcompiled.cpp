@@ -14,11 +14,12 @@
 
 #include "compiler/gcompiled_priv.hpp"
 #include "backends/common/gbackend.hpp"
+#include "executor/gexecutor.hpp"
 
 // GCompiled private implementation ////////////////////////////////////////////
 void cv::GCompiled::Priv::setup(const GMetaArgs &_metaArgs,
                                 const GMetaArgs &_outMetas,
-                                std::unique_ptr<cv::gimpl::GExecutor> &&_pE)
+                                std::unique_ptr<cv::gimpl::GAbstractExecutor> &&_pE)
 {
     m_metas    = _metaArgs;
     m_outMetas = _outMetas;

@@ -89,10 +89,17 @@ coordinates. The function distinguishes the following two cases:
                      \end{bmatrix}\f]
 
     \f[\texttt{P2} = \begin{bmatrix}
-                        f & 0 & cx_2 & T_x*f \\
+                        f & 0 & cx_2 & T_x \cdot f \\
                         0 & f & cy & 0 \\
                         0 & 0 & 1 & 0
                      \end{bmatrix} ,\f]
+
+    \f[\texttt{Q} = \begin{bmatrix}
+                        1 & 0 & 0 & -cx_1 \\
+                        0 & 1 & 0 & -cy \\
+                        0 & 0 & 0 & f \\
+                        0 & 0 & -\frac{1}{T_x} & \frac{cx_1 - cx_2}{T_x}
+                    \end{bmatrix} \f]
 
     where \f$T_x\f$ is a horizontal shift between the cameras and \f$cx_1=cx_2\f$ if
     @ref STEREO_ZERO_DISPARITY is set.
@@ -109,9 +116,16 @@ coordinates. The function distinguishes the following two cases:
 
     \f[\texttt{P2} = \begin{bmatrix}
                         f & 0 & cx & 0 \\
-                        0 & f & cy_2 & T_y*f \\
+                        0 & f & cy_2 & T_y \cdot f \\
                         0 & 0 & 1 & 0
                      \end{bmatrix},\f]
+
+    \f[\texttt{Q} = \begin{bmatrix}
+                        1 & 0 & 0 & -cx \\
+                        0 & 1 & 0 & -cy_1 \\
+                        0 & 0 & 0 & f \\
+                        0 & 0 & -\frac{1}{T_y} & \frac{cy_1 - cy_2}{T_y}
+                    \end{bmatrix} \f]
 
     where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if
     @ref STEREO_ZERO_DISPARITY is set.
@@ -148,8 +162,8 @@ CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs
 @param H2 Output rectification homography matrix for the second image.
 @param threshold Optional threshold used to filter out the outliers. If the parameter is greater
 than zero, all the point pairs that do not comply with the epipolar geometry (that is, the points
-for which \f$|\texttt{points2[i]}^T*\texttt{F}*\texttt{points1[i]}|>\texttt{threshold}\f$ ) are
-rejected prior to computing the homographies. Otherwise, all the points are considered inliers.
+for which \f$|\texttt{points2[i]}^T \cdot \texttt{F} \cdot \texttt{points1[i]}|>\texttt{threshold}\f$ )
+are rejected prior to computing the homographies. Otherwise, all the points are considered inliers.
 
 The function computes the rectification transformations without knowing intrinsic parameters of the
 cameras and their relative position in the space, which explains the suffix "uncalibrated". Another

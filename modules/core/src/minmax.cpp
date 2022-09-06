@@ -976,6 +976,12 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         return false;
 #endif
 
+    if (dev.deviceVersionMajor() == 1 && dev.deviceVersionMinor() < 2)
+    {
+        // 'static' storage class specifier used by "minmaxloc" is available from OpenCL 1.2+ only
+        return false;
+    }
+
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
@@ -1565,13 +1571,24 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_img.dims() <= 2);
+    int dims = _img.dims();
+    CV_CheckLE(dims, 2, "");
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
     if( minLoc )
-        std::swap(minLoc->x, minLoc->y);
+    {
+        if (dims == 2)
+            std::swap(minLoc->x, minLoc->y);
+        else
+            minLoc->y = 0;
+    }
     if( maxLoc )
-        std::swap(maxLoc->x, maxLoc->y);
+    {
+        if (dims == 2)
+            std::swap(maxLoc->x, maxLoc->y);
+        else
+            maxLoc->y = 0;
+    }
 }
 
 enum class ReduceMode

@@ -4,7 +4,7 @@ Hough Circle Transform {#tutorial_hough_circle}
 @tableofcontents
 
 @prev_tutorial{tutorial_hough_lines}
-@next_tutorial{tutorial_remap}
+@next_tutorial{tutorial_generalized_hough_ballard_guil}
 
 |    |    |
 | -: | :- |
@@ -81,11 +81,11 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py load
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java load
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java load
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py load
 @end_toggle
 
 ####  Convert it to grayscale:
@@ -95,11 +95,11 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py convert_to_gray
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java convert_to_gray
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java convert_to_gray
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py convert_to_gray
 @end_toggle
 
 #### Apply a Median blur to reduce noise and avoid false circle detection:
@@ -109,11 +109,11 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py reduce_noise
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java reduce_noise
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java reduce_noise
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py reduce_noise
 @end_toggle
 
 #### Proceed to apply Hough Circle Transform:
@@ -123,11 +123,11 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py houghcircles
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java houghcircles
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java houghcircles
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py houghcircles
 @end_toggle
 
 -   with the arguments:
@@ -151,11 +151,11 @@ The image we used can be found [here](https://raw.githubusercontent.com/opencv/o
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py draw
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java draw
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java draw
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py draw
 @end_toggle
 
 You can see that we will draw the circle(s) on red and the center(s) with a small green dot
@@ -167,11 +167,11 @@ You can see that we will draw the circle(s) on red and the center(s) with a smal
 @end_toggle
 
 @add_toggle_java
-@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py display
+@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java display
 @end_toggle
 
 @add_toggle_python
-@snippet samples/java/tutorial_code/ImgTrans/HoughCircle/HoughCircles.java display
+@snippet samples/python/tutorial_code/ImgTrans/HoughCircle/hough_circle.py display
 @end_toggle
 
 Result

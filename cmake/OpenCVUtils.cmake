@@ -868,6 +868,7 @@ macro(ocv_check_modules define)
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
         elseif(IS_ABSOLUTE "${flag}"
             OR flag STREQUAL "-lstdc++"
+            OR flag STREQUAL "-latomic"
         )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
@@ -1093,6 +1094,18 @@ macro(ocv_list_filterout lst regex)
     endif()
   endforeach()
 endmacro()
+
+# Usage: ocv_list_filterout_ex(list_name regex1 regex2 ...)
+macro(ocv_list_filterout_ex lst)
+  foreach(regex ${ARGN})
+    foreach(item ${${lst}})
+      if(item MATCHES "${regex}")
+        list(REMOVE_ITEM ${lst} "${item}")
+      endif()
+    endforeach()
+  endforeach()
+endmacro()
+
 
 # filter matching elements from the list
 macro(ocv_list_filter lst regex)

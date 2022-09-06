@@ -23,9 +23,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        MatMulOp(csl::Stream stream_, csl::cublas::Handle handle)
+        MatMulOp(csl::Stream stream_, csl::cublas::Handle handle, const Mat& constInp)
             : stream(std::move(stream_)), cublasHandle(std::move(handle))
         {
+            if (!constInp.empty())
+            {
+                constTensor = csl::makeTensorHeader<T>(constInp);
+                csl::copyMatToTensor<T>(constInp, constTensor, stream);
+            }
         }
 
         void forward(
@@ -33,13 +38,20 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 2 && outputs.size() == 1);
+            CV_Assert(((inputs.size() == 2 && constTensor.empty()) ||
+                       (inputs.size() == 1 && !constTensor.empty())) && outputs.size() == 1);
 
             auto input1_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input1 = input1_wrapper->getView();
 
-            auto input2_wrapper = inputs[1].dynamicCast<wrapper_type>();
-            auto input2 = input2_wrapper->getView();
+            csl::TensorView<T> input2;
+            if (constTensor.empty())
+            {
+                auto input2_wrapper = inputs[1].dynamicCast<wrapper_type>();
+                input2 = input2_wrapper->getView();
+            }
+            else
+                input2 = csl::TensorView<T>(constTensor);
 
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
@@ -59,9 +71,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto m = input1.get_axis_size(-2);
             auto n = input1.get_axis_size(-1);
-            auto k = input2.get_axis_size(-1);
             auto b = input1.size() / m / n;
-            CV_Assert(input2.get_axis_size(-2) == n);
+            int k;
+            if (constTensor.empty())
+            {
+                k = input2.get_axis_size(-1);
+                CV_Assert(input2.get_axis_size(-2) == n);
+            }
+            else
+            {
+                k = input2.get_axis_size(-2);
+                CV_Assert(input2.get_axis_size(-1) == n);
+            }
             CV_Assert(output.get_axis_size(-2) == m);
             CV_Assert(output.get_axis_size(-1) == k);
 
@@ -70,24 +91,28 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_Assert(b == 1);
                 CV_Assert(get_effective_rank(input1) <= 2);
                 CV_Assert(get_effective_rank(input2) <= 2);
-                csl::tensor_ops::gemm<T>(cublasHandle, 0.0, output, 1.0, false, input1, false, input2);
+                csl::tensor_ops::gemm<T>(cublasHandle, 0.0, output, 1.0, false, input1, !constTensor.empty(), input2);
             }
             else
             {
                 CV_Assert(rank >= 3);
                 input1.reshape(b, m, n);
-                input2.reshape(b, n, k);
+                if (constTensor.empty())
+                    input2.reshape(b, n, k);
+                else
+                    input2.reshape(b, k, n);
                 output.reshape(b, m, k);
                 input1.squeeze_to(3);
                 input2.squeeze_to(3);
                 output.squeeze_to(3);
-                csl::tensor_ops::gemmStridedBatched<T>(cublasHandle, 0.0, output, 1.0, false, input1, false, input2);
+                csl::tensor_ops::gemmStridedBatched<T>(cublasHandle, 0.0, output, 1.0, false, input1, !constTensor.empty(), input2);
             }
         }
 
     private:
         csl::Stream stream;
         csl::cublas::Handle cublasHandle;
+        csl::Tensor<T> constTensor;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

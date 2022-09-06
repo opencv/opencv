@@ -68,6 +68,18 @@ struct hough_cmp_gt
     const int* aux;
 };
 
+static inline int
+computeNumangle( double min_theta, double max_theta, double theta_step )
+{
+    int numangle = cvFloor((max_theta - min_theta) / theta_step) + 1;
+    // If the distance between the first angle and the last angle is
+    // approximately equal to pi, then the last angle will be removed
+    // in order to prevent a line to be detected twice.
+    if ( numangle > 1 && fabs(CV_PI - (numangle-1)*theta_step) < theta_step/2 )
+        --numangle;
+    return numangle;
+}
+
 static void
 createTrigTable( int numangle, double min_theta, double theta_step,
                  float irho, float *tabSin, float *tabCos )
@@ -130,7 +142,7 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
 
     CV_CheckGE(max_theta, min_theta, "max_theta must be greater than min_theta");
 
-    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
@@ -475,7 +487,7 @@ HoughLinesProbabilistic( Mat& image,
     int width = image.cols;
     int height = image.rows;
 
-    int numangle = cvRound(CV_PI / theta);
+    int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
@@ -792,7 +804,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     }
 
     UMat src = _src.getUMat();
-    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
     UMat pointsList;
@@ -846,7 +858,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     }
 
     UMat src = _src.getUMat();
-    int numangle = cvRound(CV_PI / theta);
+    int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
     UMat pointsList;
@@ -956,7 +968,7 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
     int i;
     float irho = 1 / (float)rho_step;
     float irho_min = ((float)min_rho * irho);
-    int numangle = cvRound((max_theta - min_theta) / theta_step);
+    int numangle = computeNumangle(min_theta, max_theta, theta_step);
     int numrho = cvRound((max_rho - min_rho + 1) / rho_step);
 
     Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
@@ -2293,6 +2305,9 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         break;
     case HOUGH_GRADIENT_ALT:
         {
+            if( param2 >= 1 )
+                CV_Error( Error::StsOutOfRange, "when using HOUGH_GRADIENT_ALT method, param2 parameter must be smaller than 1.0" );
+
             std::vector<EstimatedCircle> circles;
             Mat image = _image.getMat();
             HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1, param2);
@@ -2320,7 +2335,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         }
         break;
     default:
-        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
+        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually supported methods are HOUGH_GRADIENT and HOUGH_GRADIENT_ALT" );
     }
 }
 
@@ -2332,161 +2347,3 @@ void HoughCircles( InputArray _image, OutputArray _circles,
     HoughCircles(_image, _circles, method, dp, minDist, param1, param2, minRadius, maxRadius, -1, 3);
 }
 } // \namespace cv
-
-
-/* Wrapper function for standard hough transform */
-CV_IMPL CvSeq*
-cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
-               double rho, double theta, int threshold,
-               double param1, double param2,
-               double min_theta, double max_theta )
-{
-    cv::Mat image = cv::cvarrToMat(src_image);
-    std::vector<cv::Vec2f> l2;
-    std::vector<cv::Vec4i> l4;
-
-    CvMat* mat = 0;
-    CvSeq* lines = 0;
-    CvSeq lines_header;
-    CvSeqBlock lines_block;
-    int lineType, elemSize;
-    int linesMax = INT_MAX;
-    int iparam1, iparam2;
-
-    if( !lineStorage )
-        CV_Error(cv::Error::StsNullPtr, "NULL destination" );
-
-    if( rho <= 0 || theta <= 0 || threshold <= 0 )
-        CV_Error( cv::Error::StsOutOfRange, "rho, theta and threshold must be positive" );
-
-    if( method != CV_HOUGH_PROBABILISTIC )
-    {
-        lineType = CV_32FC2;
-        elemSize = sizeof(float)*2;
-    }
-    else
-    {
-        lineType = CV_32SC4;
-        elemSize = sizeof(int)*4;
-    }
-
-    bool isStorage = isStorageOrMat(lineStorage);
-
-    if( isStorage )
-    {
-        lines = cvCreateSeq( lineType, sizeof(CvSeq), elemSize, (CvMemStorage*)lineStorage );
-    }
-    else
-    {
-        mat = (CvMat*)lineStorage;
-
-        if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg,
-            "The destination matrix should be continuous and have a single row or a single column" );
-
-        if( CV_MAT_TYPE( mat->type ) != lineType )
-            CV_Error( CV_StsBadArg,
-            "The destination matrix data type is inappropriate, see the manual" );
-
-        lines = cvMakeSeqHeaderForArray( lineType, sizeof(CvSeq), elemSize, mat->data.ptr,
-                                         mat->rows + mat->cols - 1, &lines_header, &lines_block );
-        linesMax = lines->total;
-        cvClearSeq( lines );
-    }
-
-    iparam1 = cvRound(param1);
-    iparam2 = cvRound(param2);
-
-    switch( method )
-    {
-    case CV_HOUGH_STANDARD:
-        HoughLinesStandard( image, l2, CV_32FC2, (float)rho,
-                (float)theta, threshold, linesMax, min_theta, max_theta );
-        break;
-    case CV_HOUGH_MULTI_SCALE:
-        HoughLinesSDiv( image, l2, CV_32FC2, (float)rho, (float)theta,
-                threshold, iparam1, iparam2, linesMax, min_theta, max_theta );
-        break;
-    case CV_HOUGH_PROBABILISTIC:
-        HoughLinesProbabilistic( image, (float)rho, (float)theta,
-                threshold, iparam1, iparam2, l4, linesMax );
-        break;
-    default:
-        CV_Error( CV_StsBadArg, "Unrecognized method id" );
-    }
-
-    int nlines = (int)(l2.size() + l4.size());
-
-    if( !isStorage )
-    {
-        if( mat->cols > mat->rows )
-            mat->cols = nlines;
-        else
-            mat->rows = nlines;
-    }
-
-    if( nlines )
-    {
-        cv::Mat lx = method == CV_HOUGH_STANDARD || method == CV_HOUGH_MULTI_SCALE ?
-            cv::Mat(nlines, 1, CV_32FC2, &l2[0]) : cv::Mat(nlines, 1, CV_32SC4, &l4[0]);
-
-        if (isStorage)
-        {
-            cvSeqPushMulti(lines, lx.ptr(), nlines);
-        }
-        else
-        {
-            cv::Mat dst(nlines, 1, lx.type(), mat->data.ptr);
-            lx.copyTo(dst);
-        }
-    }
-
-    if( isStorage )
-        return lines;
-    return 0;
-}
-
-
-CV_IMPL CvSeq*
-cvHoughCircles( CvArr* src_image, void* circle_storage,
-                int method, double dp, double min_dist,
-                double param1, double param2,
-                int min_radius, int max_radius )
-{
-    CvSeq* circles = NULL;
-    int circles_max = INT_MAX;
-    cv::Mat src = cv::cvarrToMat(src_image), circles_mat;
-
-    if( !circle_storage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
-
-    bool isStorage = isStorageOrMat(circle_storage);
-
-    if(isStorage)
-    {
-        circles = cvCreateSeq( CV_32FC3, sizeof(CvSeq),
-            sizeof(float)*3, (CvMemStorage*)circle_storage );
-    }
-    else
-    {
-        CvSeq circles_header;
-        CvSeqBlock circles_block;
-        CvMat *mat = (CvMat*)circle_storage;
-
-        if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) ||
-            CV_MAT_TYPE(mat->type) != CV_32FC3 )
-            CV_Error( CV_StsBadArg,
-                      "The destination matrix should be continuous and have a single row or a single column" );
-
-        circles = cvMakeSeqHeaderForArray( CV_32FC3, sizeof(CvSeq), sizeof(float)*3,
-                mat->data.ptr, mat->rows + mat->cols - 1, &circles_header, &circles_block );
-        circles_max = circles->total;
-        cvClearSeq( circles );
-    }
-
-    cv::HoughCircles(src, circles_mat, method, dp, min_dist, param1, param2, min_radius, max_radius, circles_max, 3);
-    cvSeqPushMulti(circles, circles_mat.data, (int)circles_mat.total());
-    return circles;
-}
-
-/* End of file. */

@@ -56,7 +56,7 @@ void Core_MathTest::get_test_array_types_and_sizes( int test_case_idx,
                                                      vector<vector<Size> >& sizes,
                                                      vector<vector<int> >& types)
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int depth = cvtest::randInt(rng)%2 + CV_32F;
     int cn = cvtest::randInt(rng) % 4 + 1, type = CV_MAKETYPE(depth, cn);
     size_t i, j;
@@ -101,7 +101,7 @@ void Core_PowTest::get_test_array_types_and_sizes( int test_case_idx,
                                                     vector<vector<Size> >& sizes,
                                                     vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int depth = cvtest::randInt(rng) % (CV_64F+1);
     int cn = cvtest::randInt(rng) % 4 + 1;
     size_t i, j;
@@ -135,14 +135,14 @@ double Core_PowTest::get_success_error_level( int test_case_idx, int i, int j )
         return power == cvRound(power) && power >= 0 ? 0 : 1;
     else
     {
-        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.1;
+        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*4096;
     }
 }
 
 
 void Core_PowTest::get_minmax_bounds( int /*i*/, int /*j*/, int type, Scalar& low, Scalar& high )
 {
-    double l, u = cvtest::randInt(ts->get_rng())%1000 + 1;
+    double l, u = cvtest::randInt(cv::theRNG())%1000 + 1;
     if( power > 0 )
     {
         double mval = cvtest::getMaxVal(type);
@@ -398,7 +398,7 @@ void Core_MatrixTest::get_test_array_types_and_sizes( int test_case_idx,
                                                        vector<vector<Size> >& sizes,
                                                        vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int depth = cvtest::randInt(rng) % (allow_int ? CV_64F+1 : 2);
     int cn = cvtest::randInt(rng) % max_cn + 1;
     size_t i, j;
@@ -523,7 +523,7 @@ void Core_CrossProductTest::get_test_array_types_and_sizes( int,
                                                              vector<vector<Size> >& sizes,
                                                              vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int depth = cvtest::randInt(rng) % 2 + CV_32F;
     int cn = cvtest::randInt(rng) & 1 ? 3 : 1, type = CV_MAKETYPE(depth, cn);
     Size sz;
@@ -628,7 +628,7 @@ Core_GEMMTest::Core_GEMMTest() : Core_MatrixTest( 5, 1, false, false, 2 )
 
 void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     Size sizeA;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     sizeA = sizes[INPUT][0];
@@ -741,7 +741,7 @@ Core_MulTransposedTest::Core_MulTransposedTest() : Core_MatrixTest( 2, 1, false,
 
 void Core_MulTransposedTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     int src_type = cvtest::randInt(rng) % 5;
     int dst_type = cvtest::randInt(rng) % 2;
@@ -838,7 +838,7 @@ Core_TransformTest::Core_TransformTest() : Core_MatrixTest( 3, 1, true, false, 4
 
 void Core_TransformTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     int depth, dst_cn, mat_cols, mattype;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -924,7 +924,7 @@ protected:
 
 void Core_TransformLargeTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     int depth, dst_cn, mat_cols, mattype;
     Base::get_test_array_types_and_sizes(test_case_idx, sizes, types);
@@ -990,7 +990,7 @@ Core_PerspectiveTransformTest::Core_PerspectiveTransformTest() : Core_MatrixTest
 
 void Core_PerspectiveTransformTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     int depth, cn, mattype;
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -1152,7 +1152,7 @@ Core_MahalanobisTest::Core_MahalanobisTest() : Core_MatrixTest( 3, 1, false, tru
 
 void Core_MahalanobisTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
     if( cvtest::randInt(rng) & 1 )
@@ -1232,7 +1232,7 @@ Core_CovarMatrixTest::Core_CovarMatrixTest() : Core_MatrixTest( 1, 1, true, fals
 
 void Core_CovarMatrixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     int i, single_matrix;
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
@@ -1442,7 +1442,7 @@ int Core_DetTest::prepare_test_case( int test_case_idx )
 {
     int code = Core_MatrixTest::prepare_test_case( test_case_idx );
     if( code > 0 )
-        cvTsFloodWithZeros( test_mat[INPUT][0], ts->get_rng() );
+        cvTsFloodWithZeros( test_mat[INPUT][0], cv::theRNG() );
 
     return code;
 }
@@ -1580,7 +1580,7 @@ Core_InvertTest::Core_InvertTest()
 
 void Core_InvertTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
@@ -1620,7 +1620,7 @@ int Core_InvertTest::prepare_test_case( int test_case_idx )
     int code = Core_MatrixTest::prepare_test_case( test_case_idx );
     if( code > 0 )
     {
-        cvTsFloodWithZeros( test_mat[INPUT][0], ts->get_rng() );
+        cvTsFloodWithZeros( test_mat[INPUT][0], cv::theRNG() );
 
         if( method == CV_CHOLESKY )
         {
@@ -1735,7 +1735,7 @@ Core_SolveTest::Core_SolveTest() : Core_MatrixTest( 2, 1, false, false, 1 ), met
 
 void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     CvSize in_sz = cvSize(sizes[INPUT][0]);
@@ -1878,7 +1878,7 @@ flags(0), have_u(false), have_v(false), symmetric(false), compact(false), vector
 
 void Core_SVDTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size, i, m, n;
@@ -1955,7 +1955,7 @@ int Core_SVDTest::prepare_test_case( int test_case_idx )
     if( code > 0 )
     {
         Mat& input = test_mat[INPUT][0];
-        cvTsFloodWithZeros( input, ts->get_rng() );
+        cvTsFloodWithZeros( input, cv::theRNG() );
 
         if( symmetric && (have_u || have_v) )
         {
@@ -2106,7 +2106,7 @@ flags(0), have_b(false), symmetric(false), compact(false), vector_w(false)
 void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes,
                                                       vector<vector<int> >& types )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size, i, m, n;
@@ -2170,7 +2170,7 @@ int Core_SVBkSbTest::prepare_test_case( int test_case_idx )
     if( code > 0 )
     {
         Mat& input = test_mat[INPUT][0];
-        cvTsFloodWithZeros( input, ts->get_rng() );
+        cvTsFloodWithZeros( input, cv::theRNG() );
 
         if( symmetric )
         {
@@ -2289,7 +2289,7 @@ Core_SolvePolyTest::~Core_SolvePolyTest() {}
 
 void Core_SolvePolyTest::run( int )
 {
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
     int fig = 100;
     double range = 50;
     double err_eps = 1e-4;
@@ -2814,7 +2814,7 @@ public:
 protected:
     void run(int inVariant)
     {
-        RNG& rng = ts->get_rng();
+        RNG& rng = cv::theRNG();
         int i, iter = 0, N = 0, N0 = 0, K = 0, dims = 0;
         Mat labels;
 
@@ -3997,6 +3997,13 @@ TEST(Core_FastMath, InlineNaN)
     EXPECT_EQ( cvIsNaN((double) NAN), 1);
     EXPECT_EQ( cvIsNaN((double) -NAN), 1);
     EXPECT_EQ( cvIsNaN(0.0), 0);
+
+    // Regression: check the +/-Inf cases
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
+    suf.u = 0xFFF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
 }
 
 TEST(Core_FastMath, InlineIsInf)
@@ -4008,6 +4015,13 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf(0.0), 0);
+
+    // Regression: check the cases of 0x7FF00000xxxxxxxx
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000001UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
+    suf.u = 0x7FF0000012345678UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
 }
 
 }} // namespace

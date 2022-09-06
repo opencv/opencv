@@ -182,7 +182,7 @@ class CvButtonbar : public CvBar
 public:
     CvButtonbar(QWidget* arg, QString bar_name);
 
-    void addButton(QString button_name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state);
+    void addButton(QString button_name, cv::ButtonCallback call, void* userdata,  int button_type, int initial_button_state);
 
 private:
     void setLabel();
@@ -196,12 +196,12 @@ class CvPushButton : public QPushButton
 {
     Q_OBJECT
 public:
-    CvPushButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
+    CvPushButton(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -213,12 +213,12 @@ class CvCheckBox : public QCheckBox
 {
     Q_OBJECT
 public:
-    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvCheckBox(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -230,12 +230,12 @@ class CvRadioButton : public QRadioButton
 {
     Q_OBJECT
 public:
-    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvRadioButton(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -297,7 +297,7 @@ class CvWindow : public CvWinModel
 {
     Q_OBJECT
 public:
-    CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
+    CvWindow(QString arg2, int flag = cv::WINDOW_NORMAL);
     ~CvWindow();
 
     void setMouseCallBack(CvMouseCallback m, void* param);
@@ -384,10 +384,10 @@ private slots:
 
 enum type_mouse_event { mouse_up = 0, mouse_down = 1, mouse_dbclick = 2, mouse_move = 3, mouse_wheel = 4 };
 static const int tableMouseButtons[][3]={
-    {CV_EVENT_LBUTTONUP, CV_EVENT_RBUTTONUP, CV_EVENT_MBUTTONUP},               //mouse_up
-    {CV_EVENT_LBUTTONDOWN, CV_EVENT_RBUTTONDOWN, CV_EVENT_MBUTTONDOWN},         //mouse_down
-    {CV_EVENT_LBUTTONDBLCLK, CV_EVENT_RBUTTONDBLCLK, CV_EVENT_MBUTTONDBLCLK},   //mouse_dbclick
-    {CV_EVENT_MOUSEMOVE, CV_EVENT_MOUSEMOVE, CV_EVENT_MOUSEMOVE},               //mouse_move
+    {cv::EVENT_LBUTTONUP, cv::EVENT_RBUTTONUP, cv::EVENT_MBUTTONUP},               //mouse_up
+    {cv::EVENT_LBUTTONDOWN, cv::EVENT_RBUTTONDOWN, cv::EVENT_MBUTTONDOWN},         //mouse_down
+    {cv::EVENT_LBUTTONDBLCLK, cv::EVENT_RBUTTONDBLCLK, cv::EVENT_MBUTTONDBLCLK},   //mouse_dbclick
+    {cv::EVENT_MOUSEMOVE, cv::EVENT_MOUSEMOVE, cv::EVENT_MOUSEMOVE},               //mouse_move
     {0, 0, 0}                                                                   //mouse_wheel, to prevent exceptions in code
 };
 

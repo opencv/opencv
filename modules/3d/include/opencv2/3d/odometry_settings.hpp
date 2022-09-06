@@ -10,43 +10,50 @@
 namespace cv
 {
 
-class CV_EXPORTS_W OdometrySettings
+class CV_EXPORTS_W_SIMPLE OdometrySettings
 {
 public:
-    OdometrySettings();
+    CV_WRAP OdometrySettings();
+    OdometrySettings(const OdometrySettings&);
+    OdometrySettings& operator=(const OdometrySettings&);
     ~OdometrySettings() {};
-    void setCameraMatrix(InputArray val);
-    void getCameraMatrix(OutputArray val) const;
-    void setIterCounts(InputArray val);
-    void getIterCounts(OutputArray val) const;
+    CV_WRAP void setCameraMatrix(InputArray val);
+    CV_WRAP void getCameraMatrix(OutputArray val) const;
+    CV_WRAP void setIterCounts(InputArray val);
+    CV_WRAP void getIterCounts(OutputArray val) const;
 
-    void  setMinDepth(float val);
-    float getMinDepth() const;
-    void  setMaxDepth(float val);
-    float getMaxDepth() const;
-    void  setMaxDepthDiff(float val);
-    float getMaxDepthDiff() const;
-    void  setMaxPointsPart(float val);
-    float getMaxPointsPart() const;
+    CV_WRAP void  setMinDepth(float val);
+    CV_WRAP float getMinDepth() const;
+    CV_WRAP void  setMaxDepth(float val);
+    CV_WRAP float getMaxDepth() const;
+    CV_WRAP void  setMaxDepthDiff(float val);
+    CV_WRAP float getMaxDepthDiff() const;
+    CV_WRAP void  setMaxPointsPart(float val);
+    CV_WRAP float getMaxPointsPart() const;
 
-    void setSobelSize(int val);
-    int  getSobelSize() const;
-    void   setSobelScale(double val);
-    double getSobelScale() const;
-    void setNormalWinSize(int val);
-    int  getNormalWinSize() const;
+    CV_WRAP void setSobelSize(int val);
+    CV_WRAP int  getSobelSize() const;
+    CV_WRAP void   setSobelScale(double val);
+    CV_WRAP double getSobelScale() const;
 
-    void  setAngleThreshold(float val);
-    float getAngleThreshold() const;
-    void  setMaxTranslation(float val);
-    float getMaxTranslation() const;
-    void  setMaxRotation(float val);
-    float getMaxRotation() const;
+    CV_WRAP void setNormalWinSize(int val);
+    CV_WRAP int  getNormalWinSize() const;
+    CV_WRAP void setNormalDiffThreshold(float val);
+    CV_WRAP float getNormalDiffThreshold() const;
+    CV_WRAP void setNormalMethod(RgbdNormals::RgbdNormalsMethod nm);
+    CV_WRAP RgbdNormals::RgbdNormalsMethod getNormalMethod() const;
 
-    void  setMinGradientMagnitude(float val);
-    float getMinGradientMagnitude() const;
-    void setMinGradientMagnitudes(InputArray val);
-    void getMinGradientMagnitudes(OutputArray val) const;
+    CV_WRAP void  setAngleThreshold(float val);
+    CV_WRAP float getAngleThreshold() const;
+    CV_WRAP void  setMaxTranslation(float val);
+    CV_WRAP float getMaxTranslation() const;
+    CV_WRAP void  setMaxRotation(float val);
+    CV_WRAP float getMaxRotation() const;
+
+    CV_WRAP void  setMinGradientMagnitude(float val);
+    CV_WRAP float getMinGradientMagnitude() const;
+    CV_WRAP void setMinGradientMagnitudes(InputArray val);
+    CV_WRAP void getMinGradientMagnitudes(OutputArray val) const;
 
     class Impl;
 

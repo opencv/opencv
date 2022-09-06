@@ -136,18 +136,17 @@ void OdometryTest::checkUMats()
     Mat image, depth;
     readData(image, depth);
 
-    OdometrySettings ods;
-    ods.setCameraMatrix(K);
-    Odometry odometry = Odometry(otype, ods, algtype);
-    OdometryFrame odf = odometry.createOdometryFrame(OdometryFrameStoreType::UMAT);
-
-    Mat calcRt;
-
     UMat uimage, udepth;
     image.copyTo(uimage);
     depth.copyTo(udepth);
-    odf.setImage(uimage);
-    odf.setDepth(udepth);
+
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry = Odometry(otype, ods, algtype);
+    OdometryFrame odf(udepth, uimage);
+
+    Mat calcRt;
+
     uimage.release();
     udepth.release();
 
@@ -155,7 +154,7 @@ void OdometryTest::checkUMats()
     bool isComputed = odometry.compute(odf, odf, calcRt);
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
-    ASSERT_FALSE(diff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
+    ASSERT_LE(diff, idError) << "Incorrect transformation between the same frame (not the identity matrix)" << std::endl;
 }
 
 void OdometryTest::run()
@@ -167,9 +166,7 @@ void OdometryTest::run()
     OdometrySettings ods;
     ods.setCameraMatrix(K);
     Odometry odometry = Odometry(otype, ods, algtype);
-    OdometryFrame odf = odometry.createOdometryFrame();
-    odf.setImage(image);
-    odf.setDepth(depth);
+    OdometryFrame odf(depth, image);
     Mat calcRt;
 
     // 1. Try to find Rt between the same frame (try masks also).
@@ -180,7 +177,7 @@ void OdometryTest::run()
 
     ASSERT_TRUE(isComputed) << "Can not find Rt between the same frame" << std::endl;
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    ASSERT_FALSE(ndiff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
+    ASSERT_LE(ndiff, idError) << "Incorrect transformation between the same frame (not the identity matrix)" << std::endl;
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
@@ -202,13 +199,8 @@ void OdometryTest::run()
         warpFrame(depth, image, noArray(), rt.matrix, K, warpedDepth, warpedImage);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
-        OdometryFrame odfSrc = odometry.createOdometryFrame();
-        OdometryFrame odfDst = odometry.createOdometryFrame();
-
-        odfSrc.setImage(image);
-        odfSrc.setDepth(depth);
-        odfDst.setImage(warpedImage);
-        odfDst.setDepth(warpedDepth);
+        OdometryFrame odfSrc(depth, image);
+        OdometryFrame odfDst(warpedDepth, warpedImage);
 
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
@@ -235,7 +227,7 @@ void OdometryTest::run()
         }
 
         // compare rotation
-        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.11f : 0.015f;
+        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.015f : 0.01f;
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
@@ -275,44 +267,177 @@ void OdometryTest::prepareFrameCheck()
 {
     Mat K = getCameraMatrix();
 
-    Mat image, depth;
-    readData(image, depth);
+    Mat gtImage, gtDepth;
+    readData(gtImage, gtDepth);
     OdometrySettings ods;
     ods.setCameraMatrix(K);
     Odometry odometry = Odometry(otype, ods, algtype);
-    OdometryFrame odf = odometry.createOdometryFrame();
-    odf.setImage(image);
-    odf.setDepth(depth);
+    OdometryFrame odf(gtDepth, gtImage);
 
     odometry.prepareFrame(odf);
 
-    Mat points, mask;
-    odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    odf.getPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
+    std::vector<int> iters;
+    ods.getIterCounts(iters);
+    size_t nlevels = iters.size();
 
-    OdometryFrame todf = odometry.createOdometryFrame();
-    if (otype != OdometryType::DEPTH)
+    Mat points, mask, depth, gray, rgb, scaled;
+
+    odf.getMask(mask);
+    int masknz = countNonZero(mask);
+    ASSERT_GT(masknz, 0);
+
+    odf.getDepth(depth);
+    Mat patchedDepth = depth.clone();
+    patchNaNs(patchedDepth, 0);
+    int depthnz = countNonZero(patchedDepth);
+    double depthNorm = cv::norm(depth, gtDepth, NORM_INF, mask);
+    ASSERT_LE(depthNorm, 0.0);
+
+    Mat gtGray;
+    if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
-        Mat img;
-        odf.getPyramidAt(img, OdometryFramePyramidType::PYR_IMAGE, 0);
-        todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_IMAGE);
-        todf.setPyramidAt(img, OdometryFramePyramidType::PYR_IMAGE, 0);
-    }
-    todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    todf.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    todf.setPyramidLevel(1, OdometryFramePyramidType::PYR_MASK);
-    todf.setPyramidAt(mask, OdometryFramePyramidType::PYR_MASK, 0);
+        odf.getGrayImage(gray);
+        odf.getImage(rgb);
+        double rgbNorm = cv::norm(rgb, gtImage);
+        ASSERT_LE(rgbNorm, 0.0);
 
-    odometry.prepareFrame(todf);
+        if (gtImage.channels() == 3)
+            cvtColor(gtImage, gtGray, COLOR_BGR2GRAY);
+        else
+            gtGray = gtImage;
+        gtGray.convertTo(gtGray, CV_8U);
+        double grayNorm = cv::norm(gray, gtGray);
+        ASSERT_LE(grayNorm, 0.0);
+    }
+
+    odf.getProcessedDepth(scaled);
+    int scalednz = countNonZero(scaled);
+    EXPECT_EQ(scalednz, depthnz);
+
+    std::vector<Mat> gtPyrDepth, gtPyrMask;
+    //TODO: this depth calculation would become incorrect when we implement bilateral filtering, fixit
+    buildPyramid(gtDepth, gtPyrDepth, (int)nlevels - 1);
+    for (const auto& gd : gtPyrDepth)
+    {
+        Mat pm = (gd > ods.getMinDepth()) & (gd < ods.getMaxDepth());
+        gtPyrMask.push_back(pm);
+    }
+
+    size_t npyr = odf.getPyramidLevels();
+    ASSERT_EQ(npyr, nlevels);
+    Matx33f levelK = K;
+    for (size_t i = 0; i < nlevels; i++)
+    {
+        Mat depthi, cloudi, maski;
+
+        odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
+        ASSERT_FALSE(maski.empty());
+        double mnorm = cv::norm(maski, gtPyrMask[i]);
+        EXPECT_LE(mnorm, 16 * 255.0) << "Mask diff is too big at pyr level " << i;
+
+        odf.getPyramidAt(depthi, OdometryFramePyramidType::PYR_DEPTH, i);
+        ASSERT_FALSE(depthi.empty());
+        double dnorm = cv::norm(depthi, gtPyrDepth[i], NORM_INF, maski);
+        EXPECT_LE(dnorm, 8.e-7) << "Depth diff norm is too big at pyr level " << i;
+
+        odf.getPyramidAt(cloudi, OdometryFramePyramidType::PYR_CLOUD, i);
+        ASSERT_FALSE(cloudi.empty());
+        Mat gtCloud;
+        depthTo3d(depthi, levelK, gtCloud);
+        double cnorm = cv::norm(cloudi, gtCloud, NORM_INF, maski);
+        EXPECT_LE(cnorm, 0.0) << "Cloud diff norm is too big at pyr level " << i;
+        // downscale camera matrix for next pyramid level
+        levelK = 0.5f * levelK;
+        levelK(2, 2) = 1.f;
+    }
+
+    if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
+    {
+        std::vector<Mat> gtPyrImage;
+        buildPyramid(gtGray, gtPyrImage, (int)nlevels - 1);
+
+        for (size_t i = 0; i < nlevels; i++)
+        {
+            Mat rgbi, texi, dixi, diyi, maski;
+            odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
+            odf.getPyramidAt(rgbi, OdometryFramePyramidType::PYR_IMAGE, i);
+            ASSERT_FALSE(rgbi.empty());
+            double rnorm = cv::norm(rgbi, gtPyrImage[i], NORM_INF);
+            EXPECT_LE(rnorm, 1.0)  << "RGB diff is too big at pyr level " << i;
+            odf.getPyramidAt(texi, OdometryFramePyramidType::PYR_TEXMASK, i);
+            ASSERT_FALSE(texi.empty());
+            int tnz = countNonZero(texi);
+            EXPECT_GE(tnz, 1000) << "Texture mask has too few valid pixels at pyr level " << i;
+            Mat gtDixi, gtDiyi;
+            Sobel(rgbi, gtDixi, CV_16S, 1, 0, ods.getSobelSize());
+            odf.getPyramidAt(dixi, OdometryFramePyramidType::PYR_DIX, i);
+            ASSERT_FALSE(dixi.empty());
+            double dixnorm = cv::norm(dixi, gtDixi, NORM_INF, maski);
+            EXPECT_LE(dixnorm, 0) << "dI/dx diff is too big at pyr level " << i;
+            Sobel(rgbi, gtDiyi, CV_16S, 0, 1, ods.getSobelSize());
+            odf.getPyramidAt(diyi, OdometryFramePyramidType::PYR_DIY, i);
+            ASSERT_FALSE(diyi.empty());
+            double diynorm = cv::norm(diyi, gtDiyi, NORM_INF, maski);
+            EXPECT_LE(diynorm, 0) << "dI/dy diff is too big at pyr level " << i;
+        }
+    }
+
+    if (otype == OdometryType::DEPTH || otype == OdometryType::RGB_DEPTH)
+    {
+        Ptr<RgbdNormals> normalComputer = odometry.getNormalsComputer();
+        ASSERT_FALSE(normalComputer.empty());
+        Mat normals;
+        odf.getNormals(normals);
+        std::vector<Mat> gtPyrNormals;
+        buildPyramid(normals, gtPyrNormals, (int)nlevels - 1);
+        for (size_t i = 0; i < nlevels; i++)
+        {
+            Mat gtNormal = gtPyrNormals[i];
+            CV_Assert(gtNormal.type() == CV_32FC4);
+            for (int y = 0; y < gtNormal.rows; y++)
+            {
+                Vec4f *normals_row = gtNormal.ptr<Vec4f>(y);
+                for (int x = 0; x < gtNormal.cols; x++)
+                {
+                    Vec4f n4 = normals_row[x];
+                    Point3f n(n4[0], n4[1], n4[2]);
+                    double nrm = cv::norm(n);
+                    n *= 1.f / nrm;
+                    normals_row[x] = Vec4f(n.x, n.y, n.z, 0);
+                }
+            }
+
+            Mat normmaski;
+            odf.getPyramidAt(normmaski, OdometryFramePyramidType::PYR_NORMMASK, i);
+            ASSERT_FALSE(normmaski.empty());
+            int nnm = countNonZero(normmaski);
+            EXPECT_GE(nnm, 1000) << "Normals mask has too few valid pixels at pyr level " << i;
+
+            Mat ptsi;
+            odf.getPyramidAt(ptsi, OdometryFramePyramidType::PYR_CLOUD, i);
+
+            Mat normi;
+            odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
+            ASSERT_FALSE(normi.empty());
+            double nnorm = cv::norm(normi, gtNormal, NORM_INF, normmaski);
+            EXPECT_LE(nnorm, 1.8e-7) << "Normals diff is too big at pyr level " << i;
+
+            if (i == 0)
+            {
+                double pnnorm = cv::norm(normals, normi, NORM_INF, normmaski);
+                EXPECT_GE(pnnorm, 0);
+            }
+        }
+    }
 }
 
 /****************************************************************************************\
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
-TEST(RGBD_Odometry_Rgbd, algorithmic)
+TEST(RGBD_Odometry_Rgb, algorithmic)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
@@ -330,14 +455,14 @@ TEST(RGBD_Odometry_RgbdICP, algorithmic)
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.87, 1.84e-5);
     test.run();
 }
 
 
-TEST(RGBD_Odometry_Rgbd, UMats)
+TEST(RGBD_Odometry_Rgb, UMats)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.checkUMats();
 }
 
@@ -355,14 +480,15 @@ TEST(RGBD_Odometry_RgbdICP, UMats)
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    // OpenCL version has slightly less accuracy than CPU version
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, 1.84e-5);
     test.checkUMats();
 }
 
 
-TEST(RGBD_Odometry_Rgbd, prepareFrame)
+TEST(RGBD_Odometry_Rgb, prepareFrame)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.prepareFrameCheck();
 }
 
@@ -380,7 +506,7 @@ TEST(RGBD_Odometry_RgbdICP, prepareFrame)
 
 TEST(RGBD_Odometry_FastICP, prepareFrame)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.prepareFrameCheck();
 }
 
@@ -625,6 +751,33 @@ TEST(RGBD_Odometry_WarpFrame, bigScale)
 
     ASSERT_LE(l2diff, 191.026565);
     ASSERT_LE(lidiff, 0.99951172);
+}
+
+TEST(RGBD_DepthTo3D, mask)
+{
+    std::string dataPath = cvtest::TS::ptr()->get_data_path();
+    std::string srcDepthFilename = dataPath + "/cv/rgbd/depth.png";
+
+    Mat srcDepth = imread(srcDepthFilename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(srcDepth.empty())  << "Depth " << srcDepthFilename.c_str() << "can not be read" << std::endl;
+    ASSERT_TRUE(srcDepth.type() == CV_16UC1);
+
+    Mat srcMask = srcDepth > 0;
+
+    // test data used to generate warped depth and rgb
+    // the script used to generate is in opencv_extra repo
+    // at testdata/cv/rgbd/warped_depth_generator/warp_test.py
+    double fx = 525.0, fy = 525.0,
+           cx = 319.5, cy = 239.5;
+    Matx33d intr(fx,  0, cx,
+                  0, fy, cy,
+                  0,  0,  1);
+
+    Mat srcCloud;
+    depthTo3d(srcDepth, intr, srcCloud, srcMask);
+    size_t npts = countNonZero(srcMask);
+
+    ASSERT_EQ(npts, srcCloud.total());
 }
 
 }} // namespace

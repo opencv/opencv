@@ -52,6 +52,11 @@
 
 namespace cv {
 namespace dnn {
+
+namespace accessor {
+class DnnNetAccessor;  // forward declaration
+}
+
 CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
@@ -65,20 +70,23 @@ CV__DNN_INLINE_NS_BEGIN
     enum Backend
     {
         //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
-        //! OpenCV is built with Intel's Inference Engine library or
+        //! OpenCV is built with Intel OpenVINO or
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel's Inference Engine computational backend
-                                                 //!< @sa setInferenceEngineBackendType
+        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
+                                                 //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
-#ifdef __OPENCV_BUILD
+        DNN_BACKEND_CANN,
+#if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
+#if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+#endif
 #endif
     };
 
@@ -335,6 +343,15 @@ CV__DNN_INLINE_NS_BEGIN
                                            const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                            const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                            bool isLast);
+
+        /**
+         * @brief Returns a CANN backend node
+         *
+         * @param   inputsWrapper   layer inputs
+         * @param   index           layer id for op name
+         * @param   nodes           inputs of this node
+         */
+        virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
@@ -621,8 +638,10 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param calibData Calibration data to compute the quantization parameters.
          *  @param inputsDtype Datatype of quantized net's inputs. Can be CV_32F or CV_8S.
          *  @param outputsDtype Datatype of quantized net's outputs. Can be CV_32F or CV_8S.
+         *  @param perChannel Quantization granularity of quantized Net. The default is true, that means quantize model
+         *  in per-channel way (channel-wise). Set it false to quantize model in per-tensor way (or tensor-wise).
          */
-        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype);
+        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel=true);
 
         /** @brief Returns input scale and zeropoint for a quantized Net.
          *  @param scales output parameter for returning input scales.
@@ -828,6 +847,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void enableFusion(bool fusion);
 
+        /** @brief Enables or disables the Winograd compute branch. The Winograd compute branch can speed up
+         * 3x3 Convolution at a small loss of accuracy.
+        * @param useWinograd true to enable the Winograd compute branch. The default is true.
+        */
+        CV_WRAP void enableWinograd(bool useWinograd);
+
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
@@ -838,8 +863,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-    private:
+
         struct Impl;
+        inline Impl* getImpl() const { return impl.get(); }
+        inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
+        friend class accessor::DnnNetAccessor;
+    protected:
         Ptr<Impl> impl;
     };
 
@@ -1174,6 +1203,27 @@ CV__DNN_INLINE_NS_BEGIN
                              const float score_threshold, const float nms_threshold,
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
+
+    /** @brief Performs batched non maximum suppression on given boxes and corresponding scores across different classes.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param class_ids a set of corresponding class ids. Ids are integer and usually start from 0.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS void NMSBoxesBatched(const std::vector<Rect>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
+                                    const float score_threshold, const float nms_threshold,
+                                    CV_OUT std::vector<int>& indices,
+                                    const float eta = 1.f, const int top_k = 0);
+
+    CV_EXPORTS_W void NMSBoxesBatched(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
+                                      const float score_threshold, const float nms_threshold,
+                                      CV_OUT std::vector<int>& indices,
+                                      const float eta = 1.f, const int top_k = 0);
 
     /**
      * @brief Enum of Soft NMS methods.

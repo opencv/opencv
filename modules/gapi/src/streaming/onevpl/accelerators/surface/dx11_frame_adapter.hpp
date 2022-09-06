@@ -37,6 +37,11 @@ public:
     GAPI_EXPORTS ~VPLMediaFrameDX11Adapter();
     MediaFrame::View access(MediaFrame::Access) override;
 
+    // FIXME: Consider a better solution since this approach
+    // is not easily extendable for other adapters (oclcore.cpp)
+    // FIXME: Use with caution since the handle might become invalid
+    //        due to reference counting
+    mfxHDLPair getHandle() const;
     // The default implementation does nothing
     cv::util::any blobParams() const override;
     void serialize(cv::gapi::s11n::IOStream&) override;

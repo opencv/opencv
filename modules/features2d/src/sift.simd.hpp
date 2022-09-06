@@ -961,10 +961,17 @@ if( dstMat.type() == CV_32F )
         v_store(dst + k, __dst);
     }
 #endif
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"  // iteration XX invokes undefined behavior
+#endif
     for( ; k < len; k++ )
     {
         dst[k] = saturate_cast<uchar>(rawDst[k]*nrm2);
     }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
 }
 else // CV_8U
 {
@@ -982,10 +989,18 @@ else // CV_8U
         v_pack_store(dst + k, __pack01);
     }
 #endif
+
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"  // iteration XX invokes undefined behavior
+#endif
     for( ; k < len; k++ )
     {
         dst[k] = saturate_cast<uchar>(rawDst[k]*nrm2);
     }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
 }
 #else
     float* dst = dstMat.ptr<float>(row);

@@ -157,7 +157,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
             *cv::util::get<cv::MediaFrame*>(out_obj) = std::move(cv::util::get<cv::MediaFrame>(res_obj));
             break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            GAPI_Error("This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
     }
@@ -227,7 +227,7 @@ void sync_data(cv::gimpl::stream::Result &r, cv::GOptRunArgsP &outputs)
         } break;
         default:
             // ...maybe because of STANDALONE mode.
-            GAPI_Assert(false && "This value type is not supported!");
+            GAPI_Error("This value type is not supported!");
             break;
         }
     }
@@ -446,7 +446,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
               break;
           }
           default:
-              GAPI_Assert(false && "Unsupported cmd type in getInputVector()");
+              GAPI_Error("Unsupported cmd type in getInputVector()");
        }
     } // for(in_queues)
 
@@ -920,7 +920,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                     m_stops_sent++;
                     break;
                 default:
-                    GAPI_Assert(false && "Unreachable code");
+                    GAPI_Error("Unreachable code");
             }
 
             for (auto &&q : m_out_queues[out_idx])
@@ -1115,7 +1115,7 @@ void collectorThread(std::vector<Q*>   in_queues,
                 out_queue.push(Cmd{cv::util::get<cv::gimpl::Exception>(result)});
                 break;
             default:
-                GAPI_Assert(false && "Unreachable code");
+                GAPI_Error("Unreachable code");
         }
     }
 }
@@ -1288,13 +1288,7 @@ public:
 // proper graph reshape and islands recompilation
 cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
                                                   const GCompileArgs &comp_args)
-    : m_orig_graph(std::move(g_model))
-    , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
-                     .get<IslandModel>().model)
-    , m_comp_args(comp_args)
-    , m_gim(*m_island_graph)
-    , m_desync(GModel::Graph(*m_orig_graph).metadata()
-               .contains<Desynchronized>())
+    : GAbstractStreamingExecutor(std::move(g_model), comp_args)
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -1485,7 +1479,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             }
             break;
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         } // switch(kind)
     } // for(gim nodes)
@@ -1826,9 +1820,9 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
             return true;
         }
         default:
-            GAPI_Assert(false && "Unsupported cmd type in pull");
+            GAPI_Error("Unsupported cmd type in pull");
     }
-    GAPI_Assert(false && "Unreachable code");
+    GAPI_Error("Unreachable code");
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
@@ -1859,10 +1853,10 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
             return true;
         }
     }
-    GAPI_Assert(false && "Unreachable code");
+    GAPI_Error("Unreachable code");
 }
 
-std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::gimpl::GStreamingExecutor::pull()
+cv::gimpl::GAbstractStreamingExecutor::PyPullResult cv::gimpl::GStreamingExecutor::pull()
 {
     using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
     bool is_over = false;

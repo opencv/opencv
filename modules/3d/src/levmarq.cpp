@@ -127,7 +127,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
 
     double oldEnergy = energy;
 
-    CV_LOG_INFO(NULL, "#s" << " energy: " << energy);
+    CV_LOG_DEBUG(NULL, "#s" << " energy: " << energy);
 
     // diagonal clamping options
     const double minDiag = 1e-6;
@@ -167,7 +167,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
     {
         // At this point we should have jtj and jtb built
 
-        CV_LOG_INFO(NULL, "#LM#s" << " energy: " << energy);
+        CV_LOG_DEBUG(NULL, "#LM#s" << " energy: " << energy);
 
         // do the jacobian conditioning improvement used in Ceres
         if (settings.jacobiScaling)
@@ -195,18 +195,18 @@ LevMarq::Report detail::LevMarqBase::optimize()
             jtjDiag = lmDiag + diag;
             backend->setDiag(jtjDiag);
 
-            CV_LOG_INFO(NULL, "linear decompose...");
+            CV_LOG_DEBUG(NULL, "linear decompose...");
 
             bool decomposed = backend->decompose();
 
-            CV_LOG_INFO(NULL, (decomposed ? "OK" : "FAIL"));
+            CV_LOG_DEBUG(NULL, (decomposed ? "OK" : "FAIL"));
 
-            CV_LOG_INFO(NULL, "linear solve...");
+            CV_LOG_DEBUG(NULL, "linear solve...");
             // use double or convert everything to float
             Mat_<double> x((int)jtb.rows, 1);
             bool solved = decomposed && backend->solveDecomposed(jtb, x);
 
-            CV_LOG_INFO(NULL, (solved ? "OK" : "FAIL"));
+            CV_LOG_DEBUG(NULL, (solved ? "OK" : "FAIL"));
 
             double costChange = 0.0;
             double jacCostChange = 0.0;
@@ -246,11 +246,11 @@ LevMarq::Report detail::LevMarqBase::optimize()
                             if (geoIsGood)
                                 x += xgeo * settings.geoScale;
 
-                            CV_LOG_INFO(NULL, "Geo truncerr: " << truncerr << (geoIsGood ? ", use it" : ", skip it") );
+                            CV_LOG_DEBUG(NULL, "Geo truncerr: " << truncerr << (geoIsGood ? ", use it" : ", skip it") );
                         }
                         else
                         {
-                            CV_LOG_INFO(NULL, "Geo: failed to solve");
+                            CV_LOG_DEBUG(NULL, "Geo: failed to solve");
                         }
                     }
                 }
@@ -269,7 +269,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
 
                 stepQuality = costChange / jacCostChange;
 
-                CV_LOG_INFO(NULL, "#LM#" << iter
+                CV_LOG_DEBUG(NULL, "#LM#" << iter
                     << " energy: " << energy
                     << " deltaEnergy: " << costChange
                     << " deltaEqEnergy: " << jacCostChange
@@ -287,7 +287,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
                 if (settings.upDouble)
                     lmUpFactor *= 2.0;
 
-                CV_LOG_INFO(NULL, "LM goes up, lambda: " << lambdaLevMarq << ", old energy: " << oldEnergy);
+                CV_LOG_DEBUG(NULL, "LM goes up, lambda: " << lambdaLevMarq << ", old energy: " << oldEnergy);
             }
             else
             {
@@ -300,6 +300,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
                     lambdaLevMarq *= 1.0 / settings.initialLmDownFactor;
                 lmUpFactor = settings.initialLmUpFactor;
 
+                // Once set, these flags will be activated until next successful LM iteration - this is not a bug
                 smallGradient = (gradientMax < settings.minGradientTolerance);
                 smallStep = (xNorm < settings.stepNormTolerance);
                 smallEnergyDelta = (costChange / energy < settings.relEnergyDeltaTolerance);
@@ -307,11 +308,11 @@ LevMarq::Report detail::LevMarqBase::optimize()
 
                 backend->acceptProbe();
 
-                CV_LOG_INFO(NULL, "#" << iter << " energy: " << energy);
+                CV_LOG_DEBUG(NULL, "#" << iter << " energy: " << energy);
 
                 oldEnergy = energy;
 
-                CV_LOG_INFO(NULL, "LM goes down, lambda: " << lambdaLevMarq << " step quality: " << stepQuality);
+                CV_LOG_DEBUG(NULL, "LM goes down, lambda: " << lambdaLevMarq << " step quality: " << stepQuality);
             }
 
             iter++;
@@ -340,20 +341,32 @@ LevMarq::Report detail::LevMarqBase::optimize()
 
     bool found = (smallGradient || smallStep || smallEnergyDelta || smallEnergy);
 
-    CV_LOG_INFO(NULL, "Finished: " << (found ? "" : "not ") << "found");
+    CV_LOG_DEBUG(NULL, "Finished: " << (found ? "" : "not ") << "found");
     std::string fr = "Finish reason: ";
     if (settings.checkMinGradient && smallGradient)
-        CV_LOG_INFO(NULL, fr + "gradient max val dropped below threshold");
+    {
+        CV_LOG_DEBUG(NULL, fr + "gradient max val dropped below threshold");
+    }
     if (settings.checkStepNorm && smallStep)
-        CV_LOG_INFO(NULL, fr + "step size dropped below threshold");
+    {
+        CV_LOG_DEBUG(NULL, fr + "step size dropped below threshold");
+    }
     if (settings.checkRelEnergyChange && smallEnergyDelta)
-        CV_LOG_INFO(NULL, fr + "relative energy change between iterations dropped below threshold");
+    {
+        CV_LOG_DEBUG(NULL, fr + "relative energy change between iterations dropped below threshold");
+    }
     if (smallEnergy)
-        CV_LOG_INFO(NULL, fr + "energy dropped below threshold");
+    {
+        CV_LOG_DEBUG(NULL, fr + "energy dropped below threshold");
+    }
     if (tooLong)
-        CV_LOG_INFO(NULL, fr + "max number of iterations reached");
+    {
+        CV_LOG_DEBUG(NULL, fr + "max number of iterations reached");
+    }
     if (bigLambda)
-        CV_LOG_INFO(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
+    {
+        CV_LOG_DEBUG(NULL, fr + "lambda has grown above the threshold, the trust region is too small");
+    }
 
     return LevMarq::Report(found, iter, oldEnergy);
 }

@@ -162,7 +162,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
 
         default:
             // Unsupported node shape
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         }
     }

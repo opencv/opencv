@@ -30,50 +30,9 @@ static inline int getTransformDim(OdometryTransformType transformType)
     }
 }
 
-static inline
-void checkImage(InputArray image)
-{
-    if (image.empty())
-        CV_Error(Error::StsBadSize, "Image is empty.");
-    if (image.type() != CV_8UC1)
-        CV_Error(Error::StsBadSize, "Image type has to be CV_8UC1.");
-}
 
 static inline
-void checkDepth(InputArray depth, const Size& imageSize)
-{
-    if (depth.empty())
-        CV_Error(Error::StsBadSize, "Depth is empty.");
-    if (depth.size() != imageSize)
-        CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
-    if (depth.type() != CV_32FC1)
-        CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
-}
-
-static inline
-void checkMask(InputArray mask, const Size& imageSize)
-{
-    if (!mask.empty())
-    {
-        if (mask.size() != imageSize)
-            CV_Error(Error::StsBadSize, "Mask has to have the size equal to the image size.");
-        if (mask.type() != CV_8UC1)
-            CV_Error(Error::StsBadSize, "Mask type has to be CV_8UC1.");
-    }
-}
-
-static inline
-void checkNormals(InputArray normals, const Size& depthSize)
-{
-    if (normals.size() != depthSize)
-        CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
-    if (normals.type() != CV_32FC3)
-        CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
-}
-
-
-static inline
-Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -86,7 +45,7 @@ Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3f& p3d, doubl
 }
 
 static inline
-Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -100,7 +59,7 @@ Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3f& p3
 }
 
 static inline
-Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -111,7 +70,7 @@ Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3f&
 }
 
 static inline void rgbdCoeffsFunc(OdometryTransformType transformType,
-                                  double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+                                  double* C, double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     int dim = getTransformDim(transformType);
     Vec6d ret;
@@ -143,7 +102,7 @@ static inline void rgbdCoeffsFunc(OdometryTransformType transformType,
 
 
 static inline
-Vec6d calcICPEquationCoeffs(const Point3f& psrc, const Vec3f& ndst)
+Vec6d calcICPEquationCoeffs(const Point3d& psrc, const Vec3d& ndst)
 {
     Point3d pxv = psrc.cross(Point3d(ndst));
 
@@ -151,7 +110,7 @@ Vec6d calcICPEquationCoeffs(const Point3f& psrc, const Vec3f& ndst)
 }
 
 static inline
-Vec3d calcICPEquationCoeffsRotation(const Point3f& psrc, const Vec3f& ndst)
+Vec3d calcICPEquationCoeffsRotation(const Point3d& psrc, const Vec3d& ndst)
 {
     Point3d pxv = psrc.cross(Point3d(ndst));
 
@@ -159,13 +118,13 @@ Vec3d calcICPEquationCoeffsRotation(const Point3f& psrc, const Vec3f& ndst)
 }
 
 static inline
-Vec3d calcICPEquationCoeffsTranslation( const Point3f& /*p0*/, const Vec3f& ndst)
+Vec3d calcICPEquationCoeffsTranslation( const Point3d& /*p0*/, const Vec3d& ndst)
 {
     return Vec3d(ndst);
 }
 
 static inline
-void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
+void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3d& p0, const Point3d& /*p1*/, const Vec3d& n1)
 {
     int dim = getTransformDim(transformType);
     Vec6d ret;
@@ -195,50 +154,13 @@ void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f
         C[i] = ret[i];
 }
 
-void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
-void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
-
-void prepareRGBFrameBase(OdometryFrame& frame, const OdometrySettings settings, bool useDepth);
-void prepareRGBFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
-void prepareRGBFrameDst (OdometryFrame& frame, const OdometrySettings settings);
-
-void prepareICPFrameBase(OdometryFrame& frame, const OdometrySettings settings);
-void prepareICPFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
-void prepareICPFrameDst (OdometryFrame& frame, const OdometrySettings settings);
-
-
-void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage);
-void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArrayOfArrays _pyramid);
-
-void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount);
-
-template<typename TMat>
-void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth, InputArrayOfArrays pyramidNormal, InputOutputArrayOfArrays pyramidMask);
-
-template<typename TMat>
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud);
-
-void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vector<Matx33f>& pyramidCameraMatrix);
-
-template<typename TMat>
-void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputOutputArrayOfArrays pyramidSobel, int sobelSize);
-
-void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
-                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
-                                InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale);
-
-void randomSubsetOfMask(InputOutputArray _mask, float part);
-
-void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals);
-
-void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
-                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask);
-
+void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, const OdometrySettings settings, OdometryAlgoType algtype);
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
+void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, const OdometrySettings settings, OdometryAlgoType algtype);
 
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
-                         const OdometryFrame srcFrame,
-                         const OdometryFrame dstFrame,
+                         const OdometryFrame& srcFrame,
+                         const OdometryFrame& dstFrame,
                          const Matx33f& cameraMatrix,
                          float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
                          double maxTranslation, double maxRotation, double sobelScale,
@@ -260,7 +182,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
                         const Mat& corresps,
                         Mat& AtA, Mat& AtB, OdometryTransformType transformType);
 
-void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
+void calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
                             cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
 
 #ifdef HAVE_OPENCL
