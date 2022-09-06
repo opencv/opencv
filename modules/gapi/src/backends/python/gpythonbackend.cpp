@@ -14,16 +14,10 @@
 #include "api/gbackend_priv.hpp"
 #include "backends/common/gbackend.hpp"
 
-cv::gapi::python::GPythonKernel::GPythonKernel(cv::gapi::python::Impl run,
-                                               cv::gapi::python::Setup setup)
-    : m_run(run), m_setup(setup)
+cv::gapi::python::GPythonKernel::GPythonKernel(cv::gapi::python::Impl  runf,
+                                               cv::gapi::python::Setup setupf)
+    : run(runf), setup(setupf), is_stateful(setup != nullptr)
 {
-    m_isStateful = (setup != nullptr);
-}
-
-cv::GRunArgs cv::gapi::python::GPythonKernel::operator()(const cv::gapi::python::GPythonContext& ctx)
-{
-    return m_run(ctx);
 }
 
 cv::gapi::python::GPythonFunctor::GPythonFunctor(const char* id,
@@ -162,11 +156,11 @@ static void writeBack(cv::GRunArg& arg, cv::GRunArgP& out)
 
 void GPythonExecutable::handleNewStream()
 {
-    if (!m_kernel.m_isStateful)
+    if (!m_kernel.is_stateful)
         return;
 
-    m_node_state = m_kernel.m_setup(cv::gimpl::GModel::collectInputMeta(m_gm, m_op),
-                                    m_gm.metadata(m_op).get<cv::gimpl::Op>().args);
+    m_node_state = m_kernel.setup(cv::gimpl::GModel::collectInputMeta(m_gm, m_op),
+                                  m_gm.metadata(m_op).get<cv::gimpl::Op>().args);
 }
 
 void GPythonExecutable::run(std::vector<InObj>  &&input_objs,
@@ -181,16 +175,15 @@ void GPythonExecutable::run(std::vector<InObj>  &&input_objs,
                          std::back_inserter(inputs),
                          std::bind(&packArg, std::ref(m_res), _1));
 
-    cv::gapi::python::GPythonContext ctx{inputs, m_in_metas, m_out_info, false};
+    cv::gapi::python::GPythonContext ctx{inputs, m_in_metas, m_out_info, /*state*/{}};
 
-    // For stateful kernel add state to its execution context
-    if (m_kernel.m_isStateful)
+    // NB: For stateful kernel add state to its execution context
+    if (m_kernel.is_stateful)
     {
-        ctx.m_state = m_node_state;
-        ctx.m_isStateful = true;
+        ctx.m_state = cv::optional<cv::GArg>(m_node_state);
     }
 
-    auto outs = m_kernel(ctx);
+    auto outs = m_kernel.run(ctx);
 
     for (auto&& it : ade::util::zip(outs, output_objs))
     {
@@ -249,7 +242,7 @@ GPythonExecutable::GPythonExecutable(const ade::Graph& g,
     m_kernel = cag.metadata(m_op).get<PythonUnit>().kernel;
 
     // If kernel is stateful then prepare storage for its state.
-    if (m_kernel.m_isStateful)
+    if (m_kernel.is_stateful)
     {
         m_node_state = cv::GArg{ };
     }

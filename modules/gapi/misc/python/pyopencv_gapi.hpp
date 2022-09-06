@@ -660,7 +660,8 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
         // NB: Doesn't increase reference counter (false),
         // because PyObject already have ownership.
         // In case exception decrement reference counter.
-        cv::detail::PyObjectHolder args(PyTuple_New(ctx.m_isStateful ? ins.size() + 1: ins.size()), false);
+        cv::detail::PyObjectHolder args(
+                PyTuple_New(ctx.m_state.has_value() ? ins.size() + 1 : ins.size()), false);
         for (size_t i = 0; i < ins.size(); ++i)
         {
             // NB: If meta is monostate then object isn't associated with G-TYPE.
@@ -691,9 +692,9 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
             ++in_idx;
         }
 
-        if (ctx.m_isStateful)
+        if (ctx.m_state.has_value())
         {
-            PyTuple_SetItem(args.get(), ins.size(), pyopencv_from(ctx.m_state));
+            PyTuple_SetItem(args.get(), ins.size(), pyopencv_from(ctx.m_state.value()));
         }
 
         // NB: Doesn't increase reference counter (false).
@@ -742,8 +743,45 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
     return outs;
 }
 
-static cv::GArg setup_py(cv::detail::PyObjectHolder out_meta, const cv::GMetaArgs& meta,
-                         const cv::GArgs& gargs)
+static void unpackMetasToTuple(const cv::GMetaArgs&        meta,
+                               const cv::GArgs&            gargs,
+                               cv::detail::PyObjectHolder& tuple)
+{
+    size_t idx = 0;
+    for (auto&& m : meta)
+    {
+        switch (m.index())
+        {
+            case cv::GMetaArg::index_of<cv::GMatDesc>():
+                PyTuple_SetItem(tuple.get(), idx, pyopencv_from(cv::util::get<cv::GMatDesc>(m)));
+                break;
+            case cv::GMetaArg::index_of<cv::GScalarDesc>():
+                PyTuple_SetItem(tuple.get(), idx,
+                        pyopencv_from(cv::util::get<cv::GScalarDesc>(m)));
+                break;
+            case cv::GMetaArg::index_of<cv::GArrayDesc>():
+                PyTuple_SetItem(tuple.get(), idx,
+                        pyopencv_from(cv::util::get<cv::GArrayDesc>(m)));
+                break;
+            case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
+                PyTuple_SetItem(tuple.get(), idx,
+                        pyopencv_from(cv::util::get<cv::GOpaqueDesc>(m)));
+                break;
+            case cv::GMetaArg::index_of<cv::util::monostate>():
+                PyTuple_SetItem(tuple.get(), idx, pyopencv_from(gargs[idx]));
+                break;
+            case cv::GMetaArg::index_of<cv::GFrameDesc>():
+                util::throw_error(
+                        std::logic_error("GFrame isn't supported for custom operation"));
+                break;
+        }
+        ++idx;
+    }
+}
+
+static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
+                         const cv::GMetaArgs&       meta,
+                         const cv::GArgs&           gargs)
 {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
@@ -756,42 +794,11 @@ static cv::GArg setup_py(cv::detail::PyObjectHolder out_meta, const cv::GMetaArg
         // because PyObject already have ownership.
         // In case exception decrement reference counter.
         cv::detail::PyObjectHolder args(PyTuple_New(meta.size()), false);
-        size_t idx = 0;
-        for (auto&& m : meta)
-        {
-            switch (m.index())
-            {
-                case cv::GMetaArg::index_of<cv::GMatDesc>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(cv::util::get<cv::GMatDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GScalarDesc>():
-                    PyTuple_SetItem(args.get(), idx,
-                                    pyopencv_from(cv::util::get<cv::GScalarDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GArrayDesc>():
-                    PyTuple_SetItem(args.get(), idx,
-                                    pyopencv_from(cv::util::get<cv::GArrayDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
-                    PyTuple_SetItem(args.get(), idx,
-                                    pyopencv_from(cv::util::get<cv::GOpaqueDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::util::monostate>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(gargs[idx]));
-                    break;
-                case cv::GMetaArg::index_of<cv::GFrameDesc>():
-                    util::throw_error(
-                        std::logic_error("GFrame isn't supported for custom operation"));
-                    break;
-            }
-            ++idx;
-        }
-
-        // PyTuple_SetItem(args.get(), idx, pyopencv_from(gmarg));
-
-        // NB: Doesn't increase reference counter (false).
-        // In case PyObject_CallObject return NULL, do nothing in destructor.
-        cv::detail::PyObjectHolder result(PyObject_CallObject(out_meta.get(), args.get()), false);
+        unpackMetasToTuple(meta, gargs, args);
+        // NB: Take an onwership because this state is "Python" type so it will be wrapped as-is
+        // into cv::GArg and stored in GPythonBackend. Object without ownership can't
+        // be dealocated outside this function.
+        cv::detail::PyObjectHolder result(PyObject_CallObject(setup.get(), args.get()), true);
 
         if (PyErr_Occurred())
         {
@@ -841,8 +848,8 @@ static cv::GMetaArgs get_meta_args(PyObject* tuple)
 }
 
 static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
-                             const cv::GMetaArgs         &meta,
-                             const cv::GArgs             &gargs)
+                             const cv::GMetaArgs        &meta,
+                             const cv::GArgs            &gargs)
 {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
@@ -854,32 +861,7 @@ static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
         // because PyObject already have ownership.
         // In case exception decrement reference counter.
         cv::detail::PyObjectHolder args(PyTuple_New(meta.size()), false);
-        size_t idx = 0;
-        for (auto&& m : meta)
-        {
-            switch (m.index())
-            {
-                case cv::GMetaArg::index_of<cv::GMatDesc>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(cv::util::get<cv::GMatDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GScalarDesc>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(cv::util::get<cv::GScalarDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GArrayDesc>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(cv::util::get<cv::GArrayDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(cv::util::get<cv::GOpaqueDesc>(m)));
-                    break;
-                case cv::GMetaArg::index_of<cv::util::monostate>():
-                    PyTuple_SetItem(args.get(), idx, pyopencv_from(gargs[idx]));
-                    break;
-                case cv::GMetaArg::index_of<cv::GFrameDesc>():
-                    util::throw_error(std::logic_error("GFrame isn't supported for custom operation"));
-                    break;
-            }
-            ++idx;
-        }
+        unpackMetasToTuple(meta, gargs, args);
         // NB: Doesn't increase reference counter (false).
         // In case PyObject_CallObject return NULL, do nothing in destructor.
         cv::detail::PyObjectHolder result(

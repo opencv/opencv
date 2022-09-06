@@ -32,9 +32,7 @@ struct GPythonContext
     const cv::GMetaArgs  &in_metas;
     const cv::GTypesInfo &out_info;
 
-    bool m_isStateful;
-
-    GArg m_state;
+    cv::optional<cv::GArg> m_state;
 };
 
 using Impl = std::function<cv::GRunArgs(const GPythonContext&)>;
@@ -46,13 +44,9 @@ public:
     GPythonKernel() = default;
     GPythonKernel(Impl run, Setup setup);
 
-    cv::GRunArgs operator()(const GPythonContext& ctx);
-
-    bool m_isStateful = false;
-    Setup m_setup = nullptr;
-
-private:
-    Impl m_run;
+    Impl  run;
+    Setup setup       = nullptr;
+    bool  is_stateful = false;
 };
 
 class GAPI_EXPORTS GPythonFunctor : public cv::gapi::GFunctor

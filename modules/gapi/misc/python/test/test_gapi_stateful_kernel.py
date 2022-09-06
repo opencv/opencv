@@ -78,6 +78,52 @@ try:
             self.assertEqual(ref, acc1)
 
 
+        def test_stateful_throw_setup(self):
+            @cv.gapi.kernel(GStatefulCounter)
+            class GThrowStatefulCounterImpl:
+                """Implementation for GStatefulCounter operation
+                   that throw exception in setup method"""
+
+                @staticmethod
+                def setup(desc):
+                    raise Exception('Throw from setup method')
+
+                @staticmethod
+                def run(value, state):
+                    raise Exception('Unreachable')
+
+            g_in  = cv.GOpaque.Int()
+            g_out = GStatefulCounter.on(g_in)
+            comp  = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
+            pkg   = cv.gapi.kernels(GThrowStatefulCounterImpl)
+
+            with self.assertRaises(Exception): comp.apply(cv.gin(42),
+                                                          args=cv.gapi.compile_args(pkg))
+
+
+        def test_stateful_reset(self):
+            g_in  = cv.GOpaque.Int()
+            g_out = GStatefulCounter.on(g_in)
+            comp  = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
+            pkg   = cv.gapi.kernels(GStatefulCounterImpl)
+
+            cc = comp.compileStreaming(args=cv.gapi.compile_args(pkg))
+
+            cc.setSource(cv.gin(1))
+            cc.start()
+            for i in range(1, 10):
+                _, actual = cc.pull()
+                self.assertEqual(i, actual)
+            cc.stop()
+
+            cc.setSource(cv.gin(2))
+            cc.start()
+            for i in range(2, 10, 2):
+                _, actual = cc.pull()
+                self.assertEqual(i, actual)
+            cc.stop()
+
+
 except unittest.SkipTest as e:
 
     message = str(e)
