@@ -71,7 +71,7 @@ static double robustWrapper (InputArray errors, const RobustFunction &fnc) {
     double robust_sum_sqr_errs = 0.0;
     for (int pt = 0; pt < (int)errs.total()*2; pt++) {
         auto sqr_err = errs_ptr[pt];
-        sqr_err *= sqr_err; 
+        sqr_err *= sqr_err;
         robust_sum_sqr_errs += fnc.getError(sqr_err);
     }
     return sqrt(robust_sum_sqr_errs);
@@ -366,7 +366,7 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                 Mat imgpt_ik = imagePoints[k][i].reshape(2, 1);
                 imgpt_ik.convertTo(imgpt_ik, CV_64FC2);
 
-                if (is_fisheye_vec[0] && is_fisheye_vec[k]) {
+                if (is_fisheye_vec[k]) {
                     if( JtJ_.needed() || JtErr_.needed() ) {
                         Mat jacobian; // of size num_points*2  x  15 (2 + 2 + 1 + 4 + 3 + 3; // f, c, alpha, k, om, T)
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[1], T[1], Ks[k], distortions[k], 0, jacobian);
