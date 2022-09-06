@@ -449,10 +449,9 @@ class SVG:
 
         return output
 
-    def interpret_fileName(self, fileName=None):
-        if fileName is None:
-            fileName = _default_fileName
-        return fileName
+    @staticmethod
+    def interpret_fileName(fileName=None):
+        return fileName or _default_fileName
 
     def save(self, fileName=None, encoding="utf-8", compresslevel=None):
         """Save to a file for viewing.  Note that svg.save() overwrites the file named _default_fileName.
