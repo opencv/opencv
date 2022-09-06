@@ -85,7 +85,7 @@ public:
     }
 };
 
-TEST_P(Test_ONNX_layers, NMS)
+TEST_P(Test_ONNX_layers, NonMaxSuppression)
 {
     testONNXModels("nms", npy, 0, 0, false, false, 2);
 }

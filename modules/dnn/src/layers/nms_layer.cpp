@@ -139,5 +139,11 @@ public:
         }
     }
 };
+
+Ptr<NonMaxSuppressionLayer> NonMaxSuppressionLayer::create(const LayerParams& params)
+{
+    return Ptr<NonMaxSuppressionLayer>(new NonMaxSuppressionLayerImpl(params));
+}
+
 }
 }
