@@ -1081,10 +1081,9 @@ TEST_F(fisheyeTest, multiview_calibration)
     flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
     flag |= cv::fisheye::CALIB_CHECK_COND;
     flag |= cv::fisheye::CALIB_FIX_SKEW;
-    flag |= cv::fisheye::CALIB_FIX_INTRINSIC;
+
     EXPECT_TRUE(calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
        Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, flag));
-    std::cout << "errors matrix:\n" << errors_mat << "\n";
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
                            -0.06956823121068059,    0.9975601387249519, 0.005833595226966235,
                           -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);
@@ -1102,15 +1101,15 @@ TEST_F(fisheyeTest, multiview_calibration)
 
     cv::Mat theR;
     cv::Rodrigues(Rs[1], theR);
-    
-    EXPECT_MAT_NEAR(theR, R_correct, 1e-10);
-    EXPECT_MAT_NEAR(Ts[1], T_correct, 1e-10);
 
-    EXPECT_MAT_NEAR(Ks[0], K1_correct, 1e-10);
-    EXPECT_MAT_NEAR(Ks[1], K2_correct, 1e-10);
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-2);
+    EXPECT_MAT_NEAR(Ts[1], T_correct, 5e-3);
 
-    EXPECT_MAT_NEAR(distortions[0], D1_correct, 1e-10);
-    EXPECT_MAT_NEAR(distortions[1], D2_correct, 1e-10);
+    EXPECT_MAT_NEAR(Ks[0], K1_correct, 4);
+    EXPECT_MAT_NEAR(Ks[1], K2_correct, 5);
+
+    EXPECT_MAT_NEAR(distortions[0], D1_correct, 1e-2);
+    EXPECT_MAT_NEAR(distortions[1], D2_correct, 5e-2);
 }
 
 
