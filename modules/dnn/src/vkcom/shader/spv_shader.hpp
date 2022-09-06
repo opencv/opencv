@@ -14,6 +14,7 @@ namespace cv { namespace dnn { namespace vkcom {
 extern const unsigned int dw_conv_spv[1760];
 extern const unsigned int permute_spv[765];
 extern const unsigned int conv48_spv[7458];
+extern const unsigned int conv48_nobias_spv[7182];
 extern const unsigned int lrn_spv[1845];
 extern const unsigned int concat_spv[541];
 extern const unsigned int avg_pool_spv[1538];
