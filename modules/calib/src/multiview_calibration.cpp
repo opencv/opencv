@@ -433,6 +433,27 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
            noArray()/*mask, all variables to optimize*/);
     solver.optimize();
 }
+
+static void testOverlap (const std::vector<std::vector<bool>> &visibility_mat) {
+    const int NUM_CAMERAS = (int)visibility_mat.size(), NUM_FRAMES = (int)visibility_mat[0].size();
+    std::vector<bool> has_overlap(NUM_CAMERAS, false);
+    for (int c1 = 0; c1 < NUM_CAMERAS; c1++) {
+        if (has_overlap[c1])
+            continue;
+        for (int c2 = 0; c2 < NUM_CAMERAS; c2++) {
+            for (int f = 0; f < NUM_FRAMES; f++) {
+                if (visibility_mat[c1][f] && visibility_mat[c2][f]) {
+                    has_overlap[c1] = has_overlap[c2] = true;
+                    break;
+                }
+            }
+            if (has_overlap[c1])
+                break;
+        }
+        if (!has_overlap[c1])
+            CV_Error(Error::StsBadArg, "camera "+std::to_string(c1)+" has no overlap with other cameras!");
+    }
+}
 }
 
 bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
@@ -504,23 +525,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
         }
         num_visible_frames_per_camera[c] = num_visible_frames;
     }
-    std::vector<bool> has_overlap(NUM_CAMERAS, false);
-    for (int c1 = 0; c1 < NUM_CAMERAS; c1++) {
-        if (has_overlap[c1])
-            continue;
-        for (int c2 = c1 + 1; c2 < NUM_CAMERAS; c2++) {
-            for (int f = 0; f < NUM_FRAMES; f++) {
-                if (visibility_mat[c1][f] && visibility_mat[c2][f]) {
-                    has_overlap[c1] = has_overlap[c2] = true;
-                    break;
-                }
-            }
-            if (has_overlap[c1])
-                break;
-        }
-        if (!has_overlap[c1])
-            CV_Error(Error::StsBadArg, "camera "+std::to_string(c1)+" has no overlap with other cameras!");
-    }
+    multiview::testOverlap(visibility_mat);
     int flags_extrinsics = CALIB_FIX_INTRINSIC;
     if (num_fisheye_cameras != 0 && num_fisheye_cameras != NUM_CAMERAS) {
         // cameras are mixed (fisheye and pinhole)
