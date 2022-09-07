@@ -1748,6 +1748,15 @@ second camera coordinate system.
 @param T Output translation vector, see description above.
 @param E Output essential matrix.
 @param F Output fundamental matrix.
+@param rvecs Output vector of rotation vectors ( @ref Rodrigues ) estimated for each pattern view in the
+coordinate system of the first camera of the stereo pair (e.g. std::vector<cv::Mat>). More in detail, each
+i-th rotation vector together with the corresponding i-th translation vector (see the next output parameter
+description) brings the calibration pattern from the object coordinate space (in which object points are
+specified) to the camera coordinate space of the first camera of the stereo pair. In more technical terms,
+the tuple of the i-th rotation and translation vector performs a change of basis from object coordinate space
+to camera coordinate space of the first camera of the stereo pair.
+@param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
+of previous output parameter ( rvecs ).
 @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
 -   @ref CALIB_FIX_INTRINSIC Fix cameraMatrix? and distCoeffs? so that only R, T, E, and F
@@ -1844,8 +1853,8 @@ CV_EXPORTS_AS(stereoCalibrateExtended) double stereoCalibrate( InputArrayOfArray
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
-                                     Size imageSize, InputOutputArray R,InputOutputArray T, OutputArray E, OutputArray F,
-                                     OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
+                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 /// @overload
@@ -1855,6 +1864,15 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+
+/// @overload
+CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 /** @brief Computes rectification transforms for each head of a calibrated stereo camera.
