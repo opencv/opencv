@@ -3995,6 +3995,15 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     @param imageSize Size of the image used only to initialize camera intrinsic matrix.
     @param R Output rotation matrix between the 1st and the 2nd camera coordinate systems.
     @param T Output translation vector between the coordinate systems of the cameras.
+    @param rvecs Output vector of rotation vectors ( @ref Rodrigues ) estimated for each pattern view in the
+    coordinate system of the first camera of the stereo pair (e.g. std::vector<cv::Mat>). More in detail, each
+    i-th rotation vector together with the corresponding i-th translation vector (see the next output parameter
+    description) brings the calibration pattern from the object coordinate space (in which object points are
+    specified) to the camera coordinate space of the first camera of the stereo pair. In more technical terms,
+    the tuple of the i-th rotation and translation vector performs a change of basis from object coordinate space
+    to camera coordinate space of the first camera of the stereo pair.
+    @param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
+    of previous output parameter ( rvecs ).
     @param flags Different flags that may be zero or a combination of the following values:
     -    @ref fisheye::CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
     are estimated.
@@ -4009,6 +4018,12 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     zero.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
+    CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                  InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
+                                  OutputArray R, OutputArray T, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = fisheye::CALIB_FIX_INTRINSIC,
+                                  TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+    /// @overload
     CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                   InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                   OutputArray R, OutputArray T, int flags = fisheye::CALIB_FIX_INTRINSIC,
