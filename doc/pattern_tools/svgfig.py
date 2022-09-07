@@ -34,18 +34,6 @@ try:
 except NameError:
     xrange = range  # Python 3
 
-
-if re.search("windows", platform.system(), re.I):
-    try:
-        import _winreg
-        _default_directory = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
-                             r"Software\Microsoft\Windows\Current Version\Explorer\Shell Folders"), "Desktop")[0]
-#   tmpdir = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER, "Environment"), "TEMP")[0]
-#   if tmpdir[0:13] != "%USERPROFILE%":
-#     tmpdir = os.path.expanduser("~") + tmpdir[13:]
-    except:
-        _default_directory = os.path.expanduser("~") + os.sep + "Desktop"
-
 _default_fileName = "tmp.svg"
 
 _hacks = {}
