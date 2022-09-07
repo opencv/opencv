@@ -34,18 +34,6 @@ try:
 except NameError:
     xrange = range  # Python 3
 
-
-if re.search("windows", platform.system(), re.I):
-    try:
-        import _winreg
-        _default_directory = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER,
-                             r"Software\Microsoft\Windows\Current Version\Explorer\Shell Folders"), "Desktop")[0]
-#   tmpdir = _winreg.QueryValueEx(_winreg.OpenKey(_winreg.HKEY_CURRENT_USER, "Environment"), "TEMP")[0]
-#   if tmpdir[0:13] != "%USERPROFILE%":
-#     tmpdir = os.path.expanduser("~") + tmpdir[13:]
-    except:
-        _default_directory = os.path.expanduser("~") + os.sep + "Desktop"
-
 _default_fileName = "tmp.svg"
 
 _hacks = {}
@@ -449,12 +437,9 @@ class SVG:
 
         return output
 
-    def interpret_fileName(self, fileName=None):
-        if fileName is None:
-            fileName = _default_fileName
-        if re.search("windows", platform.system(), re.I) and not os.path.isabs(fileName):
-            fileName = _default_directory + os.sep + fileName
-        return fileName
+    @staticmethod
+    def interpret_fileName(fileName=None):
+        return fileName or _default_fileName
 
     def save(self, fileName=None, encoding="utf-8", compresslevel=None):
         """Save to a file for viewing.  Note that svg.save() overwrites the file named _default_fileName.
