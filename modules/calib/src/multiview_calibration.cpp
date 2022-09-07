@@ -499,10 +499,27 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             }
         }
         if (num_visible_frames == 0) {
-            // CV_Error(Error::StsBadArg, "camera "+std::to_string(c)+" has no visible frames!");
-            return false;
+            CV_Error(Error::StsBadArg, "camera "+std::to_string(c)+" has no visible frames!");
+            // return false;
         }
         num_visible_frames_per_camera[c] = num_visible_frames;
+    }
+    std::vector<bool> has_overlap(NUM_CAMERAS, false);
+    for (int c1 = 0; c1 < NUM_CAMERAS; c1++) {
+        if (has_overlap[c1])
+            continue;
+        for (int c2 = c1 + 1; c2 < NUM_CAMERAS; c2++) {
+            for (int f = 0; f < NUM_FRAMES; f++) {
+                if (visibility_mat[c1][f] && visibility_mat[c2][f]) {
+                    has_overlap[c1] = has_overlap[c2] = true;
+                    break;
+                }
+            }
+            if (has_overlap[c1])
+                break;
+        }
+        if (!has_overlap[c1])
+            CV_Error(Error::StsBadArg, "camera "+std::to_string(c1)+" has no overlap with other cameras!");
     }
     int flags_extrinsics = CALIB_FIX_INTRINSIC;
     if (num_fisheye_cameras != 0 && num_fisheye_cameras != NUM_CAMERAS) {
