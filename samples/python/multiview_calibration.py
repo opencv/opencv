@@ -32,7 +32,7 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern):
         ax.plot([cam_box_Rt[3,0], cam_box_Rt[0,0]], [cam_box_Rt[3,1], cam_box_Rt[0,1]], [cam_box_Rt[3,2], cam_box_Rt[0,2]], '-', color=colors[i])
 
     for (i,j) in pairs:
-        edge_line = plt.plot([t[i][0,0], t[j][0,0]], [t[i][1,0], t[j][1,0]], [t[i][2,0], t[j][2,0]], '-', color='black')
+        edge_line = ax.plot([t[i][0,0], t[j][0,0]], [t[i][1,0], t[j][1,0]], [t[i][2,0], t[j][2,0]], '-', color='black')[0]
     ax.scatter(pattern[:,0], pattern[:,1], pattern[:,2], color='red', marker='o')
     ax.legend(ax_lines+[edge_line], [str(i) for i in range(len(R))]+['stereo pair'], fontsize=10)
     dim_box = getDimBox(np.concatenate((all_pts)))
@@ -52,25 +52,24 @@ def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dis
     mean_err = errs.mean()
     title = "Comparison of given point (start) and back-projected (end). Cam. "+str(cam_idx)+" frame "+\
             str(frame_idx)+" mean err. (px) %.1f"%mean_err+". In top %.0f"%per_acc+"% accurate frames"
+    dist_pattern = np.linalg.norm(points_2d_est.min(0) - points_2d_est.max(0))
+    width = 2e-3*dist_pattern
+    head_width = 5*width
     if image is None:
         ax = fig.add_subplot(111)
         ax.set_aspect('equal', 'box')
         ax.set_xlabel('x', fontsize=20)
         ax.set_ylabel('y', fontsize=20)
-        width = .25
-        head_width = 1.25
     else:
         plt.imshow(image)
         ax = plt.gca()
-        width = 1
-        head_width = 4
     arrow_good = arrow_bad = None
     for k, (pt1, pt2) in enumerate(zip(points_2d, points_2d_est)):
         color = 'red' if errs[k] > visual_thr else 'green'
         arrow = ax.arrow(pt1[0], pt1[1], pt2[0]-pt1[0], pt2[1]-pt1[1], color=color, width=width, head_width=head_width)
         if errs[k] > visual_thr and arrow_bad is None:
             arrow_bad = arrow
-        elif arrow_good is None:
+        elif errs[k] < visual_thr and arrow_good is None:
             arrow_good = arrow
     legend = []
     legend_str = []
@@ -143,9 +142,12 @@ def circles_grid_points(grid_size, dist_m):
 
 def asym_circles_grid_points(grid_size, dist_m):
     pattern = []
-    for i in range(grid_size[0]):
-        for j in range(grid_size[1]):
-            pattern.append([(2*j + i % 2)*dist_m, i*dist_m, 0])
+    for i in range(grid_size[1]):
+        for j in range(grid_size[0]):
+            if i % 2 == 1:
+                pattern.append([(j+.5)*dist_m, dist_m*(i//2+.5), 0])
+            else:
+                pattern.append([j*dist_m, (i//2)*dist_m, 0])
     return np.array(pattern, dtype=np.float32)
 
 def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, RESIZE_IMAGE=True):
@@ -184,14 +186,12 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
                 img_size = img.shape[:2][::-1]
 
             scale = 1.0
-            window = (6,6)
+            window = (5,5)
             img_detection = img
             if RESIZE_IMAGE:
                 scale = 1000.0 / max(img.shape[0], img.shape[1])
                 if scale < 1.0:
                     img_detection = cv.resize(img, (int(scale * img.shape[1]), int(scale * img.shape[0])), interpolation=cv.INTER_AREA)
-                    # increase refinement window for the original image resolution
-                    window = (16, 16)
 
             if pattern_type.lower() == 'checkerboard':
                 ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
@@ -206,6 +206,9 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
                 if scale < 1.0:
                     corners /= scale
                 corners2 = cv.cornerSubPix(img, corners, window, (-1,-1), criteria)
+                # cv.drawChessboardCorners(img, grid_size, corners2, ret)
+                # plt.imshow(img)
+                # plt.show()
                 image_points_camera.append(np.array(corners2, dtype=np.float32).reshape(-1,2))
             else:
                 image_points_camera.append(np.array([], dtype=np.float32))
