@@ -19,10 +19,10 @@ Ever wondered how your digital camera detects peoples and faces? Look here to fi
 
 -   @subpage tutorial_generalized_hough_ballard_guil
 
-    Detect an object in a picture with the help of GeneralizedHoughBallard and GeneralizedHoughGuil.
-
     *Languages:* C++
 
-    *Compatibility:* \> OpenCV 3.4
+    *Compatibility:* \>= OpenCV 3.4
 
     *Author:* Markus Heck
+
+    Detect an object in a picture with the help of GeneralizedHoughBallard and GeneralizedHoughGuil.
