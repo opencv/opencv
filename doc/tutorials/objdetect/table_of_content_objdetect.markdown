@@ -16,3 +16,13 @@ Ever wondered how your digital camera detects peoples and faces? Look here to fi
 -   @subpage tutorial_traincascade
 
     This tutorial describes _opencv_traincascade_ application and its parameters.
+
+-   @subpage tutorial_generalized_hough_ballard_guil
+
+    Detect an object in a picture with the help of GeneralizedHoughBallard and GeneralizedHoughGuil.
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 3.4
+
+    *Author:* Markus Heck
