@@ -1,7 +1,8 @@
-from collections import deque
-import cv2
-import numpy as np
 import argparse
+
+import numpy as np
+import cv2
+from collections import deque
 
 '''
 AVSpeechRecognition
@@ -10,6 +11,9 @@ AVSpeechRecognition
     Option 1: Download the model from https://drive.google.com/file/d/1xuwk5ZQagKFoTXev27zvlSg8dAmSJoo7/view?usp=sharing
     Option 2: Convert the model using pretrained torch model and base repo.
         Use the colab notebook here: https://colab.research.google.com/drive/1awBCZ5O6uAT32cHvufNWad5m6q26TuqQ?usp=sharing
+
+For preporocessing the video, YUNet face detection is also required. YUNet can be downloaded from:
+https://github.com/opencv/opencv_zoo/blob/master/models/face_detection_yunet/face_detection_yunet_2022mar.onnx
 '''
 
 class AVSpeechRecognition:
@@ -29,6 +33,7 @@ class AVSpeechRecognition:
             nms_threshold: nms threshold for face detection
             top_k: top k faces for face detection
         '''
+        source = source if source else 0
         self.cap = cv2.VideoCapture(source)
         samplingRate = 16000
         fps=30
@@ -120,8 +125,6 @@ class AVSpeechRecognition:
         '''
         landmarks = self.detector.detect(frame)[-1]
         cropped = None
-        smoothed_landmarks = None
-        normalized_audio = None
         if landmarks is not None:
             landmarks = landmarks[:,:-1].reshape(landmarks.shape[0],7,2)
             if len(landmarks) == 0:
@@ -133,7 +136,7 @@ class AVSpeechRecognition:
             trans_frame, trans_landmarks = self.warp_image(frame, smoothed_landmarks)
             cropped = self.cut_patch(trans_frame, trans_landmarks[-2:], 96//2,96//2)
         if audio is not None:
-            signal_std = 0. if np.std(audio)==0. else np.std(audio)
+            signal_std = np.std(audio)
             signal_mean = np.mean(audio)
             normalized_audio = (audio - signal_mean) / signal_std
         return cropped, normalized_audio
@@ -144,7 +147,7 @@ class AVSpeechRecognition:
         return:
             pred: predicted word
         '''
-        video = np.expand_dims(np.expand_dims(np.array(self.frames_queue),0),0)
+        video = np.expand_dims(np.array(self.frames_queue , axis=(0,1))
         audio = np.expand_dims(np.array(self.audio_queue, dtype=np.float32),0)
         self.model.setInput(video, 'video_input')
         self.model.setInput(audio, 'audio_input')
@@ -163,8 +166,8 @@ class AVSpeechRecognition:
         audioBaseIndex = int(self.cap.get(cv2.CAP_PROP_AUDIO_BASE_INDEX))
         audioChannels = int(self.cap.get(cv2.CAP_PROP_AUDIO_TOTAL_CHANNELS))
 
-        while self.cap.isOpened():
-            if self.cap.grab():
+        if self.cap.isOpened():
+            while self.cap.grab():
                 ret, frame = self.cap.retrieve()
                 frame = cv2.resize(frame, (self.width, self.height))
                 audioFrame = np.asarray([])
@@ -188,10 +191,6 @@ class AVSpeechRecognition:
                         cv2.imshow('frame', frame)
                         if cv2.waitKey(1) & 0xFF == ord('q'):
                             break
-                else:
-                    continue
-            else:
-                break
 
 def parse_args():
     '''
@@ -208,7 +207,7 @@ def parse_args():
     parser.add_argument('--model', type=str, default='AVSpeechRecog.onnx',
                         help='Path to onnx Model file to use for AVSpeech Recognition')
     parser.add_argument('--detector_model', type=str, default='face_detection_yunet_2022mar.onnx',
-                        help='Path to YUNet Model onnx file to use for face detection')
+                        help='Path to YUNet Model onnx file to use for face detection.')
     parser.add_argument('--margin', type=int, default=20,
                         help='Margin for cutting the video')
     parser.add_argument('--video_width', type=int, default=640,
@@ -222,7 +221,7 @@ def parse_args():
     parser.add_argument('--top_k', type=int, default=5000,
                         help='top k for face detection')
     parser.add_argument('--show_video', action='store_true',
-                        help='Show video or Not')
+                        help='pass --show_video to show video. skip this argument to not show video.')
     parser.add_argument('--backend', choices=backends, default=cv2.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help='Select a computation backend: '
                         "%d: automatically (by default) "
@@ -242,7 +241,6 @@ def main():
     main function
     '''
     args = parse_args()
-    args.input = args.input if args.input else 0
     recognizer = AVSpeechRecognition(args.input, model_path=args.model, detector_path=args.detector_model,
                             margin=args.margin, video_width=args.video_width, video_height=args.video_height,
                             score_threshold=args.score_threshold, nms_threshold=args.nms_threshold,
