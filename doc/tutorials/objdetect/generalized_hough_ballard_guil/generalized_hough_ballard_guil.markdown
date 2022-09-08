@@ -27,8 +27,7 @@ Example
 4. Set the required parameters for both GeneralizedHough variants
 5. Detect and show found results
 
-Note:
-
+@note
 - Both variants can't be instantiated directly. Using the create methods is required.
 - Guil Hough is very slow. Calculating the results for the "mini" files used in this tutorial
   takes only a few seconds. With image and template in a higher resolution, as shown below,
@@ -40,31 +39,14 @@ Note:
 ### Code
 
 The complete code for this tutorial is shown below.
-@include generalizedHoughTransform.cpp
+@include samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp
 
 Explanation
 -----------
 
 ### Load image, template and setup variables
 
-```c++
-//  load source images
-Mat image = imread("images/generalized_hough_mini_image.jpg");
-Mat imgTemplate = imread("images/generalized_hough_mini_template.jpg");
-
-//  create grayscale image and template
-Mat templ = Mat(imgTemplate.rows, imgTemplate.cols, CV_8UC1);
-Mat grayImage;
-cvtColor(imgTemplate, templ, COLOR_RGB2GRAY);
-cvtColor(image, grayImage, COLOR_RGB2GRAY);
-
-//  create variable for location, scale and rotation of detected templates
-vector<Vec4f> positionBallard, positionGuil;
-
-//  template width and height
-int w = templ.cols;
-int h = templ.rows;
-```
+@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-load-and-setup
 
 The position vectors will contain the matches the detectors will find.
 Every entry contains four floating point values:
@@ -79,87 +61,19 @@ An example could look as follows: `[200, 100, 0.9, 120]`
 
 ### Setup parameters
 
-```c++
-//  create ballard and set options
-Ptr<GeneralizedHoughBallard> ballard = createGeneralizedHoughBallard();
-ballard->setMinDist(10);
-ballard->setLevels(360);
-ballard->setDp(2);
-ballard->setMaxBufferSize(1000);
-ballard->setVotesThreshold(40);
-
-ballard->setCannyLowThresh(30);
-ballard->setCannyHighThresh(110);
-ballard->setTemplate(templ);
-
-
-//  create guil and set options
-Ptr<GeneralizedHoughGuil> guil = createGeneralizedHoughGuil();
-guil->setMinDist(10);
-guil->setLevels(360);
-guil->setDp(3);
-guil->setMaxBufferSize(1000);
-
-guil->setMinAngle(0);
-guil->setMaxAngle(360);
-guil->setAngleStep(1);
-guil->setAngleThresh(1500);
-
-guil->setMinScale(0.5);
-guil->setMaxScale(2.0);
-guil->setScaleStep(0.05);
-guil->setScaleThresh(50);
-
-guil->setPosThresh(10);
-
-guil->setCannyLowThresh(30);
-guil->setCannyHighThresh(110);
-
-guil->setTemplate(templ);
-```
+@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-setup-parameters
 
 Finding the optimal values can end up in trial and error and depends on many factors, such as the image resolution.
 
 ### Run detection
 
-```c++
-//  execute ballard detection
-    ballard->detect(grayImage, positionBallard);
-//  execute guil detection
-    guil->detect(grayImage, positionGuil);
-```
+@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-run
 
 As mentioned above, this step will take some time, especially with larger images and when using Guil.
 
 ### Draw results and show image
 
-```c++
-//  draw ballard
-for (vector<Vec4f>::iterator iter = positionBallard.begin(); iter != positionBallard.end(); ++iter) {
-RotatedRect rRect = RotatedRect(Point2f((*iter)[0], (*iter)[1]),
-Size2f(w * (*iter)[2], h * (*iter)[2]),
-(*iter)[3]);
-Point2f vertices[4];
-rRect.points(vertices);
-for (int i = 0; i < 4; i++)
-line(image, vertices[i], vertices[(i + 1) % 4], Scalar(255, 0, 0), 6);
-}
-
-//  draw guil
-for (vector<Vec4f>::iterator iter = positionGuil.begin(); iter != positionGuil.end(); ++iter) {
-RotatedRect rRect = RotatedRect(Point2f((*iter)[0], (*iter)[1]),
-Size2f(w * (*iter)[2], h * (*iter)[2]),
-(*iter)[3]);
-Point2f vertices[4];
-rRect.points(vertices);
-for (int i = 0; i < 4; i++)
-line(image, vertices[i], vertices[(i + 1) % 4], Scalar(0, 255, 0), 2);
-}
-
-imshow("result_img", image);
-waitKey();
-return EXIT_SUCCESS;
-```
+@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-draw-results
 
 Result
 ------

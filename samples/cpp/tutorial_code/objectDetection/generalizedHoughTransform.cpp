@@ -11,6 +11,7 @@ using namespace cv;
 using namespace std;
 
 int main() {
+    //! [generalized-hough-transform-load-and-setup]
 //  load source images
     Mat image = imread("images/generalized_hough_mini_image.jpg");
     Mat imgTemplate = imread("images/generalized_hough_mini_template.jpg");
@@ -27,7 +28,10 @@ int main() {
 //  template width and height
     int w = templ.cols;
     int h = templ.rows;
+    //! [generalized-hough-transform-load-and-setup]
 
+
+    //! [generalized-hough-transform-setup-parameters]
 //  create ballard and set options
     Ptr<GeneralizedHoughBallard> ballard = createGeneralizedHoughBallard();
     ballard->setMinDist(10);
@@ -64,14 +68,18 @@ int main() {
     guil->setCannyHighThresh(110);
 
     guil->setTemplate(templ);
+    //! [generalized-hough-transform-setup-parameters]
 
 
+    //! [generalized-hough-transform-run]
 //  execute ballard detection
     ballard->detect(grayImage, positionBallard);
 //  execute guil detection
     guil->detect(grayImage, positionGuil);
+    //! [generalized-hough-transform-run]
 
 
+    //! [generalized-hough-transform-draw-results]
 //  draw ballard
     for (vector<Vec4f>::iterator iter = positionBallard.begin(); iter != positionBallard.end(); ++iter) {
         RotatedRect rRect = RotatedRect(Point2f((*iter)[0], (*iter)[1]),
@@ -96,5 +104,7 @@ int main() {
 
     imshow("result_img", image);
     waitKey();
+    //! [generalized-hough-transform-draw-results]
+
     return EXIT_SUCCESS;
 }
