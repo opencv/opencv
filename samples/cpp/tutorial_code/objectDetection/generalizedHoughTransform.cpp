@@ -12,14 +12,12 @@ using namespace std;
 
 int main() {
     //! [generalized-hough-transform-load-and-setup]
-//  load source images
+//  load source image and grayscale template
     Mat image = imread("images/generalized_hough_mini_image.jpg");
-    Mat imgTemplate = imread("images/generalized_hough_mini_template.jpg");
+    Mat templ = imread("images/generalized_hough_mini_template.jpg", IMREAD_GRAYSCALE);
 
-//  create grayscale image and template
-    Mat templ = Mat(imgTemplate.rows, imgTemplate.cols, CV_8UC1);
+//  create grayscale image
     Mat grayImage;
-    cvtColor(imgTemplate, templ, COLOR_RGB2GRAY);
     cvtColor(image, grayImage, COLOR_RGB2GRAY);
 
 //  create variable for location, scale and rotation of detected templates
