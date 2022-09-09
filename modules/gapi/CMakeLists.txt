@@ -113,6 +113,8 @@ set(gapi_srcs
     src/compiler/passes/intrin.cpp
 
     # Executor
+    src/executor/gabstractexecutor.cpp
+    src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp

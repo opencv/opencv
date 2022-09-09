@@ -1288,13 +1288,7 @@ public:
 // proper graph reshape and islands recompilation
 cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
                                                   const GCompileArgs &comp_args)
-    : m_orig_graph(std::move(g_model))
-    , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
-                     .get<IslandModel>().model)
-    , m_comp_args(comp_args)
-    , m_gim(*m_island_graph)
-    , m_desync(GModel::Graph(*m_orig_graph).metadata()
-               .contains<Desynchronized>())
+    : GAbstractStreamingExecutor(std::move(g_model), comp_args)
 {
     GModel::Graph gm(*m_orig_graph);
     // NB: Right now GIslandModel is acyclic, and all the below code assumes that.
@@ -1862,7 +1856,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
     GAPI_Assert(false && "Unreachable code");
 }
 
-std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::gimpl::GStreamingExecutor::pull()
+cv::gimpl::GAbstractStreamingExecutor::PyPullResult cv::gimpl::GStreamingExecutor::pull()
 {
     using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
     bool is_over = false;
