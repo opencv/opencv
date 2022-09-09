@@ -432,7 +432,7 @@ try:
             with self.assertRaises(Exception): create_op([cv.GMat, int], [cv.GMat]).on(cv.GMat())
 
 
-        def test_stateful_kernel(self):
+        def test_state_in_class(self):
             @cv.gapi.op('custom.sum', in_types=[cv.GArray.Int], out_types=[cv.GOpaque.Int])
             class GSum:
                 @staticmethod
