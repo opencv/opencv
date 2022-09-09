@@ -8,7 +8,7 @@ Object detection with Generalized Ballard and Guil Hough Transform {#tutorial_ge
 Goal
 ----
 
-In this tutorial you will lern how to:
+In this tutorial you will learn how to:
 
 - Use @ref cv::GeneralizedHoughBallard and @ref cv::GeneralizedHoughGuil to detect an object
 
