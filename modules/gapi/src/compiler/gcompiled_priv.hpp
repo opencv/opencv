@@ -12,7 +12,7 @@
 
 #include "opencv2/gapi/util/optional.hpp"
 #include "compiler/gmodel.hpp"
-#include "executor/gexecutor.hpp"
+#include "executor/gabstractexecutor.hpp"
 
 // NB: BTW, GCompiled is the only "public API" class which
 // private part (implementation) is hosted in the "compiler/" module.
@@ -36,14 +36,14 @@ class GAPI_EXPORTS GCompiled::Priv
     // If we want to go autonomous, we might to do something with this.
     GMetaArgs  m_metas;    // passed by user
     GMetaArgs  m_outMetas; // inferred by compiler
-    std::unique_ptr<cv::gimpl::GExecutor> m_exec;
+    std::unique_ptr<cv::gimpl::GAbstractExecutor> m_exec;
 
     void checkArgs(const cv::gimpl::GRuntimeArgs &args) const;
 
 public:
     void setup(const GMetaArgs &metaArgs,
                const GMetaArgs &outMetas,
-               std::unique_ptr<cv::gimpl::GExecutor> &&pE);
+               std::unique_ptr<cv::gimpl::GAbstractExecutor> &&pE);
     bool isEmpty() const;
 
     bool canReshape() const;
