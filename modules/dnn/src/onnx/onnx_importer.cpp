@@ -3081,6 +3081,29 @@ void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseNonMaxSuppression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // The NonMaxSuppression converted from torchvision.ops.nms has 4 inputs typically:
+    // 0. boxes
+    // 1. scores
+    // 2. max_output_boxes_per_class (INT64_MAX by default)
+    // 3. iou_threshold
+    CV_Assert(node_proto.input_size() == 4);
+
+    layerParams.type = "NonMaxSuppression";
+    if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
+    {
+        Mat max_output_boxes_per_class = getBlob(node_proto, 2);
+        layerParams.set("max_output_boxes_per_class", max_output_boxes_per_class.at<int>(0)); // INT64_MAX -> INT32_MAX
+    }
+    if (constBlobs.find(node_proto.input(3)) != constBlobs.end())
+    {
+        Mat iou_threshold = getBlob(node_proto, 3);
+        layerParams.set("iou_threshold", iou_threshold.at<float>(0));
+    }
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     for (int j = 0; j < node_proto.input_size(); j++) {
@@ -3686,11 +3709,12 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = &ONNXImporter::parseElementWise;
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["NonMaxSuppression"] = &ONNXImporter::parseNonMaxSuppression;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
                                           "Identity", "Log", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh", "Softmax",
-                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "NonMaxSuppression"};
+                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu"};
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter::parseSimpleLayers;

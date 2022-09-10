@@ -18,7 +18,7 @@ public:
         setParamsFrom(params);
 
         // 0: [y1, x1, y2, x2] for TF models; 1: [cx, cy, w, h] for PyTorch models
-        center_point_box = params.get<int>("center_point_box", 1);
+        center_point_box = params.get<int>("center_point_box", 0);
         max_output_boxes_per_class = params.get<int>("max_output_boxes_per_class", INT_MAX);
         iou_threshold = params.get<float>("iou_threshold", 0); // keep if iou <= iou_threshold
         score_threshold = params.get<float>("score_threshold", 0); // keep if score >= score_threshold
@@ -130,13 +130,18 @@ public:
         NMSFast_(boxes, scores, score_threshold, iou_threshold, 1.0, top_k, keep_indices, rect2dOverlap, keep_top_k);
 
         // Store to output
-        outputs[0].setTo(0);
+        outputs[0].setTo(-1);
+        if (keep_indices.size() == 0)
+            return;
+
+        float* outputsData = outputs[0].ptr<float>();
         for (int i = 0; i < keep_indices.size(); i++)
         {
-            outputs[0].data[i * 3] = 0;
-            outputs[0].data[i * 3 + 1] = 0;
-            outputs[0].data[i * 3 + 2] = keep_indices[i];
+            outputsData[i * 3] = 0;
+            outputsData[i * 3 + 1] = 0;
+            outputsData[i * 3 + 2] = keep_indices[i];
         }
+        outputs_arr.assign(outputs);
     }
 };
 
