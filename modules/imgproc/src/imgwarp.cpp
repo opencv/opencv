@@ -2178,6 +2178,9 @@ public:
     #if CV_TRY_SSE4_1
         bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
     #endif
+    #if CV_TRY_LASX
+        bool useLASX = CV_CPU_HAS_SUPPORT_LASX;
+    #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, dst.cols);
@@ -2240,6 +2243,10 @@ public:
                         #if CV_TRY_AVX2
                         if ( useAVX2 )
                             x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
+                        #endif
+                        #if CV_TRY_LASX
+                        if ( useLASX )
+                            x1 = opt_LASX::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
                         #endif
                         #if CV_SIMD128
                         {

@@ -47,38 +47,52 @@
 //
 // */
 
-#ifndef OPENCV_IMGPROC_RESIZE_HPP
-#define OPENCV_IMGPROC_RESIZE_HPP
 #include "precomp.hpp"
+#include "imgwarp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
-namespace opt_AVX2
-{
-#if CV_TRY_AVX2
-void resizeNN2_AVX2(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_AVX2(const Range&, const Mat&, Mat&, int*, double);
-#endif
-}
-
-namespace opt_SSE4_1
-{
-#if CV_TRY_SSE4_1
-void resizeNN2_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_SSE4_1(const Range&, const Mat&, Mat&, int*, double);
-
-int VResizeLanczos4Vec_32f16u_SSE41(const float** src, ushort* dst, const float* beta, int width);
-#endif
-}
-
 namespace opt_LASX
 {
-#if CV_TRY_LASX
-void resizeNN2_LASX(const Range&, const Mat&, Mat&, int*, double);
-void resizeNN4_LASX(const Range&, const Mat&, Mat&, int*, double);
-#endif
+
+int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw)
+{
+    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    int x1 = 0;
+    __m256i fxy_mask = _v256_setall_w(INTER_TAB_SIZE - 1);
+    __m256i XX = _v256_setall_w(X0), YY = _v256_setall_w(Y0);
+    for (; x1 <= bw - 16; x1 += 16)
+    {
+        __m256i tx0, tx1, ty0, ty1;
+        tx0 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(adelta + x1), 0), XX);
+        ty0 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(bdelta + x1), 0), YY);
+        tx1 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(adelta + x1), 8*4), XX);
+        ty1 = __lasx_xvadd_w(__lasx_xvld((const __m256i*)(bdelta + x1), 8*4), YY);
+
+        tx0 = __lasx_xvsrai_w(tx0, AB_BITS - INTER_BITS);
+        ty0 = __lasx_xvsrai_w(ty0, AB_BITS - INTER_BITS);
+        tx1 = __lasx_xvsrai_w(tx1, AB_BITS - INTER_BITS);
+        ty1 = __lasx_xvsrai_w(ty1, AB_BITS - INTER_BITS);
+
+        __m256i fx_ = _lasx_packs_w(__lasx_xvand_v(tx0, fxy_mask),
+            __lasx_xvand_v(tx1, fxy_mask));
+        __m256i fy_ = _lasx_packs_w(__lasx_xvand_v(ty0, fxy_mask),
+            __lasx_xvand_v(ty1, fxy_mask));
+        tx0 = _lasx_packs_w(__lasx_xvsrai_w(tx0, INTER_BITS),
+            __lasx_xvsrai_w(tx1, INTER_BITS));
+        ty0 = _lasx_packs_w(__lasx_xvsrai_w(ty0, INTER_BITS),
+            __lasx_xvsrai_w(ty1, INTER_BITS));
+        fx_ = __lasx_xvsadd_h(fx_, __lasx_xvslli_h(fy_, INTER_BITS));
+        fx_ = __lasx_xvpermi_d(fx_, (3 << 6) + (1 << 4) + (2 << 2) + 0);
+
+        __lasx_xvst(__lasx_xvilvl_h(ty0, tx0), (__m256i*)(xy + x1 * 2), 0);
+        __lasx_xvst(__lasx_xvilvh_h(ty0, tx0), (__m256i*)(xy + x1 * 2), 16*2);
+        __lasx_xvst(fx_, (__m256i*)(alpha + x1), 0);
+    }
+    return x1;
 }
 
 }
-#endif
+}
 /* End of file. */
