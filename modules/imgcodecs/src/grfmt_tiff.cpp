@@ -234,7 +234,6 @@ public:
 bool TiffDecoder::readHeader()
 {
     bool result = false;
-
     TIFF* tif = static_cast<TIFF*>(m_tif.get());
     if (!tif)
     {
@@ -390,18 +389,15 @@ static void fixOrientationFull(Mat &img, int orientation)
  * For 8 bit some corrections are done by TIFFReadRGBAStrip/Tile already.
  * Not so for 16/32/64 bit.
  */
-static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
+static void fixOrientation(Mat &img, uint16 orientation, bool isOrientationFull)
 {
-    switch(dst_bpp) {
-        case 8:
-            fixOrientationPartial(img, orientation);
-            break;
-
-        case 16:
-        case 32:
-        case 64:
-            fixOrientationFull(img, orientation);
-            break;
+    if( isOrientationFull )
+    {
+        fixOrientationFull(img, orientation);
+    }
+    else
+    {
+        fixOrientationPartial(img, orientation);
     }
 }
 
@@ -440,17 +436,7 @@ bool  TiffDecoder::readData( Mat& img )
                         (img_orientation == ORIENTATION_BOTRIGHT || img_orientation == ORIENTATION_RIGHTBOT ||
                          img_orientation == ORIENTATION_BOTLEFT || img_orientation == ORIENTATION_LEFTBOT);
         int wanted_channels = normalizeChannelsNumber(img.channels());
-
-        if (dst_bpp == 8)
-        {
-            char errmsg[1024];
-            if (!TIFFRGBAImageOK(tif, errmsg))
-            {
-                CV_LOG_WARNING(NULL, "OpenCV TIFF: TIFFRGBAImageOK: " << errmsg);
-                close();
-                return false;
-            }
-        }
+        bool doReadScanline = false;
 
         uint32 tile_width0 = m_width, tile_height0 = 0;
 
@@ -466,7 +452,6 @@ bool  TiffDecoder::readData( Mat& img )
         }
 
         {
-
             if (tile_width0 == 0)
                 tile_width0 = m_width;
 
@@ -482,26 +467,30 @@ bool  TiffDecoder::readData( Mat& img )
             CV_CheckLE((int)ncn, 4, "");
             CV_CheckLE((int)bpp, 64, "");
 
-            bool doReadScanline = false;
             if (dst_bpp == 8)
             {
-                // we will use TIFFReadRGBA* functions, so allocate temporary buffer for 32bit RGBA
-                bpp = 8;
-                ncn = 4;
-            }
-            else if (dst_bpp == 16)
-            {
-                // if buffer_size >= MAX_TILE_SIZE, try to use TIFFReadScanline function.
+                const int _ncn = 4; // Read RGBA
+                const int _bpp = 8; // Read 8bit
+
+                // if buffer_size(as 32bit RGBA) >= MAX_TILE_SIZE*95%,
+                // we will use TIFFReadScanline function.
+
                 if (
-                    (uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte))
+                    (uint64_t)tile_width0 * tile_height0 * _ncn * std::max(1, (int)(_bpp / bitsPerByte))
                     >=
-                    MAX_TILE_SIZE
+                    ( (uint64_t) MAX_TILE_SIZE * 95 / 100)
                 )
                 {
                     uint16_t planerConfig = (uint16)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
-                    doReadScanline = (!is_tiled)
+                    doReadScanline = (!is_tiled) // no tile
+                                     &&
+                                     ( ( ncn == 1 ) || ( ncn == 3 ) || ( ncn == 4 ) )
+                                     &&
+                                     ( ( bpp == 8 ) || ( bpp == 16 ) )
+                                     &&
+                                     (tile_height0 == (uint32_t) m_height) // single strip
                                      &&
                                      (
                                          (photometric == PHOTOMETRIC_MINISWHITE)
@@ -513,10 +502,69 @@ bool  TiffDecoder::readData( Mat& img )
                                      &&
                                      (planerConfig != PLANARCONFIG_SEPARATE);
 
-                    if ( doReadScanline )
+                    // Currently only EXTRASAMPLE_ASSOCALPHA is supported.
+                    if ( doReadScanline && ( ncn == 4 ) )
                     {
-                        // Read each scanlines.
-                        tile_height0 = 1;
+                        uint16_t extra_samples_num;
+                        uint16_t *extra_samples = NULL;
+                        CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_EXTRASAMPLES, &extra_samples_num, &extra_samples ));
+                        doReadScanline = ( extra_samples_num == 1 ) && ( extra_samples[0] == EXTRASAMPLE_ASSOCALPHA );
+                    }
+                }
+
+                if ( !doReadScanline )
+                {
+                    // we will use TIFFReadRGBA* functions, so allocate temporary buffer for 32bit RGBA
+                    bpp = 8;
+                    ncn = 4;
+
+                    char errmsg[1024];
+                    if (!TIFFRGBAImageOK(tif, errmsg))
+                    {
+                        CV_LOG_WARNING(NULL, "OpenCV TIFF: TIFFRGBAImageOK: " << errmsg);
+                        close();
+                        return false;
+                    }
+                }
+            }
+            else if (dst_bpp == 16)
+            {
+                // if buffer_size >= MAX_TILE_SIZE*95%,
+                // we will use TIFFReadScanline function.
+                if (
+                    (uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte))
+                    >=
+                    MAX_TILE_SIZE * 95 / 100
+                )
+                {
+                    uint16_t planerConfig = (uint16)-1;
+                    CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
+
+                    doReadScanline = (!is_tiled) // no tile
+                                     &&
+                                     ( ( ncn == 1 ) || ( ncn == 3 ) || ( ncn == 4 ) )
+                                     &&
+                                     ( ( bpp == 8 ) || ( bpp == 16 ) )
+                                     &&
+                                     (tile_height0 == (uint32_t) m_height) // single strip
+                                     &&
+                                     (
+                                         (photometric == PHOTOMETRIC_MINISWHITE)
+                                         ||
+                                         (photometric == PHOTOMETRIC_MINISBLACK)
+                                         ||
+                                         (photometric == PHOTOMETRIC_RGB)
+                                     )
+                                     &&
+                                     (planerConfig != PLANARCONFIG_SEPARATE);
+
+                    // Currently only EXTRASAMPLE_ASSOCALPHA is supported.
+                    if ( doReadScanline && ( ncn == 4 ) )
+                    {
+                        uint16_t extra_samples_num;
+                        uint16_t *extra_samples = NULL;
+                        CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_EXTRASAMPLES, &extra_samples_num, &extra_samples ));
+                        doReadScanline = ( extra_samples_num == 1 ) && ( extra_samples[0] == EXTRASAMPLE_ASSOCALPHA );
                     }
                 }
             }
@@ -526,21 +574,30 @@ bool  TiffDecoder::readData( Mat& img )
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
             }
 
-            CV_Assert(((uint64_t)tile_width0 * tile_height0 * ncn * std::max(1, (int)(bpp / bitsPerByte)) < MAX_TILE_SIZE) && "TIFF tile size is too large: >= 1Gb");
+            if ( doReadScanline )
+            {
+                // Read each scanlines.
+                tile_height0 = 1;
+            }
+
             const size_t buffer_size = (bpp / bitsPerByte) * ncn * tile_height0 * tile_width0;
+            CV_CheckLT( buffer_size, MAX_TILE_SIZE, "buffer_size is too large: >= 1Gb");
+
+            if ( doReadScanline )
+            {
+                CV_CheckGE( static_cast<int>(buffer_size),
+                            static_cast<int>(TIFFScanlineSize(tif)),
+                            "buffer_size is smaller than TIFFScanlineSize(). ");
+            }
+
             AutoBuffer<uchar> _buffer(buffer_size);
             uchar* buffer = _buffer.data();
             ushort* buffer16 = (ushort*)buffer;
             int tileidx = 0;
 
-            if ( doReadScanline )
-            {
-                // buffer_size should be larger than TIFFScanlineSize().
-                CV_Assert((tsize_t)buffer_size >= TIFFScanlineSize(tif));
-
-                // Currently supported dst_bpp is only 16.
-                CV_Assert(dst_bpp == 16);
-            }
+            #define MAKE_FLAG(a,b) ( (a << 8) | b )
+            const int  convert_flag = MAKE_FLAG( ncn, wanted_channels );
+            const bool isNeedConvert16to8 = ( doReadScanline ) && ( bpp == 16 ) && ( dst_bpp == 8);
 
             for (int y = 0; y < m_height; y += (int)tile_height0)
             {
@@ -557,7 +614,29 @@ bool  TiffDecoder::readData( Mat& img )
                         case 8:
                         {
                             uchar* bstart = buffer;
-                            if (!is_tiled)
+                            if (doReadScanline)
+                            {
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)buffer, y) >= 0);
+
+                                if ( isNeedConvert16to8 )
+                                {
+                                    // Convert buffer image from 16bit to 8bit.
+                                    int ix;
+                                    for ( ix = 0 ; ix < tile_width * ncn - 4; ix += 4 )
+                                    {
+                                        buffer[ ix     ] = buffer[ ix * 2 + 1 ];
+                                        buffer[ ix + 1 ] = buffer[ ix * 2 + 3 ];
+                                        buffer[ ix + 2 ] = buffer[ ix * 2 + 5 ];
+                                        buffer[ ix + 3 ] = buffer[ ix * 2 + 7 ];
+                                    }
+
+                                    for (        ; ix < tile_width * ncn ; ix ++ )
+                                    {
+                                        buffer[ ix ] = buffer[ ix * 2 + 1];
+                                    }
+                                }
+                            }
+                            else if (!is_tiled)
                             {
                                 CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32*)buffer));
                             }
@@ -568,9 +647,65 @@ bool  TiffDecoder::readData( Mat& img )
                                 bstart += (tile_height0 - tile_height) * tile_width0 * 4;
                             }
 
+                            uchar* img_line_buffer = (uchar*) img.ptr(y, 0);
+
                             for (int i = 0; i < tile_height; i++)
                             {
-                                if (color)
+                                if (doReadScanline)
+                                {
+                                    switch ( convert_flag )
+                                    {
+                                    case MAKE_FLAG( 1, 1 ): // GRAY to GRAY
+                                        memcpy( (void*) img_line_buffer,
+                                                (void*) bstart,
+                                                tile_width * sizeof(uchar) );
+                                        break;
+
+                                    case MAKE_FLAG( 1, 3 ): // GRAY to BGR
+                                        icvCvt_Gray2BGR_8u_C1C3R( bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1) );
+                                        break;
+
+                                    case MAKE_FLAG( 3, 1): // RGB to GRAY
+                                        icvCvt_BGR2Gray_8u_C3C1R( bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1) );
+                                        break;
+
+                                    case MAKE_FLAG( 3, 3 ): // RGB to BGR
+                                        icvCvt_BGR2RGB_8u_C3R( bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1) );
+                                        break;
+
+                                    case MAKE_FLAG( 4, 1 ): // RGBA to GRAY
+                                        icvCvt_BGRA2Gray_8u_C4C1R( bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1) );
+                                        break;
+
+                                    case MAKE_FLAG( 4, 3 ): // RGBA to BGR
+                                        icvCvt_BGRA2BGR_8u_C4C3R( bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1), 2 );
+                                        break;
+
+                                    case MAKE_FLAG( 4, 4 ): // RGBA to BGRA
+                                        icvCvt_BGRA2RGBA_8u_C4R(bstart, 0,
+                                                img_line_buffer, 0,
+                                                Size(tile_width, 1) );
+                                        break;
+
+                                    default:
+                                        CV_LOG_ONCE_ERROR(NULL, "OpenCV TIFF(line " << __LINE__ << "): Unsupported convertion :"
+                                                               << " bpp = " << bpp << " ncn = " << (int)ncn
+                                                               << " wanted_channels =" << wanted_channels  );
+                                        break;
+                                    }
+                                    #undef MAKE_FLAG
+                                }
+                                else if (color)
                                 {
                                     if (wanted_channels == 4)
                                     {
@@ -702,7 +837,11 @@ bool  TiffDecoder::readData( Mat& img )
                 }  // for x
             }  // for y
         }
-        fixOrientation(img, img_orientation, dst_bpp);
+
+        // If TIFFReadRGBA* function is used -> fixOrientationPartial().
+        // Otherwise                         -> fixOrientationFull().
+        fixOrientation(img, img_orientation,
+                       ( ( dst_bpp != 8 ) && ( !doReadScanline ) ) );
     }
 
     if (m_hdr && depth >= CV_32F)
@@ -727,6 +866,7 @@ TiffEncoder::~TiffEncoder()
 
 ImageEncoder TiffEncoder::newEncoder() const
 {
+    cv_tiffSetErrorHandler();
     return makePtr<TiffEncoder>();
 }
 
