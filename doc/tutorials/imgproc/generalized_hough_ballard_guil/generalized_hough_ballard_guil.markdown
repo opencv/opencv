@@ -3,7 +3,8 @@ Object detection with Generalized Ballard and Guil Hough Transform {#tutorial_ge
 
 @tableofcontents
 
-@prev_tutorial{tutorial_traincascade}
+@prev_tutorial{tutorial_hough_circle}
+@next_tutorial{tutorial_remap}
 
 Goal
 ----
@@ -39,14 +40,14 @@ Example
 ### Code
 
 The complete code for this tutorial is shown below.
-@include samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp
+@include samples/cpp/tutorial_code/ImgTrans/generalizedHoughTransform.cpp
 
 Explanation
 -----------
 
 ### Load image, template and setup variables
 
-@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-load-and-setup
+@snippet samples/cpp/tutorial_code/ImgTrans/generalizedHoughTransform.cpp generalized-hough-transform-load-and-setup
 
 The position vectors will contain the matches the detectors will find.
 Every entry contains four floating point values:
@@ -61,19 +62,19 @@ An example could look as follows: `[200, 100, 0.9, 120]`
 
 ### Setup parameters
 
-@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-setup-parameters
+@snippet samples/cpp/tutorial_code/ImgTrans/generalizedHoughTransform.cpp generalized-hough-transform-setup-parameters
 
 Finding the optimal values can end up in trial and error and depends on many factors, such as the image resolution.
 
 ### Run detection
 
-@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-run
+@snippet samples/cpp/tutorial_code/ImgTrans/generalizedHoughTransform.cpp generalized-hough-transform-run
 
 As mentioned above, this step will take some time, especially with larger images and when using Guil.
 
 ### Draw results and show image
 
-@snippet samples/cpp/tutorial_code/objectDetection/generalizedHoughTransform.cpp generalized-hough-transform-draw-results
+@snippet samples/cpp/tutorial_code/ImgTrans/generalizedHoughTransform.cpp generalized-hough-transform-draw-results
 
 Result
 ------

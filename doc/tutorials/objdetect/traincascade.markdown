@@ -2,7 +2,6 @@ Cascade Classifier Training {#tutorial_traincascade}
 ===========================
 
 @prev_tutorial{tutorial_cascade_classifier}
-@next_tutorial{tutorial_generalized_hough_ballard_guil}
 
 
 Introduction
