@@ -229,6 +229,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point &pt);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point2f &pt);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point2f &pt);
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point3f &pt);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point3f &pt);
+
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Size &sz);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Size &sz);
 
