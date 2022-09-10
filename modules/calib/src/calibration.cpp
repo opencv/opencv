@@ -566,10 +566,11 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     // 3. run the optimization
 
-    auto calibCameraLMCallback = [matM, _m, npoints, &allErrors, aspectRatio, &perViewErrors, flags, releaseObject]
+    Mat perViewErr = perViewErrors ? *perViewErrors : Mat();
+    auto calibCameraLMCallback = [matM, _m, npoints, &allErrors, aspectRatio, &perViewErr, flags, releaseObject]
         (InputOutputArray _param, OutputArray JtErr, OutputArray JtJ, double& errnorm) -> bool
     {
-        Mat jterr = JtErr.getMat(), jtj = JtJ.getMat(), perViewErr = perViewErrors ? *perViewErrors : Mat();
+        Mat jterr = JtErr.getMat(), jtj = JtJ.getMat();
         Mat mparam = _param.getMat();
         cameraCalcJErr(matM, _m, npoints, allErrors, mparam, /* calcJ */ JtErr.needed() && JtJ.needed(),
                        jterr, jtj, errnorm,
@@ -588,12 +589,13 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
+    // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
     Mat JtErr(nparams, 1, CV_64F), JtJ(nparams, nparams, CV_64F), JtJinv, JtJN;
     double reprojErr = 0;
-    JtErr.setZero(); JtJ.setZero(); Mat dummy;
+    JtErr.setZero(); JtJ.setZero();
     cameraCalcJErr(matM, _m, npoints, allErrors, param0, (stdDevs != nullptr),
                    JtErr, JtJ, reprojErr,
-                   aspectRatio, dummy, flags, releaseObject);
+                   aspectRatio, perViewErr, flags, releaseObject);
     if (stdDevs)
     {
         int nparams_nz = countNonZero(mask0);
@@ -1077,6 +1079,12 @@ static double stereoCalibrateImpl(
                        mask);
         // geodesic not supported for normal callbacks
         LevMarq::Report r = solver.optimize();
+
+        // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
+        if (!r.found && !perViewErr.empty())
+        {
+            lmcallback(param, noArray(), noArray(), reprojErr);
+        }
 
         reprojErr = r.energy;
     }
