@@ -231,8 +231,16 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && !defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv.hpp"
+
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && CV_RVV_SCALABLE
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
+
+#elif CV_LASX
+    #if !defined(CV_FORCE_SIMD128_CPP)
+    #define CV_FORCE_SIMD128_CPP 1
+    #endif
+#include "opencv2/core/hal/intrin_cpp.hpp"
+
 #else
 
 #include "opencv2/core/hal/intrin_cpp.hpp"
@@ -264,6 +272,14 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #define CV__SIMD_FORWARD 512
 #include "opencv2/core/hal/intrin_forward.hpp"
 #include "opencv2/core/hal/intrin_avx512.hpp"
+
+#endif
+
+#if CV_LASX
+
+#define CV__SIMD_FORWARD 256
+#include "opencv2/core/hal/intrin_forward.hpp"
+#include "opencv2/core/hal/intrin_lasx.hpp"
 
 #endif
 

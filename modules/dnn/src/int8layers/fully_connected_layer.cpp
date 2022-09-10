@@ -226,7 +226,7 @@ public:
     {
     public:
         FullyConnected() : srcMat(0), weights(0), biasMat(0), outputMultiplier(0), activationLUT(0), activ(0),
-                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false) {}
+                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false), useLASX(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat, const Mat& outputMultiplier,
                         const Mat& activationLUT, Mat& dstMat, const ActivationLayerInt8* activ, int nstripes, int outZp)
@@ -250,6 +250,7 @@ public:
             p.activ = !activationLUT.empty() ? activ : 0;
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            p.useLASX = checkHardwareSupport(CPU_LASX);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -293,6 +294,11 @@ public:
             #if CV_TRY_AVX2
                 if( useAVX2 )
                     opt_AVX2::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
+            #if CV_TRY_LASX
+                if( useLASX )
+                    opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
                 {
@@ -349,6 +355,7 @@ public:
         int nstripes, outZp;
         bool useAVX2;
         bool useAVX512;
+        bool useLASX;
     };
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE

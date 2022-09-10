@@ -61,6 +61,13 @@ int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X
 #endif
 }
 
+namespace opt_LASX
+{
+#if CV_TRY_LASX
+int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw);
+#endif
+}
+
 namespace opt_SSE4_1
 {
 #if CV_TRY_SSE4_1
