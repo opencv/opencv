@@ -451,6 +451,9 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             [[slider slider] setIntValue:pos];
+            if([slider respondsToSelector:@selector(handleSlider)]) {
+                [slider performSelector:@selector(handleSlider)];
+            }
         }
     }
     [localpool5 drain];
@@ -1187,7 +1190,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [slider setMaxValue:100];
     [slider setContinuous:YES];
     [slider setTarget:self];
-    [slider setAction:@selector(sliderChanged:)];
+    [slider setAction:@selector(handleSliderNotification:)];
     [self addSubview:slider];
 
     [self setAutoresizingMask:NSViewWidthSizable];
@@ -1197,8 +1200,12 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     return self;
 }
 
-- (void)sliderChanged:(NSNotification *)notification {
+- (void)handleSliderNotification:(NSNotification *)notification {
     (void)notification;
+    [self handleSlider];
+}
+
+- (void)handleSlider {
     int pos = [slider intValue];
     NSString *temp = [self initialName];
     NSString *text = [NSString stringWithFormat:@"%@ %d", temp, pos];
