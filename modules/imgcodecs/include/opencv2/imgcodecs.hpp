@@ -82,6 +82,13 @@ enum ImreadModes {
        IMREAD_IGNORE_ORIENTATION   = 128 //!< If set, do not rotate the image according to EXIF's orientation flag.
      };
 
+enum ImreadScaleDenom {
+       IMREAD_SCALE_DENOM_1 = 1,
+       IMREAD_SCALE_DENOM_2 = 2,
+       IMREAD_SCALE_DENOM_4 = 4,
+       IMREAD_SCALE_DENOM_8 = 8
+};
+
 //! Imwrite flags
 enum ImwriteFlags {
        IMWRITE_JPEG_QUALITY        = 1,  //!< For JPEG, it can be a quality from 0 to 100 (the higher is the better). Default value is 95.
@@ -177,11 +184,13 @@ enum ImreadError {
 @param flags
 @param maxPixels
 @param maxSize
+@param scaleDenom
 */
 struct CV_EXPORTS_W_PARAMS ImreadParams {
       CV_PROP_RW int flags = IMREAD_COLOR;
       CV_PROP_RW size_t maxPixels = 0;
       CV_PROP_RW Size maxSize = {};
+      CV_PROP_RW ImreadScaleDenom scaleDenom = IMREAD_SCALE_DENOM_1;
      };
 
 //! @} imgcodecs_flags

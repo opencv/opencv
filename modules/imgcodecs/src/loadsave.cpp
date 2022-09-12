@@ -563,19 +563,8 @@ imread_2( String const& filename, OutputArray image, ImreadParams params)
         return error;
     }
 
-    int scale_denom = 1;
-    if( flags > IMREAD_LOAD_GDAL )
-    {
-        if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
-            scale_denom = 2;
-        else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
-            scale_denom = 4;
-        else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
-            scale_denom = 8;
-    }
-
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    decoder->setScale( params.scaleDenom );
 
     /// set the filename in the driver
     decoder->setSource( filename );
@@ -648,9 +637,9 @@ imread_2( String const& filename, OutputArray image, ImreadParams params)
         return IMREAD_ERROR_INVALID_DATA;
     }
 
-    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    if( decoder->setScale( params.scaleDenom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize( image_data, image_data, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
+        resize( image_data, image_data, Size( size.width / params.scaleDenom, size.height / params.scaleDenom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
     /// optionally rotate the data if EXIF orientation flag says so

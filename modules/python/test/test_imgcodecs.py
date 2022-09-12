@@ -39,5 +39,10 @@ class imgcodecs_test(NewOpenCVTests):
         self.assertEqual(0, ret)
         self.assertIsNotNone(img)
 
+        ret, img2 = cv.imread2(path, flags = 1, maxPixels = 512*512, maxSize = (512,512), scaleDenom = 2)
+        self.assertEqual(0, ret)
+        self.assertIsNotNone(img2)
+        self.assertEqual(img2.size, img.size / 4)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
