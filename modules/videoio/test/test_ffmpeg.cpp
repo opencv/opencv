@@ -95,6 +95,54 @@ TEST(videoio_ffmpeg, image)
 
 //==========================================================================
 
+#define THREADS testing::ValuesIn({ 0,1,2,2000 })
+#define RAW_READ testing::ValuesIn({true, false})
+typedef tuple<string, int, bool> videoio_read_params_t;
+typedef testing::TestWithParam< testing::tuple<videoio_read_params_t, int, bool>> videoio_read;
+
+TEST_P(videoio_read, threads)
+{
+    const VideoCaptureAPIs api = CAP_FFMPEG;
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+    const string fileName = get<0>(get<0>(GetParam()));
+    const int nFrames = get<1>(get<0>(GetParam()));
+    const bool fixedThreadCount = get<2>(get<0>(GetParam()));
+    const int nThreads = get<1>(GetParam());
+    const bool rawRead = get<2>(GetParam());
+    VideoCapture cap(findDataFile(fileName), api, { CAP_PROP_N_THREADS, nThreads });
+    if (!cap.isOpened())
+        throw SkipTestException("Video stream is not supported");
+    if (nThreads == 0 || fixedThreadCount)
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), VideoCapture(findDataFile(fileName), api).get(CAP_PROP_N_THREADS));
+    else
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), nThreads);
+    if (rawRead && !cap.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
+        throw SkipTestException("Fetching of RAW video streams is not supported");
+    Mat frame;
+    int n = 0;
+    while (cap.read(frame)) {
+        ASSERT_FALSE(frame.empty());
+        n++;
+    }
+    ASSERT_EQ(n, nFrames);
+}
+
+const videoio_read_params_t videoio_read_params[] =
+{
+    videoio_read_params_t("video/big_buck_bunny.h264", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.h265", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.mjpg.avi", 125, true),
+    //videoio_read_params_t("video/big_buck_bunny.mov", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.mp4", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.mpg", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.wmv", 125, true),
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params), THREADS, RAW_READ));
+
+//==========================================================================
+
 typedef tuple<VideoCaptureAPIs, string, string, string, string, string> videoio_container_params_t;
 typedef testing::TestWithParam< videoio_container_params_t > videoio_container;
 
