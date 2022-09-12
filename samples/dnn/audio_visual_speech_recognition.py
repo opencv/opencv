@@ -147,7 +147,7 @@ class AVSpeechRecognition:
         return:
             pred: predicted word
         '''
-        video = np.expand_dims(np.array(self.frames_queue , axis=(0,1))
+        video = np.expand_dims(np.array(self.frames_queue , axis=(0,1)))
         audio = np.expand_dims(np.array(self.audio_queue, dtype=np.float32),0)
         self.model.setInput(video, 'video_input')
         self.model.setInput(audio, 'audio_input')
@@ -193,12 +193,7 @@ class AVSpeechRecognition:
                             break
 
 def parse_args():
-    '''
-    Parse arguments.
-    '''
     parser = argparse.ArgumentParser(description='Audio Visual Speech Recognition')
-    # TODO: Test all backends and targets
-    # TODO: Add classes
     backends = (cv2.dnn.DNN_BACKEND_DEFAULT, cv2.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv2.dnn.DNN_BACKEND_OPENCV)
     targets = (cv2.dnn.DNN_TARGET_CPU, cv2.dnn.DNN_TARGET_OPENCL, cv2.dnn.DNN_TARGET_OPENCL_FP16)
 
@@ -237,9 +232,6 @@ def parse_args():
     return args
 
 def main():
-    '''
-    main function
-    '''
     args = parse_args()
     recognizer = AVSpeechRecognition(args.input, model_path=args.model, detector_path=args.detector_model,
                             margin=args.margin, video_width=args.video_width, video_height=args.video_height,
