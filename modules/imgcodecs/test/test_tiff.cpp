@@ -67,48 +67,14 @@ enum ImreadMixModes
     IMREAD_MIX_COLOR_ANYDEPTH_ANYCOLOR     = IMREAD_COLOR     | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR
 };
 
-/**
- * Test lists for combination of IMREAD_*.
- */
-const ImreadMixModes all_modes_Huge[] =
-{
-    IMREAD_MIX_UNCHANGED,
-    IMREAD_MIX_GRAYSCALE,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH,
-    IMREAD_MIX_GRAYSCALE_ANYCOLOR,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR,
-    IMREAD_MIX_COLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH,
-    IMREAD_MIX_COLOR_ANYCOLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH_ANYCOLOR,
-};
+typedef tuple< uint64_t, tuple<string, int>, ImreadMixModes > Bufsize_and_Type;
+typedef testing::TestWithParam<Bufsize_and_Type> Imgcodecs_Tiff_decode_Huge;
 
 static inline
 void PrintTo(const ImreadMixModes& val, std::ostream* os)
 {
     PrintTo( static_cast<ImreadModes>(val), os );
 }
-
-typedef tuple< uint64_t, tuple<string, int>, ImreadMixModes > Bufsize_and_Type;
-typedef testing::TestWithParam<Bufsize_and_Type> Imgcodecs_Tiff_decode_Huge;
-
-const uint64_t huge_buffer_sizes_decode[] =
-{
-    (uint64_t)    1 * 1024 * 1024            ,
-    (uint64_t) 1024 * 1024 * 1024 - 32768 * 4 * 2,
-    (uint64_t) 1024 * 1024 * 1024            , // 1GB
-    (uint64_t) 2048 * 1024 * 1024            , // 2GB
-};
-
-const tuple<string, int> mat_types[] =
-{
-    make_tuple("CV_8UC1",  CV_8UC1),  // 8bit  GRAY
-    make_tuple("CV_8UC3",  CV_8UC3),  // 24bit RGB
-    make_tuple("CV_8UC4",  CV_8UC4),  // 32bit RGBA
-    make_tuple("CV_16UC1", CV_16UC1), // 16bit GRAY
-    make_tuple("CV_16UC3", CV_16UC3), // 48bit RGB
-    make_tuple("CV_16UC4", CV_16UC4), // 64bit RGBA
-};
 
 TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
 {
@@ -216,14 +182,6 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
         // Output memory usage log.
         CV_LOG_DEBUG(NULL, cv::format("OpenCV TIFF-test(line %d):memory usage info : mat(%llu), libtiff(%llu), work(%llu) -> total(%llu)",
                      __LINE__, memory_usage_cvmat, memory_usage_tiff, memory_usage_work, memory_usage_total) );
-
-        // To avoid Out of memory exception, check it.
-        const uint64_t MEMORY_USAGE_LIMIT = (uint64_t) 4096 * 1024 * 1024; // 4GB
-        if ( memory_usage_total > MEMORY_USAGE_LIMIT )
-        {
-            throw SkipTestException( cv::format("Test is skipped ( memory_usage_total(%llu) > MEMORY_USAGE_LIMIT(%llu) )",
-                memory_usage_total, MEMORY_USAGE_LIMIT ) );
-        }
 
         // Add test tags.
         if ( memory_usage_total >= (uint64_t) 6144 * 1024 * 1024 )
@@ -458,13 +416,61 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
 #undef MAKE_FLAG
 }
 
+// Basic Test
+const Bufsize_and_Type Imgcodecs_Tiff_decode_Huge_list_basic[] =
+{
+    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( (uint64_t)1024 * 1024 * 1024 - 32768 * 4 * 2, make_tuple<string,int>("CV_8UC1",  CV_8UC1),  IMREAD_MIX_COLOR ),
+    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( (uint64_t)2048 * 1024 * 1024                , make_tuple<string,int>("CV_16UC4", CV_16UC4), IMREAD_MIX_COLOR ),
+};
+
 INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_decode_Huge,
+        testing::ValuesIn( Imgcodecs_Tiff_decode_Huge_list_basic )
+);
+
+// Full Test
+
+/**
+ * Test lists for combination of IMREAD_*.
+ */
+const ImreadMixModes all_modes_Huge_Full[] =
+{
+    IMREAD_MIX_UNCHANGED,
+    IMREAD_MIX_GRAYSCALE,
+    IMREAD_MIX_GRAYSCALE_ANYDEPTH,
+    IMREAD_MIX_GRAYSCALE_ANYCOLOR,
+    IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR,
+    IMREAD_MIX_COLOR,
+    IMREAD_MIX_COLOR_ANYDEPTH,
+    IMREAD_MIX_COLOR_ANYCOLOR,
+    IMREAD_MIX_COLOR_ANYDEPTH_ANYCOLOR,
+};
+
+const uint64_t huge_buffer_sizes_decode_Full[] =
+{
+    (uint64_t)    1 * 1024 * 1024                ,
+    (uint64_t) 1024 * 1024 * 1024 - 32768 * 4 * 2,
+    (uint64_t) 1024 * 1024 * 1024                , // 1GB
+    (uint64_t) 2048 * 1024 * 1024                , // 2GB
+};
+
+const tuple<string, int> mat_types_Full[] =
+{
+    make_tuple<string, int>("CV_8UC1",  CV_8UC1),  // 8bit  GRAY
+    make_tuple<string, int>("CV_8UC3",  CV_8UC3),  // 24bit RGB
+    make_tuple<string, int>("CV_8UC4",  CV_8UC4),  // 32bit RGBA
+    make_tuple<string, int>("CV_16UC1", CV_16UC1), // 16bit GRAY
+    make_tuple<string, int>("CV_16UC3", CV_16UC3), // 48bit RGB
+    make_tuple<string, int>("CV_16UC4", CV_16UC4), // 64bit RGBA
+};
+
+INSTANTIATE_TEST_CASE_P(DISABLED_Imgcodecs_Tiff_Full, Imgcodecs_Tiff_decode_Huge,
         testing::Combine(
-            testing::ValuesIn(huge_buffer_sizes_decode),
-            testing::ValuesIn(mat_types),
-            testing::ValuesIn(all_modes_Huge)
-            )
-        );
+            testing::ValuesIn(huge_buffer_sizes_decode_Full),
+            testing::ValuesIn(mat_types_Full),
+            testing::ValuesIn(all_modes_Huge_Full)
+        )
+);
+
 
 //==================================================================================================
 
