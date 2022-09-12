@@ -2,7 +2,6 @@ import argparse
 
 import numpy as np
 import cv2
-from collections import deque
 
 '''
 AVSpeechRecognition
@@ -21,7 +20,7 @@ class AVSpeechRecognition:
     Audio Video Speech Recognition based on AVHubert (arXiv:2201.02184 [eess.AS])
     '''
     def __init__(self, source, detector_path, model_path, margin, video_width, video_height,
-                score_threshold, nms_threshold, top_k, backend, target, show_video=False):
+                score_threshold, nms_threshold, top_k, backend, target, show_video=False, labels=None):
         '''
         params:
             source: video source
@@ -33,31 +32,33 @@ class AVSpeechRecognition:
             nms_threshold: nms threshold for face detection
             top_k: top k faces for face detection
         '''
+        self.labels = open(labels).read().strip().split('\n') if labels else None
         source = source if source else 0
         self.cap = cv2.VideoCapture(source)
-        samplingRate = 16000
-        fps=30
+        self.samplingRate = 16000
+        self.fps=30
         self.source=source
+        self.realtime = True if source == 0 else False
         self.params = np.asarray([cv2.CAP_PROP_AUDIO_STREAM, 0,
                 cv2.CAP_PROP_VIDEO_STREAM, 0,
                 cv2.CAP_PROP_AUDIO_DATA_DEPTH, cv2.CV_32F,
-                cv2.CAP_PROP_AUDIO_SAMPLES_PER_SECOND, samplingRate
+                cv2.CAP_PROP_AUDIO_SAMPLES_PER_SECOND, self.samplingRate
                 ])
         self.margin = margin
         self.height = video_height
         self.width = video_width
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, video_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, video_height)
-        self.cap.set(cv2.CAP_PROP_FPS, fps)
+        self.cap.set(cv2.CAP_PROP_FPS, self.fps)
 
         self.model = cv2.dnn.readNetFromONNX(model_path)
         self.detector = cv2.FaceDetectorYN.create(detector_path, "", (video_width, video_height), score_threshold, nms_threshold, top_k)
         self.model.setPreferableBackend(backend)
         self.model.setPreferableTarget(target)
 
-        self.landmarks_queue = deque(maxlen=margin)
-        self.frames_queue = deque(maxlen=margin)
-        self.audio_queue = deque(maxlen=margin*samplingRate//fps)
+        self.landmarks_queue = []
+        self.frames_queue = []
+        self.audio_queue = []
 
         self.show_video = show_video
 
@@ -141,18 +142,19 @@ class AVSpeechRecognition:
             normalized_audio = (audio - signal_mean) / signal_std
         return cropped, normalized_audio
 
-    def predict(self):
+    def predict(self, frames_queue, audio_queue):
         '''
         predicts word using Audio Video Speech Recognition model.
         return:
             pred: predicted word
         '''
-        video = np.expand_dims(np.array(self.frames_queue , axis=(0,1)))
-        audio = np.expand_dims(np.array(self.audio_queue, dtype=np.float32),0)
+        video = np.expand_dims(np.array(frames_queue[-self.margin:]), axis=(0,1))
+        audio = np.expand_dims(np.array(audio_queue[-self.margin*self.samplingRate//self.fps+1:], dtype=np.float32),axis=(0,1))
         self.model.setInput(video, 'video_input')
         self.model.setInput(audio, 'audio_input')
         out = self.model.forward()
         pred = out[0].argmax()
+        pred = self.labels[pred] if self.labels else pred
         return pred
 
     def run(self):
@@ -174,23 +176,41 @@ class AVSpeechRecognition:
                 audioFrame = self.cap.retrieve(audioFrame, audioBaseIndex)
                 audioFrame = audioFrame[1][0] if audioFrame is not None else None
 
-                img, aud = self.preprocess(frame, audioFrame)
+                if self.realtime:
+                    img, aud = self.preprocess(frame, audioFrame)
+                    if img is not None and aud is not None:
+                        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                        img = cv2.resize(img, (96,96))
+                        self.frames_queue.append(img)
+                        for i in range(len(aud)):
+                            self.audio_queue.append(aud[i])
+                        if len(self.frames_queue) < self.margin:
+                            continue
+                        pred = self.predict(self.frames_queue, self.audio_queue)
+                        print(pred)
+                        if self.show_video:
+                            cv2.circle(frame, np.mean(self.landmarks_queue, axis=0)[0][5].astype(np.int32), 2, (0,0,255), -1)
+                            cv2.circle(frame, np.mean(self.landmarks_queue, axis=0)[0][6].astype(np.int32), 2, (0,0,255), -1)
+                            cv2.imshow('frame', frame)
+                            if cv2.waitKey(1) & 0xFF == ord('q'):
+                                break
+                else:
+                    self.frames_queue.append(frame)
+                    self.audio_queue.append(audioFrame)
+        if not self.realtime:
+            image_queue = []
+            audio_queue = []
+            for i in range(len(self.frames_queue)):
+                img, aud = self.preprocess(self.frames_queue[i], self.audio_queue[i])
                 if img is not None and aud is not None:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     img = cv2.resize(img, (96,96))
-                    self.frames_queue.append(img)
+                    image_queue.append(img)
                     for i in range(len(aud)):
-                        self.audio_queue.append(aud[i])
-                    if len(self.frames_queue) < self.margin:
-                        continue
-                    pred = self.predict()
-                    print(pred)
-                    if self.show_video:
-                        cv2.circle(frame, np.mean(self.landmarks_queue, axis=0)[0][5].astype(np.int32), 2, (0,0,255), -1)
-                        cv2.circle(frame, np.mean(self.landmarks_queue, axis=0)[0][6].astype(np.int32), 2, (0,0,255), -1)
-                        cv2.imshow('frame', frame)
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            break
+                        audio_queue.append(aud[i])
+                    if len(image_queue) / self.margin > 1:
+                        pred = self.predict(image_queue, audio_queue)
+                        print(pred)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Audio Visual Speech Recognition')
@@ -201,6 +221,8 @@ def parse_args():
                         help='Path to input video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--model', type=str, default='AVSpeechRecog.onnx',
                         help='Path to onnx Model file to use for AVSpeech Recognition')
+    parser.add_argument('--labels', type=str,
+                        help='Path to txt file containing labels. Skip this argument to print class id instead.')
     parser.add_argument('--detector_model', type=str, default='face_detection_yunet_2022mar.onnx',
                         help='Path to YUNet Model onnx file to use for face detection.')
     parser.add_argument('--margin', type=int, default=20,
@@ -235,7 +257,7 @@ def main():
     args = parse_args()
     recognizer = AVSpeechRecognition(args.input, model_path=args.model, detector_path=args.detector_model,
                             margin=args.margin, video_width=args.video_width, video_height=args.video_height,
-                            score_threshold=args.score_threshold, nms_threshold=args.nms_threshold,
+                            score_threshold=args.score_threshold, nms_threshold=args.nms_threshold, labels=args.labels,
                             top_k=args.top_k, backend=args.backend, target=args.target, show_video=args.show_video)
     recognizer.run()
 
