@@ -40,3 +40,14 @@ how G-API module can be used for that.
 
     In this tutorial we build a complex hybrid Computer Vision/Deep
     Learning video processing pipeline with G-API.
+
+
+- @subpage tutorial_gapi_oak_devices
+
+    *Languages:* C++
+
+    *Compatibility:* \> OpenCV 4.6
+
+    *Author:* Alessandro de Oliveira Faria (A.K.A. CABELO)
+
+    In this tutorial we showed how to use the Luxonis DepthAI library with G-API.
