@@ -173,6 +173,16 @@ In this section you will learn about the image processing (manipulation) functio
 
     Where we learn how to detect circles
 
+-   @subpage tutorial_generalized_hough_ballard_guil
+
+    *Languages:* C++
+
+    *Compatibility:* \>= OpenCV 3.4
+
+    *Author:* Markus Heck
+
+    Detect an object in a picture with the help of GeneralizedHoughBallard and GeneralizedHoughGuil.
+
 -   @subpage tutorial_remap
 
     *Languages:* C++, Java, Python

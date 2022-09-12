@@ -1,7 +1,7 @@
 Remapping {#tutorial_remap}
 =========
 
-@prev_tutorial{tutorial_hough_circle}
+@prev_tutorial{tutorial_generalized_hough_ballard_guil}
 @next_tutorial{tutorial_warp_affine}
 
 Goal
