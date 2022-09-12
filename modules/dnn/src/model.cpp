@@ -1364,6 +1364,12 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
         CV_Assert(outs.size() == 1);
         Mat binary = outs[0];
 
+        //Support ppdetect
+        int dim=binary.dims;
+        if(dim==3){
+            binary=binary.reshape(0,binary.size[1]);
+        }
+
         // Threshold
         Mat bitmap;
         threshold(binary, bitmap, binaryThreshold, 255, THRESH_BINARY);
