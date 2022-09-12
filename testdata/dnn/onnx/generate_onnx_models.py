@@ -2129,3 +2129,21 @@ onnx_model = onnx.helper.make_model(graph)
 
 output_np = input_np/input2_np
 save_data_and_onnx_model_multy_inputs("div_test_1x1", [input_np, input2_np], output_np, onnx_model)
+
+
+###################### GatherMulti #################################
+N, C, H, W = 2, 3, 8, 7
+axis = 2 # H
+
+input = np.random.rand(N, C, H, W).astype(np.float32)
+idx = np.random.randint(low=1, high=H, size=(3, 4), dtype=np.int32)
+output = np.take(input, idx, axis=axis)
+
+inputs = [onnx.helper.make_tensor_value_info("x", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input.dtype], shape=input.shape)]
+outputs = [onnx.helper.make_tensor_value_info("y", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output.dtype], shape=output.shape)]
+
+nodes = [onnx.helper.make_node("Constant", [], ["idx"], value=onnx.numpy_helper.from_array(idx)), onnx.helper.make_node("Gather", ["x", "idx"], ["y"], axis=axis)]
+graph = onnx.helper.make_graph(nodes, "gather_multi", inputs, outputs)
+onnx_model = onnx.helper.make_model(graph)
+
+save_data_and_onnx_model("gather_multi", input, output, onnx_model)
