@@ -9,7 +9,7 @@ AVSpeechRecognition
     How to obtain the model required for this sample:
     Option 1: Download the model from https://drive.google.com/file/d/1xuwk5ZQagKFoTXev27zvlSg8dAmSJoo7/view?usp=sharing
     Option 2: Convert the model using pretrained torch model and base repo.
-        Use the colab notebook here: https://colab.research.google.com/drive/1awBCZ5O6uAT32cHvufNWad5m6q26TuqQ?usp=sharing
+        Use the code here: https://gist.github.com/spazewalker/b8ab3eabc96ffcb30218cbb6f6ea09b3
 
 For preporocessing the video, YUNet face detection is also required. YUNet can be downloaded from:
 https://github.com/opencv/opencv_zoo/blob/master/models/face_detection_yunet/face_detection_yunet_2022mar.onnx
