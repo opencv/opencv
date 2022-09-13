@@ -335,8 +335,8 @@ MatchesInfo& MatchesInfo::operator =(const MatchesInfo &other)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                                  const UMat &mask)
+void FeaturesMatcher::match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                            const UMat &mask)
 {
     const int num_images = static_cast<int>(features.size());
 
@@ -484,8 +484,8 @@ BestOf2NearestRangeMatcher::BestOf2NearestRangeMatcher(int range_width, bool try
 }
 
 
-void BestOf2NearestRangeMatcher::operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                                  const UMat &mask)
+void BestOf2NearestRangeMatcher::match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                                       const UMat &mask)
 {
     const int num_images = static_cast<int>(features.size());
 
