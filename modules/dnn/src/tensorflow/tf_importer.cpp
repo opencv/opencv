@@ -1097,6 +1097,9 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
             std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
             hasSwap = true;
         }
+
+        bool changedType{false};
+
         if (inpLayout == DATA_LAYOUT_NHWC)
         {
             if (newShapeSize >= 2 || newShape.at<int>(1) == 1)
@@ -1110,23 +1113,28 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
                 else
                 {
                     inpLayout = DATA_LAYOUT_NHWC;
+                    changedType = newShapeSize == 4 && !hasSwap;
                 }
             }
         }
         layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
 
-        int id = dstNet.addLayer(name, "Reshape", layerParams);
-        layer_id[name] = id;
+        std::string setName = changedType ? name + "/realReshape" : name;
+
+        int id = dstNet.addLayer(setName, "Reshape", layerParams);
+        layer_id[setName] = id;
 
         // one input only
         connect(layer_id, dstNet, inpId, id, 0);
-        inpId = Pin(name);
+        inpId = Pin(setName);
 
         if ((inpLayout == DATA_LAYOUT_NHWC || inpLayout == DATA_LAYOUT_UNKNOWN || inpLayout == DATA_LAYOUT_PLANAR) &&
             newShapeSize == 4 && !hasSwap)
         {
             int order[] = {0, 3, 1, 2};  // Transform back to OpenCV's NCHW.
-            addPermuteLayer(order, name + "/nchw", inpId);
+
+            setName = changedType ? name : name + "/nchw";
+            addPermuteLayer(order, setName, inpId);
             inpLayout = DATA_LAYOUT_NCHW;
         }
 
