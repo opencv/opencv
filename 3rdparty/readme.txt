@@ -20,6 +20,7 @@ libjpeg-turbo         libjpeg-turbo is covered by three compatible BSD-style ope
                       WITH_JPEG CMake option must be ON to add libjpeg or libjpeg-turbo support to imgcodecs.
                       BUILD_JPEG=ON selects libjpeg-turbo by default (since OpenCV 3.4.2).
                       Enable BUILD_JPEG_TURBO_DISABLE=ON to force using of libjpeg (this option is removed in OpenCV 4.0).
+                      SIMD instructions are enabled by default. Use ENABLE_LIBJPEG_TURBO_SIMD to control SIMD instructions.
 ------------------------------------------------------------------------------------
 libpng                Portable Network Graphics library.
                       The license and copyright notes can be found in libpng/LICENSE.
