@@ -461,10 +461,6 @@ TEST_P(ffmpeg_get_fourcc, check_short_codecs)
     if (!cap.isOpened())
         throw SkipTestException("Video stream is not supported");
     const double fourcc = cap.get(CAP_PROP_FOURCC);
-#ifdef _WIN32  // handle old FFmpeg backend
-    if(!fourcc && fileName == "../cv/tracking/faceocc2/data/faceocc2.webm")
-        throw SkipTestException("Feature not yet supported by Windows FFmpeg shared library!");
-#endif
     ASSERT_EQ(fourcc_string, fourccToString((int)fourcc));
 }
 
@@ -491,10 +487,8 @@ TEST(videoio, mp4_orientation_meta_auto)
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
 
-#ifndef _WIN32 // TODO: FFmpeg wrapper update
     // related issue: https://github.com/opencv/opencv/issues/22088
     EXPECT_EQ(90, cap.get(CAP_PROP_ORIENTATION_META));
-#endif
 
     cap.set(CAP_PROP_ORIENTATION_AUTO, true);
     if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
@@ -569,10 +563,6 @@ TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
     const int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
-#ifdef _WIN32  // handle old FFmpeg backend
-    if (codecExtradataIdx <= 0)
-        throw SkipTestException("Codec extra data is not supported by backend or video stream");
-#endif
     Mat data;
     ASSERT_TRUE(cap.retrieve(data, codecExtradataIdx));
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
