@@ -48,15 +48,29 @@ class AndroidMediaNdkCapture : public IVideoCapture
 public:
     AndroidMediaNdkCapture():
         sawInputEOS(false), sawOutputEOS(false),
-        frameWidth(0), frameHeight(0), colorFormat(0) {}
+        frameStride(0), frameWidth(0), frameHeight(0), colorFormat(0),
+        videoWidth(0), videoHeight(0),
+        videoFrameCount(0),
+        videoRotation(0), videoRotationCode(-1),
+        videoOrientationAuto(false) {}
+
     std::shared_ptr<AMediaExtractor> mediaExtractor;
     std::shared_ptr<AMediaCodec> mediaCodec;
     bool sawInputEOS;
     bool sawOutputEOS;
+    int32_t frameStride;
     int32_t frameWidth;
     int32_t frameHeight;
     int32_t colorFormat;
+    int32_t videoWidth;
+    int32_t videoHeight;
+    float videoFrameRate;
+    int32_t videoFrameCount;
+    int32_t videoRotation;
+    int32_t videoRotationCode;
+    bool videoOrientationAuto;
     std::vector<uint8_t> buffer;
+    Mat frame;
 
     ~AndroidMediaNdkCapture() { cleanUp(); }
 
@@ -89,6 +103,7 @@ public:
                     size_t bufferSize = 0;
                     auto mediaFormat = std::shared_ptr<AMediaFormat>(AMediaCodec_getOutputFormat(mediaCodec.get()), deleter_AMediaFormat);
                     AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_WIDTH, &frameWidth);
+                    AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_STRIDE, &frameStride);
                     AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_HEIGHT, &frameHeight);
                     AMediaFormat_getInt32(mediaFormat.get(), AMEDIAFORMAT_KEY_COLOR_FORMAT, &colorFormat);
                     uint8_t* codecBuffer = AMediaCodec_getOutputBuffer(mediaCodec.get(), bufferIndex, &bufferSize);
@@ -96,30 +111,14 @@ public:
                     LOGV("colorFormat: %d", colorFormat);
                     LOGV("buffer size: %zu", bufferSize);
                     LOGV("width (frame): %d", frameWidth);
+                    LOGV("stride (frame): %d", frameStride);
                     LOGV("height (frame): %d", frameHeight);
                     if (info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM)
                     {
                         LOGV("output EOS");
                         sawOutputEOS = true;
                     }
-                    if ((size_t)frameWidth * frameHeight * 3 / 2 > bufferSize)
-                    {
-                        if (bufferSize == 3110400 && frameWidth == 1920 && frameHeight == 1088)
-                        {
-                            frameHeight = 1080;
-                            LOGV("Buffer size is too small, force using height = %d", frameHeight);
-                        }
-                        else if(bufferSize == 3110400 && frameWidth == 1088 && frameHeight == 1920)
-                        {
-                            frameWidth = 1080;
-                            LOGV("Buffer size is too small, force using width = %d", frameWidth);
-                        }
-                        else
-                        {
-                            LOGE("Buffer size is too small. Frame is ignored. Enable verbose logging to see actual values of parameters");
-                            return false;
-                        }
-                    }
+
                     AMediaCodec_releaseOutputBuffer(mediaCodec.get(), bufferIndex, info.size != 0);
                     return true;
                 } else if (bufferIndex == AMEDIACODEC_INFO_OUTPUT_BUFFERS_CHANGED) {
@@ -154,15 +153,25 @@ public:
         if (buffer.empty()) {
             return false;
         }
-        Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
+
+        Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
+
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
+            cv::cvtColor(yuv, frame, cv::COLOR_YUV2BGR_YV12);
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_NV21);
+            cv::cvtColor(yuv, frame, cv::COLOR_YUV2BGR_NV21);
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
             return false;
         }
+
+        Mat croppedFrame = frame(Rect(0, 0, videoWidth, videoHeight));
+        out.assign(croppedFrame);
+
+        if (videoOrientationAuto && -1 != videoRotationCode) {
+            cv::rotate(out, out, videoRotationCode);
+        }
+
         return true;
     }
 
@@ -170,14 +179,32 @@ public:
     {
         switch (property_id)
         {
-            case CV_CAP_PROP_FRAME_WIDTH: return frameWidth;
-            case CV_CAP_PROP_FRAME_HEIGHT: return frameHeight;
+            case CV_CAP_PROP_FRAME_WIDTH:
+                return (( videoOrientationAuto &&
+                         (cv::ROTATE_90_CLOCKWISE == videoRotationCode || cv::ROTATE_90_COUNTERCLOCKWISE == videoRotationCode))
+                        ? videoHeight : videoWidth);
+            case CV_CAP_PROP_FRAME_HEIGHT:
+                return (( videoOrientationAuto &&
+                         (cv::ROTATE_90_CLOCKWISE == videoRotationCode || cv::ROTATE_90_COUNTERCLOCKWISE == videoRotationCode))
+                        ? videoWidth : videoHeight);
+            case CV_CAP_PROP_FPS: return videoFrameRate;
+            case CV_CAP_PROP_FRAME_COUNT: return videoFrameCount;
+            case CAP_PROP_ORIENTATION_META: return videoRotation;
+            case CAP_PROP_ORIENTATION_AUTO: return videoOrientationAuto ? 1 : 0;
         }
         return 0;
     }
 
-    bool setProperty(int /* property_id */, double /* value */) CV_OVERRIDE
+    bool setProperty(int property_id, double value) CV_OVERRIDE
     {
+        switch (property_id)
+        {
+            case CAP_PROP_ORIENTATION_AUTO: {
+                videoOrientationAuto = value != 0 ? true : false;
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -221,9 +248,20 @@ public:
             if (!AMediaFormat_getString(format.get(), AMEDIAFORMAT_KEY_MIME, &mime)) {
                 LOGV("no mime type");
             } else if (!strncmp(mime, "video/", 6)) {
-                int32_t trackWidth, trackHeight;
+                int32_t trackWidth, trackHeight, fps, frameCount = 0, rotation = 0;
                 AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_WIDTH, &trackWidth);
                 AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_HEIGHT, &trackHeight);
+                AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_FRAME_RATE, &fps);
+
+                #if __ANDROID_API__ >= 28
+                    AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_ROTATION, &rotation);
+                    LOGV("rotation (track): %d", rotation);
+                #endif
+
+                #if __ANDROID_API__ >= 29
+                    AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_FRAME_COUNT, &frameCount);
+                #endif
+
                 LOGV("width (track): %d", trackWidth);
                 LOGV("height (track): %d", trackHeight);
                 if (AMediaExtractor_selectTrack(mediaExtractor.get(), i) != AMEDIA_OK) {
@@ -241,6 +279,31 @@ public:
                 if (AMediaCodec_start(mediaCodec.get()) != AMEDIA_OK) {
                     continue;
                 }
+
+                videoWidth = trackWidth;
+                videoHeight = trackHeight;
+                videoFrameRate = fps;
+                videoFrameCount = frameCount;
+                videoRotation = rotation;
+
+                switch(videoRotation) {
+                    case 90:
+                        videoRotationCode = cv::ROTATE_90_CLOCKWISE;
+                        break;
+
+                    case 180:
+                        videoRotationCode = cv::ROTATE_180;
+                        break;
+
+                    case 270:
+                        videoRotationCode = cv::ROTATE_90_COUNTERCLOCKWISE;
+                        break;
+
+                    default:
+                        videoRotationCode = -1;
+                        break;
+                }
+
                 return true;
             }
         }
@@ -251,9 +314,16 @@ public:
     void cleanUp() {
         sawInputEOS = true;
         sawOutputEOS = true;
+        frameStride = 0;
         frameWidth = 0;
         frameHeight = 0;
         colorFormat = 0;
+        videoWidth = 0;
+        videoHeight = 0;
+        videoFrameRate = 0;
+        videoFrameCount = 0;
+        videoRotation = 0;
+        videoRotationCode = -1;
     }
 };
 
