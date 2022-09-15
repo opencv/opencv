@@ -1518,10 +1518,6 @@ bool CvCapture_FFMPEG::grabFrame()
         ret = got_picture ? 0 : -1;
 #endif
         if (ret >= 0) {
-            //picture_pts = picture->best_effort_timestamp;
-            if( picture_pts == AV_NOPTS_VALUE_ )
-                picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
-
             valid = true;
         } else if (ret == AVERROR(EAGAIN)) {
             continue;
@@ -1534,8 +1530,11 @@ bool CvCapture_FFMPEG::grabFrame()
         }
     }
 
-    if (valid)
+    if (valid) {
+        if( picture_pts == AV_NOPTS_VALUE_ )
+            picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
         frame_number++;
+    }
 
     if (!rawMode && valid && first_frame_number < 0)
         first_frame_number = dts_to_frame_number(picture_pts);
