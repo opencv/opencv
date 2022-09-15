@@ -149,7 +149,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 #if defined(HAVE_ANDROID_MEDIANDK) || defined(HAVE_ANDROID_NATIVE_CAMERA)
     DECLARE_STATIC_BACKEND(CAP_ANDROID, "ANDROID_NATIVE",
 #ifdef HAVE_ANDROID_MEDIANDK
-                           MODE_CAPTURE_BY_FILENAME
+                           MODE_CAPTURE_BY_FILENAME | MODE_WRITER
 #else
                            0
 #endif
@@ -169,7 +169,11 @@ static const struct VideoBackendInfo builtin_backends[] =
 #else
                            0,
 #endif
+#ifdef HAVE_ANDROID_MEDIANDK
+                           createAndroidVideoWriter)
+#else
                            0)
+#endif
 #endif
 
 #ifdef HAVE_OBSENSOR
