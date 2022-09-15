@@ -410,6 +410,9 @@ Ptr<IVideoCapture> createXINECapture(const std::string &filename);
 
 Ptr<IVideoCapture> createAndroidCapture_cam( int index );
 Ptr<IVideoCapture> createAndroidCapture_file(const std::string &filename);
+Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int fourcc,
+                                           double fps, const Size& frameSize,
+                                           const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_obsensor_capture(int index);
 
