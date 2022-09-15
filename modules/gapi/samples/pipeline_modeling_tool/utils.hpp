@@ -1,6 +1,8 @@
 #ifndef OPENCV_GAPI_PIPELINE_MODELING_TOOL_UTILS_HPP
 #define OPENCV_GAPI_PIPELINE_MODELING_TOOL_UTILS_HPP
 
+#include <map>
+
 #include <opencv2/core.hpp>
 
 #if defined(_WIN32)
@@ -89,6 +91,26 @@ typename duration_t::rep timestamp() {
     using namespace std::chrono;
     auto now = high_resolution_clock::now();
     return duration_cast<duration_t>(now.time_since_epoch()).count();
+}
+
+#define RETHROW_WITH_MSG_IF_FAILED(expr, msg)      \
+    try {                                          \
+        expr;                                      \
+    } catch (const std::exception& e) {            \
+        std::stringstream ss;                      \
+        ss << msg << "\n caused by: " << e.what(); \
+        throw std::logic_error(ss.str());          \
+    }                                              \
+
+template <typename K, typename V>
+void intersectMapWith(std::map<K, V>& target, const std::map<K, V>& second) {
+    for (auto&& item : second) {
+        auto it = target.find(item.first);
+        if (it != target.end()) {
+            throw std::logic_error("Met already existing key: " + item.first);
+        }
+        target.insert(item);
+    }
 }
 
 } // namespace utils
