@@ -5,7 +5,21 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+// Temporary macro,
+#define CV_VECTOR_SIMD CV_SIMD_SCALABLE
+#define CV_SIMD_OR_VECTOR (CV_SIMD_SCALABLE || CV_SIMD)
+// should remove when PR#22463 (Redesign the SIMD macro) merged.
+
 #if CV_VECTOR_SIMD
+/* FIX IT:
+// std::swap(a, b) is not available for RVV vector types,
+// and CV_SWAP needs another "t" as input,
+// For compatibility, we swap RVV vector manually by using this macro.
+
+// If others scalable types (e.g. type in ARM SVE) can use std::swap,
+// then replace CV_VECTOR_SIMD with CV_RVV.
+// If std::swap is available for RVV vector types in future, remove this macro.
+*/
 #define swap(a, b) {auto t = a; a = b; b = t;}
 #endif
 
@@ -545,9 +559,6 @@ struct HSV2RGB_b
             v_float32 h = v_cvt_f32(v_reinterpret_as_s32(h_u0));
             v_float32 s = v_cvt_f32(v_reinterpret_as_s32(s_u0));
             v_float32 v = v_cvt_f32(v_reinterpret_as_s32(v_u0));
-            // dump("h", h);
-            // dump("s", s);
-            // dump("v", v);
 
             s = v_mul(s, v_coeff0);
             v = v_mul(v, v_coeff0);
