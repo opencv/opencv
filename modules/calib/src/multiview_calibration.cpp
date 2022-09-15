@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv {
 namespace multiview {
@@ -548,6 +549,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
 
     std::vector<int> camera_rt_best(NUM_FRAMES, -1);
     std::vector<double> camera_rt_errors(NUM_FRAMES, std::numeric_limits<double>::max());
+    const double WARNING_RMSE = 15.;
     if (!USE_INTRINSICS_GUESS) {
         // calibrate each camera independently to find intrinsic parameters - K and distortion coefficients
         distortions = std::vector<Mat>(NUM_CAMERAS);
@@ -566,8 +568,9 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                         imagePoints[camera][f].reshape(2) : imagePoints[camera][f]);
                 }
             }
+            double repr_err;
             if (is_fisheye_vec[camera]) {
-                fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
+                repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
                     Ks[camera], distortions[camera], rvecs, tvecs,
                     flags_intrinsics == 0 ? fisheye::CALIB_RECOMPUTE_EXTRINSIC : flags_intrinsics);
                 // calibrate does not compute error per view, so compute it manually
@@ -577,9 +580,10 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                         img_points_[f], Ks[camera], distortions[camera], rvecs.row(f), tvecs.row(f), noArray(), noArray(), true);
                 }
             } else {
-                calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
+                repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
                    rvecs, tvecs, noArray(), noArray(), errors_per_view, flags_intrinsics);
             }
+            CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE));
             int cnt_visible_frame = 0;
             for (int f = 0; f < NUM_FRAMES; f++) {
                 if (visibility_mat[camera][f]) {
@@ -599,7 +603,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             for (int k = 0; k < NUM_CAMERAS; k++) {
                 if (!visibility_mat[k][i]) continue;
                 Vec3d rvec, tvec;
-                solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE );
+                solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE);
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
                 const auto err = multiview::computeReprojectionRMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
@@ -635,7 +639,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     multiview::selectPairsBFS (pairs, NUM_CAMERAS, parent);
 
     if ((int)pairs.size() != NUM_CAMERAS-1) {
-        CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration.");
+        CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration. Incorrect number of pairs.");
 //        return false;
     }
     if (output_pairs.needed()) {
