@@ -40,8 +40,8 @@ class AVSpeechRecognition:
         source = source if source else 0
         self.cap = cv.VideoCapture(source)
         self.samplingRate = 16000
-        self.fps=30
-        self.source=source
+        self.fps = 30
+        self.source = source
         self.realtime = True if source == 0 else False
         self.params = np.asarray([cv.CAP_PROP_AUDIO_STREAM, 0,
                 cv.CAP_PROP_VIDEO_STREAM, 0,
