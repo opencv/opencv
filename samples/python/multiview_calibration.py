@@ -3,7 +3,7 @@ import sys, traceback, cv2 as cv, numpy as np, os, json, argparse, matplotlib.py
 def getDimBox(pts):
     return np.array([[pts[...,k].min(), pts[...,k].max()] for k in range(pts.shape[-1])])
 
-def plotCamerasPosition(R, t, image_sizes, pairs, pattern):
+def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx):
     cam_box = np.array([[1, 1, 0], [1, -1, 0], [-1, -1, 0], [-1, 1, 0]],dtype=np.float32)
     cam_box[:,2] = 3.0
     dist_to_pattern = np.linalg.norm(pattern.mean(0))
@@ -11,7 +11,7 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax_lines = [None for i in range(len(R))]
-    ax.set_title('Cameras position', fontsize=20)
+    ax.set_title('Cameras position and pattern of frame '+str(frame_idx), fontsize=20)
     all_pts = [pattern]
     colors = np.random.RandomState(0).rand(len(R),3)
     for i, cam in enumerate(R):
@@ -119,7 +119,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
     frame_idx = visibility_idxs[1,0]
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
-    plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame)
+    plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx)
     def plot(cam_idx, frame_idx):
         image = None if image_names is None else cv.cvtColor(cv.imread(image_names[cam_idx][frame_idx]), cv.COLOR_BGR2RGB)
         plotProjection(image_points[cam_idx][frame_idx], pattern_points, rvecs0[frame_idx],
