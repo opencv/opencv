@@ -13,14 +13,17 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <android/log.h>
-
+#include <android/native_window.h>
 #include "media/NdkMediaCodec.h"
+#include "media/NdkMediaMuxer.h"
 #include "media/NdkMediaExtractor.h"
+#include "media/NdkMediaFormat.h"
 
 #define INPUT_TIMEOUT_MS 2000
 
 #define COLOR_FormatYUV420Planar 19
 #define COLOR_FormatYUV420SemiPlanar 21
+#define COLOR_FormatSurface 0x7f000789 //See https://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities for codes
 
 using namespace cv;
 
@@ -327,6 +330,341 @@ public:
     }
 };
 
+
+
+class AndroidMediaNdkVideoWriter CV_FINAL :
+    public cv::IVideoWriter
+{
+    typedef struct {
+        int fourcc;
+        const char* mime;
+        OutputFormat muxerFormat;
+    }
+    FourCCInfo;
+
+    static const int64_t TIMEOUT = 1000L;
+    static const FourCCInfo FOURCC_INFO[];
+
+    static const FourCCInfo* findInfo(int fourcc) {
+        for( const FourCCInfo *it = FOURCC_INFO; NULL != it->mime; it++ ) {
+            if (fourcc == it->fourcc) return it;
+        }
+        return NULL;
+    }
+
+    AMediaFormat* format;
+    AMediaCodec* encoder;
+    AMediaMuxer* muxer;
+
+    #if __ANDROID_API__ >= 26
+    ANativeWindow* surface;
+    #endif
+
+    long frameIndex;
+    int width;
+    int height;
+    double frameRate;
+    ssize_t videoTrackIndex;
+    int fd;
+
+    void drainEncoder(bool end) {
+        if (end) {
+            #if __ANDROID_API__ >= 26
+            AMediaCodec_signalEndOfInputStream(encoder);
+            #else
+            writeBytes(NULL, 0);
+            #endif
+        }
+
+        AMediaCodecBufferInfo bufferInfo;
+        ssize_t bufferIndex;
+        size_t  bufferSize;
+        uint8_t *buffer;
+
+        while (true) {
+            bufferIndex = AMediaCodec_dequeueOutputBuffer(encoder, &bufferInfo, TIMEOUT);
+            if (bufferIndex >= 0) {
+                buffer = AMediaCodec_getOutputBuffer(encoder, (size_t)bufferIndex, &bufferSize);
+
+                if (NULL == buffer || 0 == bufferSize){
+                    LOGE("Can't get output buffer");
+                    break;
+                }
+
+                if (videoTrackIndex >= 0) {
+                    bufferInfo.presentationTimeUs = frameIndex * 1000000L / frameRate;
+                    LOGV("Muxer write to track %d: %d byte(s)", (int)videoTrackIndex, (int)bufferInfo.size);
+                    AMediaMuxer_writeSampleData(muxer, (size_t)videoTrackIndex, buffer, &bufferInfo);
+                } else {
+                    LOGE("Invalid video track !");
+                }
+
+                AMediaCodec_releaseOutputBuffer(encoder, (size_t)bufferIndex, false);
+                if (bufferInfo.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) break;
+            } else if (AMEDIACODEC_INFO_TRY_AGAIN_LATER == bufferIndex) {
+                if (!end) break;
+            } else if (AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED == bufferIndex) {
+                videoTrackIndex = AMediaMuxer_addTrack(muxer, AMediaCodec_getOutputFormat(encoder));
+                if (videoTrackIndex >= 0) {
+                    AMediaMuxer_start(muxer);
+                }
+                LOGV("New videoTrackIndex: %d", (int)videoTrackIndex);
+            }
+        }
+    }
+
+    #if __ANDROID_API__ < 26
+    void writeBytes( uint8_t* inputBuffer, size_t inputBufferSize ) {
+        LOGV("[writeBytes] inputBufferSize=%u", (unsigned int)inputBufferSize);
+
+        ssize_t bufferIndex;
+        size_t  bufferSize;
+        uint8_t* buffer;
+        size_t  partialSize;
+        bool firstCall = true;
+        uint32_t flags;
+
+        while(inputBufferSize > 0 || firstCall) {
+            bufferIndex = AMediaCodec_dequeueInputBuffer(encoder, TIMEOUT);
+
+            if (bufferIndex >= 0) {
+                firstCall = false;
+                buffer = AMediaCodec_getInputBuffer(encoder, (size_t)bufferIndex, &bufferSize);
+                if (NULL == buffer || 0 == bufferSize) break;
+
+                flags = 0;
+                partialSize = (inputBufferSize > bufferSize) ? bufferSize : inputBufferSize;
+                if (partialSize > 0) {
+                    memcpy(buffer, inputBuffer, partialSize);
+                    inputBuffer += partialSize;
+                    inputBufferSize -= partialSize;
+                    if (inputBufferSize > 0) {
+                        flags = AMEDIACODEC_BUFFER_FLAG_PARTIAL_FRAME;
+                    }
+                } else {
+                    flags = AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM;
+                }
+
+                LOGV(
+                    "[writeBytes] partial - bufferIndex=%d, bufferSize=%u, partialSize=%u, remaining inputBufferSize=%u",
+                    (int)bufferIndex, (unsigned int)bufferSize, (unsigned int)partialSize, (unsigned int)inputBufferSize
+                );
+
+                AMediaCodec_queueInputBuffer(encoder, (size_t)bufferIndex, 0, partialSize, frameIndex * 1000000L / frameRate, flags);
+                if (NULL != inputBuffer) drainEncoder(false);
+            }
+        }
+    }
+    #endif
+
+public:
+    AndroidMediaNdkVideoWriter(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params)
+        : format(NULL),
+          encoder(NULL),
+          muxer(NULL),
+          #if __ANDROID_API__ >= 26
+          surface(NULL),
+          #endif
+          frameIndex(0),
+          width(0),
+          height(0),
+          frameRate(0.),
+          videoTrackIndex(-1),
+          fd(-1) {
+        open(filename, fourcc, fps, frameSize, params);
+    }
+    virtual ~AndroidMediaNdkVideoWriter() { close(); }
+
+    virtual int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_ANDROID; }
+
+    virtual void write(cv::InputArray image_ ) CV_OVERRIDE
+    {
+        if (!image_.isMat()) {
+            LOGE("Support only Mat input");
+            return;
+        }
+
+        Mat image = image_.getMat();
+        if (CV_8UC3 != image.type() || image.cols > width || image.rows > height) {
+            LOGE(
+                "Expected input to be a mat of maximum %d x %d of type CV_8UC3 (%d), but received %d x %d of type: %d",
+                width, height, CV_8UC3,
+                image.cols, image.rows, image.type()
+            );
+            return;
+        }
+
+        #if __ANDROID_API__ >= 26
+        ANativeWindow_Buffer buffer;
+        if (0 != ANativeWindow_lock(surface, &buffer, NULL)) {
+            LOGE("Failed to lock the surface");
+        } else {
+            if (AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM == buffer.format) {
+                Mat bufferMat(image.rows, image.cols, CV_8UC4, buffer.bits, buffer.stride * 4);
+                cvtColor(image, bufferMat, CV_BGR2RGBA);
+            } else {
+                LOGE("Unknow surface buffer format: %u", buffer.format);
+            }
+
+            ANativeWindow_unlockAndPost(surface);
+        }
+        #else
+        LOGV("[write] image: %d  x %d", image.cols, image.rows);
+
+        //OpenCV don't support RGB to NV12 so we need to connvert to YV12 and then manually changed it to NV12
+        Mat imageYV12;
+        cvtColor(image, imageYV12, CV_BGR2YUV_YV12);
+
+        //convert from YV12 to NV12
+        size_t yPlaneSize = width * height;
+        size_t vPlaneSize = yPlaneSize / 4;
+
+        Mat channels[2] = {
+            Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize + vPlaneSize ).clone(),
+            Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize ).clone()
+        };
+        Mat vuMat( vPlaneSize, 1, CV_8UC2, imageYV12.ptr() + yPlaneSize );
+        merge(channels, 2, vuMat);
+
+        writeBytes( imageYV12.ptr(), imageYV12.rows * imageYV12.cols );
+        #endif
+
+        drainEncoder(false);
+
+        frameIndex++;
+    }
+
+    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
+    {
+        media_status_t status;
+
+        close();
+
+        const FourCCInfo* info = findInfo(fourcc);
+        if (NULL == info) {
+            LOGE("ERROR: findInfo");
+            return false;
+        }
+
+        format = AMediaFormat_new();
+        if (NULL == format) {
+            LOGE("ERROR: AMediaFormat_new");
+            goto error;
+        }
+
+        LOGV("mime: %s, width: %d, height: %d, fps: %f", info->mime, frameSize.width, frameSize.height, fps);
+
+        AMediaFormat_setString(format, AMEDIAFORMAT_KEY_MIME, info->mime);
+        AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_WIDTH, frameSize.width);
+        AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_HEIGHT, frameSize.height);
+        AMediaFormat_setFloat(format, AMEDIAFORMAT_KEY_FRAME_RATE, (float)fps);
+        AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_I_FRAME_INTERVAL, 5);
+        AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_BIT_RATE, frameSize.width * frameSize.height * 5);
+        AMediaFormat_setInt32(
+            format, AMEDIAFORMAT_KEY_COLOR_FORMAT,
+            #if __ANDROID_API__ >= 26
+            COLOR_FormatSurface
+            #else
+            COLOR_FormatYUV420SemiPlanar
+            #endif
+        );
+
+        encoder = AMediaCodec_createEncoderByType(info->mime);
+        if (NULL == encoder) {
+            LOGE("ERROR: AMediaCodec_createEncoderByType");
+            goto error;
+        }
+
+        status = AMediaCodec_configure(encoder, format, NULL, NULL, AMEDIACODEC_CONFIGURE_FLAG_ENCODE);
+        if (AMEDIA_OK != status) {
+            LOGE("ERROR: AMediaCodec_configure (%d)", status);
+            goto error;
+        }
+
+        #if __ANDROID_API__ >= 26
+        status = AMediaCodec_createInputSurface(encoder, &surface);
+        if (AMEDIA_OK != status || NULL == surface) {
+            LOGE("ERROR: AMediaCodec_createInputSurface (%d)", status);
+            goto error;
+        }
+        #endif
+
+        AMediaCodec_start(encoder);
+
+        fd = ::open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (fd < 0) {
+            LOGE("ERROR: open");
+            goto error;
+        }
+
+        muxer = AMediaMuxer_new(fd, info->muxerFormat);
+        if (NULL == muxer) {
+            LOGE("ERROR: AMediaMuxer_new");
+            goto error;
+        }
+
+        AMediaMuxer_setOrientationHint(muxer, params.get(CAP_PROP_ORIENTATION_META, 0));
+
+        frameIndex = 0;
+        width = frameSize.width;
+        height = frameSize.height;
+        frameRate = fps;
+        videoTrackIndex = -1;
+
+        return true;
+
+    error:
+        close();
+        return false;
+    }
+
+    virtual void close()
+    {
+        if (videoTrackIndex >= 0 && NULL != muxer) {
+            drainEncoder(true);
+            AMediaMuxer_stop(muxer);
+        }
+
+        if (NULL != encoder) AMediaCodec_delete(encoder);
+        if (NULL != muxer) AMediaMuxer_delete(muxer);
+
+        #if __ANDROID_API__ >= 26
+        if (NULL != surface) ANativeWindow_release(surface);
+        #endif
+
+        if (fd >= 0) ::close(fd);
+        if (NULL != format) AMediaFormat_delete(format);
+
+        format = NULL;
+        encoder = NULL;
+        muxer = NULL;
+        #if __ANDROID_API__ >= 26
+        surface = NULL;
+        #endif
+        frameIndex = 0;
+        width = 0;
+        height = 0;
+        frameRate = 0.;
+        videoTrackIndex = -1;
+        fd = -1;
+    }
+
+    virtual double getProperty(int) const CV_OVERRIDE { return 0.; }
+    virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
+    virtual bool isOpened() const CV_OVERRIDE { return NULL != encoder; }
+};
+
+
+const AndroidMediaNdkVideoWriter::FourCCInfo AndroidMediaNdkVideoWriter::FOURCC_INFO[] = {
+    { CV_FOURCC('H', '2', '6', '4'), "video/avc", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
+    { CV_FOURCC('H', '2', '6', '5'), "video/hevc", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
+    { CV_FOURCC('H', '2', '6', '3'), "video/3gpp", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
+    { CV_FOURCC('M', 'P', '4', 'V'), "video/mp4v-es", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
+    { 0, NULL },
+};
+
+
+
 /****************** Implementation of interface functions ********************/
 
 Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename) {
@@ -334,4 +672,15 @@ Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename) {
     if (res && res->initCapture(filename.c_str()))
         return res;
     return Ptr<IVideoCapture>();
+}
+
+
+Ptr<IVideoWriter> cv::createAndroidVideoWriter(
+    const std::string& filename, int fourcc,
+    double fps, const cv::Size& frameSize,
+    const VideoWriterParameters& params) {
+    Ptr<AndroidMediaNdkVideoWriter> writer = makePtr<AndroidMediaNdkVideoWriter>(filename, fourcc, fps, frameSize, params);
+    if (writer && writer->isOpened())
+        return writer;
+    return Ptr<IVideoWriter>();
 }
