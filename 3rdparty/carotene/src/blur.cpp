@@ -391,9 +391,9 @@ void blur3x3(const Size2D &size, s32 cn,
                         }
                         else if (borderType == BORDER_MODE_REFLECT101)
                         {
-                            tcurr = vsetq_lane_u16(vgetq_lane_u16(tcurr, 3),tcurr, 5);
                             tcurr = vsetq_lane_u16(vgetq_lane_u16(tcurr, 4),tcurr, 6);
                             tcurr = vsetq_lane_u16(vgetq_lane_u16(tcurr, 5),tcurr, 7);
+                            tcurr = vsetq_lane_u16(vgetq_lane_u16(tcurr, 3),tcurr, 5);
                         }
                         else
                         {
