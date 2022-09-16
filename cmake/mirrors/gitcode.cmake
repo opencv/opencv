@@ -20,10 +20,10 @@ ocv_update(TBB_PKG_NAME_GITCODE "tbb-${TBB_RELEASE_GITCODE}")
 ocv_update(TBB_PKG_MD5_GITCODE 4eeafdf16a90cb66e39a31c8d6c6804e)
 ocv_update(TBB_PKG_MD5_ORIGINAL 5af6f6c2a24c2043e62e47205e273b1f) # same as OPENCV_TBB_RELEASE_MD5 for TBB release of v2020.2
 # ADE
-ocv_update(ADE_RELEASE_GITCODE "v0.1.1f")
+ocv_update(ADE_RELEASE_GITCODE "v0.1.2a")
 ocv_update(ADE_PKG_NAME_GITCODE "ade-${ADE_RELEASE_GITCODE}")
-ocv_update(ADE_PKG_MD5_GITCODE c12909e0ccfa93138c820ba91ff37b3c)
-ocv_update(ADE_PKG_MD5_ORIGINAL b624b995ec9c439cbc2e9e6ee940d3a2) # same as ade_md5 for ADE release of v0.1.1f
+ocv_update(ADE_PKG_MD5_GITCODE 6c8015a886a98fd8a67635431fa171d8)
+ocv_update(ADE_PKG_MD5_ORIGINAL fa4b3e25167319cb0fa9432ef8281945) # same as ade_md5 for ADE release of v0.1.2a
 
 #
 # Replace download links for packages in opencv/opencv_3rdparty:
