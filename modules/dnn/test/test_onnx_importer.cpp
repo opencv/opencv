@@ -87,7 +87,10 @@ public:
 
 TEST_P(Test_ONNX_layers, NonMaxSuppression)
 {
+    // ONNX test cases:
+    // https://github.com/onnx/onnx/blob/main/onnx/backend/test/case/node/nonmaxsuppression.py
     testONNXModels("nms", npy, 0, 0, false, false, 2);
+    testONNXModels("batched_nms", npy, 0, 0, false, false, 3);
 }
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
