@@ -227,16 +227,15 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
         // TODO  Add factory static method in ProcessingEngineBase
         if (mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION) {
-            GAPI_Assert(false &&
+            GAPI_LOG_WARNING(NULL,
                         "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
-                        " - is not implemented");
+                        " - is not implemented. Rollback to MFX implementation");
+        }
+        const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
+        if (!transcode_params.empty()) {
+            engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
         } else {
-            const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
-            if (!transcode_params.empty()) {
-                engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
-            } else {
-                engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
-            }
+            engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
         }
     }
 
