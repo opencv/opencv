@@ -300,6 +300,7 @@ LevMarq::Report detail::LevMarqBase::optimize()
                     lambdaLevMarq *= 1.0 / settings.initialLmDownFactor;
                 lmUpFactor = settings.initialLmUpFactor;
 
+                // Once set, these flags will be activated until next successful LM iteration - this is not a bug
                 smallGradient = (gradientMax < settings.minGradientTolerance);
                 smallStep = (xNorm < settings.stepNormTolerance);
                 smallEnergyDelta = (costChange / energy < settings.relEnergyDeltaTolerance);
