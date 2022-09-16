@@ -193,7 +193,7 @@ CallParams read<CallParams>(const cv::FileNode& fn) {
 template <typename V>
 std::map<std::string, V> readMap(const cv::FileNode& fn) {
     std::map<std::string, V> map;
-    for (auto item : fn) {
+    for (auto&& item : fn) {
         map.emplace(item.name(), read<V>(item));
     }
     return map;
@@ -380,10 +380,14 @@ int main(int argc, char* argv[]) {
                     builder.addDummy(call_params, read<DummyParams>(node_fn));
                 } else if (node_type == "Infer") {
                     auto infer_params = read<InferParams>(node_fn);
-                    RETHROW_WITH_MSG_IF_FAILED(
-                            utils::intersectMapWith(infer_params.config, gconfig),
-                            "Failed to combine global and local configs for Infer node: "
-                            + call_params.name);
+                    try {
+                        utils::mergeMapWith(infer_params.config, gconfig);
+                    } catch (std::exception& e) {
+                        std::stringstream ss;
+                        ss << "Failed to merge global and local config for Infer node: "
+                           << call_params.name << std::endl << e.what();
+                        throw std::logic_error(ss.str());
+                    }
                     builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
