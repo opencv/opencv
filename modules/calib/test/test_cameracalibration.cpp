@@ -2026,28 +2026,28 @@ TEST(Calib_StereoCalibrate, regression_22421)
     fs["desiredT"] >> desiredT;
 
     std::vector<float> obj_points = {0, 0, 0,
-                                     0.5, 0, 0,
-                                     1, 0, 0,
-                                     1.5000001, 0, 0,
-                                     2, 0, 0,
-                                     0, 0.5, 0,
-                                     0.5, 0.5, 0,
-                                     1, 0.5, 0,
-                                     1.5000001, 0.5, 0,
-                                     2, 0.5, 0,
-                                     0, 1, 0,
-                                     0.5, 1, 0,
-                                     1, 1, 0,
-                                     1.5000001, 1, 0,
-                                     2, 1, 0,
-                                     0, 1.5000001, 0,
-                                     0.5, 1.5000001, 0,
-                                     1, 1.5000001, 0,
-                                     1.5000001, 1.5000001, 0,
-                                     2, 1.5000001, 0};
+                                     0.5f, 0, 0,
+                                     1.f, 0, 0,
+                                     1.5000001f, 0, 0,
+                                     2.0f, 0, 0,
+                                     0, 0.5f, 0,
+                                     0.5f, 0.5f, 0,
+                                     1.f, 0.5, 0,
+                                     1.5000001f, 0.5f, 0,
+                                     2.f, 0.5f, 0,
+                                     0, 1.f, 0,
+                                     0.5f, 1.f, 0,
+                                     1.f, 1.f, 0,
+                                     1.5000001f, 1.f, 0,
+                                     2.f, 1.f, 0,
+                                     0, 1.5000001f, 0,
+                                     0.5f, 1.5000001f, 0,
+                                     1.f, 1.5000001f, 0,
+                                     1.5000001f, 1.5000001f, 0,
+                                     2.f, 1.5000001f, 0};
 
     cv::Mat obj_points_mat(obj_points, true);
-    obj_points_mat = obj_points_mat.reshape(1, obj_points.size() / 3);
+    obj_points_mat = obj_points_mat.reshape(1, int(obj_points.size()) / 3);
     std::vector<cv::Mat> grid_points(image_points1.size(), obj_points_mat);
 
     cv::Mat R, T;

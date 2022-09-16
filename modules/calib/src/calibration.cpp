@@ -433,8 +433,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     if (releaseObject)
         JoBuf = Mat( maxPoints*2, maxPoints*3, CV_64FC1);
 
-    auto cameraCalcJErr = [matM, _m, npoints, nimages, flags, releaseObject, nparams, maxPoints, aspectRatio, NINTRINSIC,
-                           &JeBuf, &JiBuf, &JoBuf, &errBuf, &allErrors, &perViewErr]
+    auto cameraCalcJErr = [&, npoints, nimages, flags, releaseObject, nparams, maxPoints, NINTRINSIC]
                           (InputOutputArray _param, OutputArray _JtErr, OutputArray _JtJ, double& errnorm) -> bool
     {
         bool optimizeObjPoints = releaseObject;
@@ -659,7 +658,7 @@ static double stereoCalibrateImpl(
     Matx33d A[2];
     int pointsTotal = 0, maxPoints = 0, nparams;
     bool recomputeIntrinsics = false;
-    double aspectRatio[2] = {0};
+    double aspectRatio[2] = {0, 0};
 
     CV_Assert( _imagePoints1.type() == _imagePoints2.type() &&
                _imagePoints1.depth() == _objectPoints.depth() );
@@ -675,7 +674,8 @@ static double stereoCalibrateImpl(
         pointsTotal += ni;
     }
 
-    Mat objectPoints, imagePoints[2];
+    Mat objectPoints;
+    Mat imagePoints[2];
     _objectPoints.convertTo(objectPoints, CV_64F);
     objectPoints = objectPoints.reshape(3, 1);
 
@@ -895,8 +895,7 @@ static double stereoCalibrateImpl(
     Mat J_LRBuf( maxPoints*2, 6, CV_64F );
     Mat JiBuf( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
 
-    auto lmcallback = [errBuf, JeBuf, J_LRBuf, JiBuf, recomputeIntrinsics, nimages, flags, aspectRatio, &A, &dk, NINTRINSIC,
-                       _npoints, objectPoints, imagePoints, Dist, &perViewErr]
+    auto lmcallback = [&, recomputeIntrinsics, nimages, flags, NINTRINSIC, _npoints]
                       (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {
         Mat_<double> param_m = _param.getMat();
@@ -911,7 +910,7 @@ static double stereoCalibrateImpl(
 
         if( recomputeIntrinsics )
         {
-            size_t idx = (nimages+1)*6;
+            int idx = (nimages+1)*6;
 
             if( flags & CALIB_SAME_FOCAL_LENGTH )
             {
@@ -949,7 +948,7 @@ static double stereoCalibrateImpl(
         {
             int ni = _npoints.at<int>(i);
 
-            size_t idx = (i+1)*6;
+            int idx = (i+1)*6;
             om[0] = Vec3d(param_m(idx + 0), param_m(idx + 1), param_m(idx + 2));
             T[0]  = Vec3d(param_m(idx + 3), param_m(idx + 4), param_m(idx + 5));
 
