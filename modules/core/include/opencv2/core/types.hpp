@@ -2017,6 +2017,15 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
     return 1.0 - Aab / (Aa + Ab - Aab);
 }
 
+/** @brief Finds out if there is any intersection between two rectangles
+ *
+ * mainly useful for language bindings
+ * @param rect1 First rectangle
+ * @param rect2 Second rectangle
+ * @return the area of the intersection
+ */
+CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }
+
 ////////////////////////////// RotatedRect //////////////////////////////
 
 inline
