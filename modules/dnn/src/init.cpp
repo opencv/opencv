@@ -175,6 +175,9 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
     CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
 
+    CV_DNN_REGISTER_LAYER_CLASS(Scatter,        ScatterLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ScatterND,      ScatterNDLayer);
+
     CV_DNN_REGISTER_LAYER_CLASS(Quantize,         QuantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dequantize,       DequantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Requantize,       RequantizeLayer);
