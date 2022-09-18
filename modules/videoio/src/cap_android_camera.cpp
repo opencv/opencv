@@ -181,6 +181,7 @@ class AndroidCameraCapture : public IVideoCapture
     std::shared_ptr<ACameraCaptureSession> captureSession;
     CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
     int32_t frameWidth = 0;
+    int32_t frameStride = 0;
     int32_t frameHeight = 0;
     int32_t colorFormat;
     std::vector<uint8_t> buffer;
@@ -307,8 +308,11 @@ public:
         AImage_getPlaneData(image.get(), 1, &uPixel, &uLen);
         AImage_getPlaneData(image.get(), 2, &vPixel, &vLen);
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
+        int32_t yBufferLen = yLen;
 
-        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
+        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) && (yLen == (yStride * (frameHeight - 1)) + frameWidth) && (uLen == (uvStride * ((frameHeight / 2) - 1)) + frameWidth - 1) && (uvStride == yStride)  && (vLen == uLen) ) {
+            frameStride = yStride;
+            yBufferLen = frameStride * frameHeight;
             colorFormat = COLOR_FormatYUV420SemiPlanar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
@@ -326,8 +330,8 @@ public:
         }
 
         buffer.clear();
-        buffer.insert(buffer.end(), yPixel, yPixel + yLen);
-        buffer.insert(buffer.end(), vPixel, vPixel + yLen / 2);
+        buffer.insert(buffer.end(), yPixel, yPixel + yBufferLen);
+        buffer.insert(buffer.end(), vPixel, vPixel + yBufferLen / 2);
         return true;
     }
 
@@ -336,8 +340,8 @@ public:
         if (buffer.empty()) {
             return false;
         }
-        Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
         if (colorFormat == COLOR_FormatYUV420Planar) {
+            Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
             switch (fourCC) {
                 case FOURCC_BGR:
                     cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
@@ -356,18 +360,20 @@ public:
                     break;
             }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
+            Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
+            Mat tmp = (frameWidth == frameStride) ? yuv : yuv(Rect(0, 0, frameWidth, frameHeight + frameHeight / 2));
             switch (fourCC) {
                 case FOURCC_BGR:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_NV21);
+                    cv::cvtColor(tmp, out, cv::COLOR_YUV2BGR_NV21);
                     break;
                 case FOURCC_RGB:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2RGB_NV21);
+                    cv::cvtColor(tmp, out, cv::COLOR_YUV2RGB_NV21);
                     break;
                 case FOURCC_GRAY:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2GRAY_NV21);
+                    cv::cvtColor(tmp, out, cv::COLOR_YUV2GRAY_NV21);
                     break;
                 case FOURCC_NV21:
-                    yuv.copyTo(out);
+                    tmp.copyTo(out);
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
