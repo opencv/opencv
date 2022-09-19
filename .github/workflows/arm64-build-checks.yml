@@ -2,6 +2,9 @@ name: arm64 build checks
 
 on: workflow_dispatch
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   build:
 
