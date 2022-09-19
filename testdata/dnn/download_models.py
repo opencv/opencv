@@ -995,6 +995,11 @@ models = [
         url='https://raw.githubusercontent.com/WeChatCV/opencv_3rdparty/wechat_qrcode/sr.caffemodel',
         sha='2b181b55d1d7af718eaca6cabdeb741217b64c73',
         filename='wechat_2021-01/sr.caffemodel'),
+    Model(
+        name='yolov7_not_simplified',
+        downloader=GDrive('1rm3mIqjJNu0xPTCjMKnXccspazV1B2zv'),
+        sha='fcd0fa401c83bf2b29e18239a9c2c989c9b8669d',
+        filename='onnx/models/yolov7_not_simplified.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
