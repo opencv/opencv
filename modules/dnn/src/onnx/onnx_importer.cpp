@@ -2638,83 +2638,57 @@ void ONNXImporter::parseConstantFill(LayerParams& layerParams, const opencv_onnx
     addConstant(node_proto.output(0), tensor);
 }
 
-void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    CV_Assert(node_proto.input_size() == 2);
-    Mat indexMat = getBlob(node_proto, 1);
-    CV_Assert_N(indexMat.type() == CV_32S, indexMat.total() == 1);
-    int index = indexMat.at<int>(0);
-    int axis = layerParams.get<int>("axis", 0);
+    CV_CheckEQ(node_proto.input_size(), 2, "");
 
-    if ((constBlobs.find(node_proto.input(0)) != constBlobs.end()))
+    // TODO: get rid of the type conversions and 1-d/0-d special-casing when the time comes
+    if (layer_id.find(node_proto.input(1)) == layer_id.end())
     {
-        Mat input = getBlob(node_proto, 0);
-        Mat out;
-        std::vector<cv::Range> ranges(input.dims, Range::all());
-        ranges[axis] = Range(index, index + 1);
-
-        out = input(ranges);
-        MatShape outShape = shape(out);
-        if (outShape.size() > 1)
+        int real_ndims = getBlobExtraInfo(node_proto.input(1)).real_ndims;
+        layerParams.set("real_ndims", real_ndims);
+        if (layer_id.find(node_proto.input(0)) == layer_id.end())
         {
-            outShape.erase(outShape.begin() + axis);
-            out.reshape(0, outShape);
-        } else {
-            out.dims = 1;
+            std::vector<Mat> inputs, output;
+
+            Mat input = getBlob(node_proto, 0);
+            int input_real_ndims = input.dims;
+            int type = input.type();
+            input.convertTo(input, CV_32FC1);
+            inputs.push_back(input);
+
+            Mat indices = getBlob(node_proto, 1);
+            indices.convertTo(indices, CV_32FC1);
+            inputs.push_back(indices);
+
+            runLayer(layerParams, inputs, output);
+            output.back().convertTo(output.back(), type);
+            output.back().dims = std::max(input_real_ndims - real_ndims, 1);
+            addConstant(node_proto.output(0), output.back());
+            return;
         }
-        addConstant(node_proto.output(0), out);
-        return;
     }
-    else
+
+    for (int i = 0; i < node_proto.input_size(); ++i)
     {
-        IterShape_t shapeIt = outShapes.find(node_proto.input(0));
-        CV_Assert(shapeIt != outShapes.end());
-        MatShape inpShape = shapeIt->second;
-
-        LayerParams sliceLp;
-        sliceLp.type = "Slice";
-        sliceLp.name = inpShape.size() > 1 ? layerParams.name + "/slice" : layerParams.name;
-        std::vector<int> begin(inpShape.size(), 0);
-        std::vector<int> end(inpShape.size(), INT_MAX);
-        begin[axis] = index;
-        end[axis] = index + 1;
-
-        cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin.data(), begin.size());
-        cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end.data(), end.size());
-        sliceLp.set("begin", paramBegin);
-        sliceLp.set("end", paramEnd);
-        sliceLp.set("has_dynamic_shapes", hasDynamicShapes);
-
-        if (inpShape.size() > 1)
+        if (layer_id.find(node_proto.input(i)) == layer_id.end())
         {
-            opencv_onnx::NodeProto proto;
-            proto.add_input(node_proto.input(0));
-            proto.add_output(sliceLp.name);
-            addLayer(sliceLp, proto);
-
-            inpShape.erase(inpShape.begin() + axis);
-            layerParams.type = "Reshape";
-            layerParams.set("axis", 0);
-            layerParams.set("dim", DictValue::arrayInt(&inpShape[0], inpShape.size()));
-            if (hasDynamicShapes)
+            LayerParams constParams;
+            constParams.name = node_proto.input(i);
+            constParams.type = "Const";
+            Mat blob = getBlob(node_proto, i);
+            if (i == 1)
             {
-                std::vector<int> dynamicAxes;
-                std::vector<int> inputIndices;
-                for (int index = 0; index < inpShape.size(); ++index)
-                    dynamicAxes.push_back(index);
-                for (int index = 0; index < inpShape.size(); ++index)
-                    inputIndices.push_back(index);
-                layerParams.set("dynamic_axes", DictValue::arrayInt(dynamicAxes.data(), dynamicAxes.size()));
-                layerParams.set("input_indices", DictValue::arrayInt(inputIndices.data(), inputIndices.size()));
+                blob.convertTo(blob, CV_32FC1);
             }
-            node_proto.set_input(0, sliceLp.name);
-        }
-        else
-        {
-            layerParams = sliceLp;
+            constParams.blobs.push_back(blob);
+
+            opencv_onnx::NodeProto proto;
+            proto.add_output(constParams.name);
+            addLayer(constParams, proto);
         }
     }
+
     addLayer(layerParams, node_proto);
 }
 
