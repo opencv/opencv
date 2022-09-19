@@ -886,6 +886,13 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                     OutputArray R, OutputArray T, int flags, TermCriteria criteria)
 {
+    return cv::fisheye::stereoCalibrate(objectPoints, imagePoints1, imagePoints2, K1, D1, K2, D2, imageSize, R, T, noArray(), noArray(), flags, criteria);
+}
+
+double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                    InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
+                                    OutputArray R, OutputArray T, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags, TermCriteria criteria)
+{
     CV_INSTRUMENT_REGION();
 
     CV_Assert(!objectPoints.empty() && !imagePoints1.empty() && !imagePoints2.empty());
@@ -1116,6 +1123,27 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     if (D2.needed()) cv::Mat(intrinsicRight.k).convertTo(D2, D2.empty() ? CV_64FC1 : D2.type());
     if (R.needed()) _R.convertTo(R, R.empty() ? CV_64FC1 : R.type());
     if (T.needed()) cv::Mat(Tcur).convertTo(T, T.empty() ? CV_64FC1 : T.type());
+    if (rvecs.isMatVector())
+    {
+        if(rvecs.empty())
+            rvecs.create(n_images, 1, CV_64FC3);
+
+        if(tvecs.empty())
+            tvecs.create(n_images, 1, CV_64FC3);
+
+        for(int i = 0; i < n_images; i++ )
+        {
+            rvecs.create(3, 1, CV_64F, i, true);
+            tvecs.create(3, 1, CV_64F, i, true);
+            memcpy(rvecs.getMat(i).ptr(), rvecs1[i].val, sizeof(Vec3d));
+            memcpy(tvecs.getMat(i).ptr(), tvecs1[i].val, sizeof(Vec3d));
+        }
+    }
+    else
+    {
+        if (rvecs.needed()) cv::Mat(rvecs1).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
+        if (tvecs.needed()) cv::Mat(tvecs1).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
+    }
 
     return rms;
 }
