@@ -2330,6 +2330,90 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_3d_dim_2");
 }
 
+// This test is mainly to test:
+//  1. identity node with constant input
+//  2. limited support to range operator (all inputs are constant)
+//  3. parseExpand with multiple broadcast axes
+//  4. 1D mat dimension issue with the output of range operator
+TEST_P(Test_ONNX_layers, YOLOv7)
+{
+    std::string weightPath = _tf("models/yolov7_not_simplified.onnx");
+    std::string imgPath = _tf("../dog_orig_size.png");
+
+    Size targetSize{640, 640};
+    float conf_threshold = 0.3;
+    float iou_threshold = 0.5;
+
+    // Reference, which is collected with input size of 640x640
+    std::vector<int> refClassIds{1, 16, 7};
+    std::vector<float> refScores{0.9614331f, 0.9589417f, 0.8679074f};
+    // [x1, y1, x2, y2] x 3
+    std::vector<Rect2d> refBoxes{Rect2d(105.973236f, 150.16716f,  472.59012f, 466.48834f),
+                                  Rect2d(109.97953f,  246.17862f, 259.83676f, 600.76624f),
+                                  Rect2d(385.96185f, 83.02809f,  576.07355f,  189.82793f)};
+
+    Mat img = imread(imgPath);
+    Mat inp = blobFromImage(img, 1/255.0, targetSize, Scalar(0, 0, 0), true, false);
+
+    Net net = readNet(weightPath);
+
+    net.setInput(inp);
+    std::vector<Mat> outs;
+    net.forward(outs, net.getUnconnectedOutLayersNames());
+
+    Mat preds = outs[3].reshape(1, outs[3].size[1]); // [1, 25200, 85]
+
+    // Retrieve
+    std::vector<int> classIds;
+    std::vector<float> confidences;
+    std::vector<Rect2d> boxes;
+    // each row is [cx, cy, w, h, conf_obj, conf_class1, ..., conf_class80]
+    for (int i = 0; i < preds.rows; ++i)
+    {
+        // filter out non objects
+        float obj_conf = preds.row(i).at<float>(4);
+        if (obj_conf < conf_threshold)
+            continue;
+
+        // get class id and conf
+        Mat scores = preds.row(i).colRange(5, preds.cols);
+        double conf;
+        Point maxLoc;
+        minMaxLoc(scores, 0, &conf, 0, &maxLoc);
+        conf *= obj_conf;
+        if (conf < conf_threshold)
+            continue;
+
+        // get bbox coords
+        float* det = preds.ptr<float>(i);
+        double cx = det[0];
+        double cy = det[1];
+        double w = det[2];
+        double h = det[3];
+        // [x1, y1, x2, y2]
+        boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
+                                cx + 0.5 * w, cy + 0.5 * h));
+        classIds.push_back(maxLoc.x);
+        confidences.push_back(conf);
+    }
+
+    // NMS
+    std::vector<int> keep_idx;
+    NMSBoxes(boxes, confidences, conf_threshold, iou_threshold, keep_idx);
+
+    std::vector<int> keep_classIds;
+    std::vector<float> keep_confidences;
+    std::vector<Rect2d> keep_boxes;
+    for (auto i : keep_idx)
+    {
+        keep_classIds.push_back(classIds[i]);
+        keep_confidences.push_back(confidences[i]);
+        keep_boxes.push_back(boxes[i]);
+    }
+
+    normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
