@@ -147,6 +147,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Const,          ConstLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Arg,            ArgLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reciprocal,     ReciprocalLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Gather,         GatherLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
