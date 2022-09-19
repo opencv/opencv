@@ -1008,20 +1008,32 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     }
 
     // read the header to make sure it succeeds
+    bool success = false;
     try
     {
         // read the header to make sure it succeeds
-        if (!decoder->readHeader())
-            return 0;
+        if (decoder->readHeader())
+            success = true;
     }
     catch (const cv::Exception& e)
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-        return 0;
     }
     catch (...)
     {
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+    }
+
+    if (!success)
+    {
+        decoder.release();
+        if (!filename.empty())
+        {
+            if (0 != remove(filename.c_str()))
+            {
+                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            }
+        }
         return 0;
     }
 
@@ -1056,7 +1068,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
 
         // read the image data
         Mat mat(size.height, size.width, type);
-        bool success = false;
+        success = false;
         try
         {
             if (decoder->readData(mat))
@@ -1085,6 +1097,14 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
             break;
         }
         ++current;
+    }
+
+    if (!filename.empty())
+    {
+        if (0 != remove(filename.c_str()))
+        {
+            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+        }
     }
 
     return !mats.empty();
