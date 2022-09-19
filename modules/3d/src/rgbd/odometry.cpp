@@ -517,7 +517,7 @@ void warpFrame(InputArray depth, InputArray image, InputArray mask,
 
                     if (z < oldz)
                     {
-                        zBuffer.at<float>(uv) = z;
+                        zBuffer.at<float>(uv) = (float)z;
 
                         switch (imageType)
                         {

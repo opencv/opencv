@@ -461,7 +461,7 @@ public:
     typedef Vec<T, 3> Vec3T;
     typedef Matx<T, 3, 3> Mat33T;
 
-    LINEMOD(int _rows, int _cols, int _windowSize, const Mat& _K, float _diffThr = 50.f) :
+    LINEMOD(int _rows, int _cols, int _windowSize, const Mat& _K, double _diffThr = 50.0) :
         RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD),
         differenceThreshold(_diffThr)
     { }
@@ -552,9 +552,9 @@ public:
 
         Vec3T X1_minus_X, X2_minus_X;
 
-        ContainerDepth difference_threshold(differenceThreshold);
+        ContainerDepth difference_threshold((ContainerDepth)differenceThreshold);
         //TODO: fixit, difference threshold should not depend on input type
-        difference_threshold *= (std::is_same<DepthDepth, ushort>::value ? 1000.f : 1.f);
+        difference_threshold *= (ContainerDepth)(std::is_same<DepthDepth, ushort>::value ? 1000.0 : 1.0);
         normals.setTo(std::numeric_limits<DepthDepth>::quiet_NaN());
         for (int y = r; y < this->rows - r - 1; ++y)
         {
@@ -609,7 +609,7 @@ public:
         return normals;
     }
 
-    float differenceThreshold;
+    double differenceThreshold;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
