@@ -180,6 +180,7 @@ private:
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
@@ -2427,9 +2428,6 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
 
     if (!haveVariables)
     {
-        if (broadcast_axes.size() > 1)
-            CV_Error(Error::StsNotImplemented, "Expand op doesn't support multiple axes for constant input");
-
         if (broadcast_axes.empty())
         {
             addConstant(output_name, getBlob(node_proto, 0));
@@ -2437,10 +2435,15 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
         }
 
         Mat input = getBlob(node_proto, 0);
-        input = input.reshape(0, total(inpShape, 0, broadcast_axes[0]));
-        Mat output = cv::repeat(input, 1, targetShape[broadcast_axes[0]]);
-        output = output.reshape(0, targetShape);
-        addConstant(output_name, output);
+        MatShape subTargetShape = inpShape;
+        for (auto broadcast_axis : broadcast_axes)
+        {
+            subTargetShape[broadcast_axis] = targetShape[broadcast_axis];
+            input = input.reshape(0, total(inpShape, 0, broadcast_axis));
+            Mat output = cv::repeat(input, 1, subTargetShape[broadcast_axis]);
+            input = output.reshape(0, subTargetShape);
+        }
+        addConstant(output_name, input);
         return;
     }
 
@@ -2497,6 +2500,12 @@ void ONNXImporter::parseReshape(LayerParams& layerParams, const opencv_onnx::Nod
             std::vector<Mat> inputs(1, getBlob(node_proto, 0)), outputs;
             runLayer(layerParams, inputs, outputs);
             addConstant(node_proto.output(0), outputs[0]);
+            if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end())
+            {
+                const int real_ndims_input0 = getBlobExtraInfo(node_proto, 0).real_ndims;
+                if (real_ndims_input0 == 1 && blob.total() == 1 && blob.at<int>() == -1) // 1D tensor as input0 (data), and shape is -1
+                    constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
+            }
             return;
         }
     }
@@ -2548,7 +2557,14 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(shapeIt != outShapes.end());
     const MatShape& inpShape = shapeIt->second;
 
+    bool isInput1D = false;
+    if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end())
+        if (getBlobExtraInfo(node_proto, 0).real_ndims == 1)
+            isInput1D = true;
+
     int dims = static_cast<int>(inpShape.size());
+    if (isInput1D)
+        dims = 1;
     Mat shapeMat(dims, 1, CV_32S);
     bool isDynamicShape = false;
     for (int j = 0; j < dims; ++j)
@@ -3080,8 +3096,63 @@ void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+// Currently we only support range with all constant inputs
+void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(node_proto.input_size() == 3); // 0 - start, 1 - limit, 2 - delta
+    layerParams.type = "Range";
+
+    std::vector<int> const_id;
+    for (int i = 0; i < node_proto.input_size(); i++)
+        if (layer_id.find(node_proto.input(i)) == layer_id.end())
+            const_id.push_back(i);
+
+    // only supports the case which all inputs are constant
+    CV_Assert(const_id.size() == 3);
+
+    Mat startMat = getBlob(node_proto, 0);
+    CV_Assert(startMat.type() == CV_32SC1);
+    int start = startMat.at<int>(0);
+
+    Mat limitMat = getBlob(node_proto, 1);
+    CV_Assert(limitMat.type() == CV_32SC1);
+    int limit = limitMat.at<int>(0);
+
+    Mat deltaMat = getBlob(node_proto, 2);
+    CV_Assert(deltaMat.type() == CV_32SC1);
+    int delta = deltaMat.at<int>(0);
+
+    int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
+    Mat r(number_of_elements, 1, CV_32SC1);
+    for (int i = 0; i < number_of_elements; i++)
+    {
+        r.at<int>(i) = start + (i * delta);
+    }
+    addConstant(node_proto.output(0), r);
+    constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    bool is_all_input_const = true;
+    for (int i = 0; i < node_proto.input_size(); i++)
+    {
+        if (layer_id.find(node_proto.input(i)) != layer_id.end())
+        {
+            is_all_input_const = false;
+            break;
+        }
+    }
+    if (is_all_input_const && node_proto.output_size() == 1)
+    {
+        std::vector<Mat> input, output;
+        for (int i = 0; i < node_proto.input_size(); i++)
+            input.push_back(getBlob(node_proto, i));
+        runLayer(layerParams, input, output);
+        addConstant(node_proto.output(0), output[0]);
+        return;
+    }
+
     for (int j = 0; j < node_proto.input_size(); j++) {
         if (layer_id.find(node_proto.input(j)) == layer_id.end())
             layerParams.blobs.push_back(getBlob(node_proto, j));
@@ -3685,6 +3756,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = &ONNXImporter::parseElementWise;
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["Range"] = &ONNXImporter::parseRange;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
