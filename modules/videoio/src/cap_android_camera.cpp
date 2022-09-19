@@ -157,6 +157,7 @@ void OnCaptureFailed(void* context,
                      ACameraCaptureFailure* failure);
 
 #define CAPTURE_TIMEOUT_SECONDS 2
+#define CAPTURE_POLL_INTERVAL_MS 5
 
 /**
  * Range of Camera Exposure Time:
@@ -166,6 +167,10 @@ void OnCaptureFailed(void* context,
  */
 static const long kMinExposureTime = 1000000L;
 static const long kMaxExposureTime = 250000000L;
+
+static double elapsedTimeFrom(std::chrono::time_point<std::chrono::system_clock> start) {
+    return std::chrono::duration<double>(std::chrono::system_clock::now() - start).count();
+}
 
 class AndroidCameraCapture : public IVideoCapture
 {
@@ -267,12 +272,21 @@ public:
                     LOGW("No Buffer Available error occured - waiting for callback");
                     waitingCapture = true;
                     captureSuccess = false;
+                    auto start = std::chrono::system_clock::now();
                     bool captured = condition.wait_for(lock, std::chrono::seconds(CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
                     waitingCapture = false;
                     if (captured) {
                         mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
+                        // even though an image has been captured we may not be able to acquire it straight away so we poll every 10ms
+                        while (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE && elapsedTimeFrom(start) < CAPTURE_TIMEOUT_SECONDS) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(CAPTURE_POLL_INTERVAL_MS));
+                            mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
+                        }
                         if (mStatus != AMEDIA_OK) {
                             LOGE("Acquire image failed with error code: %d", mStatus);
+                            if (elapsedTimeFrom(start) >= CAPTURE_TIMEOUT_SECONDS) {
+                                LOGE("Image acquisition timed out");
+                            }
                             return false;
                         }
                     } else {
