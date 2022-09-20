@@ -1,5 +1,7 @@
 name: lint_python
 on: workflow_dispatch
+permissions:
+  contents: read # to fetch code (actions/checkout)
 jobs:
   lint_python:
     runs-on: ubuntu-latest
