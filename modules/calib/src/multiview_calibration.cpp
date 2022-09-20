@@ -150,7 +150,7 @@ static bool maximumSpanningTree (int NUM_CAMERAS, int NUM_FRAMES, const std::vec
             return false;
         visited[max_weight_idx] = true;
         for (int cam2 = 0; cam2 < NUM_CAMERAS; cam2++) {
-            if (!visited[cam2] && weights[max_weight_idx][cam2] > 0) {
+            if (!visited[cam2] && overlap[max_weight_idx][cam2] > 0) {
                 if (weight[cam2] < weights[max_weight_idx][cam2]) {
                     weight[cam2] = weights[max_weight_idx][cam2];
                     parent[cam2] = max_weight_idx;
@@ -435,24 +435,32 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
     solver.optimize();
 }
 
-static void testOverlap (const std::vector<std::vector<bool>> &visibility_mat) {
+static void checkConnected (const std::vector<std::vector<bool>> &visibility_mat) {
     const int NUM_CAMERAS = (int)visibility_mat.size(), NUM_FRAMES = (int)visibility_mat[0].size();
-    std::vector<bool> has_overlap(NUM_CAMERAS, false);
-    for (int c1 = 0; c1 < NUM_CAMERAS; c1++) {
-        if (has_overlap[c1])
-            continue;
-        for (int c2 = 0; c2 < NUM_CAMERAS; c2++) {
-            for (int f = 0; f < NUM_FRAMES; f++) {
-                if (visibility_mat[c1][f] && visibility_mat[c2][f]) {
-                    has_overlap[c1] = has_overlap[c2] = true;
-                    break;
+    std::vector<bool> visited(NUM_CAMERAS, false);
+    std::function<void(int)> dfs_search;
+    dfs_search = [&] (int cam) {
+        visited[cam] = true;
+        for (int cam2 = 0; cam2 < NUM_CAMERAS; cam2++) {
+            if (!visited[cam2]) {
+                for (int f = 0; f < NUM_FRAMES; f++) {
+                    if (visibility_mat[cam][f] && visibility_mat[cam2][f]) {
+                        dfs_search(cam2);
+                        break;
+                    }
                 }
             }
-            if (has_overlap[c1])
-                break;
         }
-        if (!has_overlap[c1])
-            CV_Error(Error::StsBadArg, "camera "+std::to_string(c1)+" has no overlap with other cameras!");
+    };
+    dfs_search(0);
+    for (int c = 0; c < NUM_CAMERAS; c++) {
+        if (! visited[c]) {
+            std::string connected_component = "";
+            for (int i = 0; i < NUM_CAMERAS; i++)
+                if (visited[i])
+                    connected_component += std::to_string(i);
+            CV_Error(Error::StsBadArg, "Cannot reach camera "+std::to_string(c)+" from camera 0. Found connected component "+connected_component);
+        }
     }
 }
 }
@@ -526,7 +534,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
         }
         num_visible_frames_per_camera[c] = num_visible_frames;
     }
-    multiview::testOverlap(visibility_mat);
+    multiview::checkConnected(visibility_mat);
     int flags_extrinsics = CALIB_FIX_INTRINSIC;
     if (num_fisheye_cameras != 0 && num_fisheye_cameras != NUM_CAMERAS) {
         // cameras are mixed (fisheye and pinhole)
@@ -571,8 +579,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             double repr_err;
             if (is_fisheye_vec[camera]) {
                 repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
-                    Ks[camera], distortions[camera], rvecs, tvecs,
-                    flags_intrinsics == 0 ? fisheye::CALIB_RECOMPUTE_EXTRINSIC : flags_intrinsics);
+                    Ks[camera], distortions[camera], rvecs, tvecs, flags_intrinsics);
                 // calibrate does not compute error per view, so compute it manually
                 errors_per_view = std::vector<double>(obj_points_.size());
                 for (int f = 0; f < (int) obj_points_.size(); f++) {
