@@ -1024,6 +1024,17 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
     }
 
+    int current = start;
+    while (success && current > 0)
+    {
+        if (!decoder->nextPage())
+        {
+            success = false;
+            break;
+        }
+        --current;
+    }
+
     if (!success)
     {
         decoder.release();
@@ -1035,16 +1046,6 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
             }
         }
         return 0;
-    }
-
-    int current = start;
-    while (current > 0)
-    {
-        if (!decoder->nextPage())
-        {
-            return false;
-        }
-        --current;
     }
 
     while (current < count)
@@ -1107,6 +1108,8 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         }
     }
 
+    if (!success)
+        mats.clear();
     return !mats.empty();
 }
 
