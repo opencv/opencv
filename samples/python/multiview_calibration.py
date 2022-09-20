@@ -14,7 +14,7 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx):
     ax.set_title('Cameras position and pattern of frame '+str(frame_idx), fontsize=20)
     all_pts = [pattern]
     colors = np.random.RandomState(0).rand(len(R),3)
-    for i, cam in enumerate(R):
+    for i in range(len(R)):
         cam_box_i = cam_box.copy()
         cam_box_i[:,0] *= image_sizes[i][0] / max(image_sizes[i][1], image_sizes[i][0])
         cam_box_i[:,1] *= image_sizes[i][1] / max(image_sizes[i][1], image_sizes[i][0])
@@ -107,6 +107,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
                               is_fisheye=np.array(is_fisheye, dtype=int),
                               USE_INTRINSICS_GUESS=False,
                               flags_intrinsics=0)
+    assert success
     Rs = [cv.Rodrigues(rvec)[0] for rvec in rvecs]
     print('rvecs', Rs)
     print('tvecs', Ts)
@@ -196,9 +197,9 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
             if pattern_type.lower() == 'checkerboard':
                 ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
             elif pattern_type.lower() == 'circles':
-                ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID);
+                ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID)
             elif pattern_type.lower() == 'acircles':
-                ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID);
+                ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID)
             else:
                 raise "Calibration pattern is not supported!"
 
