@@ -36,7 +36,7 @@ namespace cv { namespace utils { namespace fs {
  * Provides interprocess synchronization mechanism.
  * Platform dependent.
  *
- * Supports multiple readers / single writer access pattern (RW / readers–writer / shared-exclusive lock).
+ * Supports multiple readers / single writer access pattern (RW / readers-writer / shared-exclusive lock).
  *
  * File must exist.
  * File can't be re-used (for example, I/O operations via std::fstream is not safe)

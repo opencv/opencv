@@ -41,7 +41,7 @@
 
 /*
  Guoshen Yu, Jean-Michel Morel, ASIFT: An Algorithm for Fully Affine
- Invariant Comparison,  Image Processing On Line, 1 (2011), pp. 11–38.
+ Invariant Comparison,  Image Processing On Line, 1 (2011), pp. 11-38.
  https://doi.org/10.5201/ipol.2011.my-asift
  */
 
