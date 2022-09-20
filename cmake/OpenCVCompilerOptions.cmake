@@ -437,6 +437,7 @@ if(MSVC)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4275) # non dll-interface class 'std::exception' used as base for dll-interface class 'cv::Exception'
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4512) # Assignment operator could not be generated
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4589) # Constructor of abstract class 'cv::ORB' ignores initializer for virtual base class 'cv::Algorithm'
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4819) # Symbols like delta or epsilon cannot be represented
   endif()
 
   if(CV_ICC AND NOT ENABLE_NOISY_WARNINGS)

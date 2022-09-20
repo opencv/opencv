@@ -694,8 +694,16 @@ public:
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     //! Returns the allocator associated with the stream.
     CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
