@@ -839,7 +839,7 @@ static void calibrateRobotWorldHandEyeShah(const std::vector<Mat_<double>>& cRw,
 
 //Reference:
 //A. Li, L. Wang, and D. Wu, "Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product"
-//International Journal of Physical Sciences, vol. 5, pp. 1530–1536, 2010.
+//International Journal of Physical Sciences, vol. 5, pp. 1530-1536, 2010.
 //Matlab code: http://math.loyola.edu/~mili/Calibration/
 static void calibrateRobotWorldHandEyeLi(const std::vector<Mat_<double>>& cRw, const std::vector<Mat_<double>>& ctw,
                                          const std::vector<Mat_<double>>& gRb, const std::vector<Mat_<double>>& gtb,

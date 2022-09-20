@@ -406,14 +406,14 @@ struct SPRT_history {
     /*
      * delta:
      * The probability of a data point being consistent
-     * with a ‘bad’ model is modeled as a probability of
+     * with a 'bad' model is modeled as a probability of
      * a random event with Bernoulli distribution with parameter
-     * δ : p(1|Hb) = δ.
+     * delta : p(1|Hb) = delta.
 
      * epsilon:
-     * The probability p(1|Hg) = ε
-     * that any randomly chosen data point is consistent with a ‘good’ model
-     * is approximated by the fraction of inliers ε among the data
+     * The probability p(1|Hg) = epsilon
+     * that any randomly chosen data point is consistent with a 'good' model
+     * is approximated by the fraction of inliers epsilon among the data
      * points
 
      * A is the decision threshold, the only parameter of the Adapted SPRT

@@ -39,6 +39,8 @@ ocv_warnings_disable(CMAKE_C_FLAGS
     -Wunused-function   # v2.4.0: Clang
 )
 
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4819) # vs2019 Win64
+
 add_library(${OPENJPEG_LIBRARY_NAME} STATIC ${OPENJPEG_SRCS})
 
 target_compile_definitions(${OPENJPEG_LIBRARY_NAME} PUBLIC OPJ_STATIC)
