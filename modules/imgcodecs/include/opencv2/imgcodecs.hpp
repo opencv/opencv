@@ -332,6 +332,51 @@ CV_EXPORTS_W bool haveImageReader( const String& filename );
  */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
+/** @brief To read Multi Page images on demand
+
+The ImageCollection class provides iterator API to read multi page images on demand. Create iterator
+to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
+
+The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
+then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
+However, the intermediate pages are not decoded during the process, so typically it's quite fast.
+This is required because multipage codecs does not support going backwards.
+After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
+If you need memory, you can use .releaseCache() method to release cached index.
+The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.
+*/
+class CV_EXPORTS ImageCollection {
+public:
+    struct CV_EXPORTS iterator {
+        iterator(ImageCollection* col);
+        iterator(ImageCollection* col, int end);
+        Mat& operator*();
+        Mat* operator->();
+        iterator& operator++();
+        iterator operator++(int);
+        friend bool operator== (const iterator& a, const iterator& b) { return a.m_curr == b.m_curr; };
+        friend bool operator!= (const iterator& a, const iterator& b) { return a.m_curr != b.m_curr; };
+
+    private:
+        ImageCollection* m_pCollection;
+        int m_curr;
+    };
+
+    ImageCollection();
+    ImageCollection(const String& filename, int flags);
+    void init(const String& img, int flags);
+    size_t size() const;
+    const Mat& at(int index);
+    const Mat& operator[](int index);
+    void releaseCache(int index);
+    iterator begin();
+    iterator end();
+
+    class Impl;
+    Ptr<Impl> getImpl();
+protected:
+    Ptr<Impl> pImpl;
+};
 
 //! @} imgcodecs
 
