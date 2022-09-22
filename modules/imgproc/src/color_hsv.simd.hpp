@@ -141,7 +141,7 @@ struct RGB2HSV_b
             v_expand(v_reinterpret_as_s16(vd0), vq0, vq1);
             v_expand(v_reinterpret_as_s16(vd1), vq2, vq3);
             {
-                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storevq[vsize];
+                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storevq[VTraits<v_uint8>::max_nlanes];
                 v_store_aligned(storevq, vq0);
                 v_store_aligned(storevq + vsize/4, vq1);
                 v_store_aligned(storevq + 2*vsize/4, vq2);
@@ -161,7 +161,7 @@ struct RGB2HSV_b
             v_expand(v_reinterpret_as_s16(diffd0), diffq0, diffq1);
             v_expand(v_reinterpret_as_s16(diffd1), diffq2, diffq3);
             {
-                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storediffq[vsize];
+                int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) storediffq[VTraits<v_uint8>::max_nlanes];
                 v_store_aligned(storediffq, diffq0);
                 v_store_aligned(storediffq + vsize/4, diffq1);
                 v_store_aligned(storediffq + 2*vsize/4, diffq2);
@@ -814,7 +814,7 @@ struct RGB2HLS_b
 #if CV_SIMD_OR_VECTOR
         static const int fsize = VTraits<v_float32>::vlanes();
         //TODO: fix that when v_interleave is available
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[fsize*3];
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
         v_store_interleave(interTmpM, vx_setall_f32(1.f), vx_setall_f32(255.f), vx_setall_f32(255.f));
         v_float32 mhls0, mhls1, mhls2, mhls3;
         mhls0 = vx_load_aligned(interTmpM);
@@ -1118,7 +1118,7 @@ struct HLS2RGB_b
 #if CV_SIMD_OR_VECTOR
         static const int fsize = VTraits<v_float32>::vlanes();
         //TODO: fix that when v_interleave is available
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[fsize*3];
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
         v_float32 v255inv = vx_setall_f32(1.f/255.f);
         v_store_interleave(interTmpM, vx_setall_f32(1.f), v255inv, v255inv);
         v_float32 mhls0, mhls1, mhls2;
