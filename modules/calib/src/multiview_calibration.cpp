@@ -459,7 +459,7 @@ static void checkConnected (const std::vector<std::vector<bool>> &visibility_mat
             for (int i = 0; i < NUM_CAMERAS; i++)
                 if (visited[i])
                     connected_component += std::to_string(i)+" ";
-            CV_Error(Error::StsBadArg, "Cannot reach camera "+std::to_string(c)+" from camera 0. Found connected component "+connected_component);
+            CV_Error(Error::StsBadArg, "Cannot reach camera "+std::to_string(c)+" from camera from the connected component "+connected_component);
         }
     }
 }
