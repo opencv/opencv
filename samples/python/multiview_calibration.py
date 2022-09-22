@@ -1,4 +1,4 @@
-import sys, traceback, cv2 as cv, numpy as np, os, json, argparse, matplotlib.pyplot as plt
+import sys, traceback, cv2 as cv, numpy as np, os, json, argparse, matplotlib.pyplot as plt, time
 
 def getDimBox(pts):
     return np.array([[pts[...,k].min(), pts[...,k].max()] for k in range(pts.shape[-1])])
@@ -41,7 +41,7 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx):
     ax.set_xlabel('x', fontsize=20); ax.set_ylabel('y', fontsize=20); ax.set_zlabel('z', fontsize=20)
     ax.view_init(azim=90, elev=-40)
 
-def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dist_coeff, is_fisheye, cam_idx, frame_idx, per_acc, visual_thr=1.5, image=None):
+def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dist_coeff, is_fisheye, cam_idx, frame_idx, per_acc, image=None):
     rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)[:2]
     if is_fisheye:
         points_2d_est = cv.fisheye.projectPoints(pattern_points, rvec2, tvec2, K, dist_coeff.flatten())[0]
@@ -63,22 +63,32 @@ def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dis
     else:
         plt.imshow(image)
         ax = plt.gca()
-    arrow_good = arrow_bad = None
+    num_colors = 8
+    cmap_fnc = lambda x : np.concatenate((x, 1-x, np.zeros_like(x)))
+    cmap = cmap_fnc(np.linspace(0,1,num_colors)[None,:])
+    thrs = np.linspace(0, 10, num_colors)
+    arrows = [None for i in range(num_colors)]
     for k, (pt1, pt2) in enumerate(zip(points_2d, points_2d_est)):
-        color = 'red' if errs[k] > visual_thr else 'green'
+        color = cmap[:,-1]
+        for i in range(len(thrs)):
+            if errs[k] < thrs[i]:
+                color = cmap[:,i]
+                break
         arrow = ax.arrow(pt1[0], pt1[1], pt2[0]-pt1[0], pt2[1]-pt1[1], color=color, width=width, head_width=head_width)
-        if errs[k] > visual_thr and arrow_bad is None:
-            arrow_bad = arrow
-        elif errs[k] < visual_thr and arrow_good is None:
-            arrow_good = arrow
-    legend = []
-    legend_str = []
-    if arrow_good is not None:
-        legend.append(arrow_good)
-        legend_str.append('less than '+str(visual_thr)+' px')
-    if arrow_bad is not None:
-        legend.append(arrow_bad)
-        legend_str.append('greater than '+str(visual_thr)+' px')
+        for i in range(len(thrs)):
+            if errs[k] < thrs[i]:
+                arrows[i] = arrow
+                break
+    legend, legend_str = [], []
+    for i in range(num_colors):
+        if arrows[i] is not None:
+            legend.append(arrows[i])
+            if i == 0:
+                legend_str.append('lower than %.1f'%thrs[i])
+            elif i == num_colors-1:
+                legend_str.append('higher than %.1f'%thrs[i])
+            else:
+                legend_str.append('between %.1f'%thrs[i-1]+' and %.1f'%thrs[i])
     ax.legend(legend, legend_str, fontsize=15)
     ax.set_title(title, loc='center', wrap=True, fontsize=16)
 
@@ -97,6 +107,9 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
     for i in range(num_cameras):
         for j in range(num_frames):
             visibility[i,j] = int(len(image_points[i][j]) != 0)
+    with np.printoptions(threshold=np.inf):
+        print("Visibility Matrix:\n", np.transpose(visibility))
+    start_time = time.time()
     success, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
         cv.calibrateMultiview(objPoints=pattern_points_all,
                               imagePoints=image_points,
@@ -107,6 +120,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
                               is_fisheye=np.array(is_fisheye, dtype=int),
                               USE_INTRINSICS_GUESS=False,
                               flags_intrinsics=0)
+    print('calibration time', time.time() - start_time, 'seconds')
     assert success
     Rs = [cv.Rodrigues(rvec)[0] for rvec in rvecs]
     print('rvecs', Rs)
@@ -125,7 +139,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
         image = None if image_names is None else cv.cvtColor(cv.imread(image_names[cam_idx][frame_idx]), cv.COLOR_BGR2RGB)
         plotProjection(image_points[cam_idx][frame_idx], pattern_points, rvecs0[frame_idx],
             tvecs0[frame_idx], rvecs[cam_idx], Ts[cam_idx], Ks[cam_idx], distortions[cam_idx],
-            is_fisheye[cam_idx], cam_idx, frame_idx, 1e2*(errors_per_frame[cam_idx,frame_idx]<errors).sum()/len(errors), 1.5, image)
+            is_fisheye[cam_idx], cam_idx, frame_idx, 1e2*(errors_per_frame[cam_idx,frame_idx]<errors).sum()/len(errors), image)
     plot(visibility_idxs[0,0], visibility_idxs[1,0])
     plt.show()
 
