@@ -1172,6 +1172,20 @@ TEST_P(Test_ONNX_layers, Slice_Steps_5DInput)
     testONNXModels("slice_opset_11_steps_5d");
 }
 
+TEST_P(Test_ONNX_layers, Slice_Nonseq_Axes)
+{
+    testONNXModels("slice_nonseq_axes");
+    testONNXModels("slice_nonseq_axes_steps");
+    testONNXModels("slice_nonseq_miss_axes_steps");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Neg_Axes)
+{
+    testONNXModels("slice_neg_axes");
+    testONNXModels("slice_neg_axes_steps");
+    testONNXModels("slice_neg_miss_axes_steps");
+}
+
 TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");
