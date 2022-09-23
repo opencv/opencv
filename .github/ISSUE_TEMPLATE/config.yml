@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions
+    url: https://forum.opencv.org/
+    about: Ask questions and discuss with OpenCV community members
