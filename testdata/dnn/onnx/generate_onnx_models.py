@@ -556,6 +556,92 @@ custom_slice_list_5 = [
 model_5 = Slice(custom_slice=custom_slice_list_5)
 save_data_and_model("slice_opset_11_steps_5d", input_5, model_5, version=11)
 
+########### Slice with axes ###########
+def generate_slice_with_axes():
+    def generate_model(name, X, Y, starts, ends, axes, steps=None):
+        starts = onnx.numpy_helper.from_array(starts, name='starts')
+        ends = onnx.numpy_helper.from_array(ends, name='ends')
+        axes = onnx.numpy_helper.from_array(axes, name='axes')
+        inputs = ['X', 'starts', 'ends', 'axes']
+        if steps is not None:
+            steps = onnx.numpy_helper.from_array(steps, name='steps')
+            inputs.append('steps')
+
+        node = onnx.helper.make_node(
+            'Slice',
+            inputs,
+            outputs=['Y'],
+        )
+
+        X = onnx.helper.make_tensor_value_info(
+            'X', onnx.TensorProto.FLOAT, list(x.shape))
+        Y = onnx.helper.make_tensor_value_info(
+            'Y', onnx.TensorProto.FLOAT, list(y.shape))
+
+        graph = onnx.helper.make_graph(
+            [node],             # nodes
+            name,               # name
+            [X],                # inputs
+            [Y],                # outputs
+        )
+
+        graph.initializer.append(starts)
+        graph.initializer.append(ends)
+        graph.initializer.append(axes)
+        if steps is not None:
+            graph.initializer.append(steps)
+
+        model = onnx.helper.make_model(graph, producer_name='onnx')
+        onnx.checker.check_model(model)
+
+        input_files = os.path.join("data", "input_" + name)
+        np.save(input_files, x.data)
+
+        output_files = os.path.join("data", "output_" + name)
+        np.save(output_files, np.ascontiguousarray(y.data))
+
+        models_files = os.path.join("models", name + ".onnx")
+        onnx.save(model, models_files)
+
+    x = np.random.randn(20, 10, 5).astype(np.float32)
+    starts = np.array([1, 2, 3], dtype=np.int64)
+    ends = np.array([5, 11, 8], dtype=np.int64)
+    axes = np.array([2, 0, 1], dtype=np.int64)
+    y = x[2:11, 3:8, 1:5]
+    generate_model("slice_nonseq_axes", x, y, starts, ends, axes)
+
+    steps = np.array([1, 4, 2], dtype=np.int64)
+    y = x[2:11:4, 3:8:2, 1:5:1]
+    generate_model("slice_nonseq_axes_steps", x, y, starts, ends, axes, steps)
+
+    starts = np.array([1, 2], dtype=np.int64)
+    ends = np.array([5, 11], dtype=np.int64)
+    axes = np.array([2, 0], dtype=np.int64)
+    steps = np.array([1, 4], dtype=np.int64)
+    y = x[2:11:4, :, 1:5:1]
+    generate_model("slice_nonseq_miss_axes_steps", x, y, starts, ends, axes, steps)
+
+    x = np.random.randn(3, 10, 8, 5).astype(np.float32)
+    starts = np.array([0, 2, 3, 1], dtype=np.int64)
+    ends = np.array([3, 9, 7, 4], dtype=np.int64)
+    axes = np.array([-4, 1, -2, 3], dtype=np.int64)
+    y = x[0:3, 2:9, 3:7, 1:4]
+    generate_model("slice_neg_axes", x, y, starts, ends, axes)
+
+    steps = np.array([1, 4, 3, 2], dtype=np.int64)
+    y = x[0:3:1, 2:9:4, 3:7:3, 1:4:2]
+    generate_model("slice_neg_axes_steps", x, y, starts, ends, axes, steps)
+
+    starts = np.array([0, 3], dtype=np.int64)
+    ends = np.array([3, 7], dtype=np.int64)
+    axes = np.array([-4, -2], dtype=np.int64)
+    steps = np.array([1, 3], dtype=np.int64)
+    y = x[0:3:1, :, 3:7:3, :]
+    generate_model("slice_neg_miss_axes_steps", x, y, starts, ends, axes, steps)
+
+generate_slice_with_axes()
+
+
 class Eltwise(nn.Module):
 
     def __init__(self):
