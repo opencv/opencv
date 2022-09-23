@@ -1081,6 +1081,7 @@ template<typename R> struct TheTest
         typedef typename VTraits<uint_reg>::lane_type uint_type;
 
         Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
+        dataA[0] = std::numeric_limits<int_type>::max();
         dataA[1] *= (LaneType)-1;
         union
         {
