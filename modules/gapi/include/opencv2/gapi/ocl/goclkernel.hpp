@@ -119,6 +119,10 @@ template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
 };
+template<> struct ocl_get_in<cv::GFrame>
+{
+    static cv::MediaFrame get(GOCLContext &ctx, int idx) { return ctx.inArg<cv::MediaFrame>(idx); }
+};
 template<typename U> struct ocl_get_in<cv::GOpaque<U> >
 {
     static const U& get(GOCLContext &ctx, int idx) { return ctx.inArg<OpaqueRef>(idx).rref<U>(); }

@@ -429,4 +429,5 @@ std::string ext_mem_frame_type_to_cstr(int type) {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+
 #endif // HAVE_ONEVPL

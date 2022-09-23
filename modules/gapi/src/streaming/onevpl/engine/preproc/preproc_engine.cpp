@@ -281,7 +281,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
             vppRequests[1].AllocId = std::numeric_limits<uint16_t>::max() - request_id++;
             GAPI_Assert(request_id != std::numeric_limits<uint16_t>::max() && "Something wrong");
 
-            vppRequests[1].Type |= MFX_MEMTYPE_FROM_VPPIN;
+            vppRequests[1].Type |= MFX_MEMTYPE_FROM_VPPIN | MFX_MEMTYPE_SHARED_RESOURCE;
             vpp_out_pool_key = acceleration_policy->create_surface_pool(vppRequests[1],
                                                                         mfxVPPParams.vpp.Out);
 

@@ -251,7 +251,8 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     }
 
-    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
+    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE |
+                       MFX_MEMTYPE_FROM_VPPIN | MFX_MEMTYPE_SHARED_RESOURCE;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
                 acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 
