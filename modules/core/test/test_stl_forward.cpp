@@ -99,6 +99,13 @@ TEST_F(CORE_stl_forward, iterators_replacable_reverse_iterator)
     EXPECT_FALSE(cv::detail::__it_replacable(intVec.rbegin(), intVec.end(), subMat.rbegin()));
 }
 
+TEST_F(CORE_stl_forward, tuple_replacer_single)
+{
+    static_assert(std::is_same<decltype(cv::detail::get_replaced_val(mat_f.begin())), float*>::value, "Couldn't replace cv iterator");
+    static_assert(std::is_same<decltype(cv::detail::get_replaced_val(mat.end<int>())), int*>::value, "Couldn't replace cv iterator");
+    static_assert(!std::is_same<decltype(cv::detail::get_replaced_val(intVec.begin())), int*>::value, "Replaced non cv it while it shouldn't");
+}
+
 TEST_F(CORE_stl_forward, tuple_replacer)
 {
     //Simple example of only opencv iterators being replaced by their pointers
@@ -108,6 +115,45 @@ TEST_F(CORE_stl_forward, tuple_replacer)
     //Check the pointer values
     EXPECT_EQ((void*)std::get<0>(itReplace), (void*)mat_f.begin().ptr) << "In replaced tuple: Pointers not pointing to expected location";
     EXPECT_EQ((void*)std::get<1>(itReplace), (void*)mat_f.end().ptr) << "In replaced tuple: Pointers not pointing to expected location";
+
+
+    //This seems like it shouldn't compile because it is not a valid operation to do this on submatrices.
+    //This however is the purpose of the run-time function __iterators__replaceable! We can't do this at compile time
+    auto itReplaceSub= cv::detail::make_tpl_replaced(subMat.begin(), subMat.end());
+    static_assert(std::is_same<decltype(itReplaceSub), std::tuple<int*,int*>>::value,"CV iterators not replaced with their pointers.");
+
+    //Mixed opencv and other iterator (list)
+    auto itReplaceMixed= cv::detail::make_tpl_replaced(mat.begin<int>(), mat.end<int>(),intList.begin());
+    static_assert(std::is_same<decltype(itReplaceMixed), std::tuple<int*,int*,decltype (intList.begin())>>::value,"CV iterators not replaced with their pointers.");
+
+    //Turn order around: list first
+    auto itReplaceMixed_order_reversed= cv::detail::make_tpl_replaced(intList.begin(),mat.begin<int>(), mat.end<int>());
+    static_assert(std::is_same<decltype(itReplaceMixed_order_reversed), std::tuple<decltype (intList.begin()),int*,int*>>::value,"CV iterators not replaced with their pointers.");
+
+
+    //Test with a lambda. decltype of a lambda isn't really specified. So we compare only the first elements
+    auto itReplaced_lambda= cv::detail::make_tpl_replaced(intList.begin(),mat.begin<int>(), mat.end<int>(),[](int val){return 2*val;});
+    static_assert(std::is_same<std::tuple_element<0,decltype(itReplaced_lambda)>::type,decltype(intList.begin())>::value,"CV iterators not replaced with their pointers.");
+    static_assert(std::is_same<std::tuple_element<1,decltype(itReplaced_lambda)>::type,int*>::value,"CV iterators not replaced with their pointers.");
+    static_assert(std::is_same<std::tuple_element<2,decltype(itReplaced_lambda)>::type,int*>::value,"CV iterators not replaced with their pointers.");
+}
+
+TEST_F(CORE_stl_forward, reverse_tuple_replacer_single)
+{
+    static_assert(std::is_same<decltype(cv::detail::get_replaced_val(mat_f.rbegin())), std::reverse_iterator<float*>>::value, "Couldn't replace cv iterator");
+    static_assert(std::is_same<decltype(cv::detail::get_replaced_val(mat.rend<int>())), std::reverse_iterator<int*>>::value, "Couldn't replace cv iterator");
+    static_assert(!std::is_same<decltype(cv::detail::get_replaced_val(intVec.rbegin())), int*>::value, "Replaced non cv it while it shouldn't");
+}
+
+TEST_F(CORE_stl_forward, reverse_tuple_replacer)
+{
+    //Simple example of only opencv iterators being replaced by their pointers
+    auto itReplace= cv::detail::make_tpl_replaced(mat_f.rbegin(), mat_f.rend());
+    static_assert(std::is_same<decltype(itReplace), std::tuple<std::reverse_iterator<float*>,std::reverse_iterator<float*>>>::value,"CV iterators not replaced with their pointers.");
+
+    //Check the pointer values
+    EXPECT_EQ((void*)std::get<0>(itReplace).base(), (void*)mat_f.end().ptr) << "In replaced tuple: Pointers not pointing to expected location";
+    EXPECT_EQ((void*)std::get<1>(itReplace).base(), (void*)mat_f.begin().ptr) << "In replaced tuple: Pointers not pointing to expected location";
 
 
     //This seems like it shouldn't compile because it is not a valid operation to do this on submatrices.
@@ -211,32 +257,27 @@ TEST_F(CORE_stl_forward, count_if_test)
 
     //Test replaced iterators vs. normal stl algo
     EXPECT_EQ(experimental::count_if(mat.begin<int>(), mat.end<int>(),lambda), std::count_if(mat.begin<int>(), mat.end<int>(),lambda));
+    EXPECT_EQ(experimental::count_if(mat.rbegin<int>(), mat.rend<int>(),lambda), std::count_if(mat.rbegin<int>(), mat.rend<int>(),lambda));
     EXPECT_EQ(experimental::count_if(mat.begin<int>(), mat.end<int>(),lambda), std::count_if((int*)mat.begin<int>().ptr, (int*)mat.end<int>().ptr,lambda));
 }
 
 TEST_F(CORE_stl_forward, find_test)
 {
     //Test replaced iterators vs. normal stl algo
-    EXPECT_EQ(*experimental::find(mat.begin<int>(), mat.end<int>(),5),5);
     EXPECT_EQ(*experimental::find(mat_f.begin(), mat_f.end(),5),*std::find(mat_f.begin(), mat_f.end(),5));
+    EXPECT_EQ(experimental::find(mat_f.begin(), mat_f.end(),5),std::find(mat_f.begin(), mat_f.end(),5));
+
+    //Test reverse iterator vs stl algo
+    EXPECT_EQ(*experimental::find(mat_f.rbegin(), mat_f.rend(),5), *std::find(mat_f.rbegin(), mat_f.rend(),5));
+    EXPECT_EQ(experimental::find(mat_f.rbegin(), mat_f.rend(),5), std::find(mat_f.rbegin(), mat_f.rend(),5));
+
+    EXPECT_EQ(*experimental::find(intVec.begin(), intVec.end(),5),*std::find(intVec.begin(), intVec.end(),5));
+    EXPECT_EQ(*experimental::find(intVec.rbegin(), intVec.rend(),5),*std::find(intVec.rbegin(), intVec.rend(),5));
 
     std::ptrdiff_t replaced_dist = experimental::find(mat.begin<int>(), mat.end<int>(),10) - mat.begin<int>();
     std::ptrdiff_t orig_dist = std::find(mat.begin<int>(), mat.end<int>(),10) - mat.begin<int>();
 
     EXPECT_EQ(replaced_dist, orig_dist);
-}
-
-
-TEST_F(CORE_stl_forward, DISABLED_find_test_reverse)
-{
-    //Test replaced iterators vs. normal stl algo
-    //EXPECT_EQ(*experimental::find(mat.begin<int>(), mat.end<int>(),5),5);
-    //EXPECT_EQ(*experimental::find(mat_f.begin(), mat_f.end(),5),*std::find(mat_f.begin(), mat_f.end(),5));
-
-    std::ptrdiff_t replaced_dist = experimental::find(mat.begin<int>(), mat.end<int>(),10) - mat.begin<int>();
-    std::ptrdiff_t orig_dist = std::find(mat.rbegin<int>(), mat.rend<int>(),10) - mat.rbegin<int>();
-
-    EXPECT_EQ(replaced_dist,orig_dist);
 }
 
 #endif //_stl_forward_cpp_features_present

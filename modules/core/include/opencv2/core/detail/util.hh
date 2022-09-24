@@ -84,6 +84,13 @@ struct is_base_of_reverse<Base, Derived, typename std::enable_if<is_reverse_iter
         : std::is_base_of<Base,decltype(std::declval<Derived&>().base())>
 { }; // specialization for reverse_iterators
 
+//Test if Dummy type is derived from cv::MatConstIterator or is a reverse_iterator thereof.
+//Just a convenience class
+template<class Dummy>
+struct is_base_of_reverse_cvit : is_base_of_reverse<cv::MatConstIterator, Dummy>
+{ };
+
+
 
 }}
 #endif //OPENCV_CORE_STL_ALGORITHM_HPP

@@ -76,6 +76,11 @@ auto make_tpl_replaced(Arg && arg, Args&& ... args)
     return std::tuple_cat(std::make_tuple(replace_single_element_directional(arg)), make_tpl_replaced(args ...));
 }
 
+template<typename Arg>
+auto get_replaced_val(Arg && arg)
+{
+    return std::get<0>(make_tpl_replaced(std::forward<Arg>(arg)));
+}
 
 } // namespace detail
 } // namespace cv
