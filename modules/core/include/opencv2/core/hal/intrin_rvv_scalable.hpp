@@ -1618,7 +1618,7 @@ inline int v_signmask(const _Tpvec& a) \
 { \
     uint8_t ans[4] = {0}; \
     vsm(ans, vmslt(a, 0, VTraits<_Tpvec>::vlanes()), VTraits<_Tpvec>::vlanes()); \
-    return *(reinterpret_cast<int*>(ans)); \
+    return *(reinterpret_cast<int*>(ans)) & (((__int128_t)1 << VTraits<_Tpvec>::vlanes()) - 1); \
 } \
 inline int v_scan_forward(const _Tpvec& a) \
 { \
