@@ -193,7 +193,7 @@ CallParams read<CallParams>(const cv::FileNode& fn) {
 template <typename V>
 std::map<std::string, V> readMap(const cv::FileNode& fn) {
     std::map<std::string, V> map;
-    for (auto&& item : fn) {
+    for (auto item : fn) {
         map.emplace(item.name(), read<V>(item));
     }
     return map;
