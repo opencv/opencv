@@ -126,6 +126,8 @@ bool WebPDecoder::readHeader()
     WebPBitstreamFeatures features;
     if (VP8_STATUS_OK == WebPGetFeatures(header, sizeof(header), &features))
     {
+        CV_CheckEQ(features.has_animation, false, "WebP backend does not support animated webp images");
+
         m_width  = features.width;
         m_height = features.height;
 
