@@ -577,7 +577,7 @@ a vector\<Point2f\> .
 -   @ref RHO - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
 (used in the RANSAC and RHO methods only). That is, if
-\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
+\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} \cdot \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
 then the point \f$i\f$ is considered as an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 @param mask Optional output mask set by a robust method ( RANSAC or LMeDS ). Note that the input
@@ -642,7 +642,7 @@ CV_EXPORTS Mat findHomography( InputArray srcPoints, InputArray dstPoints,
 @param Qz Optional output 3x3 rotation matrix around z-axis.
 
 The function computes a RQ decomposition using the given rotations. This function is used in
-decomposeProjectionMatrix to decompose the left 3x3 submatrix of a projection matrix into a camera
+@ref decomposeProjectionMatrix to decompose the left 3x3 submatrix of a projection matrix into a camera
 and a rotation matrix.
 
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
@@ -676,7 +676,7 @@ be used in OpenGL. Note, there is always more than one sequence of rotations abo
 principal axes that results in the same orientation of an object, e.g. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angles are only one of the possible solutions.
 
-The function is based on RQDecomp3x3 .
+The function is based on @ref RQDecomp3x3 .
  */
 CV_EXPORTS_W void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix,
                                              OutputArray rotMatrix, OutputArray transVect,
@@ -696,7 +696,7 @@ CV_EXPORTS_W void decomposeProjectionMatrix( InputArray projMatrix, OutputArray 
 
 The function computes partial derivatives of the elements of the matrix product \f$A*B\f$ with regard to
 the elements of each of the two input matrices. The function is used to compute the Jacobian
-matrices in stereoCalibrate but can also be used in any other similar optimization function.
+matrices in @ref stereoCalibrate but can also be used in any other similar optimization function.
  */
 CV_EXPORTS_W void matMulDeriv( InputArray A, InputArray B, OutputArray dABdA, OutputArray dABdB );
 
@@ -722,10 +722,10 @@ The functions compute:
 \f[\begin{array}{l} \texttt{rvec3} =  \mathrm{rodrigues} ^{-1} \left ( \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \mathrm{rodrigues} ( \texttt{rvec1} ) \right )  \\ \texttt{tvec3} =  \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \texttt{tvec1} +  \texttt{tvec2} \end{array} ,\f]
 
 where \f$\mathrm{rodrigues}\f$ denotes a rotation vector to a rotation matrix transformation, and
-\f$\mathrm{rodrigues}^{-1}\f$ denotes the inverse transformation. See Rodrigues for details.
+\f$\mathrm{rodrigues}^{-1}\f$ denotes the inverse transformation. See @ref Rodrigues for details.
 
 Also, the functions can compute the derivatives of the output vectors with regards to the input
-vectors (see matMulDeriv ). The functions are used inside stereoCalibrate but can also be used in
+vectors (see @ref matMulDeriv ). The functions are used inside @ref stereoCalibrate but can also be used in
 your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a
 function that contains a matrix multiplication.
  */
@@ -1084,7 +1084,7 @@ calibrateCamera for details.
 old interface all the per-view vectors are concatenated.
 @param imageSize Image size in pixels used to initialize the principal point.
 @param aspectRatio If it is zero or negative, both \f$f_x\f$ and \f$f_y\f$ are estimated independently.
-Otherwise, \f$f_x = f_y * \texttt{aspectRatio}\f$ .
+Otherwise, \f$f_x = f_y \cdot \texttt{aspectRatio}\f$ .
 
 The function estimates and returns an initial camera intrinsic matrix for the camera calibration process.
 Currently, the function only supports planar calibration patterns, which are patterns where each
@@ -1098,12 +1098,12 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 
 @param image Source chessboard view. It must be an 8-bit grayscale or color image.
 @param patternSize Number of inner corners per a chessboard row and column
-( patternSize = cvSize(points_per_row,points_per_colum) = cvSize(columns,rows) ).
+( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
 -   @ref CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black
 and white, rather than a fixed threshold level (computed from the average image brightness).
--   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before
+-   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with @ref equalizeHist before
 applying fixed or adaptive thresholding.
 -   @ref CALIB_CB_FILTER_QUADS Use additional criteria (like contour area, perimeter,
 square-like shape) to filter out false quads extracted at the contour retrieval stage.
@@ -1117,7 +1117,7 @@ are found and they are placed in a certain order (row by row, left to right in e
 Otherwise, if the function fails to find all the corners or reorder them, it returns 0. For example,
 a regular chessboard has 8 x 8 squares and 7 x 7 internal corners, that is, points where the black
 squares touch each other. The detected coordinates are approximate, and to determine their positions
-more accurately, the function calls cornerSubPix. You also may use the function cornerSubPix with
+more accurately, the function calls @ref cornerSubPix. You also may use the function @ref cornerSubPix with
 different parameters if returned coordinates are not accurate enough.
 
 Sample usage of detecting and drawing chessboard corners: :
@@ -1154,9 +1154,9 @@ CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corner
 @param image Destination image. It must be an 8-bit color image.
 @param patternSize Number of inner corners per a chessboard row and column
 (patternSize = cv::Size(points_per_row,points_per_column)).
-@param corners Array of detected corners, the output of findChessboardCorners.
+@param corners Array of detected corners, the output of @ref findChessboardCorners.
 @param patternWasFound Parameter indicating whether the complete board was found or not. The
-return value of findChessboardCorners should be passed here.
+return value of @ref findChessboardCorners should be passed here.
 
 The function draws individual chessboard corners detected either as red circles if the board was not
 found, or as colored corners connected with lines if the board was found.
@@ -1542,7 +1542,7 @@ Besides the stereo-related information, the function can also perform a full cal
 the two cameras. However, due to the high dimensionality of the parameter space and noise in the
 input data, the function can diverge from the correct solution. If the intrinsic parameters can be
 estimated with high accuracy for each of the cameras individually (for example, using
-calibrateCamera ), you are recommended to do so and then pass @ref CALIB_FIX_INTRINSIC flag to the
+@ref calibrateCamera ), you are recommended to do so and then pass @ref CALIB_FIX_INTRINSIC flag to the
 function along with the computed intrinsic parameters. Otherwise, if all the parameters are
 estimated at once, it makes sense to restrict some parameters, for example, pass
  @ref CALIB_SAME_FOCAL_LENGTH and @ref CALIB_ZERO_TANGENT_DIST flags, which is usually a
@@ -1608,7 +1608,7 @@ pixels from the original images from the cameras are retained in the rectified i
 image pixels are lost). Any intermediate value yields an intermediate result between
 those two extreme cases.
 @param newImageSize New image resolution after rectification. The same size should be passed to
-initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
+@ref initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
 is passed (default), it is set to the original imageSize . Setting it to a larger value can help you
 preserve details in the original image, especially when there is a big radial distortion.
 @param validPixROI1 Optional output rectangles inside the rectified images where all the pixels
@@ -1620,7 +1620,7 @@ are valid. If alpha=0 , the ROIs cover the whole images. Otherwise, they are lik
 
 The function computes the rotation matrices for each camera that (virtually) make both camera image
 planes the same plane. Consequently, this makes all the epipolar lines parallel and thus simplifies
-the dense stereo correspondence problem. The function takes the matrices computed by stereoCalibrate
+the dense stereo correspondence problem. The function takes the matrices computed by @ref stereoCalibrate
 as input. As output, it provides two rotation matrices and also two projection matrices in the new
 coordinates. The function distinguishes the following two cases:
 
@@ -1636,10 +1636,17 @@ coordinates. The function distinguishes the following two cases:
                      \end{bmatrix}\f]
 
     \f[\texttt{P2} = \begin{bmatrix}
-                        f & 0 & cx_2 & T_x*f \\
+                        f & 0 & cx_2 & T_x \cdot f \\
                         0 & f & cy & 0 \\
                         0 & 0 & 1 & 0
                      \end{bmatrix} ,\f]
+
+    \f[\texttt{Q} = \begin{bmatrix}
+                        1 & 0 & 0 & -cx_1 \\
+                        0 & 1 & 0 & -cy \\
+                        0 & 0 & 0 & f \\
+                        0 & 0 & -\frac{1}{T_x} & \frac{cx_1 - cx_2}{T_x}
+                    \end{bmatrix} \f]
 
     where \f$T_x\f$ is a horizontal shift between the cameras and \f$cx_1=cx_2\f$ if
     @ref CALIB_ZERO_DISPARITY is set.
@@ -1656,15 +1663,22 @@ coordinates. The function distinguishes the following two cases:
 
     \f[\texttt{P2} = \begin{bmatrix}
                         f & 0 & cx & 0 \\
-                        0 & f & cy_2 & T_y*f \\
+                        0 & f & cy_2 & T_y \cdot f \\
                         0 & 0 & 1 & 0
                      \end{bmatrix},\f]
+
+    \f[\texttt{Q} = \begin{bmatrix}
+                        1 & 0 & 0 & -cx \\
+                        0 & 1 & 0 & -cy_1 \\
+                        0 & 0 & 0 & f \\
+                        0 & 0 & -\frac{1}{T_y} & \frac{cy_1 - cy_2}{T_y}
+                    \end{bmatrix} \f]
 
     where \f$T_y\f$ is a vertical shift between the cameras and \f$cy_1=cy_2\f$ if
     @ref CALIB_ZERO_DISPARITY is set.
 
 As you can see, the first three columns of P1 and P2 will effectively be the new "rectified" camera
-matrices. The matrices, together with R1 and R2 , can then be passed to initUndistortRectifyMap to
+matrices. The matrices, together with R1 and R2 , can then be passed to @ref initUndistortRectifyMap to
 initialize the rectification map for each camera.
 
 See below the screenshot from the stereo_calib.cpp sample. Some red horizontal lines pass through
@@ -1687,20 +1701,20 @@ CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs
 
 @param points1 Array of feature points in the first image.
 @param points2 The corresponding points in the second image. The same formats as in
-findFundamentalMat are supported.
+@ref findFundamentalMat are supported.
 @param F Input fundamental matrix. It can be computed from the same set of point pairs using
-findFundamentalMat .
+@ref findFundamentalMat .
 @param imgSize Size of the image.
 @param H1 Output rectification homography matrix for the first image.
 @param H2 Output rectification homography matrix for the second image.
 @param threshold Optional threshold used to filter out the outliers. If the parameter is greater
 than zero, all the point pairs that do not comply with the epipolar geometry (that is, the points
-for which \f$|\texttt{points2[i]}^T*\texttt{F}*\texttt{points1[i]}|>\texttt{threshold}\f$ ) are
-rejected prior to computing the homographies. Otherwise, all the points are considered inliers.
+for which \f$|\texttt{points2[i]}^T \cdot \texttt{F} \cdot \texttt{points1[i]}|>\texttt{threshold}\f$ )
+are rejected prior to computing the homographies. Otherwise, all the points are considered inliers.
 
 The function computes the rectification transformations without knowing intrinsic parameters of the
 cameras and their relative position in the space, which explains the suffix "uncalibrated". Another
-related difference from stereoRectify is that the function outputs not the rectification
+related difference from @ref stereoRectify is that the function outputs not the rectification
 transformations in the object (3D) space, but the planar perspective transformations encoded by the
 homography matrices H1 and H2 . The function implements the algorithm @cite Hartley99 .
 
@@ -1709,8 +1723,8 @@ homography matrices H1 and H2 . The function implements the algorithm @cite Hart
     depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion,
     it would be better to correct it before computing the fundamental matrix and calling this
     function. For example, distortion coefficients can be estimated for each head of stereo camera
-    separately by using calibrateCamera . Then, the images can be corrected using undistort , or
-    just the point coordinates can be corrected with undistortPoints .
+    separately by using @ref calibrateCamera . Then, the images can be corrected using @ref undistort , or
+    just the point coordinates can be corrected with @ref undistortPoints .
  */
 CV_EXPORTS_W bool stereoRectifyUncalibrated( InputArray points1, InputArray points2,
                                              InputArray F, Size imgSize,
@@ -1738,10 +1752,10 @@ assumed.
 @param imageSize Original image size.
 @param alpha Free scaling parameter between 0 (when all the pixels in the undistorted image are
 valid) and 1 (when all the source image pixels are retained in the undistorted image). See
-stereoRectify for details.
+@ref stereoRectify for details.
 @param newImgSize Image size after rectification. By default, it is set to imageSize .
 @param validPixROI Optional output rectangle that outlines all-good-pixels region in the
-undistorted image. See roi1, roi2 description in stereoRectify .
+undistorted image. See roi1, roi2 description in @ref stereoRectify .
 @param centerPrincipalPoint Optional flag that indicates whether in the new camera intrinsic matrix the
 principal point should be at the image center or not. By default, the principal point is chosen to
 best fit a subset of the source image (determined by alpha) to the corrected image.
@@ -1753,7 +1767,7 @@ image pixels if there is valuable information in the corners alpha=1 , or get so
 When alpha\>0 , the undistorted result is likely to have some black pixels corresponding to
 "virtual" pixels outside of the captured distorted image. The original camera intrinsic matrix, distortion
 coefficients, the computed new camera intrinsic matrix, and newImageSize should be passed to
-initUndistortRectifyMap to produce the maps for remap .
+@ref initUndistortRectifyMap to produce the maps for @ref remap .
  */
 CV_EXPORTS_W Mat getOptimalNewCameraMatrix( InputArray cameraMatrix, InputArray distCoeffs,
                                             Size imageSize, double alpha, Size newImgSize = Size(),
@@ -1920,7 +1934,7 @@ CV_EXPORTS_W void convertPointsFromHomogeneous( InputArray src, OutputArray dst 
 @param dst Output vector of 2D, 3D, or 4D points.
 
 The function converts 2D or 3D points from/to homogeneous coordinates by calling either
-convertPointsToHomogeneous or convertPointsFromHomogeneous.
+@ref convertPointsToHomogeneous or @ref convertPointsFromHomogeneous.
 
 @note The function is obsolete. Use one of the previous two functions instead.
  */
@@ -1957,9 +1971,9 @@ the found fundamental matrix. Normally just one matrix is found. But in case of 
 algorithm, the function may return up to 3 solutions ( \f$9 \times 3\f$ matrix that stores all 3
 matrices sequentially).
 
-The calculated fundamental matrix may be passed further to computeCorrespondEpilines that finds the
+The calculated fundamental matrix may be passed further to @ref computeCorrespondEpilines that finds the
 epipolar lines corresponding to the specified points. It can also be passed to
-stereoRectifyUncalibrated to compute the rectification transformation. :
+@ref stereoRectifyUncalibrated to compute the rectification transformation. :
 @code
     // Example. Estimation of fundamental matrix using the RANSAC algorithm
     int point_count = 100;
@@ -2023,7 +2037,7 @@ This function estimates essential matrix based on the five-point algorithm solve
 
 where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
 second images, respectively. The result of this function may be passed further to
-decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
+@ref decomposeEssentialMat or @ref recoverPose to recover the relative pose between cameras.
  */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  InputArray cameraMatrix, int method,
@@ -2220,14 +2234,14 @@ CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray point
 @param points Input points. \f$N \times 1\f$ or \f$1 \times N\f$ matrix of type CV_32FC2 or
 vector\<Point2f\> .
 @param whichImage Index of the image (1 or 2) that contains the points .
-@param F Fundamental matrix that can be estimated using findFundamentalMat or stereoRectify .
+@param F Fundamental matrix that can be estimated using @ref findFundamentalMat or @ref stereoRectify .
 @param lines Output vector of the epipolar lines corresponding to the points in the other image.
 Each line \f$ax + by + c=0\f$ is encoded by 3 numbers \f$(a, b, c)\f$ .
 
 For every point in one of the two images of a stereo pair, the function finds the equation of the
 corresponding epipolar line in the other image.
 
-From the fundamental matrix definition (see findFundamentalMat ), line \f$l^{(2)}_i\f$ in the second
+From the fundamental matrix definition (see @ref findFundamentalMat ), line \f$l^{(2)}_i\f$ in the second
 image for the point \f$p^{(1)}_i\f$ in the first image (when whichImage=1 ) is computed as:
 
 \f[l^{(2)}_i = F p^{(1)}_i\f]
@@ -2277,12 +2291,12 @@ CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
 @param newPoints1 The optimized points1.
 @param newPoints2 The optimized points2.
 
-The function implements the Optimal Triangulation Method (see Multiple View Geometry for details).
+The function implements the Optimal Triangulation Method (see Multiple View Geometry @cite HartleyZ00 for details).
 For each given point correspondence points1[i] \<-\> points2[i], and a fundamental matrix F, it
 computes the corrected correspondences newPoints1[i] \<-\> newPoints2[i] that minimize the geometric
 error \f$d(points1[i], newPoints1[i])^2 + d(points2[i],newPoints2[i])^2\f$ (where \f$d(a,b)\f$ is the
 geometric distance between points \f$a\f$ and \f$b\f$ ) subject to the epipolar constraint
-\f$newPoints2^T * F * newPoints1 = 0\f$ .
+\f$newPoints2^T \cdot F \cdot newPoints1 = 0\f$ .
  */
 CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray points2,
                                   OutputArray newPoints1, OutputArray newPoints2 );
@@ -2584,10 +2598,11 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param beforePoints Vector of (rectified) visible reference points before the homography is applied
 @param afterPoints Vector of (rectified) visible reference points after the homography is applied
 @param possibleSolutions Vector of int indices representing the viable solution set after filtering
-@param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the findHomography function
+@param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the
+@ref findHomography function
 
-This function is intended to filter the output of the decomposeHomographyMat based on additional
-information as described in @cite Malis2007 . The summary of the method: the decomposeHomographyMat function
+This function is intended to filter the output of the @ref decomposeHomographyMat based on additional
+information as described in @cite Malis2007 . The summary of the method: the @ref decomposeHomographyMat function
 returns 2 unique solutions and their "opposites" for a total of 4 solutions. If we have access to the
 sets of points visible in the camera frame before and after the homography transformation is applied,
 we can determine which are the true potential solutions and which are the opposites by verifying which
@@ -2977,14 +2992,14 @@ optimization. It stays at the center or at a different location specified when @
     camera.
     @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
     camera.
-    @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
+    @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see @ref reprojectImageTo3D ).
     @param flags Operation flags that may be zero or @ref fisheye::CALIB_ZERO_DISPARITY . If the flag is set,
     the function makes the principal points of each camera have the same pixel coordinates in the
     rectified views. And if the flag is not set, the function may still shift the images in the
     horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
     useful image area.
     @param newImageSize New image resolution after rectification. The same size should be passed to
-    initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
+    @ref initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
     is passed (default), it is set to the original imageSize . Setting it to larger value can help you
     preserve details in the original image, especially when there is a big radial distortion.
     @param balance Sets the new focal length in range between the min focal length and the max focal
