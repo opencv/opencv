@@ -190,6 +190,15 @@ CallParams read<CallParams>(const cv::FileNode& fn) {
     return CallParams{std::move(name), static_cast<size_t>(call_every_nth)};
 }
 
+template <typename V>
+std::map<std::string, V> readMap(const cv::FileNode& fn) {
+    std::map<std::string, V> map;
+    for (auto item : fn) {
+        map.emplace(item.name(), read<V>(item));
+    }
+    return map;
+}
+
 template <>
 InferParams read<InferParams>(const cv::FileNode& fn) {
     auto name =
@@ -200,7 +209,7 @@ InferParams read<InferParams>(const cv::FileNode& fn) {
     params.device        = check_and_read<std::string>(fn, "device", name);
     params.input_layers  = readList<std::string>(fn, "input_layers", name);
     params.output_layers = readList<std::string>(fn, "output_layers", name);
-
+    params.config        = readMap<std::string>(fn["config"]);
     return params;
 }
 
@@ -309,13 +318,13 @@ int main(int argc, char* argv[]) {
                                       cv::FileStorage::MEMORY);
         }
 
-        std::map<std::string, std::string> config;
+        std::map<std::string, std::string> gconfig;
         if (!load_config.empty()) {
-            loadConfig(load_config, config);
+            loadConfig(load_config, gconfig);
         }
         // NB: Takes priority over config from file
         if (!cached_dir.empty()) {
-            config =
+            gconfig =
                 std::map<std::string, std::string>{{"CACHE_DIR", cached_dir}};
         }
 
@@ -371,7 +380,14 @@ int main(int argc, char* argv[]) {
                     builder.addDummy(call_params, read<DummyParams>(node_fn));
                 } else if (node_type == "Infer") {
                     auto infer_params = read<InferParams>(node_fn);
-                    infer_params.config = config;
+                    try {
+                        utils::mergeMapWith(infer_params.config, gconfig);
+                    } catch (std::exception& e) {
+                        std::stringstream ss;
+                        ss << "Failed to merge global and local config for Infer node: "
+                           << call_params.name << std::endl << e.what();
+                        throw std::logic_error(ss.str());
+                    }
                     builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
