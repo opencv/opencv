@@ -9,15 +9,15 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/detail/pointer-tuple-replacer.hpp"
 #include "opencv2/core/detail/variadic-continuous-checker.hpp"
+#include "opencv2/core/detail/cpp_features.hpp"
 #include "opencv2/core/detail/util.hh"
 #include <tuple>
 
+//This opencv feature requires return type auto a C++14 feature
+#ifdef _stl_forward_cpp_features_present
+
 namespace cv {
 namespace experimental {
-
-#define stl_expansion(def_name, std_algorithm, Var_Args) \
-    template <typename... Args, std::size_t... Is> auto def_name(std::tuple<Args...> tpl, cv::detail::index_sequence<Is...>) \
-    { return std_algorithm(std::get<Is>(tpl)...); }
 
 ///@brief overload for forwarding a tuple and index sequence with cv iterators
 /// replaced as pointers
@@ -166,4 +166,6 @@ auto find(Args&&... args)
 
 } // namespace experimental
 } // namespace cv
+#endif //_stl_forward_cpp_features_present
+
 #endif //OPENCV_CORE_STL_ALGORITHM_HPP
