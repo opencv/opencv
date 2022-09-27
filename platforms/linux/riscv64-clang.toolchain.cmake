@@ -2,7 +2,7 @@ set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR riscv64)
 
 set(RISCV_CLANG_BUILD_ROOT /opt/rvv-llvm CACHE PATH "Path to CLANG for RISC-V cross compiler build directory")
-set(RISCV_GCC_INSTALL_ROOT /opt/RISCV CACHE PATH "Path to GCC for RISC-V cross compiler installation directory")
+set(RISCV_GCC_INSTALL_ROOT /opt/riscv CACHE PATH "Path to GCC for RISC-V cross compiler installation directory")
 set(CMAKE_SYSROOT ${RISCV_GCC_INSTALL_ROOT}/sysroot CACHE PATH "RISC-V sysroot")
 
 set(CLANG_TARGET_TRIPLE riscv64-unknown-linux-gnu)
