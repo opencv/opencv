@@ -354,8 +354,8 @@ public:
         Mat* operator->();
         iterator& operator++();
         iterator operator++(int);
-        friend bool operator== (const iterator& a, const iterator& b) { return a.m_curr == b.m_curr; };
-        friend bool operator!= (const iterator& a, const iterator& b) { return a.m_curr != b.m_curr; };
+        friend bool operator== (const iterator& a, const iterator& b) { return a.m_curr == b.m_curr; }
+        friend bool operator!= (const iterator& a, const iterator& b) { return a.m_curr != b.m_curr; }
 
     private:
         ImageCollection* m_pCollection;

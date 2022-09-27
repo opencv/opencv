@@ -82,7 +82,7 @@ public:
     static Ptr<WarpPerspectiveLine_SSE4> getImpl(const double *M);
     virtual void processNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) = 0;
     virtual void process(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) = 0;
-    virtual ~WarpPerspectiveLine_SSE4() {};
+    virtual ~WarpPerspectiveLine_SSE4() {}
 };
 #endif
 }

@@ -12,7 +12,7 @@
 bool isPythonBindingsDebugEnabled();
 void emit_failmsg(PyObject * exc, const char *msg);
 int failmsg(const char *fmt, ...);
-PyObject* failmsgp(const char *fmt, ...);;
+PyObject* failmsgp(const char *fmt, ...);
 
 //======================================================================================================================
 
