@@ -55,5 +55,3 @@ CAMERA4 :
   NOISE_SCALE : 0.00032
   FISHEYE : False
   DIST : [[0.42, 0.42], [0, 0], [0, 0], [0, 0], [0, 0]]
-
-

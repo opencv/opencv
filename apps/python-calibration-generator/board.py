@@ -53,5 +53,3 @@ class CheckerBoard(Board):
         # https://stackoverflow.com/questions/37310210/camera-calibration-with-opencv-how-to-adjust-chessboard-square-size
         self.pattern[:, :2] = np.mgrid[0:w, 0:h].T.reshape(-1, 2) * square_len  # only for (x,y,z=0)
         self.pattern = self.pattern.T
-
-
