@@ -65,12 +65,12 @@ CV__DNN_INLINE_NS_BEGIN
     enum Backend
     {
         //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
-        //! OpenCV is built with Intel's Inference Engine library or
+        //! OpenCV is built with Intel OpenVINO or
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel's Inference Engine computational backend
-                                                 //!< @sa setInferenceEngineBackendType
+        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
+                                                 //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,
