@@ -116,3 +116,111 @@ If files to images are provided, then the output is an image with plotted arrows
 <p align="center">
   <img src="images/checkerboard.png" width="340" />
 </p>
+
+How to run:
+----
+
+Assume we have `N` camera views, for each `i`-th view there are `M` images containg pattern points (e.g., checkeboard).
+
+Python
+--
+
+There are two options to run the sample code in Python (`opencv/samples/python/multiview_calibration.py`).
+The first option is to prepare `N` files where each file has path to image per line (images of a specific camera of the corresponding file). For example, a file for camera `i` should look like (`file_i.txt`):
+```
+/path/to/image_1
+...
+/path/to/image_M
+```
+
+Then sample program could be run via command line as follows:
+```console
+$ python3 multiview_calibration.py --pattern_size W,H --pattern_type TYPE --fisheye IS_FISHEYE_1,...,IS_FISHEYE_N \
+--pattern_distance DIST --filenames /path/to/file_1.txt,...,/path/to/file_N.txt
+```
+
+Replace `W` and `H` with size of the pattern points, `TYPE` with name of a type of the calibration grid (supported patterns: `checkerboard`, `circles`, `acircles`), `IS_FISHEYE` corresponds to the camera type (1 - is fisheye, 0 - pinhole), `DIST` is pattern distance (i.e., distance between two cells of checkerboard).
+
+Then the sample code automatically detects pattern points on images in parallel (beware of window size and criteria for detection that may are needed to be adjusted manually):
+
+```{r, eval = FALSE}
+if pattern_type.lower() == 'checkerboard':
+    ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
+elif pattern_type.lower() == 'circles':
+    ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID)
+elif pattern_type.lower() == 'acircles':
+    ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID)
+```
+
+The visibility matrix is later built by checking the size of image points after detection:
+
+```{r, eval = FALSE}
+for i in range(num_cameras):
+    for j in range(num_frames):
+        visibility[i,j] = int(len(image_points[i][j]) != 0)
+```
+
+Finally, the calibration function is run as follows:
+```{r, eval = FALSE}
+success, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
+    cv.calibrateMultiview(objPoints=pattern_points_all,
+                          imagePoints=image_points,
+                          imageSize=image_sizes,
+                          visibility=visibility,
+                          Ks=Ks,
+                          distortions=distortions,
+                          is_fisheye=np.array(is_fisheye, dtype=int),
+                          USE_INTRINSICS_GUESS=USE_INTRINSICS_GUESS,
+                          flags_intrinsics=0)
+```
+
+Alternatively, the Python sample could be run from JSON file that should contain image points, pattern points, and the same information about pattern distance, grid type etc.
+```console
+$ python3 multiview_calibration.py --json_file /path/to/json
+```
+
+C++
+--
+
+To run the calibration procedure in C++ follow the steps:
+1. Initialize data.
+
+```{r, eval = FALSE}
+cv::Mat visibility = cv::Mat_<int>(NUM_CAMERAS, NUM_FRAMES);
+std::vector<std::vector<cv::Mat>> image_points(NUM_CAMERAS, std::vector<cv::Mat>(NUM_FRAMES));
+std::vector<Size> image_sizes(NUM_CAMERAS);
+std::vector<bool> is_fisheye(NUM_CAMERAS);
+std::vector<std::vector<cv::Point3f>> objPoints;
+// todo: init object points accordingly to pattern (e.g., checkeboard)
+// output data:
+std::vector<Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
+cv::Mat output_pairs, errors_mat;
+```
+
+2. Detect pattern points on images.
+3. Build visibility matrix.
+
+```{r, eval = FALSE}
+for (int c = 0; c < NUM_CAMERAS; c++) {
+  // image_sizes[c] = ... ; // todo: initialize image size
+  // is_fisheye[c] = ....; // todo: true if fisheye, false otherwise
+  for (int f = 0; f < NUM_FRAMES; f++) {
+    // read image
+    cv::Mat gray, corners, img = cv::imread(filenames[c][f]);
+    // convert image to grayscale
+    cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+    // find pattern points on image, e.g., for checkerboard
+    bool success = cv::findChessboardCorners(gray, pattern_size, corners);
+    // save
+    visibility.at<int>(c, f) = success;
+    if (success) corners.copyTo(image_points[c][f]);
+  }
+}
+```
+
+4. Run calibration.
+
+```{r, eval = FALSE}
+bool ret = cv::calibrateMultiview (objPoints, image_points, image_sizes, visibility, Rs, Ts, Ks,
+distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false/*use_intrinsics_guess*/);
+```
