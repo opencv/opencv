@@ -2,7 +2,7 @@
 
 @tableofcontents
 
-@prev_tutorial{tutorial_dnn_halide_scheduling}
+@prev_tutorial{tutorial_dnn_openvino}
 @next_tutorial{tutorial_dnn_yolo}
 
 |    |    |
