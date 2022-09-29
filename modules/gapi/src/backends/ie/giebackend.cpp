@@ -918,13 +918,13 @@ public:
 
 private:
     void setup();
-    void release(const int id);
+    void release(const size_t id);
 
     QueueClass<size_t>               m_idle_ids;
     std::vector<IInferExecutor::Ptr> m_requests;
 };
 
-void cv::gimpl::ie::RequestPool::release(const int id) {
+void cv::gimpl::ie::RequestPool::release(const size_t id) {
     m_idle_ids.push(id);
 }
 
@@ -932,7 +932,7 @@ void cv::gimpl::ie::RequestPool::release(const int id) {
 cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferRequest>&& requests) {
     for (size_t i = 0; i < requests.size(); ++i) {
         m_requests.emplace_back(
-                std::make_shared<AsyncInferExecutor>(std::move(requests[0]),
+                std::make_shared<AsyncInferExecutor>(std::move(requests[i]),
                                                      std::bind(&RequestPool::release, this, i)));
     }
     setup();
