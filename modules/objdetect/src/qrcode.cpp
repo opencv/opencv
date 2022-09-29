@@ -136,7 +136,7 @@ void QRDetect::init(const Mat& src, double eps_vertical_, double eps_horizontal_
         const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height  * coeff_expansion);
         Size new_size(width, height);
-        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR_EXACT);
     }
     else if (min_side > 512.0)
     {
@@ -524,7 +524,7 @@ bool QRDetect::localization()
         const int height = cvRound(bin_barcode.size().height * coeff_expansion);
         Size new_size(width, height);
         Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
+        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
         bin_barcode = intermediate.clone();
         for (size_t i = 0; i < localization_points.size(); i++)
         {
@@ -537,7 +537,7 @@ bool QRDetect::localization()
         const int height = cvRound(bin_barcode.size().height / coeff_expansion);
         Size new_size(width, height);
         Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
+        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
         bin_barcode = intermediate.clone();
         for (size_t i = 0; i < localization_points.size(); i++)
         {
@@ -2742,7 +2742,7 @@ void QRDetectMulti::init(const Mat& src, double eps_vertical_, double eps_horizo
         const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height  * coeff_expansion);
         Size new_size(width, height);
-        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR_EXACT);
     }
     else if (min_side > 512.0)
     {
@@ -3099,7 +3099,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         const int height = cvRound(bin_barcode.size().height * coeff_expansion);
         Size new_size(width, height);
         Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
+        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
         bin_barcode = intermediate.clone();
     }
     else if (purpose == ZOOMING)
@@ -3108,7 +3108,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         const int height = cvRound(bin_barcode.size().height / coeff_expansion);
         Size new_size(width, height);
         Mat intermediate;
-        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR);
+        resize(bin_barcode, intermediate, new_size, 0, 0, INTER_LINEAR_EXACT);
         bin_barcode = intermediate.clone();
     }
     else
@@ -3126,7 +3126,7 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
     const int width  = cvRound(bin_barcode.size().width);
     const int height = cvRound(bin_barcode.size().height);
     Size new_size(width, height);
-    resize(bar, bar, new_size, 0, 0, INTER_LINEAR);
+    resize(bar, bar, new_size, 0, 0, INTER_LINEAR_EXACT);
     blur(bar, blur_image, Size(3, 3));
     threshold(blur_image, threshold_output, 50, 255, THRESH_BINARY);
 

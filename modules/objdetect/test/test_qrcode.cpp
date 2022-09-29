@@ -11,7 +11,7 @@ std::string qrcode_images_name[] = {
   "version_2_down.jpg", "version_2_left.jpg", "version_2_right.jpg", "version_2_up.jpg", "version_2_top.jpg",
   "version_3_down.jpg", "version_3_left.jpg", "version_3_right.jpg", "version_3_up.jpg", "version_3_top.jpg",
   "version_4_down.jpg", "version_4_left.jpg", "version_4_right.jpg", "version_4_up.jpg", "version_4_top.jpg",
-  "version_5_down.jpg", "version_5_left.jpg"/*"version_5_right.jpg"*/,
+  "version_5_down.jpg", "version_5_left.jpg", /*"version_5_right.jpg",*/ "version_5_up.jpg", "version_5_top.jpg",
   "russian.jpg", "kanji.jpg", "link_github_ocv.jpg", "link_ocv.jpg", "link_wiki_cv.jpg"
 // version_5_right.jpg DISABLED after tile fix, PR #22025
 };
@@ -87,7 +87,7 @@ TEST(Objdetect_QRCode_Close, generate_test_data)
         const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height  * coeff_expansion);
         Size new_size(width, height);
-        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR_EXACT);
         EXPECT_TRUE(detectQRCode(barcode, corners));
 #ifdef HAVE_QUIRC
         EXPECT_TRUE(decodeQRCode(barcode, corners, decoded_info, straight_barcode));
@@ -125,7 +125,7 @@ TEST(Objdetect_QRCode_Monitor, generate_test_data)
         const int width  = cvRound(src.size().width  * coeff_expansion);
         const int height = cvRound(src.size().height  * coeff_expansion);
         Size new_size(width, height);
-        resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+        resize(src, barcode, new_size, 0, 0, INTER_LINEAR_EXACT);
         EXPECT_TRUE(detectQRCode(barcode, corners));
 #ifdef HAVE_QUIRC
         EXPECT_TRUE(decodeQRCode(barcode, corners, decoded_info, straight_barcode));
@@ -380,7 +380,7 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     const int width  = cvRound(src.size().width  * coeff_expansion);
     const int height = cvRound(src.size().height  * coeff_expansion);
     Size new_size(width, height);
-    resize(src, barcode, new_size, 0, 0, INTER_LINEAR);
+    resize(src, barcode, new_size, 0, 0, INTER_LINEAR_EXACT);
     std::vector<Point> corners;
     std::string decoded_info;
     QRCodeDetector qrcode;
