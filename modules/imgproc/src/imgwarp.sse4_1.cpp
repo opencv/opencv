@@ -492,7 +492,7 @@ public:
                 (X & (INTER_TAB_SIZE - 1)));
         }
     }
-    virtual ~WarpPerspectiveLine_SSE4_Impl() CV_OVERRIDE {};
+    virtual ~WarpPerspectiveLine_SSE4_Impl() CV_OVERRIDE {}
 };
 
 Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)

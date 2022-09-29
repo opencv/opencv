@@ -43,7 +43,7 @@ std::vector<ParallelBackendInfo>& getBuiltinParallelBackendsInfo()
 #endif
     };
     return g_backends;
-};
+}
 
 static
 bool sortByPriority(const ParallelBackendInfo &lhs, const ParallelBackendInfo &rhs)

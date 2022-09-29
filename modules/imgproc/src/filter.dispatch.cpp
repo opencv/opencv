@@ -1401,7 +1401,7 @@ static void ocvSepFilter(int stype, int dtype, int ktype,
     Mat src(Size(width, height), stype, src_data, src_step);
     Mat dst(Size(width, height), dtype, dst_data, dst_step);
     f->apply(src, dst, Size(full_width, full_height), Point(offset_x, offset_y));
-};
+}
 
 //===================================================================
 //       HAL functions
