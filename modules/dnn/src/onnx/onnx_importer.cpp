@@ -85,7 +85,6 @@ class ONNXImporter
 
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
-    void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
     void lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size);
     void lstm_add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
     std::string lstm_add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
@@ -669,32 +668,6 @@ void ONNXImporter::expandMid(const std::string& prefix, opencv_onnx::NodeProto& 
     {
         node_proto.add_input(input_names[i]);
     }
-}
-
-/** @brief Multiply one of node_proto inputs by -1
- * @param layerParams parameters of the node
- * @param node_proto node which input will be replaced
- * @param input_id id of input to be multiplied by -1
- */
-void ONNXImporter::addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id)
-{
-    LayerParams powerParams;
-    powerParams.name = layerParams.name + "/neg";
-    powerParams.type = "Power";
-    powerParams.set("scale", -1.f);
-
-    //Create Power layer
-    int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
-    //Connect to input
-    IterLayerId_t layerId = layer_id.find(node_proto.input(input_id));
-    CV_Assert(layerId != layer_id.end());
-    dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-    //Add shape
-    layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
-    outShapes[powerParams.name] = outShapes[node_proto.input(input_id)];
-
-    //Replace input to Power
-    node_proto.set_input(input_id, powerParams.name);
 }
 
 void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
