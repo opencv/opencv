@@ -668,7 +668,7 @@ size_t imcount_(const String& filename, int flags)
         return collection.size();
     } catch(cv::Exception const& e) {
         // Reading header or finding decoder for the filename is failed
-        return 0;
+        std::cerr << "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what() << std::endl << std::flush;
     }
     return 0;
 }
@@ -1141,7 +1141,7 @@ int ImageCollection::Impl::currentIndex() const { return m_current; }
 
 ImageCollection::iterator ImageCollection::Impl::begin(ImageCollection* ptr) { return ImageCollection::iterator(ptr); }
 
-ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { return ImageCollection::iterator(ptr, this->size()); }
+ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { return ImageCollection::iterator(ptr, static_cast<int>(this->size())); }
 
 void ImageCollection::Impl::reset() {
     m_current = 0;
