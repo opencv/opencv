@@ -365,7 +365,7 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 
 //////////////////////////////////////////////////////////////////////////////
 
-BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2, double matches_confindece_thresh)
 {
     CV_UNUSED(try_use_gpu);
 
@@ -383,11 +383,13 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
     is_thread_safe_ = impl_->isThreadSafe();
     num_matches_thresh1_ = num_matches_thresh1;
     num_matches_thresh2_ = num_matches_thresh2;
+    matches_confindece_thresh_ = matches_confindece_thresh;
 }
 
-Ptr<BestOf2NearestMatcher> BestOf2NearestMatcher::create(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
+Ptr<BestOf2NearestMatcher> BestOf2NearestMatcher::create(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2,
+                                                         double matches_confindece_thresh)
 {
-    return makePtr<BestOf2NearestMatcher>(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh2);
+    return makePtr<BestOf2NearestMatcher>(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh2, matches_confindece_thresh);
 }
 
 
@@ -437,8 +439,8 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     matches_info.confidence = matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
 
     // Set zero confidence to remove matches between too close images, as they don't provide
-    // additional information anyway. The threshold was set experimentally.
-    matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
+    // additional information anyway.
+    matches_info.confidence = matches_info.confidence > matches_confindece_thresh_ ? 0. : matches_info.confidence;
 
     // Check if we should try to refine motion
     if (matches_info.num_inliers < num_matches_thresh2_)
