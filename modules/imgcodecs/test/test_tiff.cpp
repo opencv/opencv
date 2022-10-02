@@ -419,8 +419,8 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
 // Basic Test
 const Bufsize_and_Type Imgcodecs_Tiff_decode_Huge_list_basic[] =
 {
-    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( (uint64_t)1024 * 1024 * 1024 - 32768 * 4 * 2, make_tuple<string,int>("CV_8UC1",  CV_8UC1),  IMREAD_MIX_COLOR ),
-    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( (uint64_t)2048 * 1024 * 1024                , make_tuple<string,int>("CV_16UC4", CV_16UC4), IMREAD_MIX_COLOR ),
+    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( 1073479680ull, make_tuple<string,int>("CV_8UC1",  CV_8UC1),  IMREAD_MIX_COLOR ),
+    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( 2147483648ull, make_tuple<string,int>("CV_16UC4", CV_16UC4), IMREAD_MIX_COLOR ),
 };
 
 INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_decode_Huge,
@@ -447,10 +447,10 @@ const ImreadMixModes all_modes_Huge_Full[] =
 
 const uint64_t huge_buffer_sizes_decode_Full[] =
 {
-    (uint64_t)    1 * 1024 * 1024                ,
-    (uint64_t) 1024 * 1024 * 1024 - 32768 * 4 * 2,
-    (uint64_t) 1024 * 1024 * 1024                , // 1GB
-    (uint64_t) 2048 * 1024 * 1024                , // 2GB
+    1048576ull,    // 1 * 1024 * 1024
+    1073479680ull, // 1024 * 1024 * 1024 - 32768 * 4 * 2
+    1073741824ull, // 1024 * 1024 * 1024
+    2147483648ull, // 2048 * 1024 * 1024
 };
 
 const tuple<string, int> mat_types_Full[] =
