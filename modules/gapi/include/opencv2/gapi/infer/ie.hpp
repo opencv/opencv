@@ -88,6 +88,15 @@ struct ParamDesc {
 
     cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
+
+    using precision_t = int;
+    using precision_map_t = std::unordered_map<std::string, int>;
+    // NB: cv::util::monostate is default value that means precision wasn't specified.
+    using precision_variant_t = cv::util::variant<cv::util::monostate,
+                                                  precision_t,
+                                                  precision_map_t>;
+    precision_variant_t output_precision;
+
 };
 } // namespace detail
 
@@ -132,6 +141,7 @@ public:
               , {}
               , {}
               , {}
+              , {}
               , {}} {
     };
 
@@ -153,6 +163,7 @@ public:
               , {}
               , {}
               , 1u
+              , {}
               , {}
               , {}
               , {}
@@ -351,6 +362,29 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the output precision for model.
+
+    The function is used to set an output precision for model.
+
+    @param precision Precision in OpenCV format.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputPrecision(detail::ParamDesc::precision_t precision) {
+        desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload
+
+    @param precision_map Map of pairs: name of corresponding output layer and its precision
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputPrecision(detail::ParamDesc::precision_map_t precision_map) {
+        desc.output_precision = precision_map;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -385,7 +419,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}},
+                {}, {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -403,7 +437,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}},
+                {}, {}, {}, {}, {}},
           m_tag(tag) {
     };
 
@@ -473,6 +507,19 @@ public:
     /** @see ie::Params::cfgBatchSize */
     Params& cfgBatchSize(const size_t size) {
         desc.batch_size = cv::util::make_optional(size);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgOutputPrecision */
+    Params& cfgOutputPrecision(detail::ParamDesc::precision_t precision) {
+        desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputPrecision(detail::ParamDesc::precision_map_t precision_map) {
+        desc.output_precision = precision_map;
         return *this;
     }
 
