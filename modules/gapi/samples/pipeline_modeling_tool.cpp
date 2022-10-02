@@ -210,6 +210,12 @@ InferParams read<InferParams>(const cv::FileNode& fn) {
     params.input_layers  = readList<std::string>(fn, "input_layers", name);
     params.output_layers = readList<std::string>(fn, "output_layers", name);
     params.config        = readMap<std::string>(fn["config"]);
+
+    auto out_prec_str = readOpt<std::string>(fn["output_precision"]);
+    if (out_prec_str.has_value()) {
+        params.out_precision =
+            cv::optional<int>(strToPrecision(out_prec_str.value()));
+    }
     return params;
 }
 
