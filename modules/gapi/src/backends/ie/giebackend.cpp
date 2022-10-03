@@ -376,10 +376,10 @@ struct IEUnit {
             GAPI_LOG_INFO(nullptr, "VPP preproc created successfuly");
         }
 
-        if (params.mode == cv::gapi::ie::detail::ParamDesc::InferMode::Sync &&
+        if (params.mode == cv::gapi::ie::InferMode::Sync &&
             params.nireq != 1u) {
             throw std::logic_error(
-                    "Failed: ParamDesc::InferMode::Sync works only with nireq equal to 1.");
+                    "Failed: cv::gapi::ie::InferMode::Sync works only with nireq equal to 1.");
         }
     }
 
@@ -917,7 +917,7 @@ void AsyncInferExecutor::callback(IInferExecutor::Task task,
 class cv::gimpl::ie::RequestPool {
 public:
 
-    explicit RequestPool(cv::gapi::ie::detail::ParamDesc::InferMode   mode,
+    explicit RequestPool(cv::gapi::ie::InferMode                      mode,
                          std::vector<InferenceEngine::InferRequest>&& requests);
 
     IInferExecutor::Ptr getIdleRequest();
@@ -936,21 +936,21 @@ void cv::gimpl::ie::RequestPool::release(const size_t id) {
 }
 
 // RequestPool implementation //////////////////////////////////////////////
-cv::gimpl::ie::RequestPool::RequestPool(cv::gapi::ie::detail::ParamDesc::InferMode   mode,
+cv::gimpl::ie::RequestPool::RequestPool(cv::gapi::ie::InferMode                      mode,
                                         std::vector<InferenceEngine::InferRequest>&& requests) {
     for (size_t i = 0; i < requests.size(); ++i) {
         IInferExecutor::Ptr iexec = nullptr;
         switch (mode) {
-            case cv::gapi::ie::detail::ParamDesc::InferMode::Async:
+            case cv::gapi::ie::InferMode::Async:
                 iexec = std::make_shared<AsyncInferExecutor>(std::move(requests[i]),
                                                              std::bind(&RequestPool::release, this, i));
                 break;
-            case cv::gapi::ie::detail::ParamDesc::InferMode::Sync:
+            case cv::gapi::ie::InferMode::Sync:
                 iexec = std::make_shared<SyncInferExecutor>(std::move(requests[i]),
                                                              std::bind(&RequestPool::release, this, i));
                 break;
             default:
-                GAPI_Assert(false && "Unsupported ParamDesc::InferMode");
+                GAPI_Assert(false && "Unsupported cv::gapi::ie::InferMode");
         }
         m_requests.emplace_back(std::move(iexec));
     }
