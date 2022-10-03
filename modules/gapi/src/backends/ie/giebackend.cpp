@@ -197,6 +197,16 @@ inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
 
 template<class MatType>
 inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
+    const auto& desc = blob->getTensorDesc();
+    const auto ie_type = toCV(desc.getPrecision());
+    if (ie_type != mat.type()) {
+        std::stringstream ss;
+        ss << "Failed to copy blob from IE to OCV: "
+           << "Blobs have different data types "
+           << "(IE type: " << ie_type
+           << " vs OCV type: " << mat.type() << ")." << std::endl;
+        throw std::logic_error(ss.str());
+    }
     switch (blob->getTensorDesc().getPrecision()) {
 #define HANDLE(E,T)                                                 \
         case IE::Precision::E: std::copy_n(blob->buffer().as<T*>(), \
@@ -364,6 +374,13 @@ struct IEUnit {
         } else {
             cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
         }
+
+        if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import &&
+            !cv::util::holds_alternative<cv::util::monostate>(params.output_precision)) {
+            cv::util::throw_error(
+                    std::logic_error("Setting output precision isn't supported for imported network"));
+        }
+
 
         using namespace cv::gapi::wip::onevpl;
         if (params.vpl_preproc_device.has_value() && params.vpl_preproc_ctx.has_value()) {
@@ -1122,6 +1139,28 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
     return info;
 }
 
+using namespace cv::gapi::ie::detail;
+static void configureOutputPrecision(const IE::OutputsDataMap           &outputs_info,
+                                     const ParamDesc::PrecisionVariantT &output_precision) {
+    cv::util::visit(cv::util::overload_lambdas(
+            [&outputs_info](ParamDesc::PrecisionT cvdepth) {
+                auto precision = toIE(cvdepth);
+                for (auto it : outputs_info) {
+                    it.second->setPrecision(precision);
+                }
+            },
+            [&outputs_info](const ParamDesc::PrecisionMapT& precision_map) {
+                for (auto it : precision_map) {
+                    outputs_info.at(it.first)->setPrecision(toIE(it.second));
+                }
+            },
+            [&outputs_info](cv::util::monostate) {
+                // Do nothing.
+            }
+        ), output_precision
+    );
+}
+
 // NB: This is a callback used by async infer
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest &request,
@@ -1241,7 +1280,7 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
-        // NB: Configuring input precision and network reshape must be done
+        // NB: Configuring input/output precision and network reshape must be done
         // only in the loadNetwork case.
         using namespace cv::gapi::ie::detail;
         if (uu.params.kind == ParamDesc::Kind::Load) {
@@ -1275,6 +1314,7 @@ struct Infer: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+            configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == ParamDesc::Kind::Import);
             auto inputs = uu.this_network.GetInputsInfo();
@@ -1393,6 +1433,7 @@ struct InferROI: public cv::detail::KernelTag {
                 const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
                             .set_param(input_name, ii->getTensorDesc());
             }
+            configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
             auto inputs = uu.this_network.GetInputsInfo();
@@ -1513,6 +1554,7 @@ struct InferList: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+            configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
             std::size_t idx = 1u;
@@ -1667,6 +1709,7 @@ struct InferList2: public cv::detail::KernelTag {
                     if (!input_reshape_table.empty()) {
                         const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
                     }
+                    configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
                 } else {
                     GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
                     auto inputs = uu.this_network.GetInputsInfo();

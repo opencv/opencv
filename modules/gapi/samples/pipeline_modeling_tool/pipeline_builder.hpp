@@ -258,6 +258,7 @@ struct InferParams {
     std::vector<std::string> input_layers;
     std::vector<std::string> output_layers;
     std::map<std::string, std::string> config;
+    cv::util::optional<int> out_precision;
 };
 
 class PipelineBuilder {
@@ -362,6 +363,9 @@ void PipelineBuilder::addInfer(const CallParams&  call_params,
     }
 
     pp->pluginConfig(infer_params.config);
+    if (infer_params.out_precision) {
+        pp->cfgOutputPrecision(infer_params.out_precision.value());
+    }
     m_state->networks += cv::gapi::networks(*pp);
 
     addCall(call_params,
