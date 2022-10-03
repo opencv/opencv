@@ -91,10 +91,10 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
     // Preparation process for test
     {
         // Convert from mat_type and buffer_size to tiff file information.
-        const int width  = 32768;
+        const uint64_t width  = 32768;
         int ncn          = CV_MAT_CN(mat_type);
         int depth        = ( CV_MAT_DEPTH(mat_type) == CV_16U) ? 2 : 1; // 16bit or 8 bit
-        const int height = (uint64_t) buffer_size / width / ncn / depth;
+        const uint64_t height = (uint64_t) buffer_size / width / ncn / depth;
         const uint64_t base_scanline_size  = (uint64_t) width * ncn  * depth;
         const uint64_t base_strip_size     = (uint64_t) base_scanline_size * height;
 
