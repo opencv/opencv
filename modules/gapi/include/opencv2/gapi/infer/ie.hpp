@@ -89,13 +89,17 @@ struct ParamDesc {
     cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 
-    using precision_t = int;
-    using precision_map_t = std::unordered_map<std::string, int>;
-    // NB: cv::util::monostate is default value that means precision wasn't specified.
-    using precision_variant_t = cv::util::variant<cv::util::monostate,
-                                                  precision_t,
-                                                  precision_map_t>;
-    precision_variant_t output_precision;
+    using PrecisionT = int;
+    using PrecisionMapT = std::unordered_map<std::string, PrecisionT>;
+    // NB: This parameter can contain:
+    // 1. cv::util::monostate - Don't specify precision, but use default from IR/Blob.
+    // 2. PrecisionT (CV_8U, CV_32F, ...) - Specifies precision for all output layers.
+    // 3. PrecisionMapT ({{"layer0", CV_32F}, {"layer1", CV_16F}} - Specifies precision for certain output layer.
+    // cv::util::monostate is default value that means precision wasn't specified.
+    using PrecisionVariantT = cv::util::variant<cv::util::monostate,
+                                                PrecisionT,
+                                                PrecisionMapT>;
+    PrecisionVariantT output_precision;
 
 };
 } // namespace detail
@@ -366,21 +370,23 @@ public:
 
     The function is used to set an output precision for model.
 
-    @param precision Precision in OpenCV format.
+    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgOutputPrecision(detail::ParamDesc::precision_t precision) {
+    Params<Net>& cfgOutputPrecision(detail::ParamDesc::PrecisionT precision) {
         desc.output_precision = precision;
         return *this;
     }
 
     /** @overload
 
-    @param precision_map Map of pairs: name of corresponding output layer and its precision
+    @param precision_map Map of pairs: name of corresponding output layer
+    and its precision in OpenCV format (CV_8U, CV_32F, ...)
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgOutputPrecision(detail::ParamDesc::precision_map_t precision_map) {
+    cfgOutputPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
         desc.output_precision = precision_map;
         return *this;
     }
@@ -511,14 +517,14 @@ public:
     }
 
     /** @see ie::Params::cfgOutputPrecision */
-    Params& cfgOutputPrecision(detail::ParamDesc::precision_t precision) {
+    Params& cfgOutputPrecision(detail::ParamDesc::PrecisionT precision) {
         desc.output_precision = precision;
         return *this;
     }
 
     /** @overload */
     Params&
-    cfgOutputPrecision(detail::ParamDesc::precision_map_t precision_map) {
+    cfgOutputPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
         desc.output_precision = precision_map;
         return *this;
     }
