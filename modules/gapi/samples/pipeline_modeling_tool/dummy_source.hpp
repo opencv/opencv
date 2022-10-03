@@ -18,6 +18,7 @@ public:
                 const bool         drop_frames);
     bool pull(cv::gapi::wip::Data& data) override;
     cv::GMetaArg descr_of() const override;
+    double latency() const { return m_latency; };
 
 private:
     double  m_latency;
