@@ -88,6 +88,9 @@ struct ParamDesc {
 
     cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
+
+    enum InferMode {Sync, Async};
+    InferMode mode;
 };
 } // namespace detail
 
@@ -132,7 +135,8 @@ public:
               , {}
               , {}
               , {}
-              , {}} {
+              , {}
+              , detail::ParamDesc::InferMode::Async} {
     };
 
     /** @overload
@@ -156,7 +160,8 @@ public:
               , {}
               , {}
               , {}
-              , {}} {
+              , {}
+              , detail::ParamDesc::InferMode::Async} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -351,6 +356,22 @@ public:
         return *this;
     }
 
+    /** @brief Specifies which api will be used to run inference.
+
+    The function is used to specify mode for OpenVINO inference.
+    OpenVINO has two options to run inference:
+    1. Asynchronous (using StartAsync: https://docs.openvino.ai/latest/classInferenceEngine_1_1InferRequest.html#doxid-class-inference-engine-1-1-infer-request-1a405293e8423d82a5b45f642a3bef0d24)
+    2. Synchronous (using Infer: https://docs.openvino.ai/latest/classInferenceEngine_1_1InferRequest.html#doxid-class-inference-engine-1-1-infer-request-1a3391ce30894abde730523e9ca9371ce8)
+    By default asynchronous mode is used.
+
+    @param mode Inference mode which will be used.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInferMode(detail::ParamDesc::InferMode mode) {
+        desc.mode = mode;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -385,7 +406,8 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}},
+                {}, {}, {}, {},
+                detail::ParamDesc::InferMode::Async },
           m_tag(tag) {
     };
 
@@ -403,7 +425,8 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}},
+                {}, {}, {}, {},
+                detail::ParamDesc::InferMode::Async },
           m_tag(tag) {
     };
 
@@ -473,6 +496,12 @@ public:
     /** @see ie::Params::cfgBatchSize */
     Params& cfgBatchSize(const size_t size) {
         desc.batch_size = cv::util::make_optional(size);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgInferAPI */
+    Params& cfgInferMode(detail::ParamDesc::InferMode mode) {
+        desc.mode = mode;
         return *this;
     }
 

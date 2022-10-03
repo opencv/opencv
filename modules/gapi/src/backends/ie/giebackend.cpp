@@ -375,6 +375,12 @@ struct IEUnit {
                                     params.vpl_preproc_ctx.value());
             GAPI_LOG_INFO(nullptr, "VPP preproc created successfuly");
         }
+
+        if (params.mode == cv::gapi::ie::detail::ParamDesc::InferMode::Sync &&
+            params.nireq != 1u) {
+            throw std::logic_error(
+                    "Failed: ParamDesc::InferMode::Sync works only with nireq equal to 1.");
+        }
     }
 
     // This method is [supposed to be] called at Island compilation stage
@@ -911,7 +917,8 @@ void AsyncInferExecutor::callback(IInferExecutor::Task task,
 class cv::gimpl::ie::RequestPool {
 public:
 
-    explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
+    explicit RequestPool(cv::gapi::ie::detail::ParamDesc::InferMode   mode,
+                         std::vector<InferenceEngine::InferRequest>&& requests);
 
     IInferExecutor::Ptr getIdleRequest();
     void waitAll();
@@ -929,11 +936,23 @@ void cv::gimpl::ie::RequestPool::release(const size_t id) {
 }
 
 // RequestPool implementation //////////////////////////////////////////////
-cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferRequest>&& requests) {
+cv::gimpl::ie::RequestPool::RequestPool(cv::gapi::ie::detail::ParamDesc::InferMode   mode,
+                                        std::vector<InferenceEngine::InferRequest>&& requests) {
     for (size_t i = 0; i < requests.size(); ++i) {
-        m_requests.emplace_back(
-                std::make_shared<AsyncInferExecutor>(std::move(requests[i]),
-                                                     std::bind(&RequestPool::release, this, i)));
+        IInferExecutor::Ptr iexec = nullptr;
+        switch (mode) {
+            case cv::gapi::ie::detail::ParamDesc::InferMode::Async:
+                iexec = std::make_shared<AsyncInferExecutor>(std::move(requests[i]),
+                                                             std::bind(&RequestPool::release, this, i));
+                break;
+            case cv::gapi::ie::detail::ParamDesc::InferMode::Sync:
+                iexec = std::make_shared<SyncInferExecutor>(std::move(requests[i]),
+                                                             std::bind(&RequestPool::release, this, i));
+                break;
+            default:
+                GAPI_Assert(false && "Unsupported ParamDesc::InferMode");
+        }
+        m_requests.emplace_back(std::move(iexec));
     }
     setup();
 }
@@ -974,7 +993,7 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
             if (this_nh == nullptr) {
                 this_nh = nh;
                 this_iec = iem.metadata(this_nh).get<IEUnit>().compile();
-                m_reqPool.reset(new RequestPool(this_iec.createInferRequests()));
+                m_reqPool.reset(new RequestPool(this_iec.params.mode, this_iec.createInferRequests()));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
