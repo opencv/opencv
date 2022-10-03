@@ -295,15 +295,15 @@ private:
             std::vector<Edge> output_edges;
         };
 
-        M<std::string, Node::Ptr>         calls_map;
-        std::vector<Node::Ptr>            all_calls;
+        M<std::string, Node::Ptr>    calls_map;
+        std::vector<Node::Ptr>       all_calls;
 
-        cv::gapi::GNetPackage             networks;
-        cv::gapi::GKernelPackage          kernels;
-        cv::GCompileArgs                  compile_args;
-        cv::gapi::wip::IStreamSource::Ptr src;
-        PLMode                            mode = PLMode::STREAMING;
-        std::string                       name;
+        cv::gapi::GNetPackage        networks;
+        cv::gapi::GKernelPackage     kernels;
+        cv::GCompileArgs             compile_args;
+        std::shared_ptr<DummySource> src;
+        PLMode                       mode = PLMode::STREAMING;
+        std::string                  name;
     };
 
     std::unique_ptr<State> m_state;
