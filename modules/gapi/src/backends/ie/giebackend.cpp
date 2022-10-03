@@ -201,10 +201,10 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
     const auto ie_type = toCV(desc.getPrecision());
     if (ie_type != mat.type()) {
         std::stringstream ss;
-        ss << "Failed while copying blob from IE to OCV: "
-           << "Blobs have different data types.\n"
-           << "IE type: " << ie_type << "\n"
-           << "OCV type: " << mat.type() << std::endl;
+        ss << "Failed to copy blob from IE to OCV: "
+           << "Blobs have different data types "
+           << "(IE type: " << ie_type
+           << " vs OCV type: " << mat.type() << ")." << std::endl;
         throw std::logic_error(ss.str());
     }
     switch (blob->getTensorDesc().getPrecision()) {
@@ -1140,29 +1140,25 @@ static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
 }
 
 using namespace cv::gapi::ie::detail;
-static void configureOutputPrecision(const IE::OutputsDataMap             &outputs_info,
-                                     const ParamDesc::precision_variant_t &output_precision) {
-    switch (output_precision.index()) {
-        case ParamDesc::precision_variant_t::index_of<ParamDesc::precision_t>(): {
-            auto precision = toIE(cv::util::get<ParamDesc::precision_t>(output_precision));
-            for (auto it : outputs_info) {
-                it.second->setPrecision(precision);
+static void configureOutputPrecision(const IE::OutputsDataMap           &outputs_info,
+                                     const ParamDesc::PrecisionVariantT &output_precision) {
+    cv::util::visit(cv::util::overload_lambdas(
+            [&outputs_info](ParamDesc::PrecisionT cvdepth) {
+                auto precision = toIE(cvdepth);
+                for (auto it : outputs_info) {
+                    it.second->setPrecision(precision);
+                }
+            },
+            [&outputs_info](const ParamDesc::PrecisionMapT& precision_map) {
+                for (auto it : precision_map) {
+                    outputs_info.at(it.first)->setPrecision(toIE(it.second));
+                }
+            },
+            [&outputs_info](cv::util::monostate) {
+                // Do nothing.
             }
-            break;
-        }
-        case ParamDesc::precision_variant_t::index_of<ParamDesc::precision_map_t>(): {
-            const auto& precision_map =
-                cv::util::get<ParamDesc::precision_map_t>(output_precision);
-            for (auto it : precision_map) {
-                outputs_info.at(it.first)->setPrecision(toIE(it.second));
-            }
-            break;
-        }
-        case ParamDesc::precision_variant_t::index_of<cv::util::monostate>(): {
-            // Do nothing;
-            break;
-        }
-    }
+        ), output_precision
+    );
 }
 
 // NB: This is a callback used by async infer
