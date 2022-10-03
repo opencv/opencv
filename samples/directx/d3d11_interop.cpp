@@ -17,7 +17,6 @@
 
 #include "d3dsample.hpp"
 
-#pragma comment (lib, "d3d11.lib")
 
 class D3D11WinApp : public D3DSample
 {
