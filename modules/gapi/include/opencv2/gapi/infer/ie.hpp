@@ -52,6 +52,8 @@ enum class TraitAs: int
 
 using IEConfig = std::map<std::string, std::string>;
 
+enum InferMode {Sync, Async};
+
 namespace detail {
 struct ParamDesc {
     std::string model_path;
@@ -89,7 +91,6 @@ struct ParamDesc {
     cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 
-    enum InferMode {Sync, Async};
     InferMode mode;
 };
 } // namespace detail
@@ -136,7 +137,7 @@ public:
               , {}
               , {}
               , {}
-              , detail::ParamDesc::InferMode::Async} {
+              , InferMode::Async} {
     };
 
     /** @overload
@@ -161,7 +162,7 @@ public:
               , {}
               , {}
               , {}
-              , detail::ParamDesc::InferMode::Async} {
+              , InferMode::Async} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -367,7 +368,7 @@ public:
     @param mode Inference mode which will be used.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInferMode(detail::ParamDesc::InferMode mode) {
+    Params<Net>& cfgInferMode(InferMode mode) {
         desc.mode = mode;
         return *this;
     }
@@ -407,7 +408,7 @@ public:
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
                 {}, {}, {}, {},
-                detail::ParamDesc::InferMode::Async },
+                InferMode::Async },
           m_tag(tag) {
     };
 
@@ -426,7 +427,7 @@ public:
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
                 {}, {}, {}, {},
-                detail::ParamDesc::InferMode::Async },
+                InferMode::Async },
           m_tag(tag) {
     };
 
@@ -500,7 +501,7 @@ public:
     }
 
     /** @see ie::Params::cfgInferAPI */
-    Params& cfgInferMode(detail::ParamDesc::InferMode mode) {
+    Params& cfgInferMode(InferMode mode) {
         desc.mode = mode;
         return *this;
     }
