@@ -92,6 +92,18 @@ struct ParamDesc {
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 
     InferMode mode;
+
+    using PrecisionT = int;
+    using PrecisionMapT = std::unordered_map<std::string, PrecisionT>;
+    // NB: This parameter can contain:
+    // 1. cv::util::monostate - Don't specify precision, but use default from IR/Blob.
+    // 2. PrecisionT (CV_8U, CV_32F, ...) - Specifies precision for all output layers.
+    // 3. PrecisionMapT ({{"layer0", CV_32F}, {"layer1", CV_16F}} - Specifies precision for certain output layer.
+    // cv::util::monostate is default value that means precision wasn't specified.
+    using PrecisionVariantT = cv::util::variant<cv::util::monostate,
+                                                PrecisionT,
+                                                PrecisionMapT>;
+    PrecisionVariantT output_precision;
 };
 } // namespace detail
 
@@ -137,7 +149,8 @@ public:
               , {}
               , {}
               , {}
-              , InferMode::Async} {
+              , InferMode::Async
+              , {} } {
     };
 
     /** @overload
@@ -162,7 +175,8 @@ public:
               , {}
               , {}
               , {}
-              , InferMode::Async} {
+              , InferMode::Async
+              , {} } {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -373,6 +387,31 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the output precision for model.
+
+    The function is used to set an output precision for model.
+
+    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputPrecision(detail::ParamDesc::PrecisionT precision) {
+        desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload
+
+    @param precision_map Map of pairs: name of corresponding output layer
+    and its precision in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
+        desc.output_precision = precision_map;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -407,8 +446,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}, {}, {},
-                InferMode::Async },
+                {}, {}, {}, {}, InferMode::Async, {} },
           m_tag(tag) {
     };
 
@@ -426,8 +464,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}, {}, {},
-                InferMode::Async },
+                {}, {}, {}, {}, InferMode::Async, {} },
           m_tag(tag) {
     };
 
@@ -503,6 +540,19 @@ public:
     /** @see ie::Params::cfgInferAPI */
     Params& cfgInferMode(InferMode mode) {
         desc.mode = mode;
+        return *this;
+    }
+
+    /** @see ie::Params::cfgOutputPrecision */
+    Params& cfgOutputPrecision(detail::ParamDesc::PrecisionT precision) {
+        desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
+        desc.output_precision = precision_map;
         return *this;
     }
 

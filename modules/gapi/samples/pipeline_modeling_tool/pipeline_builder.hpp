@@ -259,6 +259,7 @@ struct InferParams {
     std::vector<std::string> output_layers;
     std::map<std::string, std::string> config;
     cv::gapi::ie::InferMode mode;
+    cv::util::optional<int> out_precision;
 };
 
 class PipelineBuilder {
@@ -296,15 +297,15 @@ private:
             std::vector<Edge> output_edges;
         };
 
-        M<std::string, Node::Ptr>         calls_map;
-        std::vector<Node::Ptr>            all_calls;
+        M<std::string, Node::Ptr>    calls_map;
+        std::vector<Node::Ptr>       all_calls;
 
-        cv::gapi::GNetPackage             networks;
-        cv::gapi::GKernelPackage          kernels;
-        cv::GCompileArgs                  compile_args;
-        cv::gapi::wip::IStreamSource::Ptr src;
-        PLMode                            mode = PLMode::STREAMING;
-        std::string                       name;
+        cv::gapi::GNetPackage        networks;
+        cv::gapi::GKernelPackage     kernels;
+        cv::GCompileArgs             compile_args;
+        std::shared_ptr<DummySource> src;
+        PLMode                       mode = PLMode::STREAMING;
+        std::string                  name;
     };
 
     std::unique_ptr<State> m_state;
@@ -364,6 +365,9 @@ void PipelineBuilder::addInfer(const CallParams&  call_params,
 
     pp->pluginConfig(infer_params.config);
     pp->cfgInferMode(infer_params.mode);
+    if (infer_params.out_precision) {
+        pp->cfgOutputPrecision(infer_params.out_precision.value());
+    }
     m_state->networks += cv::gapi::networks(*pp);
 
     addCall(call_params,
