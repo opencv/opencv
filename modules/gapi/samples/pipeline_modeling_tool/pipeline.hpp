@@ -40,6 +40,16 @@ std::string PerfReport::toStr(bool expand) const {
     return ss.str();
 }
 
+class StopCriteria {
+public:
+    using Ptr = std::unique_ptr<StopCriteria>;
+
+    virtual void start()  = 0;
+    virtual void iter()   = 0;
+    virtual bool isOver() = 0;
+    virtual ~StopCriteria() = default;
+};
+
 class Pipeline {
 public:
     using Ptr = std::shared_ptr<Pipeline>;
@@ -47,28 +57,28 @@ public:
     Pipeline(std::string&&                  name,
              cv::GComputation&&             comp,
              std::shared_ptr<DummySource>&& src,
+             StopCriteria::Ptr              stop_criteria,
              cv::GCompileArgs&&             args,
              const size_t                   num_outputs);
 
     void compile();
-    void run(double work_time_ms);
+    void run();
+
     const PerfReport& report() const;
     const std::string& name() const { return m_name;}
 
     virtual ~Pipeline() = default;
 
 protected:
-    struct RunPerf {
-        int64_t              elapsed   = 0;
-        std::vector<int64_t> latencies;
-    };
-
-    virtual void _compile() = 0;
-    virtual RunPerf _run(double work_time_ms) = 0;
+    virtual void    _compile() = 0;
+    virtual int64_t run_iter() = 0;
+    virtual void    init() {};
+    virtual void    deinit() {};
 
     std::string                  m_name;
     cv::GComputation             m_comp;
     std::shared_ptr<DummySource> m_src;
+    StopCriteria::Ptr            m_stop_criteria;
     cv::GCompileArgs             m_args;
     size_t                       m_num_outputs;
     PerfReport                   m_perf;
@@ -77,11 +87,13 @@ protected:
 Pipeline::Pipeline(std::string&&                  name,
                    cv::GComputation&&             comp,
                    std::shared_ptr<DummySource>&& src,
+                   StopCriteria::Ptr              stop_criteria,
                    cv::GCompileArgs&&             args,
                    const size_t                   num_outputs)
     : m_name(std::move(name)),
       m_comp(std::move(comp)),
       m_src(std::move(src)),
+      m_stop_criteria(std::move(stop_criteria)),
       m_args(std::move(args)),
       m_num_outputs(num_outputs) {
     m_perf.name = m_name;
@@ -94,11 +106,23 @@ void Pipeline::compile() {
     });
 }
 
-void Pipeline::run(double work_time_ms) {
-    auto run_perf = _run(work_time_ms);
+void Pipeline::run() {
+    using namespace std::chrono;
 
-    m_perf.elapsed       = run_perf.elapsed;
-    m_perf.latencies     = std::move(run_perf.latencies);
+    init();
+    auto start = high_resolution_clock::now();
+    m_stop_criteria->start();
+    while (true) {
+        m_perf.latencies.push_back(run_iter());
+        m_perf.elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+        m_stop_criteria->iter();
+
+        if (m_stop_criteria->isOver()) {
+            deinit();
+            break;
+        }
+    }
+
     m_perf.avg_latency   = utils::avg(m_perf.latencies);
     m_perf.min_latency   = utils::min(m_perf.latencies);
     m_perf.max_latency   = utils::max(m_perf.latencies);
@@ -113,7 +137,6 @@ void Pipeline::run(double work_time_ms) {
 
     m_perf.throughput =
         (m_perf.latencies.size() / static_cast<double>(m_perf.elapsed)) * 1000;
-
 }
 
 const PerfReport& Pipeline::report() const {
@@ -131,39 +154,31 @@ private:
                                      cv::GCompileArgs(m_args));
     }
 
-    Pipeline::RunPerf _run(double work_time_ms) override {
-        // NB: Setup.
+    virtual void init() override {
         using namespace std::chrono;
         // NB: N-1 buffers + timestamp.
-        std::vector<cv::Mat> out_mats(m_num_outputs - 1);
-        int64_t start_ts = -1;
-        cv::GRunArgsP pipeline_outputs;
-        for (auto& m : out_mats) {
-            pipeline_outputs += cv::gout(m);
+        m_out_mats.resize(m_num_outputs - 1);
+        for (auto& m : m_out_mats) {
+            m_pipeline_outputs += cv::gout(m);
         }
-        pipeline_outputs += cv::gout(start_ts);
+        m_pipeline_outputs += cv::gout(m_start_ts);
         m_compiled.setSource(m_src);
-
-        // NB: Start execution & measure performance statistics.
-        Pipeline::RunPerf perf;
-        auto start = high_resolution_clock::now();
         m_compiled.start();
-        while (m_compiled.pull(cv::GRunArgsP{pipeline_outputs})) {
-            int64_t latency = utils::timestamp<milliseconds>() - start_ts;
+    }
 
-            perf.latencies.push_back(latency);
-            perf.elapsed = duration_cast<milliseconds>(
-                    high_resolution_clock::now() - start).count();
+    virtual void deinit() override {
+        m_compiled.stop();
+    }
 
-            if (perf.elapsed >= work_time_ms) {
-                m_compiled.stop();
-                break;
-            }
-        };
-        return perf;
+    virtual int64_t run_iter() override {
+        m_compiled.pull(cv::GRunArgsP{m_pipeline_outputs});
+        return utils::timestamp<std::chrono::milliseconds>() - m_start_ts;
     }
 
     cv::GStreamingCompiled m_compiled;
+    cv::GRunArgsP        m_pipeline_outputs;
+    std::vector<cv::Mat> m_out_mats;
+    int64_t              m_start_ts;
 };
 
 class RegularPipeline : public Pipeline {
@@ -177,37 +192,26 @@ private:
                             cv::GCompileArgs(m_args));
     }
 
-    Pipeline::RunPerf _run(double work_time_ms) override {
-        // NB: Setup
-        using namespace std::chrono;
-        cv::gapi::wip::Data d;
-        std::vector<cv::Mat> out_mats(m_num_outputs);
-        cv::GRunArgsP pipeline_outputs;
-        for (auto& m : out_mats) {
-            pipeline_outputs += cv::gout(m);
+    virtual void init() override {
+        m_out_mats.resize(m_num_outputs);
+        for (auto& m : m_out_mats) {
+            m_pipeline_outputs += cv::gout(m);
         }
-
-        // NB: Start execution & measure performance statistics.
-        Pipeline::RunPerf perf;
-        auto start = high_resolution_clock::now();
-        while (m_src->pull(d)) {
-            auto in_mat = cv::util::get<cv::Mat>(d);
-            int64_t latency = utils::measure<milliseconds>([&]{
-                m_compiled(cv::gin(in_mat), cv::GRunArgsP{pipeline_outputs});
-            });
-
-            perf.latencies.push_back(latency);
-            perf.elapsed = duration_cast<milliseconds>(
-                    high_resolution_clock::now() - start).count();
-
-            if (perf.elapsed >= work_time_ms) {
-                break;
-            }
-        };
-        return perf;
     }
 
-    cv::GCompiled m_compiled;
+    virtual int64_t run_iter() override {
+        using namespace std::chrono;
+        cv::gapi::wip::Data d;
+        m_src->pull(d);
+        auto in_mat = cv::util::get<cv::Mat>(d);
+        return utils::measure<milliseconds>([&]{
+            m_compiled(cv::gin(in_mat), cv::GRunArgsP{m_pipeline_outputs});
+        });
+    }
+
+    cv::GCompiled        m_compiled;
+    cv::GRunArgsP        m_pipeline_outputs;
+    std::vector<cv::Mat> m_out_mats;
 };
 
 enum class PLMode {

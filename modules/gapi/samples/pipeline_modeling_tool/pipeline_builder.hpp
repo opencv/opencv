@@ -262,6 +262,49 @@ struct InferParams {
     cv::util::optional<int> out_precision;
 };
 
+class ElapsedTimeCriteria : public StopCriteria {
+public:
+    ElapsedTimeCriteria(int64_t work_time_mcs) : m_work_time_mcs(work_time_mcs) { };
+
+    void start() override {
+        m_start_ts = m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+    }
+
+    void iter() override {
+        m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+    }
+
+    bool isOver() override {
+        return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
+    }
+
+private:
+    int64_t m_work_time_mcs;
+    int64_t m_start_ts = -1;
+    int64_t m_curr_ts  = -1;
+};
+
+class NumItersCriteria : public StopCriteria {
+public:
+    NumItersCriteria(int64_t num_iters) : m_num_iters(num_iters) { };
+
+    void start() override {
+        m_curr_iters = 0;
+    }
+
+    void iter() override {
+        ++m_curr_iters;
+    }
+
+    bool isOver() override {
+        return m_curr_iters == m_num_iters;
+    }
+
+private:
+    int64_t m_num_iters;
+    int64_t m_curr_iters = 0;
+};
+
 class PipelineBuilder {
 public:
     PipelineBuilder();
@@ -279,6 +322,7 @@ public:
     void setDumpFilePath(const std::string& dump);
     void setQueueCapacity(const size_t qc);
     void setName(const std::string& name);
+    void setStopCriteria(StopCriteria::Ptr stop_criteria);
 
     Pipeline::Ptr build();
 
@@ -306,6 +350,7 @@ private:
         std::shared_ptr<DummySource> src;
         PLMode                       mode = PLMode::STREAMING;
         std::string                  name;
+        StopCriteria::Ptr            stop_criteria;
     };
 
     std::unique_ptr<State> m_state;
@@ -430,6 +475,10 @@ void PipelineBuilder::setQueueCapacity(const size_t qc) {
 
 void PipelineBuilder::setName(const std::string& name) {
     m_state->name = name;
+}
+
+void PipelineBuilder::setStopCriteria(StopCriteria::Ptr stop_criteria) {
+    m_state->stop_criteria = std::move(stop_criteria);
 }
 
 static bool visit(Node::Ptr node,
@@ -590,6 +639,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
         }
     }
 
+    GAPI_Assert(m_state->stop_criteria);
     if (m_state->mode == PLMode::STREAMING) {
         GAPI_Assert(graph_inputs.size() == 1);
         GAPI_Assert(cv::util::holds_alternative<cv::GMat>(graph_inputs[0]));
@@ -605,6 +655,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                        cv::GProtoInputArgs{graph_inputs},
                                                        cv::GProtoOutputArgs{graph_outputs}),
                                                    std::move(m_state->src),
+                                                   std::move(m_state->stop_criteria),
                                                    std::move(m_state->compile_args),
                                                    graph_outputs.size());
     }
@@ -614,6 +665,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                  cv::GProtoInputArgs{graph_inputs},
                                                  cv::GProtoOutputArgs{graph_outputs}),
                                              std::move(m_state->src),
+                                             std::move(m_state->stop_criteria),
                                              std::move(m_state->compile_args),
                                              graph_outputs.size());
 }
