@@ -178,6 +178,7 @@ set(gapi_srcs
 
     # Python bridge
     src/backends/ie/bindings_ie.cpp
+    src/backends/onnx/bindings_onnx.cpp
     src/backends/python/gpythonbackend.cpp
 
     # OpenVPL Streaming source
