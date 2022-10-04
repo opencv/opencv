@@ -44,9 +44,9 @@ class StopCriteria {
 public:
     using Ptr = std::unique_ptr<StopCriteria>;
 
-    virtual void start()  = 0;
-    virtual void iter()   = 0;
-    virtual bool isOver() = 0;
+    virtual void start() = 0;
+    virtual void iter()  = 0;
+    virtual bool done()  = 0;
     virtual ~StopCriteria() = default;
 };
 
@@ -117,7 +117,7 @@ void Pipeline::run() {
         m_perf.elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
         m_stop_criteria->iter();
 
-        if (m_stop_criteria->isOver()) {
+        if (m_stop_criteria->done()) {
             deinit();
             break;
         }
