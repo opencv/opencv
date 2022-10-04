@@ -16,4 +16,33 @@ TEST(Imgproc_PyrUp, pyrUp_regression_22184)
     ASSERT_GT(cvRound(min_val), 0);
 }
 
+TEST(Imgproc_PyrDown, pyrDown_regression)
+{
+    Mat src(16, 16,CV_16UC3,Scalar(0,0,0));
+    {
+        int swidth = src.cols;
+        int sheight = src.rows;
+        int cn = src.channels();
+        int count = 0;
+        for (int y = 0; y < sheight; y++)
+        {
+            ushort *src_c = src.ptr<ushort>(y);
+            for (int x = 0; x < swidth * cn; x++)
+            {
+                src_c[x] = (count++) % 10;
+            }
+        }
+    }
+    Mat dst(src.cols / 2 + 1, src.rows / 2 + 1, CV_16UC3, Scalar(0,0,0));
+    pyrDown(src, dst, Size(dst.cols, dst.rows));
+
+    {
+        int cn = dst.channels();
+        ushort *dst_c = dst.ptr<ushort>(dst.rows - 1);
+        ASSERT_EQ(dst_c[(dst.cols - 1) * cn], 5);
+        ASSERT_EQ(dst_c[(dst.cols - 1) * cn + 1], 5);
+        ASSERT_EQ(dst_c[(dst.cols - 1) * cn + 2], 5);
+    }
+}
+
 }}  // namespace
