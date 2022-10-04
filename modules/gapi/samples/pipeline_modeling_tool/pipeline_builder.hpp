@@ -274,7 +274,7 @@ public:
         m_curr_ts = utils::timestamp<std::chrono::microseconds>();
     }
 
-    bool isOver() override {
+    bool done() override {
         return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
     }
 
@@ -296,7 +296,7 @@ public:
         ++m_curr_iters;
     }
 
-    bool isOver() override {
+    bool done() override {
         return m_curr_iters == m_num_iters;
     }
 
