@@ -52,6 +52,8 @@ enum class TraitAs: int
 
 using IEConfig = std::map<std::string, std::string>;
 
+enum InferMode {Sync, Async};
+
 namespace detail {
 struct ParamDesc {
     std::string model_path;
@@ -89,6 +91,8 @@ struct ParamDesc {
     cv::optional<cv::gapi::wip::onevpl::Device> vpl_preproc_device;
     cv::optional<cv::gapi::wip::onevpl::Context> vpl_preproc_ctx;
 
+    InferMode mode;
+
     using PrecisionT = int;
     using PrecisionMapT = std::unordered_map<std::string, PrecisionT>;
     // NB: This parameter can contain:
@@ -100,7 +104,6 @@ struct ParamDesc {
                                                 PrecisionT,
                                                 PrecisionMapT>;
     PrecisionVariantT output_precision;
-
 };
 } // namespace detail
 
@@ -146,7 +149,8 @@ public:
               , {}
               , {}
               , {}
-              , {}} {
+              , InferMode::Async
+              , {} } {
     };
 
     /** @overload
@@ -171,7 +175,8 @@ public:
               , {}
               , {}
               , {}
-              , {}} {
+              , InferMode::Async
+              , {} } {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -366,6 +371,22 @@ public:
         return *this;
     }
 
+    /** @brief Specifies which api will be used to run inference.
+
+    The function is used to specify mode for OpenVINO inference.
+    OpenVINO has two options to run inference:
+    1. Asynchronous (using StartAsync: https://docs.openvino.ai/latest/classInferenceEngine_1_1InferRequest.html#doxid-class-inference-engine-1-1-infer-request-1a405293e8423d82a5b45f642a3bef0d24)
+    2. Synchronous (using Infer: https://docs.openvino.ai/latest/classInferenceEngine_1_1InferRequest.html#doxid-class-inference-engine-1-1-infer-request-1a3391ce30894abde730523e9ca9371ce8)
+    By default asynchronous mode is used.
+
+    @param mode Inference mode which will be used.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInferMode(InferMode mode) {
+        desc.mode = mode;
+        return *this;
+    }
+
     /** @brief Specifies the output precision for model.
 
     The function is used to set an output precision for model.
@@ -425,7 +446,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}, {}},
+                {}, {}, {}, {}, InferMode::Async, {} },
           m_tag(tag) {
     };
 
@@ -443,7 +464,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}, {}},
+                {}, {}, {}, {}, InferMode::Async, {} },
           m_tag(tag) {
     };
 
@@ -513,6 +534,12 @@ public:
     /** @see ie::Params::cfgBatchSize */
     Params& cfgBatchSize(const size_t size) {
         desc.batch_size = cv::util::make_optional(size);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgInferAPI */
+    Params& cfgInferMode(InferMode mode) {
+        desc.mode = mode;
         return *this;
     }
 

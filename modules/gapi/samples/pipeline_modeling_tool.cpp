@@ -175,6 +175,17 @@ static PLMode strToPLMode(const std::string& mode_str) {
     }
 }
 
+static cv::gapi::ie::InferMode strToInferMode(const std::string& infer_mode) {
+    if (infer_mode == "async") {
+        return cv::gapi::ie::InferMode::Async;
+    } else if (infer_mode == "sync") {
+        return cv::gapi::ie::InferMode::Sync;
+    } else {
+        throw std::logic_error("Unsupported Infer mode: " + infer_mode +
+                "\nPlease chose between: async and sync");
+    }
+}
+
 template <>
 CallParams read<CallParams>(const cv::FileNode& fn) {
     auto name =
@@ -288,7 +299,8 @@ int main(int argc, char* argv[]) {
         "{ drop_frames | false     | Drop frames if they come earlier than pipeline is completed. }"
         "{ exec_list   |           | A comma-separated list of pipelines that"
                                    " will be executed. Spaces around commas"
-                                   " are prohibited. }";
+                                   " are prohibited. }"
+        "{ infer_mode  | async     | OpenVINO inference mode (async/sync). }";
 
         cv::CommandLineParser cmd(argc, argv, keys);
         if (cmd.has("help")) {
@@ -304,6 +316,7 @@ int main(int argc, char* argv[]) {
         const auto qc          = cmd.get<int>("qc");
         const auto app_mode    = strToAppMode(cmd.get<std::string>("app_mode"));
         const auto exec_str    = cmd.get<std::string>("exec_list");
+        const auto infer_mode  = strToInferMode(cmd.get<std::string>("infer_mode"));
         const auto drop_frames = cmd.get<bool>("drop_frames");
 
         cv::FileStorage fs;
@@ -394,6 +407,7 @@ int main(int argc, char* argv[]) {
                            << call_params.name << std::endl << e.what();
                         throw std::logic_error(ss.str());
                     }
+                    infer_params.mode = infer_mode;
                     builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);

@@ -392,6 +392,12 @@ struct IEUnit {
                                     params.vpl_preproc_ctx.value());
             GAPI_LOG_INFO(nullptr, "VPP preproc created successfuly");
         }
+
+        if (params.mode == cv::gapi::ie::InferMode::Sync &&
+            params.nireq != 1u) {
+            throw std::logic_error(
+                    "Failed: cv::gapi::ie::InferMode::Sync works only with nireq equal to 1.");
+        }
     }
 
     // This method is [supposed to be] called at Island compilation stage
@@ -843,40 +849,130 @@ std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInfe
     return requests;
 }
 
-class cv::gimpl::ie::RequestPool {
+class IInferExecutor {
 public:
-    using RunF      = std::function<void(InferenceEngine::InferRequest&)>;
-    using CallbackF = std::function<void(InferenceEngine::InferRequest&, InferenceEngine::StatusCode)>;
+    using Ptr             = std::shared_ptr<IInferExecutor>;
+    using NotifyCallbackF = std::function<void()>;
+    using SetInputDataF   = std::function<void(InferenceEngine::InferRequest&)>;
+    using ReadOutputDataF = std::function<void(InferenceEngine::InferRequest&, InferenceEngine::StatusCode)>;
 
     // NB: The task is represented by:
-    // RunF      - function which is set blobs and run async inference.
-    // CallbackF - function which is obtain output blobs and post it to output.
+    // SetInputDataF - function which set input data.
+    // ReadOutputDataF - function which read output data.
     struct Task {
-        RunF run;
-        CallbackF callback;
+        SetInputDataF   set_input_data;
+        ReadOutputDataF read_output_data;
     };
 
-    explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
+    IInferExecutor(IE::InferRequest request, NotifyCallbackF notify)
+        : m_request(std::move(request)),
+          m_notify(std::move(notify)) {
+    };
 
-    void execute(Task&& t);
-    void waitAll();
+    virtual void execute(const Task& task) = 0;
+    virtual ~IInferExecutor() = default;
+
+protected:
+    IE::InferRequest m_request;
+    NotifyCallbackF  m_notify;
+};
+
+class SyncInferExecutor : public IInferExecutor {
+    using IInferExecutor::IInferExecutor;
+    virtual void execute(const IInferExecutor::Task& task) override;
+};
+
+void SyncInferExecutor::execute(const IInferExecutor::Task& task) {
+    try {
+        task.set_input_data(m_request);
+        m_request.Infer();
+        task.read_output_data(m_request, IE::StatusCode::OK);
+    } catch (...) {
+        m_notify();
+        throw;
+    }
+    // NB: Notify pool that executor has finished.
+    m_notify();
+}
+
+class AsyncInferExecutor : public IInferExecutor {
+public:
+    using IInferExecutor::IInferExecutor;
+    virtual void execute(const IInferExecutor::Task& task) override;
 
 private:
     void callback(Task task,
-                  size_t id,
                   IE::InferRequest request,
                   IE::StatusCode code) noexcept;
-    void setup();
-
-    QueueClass<size_t>                         m_idle_ids;
-    std::vector<InferenceEngine::InferRequest> m_requests;
 };
 
-// RequestPool implementation //////////////////////////////////////////////
-cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferRequest>&& requests)
-    : m_requests(std::move(requests)) {
-        setup();
+void AsyncInferExecutor::execute(const IInferExecutor::Task& task) {
+    using namespace std::placeholders;
+    using callback_t = std::function<void(IE::InferRequest, IE::StatusCode)>;
+    m_request.SetCompletionCallback(
+            static_cast<callback_t>(
+                std::bind(&AsyncInferExecutor::callback, this, task, _1, _2)));
+    try {
+        task.set_input_data(m_request);
+        m_request.StartAsync();
+    } catch (...) {
+        m_request.SetCompletionCallback([](){});
+        m_notify();
+        throw;
     }
+}
+
+void AsyncInferExecutor::callback(IInferExecutor::Task task,
+                                  IE::InferRequest     request,
+                                  IE::StatusCode       code) noexcept {
+    task.read_output_data(request, code);
+    request.SetCompletionCallback([](){});
+    // NB: Notify pool that executor has finished.
+    m_notify();
+}
+
+class cv::gimpl::ie::RequestPool {
+public:
+
+    explicit RequestPool(cv::gapi::ie::InferMode                      mode,
+                         std::vector<InferenceEngine::InferRequest>&& requests);
+
+    IInferExecutor::Ptr getIdleRequest();
+    void waitAll();
+
+private:
+    void setup();
+    void release(const size_t id);
+
+    QueueClass<size_t>               m_idle_ids;
+    std::vector<IInferExecutor::Ptr> m_requests;
+};
+
+void cv::gimpl::ie::RequestPool::release(const size_t id) {
+    m_idle_ids.push(id);
+}
+
+// RequestPool implementation //////////////////////////////////////////////
+cv::gimpl::ie::RequestPool::RequestPool(cv::gapi::ie::InferMode                      mode,
+                                        std::vector<InferenceEngine::InferRequest>&& requests) {
+    for (size_t i = 0; i < requests.size(); ++i) {
+        IInferExecutor::Ptr iexec = nullptr;
+        switch (mode) {
+            case cv::gapi::ie::InferMode::Async:
+                iexec = std::make_shared<AsyncInferExecutor>(std::move(requests[i]),
+                                                             std::bind(&RequestPool::release, this, i));
+                break;
+            case cv::gapi::ie::InferMode::Sync:
+                iexec = std::make_shared<SyncInferExecutor>(std::move(requests[i]),
+                                                             std::bind(&RequestPool::release, this, i));
+                break;
+            default:
+                GAPI_Assert(false && "Unsupported cv::gapi::ie::InferMode");
+        }
+        m_requests.emplace_back(std::move(iexec));
+    }
+    setup();
+}
 
 void cv::gimpl::ie::RequestPool::setup() {
     for (size_t i = 0; i < m_requests.size(); ++i) {
@@ -884,40 +980,10 @@ void cv::gimpl::ie::RequestPool::setup() {
     }
 }
 
-void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
+IInferExecutor::Ptr cv::gimpl::ie::RequestPool::getIdleRequest() {
     size_t id = 0u;
     m_idle_ids.pop(id);
-
-    auto& request = m_requests[id];
-
-    using namespace std::placeholders;
-    using callback_t = std::function<void(IE::InferRequest, IE::StatusCode)>;
-    request.SetCompletionCallback(
-            static_cast<callback_t>(
-                std::bind(&cv::gimpl::ie::RequestPool::callback, this,
-                          t, id, _1, _2)));
-    // NB: InferRequest is already marked as busy
-    // in case of exception need to return it back to the idle.
-    try {
-        t.run(request);
-    } catch (...) {
-        request.SetCompletionCallback([](){});
-        m_idle_ids.push(id);
-        throw;
-    }
-}
-
-void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
-                                          size_t id,
-                                          IE::InferRequest request,
-                                          IE::StatusCode code) noexcept {
-    // NB: Inference is over.
-    // 1. Run callback
-    // 2. Destroy callback to free resources.
-    // 3. Mark InferRequest as idle.
-    task.callback(request, code);
-    request.SetCompletionCallback([](){});
-    m_idle_ids.push(id);
+    return m_requests[id];
 }
 
 // NB: Not thread-safe.
@@ -944,7 +1010,7 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
             if (this_nh == nullptr) {
                 this_nh = nh;
                 this_iec = iem.metadata(this_nh).get<IEUnit>().compile();
-                m_reqPool.reset(new RequestPool(this_iec.createInferRequests()));
+                m_reqPool.reset(new RequestPool(this_iec.params.mode, this_iec.createInferRequests()));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -1356,8 +1422,8 @@ struct Infer: public cv::detail::KernelTag {
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
         using namespace std::placeholders;
-        reqPool.execute(
-                cv::gimpl::ie::RequestPool::Task {
+        reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
                     [ctx](InferenceEngine::InferRequest &req) {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
@@ -1375,9 +1441,6 @@ struct Infer: public cv::detail::KernelTag {
                                                                   cv::util::optional<cv::Rect>{});
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
-                        // FIXME: Should it be done by kernel ?
-                        // What about to do that in RequestPool ?
-                        req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, _2, ctx)
                 }
@@ -1470,8 +1533,8 @@ struct InferROI: public cv::detail::KernelTag {
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
         using namespace std::placeholders;
-        reqPool.execute(
-                cv::gimpl::ie::RequestPool::Task {
+        reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
                     [ctx](InferenceEngine::InferRequest &req) {
                         GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
@@ -1496,9 +1559,6 @@ struct InferROI: public cv::detail::KernelTag {
                                    *(ctx->uu.params.input_names.begin()),
                                    this_blob, *ctx);
                         }
-                        // FIXME: Should it be done by kernel ?
-                        // What about to do that in RequestPool ?
-                        req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, _2, ctx)
                 }
@@ -1613,11 +1673,10 @@ struct InferList: public cv::detail::KernelTag {
         for (auto&& it : ade::util::indexed(in_roi_vec)) {
                   auto  pos = ade::util::index(it);
             const auto& rc  = ade::util::value(it);
-            reqPool.execute(
-                cv::gimpl::ie::RequestPool::Task {
+            reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
                         setROIBlob(req, ctx->uu.params.input_names[0u], this_blob, rc, *ctx);
-                        req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
                 }
@@ -1770,8 +1829,8 @@ struct InferList2: public cv::detail::KernelTag {
 
         PostOutputsList callback(list_size, ctx, std::move(cached_dims));
         for (const auto &list_idx : ade::util::iota(list_size)) {
-            reqPool.execute(
-                cv::gimpl::ie::RequestPool::Task {
+            reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
                     [ctx, list_idx, list_size, blob_0](InferenceEngine::InferRequest &req) {
                         for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
@@ -1791,7 +1850,6 @@ struct InferList2: public cv::detail::KernelTag {
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
                         }
-                        req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, std::placeholders::_2, list_idx)
                 } // task
