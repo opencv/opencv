@@ -619,7 +619,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         srcFrame.getPyramidAt(srcLevelDepth, OdometryFramePyramidType::PYR_DEPTH, level);
         dstFrame.getPyramidAt(dstLevelDepth, OdometryFramePyramidType::PYR_DEPTH, level);
 
-        if (method != OdometryType::DEPTH)
+        if (method != OdometryType::DEPTH) // RGB(D)
         {
             srcFrame.getPyramidAt(srcLevelImage, OdometryFramePyramidType::PYR_IMAGE, level);
             dstFrame.getPyramidAt(dstLevelImage, OdometryFramePyramidType::PYR_IMAGE, level);
@@ -642,7 +642,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             const Mat pyramidMask;
             srcFrame.getPyramidAt(pyramidMask, OdometryFramePyramidType::PYR_MASK, level);
 
-            if(method != OdometryType::DEPTH) // RGB
+            if(method != OdometryType::DEPTH) // RGB(D)
             {
                 const Mat pyramidTexturedMask;
                 dstFrame.getPyramidAt(pyramidTexturedMask, OdometryFramePyramidType::PYR_TEXMASK, level);
@@ -652,7 +652,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                                 corresps_rgbd, diffs_rgbd, sigma_rgbd, OdometryType::RGB);
             }
 
-            if(method != OdometryType::RGB) // ICP
+            if(method != OdometryType::RGB) // ICP, RGBD
             {
                 if (algtype == OdometryAlgoType::COMMON)
                 {
