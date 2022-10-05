@@ -43,14 +43,6 @@ public:
     Odometry(OdometryType otype, const OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
-    /** Create new odometry frame
-     * The Type (Mat or UMat) depends on odometry type
-     */
-    OdometryFrame createOdometryFrame() const;
-
-    // Deprecated
-    OdometryFrame createOdometryFrame(OdometryFrameStoreType matType) const;
-
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
      */
