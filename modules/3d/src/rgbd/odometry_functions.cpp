@@ -440,29 +440,13 @@ void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vect
 }
 
 
-template<typename TMat>
-void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputOutputArrayOfArrays pyramidSobel, int sobelSize)
+void preparePyramidSobel(const std::vector<UMat>& pyramidImage, int dx, int dy, std::vector<UMat>& pyramidSobel, int sobelSize)
 {
-    size_t imgLevels = pyramidImage.size(-1).width;
-    size_t sobelLvls = pyramidSobel.size(-1).width;
-    if (!pyramidSobel.empty())
+    int nLevels = pyramidImage.size();
+    pyramidSobel.resize(nLevels, UMat());
+    for (size_t i = 0; i < nLevels; i++)
     {
-        if (sobelLvls != imgLevels)
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidSobel.");
-
-        for (size_t i = 0; i < sobelLvls; i++)
-        {
-            CV_Assert(pyramidSobel.size((int)i) == pyramidImage.size((int)i));
-            CV_Assert(pyramidSobel.type((int)i) == CV_16SC1);
-        }
-    }
-    else
-    {
-        pyramidSobel.create((int)imgLevels, 1, CV_16SC1, -1);
-        for (size_t i = 0; i < imgLevels; i++)
-        {
-            Sobel(getTMat<TMat>(pyramidImage, (int)i), getTMatRef<TMat>(pyramidSobel, (int)i), CV_16S, dx, dy, sobelSize);
-        }
+        Sobel(pyramidImage[i], pyramidSobel[i], CV_16S, dx, dy, sobelSize);
     }
 }
 
