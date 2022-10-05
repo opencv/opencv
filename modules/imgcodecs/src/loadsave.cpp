@@ -216,10 +216,11 @@ ImageCodecInitializer& getCodecs()
  * Find the decoders
  *
  * @param[in] filename File to search
+ * @param[in] status Function result
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+static ImageDecoder findDecoder( const std::string& filename, ImreadStatus& status ) {
 
     size_t i, maxlen = 0;
 
@@ -236,45 +237,7 @@ static ImageDecoder findDecoder( const String& filename ) {
 
     /// in the event of a failure, return an empty image decoder
     if( !f ) {
-        CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
-        return ImageDecoder();
-    }
-
-    // read the file signature
-    String signature(maxlen, ' ');
-    maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
-    fclose(f);
-    signature = signature.substr(0, maxlen);
-
-    /// compare signature against all decoders
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        if( codecs.decoders[i]->checkSignature(signature) )
-            return codecs.decoders[i]->newDecoder();
-    }
-
-    /// If no decoder was found, return base type
-    return ImageDecoder();
-}
-
-static ImageDecoder findDecoder( const std::string& filename, ImreadError& error ) {
-
-    size_t i, maxlen = 0;
-
-    /// iterate through list of registered codecs
-    ImageCodecInitializer& codecs = getCodecs();
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        size_t len = codecs.decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
-
-    /// Open the file
-    FILE* f= fopen( filename.c_str(), "rb" );
-
-    /// in the event of a failure, return an empty image decoder
-    if( !f ) {
-        error = IMREAD_ERROR_FILE_NOT_FOUND;
+        status = IMREAD_ERROR_FILE_NOT_FOUND;
         CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
@@ -293,8 +256,13 @@ static ImageDecoder findDecoder( const std::string& filename, ImreadError& error
     }
 
     /// If no decoder was found, return base type
-    error = IMREAD_ERROR_UNRECOGNIZED_FORMAT;
+    status = IMREAD_ERROR_UNRECOGNIZED_FORMAT;
     return ImageDecoder();
+}
+
+static ImageDecoder findDecoder( const String& filename ) {
+    ImreadStatus status;
+    return findDecoder(filename, status);
 }
 
 static ImageDecoder findDecoder( const Mat& buf )
@@ -540,12 +508,12 @@ imread_( const String& filename, int flags, Mat& mat )
  * @param[in] ImreadParams flags, maxPixels, maxSize options
  *
 */
-static ImreadError
+static ImreadStatus
 imread_2( String const& filename, OutputArray image, ImreadParams params)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
-    ImreadError error = IMREAD_OK;
+    ImreadStatus status = IMREAD_OK;
     int flags = params.flags;
 
 #ifdef HAVE_GDAL
@@ -553,14 +521,14 @@ imread_2( String const& filename, OutputArray image, ImreadParams params)
         decoder = GdalDecoder().newDecoder();
     }else{
 #endif
-        decoder = findDecoder( filename, error );
+        decoder = findDecoder( filename, status );
 #ifdef HAVE_GDAL
     }
 #endif
 
-    /// if no decoder was found, return nothing.
-    if( !decoder && error != IMREAD_OK){
-        return error;
+    // if no decoder was found, return nothing.
+    if( !decoder || status != IMREAD_OK){
+        return status;
     }
 
     /// set the scale_denom in the driver
@@ -797,7 +765,7 @@ Mat imread( const String& filename, int flags )
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
 */
-ImreadError imread2( const std::string& filename, OutputArray image, ImreadParams params )
+ImreadStatus imread2( const std::string& filename, OutputArray image, ImreadParams params )
 {
     CV_TRACE_FUNCTION();
 

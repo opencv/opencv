@@ -168,13 +168,13 @@ enum ImwritePAMFlags {
      };
 
 
-enum ImreadError {
-      IMREAD_OK = 0,
-      IMREAD_ERROR_FILE_NOT_FOUND,
-      IMREAD_ERROR_UNRECOGNIZED_FORMAT,
-      IMREAD_ERROR_SIZE_LIMIT_EXCEEDED,
-      IMREAD_ERROR_INVALID_HEADER,
-      IMREAD_ERROR_INVALID_DATA,
+enum ImreadStatus {
+      IMREAD_OK                         = 0,
+      IMREAD_ERROR_FILE_NOT_FOUND       = 1,
+      IMREAD_ERROR_UNRECOGNIZED_FORMAT  = 2,
+      IMREAD_ERROR_SIZE_LIMIT_EXCEEDED  = 3,
+      IMREAD_ERROR_INVALID_HEADER       = 4,
+      IMREAD_ERROR_INVALID_DATA         = 5
      };
 
 /** @brief Additional parameters for imread2
@@ -255,7 +255,7 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
 The function imread loads an image from the specified file and returns it. If the image cannot be
 read (because of missing file, improper permissions, unsupported or invalid format), the function
-returns an ImreadError codes and empty OutputArray ( Mat::data==NULL ).
+returns an ImreadStatus codes and empty OutputArray ( Mat::data==NULL ).
 
 Currently, the following file formats are supported:
 - @sa imread
@@ -264,7 +264,7 @@ Currently, the following file formats are supported:
 @param image OutputArray that image is loaded
 @param params additional parameters to set how image is read
 */
-CV_EXPORTS_W ImreadError imread2( const std::string& filename, OutputArray image, ImreadParams params);
+CV_EXPORTS_W ImreadStatus imread2( const std::string& filename, OutputArray image, ImreadParams params);
 
 /** @brief Loads a multi-page image from a file.
 
