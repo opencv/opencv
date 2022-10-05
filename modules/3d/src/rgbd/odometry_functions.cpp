@@ -186,143 +186,106 @@ void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 
 void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
-    typedef Mat TMat;
-
-    TMat depth;
-    frame.getScaledDepth(depth);
-    if (depth.empty())
+    //TODO: don't use scaled when scale bug is fixed
+    UMat scaledDepth;
+    frame.getScaledDepth(scaledDepth);
+    if (scaledDepth.empty())
     {
-        if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
-        {
-            TMat pyr0;
-            frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
-            frame.setDepth(pyr0);
-            frame.getScaledDepth(depth);
-        }
-        else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
-        {
-            TMat cloud;
-            frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
-            std::vector<TMat> xyz;
-            split(cloud, xyz);
-            frame.setDepth(xyz[2]);
-            frame.getScaledDepth(depth);
-        }
-        else
-            CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
+        UMat depth;
+        frame.getDepth(depth);
+        CV_Assert(!depth.empty());
+        CV_Assert(depth.type() == CV_32FC1);
+        prepareDepth(frame);
+        frame.getScaledDepth(scaledDepth);
     }
 
-    checkDepth(depth, depth.size());
-
-    TMat mask;
+    UMat mask;
     frame.getMask(mask);
-    if (mask.empty() && frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK) > 0)
+    if (mask.empty())
     {
-        TMat pyr0;
-        frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
-        frame.setMask(pyr0);
-        frame.getMask(mask);
+        mask = UMat(scaledDepth.size(), CV_8UC1, Scalar(255));
+        frame.impl->mask = mask;
     }
-    checkMask(mask, depth.size());
+    else
+    {
+        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.size() == scaledDepth.size());
+    }
 
     std::vector<int> iterCounts;
-    Mat miterCounts;
-    settings.getIterCounts(miterCounts);
-    for (int i = 0; i < miterCounts.size().height; i++)
-        iterCounts.push_back(miterCounts.at<int>(i));
+    settings.getIterCounts(iterCounts);
 
-    std::vector<TMat> dpyramids;
-    preparePyramidImage(depth, dpyramids, iterCounts.size());
-    setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+    int maxLevel = iterCounts.size() - 1;
+    std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
+    if (dpyramids.empty())
+        buildPyramid(scaledDepth, dpyramids, maxLevel);
 
-    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
-    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-
-    std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
-    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
+    std::vector<UMat>& cpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_CLOUD];
+    preparePyramidCloud(dpyramids, cameraMatrix, cpyramids);
 }
 
 void prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {
-    typedef Mat TMat;
-
-    TMat mask;
+    UMat mask;
     frame.getMask(mask);
 
-    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
-    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+    const std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
 
-    std::vector<TMat> mpyramids;
-    std::vector<TMat> npyramids;
-    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
-        npyramids, mpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+    std::vector<int> iterCounts;
+    settings.getIterCounts(iterCounts);
+    std::vector<UMat>& mpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_MASK];
+    if (mpyramids.empty())
+        preparePyramidMask(mask, dpyramids, iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
 }
 
 void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
-    typedef Mat TMat;
-
+    //TODO: think about keeping normalsComputer inside Odometry object
     Ptr<RgbdNormals> normalsComputer;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
-    TMat depth, mask, normals;
-    frame.getScaledDepth(depth);
+    UMat scaledDepth, mask, normals;
+    frame.getScaledDepth(scaledDepth);
     frame.getMask(mask);
     frame.getNormals(normals);
 
     if (normals.empty())
     {
-        if ( frame.getPyramidLevels(OdometryFramePyramidType::PYR_NORM))
-        {
-            TMat n0;
-            frame.getPyramidAt(n0, OdometryFramePyramidType::PYR_NORM, 0);
-            frame.setNormals(n0);
-            frame.getNormals(normals);
-        }
-        else
-        {
-            Matx33f K;
-            if (!normalsComputer.empty())
-                normalsComputer->getK(K);
-            if (normalsComputer.empty() ||
-                normalsComputer->getRows() != depth.rows ||
-                normalsComputer->getCols() != depth.cols ||
-                norm(K, cameraMatrix) > FLT_EPSILON)
-                normalsComputer = RgbdNormals::create(depth.rows,
-                    depth.cols,
-                    depth.depth(),
-                    cameraMatrix,
-                    normalWinSize,
-                    50.f,
-                    normalMethod);
-            TMat c0;
-            frame.getPyramidAt(c0, OdometryFramePyramidType::PYR_CLOUD, 0);
-            normalsComputer->apply(c0, normals);
-            frame.setNormals(normals);
-            frame.getNormals(normals);
-        }
+        Matx33f K;
+        if (!normalsComputer.empty())
+            normalsComputer->getK(K);
+        if (normalsComputer.empty() ||
+            normalsComputer->getRows() != scaledDepth.rows ||
+            normalsComputer->getCols() != scaledDepth.cols ||
+            norm(K, cameraMatrix) > FLT_EPSILON)
+            normalsComputer = RgbdNormals::create(scaledDepth.rows,
+                                                  scaledDepth.cols,
+                                                  scaledDepth.depth(),
+                                                  cameraMatrix,
+                                                  normalWinSize,
+                                                  50.f,
+                                                  normalMethod);
+        const UMat& c0 = frame.impl->pyramids[OdometryFramePyramidType::PYR_CLOUD][0];
+        normalsComputer->apply(c0, normals);
+        frame.impl->normals = normals;
     }
 
-    std::vector<TMat> npyramids;
-    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
-    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+    const std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
+
+    std::vector<UMat>& npyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_NORM];
     preparePyramidNormals(normals, dpyramids, npyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_NORM, npyramids);
 
-    std::vector<TMat> mpyramids;
-    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
-        npyramids, mpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+    std::vector<UMat>& mpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_MASK];
+    preparePyramidMaskWithNormals(mask, dpyramids, npyramids, settings.getMinDepth(), settings.getMaxDepth(),
+                                  mpyramids);
 
-    std::vector<TMat> nmpyramids;
+
+    std::vector<UMat>& nmpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_NORMMASK];
     preparePyramidNormalsMask(npyramids, mpyramids, settings.getMaxPointsPart(), nmpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_NORMMASK, nmpyramids);
 }
 
 void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage)
@@ -367,10 +330,11 @@ void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage
         buildPyramid(image, pyramidImage, (int)levelCount - 1);
 }
 
+//TODO: this
 template<typename TMat>
-void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth,
-                        InputArrayOfArrays pyramidNormal,
-                        InputOutputArrayOfArrays pyramidMask)
+void preparePyramidMaskWithNormals(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth,
+                                   InputArrayOfArrays pyramidNormal,
+                                   InputOutputArrayOfArrays pyramidMask)
 {
     minDepth = std::max(0.f, minDepth);
 
@@ -448,6 +412,43 @@ void preparePyramidMask(UMat mask, const std::vector<UMat> pyramidDepth, int nLe
         cv::compare(depthi, Scalar(maxDepth), ltmax, CMP_LT);
         cv::bitwise_and(gtmin, ltmax, tmpMask);
         cv::bitwise_and(maski, tmpMask, maski);
+    }
+}
+
+void preparePyramidMaskWithNormals(UMat mask, const std::vector<UMat>& pyramidDepth, const std::vector<UMat>& pyramidNormals,
+                                   float minDepth, float maxDepth,
+                                   std::vector<UMat>& pyramidMask)
+{
+    minDepth = std::max(0.f, minDepth);
+    int nLevels = pyramidNormals.size();
+    buildPyramid(mask, pyramidMask, nLevels - 1);
+
+    for (int i = 0; i < nLevels; i++)
+    {
+        UMat maski = pyramidMask[i];
+        const UMat depthi = pyramidDepth[i].clone();
+        patchNaNs(depthi, 0);
+
+        UMat gtmin, ltmax, tmpMask;
+        cv::compare(depthi, Scalar(minDepth), gtmin, CMP_GT);
+        cv::compare(depthi, Scalar(maxDepth), ltmax, CMP_LT);
+        cv::bitwise_and(gtmin, ltmax, tmpMask);
+        cv::bitwise_and(maski, tmpMask, maski);
+        if (!pyramidNormals.empty())
+        {
+            UMat normali = pyramidNormals[i];
+            UMat validNormalMask;
+            // NaN check
+            cv::compare(normali, normali, validNormalMask, CMP_EQ);
+            CV_Assert(validNormalMask.type() == CV_8UC4);
+
+            std::vector<UMat> channelMasks;
+            split(validNormalMask, channelMasks);
+            UMat tmpChMask;
+            cv::bitwise_and(channelMasks[0], channelMasks[1], tmpChMask);
+            cv::bitwise_and(channelMasks[2], tmpChMask, validNormalMask);
+            cv::bitwise_and(maski, validNormalMask, maski);
+        }
     }
 }
 
@@ -553,81 +554,54 @@ void randomSubsetOfMask(InputOutputArray _mask, float part)
     }
 }
 
-void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals)
+void preparePyramidNormals(const UMat &normals, const std::vector<UMat> &pyramidDepth, std::vector<UMat> &pyramidNormals)
 {
-    size_t depthLevels = pyramidDepth.size(-1).width;
-    size_t normalsLevels = pyramidNormals.size(-1).width;
-    if (!pyramidNormals.empty())
-    {
-        if (normalsLevels != depthLevels)
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormals.");
+    int nLevels = pyramidDepth.size();
 
-        for (size_t i = 0; i < normalsLevels; i++)
-        {
-            CV_Assert(pyramidNormals.size((int)i) == pyramidDepth.size((int)i));
-            CV_Assert(pyramidNormals.type((int)i) == CV_32FC3);
-        }
-    }
-    else
+    buildPyramid(normals, pyramidNormals, nLevels - 1);
+    // renormalize normals
+    for (size_t i = 1; i < nLevels; i++)
     {
-        buildPyramid(normals, pyramidNormals, (int)depthLevels - 1);
-        // renormalize normals
-        for (size_t i = 1; i < depthLevels; i++)
+        Mat currNormals = pyramidNormals[i].getMat(ACCESS_RW);
+        for (int y = 0; y < currNormals.rows; y++)
         {
-            Mat& currNormals = pyramidNormals.getMatRef((int)i);
-            for (int y = 0; y < currNormals.rows; y++)
+            Point3f *normals_row = currNormals.ptr<Point3f>(y);
+            for (int x = 0; x < currNormals.cols; x++)
             {
-                Point3f* normals_row = currNormals.ptr<Point3f>(y);
-                for (int x = 0; x < currNormals.cols; x++)
-                {
-                    double nrm = norm(normals_row[x]);
-                    normals_row[x] *= 1. / nrm;
-                }
+                double nrm = norm(normals_row[x]);
+                normals_row[x] *= 1. / nrm;
             }
         }
     }
 }
 
-void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
-                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask)
+//TODO: this
+void preparePyramidNormalsMask(const std::vector<UMat> &pyramidNormals, const std::vector<UMat> &pyramidMask, double maxPointsPart,
+                               std::vector<UMat> &pyramidNormalsMask)
 {
-    size_t maskLevels = pyramidMask.size(-1).width;
-    size_t norMaskLevels = pyramidNormalsMask.size(-1).width;
-    if (!pyramidNormalsMask.empty())
+    int nLevels = pyramidNormals.size();
+    pyramidNormalsMask.resize(nLevels, UMat());
+    for (size_t i = 0; i < nLevels; i++)
     {
-        if (norMaskLevels != maskLevels)
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormalsMask.");
+        UMat& normalsMask = pyramidNormalsMask[i];
+        normalsMask = pyramidMask[i].clone();
+        Mat normalsMaskCpu = normalsMask.getMat(ACCESS_RW);
 
-        for (size_t i = 0; i < norMaskLevels; i++)
+        const Mat normals = pyramidNormals[i].getMat(ACCESS_READ);
+        for (int y = 0; y < normalsMask.rows; y++)
         {
-            CV_Assert(pyramidNormalsMask.size((int)i) == pyramidMask.size((int)i));
-            CV_Assert(pyramidNormalsMask.type((int)i) == pyramidMask.type((int)i));
-        }
-    }
-    else
-    {
-        pyramidNormalsMask.create((int)maskLevels, 1, CV_8U, -1);
-        for (size_t i = 0; i < maskLevels; i++)
-        {
-            Mat& normalsMask = pyramidNormalsMask.getMatRef((int)i);
-            normalsMask = pyramidMask.getMat((int)i).clone();
-
-            const Mat normals = pyramidNormals.getMat((int)i);
-            for (int y = 0; y < normalsMask.rows; y++)
+            const Vec4f *normals_row = normals.ptr<Vec4f>(y);
+            uchar *normalsMask_row = normalsMaskCpu.ptr<uchar>(y);
+            for (int x = 0; x < normalsMask.cols; x++)
             {
-                const Vec4f* normals_row = normals.ptr<Vec4f>(y);
-                uchar* normalsMask_row = normalsMask.ptr<uchar>(y);
-                for (int x = 0; x < normalsMask.cols; x++)
+                Vec4f n = normals_row[x];
+                if (cvIsNaN(n[0]))
                 {
-                    Vec4f n = normals_row[x];
-                    if (cvIsNaN(n[0]))
-                    {
-                        normalsMask_row[x] = 0;
-                    }
+                    normalsMask_row[x] = 0;
                 }
             }
-            randomSubsetOfMask(normalsMask, (float)maxPointsPart);
         }
+        randomSubsetOfMask(normalsMaskCpu, (float)maxPointsPart);
     }
 }
 
