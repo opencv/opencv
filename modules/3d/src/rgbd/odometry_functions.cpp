@@ -389,35 +389,41 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
     }
 }
 
-template<typename TMat>
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud)
+void preparePyramidMask(UMat mask, const std::vector<UMat> pyramidDepth, int nLevels, float minDepth, float maxDepth,
+                        std::vector<UMat>& pyramidMask)
 {
-    size_t depthSize = pyramidDepth.size(-1).width;
-    size_t cloudSize = pyramidCloud.size(-1).width;
-    if (!pyramidCloud.empty())
-    {
-        if (cloudSize != depthSize)
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidCloud.");
+    minDepth = std::max(0.f, minDepth);
 
-        for (size_t i = 0; i < depthSize; i++)
-        {
-            CV_Assert(pyramidCloud.size((int)i) == pyramidDepth.size((int)i));
-            CV_Assert(pyramidCloud.type((int)i) == CV_32FC4);
-        }
+    buildPyramid(mask, pyramidMask, nLevels - 1);
+
+    for (int i = 0; i < nLevels; i++)
+    {
+        UMat maski = pyramidMask[i];
+        const UMat depthi = pyramidDepth[i].clone();
+        patchNaNs(depthi, 0);
+
+        UMat gtmin, ltmax, tmpMask;
+        cv::compare(depthi, Scalar(minDepth), gtmin, CMP_GT);
+        cv::compare(depthi, Scalar(maxDepth), ltmax, CMP_LT);
+        cv::bitwise_and(gtmin, ltmax, tmpMask);
+        cv::bitwise_and(maski, tmpMask, maski);
     }
-    else
+}
+
+void preparePyramidCloud(const std::vector<UMat> pyramidDepth, const Matx33f& cameraMatrix, std::vector<UMat>& pyramidCloud)
+{
+    int nLevels = pyramidDepth.size();
+    
+    std::vector<Matx33f> pyramidCameraMatrix;
+    buildPyramidCameraMatrix(cameraMatrix, nLevels, pyramidCameraMatrix);
+
+    pyramidCloud.resize(nLevels, UMat());
+
+    for (size_t i = 0; i < nLevels; i++)
     {
-        std::vector<Matx33f> pyramidCameraMatrix;
-        buildPyramidCameraMatrix(cameraMatrix, (int)depthSize, pyramidCameraMatrix);
-
-        pyramidCloud.create((int)depthSize, 1, CV_32FC4, -1);
-        for (size_t i = 0; i < depthSize; i++)
-        {
-            TMat cloud;
-            depthTo3d(getTMat<TMat>(pyramidDepth, (int)i), pyramidCameraMatrix[i], cloud, Mat());
-            getTMatRef<TMat>(pyramidCloud, (int)i) = cloud;
-
-        }
+        UMat cloud;
+        depthTo3d(pyramidDepth[i], pyramidCameraMatrix[i], cloud, noArray());
+        pyramidCloud[i] = cloud;
     }
 }
 
