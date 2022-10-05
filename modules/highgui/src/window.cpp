@@ -366,6 +366,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropVisible_W32(name);
+        #elif defined(HAVE_COCOA)
+            return cvGetPropVisible_COCOA(name);
         #else
             return -1;
         #endif
