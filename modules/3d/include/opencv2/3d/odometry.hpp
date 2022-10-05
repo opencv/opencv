@@ -73,7 +73,7 @@ public:
      */
     bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt);
 
-    CV_WRAP bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const;
+    CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
 
     class Impl;
