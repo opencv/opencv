@@ -44,27 +44,21 @@ enum class OdometryFrameStoreType
 class CV_EXPORTS_W OdometryFrame
 {
 public:
-    OdometryFrame();
-    OdometryFrame(OdometryFrameStoreType matType);
+    //TODO: add to docs: check image channels, if 3 or 4 then do cvtColor(BGR(A)2GRAY)
+    OdometryFrame(InputArray image = noArray(), InputArray depth = noArray(), InputArray mask = noArray(), InputArray normals = noArray());
     ~OdometryFrame() {};
-    void setImage(InputArray  image);
+
     void getImage(OutputArray image) const;
     void getGrayImage(OutputArray image) const;
-    void setDepth(InputArray  depth);
     void getDepth(OutputArray depth) const;
     void getScaledDepth(OutputArray depth) const;
-    void setMask(InputArray  mask);
     void getMask(OutputArray mask) const;
-    void setNormals(InputArray  normals);
     void getNormals(OutputArray normals) const;
-    void setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype);
-    void setPyramidLevels(size_t _nLevels);
+
     size_t getPyramidLevels(OdometryFramePyramidType oftype) const;
-    void setPyramidAt(InputArray  img, OdometryFramePyramidType pyrType, size_t level);
     void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const;
 
     class Impl;
-private:
     Ptr<Impl> impl;
 };
 }
