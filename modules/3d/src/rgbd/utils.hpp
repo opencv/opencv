@@ -280,6 +280,35 @@ struct Intr
     float fx, fy, cx, cy;
 };
 
+class OdometryFrame::Impl
+{
+public:
+    Impl() : pyramids(OdometryFramePyramidType::N_PYRAMIDS) { }
+    virtual ~Impl() {}
+
+    virtual void getImage(OutputArray image) const ;
+    virtual void getGrayImage(OutputArray image) const ;
+    virtual void getDepth(OutputArray depth) const ;
+    virtual void getScaledDepth(OutputArray depth) const ;
+    virtual void getMask(OutputArray mask) const ;
+    virtual void getNormals(OutputArray normals) const ;
+    virtual void setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype) ;
+    virtual void setPyramidLevels(size_t _nLevels) ;
+    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) const ;
+    virtual void setPyramidAt(InputArray  img,
+                              OdometryFramePyramidType pyrType, size_t level) ;
+    virtual void getPyramidAt(OutputArray img,
+                              OdometryFramePyramidType pyrType, size_t level) const ;
+
+    UMat imageGray;
+    UMat image;
+    UMat depth;
+    UMat scaledDepth;
+    UMat mask;
+    UMat normals;
+    std::vector< std::vector<UMat> > pyramids;
+};
+
 } // namespace cv
 
 
