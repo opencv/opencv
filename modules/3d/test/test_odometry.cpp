@@ -136,18 +136,17 @@ void OdometryTest::checkUMats()
     Mat image, depth;
     readData(image, depth);
 
-    OdometrySettings ods;
-    ods.setCameraMatrix(K);
-    Odometry odometry = Odometry(otype, ods, algtype);
-    OdometryFrame odf = odometry.createOdometryFrame(OdometryFrameStoreType::UMAT);
-
-    Mat calcRt;
-
     UMat uimage, udepth;
     image.copyTo(uimage);
     depth.copyTo(udepth);
-    odf.setImage(uimage);
-    odf.setDepth(udepth);
+
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry = Odometry(otype, ods, algtype);
+    OdometryFrame odf(uimage, udepth);
+
+    Mat calcRt;
+
     uimage.release();
     udepth.release();
 
@@ -167,9 +166,7 @@ void OdometryTest::run()
     OdometrySettings ods;
     ods.setCameraMatrix(K);
     Odometry odometry = Odometry(otype, ods, algtype);
-    OdometryFrame odf = odometry.createOdometryFrame();
-    odf.setImage(image);
-    odf.setDepth(depth);
+    OdometryFrame odf(image, depth);
     Mat calcRt;
 
     // 1. Try to find Rt between the same frame (try masks also).
@@ -202,13 +199,8 @@ void OdometryTest::run()
         warpFrame(depth, image, noArray(), rt.matrix, K, warpedDepth, warpedImage);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
-        OdometryFrame odfSrc = odometry.createOdometryFrame();
-        OdometryFrame odfDst = odometry.createOdometryFrame();
-
-        odfSrc.setImage(image);
-        odfSrc.setDepth(depth);
-        odfDst.setImage(warpedImage);
-        odfDst.setDepth(warpedDepth);
+        OdometryFrame odfSrc(image, depth);
+        OdometryFrame odfDst(warpedImage, warpedDepth);
 
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
