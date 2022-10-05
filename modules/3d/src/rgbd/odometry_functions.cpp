@@ -28,10 +28,10 @@ void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Odometry
     prepareICPFrame(srcFrame, dstFrame, settings, algtype);
 }
 
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, bool useDepth)
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
 {
-    prepareRGBFrameBase(srcFrame, settings, useDepth);
-    prepareRGBFrameBase(dstFrame, settings, useDepth);
+    prepareRGBFrameBase(srcFrame, settings);
+    prepareRGBFrameBase(dstFrame, settings);
 
     prepareRGBFrameSrc(srcFrame, settings);
     prepareRGBFrameDst(dstFrame, settings);
@@ -48,131 +48,99 @@ void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     prepareICPFrameDst(dstFrame, settings);
 }
 
-void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings, bool useDepth)
+
+void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
-    // Can be transformed into template argument in the future
-    // when this algorithm supports OCL UMats too
-
-    typedef Mat TMat;
-
-    TMat image;
-    frame.getGrayImage(image);
-    if (image.empty())
+    UMat grayImage;
+    frame.getGrayImage(grayImage);
+    if (grayImage.empty())
     {
-        if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_IMAGE) > 0)
-        {
-            TMat pyr0;
-            frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_IMAGE, 0);
-            frame.setImage(pyr0);
-            frame.getGrayImage(image);
-        }
+        UMat image;
+        frame.getImage(image);
+        CV_Assert(!image.empty() && image.depth() == CV_8U);
+
+        int ch = image.channels();
+        if (ch == 3 || ch == 4)
+            cvtColor(image, grayImage, ch == 3 ? COLOR_BGR2GRAY : COLOR_BGRA2GRAY, 1);
+        else if (ch == 1)
+                grayImage = image;
         else
-            CV_Error(Error::StsBadSize, "Image or pyramidImage have to be set.");
+            CV_Error(Error::StsBadArg, "Image should have 3 or 4 channels (RGB) or 1 channel (grayscale)");
+        grayImage.convertTo(grayImage, CV_8U);
+        frame.impl->imageGray = grayImage;
     }
-    checkImage(image);
 
-    TMat depth;
-    if (useDepth)
+    //TODO: don't use scaled when scale bug is fixed
+    UMat scaledDepth;
+    frame.getScaledDepth(scaledDepth);
+    if (scaledDepth.empty())
     {
-        frame.getScaledDepth(depth);
-        if (depth.empty())
-        {
-            if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH) > 0)
-            {
-                TMat pyr0;
-                frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_DEPTH, 0);
-                frame.setDepth(pyr0);
-            }
-            else if (frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD) > 0)
-            {
-                TMat cloud;
-                frame.getPyramidAt(cloud, OdometryFramePyramidType::PYR_CLOUD, 0);
-                std::vector<TMat> xyz;
-                split(cloud, xyz);
-                frame.setDepth(xyz[2]);
-                frame.getScaledDepth(depth);
-            }
-            else
-                CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
-        }
-        checkDepth(depth, image.size());
+        UMat depth;
+        frame.getDepth(depth);
+        CV_Assert(!depth.empty());
+        CV_Assert(depth.size() == grayImage.size());
+        CV_Assert(depth.type() == CV_32FC1);
+        prepareDepth(frame);
+        frame.getScaledDepth(scaledDepth);
+    }
+
+    UMat mask;
+    frame.getMask(mask);
+    if (mask.empty())
+    {
+        mask = UMat(grayImage.size(), CV_8UC1, Scalar(255));
+        frame.impl->mask = mask;
     }
     else
-        depth = TMat(image.size(), CV_32F, 1);
-
-    TMat mask;
-    frame.getMask(mask);
-    if (mask.empty() && frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK) > 0)
     {
-        TMat pyr0;
-        frame.getPyramidAt(pyr0, OdometryFramePyramidType::PYR_MASK, 0);
-        frame.setMask(pyr0);
-        frame.getMask(mask);
+        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.size() == grayImage.size());
     }
-    checkMask(mask, image.size());
 
     std::vector<int> iterCounts;
-    Mat miterCounts;
-    settings.getIterCounts(miterCounts);
-    for (int i = 0; i < miterCounts.size().height; i++)
-        iterCounts.push_back(miterCounts.at<int>(i));
+    settings.getIterCounts(iterCounts);
 
-    std::vector<TMat> ipyramids;
-    preparePyramidImage(image, ipyramids, iterCounts.size());
-    setPyramids(frame, OdometryFramePyramidType::PYR_IMAGE, ipyramids);
+    int maxLevel = (int)iterCounts.size() - 1;
+    std::vector<UMat>& ipyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_IMAGE];
+    if (ipyramids.empty())
+        buildPyramid(grayImage, ipyramids, maxLevel);
 
-    std::vector<TMat> dpyramids;
-    preparePyramidImage(depth, dpyramids, iterCounts.size());
-    setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+    std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
+    if (dpyramids.empty())
+        buildPyramid(scaledDepth, dpyramids, maxLevel);
 
-    std::vector<TMat> mpyramids;
-    std::vector<TMat> npyramids;
-    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(), npyramids, mpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+    std::vector<UMat>& mpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_MASK];
+    if (mpyramids.empty())
+        preparePyramidMask(mask, dpyramids, maxLevel + 1, settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
 }
 
 void prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {
-    typedef Mat TMat;
-
-    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
-    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
-    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
-    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-
-    std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
-    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
+    std::vector<UMat>&       cpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_CLOUD];
+    const std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
+
+    preparePyramidCloud(dpyramids, cameraMatrix, cpyramids);
 }
 
 void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
-    typedef Mat TMat;
+    const std::vector<UMat>& ipyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_IMAGE];
+    const std::vector<UMat>& mpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_MASK];
 
-    std::vector<TMat> ipyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_IMAGE));
-    getPyramids(frame, OdometryFramePyramidType::PYR_IMAGE, ipyramids);
-    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
-    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+    std::vector<UMat>& dxpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DIX];
+    std::vector<UMat>& dypyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DIY];
+    std::vector<UMat>& tmpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_TEXMASK];
 
-    std::vector<TMat> dxpyramids, dypyramids, tmpyramids;
-
-    Mat _minGradientMagnitudes;
     std::vector<float> minGradientMagnitudes;
-    settings.getMinGradientMagnitudes(_minGradientMagnitudes);
-    for (int i = 0; i < _minGradientMagnitudes.size().height; i++)
-        minGradientMagnitudes.push_back(_minGradientMagnitudes.at<float>(i));
+    settings.getMinGradientMagnitudes(minGradientMagnitudes);
 
-    preparePyramidSobel<TMat>(ipyramids, 1, 0, dxpyramids, settings.getSobelSize());
-    preparePyramidSobel<TMat>(ipyramids, 0, 1, dypyramids, settings.getSobelSize());
+    preparePyramidSobel(ipyramids, 1, 0, dxpyramids, settings.getSobelSize());
+    preparePyramidSobel(ipyramids, 0, 1, dypyramids, settings.getSobelSize());
     preparePyramidTexturedMask(dxpyramids, dypyramids, minGradientMagnitudes,
-        mpyramids, settings.getMaxPointsPart(), tmpyramids, settings.getSobelScale());
-
-    setPyramids(frame, OdometryFramePyramidType::PYR_DIX, dxpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_DIY, dypyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_TEXMASK, tmpyramids);
+                               mpyramids, settings.getMaxPointsPart(), tmpyramids, settings.getSobelScale());
 }
 
 void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
