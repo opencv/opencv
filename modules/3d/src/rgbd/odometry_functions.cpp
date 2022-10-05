@@ -460,55 +460,38 @@ void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputO
     }
 }
 
-void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
-                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
-                                InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale)
+void preparePyramidTexturedMask(const std::vector<UMat>& pyramid_dI_dx, const std::vector<UMat>& pyramid_dI_dy,
+                                std::vector<float> minGradMagnitudes, const std::vector<UMat>& pyramidMask, double maxPointsPart,
+                                std::vector<UMat>& pyramidTexturedMask, double sobelScale)
 {
-    size_t didxLevels = pyramid_dI_dx.size(-1).width;
-    size_t texLevels = pyramidTexturedMask.size(-1).width;
-    if (!pyramidTexturedMask.empty())
+    int nLevels = pyramid_dI_dx.size();
+
+    const float sobelScale2_inv = (float)(1. / (sobelScale * sobelScale));
+    pyramidTexturedMask.resize(nLevels, UMat());
+    for (size_t i = 0; i < nLevels; i++)
     {
-        if (texLevels != didxLevels)
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidTexturedMask.");
+        const float minScaledGradMagnitude2 = minGradMagnitudes[i] * minGradMagnitudes[i] * sobelScale2_inv;
+        const Mat dIdx = pyramid_dI_dx[i].getMat(ACCESS_READ);
+        const Mat dIdy = pyramid_dI_dy[i].getMat(ACCESS_READ);
 
-        for (size_t i = 0; i < texLevels; i++)
+        Mat texturedMask(dIdx.size(), CV_8UC1, Scalar(0));
+
+        for (int y = 0; y < dIdx.rows; y++)
         {
-            CV_Assert(pyramidTexturedMask.size((int)i) == pyramid_dI_dx.size((int)i));
-            CV_Assert(pyramidTexturedMask.type((int)i) == CV_8UC1);
-        }
-    }
-    else
-    {
-        CV_Assert(minGradMagnitudes.type() == CV_32F);
-        Mat_<float> mgMags = minGradMagnitudes.getMat();
-
-        const float sobelScale2_inv = (float) (1. / (sobelScale * sobelScale));
-        pyramidTexturedMask.create((int)didxLevels, 1, CV_8UC1, -1);
-        for (size_t i = 0; i < didxLevels; i++)
-        {
-            const float minScaledGradMagnitude2 = mgMags((int)i) * mgMags((int)i) * sobelScale2_inv;
-            const Mat& dIdx = pyramid_dI_dx.getMat((int)i);
-            const Mat& dIdy = pyramid_dI_dy.getMat((int)i);
-
-            Mat texturedMask(dIdx.size(), CV_8UC1, Scalar(0));
-
-            for (int y = 0; y < dIdx.rows; y++)
+            const short *dIdx_row = dIdx.ptr<short>(y);
+            const short *dIdy_row = dIdy.ptr<short>(y);
+            uchar *texturedMask_row = texturedMask.ptr<uchar>(y);
+            for (int x = 0; x < dIdx.cols; x++)
             {
-                const short* dIdx_row = dIdx.ptr<short>(y);
-                const short* dIdy_row = dIdy.ptr<short>(y);
-                uchar* texturedMask_row = texturedMask.ptr<uchar>(y);
-                for (int x = 0; x < dIdx.cols; x++)
-                {
-                    float magnitude2 = static_cast<float>(dIdx_row[x] * dIdx_row[x] + dIdy_row[x] * dIdy_row[x]);
-                    if (magnitude2 >= minScaledGradMagnitude2)
-                        texturedMask_row[x] = 255;
-                }
+                float magnitude2 = static_cast<float>(dIdx_row[x] * dIdx_row[x] + dIdy_row[x] * dIdy_row[x]);
+                if (magnitude2 >= minScaledGradMagnitude2)
+                    texturedMask_row[x] = 255;
             }
-            Mat texMask = texturedMask & pyramidMask.getMat((int)i);
-
-            randomSubsetOfMask(texMask, (float)maxPointsPart);
-            pyramidTexturedMask.getMatRef((int)i) = texMask;
         }
+        Mat texMask = texturedMask & pyramidMask[i].getMat(ACCESS_READ);
+
+        randomSubsetOfMask(texMask, (float)maxPointsPart);
+        pyramidTexturedMask[i] = texMask.getUMat(ACCESS_READ);
     }
 }
 
