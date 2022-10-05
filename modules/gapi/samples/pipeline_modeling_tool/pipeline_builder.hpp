@@ -264,19 +264,11 @@ struct InferParams {
 
 class ElapsedTimeCriteria : public StopCriteria {
 public:
-    ElapsedTimeCriteria(int64_t work_time_mcs) : m_work_time_mcs(work_time_mcs) { };
+    ElapsedTimeCriteria(int64_t work_time_mcs);
 
-    void start() override {
-        m_start_ts = m_curr_ts = utils::timestamp<std::chrono::microseconds>();
-    }
-
-    void iter() override {
-        m_curr_ts = utils::timestamp<std::chrono::microseconds>();
-    }
-
-    bool done() override {
-        return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
-    }
+    void start() override;
+    void iter()  override;
+    bool done()  override;
 
 private:
     int64_t m_work_time_mcs;
@@ -284,26 +276,50 @@ private:
     int64_t m_curr_ts  = -1;
 };
 
+ElapsedTimeCriteria::ElapsedTimeCriteria(int64_t work_time_mcs)
+    : m_work_time_mcs(work_time_mcs) {
+};
+
+void ElapsedTimeCriteria::start() {
+    m_start_ts = m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+}
+
+void ElapsedTimeCriteria::iter() {
+    m_curr_ts = utils::timestamp<std::chrono::microseconds>();
+}
+
+bool ElapsedTimeCriteria::done() {
+    return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
+}
+
 class NumItersCriteria : public StopCriteria {
 public:
-    NumItersCriteria(int64_t num_iters) : m_num_iters(num_iters) { };
+    NumItersCriteria(int64_t num_iters);
 
-    void start() override {
-        m_curr_iters = 0;
-    }
-
-    void iter() override {
-        ++m_curr_iters;
-    }
-
-    bool done() override {
-        return m_curr_iters == m_num_iters;
-    }
+    void start() override;
+    void iter()  override;
+    bool done()  override;
 
 private:
     int64_t m_num_iters;
     int64_t m_curr_iters = 0;
 };
+
+NumItersCriteria::NumItersCriteria(int64_t num_iters)
+    : m_num_iters(num_iters) {
+}
+
+void NumItersCriteria::start() {
+    m_curr_iters = 0;
+}
+
+void NumItersCriteria::iter() {
+    ++m_curr_iters;
+}
+
+bool NumItersCriteria::done() {
+    return m_curr_iters == m_num_iters;
+}
 
 class PipelineBuilder {
 public:
