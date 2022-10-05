@@ -30,37 +30,6 @@ static inline int getTransformDim(OdometryTransformType transformType)
     }
 }
 
-static inline
-void checkImage(InputArray image)
-{
-    if (image.empty())
-        CV_Error(Error::StsBadSize, "Image is empty.");
-    if (image.type() != CV_8UC1)
-        CV_Error(Error::StsBadSize, "Image type has to be CV_8UC1.");
-}
-
-static inline
-void checkDepth(InputArray depth, const Size& imageSize)
-{
-    if (depth.empty())
-        CV_Error(Error::StsBadSize, "Depth is empty.");
-    if (depth.size() != imageSize)
-        CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
-    if (depth.type() != CV_32FC1)
-        CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
-}
-
-static inline
-void checkMask(InputArray mask, const Size& imageSize)
-{
-    if (!mask.empty())
-    {
-        if (mask.size() != imageSize)
-            CV_Error(Error::StsBadSize, "Mask has to have the size equal to the image size.");
-        if (mask.type() != CV_8UC1)
-            CV_Error(Error::StsBadSize, "Mask type has to be CV_8UC1.");
-    }
-}
 
 static inline
 void checkNormals(InputArray normals, const Size& depthSize)
