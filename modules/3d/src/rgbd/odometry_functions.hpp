@@ -168,6 +168,8 @@ void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const Od
 void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 
+//TODO: remove all these declarations, rearrange functions in the file themselves
+
 void prepareRGBFrameBase(OdometryFrame& frame, const OdometrySettings settings);
 void prepareRGBFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
 void prepareRGBFrameDst (OdometryFrame& frame, const OdometrySettings settings);
