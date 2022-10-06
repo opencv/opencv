@@ -455,11 +455,19 @@ static void checkConnected (const std::vector<std::vector<bool>> &visibility_mat
     dfs_search(0);
     for (int c = 0; c < NUM_CAMERAS; c++) {
         if (! visited[c]) {
-            std::string connected_component = "";
-            for (int i = 0; i < NUM_CAMERAS; i++)
-                if (visited[i])
-                    connected_component += std::to_string(i)+" ";
-            CV_Error(Error::StsBadArg, "Cannot reach camera "+std::to_string(c)+" from camera from the connected component "+connected_component);
+            std::string isolated_cameras = "", visited = "";
+            for (int i = 0; i < NUM_CAMERAS; i++) {
+                if (!visited[i]) {
+                    if (isolated_cameras != "")
+                        isolated_cameras += ", ";
+                    isolated_cameras += std::to_string(i);
+                } else {
+                    if (visited != "")
+                        visited += ", ";
+                    visited += std::to_string(i);
+                }
+            }
+            CV_Error(Error::StsBadArg, "Isolated cameras (or components) "+isolated_cameras+" from the connected component "+visited+"!");
         }
     }
 }
