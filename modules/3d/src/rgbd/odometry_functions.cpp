@@ -38,8 +38,12 @@ Mat findMask(InputArray _depth)
 }
 
 //TODO: this
-void prepareDepth(OdometryFrame& depth)
+UMat prepareScaledDepth(OdometryFrame& depth)
 {
+    UMat depth_tmp;
+
+    frame.getDepth(depth_tmp);
+
         TMat depth_tmp;
     Mat depth_flt;
 
@@ -60,7 +64,7 @@ void prepareDepth(OdometryFrame& depth)
     this->depth = getTMat<TMat>(_depth);
     this->scaledDepth = depth_tmp;
 
-    this->impl->mask = findMask(_depth);
+    return depth_tmp;
 }
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
@@ -130,6 +134,9 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     if (mask.empty())
     {
         mask = UMat(grayImage.size(), CV_8UC1, Scalar(255));
+
+
+
         frame.impl->mask = mask;
     }
     else
@@ -137,6 +144,9 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
         CV_Assert(mask.type() == CV_8UC1);
         CV_Assert(mask.size() == grayImage.size());
     }
+
+            //TODO: this
+        this->impl->mask = findMask(_depth);
 
     std::vector<int> iterCounts;
     settings.getIterCounts(iterCounts);
@@ -204,6 +214,9 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     if (mask.empty())
     {
         mask = UMat(scaledDepth.size(), CV_8UC1, Scalar(255));
+        
+
+        
         frame.impl->mask = mask;
     }
     else
@@ -211,6 +224,9 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
         CV_Assert(mask.type() == CV_8UC1);
         CV_Assert(mask.size() == scaledDepth.size());
     }
+
+            //TODO: this
+        this->impl->mask = findMask(_depth);
 
     std::vector<int> iterCounts;
     settings.getIterCounts(iterCounts);
