@@ -262,9 +262,9 @@ struct InferParams {
     cv::util::optional<int> out_precision;
 };
 
-class ElapsedTimeCriteria : public StopCriteria {
+class ElapsedTimeCriterion : public StopCriterion {
 public:
-    ElapsedTimeCriteria(int64_t work_time_mcs);
+    ElapsedTimeCriterion(int64_t work_time_mcs);
 
     void start() override;
     void iter()  override;
@@ -276,25 +276,25 @@ private:
     int64_t m_curr_ts  = -1;
 };
 
-ElapsedTimeCriteria::ElapsedTimeCriteria(int64_t work_time_mcs)
+ElapsedTimeCriterion::ElapsedTimeCriterion(int64_t work_time_mcs)
     : m_work_time_mcs(work_time_mcs) {
 };
 
-void ElapsedTimeCriteria::start() {
+void ElapsedTimeCriterion::start() {
     m_start_ts = m_curr_ts = utils::timestamp<std::chrono::microseconds>();
 }
 
-void ElapsedTimeCriteria::iter() {
+void ElapsedTimeCriterion::iter() {
     m_curr_ts = utils::timestamp<std::chrono::microseconds>();
 }
 
-bool ElapsedTimeCriteria::done() {
+bool ElapsedTimeCriterion::done() {
     return (m_curr_ts - m_start_ts) >= m_work_time_mcs;
 }
 
-class NumItersCriteria : public StopCriteria {
+class NumItersCriterion : public StopCriterion {
 public:
-    NumItersCriteria(int64_t num_iters);
+    NumItersCriterion(int64_t num_iters);
 
     void start() override;
     void iter()  override;
@@ -305,19 +305,19 @@ private:
     int64_t m_curr_iters = 0;
 };
 
-NumItersCriteria::NumItersCriteria(int64_t num_iters)
+NumItersCriterion::NumItersCriterion(int64_t num_iters)
     : m_num_iters(num_iters) {
 }
 
-void NumItersCriteria::start() {
+void NumItersCriterion::start() {
     m_curr_iters = 0;
 }
 
-void NumItersCriteria::iter() {
+void NumItersCriterion::iter() {
     ++m_curr_iters;
 }
 
-bool NumItersCriteria::done() {
+bool NumItersCriterion::done() {
     return m_curr_iters == m_num_iters;
 }
 
@@ -338,7 +338,7 @@ public:
     void setDumpFilePath(const std::string& dump);
     void setQueueCapacity(const size_t qc);
     void setName(const std::string& name);
-    void setStopCriteria(StopCriteria::Ptr stop_criteria);
+    void setStopCriterion(StopCriterion::Ptr stop_criterion);
 
     Pipeline::Ptr build();
 
@@ -366,7 +366,7 @@ private:
         std::shared_ptr<DummySource> src;
         PLMode                       mode = PLMode::STREAMING;
         std::string                  name;
-        StopCriteria::Ptr            stop_criteria;
+        StopCriterion::Ptr           stop_criterion;
     };
 
     std::unique_ptr<State> m_state;
@@ -493,8 +493,8 @@ void PipelineBuilder::setName(const std::string& name) {
     m_state->name = name;
 }
 
-void PipelineBuilder::setStopCriteria(StopCriteria::Ptr stop_criteria) {
-    m_state->stop_criteria = std::move(stop_criteria);
+void PipelineBuilder::setStopCriterion(StopCriterion::Ptr stop_criterion) {
+    m_state->stop_criterion = std::move(stop_criterion);
 }
 
 static bool visit(Node::Ptr node,
@@ -655,7 +655,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
         }
     }
 
-    GAPI_Assert(m_state->stop_criteria);
+    GAPI_Assert(m_state->stop_criterion);
     if (m_state->mode == PLMode::STREAMING) {
         GAPI_Assert(graph_inputs.size() == 1);
         GAPI_Assert(cv::util::holds_alternative<cv::GMat>(graph_inputs[0]));
@@ -671,7 +671,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                        cv::GProtoInputArgs{graph_inputs},
                                                        cv::GProtoOutputArgs{graph_outputs}),
                                                    std::move(m_state->src),
-                                                   std::move(m_state->stop_criteria),
+                                                   std::move(m_state->stop_criterion),
                                                    std::move(m_state->compile_args),
                                                    graph_outputs.size());
     }
@@ -681,7 +681,7 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                  cv::GProtoInputArgs{graph_inputs},
                                                  cv::GProtoOutputArgs{graph_outputs}),
                                              std::move(m_state->src),
-                                             std::move(m_state->stop_criteria),
+                                             std::move(m_state->stop_criterion),
                                              std::move(m_state->compile_args),
                                              graph_outputs.size());
 }

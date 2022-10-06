@@ -1000,4 +1000,4 @@ Pipelines:
 
     exec_str = '{} --cfg={}'.format(pipeline_modeling_tool, cfg_file)
     out = get_output(exec_str)
-    assert out.startswith('Failed: Pipeline PL1 doesn\'t have stop criteria!')
+    assert out.startswith('Failed: Pipeline PL1 doesn\'t have stop criterion!')
