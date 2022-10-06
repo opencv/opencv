@@ -373,20 +373,20 @@ int main(int argc, char* argv[]) {
         for (const auto& name : exec_list) {
             const auto& pl_fn = check_and_get_fn(pipelines_fn, name, "Pipelines");
             builder.setName(name);
-            StopCriteria::Ptr stop_criteria;
+            StopCriterion::Ptr stop_criterion;
             auto opt_num_iters = readOpt<int>(pl_fn["num_iters"]);
             // NB: num_iters for specific pipeline takes priority over global work_time.
             if (opt_num_iters) {
-                stop_criteria.reset(new NumItersCriteria(opt_num_iters.value()));
+                stop_criterion.reset(new NumItersCriterion(opt_num_iters.value()));
             } else if (opt_work_time_mcs) {
-                stop_criteria.reset(new ElapsedTimeCriteria(opt_work_time_mcs.value()));
+                stop_criterion.reset(new ElapsedTimeCriterion(opt_work_time_mcs.value()));
             } else {
                 throw std::logic_error(
-                        "Failed: Pipeline " + name + " doesn't have stop criteria!\n"
+                        "Failed: Pipeline " + name + " doesn't have stop criterion!\n"
                         "Please specify either work_time: <value> in the config root"
                         " or num_iters: <value> for specific pipeline.");
             }
-            builder.setStopCriteria(std::move(stop_criteria));
+            builder.setStopCriterion(std::move(stop_criterion));
 
             // NB: Set source
             {

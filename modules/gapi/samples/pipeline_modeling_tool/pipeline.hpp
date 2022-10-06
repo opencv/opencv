@@ -40,14 +40,14 @@ std::string PerfReport::toStr(bool expand) const {
     return ss.str();
 }
 
-class StopCriteria {
+class StopCriterion {
 public:
-    using Ptr = std::unique_ptr<StopCriteria>;
+    using Ptr = std::unique_ptr<StopCriterion>;
 
     virtual void start() = 0;
     virtual void iter()  = 0;
     virtual bool done()  = 0;
-    virtual ~StopCriteria() = default;
+    virtual ~StopCriterion() = default;
 };
 
 class Pipeline {
@@ -57,7 +57,7 @@ public:
     Pipeline(std::string&&                  name,
              cv::GComputation&&             comp,
              std::shared_ptr<DummySource>&& src,
-             StopCriteria::Ptr              stop_criteria,
+             StopCriterion::Ptr             stop_criterion,
              cv::GCompileArgs&&             args,
              const size_t                   num_outputs);
 
@@ -78,7 +78,7 @@ protected:
     std::string                  m_name;
     cv::GComputation             m_comp;
     std::shared_ptr<DummySource> m_src;
-    StopCriteria::Ptr            m_stop_criteria;
+    StopCriterion::Ptr           m_stop_criterion;
     cv::GCompileArgs             m_args;
     size_t                       m_num_outputs;
     PerfReport                   m_perf;
@@ -87,13 +87,13 @@ protected:
 Pipeline::Pipeline(std::string&&                  name,
                    cv::GComputation&&             comp,
                    std::shared_ptr<DummySource>&& src,
-                   StopCriteria::Ptr              stop_criteria,
+                   StopCriterion::Ptr             stop_criterion,
                    cv::GCompileArgs&&             args,
                    const size_t                   num_outputs)
     : m_name(std::move(name)),
       m_comp(std::move(comp)),
       m_src(std::move(src)),
-      m_stop_criteria(std::move(stop_criteria)),
+      m_stop_criterion(std::move(stop_criterion)),
       m_args(std::move(args)),
       m_num_outputs(num_outputs) {
     m_perf.name = m_name;
@@ -111,13 +111,13 @@ void Pipeline::run() {
 
     init();
     auto start = high_resolution_clock::now();
-    m_stop_criteria->start();
+    m_stop_criterion->start();
     while (true) {
         m_perf.latencies.push_back(run_iter());
         m_perf.elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
-        m_stop_criteria->iter();
+        m_stop_criterion->iter();
 
-        if (m_stop_criteria->done()) {
+        if (m_stop_criterion->done()) {
             deinit();
             break;
         }
