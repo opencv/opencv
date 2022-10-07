@@ -119,6 +119,12 @@ T min(const std::vector<T>& vec) {
     return *std::min_element(vec.begin(), vec.end());
 }
 
+template <typename T>
+int64_t ms_to_mcs(T ms) {
+    using namespace std::chrono;
+    return duration_cast<microseconds>(duration<T, std::milli>(ms)).count();
+}
+
 } // namespace utils
 
 #endif // OPENCV_GAPI_PIPELINE_MODELING_TOOL_UTILS_HPP
