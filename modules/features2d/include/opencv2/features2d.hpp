@@ -732,7 +732,7 @@ public:
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-  CV_WRAP virtual const std::vector<std::vector<Point> >& getBlobContours() const = 0;
+  CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
 
 //! @} features2d_main

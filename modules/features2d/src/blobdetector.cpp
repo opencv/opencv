@@ -56,6 +56,12 @@
 namespace cv
 {
 
+// TODO: To be removed in 5.x branch
+const std::vector<std::vector<cv::Point> >& SimpleBlobDetector::getBlobContours() const
+{
+    CV_Error(Error::StsNotImplemented, "Method SimpleBlobDetector::getBlobContours() is not implemented");
+}
+
 class CV_EXPORTS_W SimpleBlobDetectorImpl : public SimpleBlobDetector
 {
 public:
