@@ -165,6 +165,29 @@ void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const M
 
     keypoints.erase(std::remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
 }
+/*
+ * Remove objects from some image and a vector by mask for pixels of this image
+ */
+template <typename T>
+void runByPixelsMask2(std::vector<KeyPoint> &keypoints, std::vector<T> &removeFrom, const Mat &mask)
+{
+    if (mask.empty())
+        return;
+
+    MaskPredicate maskPredicate(mask);
+    removeFrom.erase(std::remove_if(removeFrom.begin(), removeFrom.end(),
+                                    [&](const T &x)
+                                    {
+                                        auto index = &x - &removeFrom.front();
+                                        return maskPredicate(keypoints[index]);
+                                    }),
+                    removeFrom.end());
+    keypoints.erase(std::remove_if(keypoints.begin(), keypoints.end(), maskPredicate), keypoints.end());
+}
+void KeyPointsFilter::runByPixelsMask2VectorPoint(std::vector<KeyPoint> &keypoints, std::vector<std::vector<Point> > &removeFrom, const Mat &mask)
+{
+    runByPixelsMask2(keypoints, removeFrom, mask);
+}
 
 struct KeyPoint_LessThan
 {
