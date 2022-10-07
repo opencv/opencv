@@ -619,7 +619,7 @@ public:
 
          @param param the current vector of parameters
          @param err output vector of errors: err_i = actual_f_i - ideal_f_i
-         @param J output Jacobian: J_ij = d(err_i)/d(param_j)
+         @param J output Jacobian: J_ij = d(ideal_f_i)/d(param_j)
 
          when J=noArray(), it means that it does not need to be computed.
          Dimensionality of error vector and param vector can be different.
