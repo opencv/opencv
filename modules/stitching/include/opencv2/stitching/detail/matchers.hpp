@@ -138,7 +138,7 @@ public:
     @sa detail::MatchesInfo
     */
     CV_WRAP_AS(apply2) void operator ()(const std::vector<ImageFeatures> &features, CV_OUT std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
+                                        const cv::UMat &mask = cv::UMat()) { match(features, pairwise_matches, mask); };
 
     /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
     */
@@ -160,6 +160,16 @@ protected:
      */
     virtual void match(const ImageFeatures &features1, const ImageFeatures &features2,
                        MatchesInfo& matches_info) = 0;
+
+    /** @brief This method implements logic to match features between arbitrary number of features.
+    By default this checks every pair of inputs in the input, but the behaviour can be changed by subclasses.
+
+    @param features vector of image features
+    @param pairwise_matches found matches
+    @param mask (optional) mask indicating which image pairs should be matched
+     */
+    virtual void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                       const cv::UMat &mask = cv::UMat());
 
     bool is_thread_safe_;
 };
@@ -205,11 +215,12 @@ public:
     CV_WRAP BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
                             int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
-
-
 protected:
+    // indicate that we do not want to hide the base class match method with a different signature
+    using BestOf2NearestMatcher::match;
+    void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+               const cv::UMat &mask = cv::UMat()) CV_OVERRIDE;
+
     int range_width_;
 };
 
