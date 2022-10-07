@@ -64,5 +64,10 @@ class cuda_test(NewOpenCVTests):
         self.assertTrue(cuMat.step == 0)
         self.assertTrue(cuMat.size() == (0, 0))
 
+    def test_cuda_denoising(self):
+        self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoising'))
+        self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
+        self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
