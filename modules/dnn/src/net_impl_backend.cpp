@@ -7,6 +7,9 @@
 #include "net_impl.hpp"
 #include "legacy_backend.hpp"
 
+#include "backend.hpp"
+#include "factory.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -109,11 +112,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
     else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
-        initNgraphBackend(blobsToKeep_);
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of OpenVINO");
-#endif
+        CV_Assert(0 && "Inheritance must be used with OpenVINO backend");
     }
     else if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -154,10 +153,13 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
-void Net::Impl::setPreferableBackend(int backendId)
+void Net::Impl::setPreferableBackend(Net& net, int backendId)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
         backendId = (Backend)getParam_DNN_BACKEND_DEFAULT();
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
 
     if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
     {
@@ -165,15 +167,24 @@ void Net::Impl::setPreferableBackend(int backendId)
         backendId = DNN_BACKEND_OPENCV;
     }
 
-#ifdef HAVE_INF_ENGINE
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-#endif
-
     if (preferableBackend != backendId)
     {
-        preferableBackend = backendId;
         clear();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+#if defined(HAVE_INF_ENGINE)
+            switchToOpenVINOBackend(net);
+#elif defined(ENABLE_PLUGINS)
+            auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
+            networkBackend.switchBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "OpenVINO backend is not available in the current OpenCV build");
+#endif
+        }
+        else
+        {
+            preferableBackend = backendId;
+        }
     }
 }
 
