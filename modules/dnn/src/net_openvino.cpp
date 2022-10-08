@@ -11,17 +11,217 @@
 
 #include "net_impl.hpp"
 
+#include "backend.hpp"
+#include "factory.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_INF_ENGINE
 
+// TODO: use "string" target specifier
+class NetImplOpenVINO CV_FINAL : public Net::Impl
+{
+public:
+    typedef Net::Impl Base;
+
+    // this default constructor is used with OpenVINO native loader
+    // TODO: dedicated Impl?
+    NetImplOpenVINO()
+        : Net::Impl()
+    {
+        preferableBackend = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    // constructor to derive execution implementation from the loaded network
+    explicit NetImplOpenVINO(const Ptr<Net::Impl>& basePtr)
+        : Net::Impl()
+    {
+        basePtr_ = basePtr;
+        init();
+    }
+
+    void init()
+    {
+        CV_TRACE_FUNCTION();
+        CV_Assert(basePtr_);
+        Net::Impl& base = *basePtr_;
+        CV_Assert(!base.netWasAllocated);
+        CV_Assert(!base.netWasQuantized);
+        netInputLayer = base.netInputLayer;
+        blobsToKeep = base.blobsToKeep;
+        layers = base.layers;
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
+        {
+            LayerData& ld = it->second;
+            ld.resetAllocation();
+        }
+        layerNameToId = base.layerNameToId;
+        outputNameToId = base.outputNameToId;
+        //blobManager = base.blobManager;
+        preferableBackend = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  //base.preferableBackend;
+        preferableTarget = base.preferableTarget;
+        hasDynamicShapes = base.hasDynamicShapes;
+        CV_Assert(base.backendWrappers.empty());  //backendWrappers = base.backendWrappers;
+        lastLayerId = base.lastLayerId;
+        netWasAllocated = base.netWasAllocated;
+        netWasQuantized = base.netWasQuantized;
+        fusion = base.fusion;
+    }
+
+
+    //bool isAsync;  // FIXIT: drop
+
+
+    bool empty() const override
+    {
+        return Base::empty();
+    }
+    void setPreferableBackend(Net& net, int backendId) override
+    {
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return;  // no-op
+        if (!basePtr_)
+            CV_Error(Error::StsError, "DNN: Can't switch backend of network created by OpenVINO native loader");
+        Ptr<Net::Impl>& impl_ptr_ref = accessor::DnnNetAccessor::getImplPtrRef(net);
+        impl_ptr_ref = basePtr_;
+        basePtr_->setPreferableBackend(net, backendId);
+    }
+
+    void setPreferableTarget(int targetId) override
+    {
+        if (preferableTarget != targetId)
+        {
+            preferableTarget = targetId;
+            clear();
+        }
+    }
+
+    Ptr<BackendWrapper> wrap(Mat& host) override
+    {
+        return Ptr<BackendWrapper>(new NgraphBackendWrapper(preferableTarget, host));
+    }
+
+
+    void clear() override
+    {
+        Base::clear();
+    }
+
+    void validateBackendAndTarget() override
+    {
+        CV_TRACE_FUNCTION();
+
+        CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        CV_Check((int)preferableTarget,
+              preferableTarget == DNN_TARGET_CPU ||
+              preferableTarget == DNN_TARGET_OPENCL ||
+              preferableTarget == DNN_TARGET_OPENCL_FP16 ||
+              preferableTarget == DNN_TARGET_MYRIAD ||
+              preferableTarget == DNN_TARGET_HDDL ||
+              preferableTarget == DNN_TARGET_FPGA,
+              "Unknown OpenVINO target"
+        );
+    }
+
+    Ptr<Layer> createLayerInstance(const LayerData& ld) const override
+    {
+        // try to create layer instance from backend-specific pool (e.g., plugin)
+        Ptr<Layer> instance = LayerFactory::createLayerInstance(ld.type, const_cast<LayerParams&>(ld.params));
+        if (!instance)
+            instance = Base::createLayerInstance(ld);
+        return instance;
+    }
+
+    void addNgraphOutputs(LayerData& ld);
+
+    void initBackend(const std::vector<LayerPin>& blobsToKeep_) override;
+
+    void fuseLayers(const std::vector<LayerPin>& blobsToKeep_) override;
+
+    void forwardLayer(LayerData& ld) override;
+
+    AsyncArray getBlobAsync(const LayerPin& pin) override;
+
+    //string dump(bool forceAllocation = false) const override;
+
+    static
+    Net createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet);
+
+};  // NetImplOpenVINO
+
+
+void NetImplOpenVINO::forwardLayer(LayerData& ld)
+{
+    CV_TRACE_FUNCTION();
+
+    Ptr<Layer> layer = ld.layerInstance;
+
+    if (!ld.skip)
+    {
+        auto it = ld.backendNodes.find(preferableBackend);
+        if (ld.id == 0 ||  // input layer
+            it == ld.backendNodes.end()  // non-supported layer or its mode
+        )
+        {
+            return Base::forwardLayer(ld);
+        }
+
+        CV_Assert(it != ld.backendNodes.end());
+        const Ptr<BackendNode>& node = it->second;
+        CV_Assert(!node.empty());
+        Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
+        CV_Assert(!ieNode.empty());
+        CV_Assert(ieNode->net);
+
+        TickMeter tm;
+        tm.start();
+
+        ieNode->net->forward(ld.outputBlobsWrappers, isAsync);
+
+        tm.stop();
+        int64 t = tm.getTimeTicks();
+        layersTimings[ld.id] = (t > 0) ? t : 1;  // zero for skipped layers only
+    }
+    else
+    {
+        layersTimings[ld.id] = 0;
+    }
+
+    ld.flag = 1;
+}
+
+AsyncArray NetImplOpenVINO::getBlobAsync(const LayerPin& pin)
+{
+    CV_TRACE_FUNCTION();
+    if (!pin.valid())
+        CV_Error(Error::StsObjectNotFound, "Requested blob not found");
+
+    LayerData& ld = layers[pin.lid];
+    if ((size_t)pin.oid >= ld.outputBlobs.size())
+    {
+        CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
+                                              "the #%d was requested",
+                                               ld.name.c_str(), (int)ld.outputBlobs.size(), (int)pin.oid));
+    }
+    if (preferableTarget != DNN_TARGET_CPU)
+    {
+        CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
+        // Transfer data to CPU if it's require.
+        ld.outputBlobsWrappers[pin.oid]->copyToHost();
+    }
+    CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+
+    Ptr<NgraphBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<NgraphBackendWrapper>();
+    return std::move(wrapper->futureMat);
+}
+
 
 /** mark input pins as outputs from other subnetworks
  * FIXIT must be done by DNN engine not ngraph.
  */
-void Net::Impl::addNgraphOutputs(LayerData& ld)
+void NetImplOpenVINO::addNgraphOutputs(LayerData& ld)
 {
     CV_TRACE_FUNCTION();
 
@@ -59,7 +259,7 @@ void Net::Impl::addNgraphOutputs(LayerData& ld)
     }
 }
 
-void Net::Impl::initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
+void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 {
     CV_TRACE_FUNCTION();
     CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, "");
@@ -92,7 +292,7 @@ void Net::Impl::initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
         }
     }
 
-    if (skipInfEngineInit)
+    if (!basePtr_)  // model is loaded by OpenVINO
     {
         Ptr<BackendNode> node = layers[lastLayerId].backendNodes[preferableBackend];
         CV_Assert(!node.empty());
@@ -399,10 +599,104 @@ void Net::Impl::initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
 }
 
-//}  // Net::Impl
+
+#if 0
+#define printf_(args) printf args
+#else
+#define printf_(args)
+#endif
+
+void NetImplOpenVINO::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
+{
+    CV_TRACE_FUNCTION();
+
+    if(!fusion)
+       return;
+
+    CV_Check((int)preferableBackend, preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, "");
+
+#if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
+    return;
+#endif
+
+    // scan through all the layers. If there is convolution layer followed by the activation layer,
+    // we try to embed this activation into the convolution and disable separate execution of the activation
+
+    // FIXIT replace by layersToKeep to avoid hacks like "LayerPin(lid, 0)"
+    std::set<LayerPin> pinsToKeep(blobsToKeep_.begin(),
+                                  blobsToKeep_.end());
+    for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
+    {
+        int lid = it->first;
+        LayerData& ld = layers[lid];
+        if (ld.skip)
+        {
+            printf_(("skipped %s: %s\n", ld.layerInstance->name.c_str(), ld.layerInstance->type.c_str()));
+            continue;
+        }
+        printf_(("analyzing %s: %s\n", ld.layerInstance->name.c_str(), ld.layerInstance->type.c_str()));
+
+        // the optimization #1. try to fuse batch norm, scaling and/or activation layers
+        // with the current layer if they follow it. Normally, the are fused with the convolution layer,
+        // but some of them (like activation) may be fused with fully-connected, elemwise (+) and
+        // some other layers.
+        Ptr<Layer>& currLayer = ld.layerInstance;
+        if (ld.consumers.size() == 1 && pinsToKeep.count(LayerPin(lid, 0)) == 0)
+        {
+            LayerData* nextData = &layers[ld.consumers[0].lid];
+            LayerPin lpNext(ld.consumers[0].lid, 0);
+            while (nextData)
+            {
+                if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && pinsToKeep.count(lpNext) != 0)
+                {
+                    CV_LOG_DEBUG(NULL, "DNN/IE: skip fusing with 'output' node: " << nextData->name << "@" << nextData->type);
+                    break;
+                }
+
+                /* we use `tryFuse` member of convolution layer to fuse eltwise later
+                 * it's not intended to be fused here; hence, we stop when we encounter eltwise
+                 */
+                Ptr<Layer> nextLayer = nextData->layerInstance;
+                if (currLayer->tryFuse(nextLayer))
+                {
+                    printf_(("\tfused with %s\n", nextLayer->name.c_str()));
+                    nextData->skip = true;
+                    ld.outputBlobs = layers[lpNext.lid].outputBlobs;
+                    ld.outputBlobsWrappers = layers[lpNext.lid].outputBlobsWrappers;
+                    if (nextData->consumers.size() == 1)
+                    {
+                        int nextLayerId = nextData->consumers[0].lid;
+                        nextData = &layers[nextLayerId];
+                        lpNext = LayerPin(nextLayerId, 0);
+                    }
+                    else
+                    {
+                        nextData = 0;
+                        break;
+                    }
+                }
+                else
+                    break;
+            }
+        }
+    }
+}
+
+
+
+void switchToOpenVINOBackend(Net& net)
+{
+    CV_TRACE_FUNCTION();
+    Ptr<Net::Impl>& impl_ptr_ref = accessor::DnnNetAccessor::getImplPtrRef(net);
+    CV_Assert(impl_ptr_ref);
+    CV_LOG_INFO(NULL, "DNN: switching to OpenVINO backend... (networkID=" << impl_ptr_ref->networkId << ")");
+    Ptr<NetImplOpenVINO> openvino_impl_ptr = makePtr<NetImplOpenVINO>(impl_ptr_ref);
+    impl_ptr_ref = openvino_impl_ptr;
+}
+
 
 /*static*/
-Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet)
+Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet)
 {
     CV_TRACE_FUNCTION();
 
@@ -418,6 +712,10 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     }
 
     Net cvNet;
+    Ptr<NetImplOpenVINO> openvino_impl_ptr = makePtr<NetImplOpenVINO>();
+    NetImplOpenVINO& openvino_impl = *openvino_impl_ptr;
+    accessor::DnnNetAccessor::getImplPtrRef(cvNet) = openvino_impl_ptr;
+
     cvNet.setInputsNames(inputsNames);
 
     // set empty input to determine input shapes
@@ -432,7 +730,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
     {
         auto fake_node = std::make_shared<ngraph::op::Parameter>(ngraph::element::f32, ngraph::Shape {});
         Ptr<InfEngineNgraphNode> backendNodeNGraph(new InfEngineNgraphNode(fake_node));
-        backendNodeNGraph->net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(*(cvNet.impl), ieNet));
+        backendNodeNGraph->net = Ptr<InfEngineNgraphNet>(new InfEngineNgraphNet(openvino_impl, ieNet));
         backendNode = backendNodeNGraph;
     }
 
@@ -450,7 +748,7 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
         LayerParams lp;
         int lid = cvNet.addLayer(it.first, "", lp);
 
-        LayerData& ld = cvNet.impl->layers[lid];
+        LayerData& ld = openvino_impl.layers[lid];
 
         {
             Ptr<Layer> cvLayer(new NgraphBackendLayer(ieNet));
@@ -498,26 +796,72 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
 
     cvNet.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
 
-    cvNet.impl->skipInfEngineInit = true;
     return cvNet;
 }
+
+
+static
+Net openvino_readNetwork(const String& modelPath, const String& binPath)
+{
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    InferenceEngine::Core& ie = getCore("");
+    InferenceEngine::CNNNetwork ieNet;
+    try
+    {
+        ieNet = ie.ReadNetwork(modelPath, binPath);
+    }
+    catch (const std::exception& e)
+    {
+        CV_Error(Error::StsError, std::string("DNN: OpenVINO failed to read model '") + modelPath + "': " + e.what());
+    }
+
+    return NetImplOpenVINO::createNetworkFromModelOptimizer(ieNet);
+}
+
+
+static
+Net openvino_readNetwork(
+        const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
+        const uchar* bufferWeightsPtr, size_t bufferWeightsSize
+)
+{
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    InferenceEngine::Core& ie = getCore("");
+
+    std::string model; model.assign((char*)bufferModelConfigPtr, bufferModelConfigSize);
+
+    InferenceEngine::CNNNetwork ieNet;
+    try
+    {
+        InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::U8, { bufferWeightsSize }, InferenceEngine::Layout::C);
+        InferenceEngine::Blob::CPtr weights_blob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc, (uint8_t*)bufferWeightsPtr, bufferWeightsSize);
+
+        ieNet = ie.ReadNetwork(model, weights_blob);
+    }
+    catch (const std::exception& e)
+    {
+        CV_Error(Error::StsError, std::string("DNN: OpenVINO failed to read model: ") + e.what());
+    }
+
+    return NetImplOpenVINO::createNetworkFromModelOptimizer(ieNet);
+}
+
 #endif  // HAVE_INF_ENGINE
 
 Net Net::readFromModelOptimizer(const String& xml, const String& bin)
 {
     CV_TRACE_FUNCTION();
-#ifndef HAVE_INF_ENGINE
+#if defined(HAVE_INF_ENGINE)
+    return openvino_readNetwork(xml, bin);
+#elif defined(ENABLE_PLUGINS)
+    auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
+    return networkBackend.readNetwork(std::string(), xml, bin);
+#else
     CV_UNUSED(xml); CV_UNUSED(bin);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
-#else
-
-    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
-
-    InferenceEngine::Core& ie = getCore("");
-    InferenceEngine::CNNNetwork ieNet = ie.ReadNetwork(xml, bin);
-
-    return Impl::createNetworkFromModelOptimizer(ieNet);
-#endif  // HAVE_INF_ENGINE
+#endif
 }
 
 Net Net::readFromModelOptimizer(const std::vector<uchar>& bufferModelConfig, const std::vector<uchar>& bufferWeights)
@@ -535,34 +879,112 @@ Net Net::readFromModelOptimizer(
 )
 {
     CV_TRACE_FUNCTION();
-#ifndef HAVE_INF_ENGINE
+#if defined(HAVE_INF_ENGINE)
+    return openvino_readNetwork(bufferModelConfigPtr, bufferModelConfigSize, bufferWeightsPtr, bufferWeightsSize);
+#elif defined(ENABLE_PLUGINS)
+    auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
+    return networkBackend.readNetwork(std::string(), bufferModelConfigPtr, bufferModelConfigSize, bufferWeightsPtr, bufferWeightsSize);
+#else
     CV_UNUSED(bufferModelConfigPtr); CV_UNUSED(bufferWeightsPtr);
     CV_UNUSED(bufferModelConfigSize); CV_UNUSED(bufferModelConfigSize);
     CV_Error(Error::StsError, "Build OpenCV with Inference Engine to enable loading models from Model Optimizer.");
-#else
-
-    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
-
-    InferenceEngine::Core& ie = getCore("");
-
-    std::string model; model.assign((char*)bufferModelConfigPtr, bufferModelConfigSize);
-
-    InferenceEngine::CNNNetwork ieNet;
-    try
-    {
-        InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::U8, { bufferWeightsSize }, InferenceEngine::Layout::C);
-        InferenceEngine::Blob::CPtr weights_blob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc, (uint8_t*)bufferWeightsPtr, bufferWeightsSize);
-
-        ieNet = ie.ReadNetwork(model, weights_blob);
-    }
-    catch (const std::exception& e)
-    {
-        CV_Error(Error::StsError, std::string("DNN: IE failed to load model: ") + e.what());
-    }
-
-    return Impl::createNetworkFromModelOptimizer(ieNet);
-#endif  // HAVE_INF_ENGINE
+#endif
 }
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
+
+
+
+#ifdef BUILD_PLUGIN
+
+#define ABI_VERSION 0
+#define API_VERSION 0
+#include "plugin_api.hpp"
+
+
+namespace cv { namespace dnn_backend {
+
+using namespace cv::dnn;
+
+class NetworkBackendOpenVINO : public NetworkBackend
+{
+public:
+    void switchBackend(Net& net) CV_OVERRIDE
+    {
+        cv::dnn::switchToOpenVINOBackend(net);
+    }
+    Net readNetwork(const std::string& loaderID, const std::string& model, const std::string& config) CV_OVERRIDE
+    {
+        if (!loaderID.empty())  // only auto ("") is supported
+        {
+            CV_Error(Error::StsError, "DNN/OpenVINO: unsupported network loader ID: " + loaderID);
+        }
+        return openvino_readNetwork(model, config);
+    }
+    Net readNetwork(
+        const std::string& loaderID,
+        const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
+        const uchar* bufferWeightsPtr, size_t bufferWeightsSize
+    ) CV_OVERRIDE
+    {
+        if (!loaderID.empty())  // only auto ("") is supported
+        {
+            CV_Error(Error::StsError, "DNN/OpenVINO: unsupported network loader ID: " + loaderID);
+        }
+        return openvino_readNetwork(bufferModelConfigPtr, bufferModelConfigSize, bufferWeightsPtr, bufferWeightsSize);
+    }
+    bool checkTarget(Target target) CV_OVERRIDE
+    {
+        return openvino::checkTarget(target);
+    }
+};
+
+static
+std::shared_ptr<NetworkBackendOpenVINO>& getInstanceNetworkBackendOpenVINO()
+{
+    static std::shared_ptr<NetworkBackendOpenVINO> g_instance = std::make_shared<NetworkBackendOpenVINO>();
+    return g_instance;
+}
+
+
+}}  // namespace
+
+
+static
+CvResult cv_getInstanceNetworkBackend(CV_OUT CvPluginDNNNetworkBackend* handle) CV_NOEXCEPT
+{
+    try
+    {
+        if (!handle)
+            return CV_ERROR_FAIL;
+        *handle = cv::dnn_backend::getInstanceNetworkBackendOpenVINO().get();
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
+}
+
+static const OpenCV_DNN_Plugin_API plugin_api =
+{
+    {
+        sizeof(OpenCV_DNN_Plugin_API), ABI_VERSION, API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "OpenVINO OpenCV DNN plugin (" CVAUX_STR(INF_ENGINE_RELEASE) ")"
+    },
+    {
+        /*  1*/cv_getInstanceNetworkBackend
+    }
+};
+
+const OpenCV_DNN_Plugin_API* CV_API_CALL opencv_dnn_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
+        return &plugin_api;
+    return NULL;
+}
+
+#endif  // BUILD_PLUGIN

@@ -130,9 +130,7 @@ void normAssertTextDetections(
 
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
-#ifdef HAVE_INF_ENGINE
 bool validateVPUType();
-#endif
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,

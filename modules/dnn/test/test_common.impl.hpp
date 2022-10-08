@@ -254,9 +254,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withWebnn /*= false*/
 )
 {
-#ifdef HAVE_INF_ENGINE
     bool withVPU = validateVPUType();
-#endif
 
     std::vector< tuple<Backend, Target> > targets;
     std::vector< Target > available;
@@ -266,7 +264,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_HALIDE, *i));
     }
-#ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
@@ -288,9 +285,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         }
 
     }
-#else
-    CV_UNUSED(withInferenceEngine);
-#endif
     if (withVkCom)
     {
         available = getAvailableTargets(DNN_BACKEND_VKCOM);
@@ -356,7 +350,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #endif
 }
 
-#ifdef HAVE_INF_ENGINE
 static std::string getTestInferenceEngineVPUType()
 {
     static std::string param_vpu_type = utils::getConfigurationParameterString("OPENCV_TEST_DNN_IE_VPU_TYPE", "");
@@ -419,7 +412,6 @@ bool validateVPUType()
     static bool result = validateVPUType_();
     return result;
 }
-#endif // HAVE_INF_ENGINE
 
 
 void initDNNTests()
