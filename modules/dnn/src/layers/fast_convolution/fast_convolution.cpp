@@ -23,7 +23,8 @@ Ptr<FastConv2d> initFastConv2d(
         const std::vector<size_t>& pads_begin,
         const std::vector<size_t>& pads_end,
         InputArray _weightsMat,
-        float* srcBias)
+        float* srcBias,
+        bool useWinograd)
 {
     Ptr<FastConv2d> conv = makePtr<FastConv2d>();
 
@@ -48,11 +49,11 @@ Ptr<FastConv2d> initFastConv2d(
     const size_t wstep = weightsMat.step1();
 
 #if CV_NEON // For now, winograd is ARM platform only.
-    if (ngroups == 1 && Hk ==3 && Wk == 3 && stride_x == 1 && stride_y == 1 &&
+    if (useWinograd && ngroups == 1 && Hk ==3 && Wk == 3 && stride_x == 1 && stride_y == 1 &&
         dilation_x == 1 && dilation_y ==1 && K >= 16 && C >= 16)
-        conv->ifWinograd63 = true;
+        conv->useWinograd63 = true;
 #else
-    conv->ifWinograd63 = false;
+    conv->useWinograd63 = false;
 #endif
 
     float *srcWeights = (float *)weightsMat.data;
@@ -115,7 +116,7 @@ Ptr<FastConv2d> initFastConv2d(
         }});
 
         // Prepare Weight for Winograd F(6x6, 3x3)
-        if (conv->ifWinograd63)
+        if (conv->useWinograd63)
         {
             initWinograd63(conv, weightsMat, K, C);
         }
@@ -191,10 +192,7 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
     }
 
 #if CV_NEON
-    if (conv->ifWinograd63
-         && inputShape[2] > 12 && inputShape[3] > 12
-         && inputShape[2] < 120 && inputShape[3] < 120
-         )
+    if (conv->useWinograd63 && inputShape[2] > 12 && inputShape[3] > 12)
     {
         if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
             return;

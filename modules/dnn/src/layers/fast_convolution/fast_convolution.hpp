@@ -44,7 +44,7 @@ struct FastConv2d
     std::vector<float> weightsBuf;        // For generic Conv 2D
     std::vector<float> weightsWino63Buf;  // For Winograd F(6x6, 3x3).
     std::vector<float> biasBuf;
-    bool ifWinograd63 = false;
+    bool useWinograd63 = false;
     bool useAVX2 = checkHardwareSupport(CPU_AVX2);
     bool useNEON = checkHardwareSupport(CPU_NEON);
 };
@@ -58,7 +58,7 @@ Ptr<FastConv2d> initFastConv2d(
         const std::vector<size_t>& pads_begin,
         const std::vector<size_t>& pads_end,
         InputArray weightsMat,
-        float* srcBias);
+        float* srcBias, bool useWinograd);
 
 // It contains different computing branches, like winograd, 1x1 conv.
 void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,

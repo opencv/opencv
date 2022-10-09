@@ -1689,7 +1689,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
 void initWinograd63(Ptr<FastConv2d>& conv, InputArray _weightsMat, int K, int C)
 {
-    conv->ifWinograd63 = false;
+    conv->useWinograd63 = false;
 }
 
 int runWinograd63(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)

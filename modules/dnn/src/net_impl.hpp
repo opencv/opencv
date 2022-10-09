@@ -64,6 +64,7 @@ struct Net::Impl : public detail::NetImplBase
     bool netWasQuantized;
     bool fusion;
     bool isAsync;  // FIXIT: drop
+    bool useWinograd;
     std::vector<int64> layersTimings;
 
 
@@ -211,6 +212,7 @@ struct Net::Impl : public detail::NetImplBase
     void enableFusion(bool fusion_);
 
     virtual void fuseLayers(const std::vector<LayerPin>& blobsToKeep_);
+    void enableWinograd(bool useWinograd_);
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_);
 

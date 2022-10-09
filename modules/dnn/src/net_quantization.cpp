@@ -51,6 +51,7 @@ Net Net::Impl::quantize(Net& net, InputArrayOfArrays calibData, int inputsDtype,
     setPreferableBackend(net, DNN_BACKEND_OPENCV);
     setPreferableTarget(DNN_TARGET_CPU);
     enableFusion(false);
+    enableWinograd(false);
 
     if (calibData.isMat())
     {
