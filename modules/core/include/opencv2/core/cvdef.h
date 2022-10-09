@@ -723,7 +723,7 @@ Cv64suf;
 
 
 
-// Integer types portatibility
+// Integer types portability
 #ifdef OPENCV_STDINT_HEADER
 #include OPENCV_STDINT_HEADER
 #elif defined(__cplusplus)
