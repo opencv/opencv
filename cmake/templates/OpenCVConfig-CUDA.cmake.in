@@ -36,14 +36,6 @@ if(OpenCV_USE_CUFFT)
   list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUFFT_LIBRARIES})
 endif()
 
-if(OpenCV_USE_NVCUVID)
-  list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvid_LIBRARIES})
-endif()
-
-if(OpenCV_USE_NVCUVENC)
-  list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvencodeapi_LIBRARIES})
-endif()
-
 set(OpenCV_CUDA_LIBS_RELPATH "")
 foreach(l ${OpenCV_CUDA_LIBS_ABSPATH})
   get_filename_component(_tmp ${l} PATH)
