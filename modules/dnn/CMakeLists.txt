@@ -31,6 +31,10 @@ if(HAVE_TIMVX)
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_TIMVX=1")
 endif()
 
+if(HAVE_CANN)
+  ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_CANN=1")
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
@@ -162,6 +166,11 @@ if(HAVE_TIMVX)
     list(APPEND libs -Wl,--whole-archive ${TIMVX_LIBRARY} -Wl,--no-whole-archive)
 endif()
 
+if(HAVE_CANN)
+  list(APPEND include_dirs ${CANN_INCLUDE_DIRS})
+  list(APPEND libs -Wl,--whole-archive ${CANN_LIBRARIES} -Wl,--no-whole-archive)
+endif()
+
 set(webnn_srcs "")
 if(NOT EMSCRIPTEN)
   if(HAVE_WEBNN)
@@ -262,5 +271,12 @@ ocv_option(OPENCV_TEST_DNN_OPENVINO "Build test with OpenVINO code" (TARGET ocv.
 if(TARGET ocv.3rdparty.openvino AND OPENCV_TEST_DNN_OPENVINO)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.openvino)
+  endif()
+endif()
+
+ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann))
+if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
+  if(TARGET opencv_test_dnn)
+    ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
   endif()
 endif()

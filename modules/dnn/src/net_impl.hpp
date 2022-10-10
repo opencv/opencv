@@ -12,6 +12,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
@@ -44,6 +45,8 @@ struct Net::Impl : public detail::NetImplBase
 
     // Inheritance support
     Ptr<Net::Impl> basePtr_;
+
+    static void finalize();
 
     Ptr<DataLayer> netInputLayer;
     std::vector<LayerPin> blobsToKeep;
@@ -206,6 +209,10 @@ struct Net::Impl : public detail::NetImplBase
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
+#ifdef HAVE_CANN
+    std::shared_ptr<CannGraph> cannGraph = std::make_shared<CannGraph>();
+#endif
+
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter
@@ -220,13 +227,13 @@ struct Net::Impl : public detail::NetImplBase
 
     void forwardToLayer(LayerData& ld, bool clearFlags = true);
 
-    Mat forward(const String& outputName);
+    virtual Mat forward(const String& outputName);
     AsyncArray forwardAsync(const String& outputName);
-    void forward(OutputArrayOfArrays outputBlobs, const String& outputName);
-    void forward(OutputArrayOfArrays outputBlobs,
-            const std::vector<String>& outBlobNames);
-    void forward(std::vector<std::vector<Mat>>& outputBlobs,
-            const std::vector<String>& outBlobNames);
+    virtual void forward(OutputArrayOfArrays outputBlobs, const String& outputName);
+    virtual void forward(OutputArrayOfArrays outputBlobs,
+                         const std::vector<String>& outBlobNames);
+    virtual void forward(std::vector<std::vector<Mat>>& outputBlobs,
+                         const std::vector<String>& outBlobNames);
 
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes);

@@ -81,6 +81,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
+        DNN_BACKEND_CANN,
 #if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
 #if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -342,6 +343,17 @@ CV__DNN_INLINE_NS_BEGIN
                                            const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                            const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                            bool isLast);
+
+        /**
+         * @brief Returns a CANN backend node
+         *
+         * @param   cannGraph  void pointer to the CannGraph object
+         * @param   inputsWrapper   layer inputs
+         * @param   outputsWrapper  layer outputs
+         */
+        virtual Ptr<BackendNode> initCann(void* cannGraph,
+                                          const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                          const std::vector<Ptr<BackendWrapper> > &outputsWrapper);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
@@ -853,6 +865,9 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
+        /** @brief Release resources on device. Call this function at the end of the program if you use DNN_BACKEND_CANN.
+         */
+        CV_WRAP static void finalizeDevice();
 
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }

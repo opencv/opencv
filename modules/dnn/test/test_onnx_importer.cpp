@@ -1938,6 +1938,195 @@ TEST_P(Test_ONNX_nets, Googlenet)
     expectNoFallbacksFromIE(net);
 }
 
+TEST_P(Test_ONNX_nets, DISABLED_YOLOv3)
+{
+    const String model = findDataFile("dnn/ascend-models/yolov3_tf.pb", true);
+
+    Net net = readNetFromTensorflow(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    const String image = findDataFile("dnn/dog416.png", true);
+
+    Mat inp = imread(image);
+    net.setInput(blobFromImage(inp, 1.0f, Size(416, 416)));
+
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+    Net::finalizeDevice();
+}
+
+TEST_P(Test_ONNX_nets, DISABLED_AlexNet)
+{
+    const String model = findDataFile("dnn/ascend-models/alexnet.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<String> images{
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000001.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000002.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000003.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000004.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000005.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000006.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000007.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000008.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000009.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000010.JPEG",
+        "/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG"
+    };
+
+    Mat inp = imread(images[0]);
+    net.setInput(blobFromImage(inp, 1.0f, Size(224, 224)));
+    // Mat out = net.forward();
+
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+    Net::finalizeDevice();
+}
+
+TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
+// TEST_P(Test_ONNX_nets, ResNet50)
+{
+    const String model =  findDataFile("dnn/ascend-models/resnet50-v1-12.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    // Net net2 = readNetFromONNX(model);
+    // net2.setPreferableBackend(backend);
+
+    // Mat inp = imread(findDataFile("dnn/ascend-models/image_classification/coffee_mug.224x224.png", true));
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000001.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000002.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000003.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000004.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000005.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000006.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000007.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000008.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000009.JPEG");
+    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000010.JPEG");
+    Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG");
+    cvtColor(inp, inp, COLOR_BGR2RGB);
+    // center crop
+    cv::resize(inp, inp, Size(256, 256));
+    cv::Rect roi(16, 16, 224, 224);
+    inp = inp(roi);
+    inp.convertTo(inp, CV_32FC3);
+    cv::multiply(inp, Scalar(1.0 / 255.0), inp);
+    cv::subtract(inp, Scalar(0.485, 0.456, 0.406), inp);
+    cv::multiply(inp, Scalar(1.0/0.229, 1.0/0.224, 1.0/0.225), inp);
+
+
+    net.setInput(blobFromImage(inp));
+
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+    std::cout << "first 10 elements: ";
+    for (int i = 0; i < 10; i++)
+        std::cout << out.at<float>(i) << " ";
+    std::cout << std::endl;
+
+    double minVal, maxVal;
+    cv::Point minLoc, maxLoc;
+    cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
+    std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
+
+
+    Net::finalizeDevice();
+}
+
 TEST_P(Test_ONNX_nets, CaffeNet)
 {
 #if defined(OPENCV_32BIT_CONFIGURATION) && (defined(HAVE_OPENCL) || defined(_WIN32))

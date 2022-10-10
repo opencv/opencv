@@ -417,5 +417,13 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
+void Net::finalizeDevice()
+{
+    CV_TRACE_FUNCTION();
+#ifdef HAVE_CANN
+    return Net::Impl::finalize();
+#endif // HAVE_CANN
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

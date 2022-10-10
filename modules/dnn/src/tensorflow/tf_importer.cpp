@@ -30,6 +30,10 @@ Implementation of Tensorflow models parser
 #include "tf_graph_simplifier.hpp"
 #endif
 
+#ifdef HAVE_CANN
+#include "../net_impl.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -3239,7 +3243,12 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 
 Net readNetFromTensorflow(const String &model, const String &config)
 {
-    return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str());
+    Net net = detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str());
+#ifdef HAVE_CANN
+    auto impl = net.getImpl();
+    impl->cannGraph->loadFromTensorFlow(model);
+#endif
+    return net;
 }
 
 Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,

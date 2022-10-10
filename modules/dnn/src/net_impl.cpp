@@ -59,6 +59,14 @@ Net::Impl::Impl()
 }
 
 
+void Net::Impl::finalize()
+{
+#ifdef HAVE_CANN
+    CannClient::finalize();
+#endif
+}
+
+
 bool Net::Impl::empty() const
 {
     return layers.size() <= 1;  // first layer is default Data layer
@@ -1566,6 +1574,7 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
     case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
     case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
+    case DNN_BACKEND_CANN: backend = "CANN/"; break;
         // don't use default:
     }
     out << "digraph G {\n";

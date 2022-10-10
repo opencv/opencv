@@ -84,6 +84,14 @@ Ptr<BackendNode> Layer::initTimVX(void* timVxInfo,
     return Ptr<BackendNode>();
 }
 
+Ptr<BackendNode> Layer::initCann(void* cannGraph,
+                                 const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                 const std::vector<Ptr<BackendWrapper> > &outputsWrapper)
+{
+    CV_Error(Error::StsNotImplemented, "CANN pipeline of " + type + " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
 Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
 {
     return Ptr<BackendNode>();
