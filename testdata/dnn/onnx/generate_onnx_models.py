@@ -1581,6 +1581,34 @@ model = Greater()
 input = Variable(torch.rand(1, 3, 4, 5))
 save_data_and_model("greater", input, model, version = 11, export_params=True)
 
+class GreaterOrEqual(nn.Module):
+
+    def __init__(self):
+        super(GreaterOrEqual, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x >= 0.5)*x
+
+model = GreaterOrEqual()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("greater_or_equal", input, model, version = 13, export_params=True)
+
+class LessOrEqual(nn.Module):
+
+    def __init__(self):
+        super(LessOrEqual, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x <= 0.5)*x
+
+model = LessOrEqual()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("less_or_equal", input, model, version = 13, export_params=True)
+
 class GreaterSameDims(nn.Module):
 
     def __init__(self):
