@@ -266,8 +266,8 @@ bool CalibProcessor::checkLastFrame()
         allObjPoints.reserve(mCurrentCharucoIds.total());
         for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
             int pointID = mCurrentCharucoIds.at<int>((int)i);
-            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
-            allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
+            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->getChessboardCorners().size());
+            allObjPoints.push_back(mCharucoBoard->getChessboardCorners()[pointID]);
         }
 
         cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
