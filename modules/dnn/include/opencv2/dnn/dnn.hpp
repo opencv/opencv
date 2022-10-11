@@ -837,6 +837,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void enableFusion(bool fusion);
 
+        /** @brief Enables or disables the Winograd compute branch. The Winograd compute branch can speed up
+         * 3x3 Convolution at a small loss of accuracy.
+        * @param useWinograd true to enable the Winograd compute branch. The default is true.
+        */
+        CV_WRAP void enableWinograd(bool useWinograd);
+
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,

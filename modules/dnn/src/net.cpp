@@ -395,6 +395,13 @@ void Net::enableFusion(bool fusion)
     return impl->enableFusion(fusion);
 }
 
+void Net::enableWinograd(bool useWinograd)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->enableWinograd(useWinograd);
+}
+
 void Net::setHalideScheduler(const String& scheduler)
 {
     CV_TRACE_FUNCTION();

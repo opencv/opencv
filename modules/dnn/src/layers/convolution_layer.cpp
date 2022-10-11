@@ -89,7 +89,8 @@ public:
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads);
+        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations,
+                                   padMode, adjust_pads, useWinograd);
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);
@@ -2112,7 +2113,7 @@ public:
                 int dilation_w = dilations.back();
 
                 fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h, dilation_w,
-                                                dilation_h, pads_begin, pads_end, weightsMat, &biasvec[0]);
+                                                dilation_h, pads_begin, pads_end, weightsMat, &biasvec[0], useWinograd);
             }
 
             if (fastConv2dImpl)
