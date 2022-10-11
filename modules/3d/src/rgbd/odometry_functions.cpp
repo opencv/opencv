@@ -22,19 +22,23 @@ enum
     UTSIZE = 27
 };
 
-//TODO: this
-Mat findMask(InputArray _depth)
+UMat validDepthMask(InputArray _depth)
 {
     Mat depth_value = _depth.getMat();
     CV_Assert(depth_value.type() == DEPTH_TYPE);
     Mat m(depth_value.size(), CV_8UC1, Scalar(255));
     for (int y = 0; y < depth_value.rows; y++)
+    {
+        const float* drow = depth_value.ptr<float>(y);
         for (int x = 0; x < depth_value.cols; x++)
         {
-            if (cvIsNaN(depth_value.at<float>(y, x)) || depth_value.at<float>(y, x) <= FLT_EPSILON)
+            float v = drow[x];
+            // ignore small, negative, Inf, NaN values
+            if (!(v > FLT_EPSILON))
                 m.at<uchar>(y, x) = 0;
         }
-    return m;
+    }
+    return m.getUMat(ACCESS_READ);
 }
 
 //TODO: this
