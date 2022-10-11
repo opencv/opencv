@@ -442,6 +442,43 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage)
     }
 }
 
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
+{
+    const int mode = GetParam();
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> pages;
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    ASSERT_TRUE(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    long pos = ftell(fp);
+
+    std::vector<uchar> buf;
+    buf.resize((size_t)pos);
+    fseek(fp, 0, SEEK_SET);
+    buf.resize(fread(&buf[0], 1, buf.size(), fp));
+    fclose(fp);
+
+    bool res = imdecodemulti(buf, mode, pages);
+    ASSERT_TRUE(res == true);
+    ASSERT_EQ(page_count, pages.size());
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i], mode);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), page, pages[i]);
+    }
+}
+
 const int all_modes[] =
 {
     IMREAD_UNCHANGED,
