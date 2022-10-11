@@ -55,6 +55,7 @@ Net::Impl::Impl()
     preferableBackend = (Backend)getParam_DNN_BACKEND_DEFAULT();
     preferableTarget = DNN_TARGET_CPU;
     hasDynamicShapes = false;
+    useWinograd = true;
 }
 
 
@@ -2035,6 +2036,37 @@ void Net::Impl::getMemoryConsumption(
 
         weights.push_back(w);
         blobs.push_back(b);
+    }
+}
+
+void Net::Impl::enableWinograd(bool useWinograd_)
+{
+    if (useWinograd != useWinograd_)
+    {
+        useWinograd = useWinograd_;
+
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
+        {
+            int lid = it->first;
+            LayerData &ld = layers[lid];
+            Ptr<Layer>& currLayer = ld.layerInstance;
+
+            if (ld.type == "Convolution")
+            {
+                ld.params.set("use_winograd", useWinograd_);
+                Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
+                if (!convLayer.empty())
+                    convLayer->useWinograd = useWinograd_;
+            }
+
+            if (ld.type == "ConvolutionInt8")
+            {
+                Ptr<ConvolutionLayerInt8> convLayer = currLayer.dynamicCast<ConvolutionLayerInt8>();
+                ld.params.set("use_winograd", useWinograd_);
+                if (!convLayer.empty())
+                    convLayer->useWinograd = useWinograd_;
+            }
+        }
     }
 }
 
