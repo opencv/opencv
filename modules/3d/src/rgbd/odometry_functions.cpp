@@ -90,22 +90,6 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
 }
 
 
-static void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount)
-{
-    if (!pyramidImage.empty())
-    {
-        size_t nLevels = pyramidImage.size(-1).width;
-        if (nLevels < levelCount)
-            CV_Error(Error::StsBadSize, "Levels count of pyramidImage has to be equal or less than size of iterCounts.");
-
-        CV_Assert(pyramidImage.size(0) == image.size());
-        for (size_t i = 0; i < nLevels; i++)
-            CV_Assert(pyramidImage.type((int)i) == image.type());
-    }
-    else
-        buildPyramid(image, pyramidImage, (int)levelCount - 1);
-}
-
 static void preparePyramidMask(UMat mask, const std::vector<UMat> pyramidDepth, int nLevels, float minDepth, float maxDepth,
                                std::vector<UMat>& pyramidMask)
 {
@@ -153,23 +137,6 @@ static void extendPyrMaskByPyrNormals(const std::vector<UMat>& pyramidNormals,  
     }
 }
 
-static void preparePyramidCloud(const std::vector<UMat>& pyramidDepth, const Matx33f& cameraMatrix, std::vector<UMat>& pyramidCloud)
-{
-    int nLevels = pyramidDepth.size();
-    
-    std::vector<Matx33f> pyramidCameraMatrix;
-    buildPyramidCameraMatrix(cameraMatrix, nLevels, pyramidCameraMatrix);
-
-    pyramidCloud.resize(nLevels, UMat());
-
-    for (size_t i = 0; i < nLevels; i++)
-    {
-        UMat cloud;
-        depthTo3d(pyramidDepth[i], pyramidCameraMatrix[i], cloud, noArray());
-        pyramidCloud[i] = cloud;
-    }
-}
-
 static void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vector<Matx33f>& pyramidCameraMatrix)
 {
     pyramidCameraMatrix.resize(levels);
@@ -182,11 +149,29 @@ static void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, st
     }
 }
 
+static void preparePyramidCloud(const std::vector<UMat>& pyramidDepth, const Matx33f& cameraMatrix, std::vector<UMat>& pyramidCloud)
+{
+    int nLevels = pyramidDepth.size();
+    
+    std::vector<Matx33f> pyramidCameraMatrix;
+    buildPyramidCameraMatrix(cameraMatrix, nLevels, pyramidCameraMatrix);
+
+    pyramidCloud.resize(nLevels, UMat());
+
+    for (int i = 0; i < nLevels; i++)
+    {
+        UMat cloud;
+        depthTo3d(pyramidDepth[i], pyramidCameraMatrix[i], cloud, noArray());
+        pyramidCloud[i] = cloud;
+    }
+}
+
+
 static void preparePyramidSobel(const std::vector<UMat>& pyramidImage, int dx, int dy, std::vector<UMat>& pyramidSobel, int sobelSize)
 {
     int nLevels = pyramidImage.size();
     pyramidSobel.resize(nLevels, UMat());
-    for (size_t i = 0; i < nLevels; i++)
+    for (int i = 0; i < nLevels; i++)
     {
         Sobel(pyramidImage[i], pyramidSobel[i], CV_16S, dx, dy, sobelSize);
     }
