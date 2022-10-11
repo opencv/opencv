@@ -107,12 +107,12 @@ public:
 
 void OdometryRGB::prepareFrame(OdometryFrame& frame)
 {
-    prepareRGBFrame(frame, frame, this->settings, false);
+    prepareRGBFrame(frame, frame, this->settings);
 }
 
 void OdometryRGB::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
 {
-    prepareRGBFrame(srcFrame, dstFrame, this->settings, false);
+    prepareRGBFrame(srcFrame, dstFrame, this->settings);
 }
 
 bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
