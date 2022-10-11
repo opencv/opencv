@@ -489,9 +489,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Mat rgb = scene->rgb(poses[0]);
     Mat points, normals, tmpnormals, colors;
 
-    OdometryFrame odf;
-    odf.setDepth(depth);
-    odf.setImage(rgb);
+    OdometryFrame odf(rgb, depth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
@@ -507,21 +505,10 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
 
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (testSrcType == VolumeTestSrcType::MAT)
-        {
-            if (volumeType == VolumeType::ColorTSDF)
-                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
-            else
-                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
-        }
-        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-        {
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            if (volumeType == VolumeType::ColorTSDF)
-                odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-        }
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        else
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
@@ -568,9 +555,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     Mat rgb = scene->rgb(poses[0]);
     Mat points, normals, tmpnormals, colors;
 
-    OdometryFrame odf;
-    odf.setDepth(depth);
-    odf.setImage(rgb);
+    OdometryFrame odf(rgb, depth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
@@ -586,21 +571,10 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
 
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (testSrcType == VolumeTestSrcType::MAT)
-        {
-            if (volumeType == VolumeType::ColorTSDF)
-                volume.raycast(poses[0].matrix, points, normals, colors);
-            else
-                volume.raycast(poses[0].matrix, points, normals);
-        }
-        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-        {
-            volume.raycast(poses[0].matrix, odf);
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            if (volumeType == VolumeType::ColorTSDF)
-                odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-        }
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, points, normals, colors);
+        else
+            volume.raycast(poses[0].matrix, points, normals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
@@ -648,9 +622,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     Mat points, normals, colors, newPoints, newNormals;
     int anfas, profile;
 
-    OdometryFrame odf;
-    odf.setDepth(depth);
-    odf.setImage(rgb);
+    OdometryFrame odf(rgb, depth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
@@ -664,21 +636,10 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
         volume.integrate(odf, poses[0].matrix);
     }
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
-        else
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-        if (volumeType == VolumeType::ColorTSDF)
-            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-    }
+    if (volumeType == VolumeType::ColorTSDF)
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+    else
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
 
     patchNaNs(points);
     anfas = counterOfValid(points);
@@ -694,21 +655,10 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     points.release();
     normals.release();
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals, colors);
-        else
-            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-        if (volumeType == VolumeType::ColorTSDF)
-            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-    }
+    if (volumeType == VolumeType::ColorTSDF)
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals, colors);
+    else
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
 
     patchNaNs(points);
     profile = counterOfValid(points);
@@ -748,9 +698,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     Mat points, normals, colors, newPoints, newNormals;
     int anfas, profile;
 
-    OdometryFrame odf;
-    odf.setDepth(depth);
-    odf.setImage(rgb);
+    OdometryFrame odf(rgb, depth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
@@ -764,21 +712,10 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
         volume.integrate(odf, poses[0].matrix);
     }
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, points, normals, colors);
-        else
-            volume.raycast(poses[0].matrix, points, normals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[0].matrix, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-        if (volumeType == VolumeType::ColorTSDF)
-            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-    }
+    if (volumeType == VolumeType::ColorTSDF)
+        volume.raycast(poses[0].matrix, points, normals, colors);
+    else
+        volume.raycast(poses[0].matrix, points, normals);
 
     patchNaNs(points);
     anfas = counterOfValid(points);
@@ -794,21 +731,10 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     points.release();
     normals.release();
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[17].matrix, points, normals, colors);
-        else
-            volume.raycast(poses[17].matrix, points, normals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[17].matrix, odf);
-        odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-        if (volumeType == VolumeType::ColorTSDF)
-            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-    }
+    if (volumeType == VolumeType::ColorTSDF)
+        volume.raycast(poses[17].matrix, points, normals, colors);
+    else
+        volume.raycast(poses[17].matrix, points, normals);
 
     patchNaNs(points);
     profile = counterOfValid(points);

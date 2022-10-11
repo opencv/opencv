@@ -471,13 +471,11 @@ PERF_TEST(Perf_TSDF, integrate_frame)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
+        OdometryFrame odf(noArray(), depth);
 
         startTimer();
         volume.integrate(odf, pose);
         stopTimer();
-
     }
     SANITY_CHECK_NOTHING();
 }
@@ -517,55 +515,6 @@ PERF_TEST(Perf_TSDF, raycast_mat)
         if (display)
             displayImage(depth, points, normals, depthFactor, lightPose);
 
-    }
-    SANITY_CHECK_NOTHING();
-}
-
-// Perf_TSDF_GPU.raycast_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_TSDF_GPU, raycast_frame)
-#else
-PERF_TEST(Perf_TSDF, raycast_frame)
-#endif
-{
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-
-#ifdef HAVE_OPENCL
-        OdometryFrame odf(OdometryFrameStoreType::UMAT);
-#else
-        OdometryFrame odf;
-#endif
-
-        odf.setDepth(depth);
-        volume.integrate(odf, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, odf);
-        stopTimer();
-
-        if (display)
-        {
-            Mat points, normals;
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            displayImage(depth, points, normals, depthFactor, lightPose);
-        }
     }
     SANITY_CHECK_NOTHING();
 }
@@ -626,8 +575,7 @@ PERF_TEST(Perf_TSDF_CPU, integrate_frame)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
+        OdometryFrame odf(noArray(), depth);
 
         startTimer();
         volume.integrate(odf, pose);
@@ -678,52 +626,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_mat)
     cv::ocl::setUseOpenCL(true);
 }
 
-// Perf_TSDF_CPU.raycast_frame
-PERF_TEST(Perf_TSDF_CPU, raycast_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
-        volume.integrate(odf, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, odf);
-        stopTimer();
-
-        if (display)
-        {
-            Mat points, normals;
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            displayImage(depth, points, normals, depthFactor, lightPose);
-        }
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
 #endif
-
-
-
 
 // Perf_HashTSDF_GPU.integrate_mat
 #ifdef HAVE_OPENCL
@@ -780,8 +683,7 @@ PERF_TEST(Perf_HashTSDF, integrate_frame)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
+        OdometryFrame odf(noArray(), depth);
 
         startTimer();
         volume.integrate(odf, pose);
@@ -829,56 +731,6 @@ PERF_TEST(Perf_HashTSDF, raycast_mat)
     }
     SANITY_CHECK_NOTHING();
 }
-
-// Perf_HashTSDF_GPU.raycast_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_HashTSDF_GPU, raycast_frame)
-#else
-PERF_TEST(Perf_HashTSDF, raycast_frame)
-#endif
-{
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-
-#ifdef HAVE_OPENCL
-        OdometryFrame odf(OdometryFrameStoreType::UMAT);
-#else
-        OdometryFrame odf;
-#endif
-
-        odf.setDepth(depth);
-        volume.integrate(odf, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, odf);
-        stopTimer();
-
-        if (display)
-        {
-            Mat points, normals;
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            displayImage(depth, points, normals, depthFactor, lightPose);
-        }
-    }
-    SANITY_CHECK_NOTHING();
-}
-
 
 #ifdef HAVE_OPENCL
 // Perf_HashTSDF_CPU.integrate_mat
@@ -935,8 +787,7 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_frame)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
+        OdometryFrame odf(noArray(), depth);
 
         startTimer();
         volume.integrate(odf, pose);
@@ -985,51 +836,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
 
     cv::ocl::setUseOpenCL(true);
 }
-
-// Perf_HashTSDF_CPU.raycast_frame
-PERF_TEST(Perf_HashTSDF_CPU, raycast_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
-        volume.integrate(odf, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, odf);
-        stopTimer();
-
-        if (display)
-        {
-            Mat points, normals;
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            displayImage(depth, points, normals, depthFactor, lightPose);
-        }
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
 #endif
-
 
 
 // Perf_ColorTSDF_CPU.integrate_mat
@@ -1089,9 +896,7 @@ PERF_TEST(Perf_ColorTSDF, integrate_frame)
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
         Mat rgb = scene->rgb(pose);
-        OdometryFrame odf;
-        odf.setDepth(depth);
-        odf.setImage(rgb);
+        OdometryFrame odf(rgb, depth);
 
         startTimer();
         volume.integrate(odf, pose);
@@ -1140,53 +945,5 @@ PERF_TEST(Perf_ColorTSDF, raycast_mat)
     }
     SANITY_CHECK_NOTHING();
 }
-
-// Perf_ColorTSDF_CPU.raycast_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_ColorTSDF_CPU, raycast_frame)
-#else
-PERF_TEST(Perf_ColorTSDF, raycast_frame)
-#endif
-{
-    VolumeType volumeType = VolumeType::ColorTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat rgb = scene->rgb(pose);
-
-        OdometryFrame odf;
-        odf.setDepth(depth);
-        odf.setImage(rgb);
-        volume.integrate(odf, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, odf);
-        stopTimer();
-
-        if (display)
-        {
-            Mat points, normals, colors;
-            odf.getPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-            odf.getPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
-        }
-    }
-    SANITY_CHECK_NOTHING();
-}
-
 
 }} // namespace

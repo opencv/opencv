@@ -358,8 +358,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Mat points, normals;
     AccessFlag af = ACCESS_READ;
 
-    OdometryFrame odf(OdometryFrameStoreType::UMAT);
-    odf.setDepth(udepth);
+    OdometryFrame odf(noArray(), udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
         volume.integrate(depth, poses[0].matrix);
@@ -368,24 +367,15 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
 
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (testSrcType == VolumeTestSrcType::MAT)
-        {
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
-        }
-        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-        {
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
-            odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
-        }
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
         if (testSrcType == VolumeTestSrcType::MAT)
         {
             // takes only point from raycast for checking fetched normals on the display
-            volume.raycast(poses[0].matrix, frameSize.height,frameSize.width, upoints, utmpnormals);
-            //volume.fetchPointsNormals(upoints, utmpnormals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, utmpnormals);
+            // volume.fetchPointsNormals(upoints, utmpnormals);
             volume.fetchNormals(upoints, unormals);
         }
     }
@@ -427,8 +417,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     Mat points, normals;
     AccessFlag af = ACCESS_READ;
 
-    OdometryFrame odf(OdometryFrameStoreType::UMAT);
-    odf.setDepth(udepth);
+    OdometryFrame odf(noArray(), udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
         volume.integrate(depth, poses[0].matrix);
@@ -437,16 +426,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
 
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        if (testSrcType == VolumeTestSrcType::MAT)
-        {
             volume.raycast(poses[0].matrix, upoints, unormals);
-        }
-        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-        {
-            volume.raycast(poses[0].matrix, odf);
-            odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
-            odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
-        }
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
@@ -498,25 +478,14 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     AccessFlag af = ACCESS_READ;
     int anfas, profile;
 
-    OdometryFrame odf(OdometryFrameStoreType::UMAT);
-    odf.setDepth(udepth);
+    OdometryFrame odf(noArray(), udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
         volume.integrate(depth, poses[0].matrix);
     else
         volume.integrate(odf, poses[0].matrix);
 
-
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
+    volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
 
     normals = unormals.getMat(af);
     points  = upoints.getMat(af);
@@ -526,16 +495,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, upoints1, unormals1);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, odf);
-        odf.getPyramidAt(upoints1, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(unormals1, OdometryFramePyramidType::PYR_NORM, 0);
-    }
+    volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, upoints1, unormals1);
 
     normals = unormals1.getMat(af);
     points  = upoints1.getMat(af);
@@ -576,25 +536,14 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     AccessFlag af = ACCESS_READ;
     int anfas, profile;
 
-    OdometryFrame odf(OdometryFrameStoreType::UMAT);
-    odf.setDepth(udepth);
+    OdometryFrame odf(noArray(), udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
         volume.integrate(depth, poses[0].matrix);
     else
         volume.integrate(odf, poses[0].matrix);
 
-
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        volume.raycast(poses[0].matrix, upoints, unormals);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[0].matrix, odf);
-        odf.getPyramidAt(upoints, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(unormals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
+    volume.raycast(poses[0].matrix, upoints, unormals);
 
     normals = unormals.getMat(af);
     points  = upoints.getMat(af);
@@ -604,19 +553,10 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
-    if (testSrcType == VolumeTestSrcType::MAT) // Odometry frame or Mats
-    {
-        volume.raycast(poses[17].matrix, upoints1, unormals1);
-    }
-    else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-    {
-        volume.raycast(poses[17].matrix, odf);
-        odf.getPyramidAt(upoints1, OdometryFramePyramidType::PYR_CLOUD, 0);
-        odf.getPyramidAt(unormals1, OdometryFramePyramidType::PYR_NORM, 0);
-    }
+    volume.raycast(poses[17].matrix, upoints1, unormals1);
 
     normals = unormals1.getMat(af);
-    points  = upoints1.getMat(af);
+    points = upoints1.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
