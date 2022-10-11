@@ -55,7 +55,7 @@ Module['imread'] = function(imageSource) {
         canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
-        ctx = canvas.getContext('2d');
+        ctx = canvas.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, img.width, img.height);
     } else if (img instanceof HTMLCanvasElement) {
         canvas = img;
