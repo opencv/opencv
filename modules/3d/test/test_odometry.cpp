@@ -278,7 +278,7 @@ void OdometryTest::prepareFrameCheck()
 
     std::vector<int> iters;
     ods.getIterCounts(iters);
-    int nlevels = iters.size();
+    size_t nlevels = iters.size();
 
     Mat points, mask, depth, gray, rgb, normals, scaled;
     odf.getDepth(depth);
@@ -358,7 +358,7 @@ void OdometryTest::prepareFrameCheck()
         size_t ndiy = odf.getPyramidLevels(OdometryFramePyramidType::PYR_DIY);
         ASSERT_EQ(ndiy, nlevels);
 
-        for (int i = 0; i < nlevels; i++)
+        for (size_t i = 0; i < nlevels; i++)
         {
             Mat rgbi, texi, dixi, diyi;
             odf.getPyramidAt(rgbi, OdometryFramePyramidType::PYR_IMAGE, i);
@@ -381,15 +381,15 @@ void OdometryTest::prepareFrameCheck()
         std::vector<Mat> gtPyrNormals;
         buildPyramid(normals, gtPyrNormals, nlevels);
 
-        size_t nnorm = odf.getPyramidLevels(OdometryFramePyramidType::PYR_NORM);
-        ASSERT_EQ(nnorm, nlevels);
+        size_t nnormlev = odf.getPyramidLevels(OdometryFramePyramidType::PYR_NORM);
+        ASSERT_EQ(nnormlev, nlevels);
         if (algtype == OdometryAlgoType::COMMON)
         {
             size_t nnrmask = odf.getPyramidLevels(OdometryFramePyramidType::PYR_NORMMASK);
             ASSERT_EQ(nnrmask, nlevels);
         }
 
-        for (int i = 0; i < nlevels; i++)
+        for (size_t i = 0; i < nlevels; i++)
         {
             Mat normi;
             odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
