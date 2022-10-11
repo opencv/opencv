@@ -62,15 +62,6 @@ public:
     Rendered image size and camera intrinsics are taken from volume settings structure.
 
     * @param cameraPose the pose of camera in global coordinates.
-    * @param outFrame the object where to store rendered points and normals.
-    */
-    void raycast(InputArray cameraPose, OdometryFrame& outFrame) const;
-
-    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
-
-    Rendered image size and camera intrinsics are taken from volume settings structure.
-
-    * @param cameraPose the pose of camera in global coordinates.
     * @param points image to store rendered points.
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
