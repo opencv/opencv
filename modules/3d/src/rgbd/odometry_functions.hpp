@@ -165,7 +165,7 @@ void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f
 }
 
 void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
-void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, bool useDepth);
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 
 //TODO: remove all these declarations, rearrange functions in the file themselves
@@ -177,10 +177,6 @@ void prepareRGBFrameDst (OdometryFrame& frame, const OdometrySettings settings);
 void prepareICPFrameBase(OdometryFrame& frame, const OdometrySettings settings);
 void prepareICPFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
 void prepareICPFrameDst (OdometryFrame& frame, const OdometrySettings settings);
-
-
-void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage);
-void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArrayOfArrays _pyramid);
 
 void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount);
 
@@ -198,8 +194,6 @@ void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputO
 void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
                                 InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
                                 InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale);
-
-void randomSubsetOfMask(InputOutputArray _mask, float part);
 
 void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals);
 
