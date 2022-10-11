@@ -26,12 +26,6 @@ enum OdometryFramePyramidType
     N_PYRAMIDS
 };
 
-enum class OdometryFrameStoreType
-{
-    MAT  = 0,
-    UMAT = 1
-};
-
 class CV_EXPORTS_W OdometryFrame
 {
 public:
