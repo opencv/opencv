@@ -168,38 +168,7 @@ void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const Od
 void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
 
-//TODO: remove all these declarations, rearrange functions in the file themselves
-
-void prepareRGBFrameBase(OdometryFrame& frame, const OdometrySettings settings);
-void prepareRGBFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
-void prepareRGBFrameDst (OdometryFrame& frame, const OdometrySettings settings);
-
-void prepareICPFrameBase(OdometryFrame& frame, const OdometrySettings settings);
-void prepareICPFrameSrc (OdometryFrame& frame, const OdometrySettings settings);
-void prepareICPFrameDst (OdometryFrame& frame, const OdometrySettings settings);
-
-void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount);
-
-template<typename TMat>
-void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth, InputArrayOfArrays pyramidNormal, InputOutputArrayOfArrays pyramidMask);
-
-template<typename TMat>
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud);
-
-void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vector<Matx33f>& pyramidCameraMatrix);
-
-template<typename TMat>
-void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputOutputArrayOfArrays pyramidSobel, int sobelSize);
-
-void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
-                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
-                                InputOutputArrayOfArrays pyramidTexturedMask, double sobelScale);
-
-void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals);
-
-void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
-                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask);
-
+//TODO: remove all these declarations, make these functions static, rearrange them in the file instead
 
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          const OdometryFrame srcFrame,
