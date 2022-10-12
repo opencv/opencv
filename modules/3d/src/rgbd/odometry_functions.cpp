@@ -82,7 +82,7 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
     double maxv;
     cv::minMaxLoc(depth, nullptr, &maxv);
     UMat depthFlt;
-    depthFlt.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
+    depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
     
     frame.impl->scaledDepth = depthFlt;
 
