@@ -83,7 +83,7 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
     cv::minMaxLoc(depth, nullptr, &maxv);
     UMat depthFlt;
     depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
-    
+
     frame.impl->scaledDepth = depthFlt;
 
     return depthFlt;
@@ -309,6 +309,7 @@ static void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
         CV_Assert(mask.size() == grayImage.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }
+    frame.getMask(mask);
 
     std::vector<int> iterCounts;
     settings.getIterCounts(iterCounts);
@@ -383,6 +384,7 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
         CV_Assert(mask.size() == scaledDepth.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }
+    frame.getMask(mask);
 
     std::vector<int> iterCounts;
     settings.getIterCounts(iterCounts);
