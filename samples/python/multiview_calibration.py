@@ -102,13 +102,13 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
 
     num_cameras = len(image_points)
     num_frames = len(image_points[0])
-    visibility = np.zeros((num_cameras, num_frames), dtype=int)
+    detection_mask = np.zeros((num_cameras, num_frames), dtype=int)
     pattern_points_all = [pattern_points] * num_frames
     for i in range(num_cameras):
         for j in range(num_frames):
-            visibility[i,j] = int(len(image_points[i][j]) != 0)
+            detection_mask[i,j] = int(len(image_points[i][j]) != 0)
     with np.printoptions(threshold=np.inf):
-        print("Visibility Matrix:\n", np.transpose(visibility))
+        print("detection mask Matrix:\n", np.transpose(detection_mask))
 
     if Ks is not None and distortions is not None:
         USE_INTRINSICS_GUESS = True
@@ -117,8 +117,12 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
         if find_intrinsics_in_advance:
             Ks, distortions = [], []
             for c in range(num_cameras):
-                image_points_c = [image_points[c][f] for f in range(num_frames) if len(image_points[c][f]) > 0]
-                repr_err_c, K, dist_coeff, _, _ = cv.calibrateCamera([pattern_points] * len(image_points_c), image_points_c, image_sizes[c], None, None)
+                if is_fisheye[c]:
+                    image_points_c = [image_points[c][f][:,None] for f in range(num_frames) if len(image_points[c][f]) > 0]
+                    repr_err_c, K, dist_coeff, _, _ = cv.fisheye.calibrate([pattern_points[:,None]] * len(image_points_c), image_points_c, image_sizes[c], None, None)
+                else:
+                    image_points_c = [image_points[c][f] for f in range(num_frames) if len(image_points[c][f]) > 0]
+                    repr_err_c, K, dist_coeff, _, _ = cv.calibrateCamera([pattern_points] * len(image_points_c), image_points_c, image_sizes[c], None, None)
                 print('intrinsics calibration for camera', c, ', reproj error %.2f (px)' % repr_err_c)
                 Ks.append(K)
                 distortions.append(dist_coeff)
@@ -128,7 +132,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
         cv.calibrateMultiview(objPoints=pattern_points_all,
                               imagePoints=image_points,
                               imageSize=image_sizes,
-                              visibility=visibility,
+                              detection_mask=detection_mask,
                               Ks=Ks,
                               distortions=distortions,
                               is_fisheye=np.array(is_fisheye, dtype=int),
@@ -146,8 +150,8 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
     with np.printoptions(precision=2):
         print('mean RMS errors per camera', np.array([np.mean(errs[errs > 0]) for errs in errors_per_frame]))
 
-    visibility_idxs = np.stack(np.where(visibility)) # 2 x M, first row is camera idx, second is frame idx
-    frame_idx = visibility_idxs[1,0]
+    detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
+    frame_idx = detection_mask_idxs[1,0]
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
     plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx)
@@ -156,7 +160,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
         plotProjection(image_points[cam_idx][frame_idx], pattern_points, rvecs0[frame_idx],
             tvecs0[frame_idx], rvecs[cam_idx], Ts[cam_idx], Ks[cam_idx], distortions[cam_idx],
             is_fisheye[cam_idx], cam_idx, frame_idx, 1e2*(errors_per_frame[cam_idx,frame_idx]<errors).sum()/len(errors), image)
-    plot(visibility_idxs[0,0], visibility_idxs[1,0])
+    plot(detection_mask_idxs[0,0], detection_mask_idxs[1,0])
     plt.show()
 
 def chessboard_points(grid_size, dist_m):
@@ -181,14 +185,13 @@ def asym_circles_grid_points(grid_size, dist_m):
                 pattern.append([j*dist_m, (i//2)*dist_m, 0])
     return np.array(pattern, dtype=np.float32)
 
-def detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, RESIZE_IMAGE):
+def detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, winsize, RESIZE_IMAGE):
     print(img_name)
     assert os.path.exists(img_name)
     img = cv.cvtColor(cv.imread(img_name), cv.COLOR_BGR2GRAY)
     img_size = img.shape[:2][::-1]
 
     scale = 1.0
-    window = (5,5)
     img_detection = img
     if RESIZE_IMAGE:
         scale = 1000.0 / max(img.shape[0], img.shape[1])
@@ -207,7 +210,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, RESI
     if ret:
         if scale < 1.0:
             corners /= scale
-        corners2 = cv.cornerSubPix(img, corners, window, (-1,-1), criteria)
+        corners2 = cv.cornerSubPix(img, corners, winsize, (-1,-1), criteria)
         # cv.drawChessboardCorners(img, grid_size, corners2, ret)
         # plt.imshow(img)
         # plt.show()
@@ -215,7 +218,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, RESI
     else:
         return cam_idx, frame_idx, img_size, np.array([], dtype=np.float32)
 
-def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, RESIZE_IMAGE=True, find_intrinsics_in_advance=False, is_parallel_detection=False):
+def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, winsize, points_json_file, debug_corners, RESIZE_IMAGE=True, find_intrinsics_in_advance=False, is_parallel_detection=True):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -250,17 +253,47 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
     image_points_cameras = [[None for j in range(len(images_names))] for i in range(len(files_with_images))]
     if is_parallel_detection:
         output = joblib.Parallel(n_jobs=multiprocessing.cpu_count()) \
-            (joblib.delayed(detect)(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, RESIZE_IMAGE) for cam_idx, frame_idx, img_name in input_data)
+            (joblib.delayed(detect)(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, winsize, RESIZE_IMAGE) for cam_idx, frame_idx, img_name in input_data)
         for cam_idx, frame_idx, img_size, corners in output:
             image_points_cameras[cam_idx][frame_idx] = corners
             if image_sizes[cam_idx] is None:
                 image_sizes[cam_idx] = img_size
     else:
         for cam_idx, frame_idx, img_name in input_data:
-            _, _, img_size, corners = detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, RESIZE_IMAGE)
+            _, _, img_size, corners = detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, winsize, RESIZE_IMAGE)
             image_points_cameras[cam_idx][frame_idx] = corners
             if image_sizes[cam_idx] is None:
                 image_sizes[cam_idx] = img_size
+
+    if debug_corners:
+        # plots random image frames with detected points
+        num_random_plots = 5
+        visible_frames = []
+        for c, pts_cam in enumerate(image_points_cameras):
+            for f, pts_frame in enumerate(pts_cam):
+                if len(pts_frame) > 0:
+                    visible_frames.append((c,f))
+        random_images = np.random.RandomState(0).choice(range(len(visible_frames)), min(num_random_plots, len(visible_frames)))
+        for idx in random_images:
+            c, f = visible_frames[idx]
+            img = cv.cvtColor(cv.imread(all_images_names[c][f]), cv.COLOR_BGR2RGB)
+            cv.drawChessboardCorners(img, grid_size, image_points_cameras[c][f], True)
+            plt.figure()
+            plt.imshow(img)
+        plt.show()
+
+    if points_json_file != '':
+        image_points_cameras_list = []
+        for pts_cam in image_points_cameras:
+            cam_pts = []
+            for pts_frame in pts_cam:
+                if len(pts_frame) > 0:
+                    cam_pts.append(pts_frame.tolist())
+                else:
+                    cam_pts.append([])
+            image_points_cameras_list.append(cam_pts)
+        json.dump({'object_points': pattern.tolist(), 'image_points': image_points_cameras_list, 'image_sizes': image_sizes, 'is_fisheye': is_fisheye}, open(points_json_file, 'w'))
+
     calibrateFromPoints(pattern, image_points_cameras, image_sizes, is_fisheye, all_images_names, find_intrinsics_in_advance)
 
 def calibrateFromJSON(json_file, find_intrinsics_in_advance=False):
@@ -284,6 +317,9 @@ if __name__ == '__main__':
     parser.add_argument('--fisheye', type=str, default=None, help='fisheye mask, e.g., 0,1,...')
     parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
     parser.add_argument('--find_intrinsics_in_advance', type=int, default=0, help='calibrate intrinsics in advance, 0 - False, 1 - True')
+    parser.add_argument('--winsize', type=str, default='5,5', help='window size for corners detection: w,h')
+    parser.add_argument('--debug_corners', type=str, default='False', help='debug flag for corners detection visualization of images (True or False)')
+    parser.add_argument('--points_json_file', type=str, default='', help='if path is provided then image and object points will be saved to JSON file.')
     params, _ = parser.parse_known_args()
     if params.json_file is not None:
         calibrateFromJSON(params.json_file, params.find_intrinsics_in_advance==1)
@@ -293,4 +329,5 @@ if __name__ == '__main__':
             assert False and 'Either json file or all other parameters must be set'
         calibrateFromImages(params.filenames.split(','), [int(v) for v in params.pattern_size.split(',')],
             params.pattern_type, [bool(int(v)) for v in params.fisheye.split(',')], params.pattern_distance,
-            find_intrinsics_in_advance=params.find_intrinsics_in_advance==1)
+            winsize=tuple([int(v) for v in params.winsize.split(',')]), points_json_file=params.points_json_file,
+            debug_corners=eval(params.debug_corners), find_intrinsics_in_advance=params.find_intrinsics_in_advance==1)
