@@ -1331,25 +1331,23 @@ struct GetAbInvoker : ParallelLoopBody
     float minCos;
 };
 
-void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
-    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+void calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
+                            cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
 
     CV_OCL_RUN(ocl::isOpenCLActivated(),
         ocl_calcICPLsmMatricesFast(cameraMatrix,
-            oldPts.getUMat(AccessFlag::ACCESS_READ), oldNrm.getUMat(AccessFlag::ACCESS_READ),
-            newPts.getUMat(AccessFlag::ACCESS_READ), newNrm.getUMat(AccessFlag::ACCESS_READ),
+            oldPts, oldNrm, newPts, newNrm,
             pose, level, maxDepthDiff, angleThreshold,
             A, b)
         );
 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
-    const Points  op(oldPts), np(newPts);
-    const Normals on(oldNrm),  nn(newNrm);
-
+    const Points  op(oldPts.getMat(AccessFlag::ACCESS_READ)), np(newPts.getMat(AccessFlag::ACCESS_READ));
+    const Normals on(oldNrm.getMat(AccessFlag::ACCESS_READ)), nn(newNrm.getMat(AccessFlag::ACCESS_READ));
 
     Intr intrinsics(cameraMatrix);
     GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
@@ -1375,7 +1373,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 #ifdef HAVE_OPENCL
 
 bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
-    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+                                cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_TRACE_FUNCTION();
 
@@ -1413,7 +1411,7 @@ bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const 
     lrows = roundDownPow2(lrows);
     size_t localSize[2] = { lcols, lrows };
     Size ngroups((int)divUp(globalSize[0], (unsigned int)localSize[0]),
-        (int)divUp(globalSize[1], (unsigned int)localSize[1]));
+                 (int)divUp(globalSize[1], (unsigned int)localSize[1]));
 
     // size of local buffer for group-wide reduce
     size_t lsz = localSize[0] * localSize[1] * ltsz;

@@ -194,7 +194,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
                         const Mat& corresps,
                         Mat& AtA, Mat& AtB, OdometryTransformType transformType);
 
-void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
+void calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
                             cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b);
 
 #ifdef HAVE_OPENCL
