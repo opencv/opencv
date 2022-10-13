@@ -283,11 +283,16 @@ void OdometryTest::prepareFrameCheck()
     size_t nlevels = iters.size();
 
     Mat points, mask, depth, gray, rgb, normals, scaled;
+
+    odf.getMask(mask);
+    int masknz = countNonZero(mask);
+    ASSERT_GT(masknz, 0);
+
     odf.getDepth(depth);
     int depthnz = countNonZero(depth);
-    double depthNorm = cv::norm(depth, gtDepth);
+    double depthNorm = cv::norm(depth, gtDepth, NORM_INF, mask);
     ASSERT_LE(depthNorm, 0.0);
-    
+
     if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
         odf.getGrayImage(gray);
@@ -300,10 +305,6 @@ void OdometryTest::prepareFrameCheck()
         ASSERT_LE(grayNorm, 0.0);
     }
 
-    odf.getMask(mask);
-    int masknz = countNonZero(mask);
-    ASSERT_GT(masknz, 0);
-
     if (otype == OdometryType::DEPTH || otype == OdometryType::RGB_DEPTH)
     {
         odf.getNormals(normals);
@@ -312,97 +313,87 @@ void OdometryTest::prepareFrameCheck()
     //TODO: remove it when scale issue is fixed
     odf.getScaledDepth(scaled);
     int scalednz = countNonZero(scaled);
-    ASSERT_EQ(scalednz, depthnz);
+    EXPECT_EQ(scalednz, depthnz);
 
     std::vector<Mat> gtPyrDepth, gtPyrMask;
     buildPyramid(gtDepth, gtPyrDepth, nlevels);
     buildPyramid(mask, gtPyrMask, nlevels);
 
-    size_t ndepth = odf.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH);
-    ASSERT_EQ(ndepth, nlevels);
-    size_t ncloud = odf.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD);
-    ASSERT_EQ(ncloud, nlevels);
-    size_t nmask = odf.getPyramidLevels(OdometryFramePyramidType::PYR_MASK);
-    ASSERT_EQ(nmask, nlevels);
-    int gtnz = masknz;
+    size_t npyr = odf.getPyramidLevels();
+    ASSERT_EQ(npyr, nlevels);
     for (size_t i = 0; i < nlevels; i++)
     {
         Mat depthi, cloudi, maski;
-        odf.getPyramidAt(depthi, OdometryFramePyramidType::PYR_DEPTH, i);
-        double dnorm = cv::norm(depthi, gtPyrDepth[i]);
-        ASSERT_LE(dnorm, 0.0);
 
         odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
+        ASSERT_FALSE(maski.empty());
         double mnorm = cv::norm(maski, gtPyrMask[i]);
-        ASSERT_LE(mnorm, 0.0);
+        EXPECT_LE(mnorm, 0.0);
+
+        odf.getPyramidAt(depthi, OdometryFramePyramidType::PYR_DEPTH, i);
+        ASSERT_FALSE(depthi.empty());
+        double dnorm = cv::norm(depthi, gtPyrDepth[i], NORM_INF, maski);
+        EXPECT_LE(dnorm, 0.0);
 
         odf.getPyramidAt(cloudi, OdometryFramePyramidType::PYR_CLOUD, i);
-        std::vector<Mat> ch;
-        split(cloudi, ch);
-        int cnz = countNonZero(ch[0] + ch[1] + ch[2]);
-        ASSERT_LE(abs(cnz - gtnz), 0.0);
-
-        gtnz /= 4;
+        ASSERT_FALSE(cloudi.empty());
+        Mat gtCloud;
+        depthTo3d(depthi, K, gtCloud, maski);
+        double cnorm = cv::norm(cloudi, gtCloud, NORM_INF, maski);
+        EXPECT_LE(cnorm, 0.0);
     }
-
 
     if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
         std::vector<Mat> gtPyrImage;
         buildPyramid(gtImage, gtPyrImage, nlevels);
 
-        size_t nimg = odf.getPyramidLevels(OdometryFramePyramidType::PYR_IMAGE);
-        ASSERT_EQ(nimg, nlevels);
-        size_t ntm = odf.getPyramidLevels(OdometryFramePyramidType::PYR_TEXMASK);
-        ASSERT_EQ(ntm, nlevels);
-        size_t ndix = odf.getPyramidLevels(OdometryFramePyramidType::PYR_DIX);
-        ASSERT_EQ(ndix, nlevels);
-        size_t ndiy = odf.getPyramidLevels(OdometryFramePyramidType::PYR_DIY);
-        ASSERT_EQ(ndiy, nlevels);
-
         for (size_t i = 0; i < nlevels; i++)
         {
             Mat rgbi, texi, dixi, diyi;
             odf.getPyramidAt(rgbi, OdometryFramePyramidType::PYR_IMAGE, i);
+            ASSERT_FALSE(rgbi.empty());
             double rnorm = cv::norm(rgbi, gtPyrImage[i]);
-            ASSERT_LE(rnorm, 0.0);
+            EXPECT_LE(rnorm, 0.0);
             odf.getPyramidAt(texi, OdometryFramePyramidType::PYR_TEXMASK, i);
+            ASSERT_FALSE(texi.empty());
             int tnz = countNonZero(texi);
-            ASSERT_GT(tnz, 0);
+            EXPECT_GT(tnz, 0);
             odf.getPyramidAt(dixi, OdometryFramePyramidType::PYR_DIX, i);
+            ASSERT_FALSE(dixi.empty());
             int dixnz = countNonZero(dixi);
-            ASSERT_GT(dixnz, 0);
+            EXPECT_GT(dixnz, 0);
             odf.getPyramidAt(diyi, OdometryFramePyramidType::PYR_DIY, i);
+            ASSERT_FALSE(diyi.empty());
             int diynz = countNonZero(diyi);
-            ASSERT_GT(diynz, 0);
+            EXPECT_GT(diynz, 0);
         }
     }
 
     if (otype == OdometryType::DEPTH || otype == OdometryType::RGB_DEPTH)
     {
-        std::vector<Mat> gtPyrNormals;
-        buildPyramid(normals, gtPyrNormals, nlevels);
-
-        size_t nnormlev = odf.getPyramidLevels(OdometryFramePyramidType::PYR_NORM);
-        ASSERT_EQ(nnormlev, nlevels);
-        if (algtype == OdometryAlgoType::COMMON)
-        {
-            size_t nnrmask = odf.getPyramidLevels(OdometryFramePyramidType::PYR_NORMMASK);
-            ASSERT_EQ(nnrmask, nlevels);
-        }
-
+        Ptr<RgbdNormals> normalComputer = odometry.getNormalsComputer();
+        ASSERT_FALSE(normalComputer.empty());
         for (size_t i = 0; i < nlevels; i++)
         {
+            Mat ptsi;
+            odf.getPyramidAt(ptsi, OdometryFramePyramidType::PYR_CLOUD, i);
+
+            Mat gtNormals;
+            normalComputer->apply(ptsi, gtNormals);
+
             Mat normi;
             odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
-            double nnorm = cv::norm(normi, gtPyrNormals[i]);
-            ASSERT_LE(nnorm, 0.0);
+            ASSERT_FALSE(normi.empty());
+            double nnorm = cv::norm(normi, gtNormals);
+            EXPECT_LE(nnorm, 0.0);
             if (algtype == OdometryAlgoType::COMMON)
             {
                 Mat normmaski;
                 odf.getPyramidAt(normmaski, OdometryFramePyramidType::PYR_NORMMASK, i);
+                ASSERT_FALSE(normmaski.empty());
                 int nnm = countNonZero(normmaski);
-                ASSERT_GT(nnm, 0);
+                EXPECT_GT(nnm, 0);
             }
         }
     }
