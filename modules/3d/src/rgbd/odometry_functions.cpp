@@ -167,17 +167,6 @@ static void preparePyramidCloud(const std::vector<UMat>& pyramidDepth, const Mat
 }
 
 
-static void preparePyramidSobel(const std::vector<UMat>& pyramidImage, int dx, int dy, std::vector<UMat>& pyramidSobel, int sobelSize)
-{
-    int nLevels = pyramidImage.size();
-    pyramidSobel.resize(nLevels, UMat());
-    for (int i = 0; i < nLevels; i++)
-    {
-        Sobel(pyramidImage[i], pyramidSobel[i], CV_16S, dx, dy, sobelSize);
-    }
-}
-
-
 static void preparePyramidTexturedMask(const std::vector<UMat>& pyramid_dI_dx, const std::vector<UMat>& pyramid_dI_dy,
                                        std::vector<float> minGradMagnitudes, const std::vector<UMat>& pyramidMask, double maxPointsPart,
                                        std::vector<UMat>& pyramidTexturedMask, double sobelScale)
@@ -348,13 +337,21 @@ static void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 
     std::vector<UMat>& dxpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DIX];
     std::vector<UMat>& dypyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DIY];
-    std::vector<UMat>& tmpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_TEXMASK];
 
     std::vector<float> minGradientMagnitudes;
     settings.getMinGradientMagnitudes(minGradientMagnitudes);
 
-    preparePyramidSobel(ipyramids, 1, 0, dxpyramids, settings.getSobelSize());
-    preparePyramidSobel(ipyramids, 0, 1, dypyramids, settings.getSobelSize());
+    int nLevels = ipyramids.size();
+    dxpyramids.resize(nLevels, UMat());
+    dypyramids.resize(nLevels, UMat());
+    int sobelSize = settings.getSobelSize();
+    for (int i = 0; i < nLevels; i++)
+    {
+        Sobel(ipyramids[i], dxpyramids[i], CV_16S, 1, 0, sobelSize);
+        Sobel(ipyramids[i], dypyramids[i], CV_16S, 0, 1, sobelSize);
+    }
+
+    std::vector<UMat>& tmpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_TEXMASK];
     preparePyramidTexturedMask(dxpyramids, dypyramids, minGradientMagnitudes,
                                mpyramids, settings.getMaxPointsPart(), tmpyramids, settings.getSobelScale());
 }
