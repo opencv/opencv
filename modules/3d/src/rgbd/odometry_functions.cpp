@@ -67,7 +67,10 @@ static UMat validDepthMask(InputArray _depth)
                 m.at<uchar>(y, x) = 0;
         }
     }
-    return m.getUMat(ACCESS_READ);
+    //TODO: check if we need this clone() call
+    UMat umask;
+    m.copyTo(umask);
+    return umask;
 }
 
 
@@ -196,9 +199,8 @@ static void preparePyramidTexturedMask(const std::vector<UMat>& pyramid_dI_dx, c
             }
         }
         Mat texMask = texturedMask & pyramidMask[i].getMat(ACCESS_READ);
-
         randomSubsetOfMask(texMask, (float)maxPointsPart);
-        pyramidTexturedMask[i] = texMask.getUMat(ACCESS_READ);
+        texMask.copyTo(pyramidTexturedMask[i]);
     }
 }
 
@@ -232,24 +234,27 @@ static void preparePyramidNormalsMask(const std::vector<UMat> &pyramidNormals, c
     pyramidNormalsMask.resize(nLevels, UMat());
     for (int i = 0; i < nLevels; i++)
     {
-        Mat normalsMaskCpu = pyramidMask[i].clone().getMat(ACCESS_RW);
+        UMat pyrMask = pyramidMask[i];
 
         const Mat normals = pyramidNormals[i].getMat(ACCESS_READ);
-        for (int y = 0; y < normalsMaskCpu.rows; y++)
+        Mat_<uchar> normalsMask(pyrMask.size(), (uchar)255);
+        for (int y = 0; y < normalsMask.rows; y++)
         {
             const Vec4f *normals_row = normals.ptr<Vec4f>(y);
-            uchar *normalsMask_row = normalsMaskCpu.ptr<uchar>(y);
-            for (int x = 0; x < normalsMaskCpu.cols; x++)
+            uchar *normalsMask_row = normalsMask.ptr<uchar>(y);
+            for (int x = 0; x < normalsMask.cols; x++)
             {
                 Vec4f n = normals_row[x];
-                if (std::isfinite(n[0]) && std::isfinite(n[1]) && std::isfinite(n[2]))
+                if (!(std::isfinite(n[0]) && std::isfinite(n[1]) && std::isfinite(n[2])))
                 {
                     normalsMask_row[x] = 0;
                 }
             }
         }
-        randomSubsetOfMask(normalsMaskCpu, (float)maxPointsPart);
-        pyramidNormalsMask[i] = normalsMaskCpu.getUMat(ACCESS_READ);
+        cv::bitwise_and(pyrMask.getMat(ACCESS_READ), normalsMask, normalsMask);
+
+        randomSubsetOfMask(normalsMask, (float)maxPointsPart);
+        normalsMask.copyTo(pyramidNormalsMask[i]);
     }
 }
 
@@ -573,7 +578,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount && algtype != OdometryAlgoType::FAST)
                 break;
 
-            const Mat srcPyrCloud;
+            const UMat srcPyrCloud;
             srcFrame.getPyramidAt(srcPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
 
 
@@ -585,7 +590,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 dstFrame.getPyramidAt(dstPyrImage, OdometryFramePyramidType::PYR_IMAGE, level);
                 dstFrame.getPyramidAt(dstPyrIdx, OdometryFramePyramidType::PYR_DIX, level);
                 dstFrame.getPyramidAt(dstPyrIdy, OdometryFramePyramidType::PYR_DIY, level);
-                calcRgbdLsmMatrices(srcPyrCloud, resultRt, dstPyrIdx, dstPyrIdy,
+                calcRgbdLsmMatrices(srcPyrCloud.getMat(ACCESS_READ), resultRt, dstPyrIdx, dstPyrIdy,
                                     corresps_rgbd, diffs_rgbd, sigma_rgbd, fx, fy, sobelScale,
                                     AtA_rgbd, AtB_rgbd, transformType);
                 AtA += AtA_rgbd;
@@ -593,17 +598,19 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
             if(corresps_icp.rows >= minCorrespsCount || algtype == OdometryAlgoType::FAST)
             {
-                const Mat dstPyrCloud, dstPyrNormals, srcPyrNormals;
-                dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
-                dstFrame.getPyramidAt(dstPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
-
                 if (algtype == OdometryAlgoType::COMMON)
                 {
-                    calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
+                    const Mat dstPyrCloud, dstPyrNormals;
+                    dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
+                    dstFrame.getPyramidAt(dstPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
+                    calcICPLsmMatrices(srcPyrCloud.getMat(ACCESS_READ), resultRt, dstPyrCloud, dstPyrNormals,
                                        corresps_icp, AtA_icp, AtB_icp, transformType);
                 }
                 else
                 {
+                    const UMat dstPyrCloud, dstPyrNormals, srcPyrNormals;
+                    dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
+                    dstFrame.getPyramidAt(dstPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     cv::Matx66f A;
                     cv::Vec6f b;
