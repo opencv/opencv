@@ -13,6 +13,7 @@
 namespace cv
 {
 
+//TODO: cleanup this file, remove unused
 
  /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
   * a limit. For a float/double, we just check if it is a NaN
@@ -45,7 +46,6 @@ inline bool isValidDepth(const int& depth)
     return (depth != std::numeric_limits<int>::min()) &&
            (depth != std::numeric_limits<int>::max());
 }
-
 
 inline bool isValidDepth(const unsigned int& depth)
 {
@@ -81,7 +81,6 @@ rescaleDepthTemplated<double>(const Mat& in, Mat& out)
   rescaleDepth(in, CV_64F, out);
 }
 
-
 // One place to turn intrinsics on and off
 #define USE_INTRINSICS CV_SIMD128
 
@@ -104,18 +103,6 @@ static inline bool isNaN(const cv::v_float32x4& p)
     return cv::v_check_any(p != p);
 }
 #endif
-
-template<typename TMat>
-inline TMat getTMat(InputArray, int = -1);
-template<>
-Mat getTMat<Mat>(InputArray a, int i);
-template<>
-UMat getTMat<UMat>(InputArray a, int i);
-
-template<typename TMat>
-inline TMat& getTMatRef(InputOutputArray, int = -1);
-template<>
-Mat& getTMatRef<Mat>(InputOutputArray a, int i);
 
 inline size_t roundDownPow2(size_t x)
 {
