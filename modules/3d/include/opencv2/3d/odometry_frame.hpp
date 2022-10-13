@@ -40,7 +40,11 @@ public:
     void getMask(OutputArray mask) const;
     void getNormals(OutputArray normals) const;
 
-    size_t getPyramidLevels(OdometryFramePyramidType oftype) const;
+    //TODO: add docs
+    // returns amt of levels in pyramids (all of them should have the same amt of levels) or 0 if no pyramids were prepared yet
+    size_t getPyramidLevels() const;
+    //TODO: add docs
+    // returns empty img if no data in the pyramid or in the pyramid's level
     void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const;
 
     class Impl;

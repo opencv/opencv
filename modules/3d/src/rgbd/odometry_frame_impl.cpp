@@ -40,7 +40,7 @@ void OdometryFrame::getScaledDepth(OutputArray depth) const { this->impl->getSca
 void OdometryFrame::getMask(OutputArray mask) const { this->impl->getMask(mask); }
 void OdometryFrame::getNormals(OutputArray normals) const { this->impl->getNormals(normals); }
 
-size_t OdometryFrame::getPyramidLevels(OdometryFramePyramidType oftype) const { return this->impl->getPyramidLevels(oftype); }
+size_t OdometryFrame::getPyramidLevels() const { return this->impl->getPyramidLevels(); }
 
 void OdometryFrame::getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const
 {
@@ -77,44 +77,25 @@ void OdometryFrame::Impl::getNormals(OutputArray _normals) const
     _normals.assign(this->normals);
 }
 
-void OdometryFrame::Impl::setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype)
+size_t OdometryFrame::Impl::getPyramidLevels() const
 {
-    if (oftype < OdometryFramePyramidType::N_PYRAMIDS)
-        pyramids[oftype].resize(_nLevels, UMat());
-    else
-        CV_Error(Error::StsBadArg, "Incorrect type.");
-
-}
-
-void OdometryFrame::Impl::setPyramidLevels(size_t _nLevels)
-{
-    for (auto& p : pyramids)
+    // all pyramids should have the same size
+    for (const auto& p : this->pyramids)
     {
-        p.resize(_nLevels, UMat());
+        if (!p.empty())
+            return p.size();
     }
+    return 0;
 }
 
-size_t OdometryFrame::Impl::getPyramidLevels(OdometryFramePyramidType oftype) const
-{
-    if (oftype < OdometryFramePyramidType::N_PYRAMIDS)
-        return pyramids[oftype].size();
-    else
-        return 0;
-}
-
-void OdometryFrame::Impl::setPyramidAt(InputArray _img, OdometryFramePyramidType pyrType, size_t level)
-{
-    CV_Assert(pyrType >= 0);
-    CV_Assert((size_t)pyrType < pyramids.size());
-    CV_Assert(level < pyramids[pyrType].size());
-    _img.copyTo(pyramids[pyrType][level]);
-}
 
 void OdometryFrame::Impl::getPyramidAt(OutputArray _img, OdometryFramePyramidType pyrType, size_t level) const
 {
     CV_Assert(pyrType < OdometryFramePyramidType::N_PYRAMIDS);
-    CV_Assert(level < pyramids[pyrType].size());
-    _img.assign(pyramids[pyrType][level]);
+    if (level < pyramids[pyrType].size())
+        _img.assign(pyramids[pyrType][level]);
+    else
+        _img.clear();
 }
 
 }
