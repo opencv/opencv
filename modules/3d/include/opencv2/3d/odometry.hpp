@@ -68,6 +68,10 @@ public:
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
 
+    //TODO: document it
+    //requires frame size, initialized at prepareFrame stage()
+    Ptr<RgbdNormals> getNormalsComputer() const;
+
     class Impl;
 private:
     Ptr<Impl> impl;

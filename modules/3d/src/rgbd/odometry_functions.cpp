@@ -14,10 +14,6 @@
 namespace cv
 {
 
-//TODO: make them algorithm parameters
-static const int normalWinSize = 5;
-static const RgbdNormals::RgbdNormalsMethod normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
-
 enum
 {
     UTSIZE = 27
@@ -420,10 +416,8 @@ static void prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 }
 
 
-static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
+static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings, Ptr<RgbdNormals>& normalsComputer)
 {
-    //TODO: think about keeping normalsComputer inside Odometry object
-    Ptr<RgbdNormals> normalsComputer;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
@@ -441,13 +435,18 @@ static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             normalsComputer->getRows() != scaledDepth.rows ||
             normalsComputer->getCols() != scaledDepth.cols ||
             norm(K, cameraMatrix) > FLT_EPSILON)
+        {
+            int normalWinSize = settings.getNormalWinSize();
+            float diffThreshold = settings.getNormalDiffThreshold();
+            RgbdNormals::RgbdNormalsMethod normalMethod = settings.getNormalMethod();
             normalsComputer = RgbdNormals::create(scaledDepth.rows,
                                                   scaledDepth.cols,
                                                   scaledDepth.depth(),
                                                   cameraMatrix,
                                                   normalWinSize,
-                                                  50.f,
+                                                  diffThreshold,
                                                   normalMethod);
+        }
         const UMat& c0 = frame.impl->pyramids[OdometryFramePyramidType::PYR_CLOUD][0];
         normalsComputer->apply(c0, normals);
         frame.impl->normals = normals;
@@ -483,21 +482,21 @@ void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     prepareRGBFrameDst(dstFrame, settings);
 }
 
-void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
+void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, OdometrySettings settings, OdometryAlgoType algtype)
 {
     prepareICPFrameBase(srcFrame, settings);
     prepareICPFrameBase(dstFrame, settings);
 
     prepareICPFrameSrc(srcFrame, settings);
     if (algtype == OdometryAlgoType::FAST)
-        prepareICPFrameDst(srcFrame, settings);
-    prepareICPFrameDst(dstFrame, settings);
+        prepareICPFrameDst(srcFrame, settings, normalsComputer);
+    prepareICPFrameDst(dstFrame, settings, normalsComputer);
 }
 
-void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
+void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, OdometrySettings settings, OdometryAlgoType algtype)
 {
     prepareRGBFrame(srcFrame, dstFrame, settings);
-    prepareICPFrame(srcFrame, dstFrame, settings, algtype);
+    prepareICPFrame(srcFrame, dstFrame, normalsComputer, settings, algtype);
 }
 
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,

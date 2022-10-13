@@ -164,9 +164,9 @@ void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f
         C[i] = ret[i];
 }
 
-void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
+void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, const OdometrySettings settings, OdometryAlgoType algtype);
 void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
-void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, const OdometrySettings settings, OdometryAlgoType algtype);
+void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, const OdometrySettings settings, OdometryAlgoType algtype);
 
 //TODO: remove all these declarations, make these functions static, rearrange them in the file instead
 
