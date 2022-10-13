@@ -131,6 +131,8 @@ void OdometryTest::generateRandomTransformation(Mat& rvec, Mat& tvec)
 
 void OdometryTest::checkUMats()
 {
+    //TODO: check Mat/UMat lifetime in this function
+
     Mat K = getCameraMatrix();
 
     Mat image, depth;
@@ -154,7 +156,7 @@ void OdometryTest::checkUMats()
     bool isComputed = odometry.compute(odf, odf, calcRt);
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
-    ASSERT_FALSE(diff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
+    ASSERT_LE(diff, idError) << "Incorrect transformation between the same frame (not the identity matrix)" << std::endl;
 }
 
 void OdometryTest::run()
@@ -177,7 +179,7 @@ void OdometryTest::run()
 
     ASSERT_TRUE(isComputed) << "Can not find Rt between the same frame" << std::endl;
     double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    ASSERT_FALSE(ndiff > idError) << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
+    ASSERT_LE(ndiff, idError) << "Incorrect transformation between the same frame (not the identity matrix)" << std::endl;
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
@@ -410,6 +412,8 @@ void OdometryTest::prepareFrameCheck()
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
+//TODO: tune all these thresholds
+
 TEST(RGBD_Odometry_Rgbd, algorithmic)
 {
     OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
@@ -455,7 +459,8 @@ TEST(RGBD_Odometry_RgbdICP, UMats)
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    // OpenCL version has slightly less accuracy than CPU version
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 2.14e-6);
     test.checkUMats();
 }
 
