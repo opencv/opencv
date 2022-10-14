@@ -1221,6 +1221,7 @@ TEST_P(Layer_Test_DWconv_Prelu, Accuracy)
     Mat in_blob(4, &shape[0], CV_32FC1, Scalar(1));
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.enableWinograd(false);
     net.setInput(in_blob);
     Mat out = net.forward();
 

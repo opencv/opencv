@@ -21,7 +21,7 @@ enum { FAST_VEC_NLANES=4 };
 #define CONV_MR 4
 #define CONV_NR 24
 
-#if CV_AVX2
+#if CV_TRY_AVX2
 enum { FAST_VEC_NLANES=8 }; // AVX2
 #else
 enum { FAST_VEC_NLANES=4 }; // SIMD 128
@@ -29,6 +29,31 @@ enum { FAST_VEC_NLANES=4 }; // SIMD 128
 
 #endif
 #endif
+
+enum {
+    _FX_WINO_STEP=6,
+    _FX_WINO_KSIZE=3,
+    _FX_WINO_SIZE=_FX_WINO_STEP+_FX_WINO_KSIZE-1,
+    _FX_WINO_AREA=_FX_WINO_SIZE*_FX_WINO_SIZE,
+
+#if CV_TRY_AVX2 || (CV_NEON && CV_NEON_AARCH64)
+    _FX_WINO_KBLOCK = 4,
+    _FX_WINO_IBLOCK = 6,
+#else
+    _FX_WINO_KBLOCK = 4,
+    _FX_WINO_IBLOCK = 3,
+#endif
+
+#if CV_TRY_AVX2
+    _FX_WINO_ATOM_F32 = 8,
+#else
+    _FX_WINO_ATOM_F32 = 4,
+#endif
+
+    _FX_WINO_NATOMS_F32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
+};
+
+enum { _FX_CONV_TYPE_GENERIC=0, _FX_CONV_TYPE_DEPTHWISE=1, _FX_CONV_TYPE_WINOGRAD3X3=2 };
 
 namespace cv {
 namespace dnn {
@@ -41,10 +66,17 @@ struct FastConv2d
     int dilation_y, dilation_x;
     int pad_top, pad_bottom, pad_left, pad_right;
 
-    std::vector<float> weightsBuf;        // For generic Conv 2D
-    std::vector<float> weightsWino63Buf;  // For Winograd F(6x6, 3x3).
+    std::vector<float> weightsBuf;     // For generic Conv 2D
+    float* weightsBufPtr;
+    std::vector<float> weightsWinoBuf; // For Winograd F(6x6, 3x3).
+    float* weightsWinoBufPtr;
     std::vector<float> biasBuf;
-    bool useWinograd63 = false;
+    int conv_type;
+#if CV_SIMD128
+    bool useSIMD128 = true;
+#else
+    bool useSIMD128 = false;
+#endif
     bool useAVX2 = checkHardwareSupport(CPU_AVX2);
     bool useNEON = checkHardwareSupport(CPU_NEON);
 };
@@ -67,10 +99,7 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
 void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, float minval, float maxval,
         ActivationLayer* activ, bool ifMinMaxAct);
 
-// winograd init
-void initWinograd63(Ptr<FastConv2d>& conv, InputArray weightsMat, int K, int C);
-
-int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,
+void runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
 
 } // namespace dnn
@@ -84,6 +113,12 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                 float minval, float maxval, int Hi, int Wi, int H0, int W0, int ksize, int pad_top, int pad_left,
                 int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                 int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3);
+
+void _fx_winograd_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock);
+void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg);
+void _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
+                               float bias, float minval, float maxval, bool ifMinMaxAct);
+
 #endif
 } // namespace opt_AVX2
 
