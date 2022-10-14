@@ -31,7 +31,8 @@ int main(int argc, const char* argv[])
     }
 
     cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
-
+    String outputFileCpu = cv::tempfile(".avi");
+    String outputFileGpu = cv::tempfile(".h264");
     cv::VideoWriter writer;
     cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
@@ -53,18 +54,17 @@ int main(int argc, const char* argv[])
         {
             std::cout << "Frame Size : " << frame.cols << "x" << frame.rows << std::endl;
             std::cout << "Open CPU Writer" << std::endl;
-            const String outputFilename = "output_cpu.avi";
-            if (!writer.open(outputFilename, cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), fps, frame.size()))
+            if (!writer.open(outputFileCpu, cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), fps, frame.size()))
                 return -1;
-            std::cout << "Writing to " << outputFilename << std::endl;
+            std::cout << "Writing to " << outputFileCpu << std::endl;
         }
 
         if (d_writer.empty())
         {
             std::cout << "Open CUDA Writer" << std::endl;
-            const cv::String outputFilename = "output_gpu.h264";
-            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), cv::cudacodec::VideoWriterCodec::H264, fps, cv::cudacodec::COLOR_FORMAT_CV::BGR, stream);
-            std::cout << "Writing to " << outputFilename << std::endl;
+            outputFileGpu = cv::tempfile(".h264");
+            d_writer = cv::cudacodec::createVideoWriter(outputFileGpu, frame.size(), cv::cudacodec::CODEC_VW::H264, fps, cv::cudacodec::COLOR_FORMAT_VW::BGR, 0, stream);
+            std::cout << "Writing to " << outputFileGpu << std::endl;
         }
 
         d_frame.upload(frame, stream);
@@ -72,6 +72,9 @@ int main(int argc, const char* argv[])
         writer.write(frame);
         d_writer->write(d_frame);
     }
+
+    remove(outputFileCpu.c_str());
+    remove(outputFileGpu.c_str());
 
     return 0;
 }
