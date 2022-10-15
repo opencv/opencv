@@ -2115,23 +2115,24 @@ transform.
 
 @param image 8-bit, single-channel binary source image. The image may be modified by the function.
 @param lines Output vector of lines. Each line is represented by a 2 or 3 element vector
-\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$ . \f$\rho\f$ is the distance from the coordinate origin \f$(0,0)\f$ (top-left corner of
-the image). \f$\theta\f$ is the line rotation angle in radians (
-\f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ).
+\f$(\rho, \theta)\f$ or \f$(\rho, \theta, \textrm{votes})\f$, where \f$\rho\f$ is the distance from
+the coordinate origin \f$(0,0)\f$ (top-left corner of the image), \f$\theta\f$ is the line rotation
+angle in radians ( \f$0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}\f$ ), and
 \f$\textrm{votes}\f$ is the value of accumulator.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
-@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+@param threshold %Accumulator threshold parameter. Only those lines are returned that get enough
 votes ( \f$>\texttt{threshold}\f$ ).
-@param srn For the multi-scale Hough transform, it is a divisor for the distance resolution rho .
+@param srn For the multi-scale Hough transform, it is a divisor for the distance resolution rho.
 The coarse accumulator distance resolution is rho and the accurate accumulator resolution is
-rho/srn . If both srn=0 and stn=0 , the classical Hough transform is used. Otherwise, both these
+rho/srn. If both srn=0 and stn=0, the classical Hough transform is used. Otherwise, both these
 parameters should be positive.
 @param stn For the multi-scale Hough transform, it is a divisor for the distance resolution theta.
 @param min_theta For standard and multi-scale Hough transform, minimum angle to check for lines.
 Must fall between 0 and max_theta.
-@param max_theta For standard and multi-scale Hough transform, maximum angle to check for lines.
-Must fall between min_theta and CV_PI.
+@param max_theta For standard and multi-scale Hough transform, an upper bound for the angle.
+Must fall between min_theta and CV_PI. The actual maximum angle in the accumulator may be slightly
+less than max_theta, depending on the parameters min_theta and theta.
  */
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
@@ -2159,7 +2160,7 @@ And this is the output of the above program in case of the probabilistic Hough t
 line segment.
 @param rho Distance resolution of the accumulator in pixels.
 @param theta Angle resolution of the accumulator in radians.
-@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+@param threshold %Accumulator threshold parameter. Only those lines are returned that get enough
 votes ( \f$>\texttt{threshold}\f$ ).
 @param minLineLength Minimum line length. Line segments shorter than that are rejected.
 @param maxLineGap Maximum allowed gap between points on the same line to link them.
@@ -2178,13 +2179,14 @@ The function finds lines in a set of points using a modification of the Hough tr
 @param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
 @param lines_max Max count of Hough lines.
-@param threshold Accumulator threshold parameter. Only those lines are returned that get enough
+@param threshold %Accumulator threshold parameter. Only those lines are returned that get enough
 votes ( \f$>\texttt{threshold}\f$ ).
 @param min_rho Minimum value for \f$\rho\f$ for the accumulator (Note: \f$\rho\f$ can be negative. The absolute value \f$|\rho|\f$ is the distance of a line to the origin.).
 @param max_rho Maximum value for \f$\rho\f$ for the accumulator.
 @param rho_step Distance resolution of the accumulator.
 @param min_theta Minimum angle value of the accumulator in radians.
-@param max_theta Maximum angle value of the accumulator in radians.
+@param max_theta Upper bound for the angle value of the accumulator in radians. The actual maximum
+angle may be slightly less than max_theta, depending on the parameters min_theta and theta_step.
 @param theta_step Angle resolution of the accumulator in radians.
  */
 CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int lines_max, int threshold,

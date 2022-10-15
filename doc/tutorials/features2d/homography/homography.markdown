@@ -418,9 +418,17 @@ homography from camera displacement:
 
 The homography matrices are similar. If we compare the image 1 warped using both homography matrices:
 
-![Left: image warped using the homography estimated. Right: using the homography computed from the camera displacement](images/homography_camera_displacement_compare.jpg)
+![Left: image warped using the estimated homography. Right: using the homography computed from the camera displacement.](images/homography_camera_displacement_compare.jpg)
 
 Visually, it is hard to distinguish a difference between the result image from the homography computed from the camera displacement and the one estimated with @ref cv::findHomography function.
+
+#### Exercise
+
+This demo shows you how to compute the homography transformation from two camera poses. Try to perform the same operations, but by computing N inter homography this time. Instead of computing one homography to directly warp the source image to the desired camera viewpoint, perform N warping operations to see the different transformations operating.
+
+You should get something similar to the following:
+
+![The first three images show the source image warped at three different interpolated camera viewpoints. The 4th image shows the "error image" between the warped source image at the final camera viewpoint and the desired image.](images/homography_camera_poses_interpolation.jpg)
 
 ### Demo 4: Decompose the homography matrix {#tutorial_homography_Demo4}
 

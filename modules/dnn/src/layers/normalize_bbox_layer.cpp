@@ -215,8 +215,8 @@ public:
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();
 
-        size_t num = total(shape(inp0.size), 0, startAxis);
-        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t num = total(inp0, 0, startAxis);
+        size_t numPlanes = total(inp0, startAxis, endAxis + 1);
         CV_Assert(num * numPlanes != 0);
         size_t planeSize = inp0.total() / (num * numPlanes);
         for (size_t n = 0; n < num; ++n)

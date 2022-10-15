@@ -27,6 +27,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
     endif()
 endif()
 
+if(APPLE AND CV_CLANG AND WITH_NEON)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-unused-function)
+endif()
+
 add_library(carotene_objs OBJECT EXCLUDE_FROM_ALL
   ${carotene_headers}
   ${carotene_sources}
