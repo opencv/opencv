@@ -698,7 +698,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
           if(fname_LOWER MATCHES "\\.${OPT_LOWER}\\.cpp$")
 #message("${fname} BASELINE-${OPT}")
             set(__opt_found 1)
-            list(APPEND __result "${fname}")
+            list(APPEND __result_${OPT} "${fname}")
             break()
           endif()
         endforeach()
@@ -732,7 +732,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
     endif()
   endforeach()
 
-  foreach(OPT ${CPU_DISPATCH_FINAL})
+  foreach(OPT ${CPU_BASELINE_FINAL} ${CPU_DISPATCH_FINAL})
     if(__result_${OPT})
 #message("${OPT}: ${__result_${OPT}}")
       if(CMAKE_GENERATOR MATCHES "^Visual"

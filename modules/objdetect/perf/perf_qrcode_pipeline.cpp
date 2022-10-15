@@ -55,6 +55,10 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
 
 typedef ::perf::TestBaseWithParam< std::string > Perf_Objdetect_QRCode_Multi;
 
+static inline bool compareCorners(const Point2f& corner1, const Point2f& corner2) {
+    return corner1.x == corner2.x ? corner1.y < corner2.y : corner1.x < corner2.x;
+}
+
 PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
 {
     const std::string name_current_image = GetParam();
@@ -66,9 +70,12 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
     std::vector<Point2f> corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.detectMulti(src, corners));
-    sort(corners.begin(), corners.end(), [](const Point2f& corner1, const Point2f& corner2)
-        {return corner1.x == corner2.x ? corner1.y < corner2.y : corner1.x < corner2.x;});
+    sort(corners.begin(), corners.end(), compareCorners);
     SANITY_CHECK(corners);
+}
+
+static inline bool compareQR(const pair<string, Mat>& v1, const pair<string, Mat>& v2) {
+    return v1.first < v2.first;
 }
 
 #ifdef HAVE_QUIRC
@@ -97,8 +104,8 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     for (size_t i = 0ull;  i < decoded_info.size(); i++) {
         result.push_back(make_pair(decoded_info[i], straight_barcode[i]));
     }
-    sort(result.begin(), result.end(), [](const pair<string, Mat>& v1, const pair<string, Mat>& v2)
-        {return v1.first < v2.first; });
+
+    sort(result.begin(), result.end(), compareQR);
     vector<vector<uint8_t> > decoded_info_sort;
     vector<Mat> straight_barcode_sort;
     for (size_t i = 0ull;  i < result.size(); i++) {
