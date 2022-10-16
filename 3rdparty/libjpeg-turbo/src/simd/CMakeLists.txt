@@ -75,8 +75,6 @@ elseif(CPU_TYPE STREQUAL "i386")
   endif()
 endif()
 
-message(STATUS "CMAKE_ASM_NASM_OBJECT_FORMAT = ${CMAKE_ASM_NASM_OBJECT_FORMAT}")
-
 if(NOT CMAKE_ASM_NASM_OBJECT_FORMAT)
   simd_fail("SIMD extensions disabled: could not determine NASM object format")
   return()
@@ -102,7 +100,6 @@ endif()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
 set(EFFECTIVE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} ${CMAKE_ASM_NASM_FLAGS_${CMAKE_BUILD_TYPE_UC}}")
-message(STATUS "CMAKE_ASM_NASM_FLAGS = ${EFFECTIVE_ASM_NASM_FLAGS}")
 
 set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -I\"${CMAKE_CURRENT_SOURCE_DIR}/nasm/\" -I\"${CMAKE_CURRENT_SOURCE_DIR}/${CPU_TYPE}/\"")
 
@@ -116,6 +113,7 @@ add_custom_target(jsimdcfg COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc.h |
   ${GREP} -E '^[\;%]|^\ %' | sed 's%_cpp_protection_%%' |
   sed 's@% define@%define@g' >${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc)
+set_target_properties(jsimdcfg PROPERTIES FOLDER "3rdparty")
 
 if(CPU_TYPE STREQUAL "x86_64")
   set(SIMD_SOURCES x86_64/jsimdcpu.asm x86_64/jfdctflt-sse.asm
@@ -200,14 +198,16 @@ endforeach()
 
 if(MSVC_IDE OR XCODE)
   set(SIMD_OBJS ${SIMD_OBJS} PARENT_SCOPE)
-  add_library(simd OBJECT ${CPU_TYPE}/jsimd.c)
-  add_custom_target(simd-objs DEPENDS ${SIMD_OBJS})
-  add_dependencies(simd simd-objs)
+  add_library(jsimd OBJECT ${CPU_TYPE}/jsimd.c)
+  add_custom_target(jsimd-objs DEPENDS ${SIMD_OBJS})
+  add_dependencies(jsimd jsimd-objs)
+  set_target_properties(jsimd PROPERTIES FOLDER "3rdparty")
+  set_target_properties(jsimd-objs PROPERTIES FOLDER "3rdparty")
 else()
-  add_library(simd OBJECT ${SIMD_SOURCES} ${CPU_TYPE}/jsimd.c)
+  add_library(jsimd OBJECT ${SIMD_SOURCES} ${CPU_TYPE}/jsimd.c)
 endif()
 if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 
@@ -397,10 +397,10 @@ if(NOT NEON_INTRINSICS)
   set(SIMD_SOURCES ${SIMD_SOURCES} arm/aarch${BITS}/jsimd_neon.S)
 endif()
 
-add_library(simd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimd.c)
+add_library(jsimd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 
@@ -439,10 +439,10 @@ if(NOT HAVE_DSPR2)
   return()
 endif()
 
-add_library(simd OBJECT mips/jsimd_dspr2.S mips/jsimd.c)
+add_library(jsimd OBJECT mips/jsimd_dspr2.S mips/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 ###############################################################################
@@ -487,10 +487,10 @@ foreach(file ${SIMD_SOURCES})
     " -Wa,-mloongson-mmi,-mloongson-ext")
 endforeach()
 
-add_library(simd OBJECT ${SIMD_SOURCES} mips64/jsimd.c)
+add_library(jsimd OBJECT ${SIMD_SOURCES} mips64/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 ###############################################################################
@@ -527,10 +527,10 @@ set(SIMD_SOURCES powerpc/jccolor-altivec.c powerpc/jcgray-altivec.c
 set_source_files_properties(${SIMD_SOURCES} PROPERTIES
   COMPILE_FLAGS -maltivec)
 
-add_library(simd OBJECT ${SIMD_SOURCES} powerpc/jsimd.c)
+add_library(jsimd OBJECT ${SIMD_SOURCES} powerpc/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 
