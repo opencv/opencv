@@ -188,6 +188,7 @@ private:
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
@@ -3131,6 +3132,58 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
 }
 
+void ONNXImporter::parseScatter(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 3, "Scatter: three inputs are required.");
+    layerParams.type = "Scatter";
+    if (node_proto.op_type() == "ScatterND")
+        layerParams.type = "ScatterND";
+
+     size_t consts = 0;
+    for (size_t i = 0; i < node_proto.input_size(); ++i)
+        if (layer_id.find(node_proto.input(i)) == layer_id.end())
+            ++consts;
+
+    if (consts == node_proto.input_size())
+    {
+        std::vector<Mat> inputs, output;
+        for (size_t i = 0; i < node_proto.input_size(); i++)
+        {
+            Mat blob = getBlob(node_proto, i);
+            if (i == 1) // indices
+                blob.convertTo(blob, CV_32F);
+            inputs.push_back(blob);
+        }
+        runLayer(layerParams, inputs, output);
+        CV_Assert(output.size() == 1);
+        addConstant(node_proto.output(0), output[0]);
+        return;
+    }
+    else if (consts > 0)
+    {
+        for (size_t i = 0; i < node_proto.input_size(); i++)
+        {
+            if (layer_id.find(node_proto.input(i)) == layer_id.end())
+            {
+                Mat blob = getBlob(node_proto, i);
+                if (i == 1) // indices, from int32/int64 to float32
+                    blob.convertTo(blob, CV_32F);
+
+                LayerParams constParams;
+                constParams.name = node_proto.input(i);
+                constParams.type = "Const";
+                constParams.blobs.push_back(blob);
+
+                opencv_onnx::NodeProto proto;
+                proto.add_output(constParams.name);
+                addLayer(constParams, proto);
+            }
+        }
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool is_all_input_const = true;
@@ -3785,6 +3838,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
+    dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =

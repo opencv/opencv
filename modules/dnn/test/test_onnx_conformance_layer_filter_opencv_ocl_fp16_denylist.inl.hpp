@@ -31,3 +31,16 @@
 "test_reduce_sum_square_do_not_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
 "test_reduce_sum_square_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
 "test_reduce_sum_square_negative_axes_keepdims_random", // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004, Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
+"test_scatter_elements_with_axis",
+"test_scatter_elements_with_duplicate_indices",
+"test_scatter_elements_with_negative_indices",
+"test_scatter_elements_with_reduction_max",
+"test_scatter_elements_with_reduction_min",
+"test_scatter_elements_without_axis",
+"test_scatter_with_axis",
+"test_scatter_without_axis",
+"test_scatternd",
+"test_scatternd_add",
+"test_scatternd_max",
+"test_scatternd_min",
+"test_scatternd_multiply",

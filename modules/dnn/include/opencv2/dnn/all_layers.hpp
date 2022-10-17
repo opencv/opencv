@@ -1067,6 +1067,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CumSumLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ScatterLayer : public Layer
+    {
+    public:
+        static Ptr<ScatterLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ScatterNDLayer : public Layer
+    {
+    public:
+        static Ptr<ScatterNDLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
