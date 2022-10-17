@@ -392,17 +392,22 @@ if torch.__version__ == '1.2.0':
 
 class Unsqueeze(nn.Module):
 
-    def __init__(self):
+    def __init__(self, dim):
         super(Unsqueeze, self).__init__()
+        self.dim = dim
 
     def forward(self, x):
-        return torch.unsqueeze(x, dim=1)
+        return torch.unsqueeze(x, dim = self.dim)
 
 input = Variable(torch.randn(1, 2, 3))
-model = Unsqueeze()
+model = Unsqueeze(1)
 model.eval()
 save_data_and_model("unsqueeze", input, model)
 save_data_and_model("unsqueeze_opset_13", input, model, version=13)
+
+model = Unsqueeze(-2)
+model.eval()
+save_data_and_model("unsqueeze_neg_axes", input, model)
 
 input = Variable(torch.randn(1, 2, 4, 5))
 deconv_adjpad2d = nn.ConvTranspose2d(2, 3, (3, 2), stride=(1, 2), padding=(1, 2), output_padding=(0, 1))
