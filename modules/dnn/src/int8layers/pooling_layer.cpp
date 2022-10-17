@@ -26,11 +26,11 @@ public:
         computeMaxIdx = false;
         globalPooling = false;
         isGlobalPooling = std::vector<bool>(3, false);
-        output_zp = params.get<int>("zeropoints");
+        output_zp = params.get<int>("zeropoints", 0);
         input_zp = params.get<int>("input_zeropoint", output_zp);
         multiplier = params.get<float>("multiplier", 1.f);
 
-        output_sc = params.get<float>("scales");
+        output_sc = params.get<float>("scales", 1.f);
         input_sc =  multiplier * output_sc;
 
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
