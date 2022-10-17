@@ -1,3 +1,26 @@
+#!/usr/bin/env python
+""" Parse OpenCV trace logs and present summarized statistics in a table
+
+### Options
+
+./trace_profiler.py <TraceLogFile> <num>
+
+<TraceLogFile>  - usually OpenCVTrace.txt
+<num>           - number of functions to show (depth)
+
+### Example
+
+./trace_profiler.py OpenCVTrace.txt 2
+
+ ID name                                               count thr         min   ...
+                                                                        t-min  ...
+  1 main#test_main.cpp:6                                   1   1       88.484  ...
+                                                                      200.210  ...
+
+  2 UMatBasicTests_copyTo#test_umat.cpp:176|main          40   1        0.125  ...
+                                                                        0.173  ...
+"""
+
 from __future__ import print_function
 
 import os
