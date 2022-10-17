@@ -2313,8 +2313,9 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
         }
 //        CV_Assert(axes.getIntValue(axes.size()-1) <= dims.size());
         for (int j = 0; j < axes.size(); j++) {
-            const int idx = axes.getIntValue(j);
-            CV_Assert(idx <= dims.size());
+            int idx = axes.getIntValue(j);
+            idx = idx < 0 ? idx + input_dims + 1 : idx;
+            CV_Assert(0 <= idx && idx <= dims.size());
             dims.insert(dims.begin() + idx, 1);
         }
 
@@ -2331,6 +2332,7 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
 
     MatShape inpShape = outShapes[node_proto.input(0)];
     int axis = axes.getIntValue(0);
+    axis = axis < 0 ? axis + (int)inpShape.size() + 1 : axis;
     CV_Assert(0 <= axis && axis <= inpShape.size());
     std::vector<int> outShape = inpShape;
     outShape.insert(outShape.begin() + axis, 1);
