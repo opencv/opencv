@@ -1,4 +1,4 @@
-# How to enable Halide backend for improve efficiency  {#tutorial_dnn_halide}
+# How to enable Halide backend {#tutorial_dnn_halide}
 
 @tableofcontents
 
@@ -21,25 +21,30 @@ An official website of the Halide project: http://halide-lang.org/.
 An up to date efficiency comparison: https://github.com/opencv/opencv/wiki/DNN-Efficiency
 
 ## Requirements
+
+Download Halide [binary release](https://github.com/halide/Halide/releases) or build from source.
+Actual instructions can be always found at the [official documentation](https://github.com/halide/Halide#building-halide-with-cmake).
+
 ### LLVM compiler
 
 @note LLVM compilation might take a long time.
 
-- Download LLVM source code from http://releases.llvm.org/4.0.0/llvm-4.0.0.src.tar.xz.
-Unpack it. Let **llvm_root** is a root directory of source code.
-
-- Create directory **llvm_root**/tools/clang
-
-- Download Clang with the same version as LLVM. In our case it will be from
-http://releases.llvm.org/4.0.0/cfe-4.0.0.src.tar.xz. Unpack it into
-**llvm_root**/tools/clang. Note that it should be a root for Clang source code.
+- Download LLVM source code using git
+@code
+git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git
+@endcode
 
 - Build LLVM on Linux
 @code
-cd llvm_root
-mkdir build && cd build
-cmake -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=ON -DCMAKE_BUILD_TYPE=Release ..
-make -j4
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
+      -DLLVM_TARGETS_TO_BUILD="X86" \
+      -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_ASSERTIONS=ON \
+      -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON -DLLVM_BUILD_32_BITS=OFF \
+      -S llvm-project/llvm -B llvm-build
+
+cd llvm-build && make -j$(nproc --all)
+cmake --install llvm-build --prefix llvm-install 
 @endcode
 
 - Build LLVM on Windows (Developer Command Prompt)
@@ -50,6 +55,9 @@ MSBuild.exe /m:4 /t:Build /p:Configuration=Release .\\INSTALL.vcxproj
 @endcode
 
 @note `\\path-to-llvm-build\\` and `\\path-to-llvm-install\\` are different directories.
+
+```bash
+```
 
 ### Halide language.
 

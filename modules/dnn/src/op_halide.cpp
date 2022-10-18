@@ -333,7 +333,15 @@ void forwardHalide(std::vector<Ptr<BackendWrapper> > &outputs,
     CV_Assert(!node.empty());
     Halide::Func& top = node.dynamicCast<HalideBackendNode>()->funcs.back();
     auto outputBuffers = halideBuffers(outputs);
-    top.realize(Halide::Realization(outputBuffers));
+
+    try {
+        // std::cout << "realize " << top.name() << std::endl;
+        // top.print_loop_nest();
+        top.realize(Halide::Realization(outputBuffers));
+        // std::cout << "realize end" << std::endl;
+    } catch(Halide::InternalError& ex) {
+        std::cout << ex.what() << std::endl;
+    }
 #endif  // HAVE_HALIDE
 }
 
