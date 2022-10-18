@@ -2273,10 +2273,8 @@ bool QRDecode::updatePerspective()
     pts.push_back(centerPt);
 
     Mat H = findHomography(pts, perspective_points);
-    Mat bin_original;
-    adaptiveThreshold(original, bin_original, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 83, 2);
     Mat temp_intermediate;
-    warpPerspective(bin_original, temp_intermediate, H, temporary_size, INTER_NEAREST);
+    warpPerspective(bin_barcode, temp_intermediate, H, temporary_size, INTER_NEAREST);
     no_border_intermediate = temp_intermediate(Range(1, temp_intermediate.rows), Range(1, temp_intermediate.cols));
 
     const int border = cvRound(0.1 * test_perspective_size);
