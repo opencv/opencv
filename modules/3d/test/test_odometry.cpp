@@ -282,7 +282,7 @@ void OdometryTest::prepareFrameCheck()
     ods.getIterCounts(iters);
     size_t nlevels = iters.size();
 
-    Mat points, mask, depth, gray, rgb, normals, scaled;
+    Mat points, mask, depth, gray, rgb, scaled;
 
     odf.getMask(mask);
     int masknz = countNonZero(mask);
@@ -303,11 +303,6 @@ void OdometryTest::prepareFrameCheck()
         cvtColor(gtImage, gtGray, COLOR_BGR2GRAY);
         double grayNorm = cv::norm(gray, gtGray);
         ASSERT_LE(grayNorm, 0.0);
-    }
-
-    if (otype == OdometryType::DEPTH || otype == OdometryType::RGB_DEPTH)
-    {
-        odf.getNormals(normals);
     }
 
     //TODO: remove it when scale issue is fixed
@@ -374,26 +369,46 @@ void OdometryTest::prepareFrameCheck()
     {
         Ptr<RgbdNormals> normalComputer = odometry.getNormalsComputer();
         ASSERT_FALSE(normalComputer.empty());
+        Mat normals;
+        odf.getNormals(normals);
+        std::vector<Mat> gtPyrNormals;
+        buildPyramid(normals, gtPyrNormals, nlevels - 1);
         for (size_t i = 0; i < nlevels; i++)
         {
+            Mat gtNormal = gtPyrNormals[i];
+            CV_Assert(gtNormal.type() == CV_32FC4);
+            for (int y = 0; y < gtNormal.rows; y++)
+            {
+                Vec4f *normals_row = gtNormal.ptr<Vec4f>(y);
+                for (int x = 0; x < gtNormal.cols; x++)
+                {
+                    Vec4f n4 = normals_row[x];
+                    Point3f n(n4[0], n4[1], n4[2]);
+                    double nrm = cv::norm(n);
+                    n *= 1.f / nrm;
+                    normals_row[x] = Vec4f(n.x, n.y, n.z, 0);
+                }
+            }
+
+            Mat normmaski;
+            odf.getPyramidAt(normmaski, OdometryFramePyramidType::PYR_NORMMASK, i);
+            ASSERT_FALSE(normmaski.empty());
+            int nnm = countNonZero(normmaski);
+            EXPECT_GE(nnm, 1000) << "Normals mask has too few valid pixels at pyr level " << i;
+
             Mat ptsi;
             odf.getPyramidAt(ptsi, OdometryFramePyramidType::PYR_CLOUD, i);
-
-            Mat gtNormals;
-            normalComputer->apply(ptsi, gtNormals);
 
             Mat normi;
             odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
             ASSERT_FALSE(normi.empty());
-            double nnorm = cv::norm(normi, gtNormals);
-            EXPECT_LE(nnorm, 0.0);
-            if (algtype == OdometryAlgoType::COMMON)
+            double nnorm = cv::norm(normi, gtNormal, NORM_INF, normmaski);
+            EXPECT_LE(nnorm, 1.2e-7) << "Normals diff is too big at pyr level " << i;
+
+            if (i == 0)
             {
-                Mat normmaski;
-                odf.getPyramidAt(normmaski, OdometryFramePyramidType::PYR_NORMMASK, i);
-                ASSERT_FALSE(normmaski.empty());
-                int nnm = countNonZero(normmaski);
-                EXPECT_GT(nnm, 0);
+                double pnnorm = cv::norm(normals, normi, NORM_INF, normmaski);
+                EXPECT_GE(pnnorm, 0);
             }
         }
     }
