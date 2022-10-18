@@ -6,7 +6,7 @@ import cv2 as cv
 from tests_common import NewOpenCVTests
 
 class odometry_test(NewOpenCVTests):
-    def testCommon(self, needRgb, otype):
+    def commonOdometryTest(self, needRgb, otype):
         depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
         if needRgb:
             rgb = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYCOLOR)
@@ -41,16 +41,16 @@ class odometry_test(NewOpenCVTests):
         self.assertTrue(isCorrect)
 
     def test_OdometryDefault(self):
-        self.testCommon(False, None)
+        self.commonOdometryTest(False, None)
 
     def test_OdometryDepth(self):
-        self.testCommon(False, cv.DEPTH)
+        self.commonOdometryTest(False, cv.DEPTH)
 
     def test_OdometryRGB(self):
-        self.testCommon(True, cv.RGB)
+        self.commonOdometryTest(True, cv.RGB)
 
     def test_OdometryRGB_Depth(self):
-        self.testCommon(True, cv.RGB_DEPTH)
+        self.commonOdometryTest(True, cv.RGB_DEPTH)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

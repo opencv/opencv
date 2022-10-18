@@ -1220,9 +1220,11 @@ struct GetAbInvoker : ParallelLoopBody
             }
         }
 
+        CV_UNUSED(UTSIZE);
+
 #else
         float upperTriangle[UTSIZE];
-        for (int i = 0; i < UTSIZE; i++)
+        for (size_t i = 0; i < UTSIZE; i++)
             upperTriangle[i] = 0;
 
         for (int y = range.start; y < range.end; y++)
@@ -1461,7 +1463,7 @@ bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const 
         throw std::runtime_error("Failed to run kernel");
 
     float upperTriangle[UTSIZE];
-    for (int i = 0; i < UTSIZE; i++)
+    for (size_t i = 0; i < UTSIZE; i++)
         upperTriangle[i] = 0;
 
     Mat groupedSumCpu = groupedSumGpu.getMat(ACCESS_READ);
@@ -1469,10 +1471,10 @@ bool ocl_calcICPLsmMatricesFast(Matx33f cameraMatrix, const UMat& oldPts, const 
     for (int y = 0; y < ngroups.height; y++)
     {
         const float* rowr = groupedSumCpu.ptr<float>(y);
-        for (int x = 0; x < ngroups.width; x++)
+        for (size_t x = 0; x < size_t(ngroups.width); x++)
         {
             const float* p = rowr + x * UTSIZE;
-            for (int j = 0; j < UTSIZE; j++)
+            for (size_t j = 0; j < UTSIZE; j++)
             {
                 upperTriangle[j] += p[j];
             }
