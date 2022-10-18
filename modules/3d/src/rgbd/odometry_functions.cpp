@@ -161,7 +161,7 @@ static void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, st
 static void preparePyramidCloud(const std::vector<UMat>& pyramidDepth, const Matx33f& cameraMatrix, std::vector<UMat>& pyramidCloud)
 {
     int nLevels = pyramidDepth.size();
-    
+
     std::vector<Matx33f> pyramidCameraMatrix;
     buildPyramidCameraMatrix(cameraMatrix, nLevels, pyramidCameraMatrix);
 

@@ -300,7 +300,7 @@ void OdometryTest::prepareFrameCheck()
         odf.getImage(rgb);
         double rgbNorm = cv::norm(rgb, gtImage);
         ASSERT_LE(rgbNorm, 0.0);
-    
+
         if (gtImage.channels() == 3)
             cvtColor(gtImage, gtGray, COLOR_BGR2GRAY);
         else
