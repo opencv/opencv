@@ -98,6 +98,7 @@ ocv_optimization_process_obsolete_option(ENABLE_POPCNT POPCNT ON)
 ocv_optimization_process_obsolete_option(ENABLE_AVX AVX ON)
 ocv_optimization_process_obsolete_option(ENABLE_AVX2 AVX2 ON)
 ocv_optimization_process_obsolete_option(ENABLE_FMA3 FMA3 ON)
+ocv_optimization_process_obsolete_option(ENABLE_LASX LASX ON)
 
 ocv_optimization_process_obsolete_option(ENABLE_VFPV3 VFPV3 OFF)
 ocv_optimization_process_obsolete_option(ENABLE_NEON NEON OFF)
