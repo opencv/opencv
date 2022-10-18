@@ -440,7 +440,7 @@ TEST(RGBD_Odometry_RgbdICP, algorithmic)
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.8e-5);
     test.run();
 }
 
@@ -466,7 +466,7 @@ TEST(RGBD_Odometry_RgbdICP, UMats)
 TEST(RGBD_Odometry_FastICP, UMats)
 {
     // OpenCL version has slightly less accuracy than CPU version
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 2.14e-6);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.8e-5);
     test.checkUMats();
 }
 
