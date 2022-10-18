@@ -53,33 +53,6 @@ inline bool isValidDepth(const unsigned int& depth)
            (depth != std::numeric_limits<unsigned int>::max());
 }
 
-/** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
- * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
- * Otherwise, the image is simply converted to floats
- * @param in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
- *              (as done with the Microsoft Kinect), it is assumed in meters)
- * @param the desired output depth (floats or double)
- * @param out The rescaled float depth image
- */
-/* void rescaleDepth(InputArray in_in, int depth, OutputArray out_out); */
-
-template<typename T>
-void
-rescaleDepthTemplated(const Mat& in, Mat& out);
-
-template<>
-inline void
-rescaleDepthTemplated<float>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_32F, out);
-}
-
-template<>
-inline void
-rescaleDepthTemplated<double>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_64F, out);
-}
 
 // One place to turn intrinsics on and off
 #define USE_INTRINSICS CV_SIMD128
