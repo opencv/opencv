@@ -957,43 +957,43 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 #ifdef HAVE_HALIDE
 TEST(MixedBackends_Halide_Default_Halide, Accuracy)
 {
-    // // Just a layer that supports Halide backend.
-    // LayerParams lrn;
-    // lrn.type = "LRN";
-    // lrn.name = "testLRN";
+    // Just a layer that supports Halide backend.
+    LayerParams lrn;
+    lrn.type = "LRN";
+    lrn.name = "testLRN";
 
-    // // Some of layers that doesn't supports Halide backend yet.
-    // LayerParams mvn;
-    // mvn.type = "MVN";
-    // mvn.name = "testMVN";
+    // Some of layers that doesn't supports Halide backend yet.
+    LayerParams mvn;
+    mvn.type = "MVN";
+    mvn.name = "testMVN";
 
-    // // Halide layer again.
-    // LayerParams lrn2;
-    // lrn2.type = "LRN";
-    // lrn2.name = "testLRN2";
+    // Halide layer again.
+    LayerParams lrn2;
+    lrn2.type = "LRN";
+    lrn2.name = "testLRN2";
 
-    // Net net;
-    // int lrnId = net.addLayer(lrn.name, lrn.type, lrn);
-    // net.connect(0, 0, lrnId, 0);
-    // net.addLayerToPrev(mvn.name, mvn.type, mvn);
-    // net.addLayerToPrev(lrn2.name, lrn2.type, lrn2);
+    Net net;
+    int lrnId = net.addLayer(lrn.name, lrn.type, lrn);
+    net.connect(0, 0, lrnId, 0);
+    net.addLayerToPrev(mvn.name, mvn.type, mvn);
+    net.addLayerToPrev(lrn2.name, lrn2.type, lrn2);
 
-    // int sz[] = {4, 3, 5, 6};
-    // Mat input(4, &sz[0], CV_32F);
-    // randu(input, -1.0f, 1.0f);
-    // net.setInput(input);
-    // net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    // Mat outputDefault = net.forward().clone();
+    int sz[] = {4, 3, 5, 6};
+    Mat input(4, &sz[0], CV_32F);
+    randu(input, -1.0f, 1.0f);
+    net.setInput(input);
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    Mat outputDefault = net.forward().clone();
 
-    // net.setPreferableBackend(DNN_BACKEND_HALIDE);
-    // net.setInput(input);
-    // Mat outputHalide = net.forward().clone();
-    // normAssert(outputDefault, outputHalide);
+    net.setPreferableBackend(DNN_BACKEND_HALIDE);
+    net.setInput(input);
+    Mat outputHalide = net.forward().clone();
+    normAssert(outputDefault, outputHalide);
 
-    // net.setPreferableTarget(DNN_TARGET_OPENCL);
-    // net.setInput(input);
-    // outputHalide = net.forward().clone();
-    // normAssert(outputDefault, outputHalide);
+    net.setPreferableTarget(DNN_TARGET_OPENCL);
+    net.setInput(input);
+    outputHalide = net.forward().clone();
+    normAssert(outputDefault, outputHalide);
 }
 #endif  // HAVE_HALIDE
 
