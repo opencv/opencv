@@ -473,7 +473,7 @@ static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings, 
     {
         std::vector<int> iterCounts;
         settings.getIterCounts(iterCounts);
-        preparePyramidMask(mask, dpyramids, iterCounts.size(), settings.getMaxDepth(), settings.getMaxDepth(), mpyramids);
+        preparePyramidMask(mask, dpyramids, iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
         extendPyrMaskByPyrNormals(npyramids, mpyramids);
     }
 
