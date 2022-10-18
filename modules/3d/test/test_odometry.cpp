@@ -422,7 +422,7 @@ void OdometryTest::prepareFrameCheck()
             odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
             ASSERT_FALSE(normi.empty());
             double nnorm = cv::norm(normi, gtNormal, NORM_INF, normmaski);
-            EXPECT_LE(nnorm, 1.2e-7) << "Normals diff is too big at pyr level " << i;
+            EXPECT_LE(nnorm, 1.8e-7) << "Normals diff is too big at pyr level " << i;
 
             if (i == 0)
             {
@@ -459,7 +459,7 @@ TEST(RGBD_Odometry_RgbdICP, algorithmic)
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.8e-5);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.84e-5);
     test.run();
 }
 
@@ -485,7 +485,7 @@ TEST(RGBD_Odometry_RgbdICP, UMats)
 TEST(RGBD_Odometry_FastICP, UMats)
 {
     // OpenCL version has slightly less accuracy than CPU version
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.8e-5);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, 1.84e-5);
     test.checkUMats();
 }
 
