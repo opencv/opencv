@@ -220,13 +220,17 @@ static void preparePyramidNormals(const UMat &normals, const std::vector<UMat> &
     for (int i = 1; i < nLevels; i++)
     {
         Mat currNormals = pyramidNormals[i].getMat(ACCESS_RW);
+        CV_Assert(currNormals.type() == CV_32FC4);
         for (int y = 0; y < currNormals.rows; y++)
         {
-            Point3f *normals_row = currNormals.ptr<Point3f>(y);
+            Vec4f *normals_row = currNormals.ptr<Vec4f>(y);
             for (int x = 0; x < currNormals.cols; x++)
             {
-                double nrm = norm(normals_row[x]);
-                normals_row[x] *= 1. / nrm;
+                Vec4f n4 = normals_row[x];
+                Point3f n(n4[0], n4[1], n4[2]);
+                double nrm = norm(n);
+                n *= 1.f / nrm;
+                normals_row[x] = Vec4f(n.x, n.y, n.z, 0);
             }
         }
     }
