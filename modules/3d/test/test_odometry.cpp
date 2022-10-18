@@ -293,14 +293,19 @@ void OdometryTest::prepareFrameCheck()
     double depthNorm = cv::norm(depth, gtDepth, NORM_INF, mask);
     ASSERT_LE(depthNorm, 0.0);
 
+    Mat gtGray;
     if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
         odf.getGrayImage(gray);
         odf.getImage(rgb);
         double rgbNorm = cv::norm(rgb, gtImage);
         ASSERT_LE(rgbNorm, 0.0);
-        Mat gtGray;
-        cvtColor(gtImage, gtGray, COLOR_BGR2GRAY);
+    
+        if (gtImage.channels() == 3)
+            cvtColor(gtImage, gtGray, COLOR_BGR2GRAY);
+        else
+            gtGray = gtImage;
+        gtGray.convertTo(gtGray, CV_8U);
         double grayNorm = cv::norm(gray, gtGray);
         ASSERT_LE(grayNorm, 0.0);
     }
@@ -311,11 +316,18 @@ void OdometryTest::prepareFrameCheck()
     EXPECT_EQ(scalednz, depthnz);
 
     std::vector<Mat> gtPyrDepth, gtPyrMask;
-    buildPyramid(gtDepth, gtPyrDepth, nlevels);
-    buildPyramid(mask, gtPyrMask, nlevels);
+    //TODO: this depth calculation would become incorrect, fixit
+    buildPyramid(gtDepth, gtPyrDepth, nlevels - 1);
+    for (const auto& gd : gtPyrDepth)
+    {
+        //TODO: bitwise_and it with odf-provided mask
+        Mat pm = (gd > ods.getMinDepth()) & (gd < ods.getMaxDepth());
+        gtPyrMask.push_back(pm);
+    }
 
     size_t npyr = odf.getPyramidLevels();
     ASSERT_EQ(npyr, nlevels);
+    Matx33f levelK = K;
     for (size_t i = 0; i < nlevels; i++)
     {
         Mat depthi, cloudi, maski;
@@ -323,45 +335,52 @@ void OdometryTest::prepareFrameCheck()
         odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
         ASSERT_FALSE(maski.empty());
         double mnorm = cv::norm(maski, gtPyrMask[i]);
-        EXPECT_LE(mnorm, 0.0);
+        EXPECT_LE(mnorm, 0.0) << "Mask diff is too big at pyr level " << i;
 
         odf.getPyramidAt(depthi, OdometryFramePyramidType::PYR_DEPTH, i);
         ASSERT_FALSE(depthi.empty());
         double dnorm = cv::norm(depthi, gtPyrDepth[i], NORM_INF, maski);
-        EXPECT_LE(dnorm, 0.0);
+        EXPECT_LE(dnorm, 8.e-7) << "Depth diff norm is too big at pyr level " << i;
 
         odf.getPyramidAt(cloudi, OdometryFramePyramidType::PYR_CLOUD, i);
         ASSERT_FALSE(cloudi.empty());
         Mat gtCloud;
-        depthTo3d(depthi, K, gtCloud, maski);
+        depthTo3d(depthi, levelK, gtCloud);
         double cnorm = cv::norm(cloudi, gtCloud, NORM_INF, maski);
-        EXPECT_LE(cnorm, 0.0);
+        EXPECT_LE(cnorm, 0.0) << "Cloud diff norm is too big at pyr level " << i;
+        // downscale camera matrix for next pyramid level
+        levelK = 0.5f * levelK;
+        levelK(2, 2) = 1.f;
     }
 
     if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
         std::vector<Mat> gtPyrImage;
-        buildPyramid(gtImage, gtPyrImage, nlevels);
+        buildPyramid(gtGray, gtPyrImage, nlevels - 1);
 
         for (size_t i = 0; i < nlevels; i++)
         {
-            Mat rgbi, texi, dixi, diyi;
+            Mat rgbi, texi, dixi, diyi, maski;
+            odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
             odf.getPyramidAt(rgbi, OdometryFramePyramidType::PYR_IMAGE, i);
             ASSERT_FALSE(rgbi.empty());
-            double rnorm = cv::norm(rgbi, gtPyrImage[i]);
-            EXPECT_LE(rnorm, 0.0);
+            double rnorm = cv::norm(rgbi, gtPyrImage[i], NORM_INF);
+            EXPECT_LE(rnorm, 1.0)  << "RGB diff is too big at pyr level " << i;
             odf.getPyramidAt(texi, OdometryFramePyramidType::PYR_TEXMASK, i);
             ASSERT_FALSE(texi.empty());
             int tnz = countNonZero(texi);
-            EXPECT_GT(tnz, 0);
+            EXPECT_GE(tnz, 1000) << "Texture mask has too few valid pixels at pyr level " << i;
+            Mat gtDixi, gtDiyi;
+            Sobel(rgbi, gtDixi, CV_16S, 1, 0, ods.getSobelSize());
             odf.getPyramidAt(dixi, OdometryFramePyramidType::PYR_DIX, i);
             ASSERT_FALSE(dixi.empty());
-            int dixnz = countNonZero(dixi);
-            EXPECT_GT(dixnz, 0);
+            double dixnorm = cv::norm(dixi, gtDixi, NORM_INF, maski);
+            EXPECT_LE(dixnorm, 0) << "dI/dx diff is too big at pyr level " << i;
+            Sobel(rgbi, gtDiyi, CV_16S, 0, 1, ods.getSobelSize());
             odf.getPyramidAt(diyi, OdometryFramePyramidType::PYR_DIY, i);
             ASSERT_FALSE(diyi.empty());
-            int diynz = countNonZero(diyi);
-            EXPECT_GT(diynz, 0);
+            double diynorm = cv::norm(diyi, gtDiyi, NORM_INF, maski);
+            EXPECT_LE(diynorm, 0) << "dI/dy diff is too big at pyr level " << i;
         }
     }
 
