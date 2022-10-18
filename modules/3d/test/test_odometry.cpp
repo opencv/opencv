@@ -420,7 +420,7 @@ void OdometryTest::prepareFrameCheck()
 
 //TODO: tune all these thresholds
 
-TEST(RGBD_Odometry_Rgbd, algorithmic)
+TEST(RGBD_Odometry_Rgb, algorithmic)
 {
     OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
     test.run();
@@ -445,7 +445,7 @@ TEST(RGBD_Odometry_FastICP, algorithmic)
 }
 
 
-TEST(RGBD_Odometry_Rgbd, UMats)
+TEST(RGBD_Odometry_Rgb, UMats)
 {
     OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
     test.checkUMats();
@@ -471,7 +471,7 @@ TEST(RGBD_Odometry_FastICP, UMats)
 }
 
 
-TEST(RGBD_Odometry_Rgbd, prepareFrame)
+TEST(RGBD_Odometry_Rgb, prepareFrame)
 {
     OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
     test.prepareFrameCheck();
