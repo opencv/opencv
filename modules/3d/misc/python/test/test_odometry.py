@@ -41,16 +41,16 @@ class odometry_test(NewOpenCVTests):
         self.assertTrue(isCorrect)
 
     def test_OdometryDefault(self):
-        testCommon(self, False, None)
+        self.testCommon(False, None)
 
     def test_OdometryDepth(self):
-        testCommon(self, False, cv.DEPTH)
+        self.testCommon(False, cv.DEPTH)
 
     def test_OdometryRGB(self):
-        testCommon(self, True, cv.RGB)
+        self.testCommon(True, cv.RGB)
 
     def test_OdometryRGB_Depth(self):
-        testCommon(self, True, cv.RGB_DEPTH)
+        self.testCommon(True, cv.RGB_DEPTH)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

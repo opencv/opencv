@@ -14,11 +14,6 @@
 namespace cv
 {
 
-enum
-{
-    UTSIZE = 27
-};
-
 static void randomSubsetOfMask(InputOutputArray _mask, float part)
 {
     const int minPointsCount = 1000; // minimum point count (we can process them fast)
@@ -998,6 +993,9 @@ bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double m
 
     return translation <= maxTranslation && rotation <= maxRotation;
 }
+
+// Upper triangle buffer size (for symmetric matrix build)
+const size_t UTSIZE = 27;
 
 #if USE_INTRINSICS
 static inline bool fastCheck(const v_float32x4& p0, const v_float32x4& p1)
