@@ -3004,6 +3004,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
                 LayerParams constParams;
                 constParams.name = node_proto.input(i);
                 constParams.type = "Const";
+                // Non-constant propagated layers cannot output 1-d or 0-d tensors.
+                inp.dims = std::max(inp.dims, 2);
                 constParams.blobs.push_back(inp);
 
                 opencv_onnx::NodeProto proto;
