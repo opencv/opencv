@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 """ Format performance test results and compare metrics between test runs
 
-This script allows to compare performance data collected during separate test runs and present it in a text, Markdown or HTML table.
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+This script allows to compare performance data collected during separate test runs and present it in
+a text, Markdown or HTML table.
 
 ### Major options
 

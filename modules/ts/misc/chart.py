@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 """ OpenCV performance test results charts generator.
 
-This script formats results of a performance test as a table or a series of tables according to test parameters.
+This script formats results of a performance test as a table or a series of tables according to test
+parameters.
 
 ### Description
 
-Script accepts an XML with performance test results as an input. Only one test (aka testsuite) containing multiple cases (aka testcase) with different parameters can be used. Test should have 2 or more parameters, for example resolution (640x480), data type (8UC1), mode (NORM_TYPE), etc. Parameters #2 and #1 will be used as table row and column by default, this mapping can be changed with `-x` and `-y` options. Parameter combination besides the two selected for row and column will be represented as a separate table. I.e. one table (RES x TYPE) for `NORM_L1`, another for `NORM_L2`, etc.
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
 
-Test can be selected either by using `--gtest_filter` option when running the test, or by using the `--filter` script option.
+Script accepts an XML with performance test results as an input. Only one test (aka testsuite)
+containing multiple cases (aka testcase) with different parameters can be used. Test should have 2
+or more parameters, for example resolution (640x480), data type (8UC1), mode (NORM_TYPE), etc.
+Parameters #2 and #1 will be used as table row and column by default, this mapping can be changed
+with `-x` and `-y` options. Parameter combination besides the two selected for row and column will
+be represented as a separate table. I.e. one table (RES x TYPE) for `NORM_L1`, another for
+`NORM_L2`, etc.
+
+Test can be selected either by using `--gtest_filter` option when running the test, or by using the
+`--filter` script option.
 
 ### Options:
 

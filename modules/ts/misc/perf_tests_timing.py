@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """ Prints total execution time and number of total/failed tests.
 
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
 This script uses XML test log to produce basic runtime statistics in a text or HTML table.
 
 ### Example:

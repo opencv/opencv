@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 """ Parse OpenCV trace logs and present summarized statistics in a table
 
+To collect trace logs use OpenCV built with tracing support (enabled by default), set
+`OPENCV_TRACE=1` environment variable and run your application. `OpenCVTrace.txt` file will be
+created in the current folder.
+See https://github.com/opencv/opencv/wiki/Profiling-OpenCV-Applications for more details.
+
 ### Options
 
 ./trace_profiler.py <TraceLogFile> <num>

@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 """ Print performance test run statistics.
 
-This script produces configurable performance report tables in text and HTML formats. It allows to filter test cases by name and parameter string and select specific performance metrics columns. One or multiple test results can be used for input.
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+This script produces configurable performance report tables in text and HTML formats. It allows to
+filter test cases by name and parameter string and select specific performance metrics columns. One
+or multiple test results can be used for input.
 
 ### Example
 

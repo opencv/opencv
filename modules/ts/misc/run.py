@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """ Test runner and results collector for OpenCV
 
-This script abstracts execution procedure for OpenCV tests. Target scenario: running automated tests in a continuous integration system.
+This script abstracts execution procedure for OpenCV tests. Target scenario: running automated tests
+in a continuous integration system.
+See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
 
 ### Main features
 
