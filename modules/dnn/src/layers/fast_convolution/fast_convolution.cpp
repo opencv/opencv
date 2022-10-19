@@ -14,7 +14,7 @@
 #include "fast_convolution.simd.hpp"
 
 namespace cv { namespace dnn {
-
+enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 Ptr<FastConv2d> initFastConv2d(
         int ngroups,
         int K, int C, int Hk, int Wk,
@@ -44,20 +44,17 @@ Ptr<FastConv2d> initFastConv2d(
     conv->pad_bottom = pads_end[0];
     conv->pad_left = pads_begin[1];
     conv->pad_right = pads_end[1];
+    conv->conv_type =
+            (ngroups > 1 && ngroups == K && ngroups == C) ? _FX_CONV_TYPE_DEPTHWISE :
+            useWinograd && ((conv->useSIMD128 || conv->useAVX2 || conv->useNEON) && Hk == 3 && Wk == 3 &&
+            dilation_y == 1 && dilation_x == 1 && stride_y == 1 && stride_x == 1) ? _FX_CONV_TYPE_WINOGRAD3X3 :
+            _FX_CONV_TYPE_GENERIC;
     Mat weightsMat = _weightsMat.getMat();
     auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
 
-#if CV_NEON // For now, winograd is ARM platform only.
-    if (useWinograd && ngroups == 1 && Hk ==3 && Wk == 3 && stride_x == 1 && stride_y == 1 &&
-        dilation_x == 1 && dilation_y ==1 && K >= 16 && C >= 16)
-        conv->useWinograd63 = true;
-#else
-    conv->useWinograd63 = false;
-#endif
-
     float *srcWeights = (float *)weightsMat.data;
-    if (ngroups > 1 && ngroups == K && ngroups == C)
+    if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE)
     {
         // for depth-wise convolutions on NCHW data we just preserve the weights in KCHW layout,
         // but add some padding to make the weights array layout more SIMD-friendly
@@ -66,17 +63,97 @@ Ptr<FastConv2d> initFastConv2d(
         // this code aims to let memory fit with vector size.
         int padded_ksize = ((ksize + FAST_VEC_NLANES-1) / FAST_VEC_NLANES) * FAST_VEC_NLANES;
         int nweights = C*padded_ksize;
-        conv->weightsBuf.reserve(nweights);
-        float* weightsBufPtr = conv->weightsBuf.data();
-        memset(weightsBufPtr, 0, nweights*sizeof(weightsBufPtr[0]));
-        for(int c = 0; c < C; c++)
+        conv->weightsBuf.reserve(nweights + VEC_ALIGN);
+        conv->weightsBufPtr = alignPtr(conv->weightsBuf.data(), VEC_ALIGN);
+        memset(conv->weightsBufPtr, 0, nweights*sizeof(conv->weightsBufPtr[0]));
+        auto weightsBufPtr = conv->weightsBufPtr;
+        parallel_for_(Range(0, C), [&](const Range& r0){
+        for(int c = r0.start; c < r0.end; c++)
         {
             for (int k = 0; k < ksize; k++)
                 weightsBufPtr[c*padded_ksize + k] = srcWeights[c*wstep + k];
-        }
+        }});
     }
     else
     {
+        if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // winograd
+        {
+            static const float ktm[8][3] = {
+                    {1.0f,      0.0f,      0.0f},
+                    {-2.0f / 9, -2.0f / 9, -2.0f / 9},
+                    {-2.0f / 9, 2.0f / 9, -2.0f / 9},
+                    {1.0f / 90, 1.0f / 45, 2.0f / 45},
+                    {1.0f / 90, -1.0f / 45, 2.0f / 45},
+                    {32.f/45, 16.f/45, 8.f/45},
+                    {32.f/45, -16.f/45, 8.f/45},
+                    {0.0f, 0.0f, 1.0f}
+            };
+
+            // the weights are packed as 6-dim tensor:
+            // ngroups * ceil((K/ngroups)/KBLOCK) * (W*W/ATOM_SIZE) * (C/ngroups) * KBLOCK * ATOM_SIZE,
+            // where W is the size of Winograd-transformed kernel (8x8),
+            // ATOM_SIZE is number of lanes in SIMD register (4 for NEON and FP32),
+            // KBLOCK is some platform-dependent constant dependent on the number of SIMD registers.
+            int ksize = _FX_WINO_KSIZE * _FX_WINO_KSIZE;
+            int Cg = C/ngroups;
+            int Kg = K/ngroups;
+            int Kg_nblocks = (Kg + _FX_WINO_KBLOCK - 1)/_FX_WINO_KBLOCK;
+            size_t nweights = ngroups*Kg_nblocks*Cg*_FX_WINO_KBLOCK*_FX_WINO_AREA;
+            conv->weightsWinoBuf.reserve(nweights + VEC_ALIGN);
+            conv->weightsWinoBufPtr = alignPtr(conv->weightsWinoBuf.data(), VEC_ALIGN);
+            float* wptrWino = conv->weightsWinoBufPtr;
+            memset(wptrWino, 0, nweights * sizeof(wptrWino[0]));
+
+            parallel_for_(Range(0, K), [&](const Range& r0){
+            float kernelTm[_FX_WINO_AREA];
+            for (int k = r0.start; k < r0.end; k++)
+            {
+                int g = k / Kg;
+                int k_ = k - g*Kg;
+                int ki = k_ / _FX_WINO_KBLOCK;
+                int dk = k_ - ki*_FX_WINO_KBLOCK;
+
+                for (int c = 0; c < Cg; c++)
+                {
+                    // wstep = Hk*Wk*Cg
+                    const float *kernel0 = srcWeights + k * wstep + c * ksize;
+
+                    // transform kernel, transposed
+                    const float *k0 = kernel0;
+                    const float *k1 = kernel0 + 3;
+                    const float *k2 = kernel0 + 6;
+
+                    // h
+                    float tmp[8][3];
+                    for (int i = 0; i < 8; i++)
+                    {
+                        tmp[i][0] = k0[0] * ktm[i][0] + k0[1] * ktm[i][1] + k0[2] * ktm[i][2];
+                        tmp[i][1] = k1[0] * ktm[i][0] + k1[1] * ktm[i][1] + k1[2] * ktm[i][2];
+                        tmp[i][2] = k2[0] * ktm[i][0] + k2[1] * ktm[i][1] + k2[2] * ktm[i][2];
+                    }
+
+                    // v
+                    for (int j = 0; j < 8; j++)
+                    {
+                        float *tmpp = &tmp[j][0];
+
+                        for (int i = 0; i < 8; i++)
+                            kernelTm[j * 8 + i] = tmpp[0] * ktm[i][0] + tmpp[1] * ktm[i][1] + tmpp[2] * ktm[i][2];
+                    }
+
+                    // repack the data.
+                    float* wptr = wptrWino + (g*Kg_nblocks + ki) * Cg *_FX_WINO_KBLOCK*_FX_WINO_AREA +
+                                  (c*_FX_WINO_KBLOCK + dk)*_FX_WINO_ATOM_F32;
+                    for (int i = 0; i < _FX_WINO_NATOMS_F32; i++,
+                            wptr += Cg * _FX_WINO_KBLOCK * _FX_WINO_ATOM_F32)
+                    {
+                        CV_Assert(conv->weightsWinoBufPtr <= wptr && wptr + _FX_WINO_ATOM_F32 <= conv->weightsWinoBufPtr + nweights);
+                        memcpy(wptr, kernelTm + i * _FX_WINO_ATOM_F32, _FX_WINO_ATOM_F32*sizeof (wptr[0]));
+                    }
+                }
+            }});
+        }
+
         // The weights are packed as
         // ngroups x (ceil((K/ngroups)/CONV_MR)*CONV_MR) x (Cg*Hk*Wk) x CONV_MR tensor
         int Kg = K/ngroups, Cg = max(C/ngroups, 1);
@@ -84,8 +161,9 @@ Ptr<FastConv2d> initFastConv2d(
         int Kg_aligned = numStripsMR * CONV_MR;
         int HkWkCg = Hk*Wk*Cg;
         size_t nweights = ngroups*Kg_aligned*HkWkCg;
-        conv->weightsBuf.reserve(nweights);
-        float* weightsBufPtr = conv->weightsBuf.data();
+        conv->weightsBuf.reserve(nweights + VEC_ALIGN);
+        conv->weightsBufPtr = alignPtr(conv->weightsBuf.data(), VEC_ALIGN);
+        float* weightsBufPtr = conv->weightsBufPtr;
         memset(weightsBufPtr, 0, nweights*sizeof(weightsBufPtr[0]));
 
         // Pack the weight.
@@ -114,18 +192,12 @@ Ptr<FastConv2d> initFastConv2d(
                 }
             }
         }});
-
-        // Prepare Weight for Winograd F(6x6, 3x3)
-        if (conv->useWinograd63)
-        {
-            initWinograd63(conv, weightsMat, K, C);
-        }
     }
 
     // store bias; append some zero's to make sure that
     // we can always read MR elements starting from any valid index
     {
-        int k = 0, nbias = K + CONV_MR - 1;
+        int k = 0, nbias = K + 32;
         conv->biasBuf.reserve(nbias);
         float* biasBufPtr = conv->biasBuf.data();
         for(; k < K; k++)
@@ -185,19 +257,16 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
     else
         activ = nullptr;
 
-    if (conv->ngroups  > 1 && conv->ngroups == conv->K && conv->ngroups == conv->C)
+    if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE)
     {
         CV_Assert(fusedAddMat.empty()); // Depthwise-Convolution layer should not be followed by Add layer.
         return runDepthwise(input, output, conv, minval, maxval, activ, ifMinMaxAct);
     }
-
-#if CV_NEON
-    if (conv->useWinograd63 && inputShape[2] > 12 && inputShape[3] > 12)
+    else if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3 && inputShape[2] >= 12 && inputShape[3] >= 12) // winograd
     {
-        if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
-            return;
+        CV_Assert(conv->weightsWinoBufPtr);
+        return runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct);
     }
-#endif
 
     int N = inputShape[0], C = inputShape[1], Hi = inputShape[2], Wi = inputShape[3];  // [N, C, H, W]
     int K = conv->K, Hk = conv->Hk, Wk = conv->Wk;
@@ -217,7 +286,6 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
     bool fast_1x1 = stride_x == 1 && stride_y == 1 && ksize == 1;
     int HkWkCg = Hk*Wk*Cg;
 
-    enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F }; // Memory alignment.
     int MAX_STRIPES = 2; // (56 + CONV_NR - 1)/CONV_NR;
 
     // Friendly to L1 cache
@@ -447,7 +515,7 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
                 }
 
                 yx0 = yx0_saved;
-                float* weights = conv->weightsBuf.data() + g * Kg_aligned * HkWkCg;
+                float* weights = conv->weightsBufPtr + g * Kg_aligned * HkWkCg;
                 const float* biasptr = conv->biasBuf.data() + Kg * g;
                 int ldc = nstripes * CONV_NR;
 

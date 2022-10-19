@@ -333,7 +333,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         ofstab[k] = dy * Wi + dx;
     }
 
-    const float *weights0 = conv->weightsBuf.data(), *bias = conv->biasBuf.data();
+    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
     int inner_ytop = (pad_bottom + stride_y - 1) / stride_y, inner_ybottom = 3;
     int inner_xleft = (pad_left + stride_x - 1) / stride_x, inner_xright = 4;
 
