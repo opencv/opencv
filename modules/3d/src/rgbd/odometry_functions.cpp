@@ -42,29 +42,6 @@ static void randomSubsetOfMask(InputOutputArray _mask, float part)
 }
 
 
-static UMat validDepthMask(InputArray _depth)
-{
-    Mat depth_value = _depth.getMat();
-    CV_Assert(depth_value.type() == DEPTH_TYPE);
-    Mat m(depth_value.size(), CV_8UC1, Scalar(255));
-    for (int y = 0; y < depth_value.rows; y++)
-    {
-        const float* drow = depth_value.ptr<float>(y);
-        for (int x = 0; x < depth_value.cols; x++)
-        {
-            float v = drow[x];
-            // ignore small, negative, Inf, NaN values
-            if (!(v > FLT_EPSILON))
-                m.at<uchar>(y, x) = 0;
-        }
-    }
-    //TODO: check if we need this clone() call
-    UMat umask;
-    m.copyTo(umask);
-    return umask;
-}
-
-
 static UMat prepareScaledDepth(OdometryFrame& frame)
 {
     UMat depth;
@@ -294,7 +271,9 @@ static void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
         CV_Assert(scaledDepth.size() == grayImage.size());
     }
 
-    UMat depthMask = validDepthMask(scaledDepth);
+    UMat depthMask;
+    // ignore small, negative, Inf, NaN values
+    cv::compare(scaledDepth, Scalar(FLT_EPSILON), depthMask, CMP_GT);
 
     UMat mask;
     frame.getMask(mask);
@@ -377,7 +356,9 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
         scaledDepth = prepareScaledDepth(frame);
     }
 
-    UMat depthMask = validDepthMask(scaledDepth);
+    UMat depthMask;
+    // ignore small, negative, Inf, NaN values
+    cv::compare(scaledDepth, Scalar(FLT_EPSILON), depthMask, CMP_GT);
 
     UMat mask;
     frame.getMask(mask);
