@@ -2,6 +2,7 @@ name: PR:3.4
 
 on:
   pull_request:
+    types: [opened, reopened, labeled, unlabeled, synchronize]
     branches:
       - 3.4
 
