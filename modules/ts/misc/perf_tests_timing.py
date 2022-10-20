@@ -100,7 +100,7 @@ if __name__ == "__main__":
             suit_time = 0
             suit_num = 0
             fails_num = 0
-            for name in sorted(test_cases, key=alphanum_keyselector):
+            for name in sorted(test_cases.keys(), key=alphanum_keyselector):
                 cases = test_cases[name]
 
                 groupName = next(c for c in cases if c).shortName()

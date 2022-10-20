@@ -222,7 +222,7 @@ if __name__ == "__main__":
         exit(1)
 
     for i in range(argsnum):
-        arglists[i] = sorted([str(key) for key in arglists[i]], key=alphanum_keyselector)
+        arglists[i] = sorted([str(key) for key in arglists[i].keys()], key=alphanum_keyselector)
 
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))
