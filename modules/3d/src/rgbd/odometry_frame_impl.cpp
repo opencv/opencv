@@ -14,7 +14,6 @@ namespace cv
 OdometryFrame::OdometryFrame(InputArray image, InputArray depth, InputArray mask, InputArray normals)
 {
     this->impl = makePtr<OdometryFrame::Impl>();
-    //TODO: expand all of this
     if (!image.empty())
     {
         image.copyTo(this->impl->image);
