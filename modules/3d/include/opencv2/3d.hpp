@@ -2535,7 +2535,7 @@ public:
     *
     * @param point The point data in Point3f format.
     */
-    void insertPoint(const Point3f& point);
+    bool insertPoint(const Point3f& point);
 
     /** @brief Read point cloud data and create OctreeNode.
     *
