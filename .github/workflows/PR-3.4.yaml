@@ -5,6 +5,10 @@ on:
     branches:
       - 3.4
 
+concurrency:
+  group: ${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   Ubuntu2004-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-ARM64.yaml@main
