@@ -1,4 +1,5 @@
-import sys, traceback, cv2 as cv, numpy as np, os, json, argparse, matplotlib.pyplot as plt, time, joblib, multiprocessing
+import sys, cv2 as cv, numpy as np, os, pickle, json, argparse, matplotlib.pyplot as plt, time, joblib, multiprocessing
+from datetime import datetime
 
 def getDimBox(pts):
     return np.array([[pts[...,k].min(), pts[...,k].max()] for k in range(pts.shape[-1])])
@@ -40,6 +41,24 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx):
     ax.set_box_aspect((dim_box[0, 1] - dim_box[0, 0], dim_box[1, 1] - dim_box[1, 0], dim_box[2, 1] - dim_box[2, 0]))
     ax.set_xlabel('x', fontsize=20); ax.set_ylabel('y', fontsize=20); ax.set_zlabel('z', fontsize=20)
     ax.view_init(azim=90, elev=-40)
+
+def showUndistorted(image_points, Ks, distortions, image_names, image_sizes):
+    detection_mask = getDetectionMask(image_points)
+    for cam in range(len(image_points)):
+        detected_imgs = np.where(detection_mask[cam])[0]
+        random_frame = np.random.RandomState(0).choice(detected_imgs, 1, replace=False)[0]
+        undistorted_pts = cv.undistortPoints(image_points[cam][random_frame], Ks[cam], distortions[cam], P=Ks[cam])[:,0]
+        fig = plt.figure()
+        if image_names is not None:
+            undistorted_img = cv.undistort(cv.imread(image_names[cam][random_frame]), Ks[cam], distortions[cam])
+            plt.imshow(undistorted_img)
+        else:
+            ax = fig.add_subplot(111)
+            ax.set_aspect('equal', 'box')
+            ax.set_xlabel('x', fontsize=20)
+            ax.set_ylabel('y', fontsize=20)
+        plt.scatter(undistorted_pts[:,0], undistorted_pts[:,1], s=10)
+        plt.title('Undistorted. Camera '+str(cam)+' frame '+str(random_frame), loc='center', wrap=True, fontsize=16)
 
 def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dist_coeff, is_fisheye, cam_idx, frame_idx, per_acc, image=None):
     rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)[:2]
@@ -92,7 +111,14 @@ def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dis
     ax.legend(legend, legend_str, fontsize=15)
     ax.set_title(title, loc='center', wrap=True, fontsize=16)
 
-def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, image_names=None, find_intrinsics_in_advance=False, Ks=None, distortions=None):
+def getDetectionMask(image_points):
+    detection_mask = np.zeros((len(image_points), len(image_points[0])), dtype=int)
+    for i in range(len(image_points)):
+        for j in range(len(image_points[0])):
+            detection_mask[i,j] = int(len(image_points[i][j]) != 0)
+    return detection_mask
+
+def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, path_to_save, image_names=None, find_intrinsics_in_python=False, Ks=None, distortions=None):
     """
     pattern_points: NUM_POINTS x 3 (numpy array)
     image_points: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2
@@ -102,19 +128,16 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
 
     num_cameras = len(image_points)
     num_frames = len(image_points[0])
-    detection_mask = np.zeros((num_cameras, num_frames), dtype=int)
+    detection_mask = getDetectionMask(image_points)
     pattern_points_all = [pattern_points] * num_frames
-    for i in range(num_cameras):
-        for j in range(num_frames):
-            detection_mask[i,j] = int(len(image_points[i][j]) != 0)
     with np.printoptions(threshold=np.inf):
-        print("detection mask Matrix:\n", np.transpose(detection_mask))
+        print("detection mask Matrix:\n", str(detection_mask).replace('0\n ', '0').replace('1\n ', '1'))
 
     if Ks is not None and distortions is not None:
         USE_INTRINSICS_GUESS = True
     else:
-        USE_INTRINSICS_GUESS = find_intrinsics_in_advance
-        if find_intrinsics_in_advance:
+        USE_INTRINSICS_GUESS = find_intrinsics_in_python
+        if find_intrinsics_in_python:
             Ks, distortions = [], []
             for c in range(num_cameras):
                 if is_fisheye[c]:
@@ -136,11 +159,10 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
                               Ks=Ks,
                               distortions=distortions,
                               is_fisheye=np.array(is_fisheye, dtype=int),
-                              USE_INTRINSICS_GUESS=USE_INTRINSICS_GUESS,
+                              use_intrinsics_guess=USE_INTRINSICS_GUESS,
                               flags_intrinsics=0)
     print('calibration time', time.time() - start_time, 'seconds')
     assert success
-    Rs = [cv.Rodrigues(rvec)[0] for rvec in rvecs]
     print('rvecs', Rs)
     print('tvecs', Ts)
     print('K', Ks)
@@ -150,6 +172,17 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
     with np.printoptions(precision=2):
         print('mean RMS errors per camera', np.array([np.mean(errs[errs > 0]) for errs in errors_per_frame]))
 
+    save_file = path_to_save if path_to_save != '' else datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")+'.pkl'
+    pickle.dump({'rvecs': rvecs, 'Ts': Ts, 'Ks': Ks, 'distortions': distortions, 'rvecs0': rvecs0, 'tvecs0': tvecs0, 'errors_per_frame': errors_per_frame,
+        'output_pairs': output_pairs, 'image_points': image_points, 'images_names': image_names, 'is_fisheye': is_fisheye, 'image_sizes': image_sizes,
+        'object_points': pattern_points}, open(save_file, 'wb'))
+
+    visualizeResults(rvecs, Ts, Ks, distortions, is_fisheye, image_points, errors_per_frame, rvecs0, tvecs0, pattern_points, image_sizes, output_pairs, image_names)
+
+def visualizeResults(rvecs, Ts, Ks, distortions, is_fisheye, image_points, errors_per_frame, rvecs0, tvecs0, pattern_points, image_sizes, output_pairs, image_names):
+    Rs = [cv.Rodrigues(rvec)[0] for rvec in rvecs]
+    errors = errors_per_frame[errors_per_frame > 0]
+    detection_mask = getDetectionMask(image_points)
     detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
     frame_idx = detection_mask_idxs[1,0]
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
@@ -161,7 +194,12 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, i
             tvecs0[frame_idx], rvecs[cam_idx], Ts[cam_idx], Ks[cam_idx], distortions[cam_idx],
             is_fisheye[cam_idx], cam_idx, frame_idx, 1e2*(errors_per_frame[cam_idx,frame_idx]<errors).sum()/len(errors), image)
     plot(detection_mask_idxs[0,0], detection_mask_idxs[1,0])
+    showUndistorted(image_points, Ks, distortions, image_names, image_sizes)
     plt.show()
+
+def visualizeFromPickle(file):
+    data = pickle.load(open(file, 'rb'))
+    visualizeResults(**data)
 
 def chessboard_points(grid_size, dist_m):
     pattern = np.zeros((grid_size[0]*grid_size[1],3), np.float32)
@@ -216,9 +254,12 @@ def detect(cam_idx, frame_idx, img_name, pattern_type, grid_size, criteria, wins
         # plt.show()
         return cam_idx, frame_idx, img_size, np.array(corners2, dtype=np.float32).reshape(-1,2)
     else:
+        # plt.imshow(img_detection)
+        # plt.show()
         return cam_idx, frame_idx, img_size, np.array([], dtype=np.float32)
 
-def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, winsize, points_json_file, debug_corners, RESIZE_IMAGE=True, find_intrinsics_in_advance=False, is_parallel_detection=True):
+def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, winsize, points_json_file, debug_corners,
+        path_to_save, RESIZE_IMAGE=False, find_intrinsics_in_python=False, is_parallel_detection=True):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -294,9 +335,9 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
             image_points_cameras_list.append(cam_pts)
         json.dump({'object_points': pattern.tolist(), 'image_points': image_points_cameras_list, 'image_sizes': image_sizes, 'is_fisheye': is_fisheye}, open(points_json_file, 'w'))
 
-    calibrateFromPoints(pattern, image_points_cameras, image_sizes, is_fisheye, all_images_names, find_intrinsics_in_advance)
+    calibrateFromPoints(pattern, image_points_cameras, image_sizes, is_fisheye, path_to_save, all_images_names, find_intrinsics_in_python)
 
-def calibrateFromJSON(json_file, find_intrinsics_in_advance=False):
+def calibrateFromJSON(json_file, path_to_save, find_intrinsics_in_python=False):
     assert os.path.exists(json_file)
     data = json.load(open(json_file, 'r'))
     for i in range(len(data['image_points'])):
@@ -306,7 +347,7 @@ def calibrateFromJSON(json_file, find_intrinsics_in_advance=False):
     distortions = data['distortions'] if 'distortions' in data else None
     images_names = data['images_names'] if 'images_names' in data else None
     calibrateFromPoints(np.array(data['object_points'], dtype=np.float32).T, data['image_points'], data['image_sizes'],
-        data['is_fisheye'], images_names, find_intrinsics_in_advance, Ks, distortions)
+        data['is_fisheye'], path_to_save, images_names, find_intrinsics_in_python, Ks, distortions)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -316,13 +357,22 @@ if __name__ == '__main__':
     parser.add_argument('--pattern_type', type=str, default=None, help='supported: checkeboard, circles, acircles')
     parser.add_argument('--fisheye', type=str, default=None, help='fisheye mask, e.g., 0,1,...')
     parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
-    parser.add_argument('--find_intrinsics_in_advance', type=int, default=0, help='calibrate intrinsics in advance, 0 - False, 1 - True')
+    parser.add_argument('--find_intrinsics_in_python', type=int, default=0, help='calibrate intrinsics in Python sample instead of C++, 0 - False, 1 - True')
     parser.add_argument('--winsize', type=str, default='5,5', help='window size for corners detection: w,h')
     parser.add_argument('--debug_corners', type=str, default='False', help='debug flag for corners detection visualization of images (True or False)')
     parser.add_argument('--points_json_file', type=str, default='', help='if path is provided then image and object points will be saved to JSON file.')
+    parser.add_argument('--path_to_save', type=str, default='', help='path to save results in pickle file')
+    parser.add_argument('--path_to_visualize', type=str, default='', help='path to results pickle file needed to run visualization')
+    parser.add_argument('--visualize', type=str, default='False', help='visualization flag (True or False), if True only runs visualization but path_to_visualize must be provided')
     params, _ = parser.parse_known_args()
+
+    if eval(params.visualize):
+        assert os.path.exists(params.path_to_visualize), 'Path to result file does not exist ('+params.path_to_visualize+')'
+        visualizeResults(params.path_to_visualize)
+        sys.exit(0)
+
     if params.json_file is not None:
-        calibrateFromJSON(params.json_file, params.find_intrinsics_in_advance==1)
+        calibrateFromJSON(params.json_file, params.path_to_save, params.find_intrinsics_in_python==1)
     else:
         if (params.fisheye is None and params.filenames is None and params.pattern_type is None and \
                 params.pattern_size is None and params.pattern_distance is None):
@@ -330,4 +380,5 @@ if __name__ == '__main__':
         calibrateFromImages(params.filenames.split(','), [int(v) for v in params.pattern_size.split(',')],
             params.pattern_type, [bool(int(v)) for v in params.fisheye.split(',')], params.pattern_distance,
             winsize=tuple([int(v) for v in params.winsize.split(',')]), points_json_file=params.points_json_file,
-            debug_corners=eval(params.debug_corners), find_intrinsics_in_advance=params.find_intrinsics_in_advance==1)
+            debug_corners=eval(params.debug_corners), path_to_save=params.path_to_save,
+            find_intrinsics_in_python=params.find_intrinsics_in_python==1)
