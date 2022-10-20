@@ -28,28 +28,110 @@ Briefly:
 2. Calibrate pairwise cameras (using stereo calibration) using intrinsics parameters from the step 1.
 3. Do global optimization using all cameras simultaneously to refine extrinsic parameters.
 
+
+How to run:
+====
+
+Assume we have `N` camera views, for each `i`-th view there are `M` images containing pattern points (e.g., checkerboard).
+
+Python sample
+--
+There are two options to run the sample code in Python (`opencv/samples/python/multiview_calibration.py`) either with raw images or provided points.
+The first option is to prepare `N` files where each file has path to image per line (images of a specific camera of the corresponding file). For example, a file for camera `i` should look like (`file_i.txt`):
+```
+/path/to/image_1_of_camera_i
+...
+/path/to/image_M_of_camera_i
+```
+
+Then sample program could be run via command line as follows:
+```console
+$ python3 multiview_calibration.py --pattern_size W,H --pattern_type TYPE --fisheye IS_FISHEYE_1,...,IS_FISHEYE_N \
+--pattern_distance DIST --filenames /path/to/file_1.txt,...,/path/to/file_N.txt
+```
+
+Replace `W` and `H` with size of the pattern points, `TYPE` with name of a type of the calibration grid (supported patterns: `checkerboard`, `circles`, `acircles`), `IS_FISHEYE` corresponds to the camera type (1 - is fisheye, 0 - pinhole), `DIST` is pattern distance (i.e., distance between two cells of checkerboard).
+The sample script automatically detects image points accordingly to the specified pattern type. By default detection is done in parallel, but this option could be turned off.
+
+Additional (optional) flags to Python sample that could be used are as follows:
+* `--winsize` - pass values `H,W` to define window size for corners detection (default is 5,5).
+* `--debug_corners` - pass `True` or `False`. If `True` program shows several random images with detected corners for user to manually verify the detection (default is `False`).
+* `--points_json_file` - pass name of JSON file where image and pattern points could be saved after detection. Later this file could be used to run sample code. Default value is '' (nothing is saved).
+* `--find_intrinsics_in_python` - pass `0` or `1`. If `1` then the Python sample automatically calibrates intrinsics parameters and reports reprojection errors. The multiview calibration is done only for extrinsics parameters. This flag aims to separate calibration process and make it easier to debug what goes wrong.
+* `--path_to_save` - path to save results in pickle file
+* `--path_to_visualize` - path to results pickle file needed to run visualization
+* `--visualize` - visualization flag (True or False), if True only runs visualization but path_to_visualize must be provided
+
+Alternatively, the Python sample could be run from JSON file that should contain image points, pattern points, and boolean indicator whether a camera is fisheye.
+The example of JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (currently under [pull request](https://github.com/opencv/opencv_extra/pull/1001)). Its format should be dictionary with the following items:
+* `object_points` - list of lists of pattern (object) points (size NUM_POINTS x 3).
+* `image_points` - list of lists of lists of lists of image points (size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2).
+* `image_sizes` - list of tuples (width x height) of image size.
+* `is_fisheye` - list of boolean values (true - fisheye camera, false - otherwise).
+Optionally:
+* `Ks` and `distortions` - intrinsics parameters. If they are provided in JSON file then the proposed method does not estimate intrinsics parameters. `Ks` (intrinsic matrices) is list of lists of lists (NUM_CAMERAS x 3 x 3), `distortions` is list of lists (NUM_CAMERAS x NUM_VALUES) of distortion parameters.
+* `images_names` - list of lists (NUM_CAMERAS x NUM_FRAMES x string) of image filenames for visualization of points after calibration.
+
+```console
+$ python3 multiview_calibration.py --json_file /path/to/json
+```
+
+The description of flags could be found directly by running the sample script with `help` option:
+```console
+python3 multiview_calibration.py --help
+```
+
+
+The expected output in Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/`) should be the following:
+![](images/terminal-demo.png)
+
+Python visualization:
+----
+Apart from estimated extrinsics / intrinsics, the python sample provides a comprehensive visualization.
+Firstly, the sample shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
+If images are not known, then a simple plot with arrows (from given point to the back-projected one) visualizing errors is shown. The color of arrows highlights the error values. Additionally, the title reports mean error on this frame, and its accuracy among other frames used in calibration.
+The following test instances were synthetically generated (see `opencv/apps/python-calibration-generator/calibration_generator.py`):
+
+![](images/1.png)
+
+![](images/2.png)
+
+This instance has large Gaussian points noise.
+
+![](images/3.png)
+
+Another example, with more complex tree structure is here, it shows a weak connection between two groups of cameras.
+
+![](images/4.png)
+
+If files to images are provided, then the output is an image with plotted arrows:
+
+![](images/checkerboard.png)
+
+
 Steps in detail:
 ----
 1. If the intrinsics are not provided, the calibration procedure starts intrinsics calibration independently for each camera using OpenCV function `calibrateCamera` [see this turorial](https://github.com/opencv/opencv/blob/5.x/doc/tutorials/calib3d/camera_calibration/camera_calibration.markdown).
-* a\. If input is a combination of fisheye and pinhole cameras, then fisheye images are calibrated with the default OpenCV calibrate function. The reason is that stereo calibration in OpenCV does not support a mix of fisheye and pinhole cameras. The following flags are used in this scenario;
-* * i\. [CALIB_RATIONAL_MODEL](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa204766e24f2e413e7a7c9f8b9e93f16c) - it extends default (5 coefficients) distortion model and returns more parameters.
-* * ii\. [CALIB_ZERO_TANGENT_DIST](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa769b5792d4e9c4ae073eaf317aec73ef) - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
-* * iii\. [CALIB_FIX_K5](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa5e080a1f6b8e545196c2c2e874dce6ac), [CALIB_FIX_K6](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa7d57502505ca433b25116aebadf33088) - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
-* b\. Output of intrinsic calibration is also rotation, translation vectors (transform of pattern points to camera frame), and errors per frame.
-* * i\. For each frame, the index of the camera with the lowest error among all cameras is saved.
+* a. If input is a combination of fisheye and pinhole cameras, then fisheye images are calibrated with the default OpenCV calibrate function. The reason is that stereo calibration in OpenCV does not support a mix of fisheye and pinhole cameras. The following flags are used in this scenario;
+* * i. [#CALIB_RATIONAL_MODEL](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa204766e24f2e413e7a7c9f8b9e93f16c) - it extends default (5 coefficients) distortion model and returns more parameters.
+* * ii. [#CALIB_ZERO_TANGENT_DIST](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa769b5792d4e9c4ae073eaf317aec73ef) - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
+* * iii. [#CALIB_FIX_K5](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa5e080a1f6b8e545196c2c2e874dce6ac), [#CALIB_FIX_K6](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa7d57502505ca433b25116aebadf33088) - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
+* b. Output of intrinsic calibration is also rotation, translation vectors (transform of pattern points to camera frame), and errors per frame.
+* * i. For each frame, the index of the camera with the lowest error among all cameras is saved.
 2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation ([see solvePnP](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d)) to estimate rotation / translation vectors, and reprojection error for each frame.
 3. Assume that cameras can be represented as nodes of a connected graph. An edge between two cameras is created if there is any image overlap over all frames. If the graph does not connect all cameras (i.e., exists a camera that has no overlap with other cameras) then calibration is not possible. Otherwise, the next step consists of finding the [maximum spanning tree](https://en.wikipedia.org/wiki/Minimum_spanning_tree) (MST) of this graph. The MST captures all best pairwise camera connections. The weight of edges across all frames is a weighted combination of multiple factors:
-* a\. The main contribution is a number of pattern points detected in both images (cameras).
-* b\. Ratio of area of convex hull of projected points in the image to the image resolution.
-* c\. Angle between cameras' optical axes (found from rotation vectors).
-* d\. Angle between the camera's optical axis and the pattern's normal vector (found from 3 non-collinear pattern's points).
+* a. The main contribution is a number of pattern points detected in both images (cameras).
+* b. Ratio of area of convex hull of projected points in the image to the image resolution.
+* c. Angle between cameras' optical axes (found from rotation vectors).
+* d. Angle between the camera's optical axis and the pattern's normal vector (found from 3 non-collinear pattern's points).
 4. The initial estimate of cameras' extrinsics is found by pairwise stereo calibration (see [stereoCalibrate](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga91018d80e2a93ade37539f01e6f07de5)). Without loss of generality, the 0-th camera’s rotation is fixed to identity and translation to zero vector, and the 0-th node becomes the root of the MST. The order of stereo calibration is selected by traversing MST in breadth first search, starting from the root. The total number of pairs (also number of edges of tree) is NUM_CAMERAS - 1, which is property of a tree graph.
 5. Given the initial estimate of extrinsics the aim is to polish results using global optimization (via Levenberq-Marquardt method, see [cv::LevMarq class](https://github.com/opencv/opencv/blob/5.x/modules/3d/include/opencv2/3d.hpp#L518)).
-* a\. To reduce the total number of parameters, all rotation / translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
-* b\. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation / translation vectors per frame.
-* c\. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is `x\*exp(-x/s)` (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` (e.g., 30) pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`.
+* a. To reduce the total number of parameters, all rotation / translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
+* b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation / translation vectors per frame.
+* c. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is $x\cdot exp(-x/s)$ (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`. The value of scale factor was found by exhaustive evaluation that forces robust function to almost linearly increase until the robust value of an error is 10 px and decrease afterwards (see graph of the function below). The value itself is equal to 30, but could be modified in OpenCV source code.
+![](images/exp.png)
 
-Input:
+Method Input:
 ----
 * Pattern (object) points. (NUM_FRAMES x) NUM_PATTERN_POINTS x 3. Points may contain a copy of pattern points along frames.
 * Image points: NUM_CAMERAS x NUM_FRAMES x NUM_PATTERN_POINTS x 2.
@@ -60,7 +142,7 @@ Input:
 * [USE_INTRINSICS_GUESS](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa6eedf3c8312d4b29edfe0a434722e2ef) - indicates whether intrinsics are provided.
 * Flags_intrinsics - flag for intrinsics estimation.
 
-Output:
+Method Output:
 ----
 * Boolean indicator of success
 * Rotation / Translation vectors of extrinsics parameters with respect to camera (relative) 0. Number of vectors is `NUM_CAMERAS-1`, for the first camera rotation / translation vectors are zero.
@@ -94,68 +176,9 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
   R*, t* = optimizeLevenbergMarquardt(R, t, pattern_points, image_points, K, distortion)
 ```
 
-Python samples:
+Python sample API:
 ----
-To demonstrate functionally of the proposed method, the corresponding sample file is created in Python that works either with raw images or provided points.
-The arguments to the sample file are either a path to a JSON file already containing all image and pattern points together with camera information; or files containing image names, and camera information passed through a command line.
-If the arguments are files containing images, the function automatically does image points detection (the pattern type has to be specified, e.g., checkerboard).
-Apart from estimated extrinsics / intrinsics, the python sample provides a comprehensive visualization.
-
-Firstly, the sample shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
-
-If images are not known, then a simple plot with arrows (from given point to the back-projected one) visualizing errors is shown. The color of arrows highlights the error values. Additionally, the title reports mean error on this frame, and its accuracy among other frames used in calibration.
-
-The following test instances were synthetically generated (see `opencv/apps/python-calibration-generator/calibration_generator.py`):
-
-![](images/1.png)
-
-![](images/2.png)
-
-This instance has large Gaussian points noise.
-
-![](images/3.png)
-
-Another example, with more complex tree structure is here, it shows a weak connection between two groups of cameras.
-
-![](images/4.png)
-
-If files to images are provided, then the output is an image with plotted arrows:
-
-![](images/checkerboard.png)
-
-How to run:
-----
-
-Assume we have `N` camera views, for each `i`-th view there are `M` images containg pattern points (e.g., checkeboard).
-
-Python
---
-
-There are two options to run the sample code in Python (`opencv/samples/python/multiview_calibration.py`).
-The first option is to prepare `N` files where each file has path to image per line (images of a specific camera of the corresponding file). For example, a file for camera `i` should look like (`file_i.txt`):
-```
-/path/to/image_1_of_camera_i
-...
-/path/to/image_M_of_camera_i
-```
-
-Then sample program could be run via command line as follows:
-```console
-$ python3 multiview_calibration.py --pattern_size W,H --pattern_type TYPE --fisheye IS_FISHEYE_1,...,IS_FISHEYE_N \
---pattern_distance DIST --filenames /path/to/file_1.txt,...,/path/to/file_N.txt
-```
-
-Replace `W` and `H` with size of the pattern points, `TYPE` with name of a type of the calibration grid (supported patterns: `checkerboard`, `circles`, `acircles`), `IS_FISHEYE` corresponds to the camera type (1 - is fisheye, 0 - pinhole), `DIST` is pattern distance (i.e., distance between two cells of checkerboard).
-
-Additional (optional) flags to Python sample that could be used are as follows:
-* `--winsize` - pass values `H,W` to define window size for corners detection (default is 5,5).
-* `--debug_corners` - pass `True` or `False`. If `True` program shows several random images with detected corners for user to manually verify the detection (default is `False`).
-* `--points_json_file` - pass name of JSON file where image and pattern points could be saved after detection. Later this file could be used to run sample code. Default value is '' (nothing is saved).
-* `--find_intrinsics_in_advance` - pass `0` or `1`. If `1` then Python sample automatically does intrinsics calibration and reports a reprohjection error. The multiview calibration is done only for extrinsics parameters.
-
-The sample code automatically detects pattern points on images in parallel (beware of window size and criteria for detection that may are needed to be adjusted manually):
-
-```{r, eval = FALSE}
+```python
 if pattern_type.lower() == 'checkerboard':
     ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
 elif pattern_type.lower() == 'circles':
@@ -186,62 +209,82 @@ success, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pa
                           flags_intrinsics=0)
 ```
 
-Alternatively, the Python sample could be run from JSON file that should contain image points, pattern points, and boolean indicator whether a camera is fisheye.
-The example of JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (currently under [pull request](https://github.com/opencv/opencv_extra/pull/1001)). Its format should be dictionary with the following items:
-* `object_points` - list of lists of pattern (object) points (size NUM_POINTS x 3).
-* `image_points` - list of lists of lists of lists of image points (size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2).
-* `image_sizes` - list of tuples (width x height) of image size.
-* `is_fisheye` - list of boolean values (true - fisheye camera, false - otherwise).
-Optionally:
-* `Ks` and `distortions` - intrinsics parameters. If they are provided in JSON file then the proposed method does not estimate intrinsics parameters. `Ks` (intrinsic matrices) is list of lists of lists (NUM_CAMERAS x 3 x 3), `distortions` is list of lists (NUM_CAMERAS x NUM_VALUES) of distortion parameters.
-* `images_names` - list of lists (NUM_CAMERAS x NUM_FRAMES x string) of image filenames for visualization of points after calibration.
-
-```console
-$ python3 multiview_calibration.py --json_file /path/to/json
-```
-
-C++
+C++ sample API
 --
 
-To run the calibration procedure in C++ follow the steps:
-1. Initialize data.
-
+To run the calibration procedure in C++ follow the steps (see sample script in `opencv/samples/cpp/multiview_calibration_sample.cpp`):
+1. Prepare data similarly to Python sample, ie., pattern size and scale, fisheye camera mask, files containing image filenames, and pass them to function:
 ```cpp
-cv::Mat detection_mask = cv::Mat_<int>(NUM_CAMERAS, NUM_FRAMES);
-std::vector<std::vector<cv::Mat>> image_points(NUM_CAMERAS, std::vector<cv::Mat>(NUM_FRAMES));
-std::vector<Size> image_sizes(NUM_CAMERAS);
-std::vector<bool> is_fisheye(NUM_CAMERAS);
-std::vector<std::vector<cv::Point3f>> objPoints;
-// todo: init object points accordingly to pattern (e.g., checkeboard)
-// output data:
-std::vector<cv::Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
-cv::Mat output_pairs, errors_mat;
+void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type,
+           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames);
 ```
-
-2. Detect pattern points on images.
-3. Build detection mask matrix.
+2. Initialize data.
 
 ```cpp
-for (int c = 0; c < NUM_CAMERAS; c++) {
-  // image_sizes[c] = ... ; // todo: initialize image size
-  // is_fisheye[c] = ....; // todo: true if fisheye, false otherwise
-  for (int f = 0; f < NUM_FRAMES; f++) {
-    // read image
-    cv::Mat gray, corners, img = cv::imread(filenames[c][f]);
-    // convert image to grayscale
-    cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
-    // find pattern points on image, e.g., for checkerboard
-    bool success = cv::findChessboardCorners(gray, pattern_size, corners);
-    // save
-    detection_mask.at<int>(c, f) = success;
-    if (success) corners.copyTo(image_points[c][f]);
-  }
+std::vector<cv::Vec3f> board (pattern_size.area());
+const int num_cameras = (int)is_fisheye.size();
+std::vector<std::vector<cv::Mat>> image_points_all;
+std::vector<cv::Size> image_sizes;
+std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
+std::vector<cv::Mat> Ks, distortions, Ts, Rs;
+cv::Mat rvecs0, tvecs0, errors_mat, output_pairs;
+if (pattern_type == "checkerboard") {
+    for (int i = 0; i < pattern_size.height; i++) {
+        for (int j = 0; j < pattern_size.width; j++) {
+            board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0) * pattern_scale;
+        }
+    }
 }
 ```
 
-4. Run calibration.
+3. Detect pattern points on images.
+```cpp
+int num_frames = -1;
+for (const auto &filename : filenames) {
+    std::fstream file(filename);
+    std::string img_file;
+    std::vector<cv::Mat> image_points_cameras;
+    bool save_img_size = true;
+    while (std::getline(file, img_file)) {
+        if (img_file.empty())
+            break;
+        std::cout << img_file << "\n";
+        cv::Mat img = cv::imread(img_file), corners;
+        if (save_img_size) {
+            image_sizes.emplace_back(cv::Size(img.cols, img.rows));
+            save_img_size = false;
+        }
+        cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+        bool success = false;
+        if (pattern_type == "checkerboard") {
+            success = cv::findChessboardCorners(img, pattern_size, corners);
+        }
+        if (success && corners.rows == pattern_size.area())
+            image_points_cameras.emplace_back(corners);
+        else
+            image_points_cameras.emplace_back(cv::Mat());
+    }
+    if (num_frames == -1)
+        num_frames = (int)image_points_cameras.size();
+    else
+        assert(num_frames == (int)image_points_cameras.size());
+    image_points_all.emplace_back(image_points_cameras);
+}
 
-```python
-bool ret = cv::calibrateMultiview (objPoints, image_points, image_sizes, detection_mask, Rs, Ts, Ks,
-distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false/*use_intrinsics_guess*/);
+```
+4. Build detection mask matrix.
+
+```cpp
+cv::Mat visibility = cv::Mat_<int>(num_cameras, num_frames);
+for (int i = 0; i < num_cameras; i++) {
+    for (int j = 0; j < num_frames; j++) {
+        visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
+    }
+}
+```
+
+5. Run calibration.
+```cpp
+bool ret = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
+   Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/));
 ```
