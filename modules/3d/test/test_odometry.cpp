@@ -131,8 +131,6 @@ void OdometryTest::generateRandomTransformation(Mat& rvec, Mat& tvec)
 
 void OdometryTest::checkUMats()
 {
-    //TODO: check Mat/UMat lifetime in this function
-
     Mat K = getCameraMatrix();
 
     Mat image, depth;
@@ -229,7 +227,7 @@ void OdometryTest::run()
         }
 
         // compare rotation
-        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.11f : 0.015f;
+        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.015f : 0.01f;
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
@@ -335,7 +333,7 @@ void OdometryTest::prepareFrameCheck()
         odf.getPyramidAt(maski, OdometryFramePyramidType::PYR_MASK, i);
         ASSERT_FALSE(maski.empty());
         double mnorm = cv::norm(maski, gtPyrMask[i]);
-        EXPECT_LE(mnorm, 0.0) << "Mask diff is too big at pyr level " << i;
+        EXPECT_LE(mnorm, 16 * 255.0) << "Mask diff is too big at pyr level " << i;
 
         odf.getPyramidAt(depthi, OdometryFramePyramidType::PYR_DEPTH, i);
         ASSERT_FALSE(depthi.empty());
@@ -437,11 +435,9 @@ void OdometryTest::prepareFrameCheck()
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
-//TODO: tune all these thresholds
-
 TEST(RGBD_Odometry_Rgb, algorithmic)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
@@ -466,7 +462,7 @@ TEST(RGBD_Odometry_FastICP, algorithmic)
 
 TEST(RGBD_Odometry_Rgb, UMats)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.checkUMats();
 }
 
@@ -492,7 +488,7 @@ TEST(RGBD_Odometry_FastICP, UMats)
 
 TEST(RGBD_Odometry_Rgb, prepareFrame)
 {
-    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.prepareFrameCheck();
 }
 
@@ -510,7 +506,7 @@ TEST(RGBD_Odometry_RgbdICP, prepareFrame)
 
 TEST(RGBD_Odometry_FastICP, prepareFrame)
 {
-    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.89, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.prepareFrameCheck();
 }
 
