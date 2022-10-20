@@ -1,4 +1,26 @@
 #!/usr/bin/env python
+""" Prints total execution time and number of total/failed tests.
+
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+This script uses XML test log to produce basic runtime statistics in a text or HTML table.
+
+### Example:
+
+./perf_tests_timing.py  opencv_perf_core.xml
+
+Overall time: 222.71 min
+
+Module                       Testsuit                        Time (min) Num of tests Failed
+opencv Gemm::OCL_GemmFixture                                  113.669        24
+opencv dft::Size_MatType_FlagsType_NzeroRows                   21.127       180
+opencv Dft::OCL_DftFixture                                     11.153       144
+opencv convertTo::Size_DepthSrc_DepthDst_Channels_alpha        7.992        392
+opencv Normalize::OCL_NormalizeFixture                         5.412         96
+...    ...                                                      ...         ...
+"""
 
 from __future__ import print_function
 import testlog_parser, sys, os, xml, glob, re
@@ -78,7 +100,7 @@ if __name__ == "__main__":
             suit_time = 0
             suit_num = 0
             fails_num = 0
-            for name in sorted(test_cases.iterkeys(), key=alphanum_keyselector):
+            for name in sorted(test_cases.keys(), key=alphanum_keyselector):
                 cases = test_cases[name]
 
                 groupName = next(c for c in cases if c).shortName()
