@@ -287,7 +287,9 @@ void OdometryTest::prepareFrameCheck()
     ASSERT_GT(masknz, 0);
 
     odf.getDepth(depth);
-    int depthnz = countNonZero(depth);
+    Mat patchedDepth = depth.clone();
+    patchNaNs(patchedDepth, 0);
+    int depthnz = countNonZero(patchedDepth);
     double depthNorm = cv::norm(depth, gtDepth, NORM_INF, mask);
     ASSERT_LE(depthNorm, 0.0);
 

@@ -54,7 +54,7 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
     cv::minMaxLoc(depth, nullptr, &maxv);
     UMat depthFlt;
     depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
-
+    patchNaNs(depthFlt, 0);
     frame.impl->scaledDepth = depthFlt;
 
     return depthFlt;
@@ -75,15 +75,13 @@ static void preparePyramidMask(UMat mask, const std::vector<UMat> pyramidDepth, 
 {
     minDepth = std::max(0.f, minDepth);
 
-    //TODO: fixit, this creates mask with half-tone values
     buildPyramid(mask, pyramidMask, nLevels - 1);
 
     for (int i = 0; i < nLevels; i++)
     {
         UMat maski = pyramidMask[i];
-        const UMat depthi = pyramidDepth[i].clone();
-        //TODO: do we need this?
-        patchNaNs(depthi, 0);
+        threshold(maski, maski, 254, 255, THRESH_TOZERO);
+        const UMat depthi = pyramidDepth[i];
 
         UMat gtmin, ltmax, tmpMask;
         cv::compare(depthi, Scalar(minDepth), gtmin, CMP_GT);
