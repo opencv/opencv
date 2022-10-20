@@ -15,8 +15,8 @@ class Odometry::Impl
 public:
     Impl() {};
     virtual ~Impl() {};
-    virtual void prepareFrame(OdometryFrame& frame) = 0;
-    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) = 0;
+    virtual void prepareFrame(OdometryFrame& frame) const = 0;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const = 0;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const = 0;
     virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
@@ -38,8 +38,8 @@ public:
     { }
     ~OdometryICP() { }
 
-    virtual void prepareFrame(OdometryFrame& frame) override;
-    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual void prepareFrame(OdometryFrame& frame) const override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
@@ -52,12 +52,12 @@ Ptr<RgbdNormals> OdometryICP::getNormalsComputer() const
     return this->normalsComputer;
 }
 
-void OdometryICP::prepareFrame(OdometryFrame& frame)
+void OdometryICP::prepareFrame(OdometryFrame& frame) const
 {
     prepareICPFrame(frame, frame, this->normalsComputer, this->settings, this->algtype);
 }
 
-void OdometryICP::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
+void OdometryICP::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const
 {
     prepareICPFrame(srcFrame, dstFrame, this->normalsComputer, this->settings, this->algtype);
 }
@@ -111,8 +111,8 @@ public:
     OdometryRGB(OdometrySettings _settings, OdometryAlgoType _algtype) : settings(_settings), algtype(_algtype) { }
     ~OdometryRGB() { }
 
-    virtual void prepareFrame(OdometryFrame& frame) override;
-    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual void prepareFrame(OdometryFrame& frame) const override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
@@ -121,12 +121,12 @@ public:
 };
 
 
-void OdometryRGB::prepareFrame(OdometryFrame& frame)
+void OdometryRGB::prepareFrame(OdometryFrame& frame) const
 {
     prepareRGBFrame(frame, frame, this->settings);
 }
 
-void OdometryRGB::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
+void OdometryRGB::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const
 {
     prepareRGBFrame(srcFrame, dstFrame, this->settings);
 }
@@ -178,8 +178,8 @@ public:
     OdometryRGBD(OdometrySettings _settings, OdometryAlgoType _algtype) : settings(_settings), algtype(_algtype), normalsComputer() { }
     ~OdometryRGBD() { }
 
-    virtual void prepareFrame(OdometryFrame& frame) override;
-    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) override;
+    virtual void prepareFrame(OdometryFrame& frame) const override;
+    virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
     virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
@@ -192,12 +192,12 @@ Ptr<RgbdNormals> OdometryRGBD::getNormalsComputer() const
     return normalsComputer;
 }
 
-void OdometryRGBD::prepareFrame(OdometryFrame& frame)
+void OdometryRGBD::prepareFrame(OdometryFrame& frame) const
 {
     prepareRGBDFrame(frame, frame, this->normalsComputer, this->settings, this->algtype);
 }
 
-void OdometryRGBD::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
+void OdometryRGBD::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const
 {
     prepareRGBDFrame(srcFrame, dstFrame, this->normalsComputer, this->settings, this->algtype);
 }
@@ -290,17 +290,17 @@ Odometry::~Odometry()
 {
 }
 
-void Odometry::prepareFrame(OdometryFrame& frame)
+void Odometry::prepareFrame(OdometryFrame& frame) const
 {
     this->impl->prepareFrame(frame);
 }
 
-void Odometry::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame)
+void Odometry::prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const
 {
     this->impl->prepareFrames(srcFrame, dstFrame);
 }
 
-bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt)
+bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const
 {
     return this->impl->compute(srcFrame, dstFrame, Rt);
 }
