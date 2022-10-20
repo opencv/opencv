@@ -13,8 +13,6 @@
 namespace cv
 {
 
-//TODO: cleanup this file, remove unused
-
  /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
   * a limit. For a float/double, we just check if it is a NaN
   * @param depth the depth to check for validity

@@ -314,11 +314,10 @@ void OdometryTest::prepareFrameCheck()
     EXPECT_EQ(scalednz, depthnz);
 
     std::vector<Mat> gtPyrDepth, gtPyrMask;
-    //TODO: this depth calculation would become incorrect, fixit
+    //TODO: this depth calculation would become incorrect when we implement bilateral filtering, fixit
     buildPyramid(gtDepth, gtPyrDepth, nlevels - 1);
     for (const auto& gd : gtPyrDepth)
     {
-        //TODO: bitwise_and it with odf-provided mask
         Mat pm = (gd > ods.getMinDepth()) & (gd < ods.getMaxDepth());
         gtPyrMask.push_back(pm);
     }
