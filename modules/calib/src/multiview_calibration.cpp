@@ -477,7 +477,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
         const std::vector<Size> &imageSize, const Mat &detection_mask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
-        OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS, int flags_intrinsics) {
+        OutputArray errors_per_frame, OutputArray output_pairs, bool use_intrinsics_guess, int flags_intrinsics) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
@@ -490,7 +490,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     CV_Assert(detection_mask.rows == (int)imageSize.size());
     CV_Assert(detection_mask.cols == std::max(objPoints.rows(), objPoints.cols())); // equal number of frames
     CV_Assert(Rs.isMatVector() == Ts.isMatVector());
-    if (USE_INTRINSICS_GUESS) {
+    if (use_intrinsics_guess) {
         CV_Assert(Ks.size() == distortions.size() && Ks.size() == imageSize.size());
     }
     // normalize object points
@@ -566,7 +566,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     std::vector<int> camera_rt_best(NUM_FRAMES, -1);
     std::vector<double> camera_rt_errors(NUM_FRAMES, std::numeric_limits<double>::max());
     const double WARNING_RMSE = 15.;
-    if (!USE_INTRINSICS_GUESS) {
+    if (!use_intrinsics_guess) {
         // calibrate each camera independently to find intrinsic parameters - K and distortion coefficients
         distortions = std::vector<Mat>(NUM_CAMERAS);
         Ks = std::vector<Mat>(NUM_CAMERAS);

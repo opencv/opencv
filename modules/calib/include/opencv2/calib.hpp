@@ -1132,7 +1132,7 @@ Multiview calibraton.
 @param[in] is_fisheye of size NUM_CAMERAS -- indicates whether i-th camera is fisheye. Currently supported either all or none.
 @param[in] USE_INTRINSICS_GUESS - if true then intrinsic parameters (K and distortion) are not estimated
 @param[in] flags_intrinsics -- flags that are used for intrinsics calibration.
-@param[out] return Output: true if success, false - otherwise
+@return: true if success, false - otherwise
 @param[out] Rs Output of size NUM_CAMERAS x 3 x 1 -- rotation matrices wrt camera 0, where Rs[0] = 0
 @param[out] Ts Output of size NUM_CAMERAS x 3 x 1 -- translation vectors wrt camera 0, where Ts[0] = 0
 @param[out] rvecs0 Output of size NUM_FRAMES x 3 x 3 -- rotation vectors for camera 0 (may contain null Mat, if frame is not valid)
@@ -1141,13 +1141,16 @@ Multiview calibraton.
 @param[out] distortions Output of size NUM_CAMERAS x NUM_PARAMS
 @param[out] errors_per_frame of size NUM_CAMERAS x NUM_FRAMES - RMSE per each visible frame, (-1 for non-visible).
 @param[out] output_pairs of size (NUM_CAMERAS-1) x 2 contains pairs with camera indices that were used for initial pairwise stereo calibration.
+
+Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
+points in all the available views from both cameras.
 */
 
 CV_EXPORTS_W bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, const Mat &detection_mask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_OUT std::vector<Mat> &Ks, CV_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
-        OutputArray errors_per_frame, OutputArray output_pairs, bool USE_INTRINSICS_GUESS=false, int flags_intrinsics=0);
+        OutputArray errors_per_frame, OutputArray output_pairs, bool use_intrinsics_guess=false, int flags_intrinsics=0);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
