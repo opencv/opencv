@@ -625,7 +625,7 @@ TEST_P(RenderedNormals, check)
 
 INSTANTIATE_TEST_CASE_P(RGBD_Normals, RenderedNormals, ::testing::Combine(::testing::Values(CV_32F, CV_64F),
                                                                           ::testing::Values(
-    NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_FALS,          {  81.8210,     0}},
+    NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_FALS,          {  81.8213,     0}},
     NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD,       { 107.2710, 29168}},
     NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_SRI,           {  73.2027, 17693}},
     NormalComputerThresholds { RgbdNormals::RGBD_NORMALS_METHOD_CROSS_PRODUCT, {  57.9832,  2531}}),
