@@ -55,6 +55,8 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target> >
     }
 };
 
+static std::set<std::string> nary_eltwise_cuda_deny_ops = {"add", "equal", "greater", "less", "mean", "mul", "pow", "sub"};
+
 struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 {
     void test_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const String op, bool isRef = false)
@@ -62,6 +64,13 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
         int backendId = get<0>(GetParam());
         int targetId = get<1>(GetParam());
 
+        if (!isRef && backendId == DNN_BACKEND_CUDA)
+        {
+            if (a_shape != b_shape)
+                throw SkipTestException("The test is skipped because inputs with different shapes are not supported.");
+            if (nary_eltwise_cuda_deny_ops.find(op) != nary_eltwise_cuda_deny_ops.end())
+                throw SkipTestException("The operator '" + op + "' is skipped because is not support with cuda currently.");
+        }
         Mat a(a_shape, CV_32FC1);
         Mat b(b_shape, CV_32FC1);
 
@@ -410,6 +419,9 @@ PERF_TEST_P_(Layer_ScatterND, DISABLED_ScatterND_add)
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+#ifdef HAVE_CUDA
+INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA)));
+#endif
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 

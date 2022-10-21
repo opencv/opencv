@@ -4,11 +4,17 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <algorithm>
 #include <iterator>
 #include <numeric>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/eltwise.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -91,6 +97,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
+            op == OPERATION::PROD || op == OPERATION::DIV)
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -640,6 +649,38 @@ public:
                 CV_Error(cv::Error::BadDepth, "Unsupported type.");
         };
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        for (int i = 1; i < inputs.size(); i++)
+        {
+            auto from_wrapper = inputs[i].dynamicCast<CUDABackendWrapper>();
+            if (input_wrapper->getShape() != from_wrapper->getShape())
+                return Ptr<BackendNode>();
+        }
+
+        auto op_ = [this] {
+            switch (op) {
+                case OPERATION::MAX: return cuda4dnn::EltwiseOpType::MAX;
+                case OPERATION::MIN: return cuda4dnn::EltwiseOpType::MIN;
+                case OPERATION::SUM: return cuda4dnn::EltwiseOpType::SUM;
+                case OPERATION::PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
+                case OPERATION::DIV: return cuda4dnn::EltwiseOpType::DIV;
+                default: CV_Error(Error::StsNotImplemented, "Other operators except MAX, MIN, SUM, PRODUCT and DIV are not supported with cuda.");
+            }
+        }();
+
+        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, std::vector<float>());
+    }
+#endif
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
