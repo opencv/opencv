@@ -12,35 +12,25 @@
 #if CV_NEON && CV_NEON_AARCH64  // 32 registers.
 #define CONV_MR 4
 #define CONV_NR 28
-enum { FAST_VEC_NLANES=4 };
 #elif CV_NEON              // 16 registers.
 #define CONV_MR 4
 #define CONV_NR 12
-enum { FAST_VEC_NLANES=4 };
 #else // SIMD 128, AVX or AVX2
 #define CONV_MR 4
 #define CONV_NR 24
-
-#if CV_TRY_AVX2
-enum { FAST_VEC_NLANES=8 }; // AVX2
-#else
-enum { FAST_VEC_NLANES=4 }; // SIMD 128
 #endif
 
-#endif
-#endif
-
+// Winograd Params
 enum {
     _FX_WINO_STEP=6,
     _FX_WINO_KSIZE=3,
     _FX_WINO_SIZE=_FX_WINO_STEP+_FX_WINO_KSIZE-1,
     _FX_WINO_AREA=_FX_WINO_SIZE*_FX_WINO_SIZE,
 
-#if CV_TRY_AVX2 || (CV_NEON && CV_NEON_AARCH64)
     _FX_WINO_KBLOCK = 4,
+#if (CV_NEON && CV_NEON_AARCH64) || CV_TRY_AVX2
     _FX_WINO_IBLOCK = 6,
 #else
-    _FX_WINO_KBLOCK = 4,
     _FX_WINO_IBLOCK = 3,
 #endif
 
@@ -52,8 +42,8 @@ enum {
 
     _FX_WINO_NATOMS_F32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
 };
-
 enum { _FX_CONV_TYPE_GENERIC=0, _FX_CONV_TYPE_DEPTHWISE=1, _FX_CONV_TYPE_WINOGRAD3X3=2 };
+#endif
 
 namespace cv {
 namespace dnn {
@@ -77,8 +67,18 @@ struct FastConv2d
 #else
     bool useSIMD128 = false;
 #endif
+
+#if CV_TRY_AVX2
     bool useAVX2 = checkHardwareSupport(CPU_AVX2);
+#else
+    bool useAVX2 = false;
+#endif
+
+#if CV_NEON
     bool useNEON = checkHardwareSupport(CPU_NEON);
+#else
+    bool useNEON = false;
+#endif
 };
 
 // return a FastConv2d instance.
@@ -99,7 +99,7 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
 void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>& conv, float minval, float maxval,
         ActivationLayer* activ, bool ifMinMaxAct);
 
-void runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
 
 } // namespace dnn

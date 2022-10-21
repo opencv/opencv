@@ -78,6 +78,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                     int dilation_y, int stride_x, int stride_y, int inner_xleft, int inner_xright, int inner_ytop,
                     int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
+    const int VEC_NLANES = 8;
     __m256 vminval = _mm256_set1_ps(minval);
     __m256 vmaxval = _mm256_set1_ps(maxval);
 
@@ -174,7 +175,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                 {
                     if (dy0 == 3)
                     {
-                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                        for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -250,7 +251,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                     }
                     else
                     {
-                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                        for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -276,7 +277,7 @@ void depthWiseBlock_AVX2(const float *inptr, float *outptr, const float *weights
                 }
                 else
                 {
-                    for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                    for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                     {
                         int xi_ = x0 * stride_x - pad_left, k = 0;
                         const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -701,7 +702,6 @@ void _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep,
         z50 = _mm256_add_ps(vbias, z50);
     }
 
-    // TODO make sure the lenght of bpptr is 8.
     if (bpptr)
     {
         z00 = _mm256_add_ps(z00, _mm256_loadu_ps(bpptr));
