@@ -616,9 +616,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 #elif defined (HAVE_WAYLAND)
     return setWindowTitle_WAYLAND(winname, title);
 #else
-    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
-        "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
-        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
+    CV_NO_GUI_ERROR(CV_Func);
 #endif
 }
 
@@ -1243,8 +1241,8 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #define CV_NO_GUI_ERROR(funcname) \
     cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
-    "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "\
-    "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script", \
+    "Rebuild the library with Windows, Cocoa, Qt or Plugin support. "\
+    "If you are on Ubuntu or Debian, install qtbase5-dev, then re-run cmake", \
     funcname, __FILE__, __LINE__)
 
 
