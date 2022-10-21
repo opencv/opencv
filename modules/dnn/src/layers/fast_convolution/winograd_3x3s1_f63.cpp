@@ -13,6 +13,8 @@
 #include "fast_convolution.hpp"
 
 namespace cv { namespace dnn {
+
+#if CV_NEON || CV_SIMD128 || CV_TRY_AVX2
 enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 
 static void
@@ -141,7 +143,7 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
             vst1q_f32(outbuf + 20*64, s32);
         }
     }
-#elif CV_SIMD
+#elif CV_SIMD128
     CV_Assert(_FX_WINO_IBLOCK == 3 && _FX_WINO_KBLOCK == 4);
     for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
             outbuf += _FX_WINO_ATOM_F32)
@@ -183,15 +185,15 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
         v_store(outbuf, s00);
         v_store(outbuf + 1*64, s01);
         v_store(outbuf + 2*64, s02);
-        v_store(outbuf + 6*64, s10);
-        v_store(outbuf + 7*64, s11);
-        v_store(outbuf + 8*64, s12);
-        v_store(outbuf + 12*64, s20);
-        v_store(outbuf + 13*64, s21);
-        v_store(outbuf + 14*64, s22);
-        v_store(outbuf + 18*64, s30);
-        v_store(outbuf + 19*64, s31);
-        v_store(outbuf + 20*64, s32);
+        v_store(outbuf + 3*64, s10);
+        v_store(outbuf + 4*64, s11);
+        v_store(outbuf + 5*64, s12);
+        v_store(outbuf + 6*64, s20);
+        v_store(outbuf + 7*64, s21);
+        v_store(outbuf + 8*64, s22);
+        v_store(outbuf + 9*64, s30);
+        v_store(outbuf + 10*64, s31);
+        v_store(outbuf + 11*64, s32);
     }
 #else
     for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32;
@@ -406,7 +408,7 @@ _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep,
     vst1q_f32(outptr + outstep*13, z61);
     vst1q_f32(outptr + outstep*14, z70);
     vst1q_f32(outptr + outstep*15, z71);
-#elif CV_SIMD
+#elif CV_SIMD128
     v_float32x4 x00 = v_load(inptr), x01 = v_load(inptr + 4);
     v_float32x4 x10 = v_load(inptr + inpstep), x11 = v_load(inptr + inpstep + 4);
     v_float32x4 x20 = v_load(inptr + inpstep*2), x21 = v_load(inptr + inpstep*2 + 4);
@@ -750,8 +752,7 @@ _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep,
     vst1_f32(outptr + outstep*4 + 4, vget_low_f32(z41));
     vst1q_f32(outptr + outstep*5, z50);
     vst1_f32(outptr + outstep*5 + 4, vget_low_f32(z51));
-//#elif CV_AVX2
-#elif CV_SIMD
+#elif CV_SIMD128
     v_float32x4 x00 = v_load(inptr), x01 = v_load(inptr + 4);
     v_float32x4 x10 = v_load(inptr + inpstep), x11 = v_load(inptr + inpstep + 4);
     v_float32x4 x20 = v_load(inptr + inpstep*2), x21 = v_load(inptr + inpstep*2 + 4);
@@ -919,7 +920,7 @@ _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep,
 #endif
 }
 
-void runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv,
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv,
                   int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
     Mat input = _input.getMat();
@@ -1138,5 +1139,15 @@ void runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outp
             }
         }
     }});
+    return 1;
 }
+
+#else
+
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv,
+                  int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
+{
+    return 0;
+}
+#endif
 }} // namespace cv::dnn

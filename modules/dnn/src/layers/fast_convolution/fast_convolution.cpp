@@ -49,6 +49,15 @@ Ptr<FastConv2d> initFastConv2d(
             useWinograd && ((conv->useSIMD128 || conv->useAVX2 || conv->useNEON) && Hk == 3 && Wk == 3 &&
             dilation_y == 1 && dilation_x == 1 && stride_y == 1 && stride_x == 1) ? _FX_CONV_TYPE_WINOGRAD3X3 :
             _FX_CONV_TYPE_GENERIC;
+
+    int VEC_NLANES = 4;
+#if CV_TRY_AVX2
+    if (!conv->useAVX2 && conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // convert Winograd to generic conv.
+        conv->conv_type = _FX_CONV_TYPE_GENERIC;
+    if (conv->useAVX2)
+       VEC_NLANES = 8;
+#endif
+
     Mat weightsMat = _weightsMat.getMat();
     auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
@@ -61,7 +70,7 @@ Ptr<FastConv2d> initFastConv2d(
         int ksize = Hk*Wk;
 
         // this code aims to let memory fit with vector size.
-        int padded_ksize = ((ksize + FAST_VEC_NLANES-1) / FAST_VEC_NLANES) * FAST_VEC_NLANES;
+        int padded_ksize = ((ksize + VEC_NLANES-1) / VEC_NLANES) * VEC_NLANES;
         int nweights = C*padded_ksize;
         conv->weightsBuf.reserve(nweights + VEC_ALIGN);
         conv->weightsBufPtr = alignPtr(conv->weightsBuf.data(), VEC_ALIGN);
@@ -265,7 +274,8 @@ void runFastConv2d(InputArray _input, OutputArray _output, const Ptr<FastConv2d>
     else if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3 && inputShape[2] >= 12 && inputShape[3] >= 12) // winograd
     {
         CV_Assert(conv->weightsWinoBufPtr);
-        return runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct);
+        if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
+            return;
     }
 
     int N = inputShape[0], C = inputShape[1], Hi = inputShape[2], Wi = inputShape[3];  // [N, C, H, W]
