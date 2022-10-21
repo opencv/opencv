@@ -1175,7 +1175,7 @@ public:
 
         if (!computeMaxIdx)
         {
-            top(x, y, c, n) = { res[2] };
+            top(x, y, c, n) = res[2];
             return Ptr<BackendNode>(new HalideBackendNode(top));
         }
 
