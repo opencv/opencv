@@ -7,28 +7,28 @@ on:
 
 jobs:
   Ubuntu2004-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-ARM64.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-ARM64.yaml@asen/cancel_in_progress
 
   Ubuntu1404-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-U14.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-U14.yaml@asen/cancel_in_progress
 
   Ubuntu2004-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-U20.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-U20.yaml@asen/cancel_in_progress
 
   Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-W10.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-W10.yaml@asen/cancel_in_progress
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-macOS-ARM64.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-macOS-ARM64.yaml@asen/cancel_in_progress
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-macOS-x86_64.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-macOS-x86_64.yaml@asen/cancel_in_progress
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-iOS.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-iOS.yaml@asen/cancel_in_progress
 
   Android:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-Android.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-Android.yaml@asen/cancel_in_progress
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-3.4-docs.yaml@main
+    uses: asenyaev/ci-gha-workflow/.github/workflows/OCV-PR-3.4-docs.yaml@asen/cancel_in_progress
