@@ -8,6 +8,7 @@
         android:label="@string/app_name">
 
         <activity
+            android:exported="true"
             android:name=".Puzzle15Activity"
             android:label="@string/app_name"
             android:screenOrientation="landscape"
