@@ -95,8 +95,6 @@ TEST(videoio_ffmpeg, image)
 
 //==========================================================================
 
-#define THREADS testing::ValuesIn({ 0,1,2,2000 })
-#define RAW_READ testing::ValuesIn({true, false})
 typedef tuple<string, int, bool> videoio_read_params_t;
 typedef testing::TestWithParam< testing::tuple<videoio_read_params_t, int, bool>> videoio_read;
 
@@ -139,7 +137,9 @@ const videoio_read_params_t videoio_read_params[] =
     //videoio_read_params_t("video/big_buck_bunny.wmv", 125, true),
 };
 
-INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params), THREADS, RAW_READ));
+INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params),
+                                                             testing::Values(0, 1, 2, 2000),
+                                                             testing::Values(true, false)));
 
 //==========================================================================
 
