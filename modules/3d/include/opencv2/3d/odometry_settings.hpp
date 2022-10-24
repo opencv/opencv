@@ -33,8 +33,13 @@ public:
     int  getSobelSize() const;
     void   setSobelScale(double val);
     double getSobelScale() const;
+
     void setNormalWinSize(int val);
     int  getNormalWinSize() const;
+    void setNormalDiffThreshold(float val);
+    float getNormalDiffThreshold() const;
+    void setNormalMethod(RgbdNormals::RgbdNormalsMethod nm);
+    RgbdNormals::RgbdNormalsMethod getNormalMethod() const;
 
     void  setAngleThreshold(float val);
     float getAngleThreshold() const;

@@ -43,24 +43,16 @@ public:
     Odometry(OdometryType otype, const OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
-    /** Create new odometry frame
-     * The Type (Mat or UMat) depends on odometry type
-     */
-    OdometryFrame createOdometryFrame() const;
-
-    // Deprecated
-    OdometryFrame createOdometryFrame(OdometryFrameStoreType matType) const;
-
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
      */
-    void prepareFrame(OdometryFrame& frame);
+    void prepareFrame(OdometryFrame& frame) const;
 
     /** Prepare frame for odometry calculation
      * @param srcFrame frame will be prepared as src frame ("original" image)
      * @param dstFrame frame will be prepared as dsr frame ("rotated" image)
      */
-    void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame);
+    void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const;
 
     /** Compute Rigid Transformation between two frames so that Rt * src = dst
      * @param srcFrame src frame ("original" image)
@@ -71,10 +63,14 @@ public:
      *   R_31 R_32 R_33 t_3
      *   0    0    0    1  }
      */
-    bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt);
+    bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const;
 
-    CV_WRAP bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const;
+    CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
+
+    //TODO: document it
+    //requires frame size, initialized at prepareFrame stage()
+    Ptr<RgbdNormals> getNormalsComputer() const;
 
     class Impl;
 private:

@@ -96,45 +96,10 @@ void TsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void TsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 
 void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
     raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
-}
-
-void TsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-#ifndef HAVE_OPENCL
-    Mat points, normals;
-    raycast(cameraPose, height, width, points, normals, noArray());
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-#else
-    if (useGPU)
-    {
-        UMat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-    else
-    {
-        Mat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-#endif
 }
 
 
@@ -301,47 +266,13 @@ void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
     CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
 }
 
-void HashTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 
 void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
     raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
 }
 
-void HashTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-#ifndef HAVE_OPENCL
-    Mat points, normals;
-    raycast(cameraPose, height, width, points, normals, noArray());
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-#else
-    if (useGPU)
-    {
-        UMat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    }
-    else
-    {
-        Mat points, normals;
-        raycast(cameraPose, height, width, points, normals, noArray());
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-        outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-        outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-        outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
 
-    }
-#endif
-}
 void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     if (_colors.needed())
@@ -481,25 +412,9 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
     integrateColorTsdfVolumeUnit(settings, cameraPose, depth, image, pixNorms, volume);
 }
 
-void ColorTsdfVolume::raycast(InputArray cameraPose, OdometryFrame& outFrame) const
-{
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), outFrame);
-}
 void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
     raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
-}
-
-void ColorTsdfVolume::raycast(InputArray cameraPose, int height, int width, OdometryFrame& outFrame) const
-{
-    Mat points, normals, colors;
-    raycast(cameraPose, height, width, points, normals, colors);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
-    outFrame.setPyramidLevel(1, OdometryFramePyramidType::PYR_IMAGE);
-    outFrame.setPyramidAt(points, OdometryFramePyramidType::PYR_CLOUD, 0);
-    outFrame.setPyramidAt(normals, OdometryFramePyramidType::PYR_NORM, 0);
-    outFrame.setPyramidAt(colors, OdometryFramePyramidType::PYR_IMAGE, 0);
 }
 
 void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const

@@ -52,7 +52,7 @@ public:
     virtual ~Submap() = default;
 
     virtual void integrate(InputArray _depth, const int currframeId);
-    virtual void raycast(const Odometry& icp, const cv::Affine3f& cameraPose, cv::Size frameSize,
+    virtual void raycast(const cv::Affine3f& cameraPose, cv::Size frameSize,
                          OutputArray points = noArray(), OutputArray normals = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume.getTotalVolumeUnits()); };
@@ -112,25 +112,21 @@ void Submap<MatType>::integrate(InputArray _depth, const int currFrameId)
 }
 
 template<typename MatType>
-void Submap<MatType>::raycast(const Odometry& icp, const cv::Affine3f& _cameraPose, cv::Size frameSize,
+void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSize,
                               OutputArray points, OutputArray normals)
 {
     if (!points.needed() && !normals.needed())
     {
         MatType pts, nrm;
-
-        frame.getPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
-        frame.getPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM, 0);
+        //TODO: get depth instead of pts from raycast
         volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.height, pts, nrm);
-        frame.setPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
-        frame.setPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM,  0);
+
+        std::vector<MatType> pch(3);
+        split(pts, pch);
 
         renderFrame = frame;
 
-        Mat depth;
-        frame.getScaledDepth(depth);
-        frame = icp.createOdometryFrame();
-        frame.setDepth(depth);
+        frame = OdometryFrame(noArray(), pch[2]);
     }
     else
     {
