@@ -17,6 +17,7 @@
         android:allowBackup="true"
         android:icon="@drawable/icon">
         <activity
+            android:exported="true"
             android:name=".Tutorial4Activity"
             android:label="@string/app_name"
             android:screenOrientation="landscape"
