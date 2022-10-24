@@ -82,7 +82,11 @@ extern "C" {
 
 #include <libavutil/mathematics.h>
 #include <libavutil/opt.h>
+// https://github.com/FFmpeg/FFmpeg/blame/d79c240196f43b93bd204363f1facc270029f113/doc/APIchanges#L1689-L1695
+#if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
+    ? CALC_FFMPEG_VERSION(52, 85, 100) : CALC_FFMPEG_VERSION(53, 15, 0))
 #include <libavutil/display.h>
+#endif
 
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(51, 63, 100) : CALC_FFMPEG_VERSION(54, 6, 0))
