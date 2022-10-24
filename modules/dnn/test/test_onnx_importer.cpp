@@ -2395,7 +2395,7 @@ TEST_P(Test_ONNX_layers, CumSum)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_layers, YOLOv7)
 {
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx");
+    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
