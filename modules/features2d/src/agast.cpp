@@ -7950,23 +7950,23 @@ public:
 
     void read( const FileNode& fn) CV_OVERRIDE
     {
-      // if node is empty, keep previous value
-      if (!fn["threshold"].empty())
-        fn["threshold"] >> threshold;
-      if (!fn["nonmaxSuppression"].empty())
-        fn["nonmaxSuppression"] >> nonmaxSuppression;
-      if (!fn["type"].empty())
-        fn["type"] >> type;
+        // if node is empty, keep previous value
+        if (!fn["threshold"].empty())
+            fn["threshold"] >> threshold;
+        if (!fn["nonmaxSuppression"].empty())
+            fn["nonmaxSuppression"] >> nonmaxSuppression;
+        if (!fn["type"].empty())
+            fn["type"] >> type;
     }
     void write( FileStorage& fs) const CV_OVERRIDE
     {
-      if(fs.isOpened())
-      {
-        fs << "name" << getDefaultName();
-        fs << "threshold" << threshold;
-        fs << "nonmaxSuppression" << nonmaxSuppression;
-        fs << "type" << type;
-      }
+        if(fs.isOpened())
+        {
+            fs << "name" << getDefaultName();
+            fs << "threshold" << threshold;
+            fs << "nonmaxSuppression" << nonmaxSuppression;
+            fs << "type" << type;
+        }
     }
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE

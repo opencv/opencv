@@ -256,6 +256,7 @@ public:
 typedef AffineFeature AffineFeatureDetector;
 typedef AffineFeature AffineDescriptorExtractor;
 
+
 /** @brief Class for extracting keypoints and computing descriptors using the Scale Invariant Feature Transform
 (SIFT) algorithm by D. Lowe @cite Lowe04 .
 */
