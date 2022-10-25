@@ -38,7 +38,7 @@ class CV_EXPORTS_W OdometryFrame
 public:
     /**
      * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
-     * 
+     *
      * @param image An RGB or grayscale image (or noArray() if it's not required for used ICP algorithm).
      * Should have 3 or 4 uchar channels if it's RGB image or 1 uchar channel if it's grayscale. If it's RGB then it's converted to grayscale
      * image automatically.
@@ -51,37 +51,37 @@ public:
 
     /**
      * @brief Get the original user-provided RGB/Gray image
-     * 
+     *
      * @param image Output image
      */
     void getImage(OutputArray image) const;
     /**
      * @brief Get the gray image generated from the user-provided RGB/Gray image
-     * 
+     *
      * @param image Output image
      */
     void getGrayImage(OutputArray image) const;
     /**
      * @brief Get the original user-provided depth image
-     * 
+     *
      * @param depth Output image
      */
     void getDepth(OutputArray depth) const;
     /**
      * @brief Get the depth image generated from the user-provided one after conversion, rescale or filtering for ICP algorithm needs
-     * 
+     *
      * @param depth Output image
      */
     void getProcessedDepth(OutputArray depth) const;
     /**
      * @brief Get the valid pixels mask generated for the ICP calculations intersected with the user-provided mask
-     * 
+     *
      * @param mask Output image
      */
     void getMask(OutputArray mask) const;
     /**
      * @brief Get the normals image either generated for the ICP calculations or user-provided
-     * 
+     *
      * @param normals Output image
      */
     void getNormals(OutputArray normals) const;
@@ -94,7 +94,7 @@ public:
     /**
      * @brief Get the image generated for the ICP calculations from one of the pyramids specified by pyrType. Returns empty image if
      * the pyramid is empty or there's no such pyramid level
-     * 
+     *
      * @param img Output image
      * @param pyrType Type of pyramid
      * @param level Level in the pyramid
