@@ -32,16 +32,6 @@ static inline int getTransformDim(OdometryTransformType transformType)
 
 
 static inline
-void checkNormals(InputArray normals, const Size& depthSize)
-{
-    if (normals.size() != depthSize)
-        CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
-    if (normals.type() != CV_32FC3)
-        CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
-}
-
-
-static inline
 Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
