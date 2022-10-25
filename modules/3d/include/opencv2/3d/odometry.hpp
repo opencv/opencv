@@ -68,8 +68,11 @@ public:
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
 
-    //TODO: document it
-    //requires frame size, initialized at prepareFrame stage()
+    /**
+     * @brief Get the normals computer object used for normals calculation (if presented).
+     * The normals computer is generated at first need during prepareFrame when normals are required for the ICP algorithm
+     * but not presented by a user. Re-generated each time the related settings change or a new frame arrives with the different size.
+     */
     Ptr<RgbdNormals> getNormalsComputer() const;
 
     class Impl;
