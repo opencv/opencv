@@ -72,7 +72,7 @@ public:
      * 
      * @param depth Output image
      */
-    void getScaledDepth(OutputArray depth) const;
+    void getProcessedDepth(OutputArray depth) const;
     /**
      * @brief Get the valid pixels mask generated for the ICP calculations intersected with the user-provided mask
      * 

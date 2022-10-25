@@ -310,8 +310,7 @@ void OdometryTest::prepareFrameCheck()
         ASSERT_LE(grayNorm, 0.0);
     }
 
-    //TODO: remove it when scale issue is fixed
-    odf.getScaledDepth(scaled);
+    odf.getProcessedDepth(scaled);
     int scalednz = countNonZero(scaled);
     EXPECT_EQ(scalednz, depthnz);
 

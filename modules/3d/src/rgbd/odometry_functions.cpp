@@ -262,7 +262,7 @@ static void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
     //TODO: don't use scaled when scale bug is fixed
     UMat scaledDepth;
-    frame.getScaledDepth(scaledDepth);
+    frame.getProcessedDepth(scaledDepth);
     if (scaledDepth.empty())
     {
         scaledDepth = prepareScaledDepth(frame);
@@ -348,7 +348,7 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
     //TODO: don't use scaled when scale bug is fixed
     UMat scaledDepth;
-    frame.getScaledDepth(scaledDepth);
+    frame.getProcessedDepth(scaledDepth);
     if (scaledDepth.empty())
     {
         scaledDepth = prepareScaledDepth(frame);
@@ -410,7 +410,7 @@ static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings, 
     settings.getCameraMatrix(cameraMatrix);
 
     UMat scaledDepth, mask, normals;
-    frame.getScaledDepth(scaledDepth);
+    frame.getProcessedDepth(scaledDepth);
     frame.getMask(mask);
     frame.getNormals(normals);
 
@@ -439,6 +439,7 @@ static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings, 
         normalsComputer->apply(c0, normals);
         frame.impl->normals = normals;
     }
+    CV_Assert(normals.type() == CV_32FC4);
 
     const std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
 

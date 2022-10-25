@@ -35,7 +35,7 @@ OdometryFrame::OdometryFrame(InputArray image, InputArray depth, InputArray mask
 void OdometryFrame::getImage(OutputArray image) const { this->impl->getImage(image); }
 void OdometryFrame::getGrayImage(OutputArray image) const { this->impl->getGrayImage(image); }
 void OdometryFrame::getDepth(OutputArray depth) const { this->impl->getDepth(depth); }
-void OdometryFrame::getScaledDepth(OutputArray depth) const { this->impl->getScaledDepth(depth); }
+void OdometryFrame::getProcessedDepth(OutputArray depth) const { this->impl->getProcessedDepth(depth); }
 void OdometryFrame::getMask(OutputArray mask) const { this->impl->getMask(mask); }
 void OdometryFrame::getNormals(OutputArray normals) const { this->impl->getNormals(normals); }
 
@@ -61,7 +61,7 @@ void OdometryFrame::Impl::getDepth(OutputArray _depth) const
     _depth.assign(this->depth);
 }
 
-void OdometryFrame::Impl::getScaledDepth(OutputArray _depth) const
+void OdometryFrame::Impl::getProcessedDepth(OutputArray _depth) const
 {
     _depth.assign(this->scaledDepth);
 }
