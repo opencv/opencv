@@ -29,7 +29,7 @@ enum OdometryFramePyramidType
 /**
  * @brief An object that keeps per-frame data for Odometry algorithms from user-provided images to algorithm-specific precalculated data.
  * When not empty, it contains a depth image, a mask of valid pixels and a set of pyramids generated from that data.
- * An RGB/Gray image and normals are optional.
+ * An BGR/Gray image and normals are optional.
  * OdometryFrame is made to be used together with Odometry class to reuse precalculated data between Rt data calculations.
  * A proper way to do that is to call Odometry::prepareFrames() on prev and next frames and then pass them to Odometry::compute() method.
  */
@@ -39,24 +39,24 @@ public:
     /**
      * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
      *
-     * @param image An RGB or grayscale image (or noArray() if it's not required for used ICP algorithm).
-     * Should have 3 or 4 uchar channels if it's RGB image or 1 uchar channel if it's grayscale. If it's RGB then it's converted to grayscale
+     * @param image An BGR or grayscale image (or noArray() if it's not required for used ICP algorithm).
+     * Should be CV_8UC3 or CV_8C4 if it's BGR image or CV_8UC1 if it's grayscale. If it's BGR then it's converted to grayscale
      * image automatically.
-     * @param depth A depth image, should have 1 channel
-     * @param mask A user-provided mask of valid pixels, should have 1 uchar channel
-     * @param normals A user-provided normals to the depth surface, should have 4 float channels
+     * @param depth A depth image, should be CV_8UC1
+     * @param mask A user-provided mask of valid pixels, should be CV_8UC1
+     * @param normals A user-provided normals to the depth surface, should be CV_32FC4
      */
     OdometryFrame(InputArray image = noArray(), InputArray depth = noArray(), InputArray mask = noArray(), InputArray normals = noArray());
     ~OdometryFrame() {};
 
     /**
-     * @brief Get the original user-provided RGB/Gray image
+     * @brief Get the original user-provided BGR/Gray image
      *
      * @param image Output image
      */
     void getImage(OutputArray image) const;
     /**
-     * @brief Get the gray image generated from the user-provided RGB/Gray image
+     * @brief Get the gray image generated from the user-provided BGR/Gray image
      *
      * @param image Output image
      */
