@@ -1,6 +1,7 @@
 set(the_description "2D Features Framework")
 
 ocv_add_dispatched_file(sift SSE4_1 AVX2 AVX512_SKX)
+ocv_add_dispatched_file(sift2 SSE4_1 AVX2 AVX512_SKX)
 
 set(debug_modules "")
 if(DEBUG_opencv_features2d)
