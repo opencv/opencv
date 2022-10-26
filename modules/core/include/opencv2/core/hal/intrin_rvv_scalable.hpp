@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+// The original implementation is contributed by HAN Liutong.
+// Copyright (C) 2022, Institute of Software, Chinese Academy of Sciences.
 
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
@@ -1689,7 +1695,7 @@ OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float64, vlmul_trunc_u8mf8)
 
 ////// FP16 support ///////
 
-#if __riscv_zfh
+#if defined(__riscv_zfh) && __riscv_zfh
 inline v_float32 v_load_expand(const float16_t* ptr)
 {
     return vfwcvt_f(vle16_v_f16mf2((_Float16*)ptr, VTraits<v_float32>::vlanes()) ,VTraits<v_float32>::vlanes());;
