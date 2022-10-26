@@ -522,6 +522,11 @@ using namespace CV__SIMD_NAMESPACE;
 
 #endif
 
+//! @cond IGNORED
+#ifndef CV_SIMD_64F
+#define CV_SIMD_64F 0
+#endif
+
 namespace CV__SIMD_NAMESPACE {
 //! @addtogroup core_hal_intrin
 //! @{
@@ -886,10 +891,6 @@ namespace CV__SIMD_NAMESPACE {
     #undef VXPREFIX
 } // namespace
 
-//! @cond IGNORED
-#ifndef CV_SIMD_64F
-#define CV_SIMD_64F 0
-#endif
 
 #ifndef CV_SIMD_FP16
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
