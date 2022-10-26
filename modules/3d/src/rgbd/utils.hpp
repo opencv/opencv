@@ -247,7 +247,7 @@ public:
     virtual void getImage(OutputArray image) const ;
     virtual void getGrayImage(OutputArray image) const ;
     virtual void getDepth(OutputArray depth) const ;
-    virtual void getScaledDepth(OutputArray depth) const ;
+    virtual void getProcessedDepth(OutputArray depth) const ;
     virtual void getMask(OutputArray mask) const ;
     virtual void getNormals(OutputArray normals) const ;
 
