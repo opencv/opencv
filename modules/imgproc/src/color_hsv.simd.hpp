@@ -5,19 +5,14 @@
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-// Temporary macro,
-#define CV_VECTOR_SIMD CV_SIMD_SCALABLE
-#define CV_SIMD_OR_VECTOR (CV_SIMD_SCALABLE || CV_SIMD)
-// should remove when PR#22463 (Redesign the SIMD macro) merged.
-
-#if CV_VECTOR_SIMD
+#if CV_SIMD_SCALABLE
 /* FIX IT:
 // std::swap(a, b) is not available for RVV vector types,
 // and CV_SWAP needs another "t" as input,
 // For compatibility, we swap RVV vector manually by using this macro.
 
 // If others scalable types (e.g. type in ARM SVE) can use std::swap,
-// then replace CV_VECTOR_SIMD with CV_RVV.
+// then replace CV_SIMD_SCALABLE with CV_RVV.
 // If std::swap is available for RVV vector types in future, remove this macro.
 */
 #define swap(a, b) {auto t = a; a = b; b = t;}
@@ -103,7 +98,7 @@ struct RGB2HSV_b
 
         int i = 0;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         const int vsize = VTraits<v_uint8>::vlanes();
         for ( ; i <= n - vsize;
               i += vsize, src += scn*vsize, dst += 3*vsize)
@@ -279,7 +274,7 @@ struct RGB2HSV_f
     : srccn(_srccn), blueIdx(_blueIdx), hrange(_hrange)
     { }
 
-    #if CV_SIMD_OR_VECTOR
+    #if CV_SIMD || CV_SIMD_SCALABLE
     inline void process(const v_float32& v_r, const v_float32& v_g, const v_float32& v_b,
                         v_float32& v_h, v_float32& v_s, v_float32& v_v,
                         float hscale) const
@@ -312,7 +307,7 @@ struct RGB2HSV_f
         float hscale = hrange*(1.f/360.f);
         n *= 3;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         const int vsize = VTraits<v_float32>::vlanes();
         for ( ; i <= n - 3*vsize; i += 3*vsize, src += scn * vsize)
         {
@@ -372,7 +367,7 @@ struct RGB2HSV_f
 };
 
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
 inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32& v,
                          v_float32& b, v_float32& g, v_float32& r, float hscale)
 {
@@ -476,7 +471,7 @@ struct HSV2RGB_f
         float hs = hscale;
         n *= 3;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 valpha = vx_setall_f32(alpha);
         for (; i <= n - vsize*3; i += vsize*3, dst += dcn * vsize)
@@ -533,7 +528,7 @@ struct HSV2RGB_b
         int j = 0, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
-#if CV_SIMD_OR_VECTOR //6
+#if CV_SIMD || CV_SIMD_SCALABLE
         const int vsize = VTraits<v_float32>::vlanes();
 
         for (j = 0; j <= (n - vsize*4) * 3; j += 3 * 4 * vsize, dst += dcn * 4 * vsize)
@@ -682,7 +677,7 @@ struct RGB2HLS_f
     {
     }
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
     inline void process(const v_float32& r, const v_float32& g, const v_float32& b,
                         const v_float32& vhscale,
                         v_float32& h, v_float32& l, v_float32& s) const
@@ -721,7 +716,7 @@ struct RGB2HLS_f
 
         int i = 0, bidx = blueIdx, scn = srccn;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         const int vsize = VTraits<v_float32>::vlanes();
         v_float32 vhscale = vx_setall_f32(hscale);
 
@@ -805,13 +800,13 @@ struct RGB2HLS_b
 
         int scn = srccn;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[bufChannels*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[bufChannels*BLOCK_SIZE];
 #endif
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         static const int fsize = VTraits<v_float32>::vlanes();
         //TODO: fix that when v_interleave is available
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
@@ -827,7 +822,7 @@ struct RGB2HLS_b
         {
             int dn = std::min(n - i, (int)BLOCK_SIZE);
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
             v_float32 v255inv = vx_setall_f32(1.f/255.f);
             if (scn == 3)
             {
@@ -906,7 +901,7 @@ struct RGB2HLS_b
             cvt(buf, buf, dn);
 
             int j = 0;
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
             for( ; j <= dn*3 - fsize*3*4; j += fsize*3*4)
             {
                 v_float32 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11;
@@ -977,7 +972,7 @@ struct HLS2RGB_f
     : dstcn(_dstcn), blueIdx(_blueIdx), hscale(6.f/_hrange)
     { }
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
     inline void process(const v_float32& h, const v_float32& l, const v_float32& s,
                         v_float32& b, v_float32& g, v_float32& r) const
     {
@@ -1020,7 +1015,7 @@ struct HLS2RGB_f
         int i = 0, bidx = blueIdx, dcn = dstcn;
         float alpha = ColorChannel<float>::max();
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         static const int vsize = VTraits<v_float32>::vlanes();
         for (; i <= n - vsize; i += vsize, src += 3*vsize, dst += dcn*vsize)
         {
@@ -1109,13 +1104,13 @@ struct HLS2RGB_b
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[bufChannels*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[bufChannels*BLOCK_SIZE];
 #endif
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
         static const int fsize = VTraits<v_float32>::vlanes();
         //TODO: fix that when v_interleave is available
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
@@ -1132,7 +1127,7 @@ struct HLS2RGB_b
             int dn = std::min(n - i, (int)BLOCK_SIZE);
             j = 0;
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
             for( ; j <= dn*3 - 3*4*fsize; j += 3*4*fsize)
             {
                 // 3x uchar -> 3*4 float
@@ -1189,7 +1184,7 @@ struct HLS2RGB_b
             }
             cvt(buf, buf, dn);
 
-#if CV_SIMD_OR_VECTOR
+#if CV_SIMD || CV_SIMD_SCALABLE
             v_float32 v255 = vx_setall_f32(255.f);
             if(dcn == 3)
             {
