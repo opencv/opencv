@@ -188,11 +188,22 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                     cv::format("VIDEOIO(%s): backend is not available "
+                                    cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
-                                                 info.name));
+                                                info.name));
             }
+        }
+    }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by name",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
         }
     }
 
@@ -302,11 +313,22 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                     cv::format("VIDEOIO(%s): backend is not available "
+                                    cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
-                                                 info.name));
+                                                info.name));
             }
+        }
+    }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by index",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
         }
     }
 
