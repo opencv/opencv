@@ -1116,6 +1116,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     }
     else
     {
+        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using capture options from environment: " << options);
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
         av_dict_parse_string(&dict, options, ";", "|", 0);
 #else
@@ -2911,7 +2912,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     AVDictionary *dict = NULL;
 #if !defined(NO_GETENV) && (LIBAVUTIL_VERSION_MAJOR >= 53)
     char* options = getenv("OPENCV_FFMPEG_WRITER_OPTIONS");
-    if (options) {
+    if (options)
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using writer options from environment: " << options);
         av_dict_parse_string(&dict, options, ";", "|", 0);
     }
 #endif
