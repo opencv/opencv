@@ -1140,7 +1140,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
         CV_WARN(_filename);
         goto exit_func;
     }
-    err = avformat_find_stream_info(ic, NULL);
+    err = avformat_find_stream_info(ic, &dict);
     if (err < 0)
     {
         CV_LOG_WARNING(NULL, "Unable to read codec parameters from stream (" << _opencv_ffmpeg_get_error_string(err) << ")");
