@@ -74,7 +74,7 @@ TEST(multiview_calibration, accuracy) {
         cv::Matx33d K(focal, 0, (double)image_sizes[c].width/2.,
                     0, focal, (double)image_sizes[c].height/2.,
                     0, 0, 1);
-        cv::Matx<double, 1, 5> dist (rng.uniform(3e-1, 8e-1), 0, 0, 0, 0);
+        cv::Matx<double, 1, 5> dist (rng.uniform(1e-1, 3e-1), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2), rng.uniform(1e-2, 5e-2));
         Ks_gt.emplace_back(cv::Mat(K));
         distortions_gt.emplace_back(cv::Mat(dist));
         if (c == 0) {
@@ -170,14 +170,16 @@ TEST(multiview_calibration, accuracy) {
 
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
-    EXPECT_TRUE(calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs));
+    calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, 0);
 
-    const double K_err_tol = 1e1, dist_tol = 2e-1, R_tol = 1e-2, T_tol = 1e-2;
+    const double K_err_tol = 1e1, dist_tol = 1e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
         cv::Mat R;
         cv::Rodrigues(Rs[c], R);
         EXPECT_MAT_NEAR(Ks_gt[c], Ks[c], K_err_tol);
+        std::cout << distortions_gt[c] << "\n";
+        std::cout << distortions[c] << "\n";
         EXPECT_MAT_NEAR(distortions_gt[c], distortions[c], dist_tol);
         EXPECT_MAT_NEAR(Rs_gt[c], R, R_tol);
         EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);

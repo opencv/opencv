@@ -473,8 +473,8 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
 }
 }
 
-bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
-        const std::vector<Size> &imageSize, const Mat &detection_mask,
+double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
+        const std::vector<Size> &imageSize, InputArray detection_mask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray is_fisheye,
         OutputArray errors_per_frame, OutputArray output_pairs, bool use_intrinsics_guess, int flags_intrinsics) {
@@ -484,11 +484,16 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     CV_CheckEQ((int)imageSize.empty(), 0, "Image size per camera must not be empty!");
     CV_CheckEQ((int)detection_mask.empty(), 0, "detection_mask matrix must not be empty!");
     CV_CheckEQ((int)is_fisheye.empty(), 0, "Fisheye mask must not be empty!");
+
+    Mat detection_mask_ = detection_mask.getMat(), is_fisheye_mat = is_fisheye.getMat();
+    CV_CheckEQ(detection_mask_.type(), CV_8U, "detection_mask must be of type CV_8U");
+    CV_CheckEQ(is_fisheye_mat.type(), CV_8U, "is_fisheye_mat must be of type CV_8U");
+
     // equal number of cameras
     CV_Assert(imageSize.size() == imagePoints.size());
-    CV_Assert(detection_mask.rows == std::max(is_fisheye.rows(), is_fisheye.cols()));
-    CV_Assert(detection_mask.rows == (int)imageSize.size());
-    CV_Assert(detection_mask.cols == std::max(objPoints.rows(), objPoints.cols())); // equal number of frames
+    CV_Assert(detection_mask_.rows == std::max(is_fisheye.rows(), is_fisheye.cols()));
+    CV_Assert(detection_mask_.rows == (int)imageSize.size());
+    CV_Assert(detection_mask_.cols == std::max(objPoints.rows(), objPoints.cols())); // equal number of frames
     CV_Assert(Rs.isMatVector() == Ts.isMatVector());
     if (use_intrinsics_guess) {
         CV_Assert(Ks.size() == distortions.size() && Ks.size() == imageSize.size());
@@ -498,7 +503,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     CV_Assert((obj_pts_0.type() == CV_32F && (obj_pts_0.rows == 3 || obj_pts_0.cols == 3)) ||
               (obj_pts_0.type() == CV_32FC3 && (obj_pts_0.rows == 1 || obj_pts_0.cols == 1)));
     const bool obj_points_in_rows = obj_pts_0.cols == 3;
-    const int NUM_CAMERAS = (int)detection_mask.rows, NUM_FRAMES = (int)detection_mask.cols;
+    const int NUM_CAMERAS = (int)detection_mask_.rows, NUM_FRAMES = (int)detection_mask_.cols;
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
     const double scale_3d_pts = multiview::getScaleOfObjPoints(NUM_PATTERN_PTS, obj_pts_0, obj_points_in_rows);
 
@@ -519,10 +524,6 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
 
     std::vector<bool> is_fisheye_vec(NUM_CAMERAS);
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
-    // convert to boolean
-    Mat detection_mask_ = detection_mask, is_fisheye_mat = is_fisheye.getMat();
-    detection_mask_.convertTo(detection_mask_, CV_8U);
-    is_fisheye_mat.convertTo(is_fisheye_mat, CV_8U);
     const auto * const detection_mask_ptr = detection_mask_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
     int num_fisheye_cameras = 0;
     for (int c = 0; c < NUM_CAMERAS; c++) {
@@ -538,7 +539,6 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
         }
         if (num_visible_frames == 0) {
             CV_Error(Error::StsBadArg, "camera "+std::to_string(c)+" has no visible frames!");
-            // return false;
         }
         num_visible_frames_per_camera[c] = num_visible_frames;
     }
@@ -558,6 +558,8 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     std::vector<std::vector<float>> points_ratio_area(NUM_CAMERAS, std::vector<float>(NUM_FRAMES));
     multiview::imagePointsArea(imageSize, detection_mask_mat, imagePoints, points_ratio_area);
 
+    // constant threshold for angle between two camera axes in radians (=160*M_PI/180).
+    // if angle exceeds this threshold then a weight of a camera pair is lowered.
     const double THR_PATTERN_CAMERA_ANGLES = 160*M_PI/180;
     std::vector<std::vector<Vec3d>> rvecs_all(NUM_CAMERAS, std::vector<Vec3d>(NUM_FRAMES)),
         tvecs_all(NUM_CAMERAS, std::vector<Vec3d>(NUM_FRAMES)),
@@ -638,8 +640,15 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
     Rs_vec[0] = Matx33d ::eye();
     Ts_vec[0] = Vec3d::zeros();
 
-    if (NUM_CAMERAS == 1)
-        return true;
+    if (NUM_CAMERAS == 1) {
+        double sum_errors = 0, cnt_errors = 0;
+        for (int f = 0; f < NUM_FRAMES; f++) {
+            if (detection_mask_mat[0][f]) {
+                sum_errors += camera_rt_errors[f];
+            }
+        }
+        return sum_errors / cnt_errors;
+    }
 
     std::vector<int> parent;
     std::vector<std::vector<int>> overlaps;
@@ -647,7 +656,6 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
             is_valid_angle2pattern, points_ratio_area, .5, 1.0)) {
         // failed to find suitable pairs with constraints!
         CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration.");
-//        return false;
     }
 
     std::vector<std::pair<int,int>> pairs;
@@ -655,7 +663,6 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
 
     if ((int)pairs.size() != NUM_CAMERAS-1) {
         CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration. Incorrect number of pairs.");
-//        return false;
     }
     if (output_pairs.needed()) {
         Mat pairs_mat = Mat_<int>(NUM_CAMERAS-1, 2);
@@ -798,6 +805,7 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
         if (!is_mat_vec && tvecs0.needed())
             tvecs0_.copyTo(tvecs0);
     }
+    double sum_errors = 0, cnt_errors = 0;
     if (errors_per_frame.needed()) {
         const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
         const bool r_mat_vec = Rs.isMatVector(), t_mat_vec = Ts.isMatVector();
@@ -810,13 +818,16 @@ bool calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::ve
                 if (detection_mask_mat[c][f]) {
                     const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
                     const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
-                    (*errs_ptr++) = multiview::computeReprojectionRMSE(objPoints.getMat(f), imagePoints[c][f], Ks[c],
+                    const double err = multiview::computeReprojectionRMSE(objPoints.getMat(f), imagePoints[c][f], Ks[c],
                          distortions[c], rvec0, tvec0, rvec, tvec, is_fisheye_vec[c]);
+                    (*errs_ptr++) = err;
+                    sum_errors += err;
+                    cnt_errors += 1;
                 } else (*errs_ptr++) = -1.0;
             }
         }
         errs.copyTo(errors_per_frame);
     }
-    return true;
+    return sum_errors / cnt_errors;
 }
 }

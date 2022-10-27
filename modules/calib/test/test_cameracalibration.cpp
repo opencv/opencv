@@ -2085,8 +2085,8 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
     std::vector<Size> image_sizes (2, imageSize);
     Mat visibility_mat = Mat_<bool>::ones(2, (int)objectPoints.size());
     std::vector<bool> is_fisheye(2, false);
-    EXPECT_TRUE(calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, noArray(), noArray(), is_fisheye, errors_mat, noArray(), false, flags));
+    calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
+       Rs, Ts, Ks, distortions, noArray(), noArray(), is_fisheye, errors_mat, noArray(), false, flags);
     cv::Rodrigues(Rs[1], R);
     Ts[1].copyTo(T);
     distortions[0].copyTo(distCoeffs1);
