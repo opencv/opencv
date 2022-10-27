@@ -7,12 +7,12 @@
 #include <iostream>
 #include <fstream>
 
-void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type, const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames) {
+static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type,
+           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames) {
     std::vector<cv::Vec3f> board (pattern_size.area());
     const int num_cameras = (int)is_fisheye.size();
     std::vector<std::vector<cv::Mat>> image_points_all;
     std::vector<cv::Size> image_sizes;
-    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
     std::vector<cv::Mat> Ks, distortions, Ts, Rs;
     cv::Mat rvecs0, tvecs0, errors_mat, output_pairs;
     if (pattern_type == "checkerboard") {
@@ -27,6 +27,7 @@ void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, cons
     int num_frames = -1;
     for (const auto &filename : filenames) {
         std::fstream file(filename);
+        assert(file.is_open());
         std::string img_file;
         std::vector<cv::Mat> image_points_cameras;
         bool save_img_size = true;
@@ -62,9 +63,11 @@ void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, cons
             visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
         }
     }
-    bool ret = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
-       Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/));
-    assert(ret);
+    assert(num_frames != -1);
+    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
+    const double rmse = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
+       Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/);
+    std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {
         std::cout << "camera " << c << '\n';
         std::cout << Rs[c] << " rotation\n";
@@ -75,14 +78,45 @@ void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, cons
 }
 
 int main (int argc, char **argv) {
-    const cv::Size pattern_size (18, 13);
-    const double pattern_scale = 0.01;
-    const int num_cameras = 10;
-    const std::vector<bool> is_fisheye(num_cameras, false);
-    const std::string pattern_type = "checkerboard", files_folder = "multiview_calibration_images/";
-    std::vector<std::string> filenames(num_cameras);
-    for (int i = 0; i < num_cameras; i++)
-        filenames[i] = files_folder + "cam_"+std::to_string(i)+".txt";
-    detectPointsAndCalibrate (pattern_size, pattern_scale, pattern_type, is_fisheye, filenames);
+    cv::String keys =
+            "{help h usage ? || print help }"
+            "{pattern_width || pattern grid width}"
+            "{pattern_height || pattern grid height}"
+            "{pattern_scale || pattern scale}"
+            "{pattern_type |  checkerboard  | pattern type, e.g., checkerboard}"
+            "{is_fisheye || cameras type fisheye (1), pinhole(0), separated by comma (no space)}"
+            "{files_with_images || files containing path to image names separated by comma (no space)}";
+
+    cv::CommandLineParser parser(argc, argv, keys);
+    if (parser.has("help")) {
+        parser.printMessage();
+        return 0;
+    }
+    assert(parser.has("pattern_width") && parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
+        parser.has("is_fisheye") && parser.has("files_with_images"));
+    const cv::Size pattern_size (parser.get<int>("pattern_width"), parser.get<int>("pattern_height"));
+    std::vector<bool> is_fisheye;
+    const cv::String is_fisheye_str = parser.get<cv::String>("is_fisheye");
+    for (char i : is_fisheye_str) {
+        if (i == '0') {
+            is_fisheye.emplace_back(false);
+        } else if (i == '1') {
+            is_fisheye.emplace_back(true);
+        }
+    }
+    const cv::String files_with_images_str = parser.get<cv::String>("files_with_images");
+    std::vector<std::string> filenames;
+    std::string temp_str;
+    for (char i : files_with_images_str) {
+        if (i == ',') {
+            filenames.emplace_back(temp_str);
+            temp_str = "";
+        } else {
+            temp_str += i;
+        }
+    }
+    filenames.emplace_back(temp_str);
+    assert(filenames.size() == is_fisheye.size());
+    detectPointsAndCalibrate (pattern_size, parser.get<double>("pattern_scale"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames);
     return 0;
 }
