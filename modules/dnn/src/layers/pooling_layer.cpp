@@ -1173,6 +1173,12 @@ public:
         // Halide::argmax returns tuple (r.x, r.y, max).
         Halide::Tuple res = argmax(inputBuffer(kx, ky, c, n));
 
+        if (!computeMaxIdx)
+        {
+            top(x, y, c, n) = res[2];
+            return Ptr<BackendNode>(new HalideBackendNode(top));
+        }
+
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
         if(paddingLeft || paddingTop)

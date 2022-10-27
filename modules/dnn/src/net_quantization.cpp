@@ -33,7 +33,7 @@ void getQuantizationParams(const Mat& src, std::vector<float>& scales, std::vect
 }
 
 // FIXIT drop from inference API
-Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
+Net Net::Impl::quantize(Net& net, InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel)
 {
     // Net can be quantized only once.
     if (netWasQuantized)
@@ -47,9 +47,11 @@ Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outpu
     int prefTarget = preferableTarget;
 
     // Disable fusions and use CPU backend to quantize net
-    setPreferableBackend(DNN_BACKEND_OPENCV);
+    // FIXIT: we should not modify original network!
+    setPreferableBackend(net, DNN_BACKEND_OPENCV);
     setPreferableTarget(DNN_TARGET_CPU);
     enableFusion(false);
+    enableWinograd(false);
 
     if (calibData.isMat())
     {
@@ -163,7 +165,7 @@ Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outpu
     Net::Impl& dstNet = *(dstNet_.impl);
     dstNet.netWasQuantized = true;
     dstNet.setInputsNames(netInputLayer->outNames);
-    dstNet.setPreferableBackend(prefBackend);
+    dstNet.setPreferableBackend(dstNet_, prefBackend);
     dstNet.setPreferableTarget(prefTarget);
     dstNet.enableFusion(originalFusion);
 
@@ -253,7 +255,7 @@ Net Net::Impl::quantize(InputArrayOfArrays calibData, int inputsDtype, int outpu
         }
     }
     // Restore FP32 Net's backend, target and fusion
-    setPreferableBackend(prefBackend);
+    setPreferableBackend(net, prefBackend);
     setPreferableTarget(prefTarget);
     enableFusion(originalFusion);
     return dstNet_;

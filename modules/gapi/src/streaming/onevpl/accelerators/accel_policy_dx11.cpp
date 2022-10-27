@@ -14,7 +14,6 @@
 #include "logger.hpp"
 
 #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
-#pragma comment(lib,"d3d11.lib")
 
 #define D3D11_NO_HELPERS
 #include <d3d11.h>

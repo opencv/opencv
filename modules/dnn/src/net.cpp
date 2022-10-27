@@ -120,7 +120,7 @@ Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtyp
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
     CV_Assert(!empty());
-    return impl->quantize(calibData, inputsDtype, outputsDtype, perChannel);
+    return impl->quantize(*this, calibData, inputsDtype, outputsDtype, perChannel);
 }
 
 // FIXIT drop from inference API
@@ -146,7 +146,7 @@ void Net::setPreferableBackend(int backendId)
     CV_TRACE_FUNCTION();
     CV_TRACE_ARG(backendId);
     CV_Assert(impl);
-    return impl->setPreferableBackend(backendId);
+    return impl->setPreferableBackend(*this, backendId);
 }
 
 void Net::setPreferableTarget(int targetId)
@@ -393,6 +393,13 @@ void Net::enableFusion(bool fusion)
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
     return impl->enableFusion(fusion);
+}
+
+void Net::enableWinograd(bool useWinograd)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    return impl->enableWinograd(useWinograd);
 }
 
 void Net::setHalideScheduler(const String& scheduler)

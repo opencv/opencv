@@ -41,7 +41,7 @@ public:
     BaseConvolutionLayerInt8Impl(const LayerParams &params)
     {
         setParamsFrom(params);
-        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads);
+        getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads, useWinograd);
 
         numOutput = params.get<int>("num_output");
         int ngroups = params.get<int>("group", 1);

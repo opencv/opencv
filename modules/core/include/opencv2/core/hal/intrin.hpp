@@ -50,6 +50,12 @@
 #include <stdlib.h>
 #include "opencv2/core/cvdef.h"
 
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 #define OPENCV_HAL_ADD(a, b) ((a) + (b))
 #define OPENCV_HAL_AND(a, b) ((a) & (b))
 #define OPENCV_HAL_NOP(a) (a)
@@ -924,5 +930,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 } // cv::
 
 //! @endcond
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic pop
+#endif
 
 #endif

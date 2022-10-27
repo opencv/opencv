@@ -178,6 +178,7 @@ set(gapi_srcs
 
     # Python bridge
     src/backends/ie/bindings_ie.cpp
+    src/backends/onnx/bindings_onnx.cpp
     src/backends/python/gpythonbackend.cpp
 
     # OpenVPL Streaming source
@@ -317,6 +318,12 @@ if(HAVE_GAPI_ONEVPL)
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
 
+  if(HAVE_DIRECTX AND HAVE_D3D11)
+    ocv_target_link_libraries(${the_module} PRIVATE d3d11 dxgi)
+  endif()
+  if(WIN32)
+    ocv_target_link_libraries(${the_module} PRIVATE mf mfuuid mfplat shlwapi mfreadwrite)
+  endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
@@ -368,6 +375,9 @@ ocv_add_samples()
 if(TARGET example_gapi_onevpl_infer_single_roi)
   if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
     ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ocv.3rdparty.openvino)
+  endif()
+  if(HAVE_DIRECTX AND HAVE_D3D11)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE d3d11 dxgi)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})

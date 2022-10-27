@@ -2956,6 +2956,105 @@ TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatchStreaming)
     }
 }
 
+struct AgeGenderInferTest: public ::testing::Test {
+    cv::Mat m_in_mat;
+    cv::Mat m_gapi_age;
+    cv::Mat m_gapi_gender;
+
+    cv::gimpl::ie::wrap::Plugin     m_plugin;
+    IE::CNNNetwork                  m_net;
+    cv::gapi::ie::detail::ParamDesc m_params;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    void SetUp() {
+        initDLDTDataPath();
+        m_params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        m_params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        m_params.device_id = "CPU";
+
+        m_plugin = cv::gimpl::ie::wrap::getPlugin(m_params);
+        m_net    = cv::gimpl::ie::wrap::readNetwork(m_params);
+        setNetParameters(m_net);
+
+        m_in_mat = cv::Mat(cv::Size(320, 240), CV_8UC3);
+        cv::randu(m_in_mat, 0, 255);
+    }
+
+    cv::GComputation buildGraph() {
+        cv::GMat in, age, gender;
+        std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+        return cv::GComputation(cv::GIn(in), cv::GOut(age, gender));
+    }
+
+    void validate() {
+        IE::Blob::Ptr ie_age, ie_gender;
+        {
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(m_plugin, m_net, m_params);
+            auto infer_request = this_network.CreateInferRequest();
+            infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(m_in_mat));
+            infer_request.Infer();
+            ie_age    = infer_request.GetBlob("age_conv3");
+            ie_gender = infer_request.GetBlob("prob");
+        }
+        // Validate with IE itself (avoid DNN module dependency here)
+        normAssert(cv::gapi::ie::util::to_ocv(ie_age),    m_gapi_age,    "Test age output"   );
+        normAssert(cv::gapi::ie::util::to_ocv(ie_gender), m_gapi_gender, "Test gender output");
+    }
+};
+
+TEST_F(AgeGenderInferTest, SyncExecution) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgInferMode(cv::gapi::ie::InferMode::Sync);
+
+    buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                       cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+}
+
+TEST_F(AgeGenderInferTest, ThrowSyncWithNireqNotEqualToOne) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgInferMode(cv::gapi::ie::InferMode::Sync)
+     .cfgNumRequests(4u);
+
+    EXPECT_ANY_THROW(buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                                        cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST_F(AgeGenderInferTest, ChangeOutputPrecision) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgOutputPrecision(CV_8U);
+
+    for (auto it : m_net.getOutputsInfo()) {
+        it.second->setPrecision(IE::Precision::U8);
+    }
+
+    buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                       cv::compile_args(cv::gapi::networks(pp)));
+    validate();
+}
+
+TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecison) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgOutputPrecision({{"prob", CV_8U}});
+
+    m_net.getOutputsInfo().at("prob")->setPrecision(IE::Precision::U8);
+
+    buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                       cv::compile_args(cv::gapi::networks(pp)));
+    validate();
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE

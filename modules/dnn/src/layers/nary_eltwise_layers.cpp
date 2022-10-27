@@ -51,11 +51,11 @@ public:
             op = OPERATION::EQUAL;
         else if (operation == "greater")
             op = OPERATION::GREATER;
-        else if (operation == "greater_equal")
+        else if (operation == "greaterorequal")
             op = OPERATION::GREATER_EQUAL;
         else if (operation == "less")
             op = OPERATION::LESS;
-        else if (operation == "less_equal")
+        else if (operation == "lessorequal")
             op = OPERATION::LESS_EQUAL;
         else if (operation == "pow")
             op = OPERATION::POW;

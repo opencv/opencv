@@ -14,6 +14,7 @@
 using gapi_GKernelPackage           = cv::GKernelPackage;
 using gapi_GNetPackage              = cv::gapi::GNetPackage;
 using gapi_ie_PyParams              = cv::gapi::ie::PyParams;
+using gapi_onnx_PyParams            = cv::gapi::onnx::PyParams;
 using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
 using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;

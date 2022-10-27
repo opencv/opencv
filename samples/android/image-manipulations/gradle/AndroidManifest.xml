@@ -7,7 +7,9 @@
         android:label="@string/app_name"
         android:icon="@drawable/icon">
 
-        <activity android:name="ImageManipulationsActivity"
+        <activity
+                  android:exported="true"
+                  android:name="ImageManipulationsActivity"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">

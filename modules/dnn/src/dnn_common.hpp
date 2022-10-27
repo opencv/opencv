@@ -156,6 +156,18 @@ static inline std::string toString(const Mat& blob, const std::string& name = st
 
 
 CV__DNN_INLINE_NS_END
+
+namespace accessor {
+class DnnNetAccessor
+{
+public:
+    static inline Ptr<Net::Impl>& getImplPtrRef(Net& net)
+    {
+        return net.impl;
+    }
+};
+}
+
 }}  // namespace
 
 #endif  // __OPENCV_DNN_COMMON_HPP__
