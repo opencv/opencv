@@ -91,6 +91,7 @@ extern "C" {
 
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include <libavdevice/avdevice.h>
 
 // https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L602-L605
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(58, 9, 100)
@@ -621,6 +622,7 @@ struct CvCapture_FFMPEG
 
 void CvCapture_FFMPEG::init()
 {
+    avdevice_register_all();
     ic = 0;
     video_stream = -1;
     video_st = 0;

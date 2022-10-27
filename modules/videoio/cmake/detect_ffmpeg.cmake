@@ -19,10 +19,10 @@ if(NOT HAVE_FFMPEG AND WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
   endif()
 endif()
 
-set(_required_ffmpeg_libraries libavcodec libavformat libavutil libswscale)
+set(_required_ffmpeg_libraries libavcodec libavformat libavutil libswscale libavdevice)
 set(_used_ffmpeg_libraries ${_required_ffmpeg_libraries})
 if(NOT HAVE_FFMPEG AND PKG_CONFIG_FOUND)
-  ocv_check_modules(FFMPEG libavcodec libavformat libavutil libswscale)
+  ocv_check_modules(FFMPEG libavcodec libavformat libavutil libswscale libavdevice)
   if(FFMPEG_FOUND)
     ocv_check_modules(FFMPEG_libavresample libavresample) # optional
     if(FFMPEG_libavresample_FOUND)
@@ -51,6 +51,7 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   set(_min_libavutil_version 52.3.0)
   set(_min_libswscale_version 2.1.1)
   set(_min_libavresample_version 1.0.1)
+  set(_min_libavdevice_version 56.0.0)
   foreach(ffmpeg_lib ${_used_ffmpeg_libraries})
     if(FFMPEG_${ffmpeg_lib}_VERSION VERSION_LESS _min_${ffmpeg_lib}_version)
       message(STATUS "FFMPEG is disabled. Can't find suitable ${ffmpeg_lib} library"
@@ -67,6 +68,7 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   unset(_min_libavutil_version)
   unset(_min_libswscale_version)
   unset(_min_libavresample_version)
+  unset(_min_libavdevice_version)
 endif()
 
 #==================================
