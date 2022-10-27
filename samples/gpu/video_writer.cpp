@@ -63,7 +63,7 @@ int main(int argc, const char* argv[])
         {
             std::cout << "Open CUDA Writer" << std::endl;
             const cv::String outputFilename = "output_gpu.h264";
-            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), cv::cudacodec::CODEC_VW::H264, fps, cv::cudacodec::COLOR_FORMAT_VW::BGR, 0, stream);
+            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), cv::cudacodec::Codec::H264, fps, cv::cudacodec::ColorFormat::BGR, 0, stream);
             std::cout << "Writing to " << outputFilename << std::endl;
         }
 
