@@ -10,19 +10,12 @@
 #include "graph/graph.h" // ge::Graph; ge::Operator from operator.h
 #include "graph/ge_error_codes.h" // GRAPH_SUCCESS, ...
 
-/* We dont need these if we do not build graph with initCann
-#include "all_ops.h" // ge::Conv2D, ...
+#include "op_proto/built-in/inc/all_ops.h" // ge::Conv2D, ...
 #include "graph/tensor.h" // ge::Shape, ge::Tensor, ge::TensorDesc
 #include "graph/types.h" // DT_FLOAT, ... ; FORMAT_NCHW, ...
-*/
 
 #include "ge/ge_api_types.h" // ge::ir_option::SOC_VERSION
 #include "ge/ge_ir_build.h" // build graph
-
-// parser
-#include "parser/onnx_parser.h" // aclgrphParseONNX
-#include "parser/tensorflow_parser.h" // aclgrphParseTensorflow
-#include "parser/caffe_parser.h" // aclgrphParseCaffe
 
 #endif // HAVE_CANN
 
@@ -61,6 +54,8 @@ CV__DNN_INLINE_NS_END
     // void initAcl();
     void initAclGraphBuilder();
 
+    class CannNet;
+
     class AclEnvGuard {
     public:
         explicit AclEnvGuard();
@@ -72,30 +67,62 @@ CV__DNN_INLINE_NS_END
         static std::mutex global_acl_env_mutex_;
     };
 
-    struct CannGraph
-    {
-        explicit CannGraph() { graph = ge::Graph("graph"); }
-
-        ge::Graph graph;
-
-        bool loadFromONNX(const String& modelFile);
-        bool loadFromONNXFromMem(const char* buffer, size_t length);
-        bool loadFromTensorFlow(const String& modelFile);
-        bool loadFromCaffe(const String& modelFile, const String& weightFile);
-    };
-
-    class CannClient
+    class CannConstOp
     {
     public:
-        explicit CannClient(int deviceId = 0) { init(deviceId); acl_env = AclEnvGuard::GetAclEnv(); }
-        ~CannClient(); // release private members
-        void init(int deviceId);
+        CannConstOp(const uint8_t* data, const int dtype, const std::vector<int>& shape, const std::string& name);
+        std::shared_ptr<ge::op::Const> getOp() { return op_; }
+        std::shared_ptr<ge::TensorDesc> getTensorDesc() { return desc_; }
+    private:
+        std::shared_ptr<ge::op::Const> op_;
+        std::shared_ptr<ge::TensorDesc> desc_;
+    };
+
+    class CannBackendNode : public BackendNode
+    {
+    public:
+        CannBackendNode(const std::shared_ptr<ge::Operator>& op);
+        std::shared_ptr<ge::Operator> getOp();
+        // void createCannNet(ge::Graph& graph);
+    private:
+        std::shared_ptr<ge::Operator> op_;
+        // std::shared_ptr<CannNet> cannNet;
+    };
+
+    class CannBackendWrapper : public BackendWrapper
+    {
+    public:
+        CannBackendWrapper(const Mat& m);
+        ~CannBackendWrapper() { }
+
+        std::shared_ptr<ge::TensorDesc> getTensorDesc() { return desc_; }
+
+        virtual void copyToHost() CV_OVERRIDE;
+
+        virtual void setHostDirty() CV_OVERRIDE;
+
+        Mat* host;
+        std::shared_ptr<ge::TensorDesc> desc_;
+    };
+
+    class CannNet
+    {
+    public:
+        explicit CannNet(int deviceId = 0)
+            : device_id(deviceId)
+        {
+            init();
+            acl_env = AclEnvGuard::GetAclEnv();
+        }
+        ~CannNet(); // release private members
         static void finalize();
 
         bool empty() const;
 
-        void buildModelFromGraph(ge::Graph& graph);
-        void loadModel(); // call aclInit before this API is called
+        void buildFromGraph(ge::Graph& graph);
+        // CannNet& bindInput(const std::vector<Mat>& inputs, const std::vector<String>& names = {});
+        // CannNet& bindOutput(const std::vector<Mat>& inputs, const std::vector<String>& names = {});
+        void loadToDevice(); // call aclInit before this API is called
 
         void setInput(const Mat& input, const String& name = String());
         void forward();
@@ -103,14 +130,20 @@ CV__DNN_INLINE_NS_END
         void fetchOutput(Mat& output, const size_t idx);
 
         size_t getOutputNum() const;
+        void setOutputNames(const std::vector<std::string>& names);
 
     private:
+        void init();
+
         void createInputDataset();
         void createOutputDataset();
+
+        int getOutputIndexByName(const std::string& name);
 
         void destroyDataset(aclmdlDataset** dataset);
 
         std::shared_ptr<AclEnvGuard> acl_env;
+        std::vector<std::string> output_names;
 
         uint32_t model_id{0};
         aclmdlDesc* model_desc{nullptr};

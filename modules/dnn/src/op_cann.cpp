@@ -77,78 +77,86 @@ void initAclGraphBuilder()
     mtx.unlock();
 }
 
-bool CannGraph::loadFromONNX(const String& modelFile)
+CannConstOp::CannConstOp(const uint8_t* data, const int dtype, const std::vector<int>& shape, const std::string& name)
 {
-    using namespace ge;
+    std::vector<int64_t> shape_{shape.begin(), shape.end()};
+    // for (int s : shape)
+    //     shape_.push_back((int64_t)s);
 
-    std::map<AscendString, AscendString> parse_options; // TODO: support custom parse_options from file
-    CV_LOG_INFO(NULL, "Load graph from " << modelFile << " with ge::aclgrphParseONNX");
-    ACL_CHECK_GRAPH_RET(aclgrphParseONNX(modelFile.c_str(), parse_options, graph));
-
-    return true;
+    auto ge_shape = ge::Shape(shape_);
+    auto ge_dtype = ge::DT_FLOAT;
+    switch (dtype)
+    {
+        case CV_32F: break;
+        case CV_32S: ge_dtype = ge::DT_INT32; break;
+        default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+    }
+    auto size_of_type = sizeof(float);
+    switch (dtype)
+    {
+        case CV_32F: break;
+        case CV_32S: size_of_type = sizeof(int); break;
+        default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+    }
+    desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge_dtype);
+    auto ge_tensor = std::make_shared<ge::Tensor>();
+    ge_tensor->SetTensorDesc(*desc_);
+    ge_tensor->SetData(data, ge_shape.GetShapeSize() * size_of_type);
+    op_ = std::make_shared<ge::op::Const>(name);
+    op_->set_attr_value(*ge_tensor);
 }
 
-bool CannGraph::loadFromONNXFromMem(const char* buffer, size_t length)
+CannBackendNode::CannBackendNode(const std::shared_ptr<ge::Operator>& op)
+    : BackendNode(DNN_BACKEND_CANN), op_(op) { }
+
+std::shared_ptr<ge::Operator> CannBackendNode::getOp() { return op_; }
+
+// void CannBackendNode::createCannNet(ge::Graph& graph)
+// {
+//     cannNet = std::make_shared<CannNet>();
+//     cannNet->buildFromGraph(graph);
+//     cannNet->loadToDevice();
+// }
+
+CannBackendWrapper::CannBackendWrapper(const Mat& m)
+    : BackendWrapper(DNN_BACKEND_CANN, DNN_TARGET_NPU),  host((Mat*)&m)
 {
-    using namespace ge;
+    auto mat_shape = shape(*host);
+    std::vector<int64_t> shape_;
+    for (int s : mat_shape)
+        shape_.push_back((int64_t)s);
 
-    std::map<AscendString, AscendString> parse_options; // // TODO: support custom parse_options from file
-    CV_LOG_INFO(NULL, "Load graph from buffer with ge::aclgrphParseONNXFromMem");
-    ACL_CHECK_GRAPH_RET(aclgrphParseONNXFromMem(buffer, length, parse_options, graph));
-
-    return true;
+    auto ge_shape = ge::Shape(shape_);
+    desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge::DT_FLOAT);
 }
 
-bool CannGraph::loadFromTensorFlow(const String& modelFile)
+void CannBackendWrapper::copyToHost()
 {
-    using namespace ge;
-
-    std::map<AscendString, AscendString> parse_options; // TODO: support custom parse_options from file
-    CV_LOG_INFO(NULL, "Load graph from " << modelFile << " with ge::aclgrphParseTensorFlow");
-    ACL_CHECK_GRAPH_RET(aclgrphParseTensorFlow(modelFile.c_str(), parse_options, graph));
-
-    return true;
+    CV_LOG_INFO(NULL, "Not implemented");
 }
 
-bool CannGraph::loadFromCaffe(const String& modelFile, const String& weightFile)
+void CannBackendWrapper::setHostDirty()
 {
-    using namespace ge;
-
-    std::map<AscendString, AscendString> parse_options; // TODO: support custom parse_options from file
-    CV_LOG_INFO(NULL, "Load graph from " << modelFile << " with ge::aclgrphParseTensorFlow");
-    ACL_CHECK_GRAPH_RET(aclgrphParseCaffe(modelFile.c_str(), weightFile.c_str(), parse_options, graph));
-
-    return true;
+    CV_LOG_INFO(NULL, "Not implemented");
 }
 
-void CannClient::init(int deviceId)
+CannNet::~CannNet()
 {
-    device_id = deviceId;
-
-    ACL_CHECK_RET(aclrtSetDevice(device_id));
-    ACL_CHECK_RET(aclrtCreateContext(&context, device_id));
-    // ACL_CHECK_RET(aclrtCreateStream(&stream));
-
-    initAclGraphBuilder();
-}
-
-CannClient::~CannClient()
-{
-    CV_LOG_INFO(NULL, "In ~CannClient, inputs = " << inputs << ", outputs = " << outputs);
+    CV_LOG_INFO(NULL, "In ~CannNet, inputs = " << inputs << ", outputs = " << outputs);
     if (!model_desc)
     {
-        CV_LOG_INFO(NULL, "[Failed] Tried to deconstruct CannClient but model is not loaded");
+        CV_LOG_INFO(NULL, "[Failed] Tried to deconstruct CannNet but model is not loaded");
         return;
     }
     // free datasets: inputs, outputs
     if (inputs)
     {
-        CV_LOG_INFO(NULL, "In ~CannClient: destroy inputs");
+        CV_LOG_INFO(NULL, "In ~CannNet: destroy inputs");
         destroyDataset(&inputs);
     }
     if (outputs)
     {
-        CV_LOG_INFO(NULL, "In ~CannClient: destroy outputs");
+        CV_LOG_INFO(NULL, "In ~CannNet: destroy outputs");
         destroyDataset(&outputs);
     }
     // unload model
@@ -178,18 +186,24 @@ CannClient::~CannClient()
     }
 }
 
-void CannClient::finalize()
+void CannNet::finalize()
 {
     finalizeAclGraphBuilder();
 }
 
-bool CannClient::empty() const
+bool CannNet::empty() const
 {
     return (model_desc == nullptr);
 }
 
-void CannClient::loadModel()
+void CannNet::loadToDevice()
 {
+    if (model_desc != nullptr)
+    {
+        CV_LOG_INFO(NULL, "Model has been loaded to device. Skipping ...");
+        return;
+    }
+
     CV_LOG_INFO(NULL, "Load model to NPU memory");
     ACL_CHECK_RET(aclmdlLoadFromMem(reinterpret_cast<const void*>(model.data()), model.size(), &model_id));
 
@@ -201,7 +215,7 @@ void CannClient::loadModel()
     createOutputDataset();
 }
 
-void CannClient::setInput(const Mat& input, const String& name)
+void CannNet::setInput(const Mat& input, const String& name)
 {
     size_t idx;
     if (!name.empty())
@@ -231,25 +245,25 @@ void CannClient::setInput(const Mat& input, const String& name)
     ACL_CHECK_RET(aclrtMemcpy(p_device, data_size, p_host, data_size, ACL_MEMCPY_HOST_TO_DEVICE));
 }
 
-void CannClient::forward()
+void CannNet::forward()
 {
     ACL_CHECK_RET(aclrtSetCurrentContext(context));
     ACL_CHECK_RET(aclmdlExecute(model_id, inputs, outputs));
     CV_LOG_INFO(NULL, "[Success] Finished forward");
 }
 
-void CannClient::fetchOutput(Mat& output, const String& name)
+void CannNet::fetchOutput(Mat& output, const String& name)
 {
     size_t idx;
     if (name.empty())
         idx = 0;
     else
-        ACL_CHECK_RET(aclmdlGetOutputIndexByName(model_desc, name.c_str(), &idx));
+        idx = getOutputIndexByName(name);
 
     fetchOutput(output, idx);
 }
 
-void CannClient::fetchOutput(Mat& output, const size_t idx)
+void CannNet::fetchOutput(Mat& output, const size_t idx)
 {
     // TODO: check idx in range [0, net_output_number)
 
@@ -273,12 +287,20 @@ void CannClient::fetchOutput(Mat& output, const size_t idx)
     ACL_CHECK_RET(aclrtMemcpy(p_host, data_size, p_device, data_size, ACL_MEMCPY_DEVICE_TO_HOST));
 }
 
-size_t CannClient::getOutputNum() const
+size_t CannNet::getOutputNum() const
 {
     return aclmdlGetNumOutputs(model_desc);
 }
 
-void CannClient::buildModelFromGraph(ge::Graph& graph)
+void CannNet::setOutputNames(const std::vector<std::string>& names)
+{
+    CV_Assert(names.size() == getOutputNum());
+
+    output_names.clear();
+    output_names.assign(names.begin(), names.end());
+}
+
+void CannNet::buildFromGraph(ge::Graph& graph)
 {
     using namespace ge;
 
@@ -302,7 +324,16 @@ void CannClient::buildModelFromGraph(ge::Graph& graph)
                 om_model.length);
 }
 
-void CannClient::createInputDataset()
+void CannNet::init()
+{
+    ACL_CHECK_RET(aclrtSetDevice(device_id));
+    ACL_CHECK_RET(aclrtCreateContext(&context, device_id));
+    // ACL_CHECK_RET(aclrtCreateStream(&stream));
+
+    initAclGraphBuilder();
+}
+
+void CannNet::createInputDataset()
 {
     inputs = aclmdlCreateDataset();
     size_t n_inputs = aclmdlGetNumInputs(model_desc);
@@ -318,7 +349,7 @@ void CannClient::createInputDataset()
     }
 }
 
-void CannClient::createOutputDataset()
+void CannNet::createOutputDataset()
 {
     outputs = aclmdlCreateDataset();
     size_t n_outputs = aclmdlGetNumOutputs(model_desc);
@@ -333,7 +364,17 @@ void CannClient::createOutputDataset()
     }
 }
 
-void CannClient::destroyDataset(aclmdlDataset** dataset)
+int CannNet::getOutputIndexByName(const std::string& name)
+{
+    int idx;
+    for (idx = 0; idx < output_names.size(); idx++)
+        if (output_names[idx] == name)
+            return idx;
+
+    return -1;
+}
+
+void CannNet::destroyDataset(aclmdlDataset** dataset)
 {
     if (!dataset)
     {

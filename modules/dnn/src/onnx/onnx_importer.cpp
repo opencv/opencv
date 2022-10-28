@@ -44,10 +44,6 @@
 
 #include "onnx_graph_simplifier.hpp"
 
-#ifdef HAVE_CANN
-#include "../net_impl.hpp"
-#endif
-
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -4045,22 +4041,12 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
 
 Net readNetFromONNX(const String& onnxFile)
 {
-    Net net = detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
-#ifdef HAVE_CANN
-    auto impl = net.getImpl();
-    impl->cannGraph->loadFromONNX(onnxFile);
-#endif
-    return net;
+    return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
 {
-    Net net = detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
-#ifdef HAVE_CANN
-    auto impl = net.getImpl();
-    impl->cannGraph->loadFromONNXFromMem(buffer, sizeBuffer);
-#endif
-    return net;
+    return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
 Net readNetFromONNX(const std::vector<uchar>& buffer)

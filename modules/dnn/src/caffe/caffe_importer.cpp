@@ -53,10 +53,6 @@
 #include "caffe_io.hpp"
 #endif
 
-#ifdef HAVE_CANN
-#include "../net_impl.hpp"
-#endif // HAVE_CANN
-
 #include <opencv2/core/utils/fp_control_utils.hpp>
 
 namespace cv {
@@ -574,10 +570,6 @@ Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
     Net net;
     caffeImporter.populateNet(net);
-#ifdef HAVE_CANN
-    auto impl = net.getImpl();
-    impl->cannGraph->loadFromCaffe(prototxt, caffeModel);
-#endif
     return net;
 }
 

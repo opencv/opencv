@@ -347,13 +347,11 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Returns a CANN backend node
          *
-         * @param   cannGraph  void pointer to the CannGraph object
          * @param   inputsWrapper   layer inputs
-         * @param   outputsWrapper  layer outputs
+         * @param   index           layer id for op name
+         * @param   nodes           inputs of this node
          */
-        virtual Ptr<BackendNode> initCann(void* cannGraph,
-                                          const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
-                                          const std::vector<Ptr<BackendWrapper> > &outputsWrapper);
+        virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.

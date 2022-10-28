@@ -209,10 +209,6 @@ struct Net::Impl : public detail::NetImplBase
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
-#ifdef HAVE_CANN
-    std::shared_ptr<CannGraph> cannGraph = std::make_shared<CannGraph>();
-#endif
-
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
 
     // TODO add getter

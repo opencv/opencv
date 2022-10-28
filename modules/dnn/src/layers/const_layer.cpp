@@ -11,6 +11,9 @@
 #include "layers_common.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
+
+#include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -40,7 +43,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_WEBNN ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -79,6 +83,40 @@ public:
         blobs[0].copyTo(outputs[0]);
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto mat_shape = shape(blobs[0]);
+        std::vector<int64_t> mat_shape_{mat_shape.begin(), mat_shape.end()};
+
+        auto ge_shape = ge::Shape(mat_shape_);
+        auto ge_dtype = ge::DT_FLOAT;
+        switch (blobs[0].type())
+        {
+            case CV_32F: break;
+            case CV_32S: ge_dtype = ge::DT_INT32; break;
+            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+        }
+        auto size_of_type = sizeof(float);
+        switch (blobs[0].type())
+        {
+            case CV_32F: break;
+            case CV_32S: size_of_type = sizeof(int); break;
+            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+        }
+
+        auto desc = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge_dtype);
+        auto ge_tensor = std::make_shared<ge::Tensor>();
+        ge_tensor->SetTensorDesc(*desc);
+        ge_tensor->SetData(blobs[0].data, ge_shape.GetShapeSize() * size_of_type);
+
+        std::string op_name = cv::format("const_%d", index);
+        auto op = std::make_shared<ge::op::Const>(op_name);
+        op->set_attr_value(*ge_tensor);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,

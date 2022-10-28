@@ -1938,54 +1938,9 @@ TEST_P(Test_ONNX_nets, Googlenet)
     expectNoFallbacksFromIE(net);
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_YOLOv3)
-{
-    const String model = findDataFile("dnn/ascend-models/yolov3_tf.pb", true);
-
-    Net net = readNetFromTensorflow(model);
-    ASSERT_FALSE(net.empty());
-
-    net.setPreferableBackend(backend);
-    net.setPreferableTarget(target);
-
-    const String image = findDataFile("dnn/dog416.png", true);
-
-    Mat inp = imread(image);
-    net.setInput(blobFromImage(inp, 1.0f, Size(416, 416)));
-
-    TickMeter tm;
-    int repeat = 10;
-    std::vector<double> times;
-    tm.start();
-    Mat out = net.forward();
-    tm.stop();
-    double firstrun = tm.getTimeMilli();
-    std::cout << "firstrun: " << firstrun << std::endl;
-    tm.reset();
-    for (int i = 0; i < repeat; i++)
-    {
-        tm.start();
-        net.forward();
-        tm.stop();
-        times.push_back(tm.getTimeMilli());
-        tm.reset();
-    }
-    double min_time = times[0], max_time = times[0];
-    double total_time = 0;
-    for (auto t : times)
-    {
-        total_time += t;
-        if (min_time > t)
-            min_time = t;
-        if (max_time < t)
-            max_time = t;
-    }
-    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
-
-    Net::finalizeDevice();
-}
 
 TEST_P(Test_ONNX_nets, DISABLED_AlexNet)
+// TEST_P(Test_ONNX_nets, AlexNet)
 {
     const String model = findDataFile("dnn/ascend-models/alexnet.onnx", true);
 
@@ -2045,10 +2000,64 @@ TEST_P(Test_ONNX_nets, DISABLED_AlexNet)
     Net::finalizeDevice();
 }
 
+TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
+// TEST_P(Test_ONNX_nets, ResNet50_val)
+{
+    const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<String> images{
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000001.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000002.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000003.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000004.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000005.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000006.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000007.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000008.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000009.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000010.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG"),
+    };
+
+    for (auto image : images)
+    {
+        Mat inp = imread(image);
+        cvtColor(inp, inp, COLOR_BGR2RGB);
+        // center crop
+        cv::resize(inp, inp, Size(256, 256));
+        cv::Rect roi(16, 16, 224, 224);
+        inp = inp(roi);
+        inp.convertTo(inp, CV_32FC3);
+        cv::multiply(inp, Scalar(1.0 / 255.0), inp);
+        cv::subtract(inp, Scalar(0.485, 0.456, 0.406), inp);
+        cv::multiply(inp, Scalar(1.0/0.229, 1.0/0.224, 1.0/0.225), inp);
+
+        net.setInput(blobFromImage(inp));
+        // Mat out = net.forward();
+        // std::vector<Mat> outs;
+        // net.forward(outs, net.getUnconnectedOutLayersNames());
+        Mat out = net.forward("save_infer_model/scale_0.tmp_0");
+
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+        cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
+        std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
+    }
+
+
+    Net::finalizeDevice();
+}
+
 TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
 // TEST_P(Test_ONNX_nets, ResNet50)
 {
-    const String model =  findDataFile("dnn/ascend-models/resnet50-v1-12.onnx", true);
+    const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -2059,17 +2068,6 @@ TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
     // Net net2 = readNetFromONNX(model);
     // net2.setPreferableBackend(backend);
 
-    // Mat inp = imread(findDataFile("dnn/ascend-models/image_classification/coffee_mug.224x224.png", true));
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000001.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000002.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000003.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000004.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000005.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000006.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000007.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000008.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000009.JPEG");
-    // Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000010.JPEG");
     Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG");
     cvtColor(inp, inp, COLOR_BGR2RGB);
     // center crop
@@ -2083,6 +2081,116 @@ TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
 
 
     net.setInput(blobFromImage(inp));
+
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat out = net.forward("save_infer_model/scale_0.tmp_0");
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+    double minVal, maxVal;
+    cv::Point minLoc, maxLoc;
+    cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
+    std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
+
+
+    Net::finalizeDevice();
+}
+
+TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
+// TEST_P(Test_ONNX_nets, MobileNet_val)
+{
+    const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    std::vector<String> images{
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000001.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000002.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000003.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000004.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000005.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000006.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000007.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000008.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000009.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000010.JPEG"),
+        String("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG"),
+    };
+
+    for (auto image : images)
+    {
+        Mat inp = imread(image);
+        cvtColor(inp, inp, COLOR_BGR2RGB);
+        // center crop
+        cv::resize(inp, inp, Size(256, 256));
+        cv::Rect roi(16, 16, 224, 224);
+        inp = inp(roi);
+
+        Mat input_blob = blobFromImage(inp, 1.0/255.0, cv::Size(), cv::Scalar(0.485, 0.456, 0.406));
+        cv::divide(input_blob, cv::Scalar(0.229, 0.224, 0.225), input_blob);
+
+        net.setInput(input_blob);
+        Mat out = net.forward();
+
+        double minVal, maxVal;
+        cv::Point minLoc, maxLoc;
+        cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
+        std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
+    }
+
+
+    Net::finalizeDevice();
+}
+
+TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
+// TEST_P(Test_ONNX_nets, MobileNet)
+{
+    const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = imread("/home/test_user01/fytao/data/val/ILSVRC2012_val_00000011.JPEG");
+    cvtColor(inp, inp, COLOR_BGR2RGB);
+    // center crop
+    cv::resize(inp, inp, Size(256, 256));
+    cv::Rect roi(16, 16, 224, 224);
+    inp = inp(roi);
+    Mat input_blob = blobFromImage(inp, 1.0/255.0, cv::Size(), cv::Scalar(0.485, 0.456, 0.406));
+    cv::divide(input_blob, cv::Scalar(0.229, 0.224, 0.225), input_blob);
+
+    net.setInput(input_blob);
 
     TickMeter tm;
     int repeat = 10;
@@ -2123,6 +2231,174 @@ TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
     cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
     std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
 
+
+    Net::finalizeDevice();
+}
+
+TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
+// TEST_P(Test_ONNX_nets, YOLOX)
+{
+    const String model =  findDataFile("dnn/ascend-models/yolox.onnx", true);
+
+    Net net = readNetFromONNX(model);
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    cvtColor(inp, inp, COLOR_BGR2RGB);
+    Mat input_blob = blobFromImage(inp, 1.0f, cv::Size(640, 640));
+
+    net.setInput(input_blob);
+
+    TickMeter tm;
+    int repeat = 10;
+    std::vector<double> times;
+    tm.start();
+    Mat output = net.forward();
+    tm.stop();
+    double firstrun = tm.getTimeMilli();
+    std::cout << "firstrun: " << firstrun << std::endl;
+    tm.reset();
+    for (int i = 0; i < repeat; i++)
+    {
+        tm.start();
+        net.forward();
+        tm.stop();
+        times.push_back(tm.getTimeMilli());
+        tm.reset();
+    }
+    double min_time = times[0], max_time = times[0];
+    double total_time = 0;
+    for (auto t : times)
+    {
+        total_time += t;
+        if (min_time > t)
+            min_time = t;
+        if (max_time < t)
+            max_time = t;
+    }
+    std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
+
+
+    // post process
+    std::vector<int> strides{8, 16, 32};
+    std::vector<int> hsizes{80, 40, 20}; // [640 / stride for stride in strides]
+    std::vector<int> wsizes{80, 40, 20};
+
+    std::vector<Point2f> grids(8400);
+    std::vector<float> expanded_strides(8400);
+    int i, j, k, l = 0, h, w;
+    for (i = 0; i < hsizes.size(); i++)
+    {
+        h = hsizes[i];
+        w = wsizes[i];
+        std::cout << "h = " << h << ", w = " << w << std::endl;
+        for (j = 0; j < h; j++)
+        {
+            for (k = 0; k < w; k++)
+            {
+                Point2f grid{float(k), float(j)};
+                grids[l] = grid;
+                expanded_strides[l] = float(strides[i]);
+                l++;
+            }
+        }
+    }
+
+    const float* p_delta = (const float*)output.data;
+
+    Mat outs;
+    Mat out(1, 6, CV_32FC1);
+    for (i = 0; i < 8400; i++)
+    {
+        j = i * 85;
+        Point2f grid = grids[i];
+        float expanded_stride = expanded_strides[i];
+
+        // retrieve objectness score
+        float objectness = p_delta[j + 4];
+
+        // retrieve class scores
+        float max_score = -1.f;
+        float max_idx = -1.f;
+        float this_score;
+        for (k = 5; k < 85; k++)
+        {
+            this_score = p_delta[j + k] * objectness;
+            if (this_score > max_score)
+            {
+                max_score = this_score;
+                max_idx = k - 5;
+            }
+        }
+        // std::cout << cv::format("%d-th objness = %f, max_score = %f", i, objectness, max_score) << std::endl;
+        if (max_score < 0.5)
+            continue;
+        out.at<float>(0, 4) = max_score;
+        out.at<float>(0, 5) = max_idx;
+
+        // retrieve bbox
+        float cx = (p_delta[j] + grid.x) * expanded_stride;
+        float cy = (p_delta[j + 1] + grid.y) * expanded_stride;
+        float width = std::exp(p_delta[j + 2]) * expanded_stride;
+        float height = std::exp(p_delta[j + 3]) * expanded_stride;
+        out.at<float>(0, 0) = cx - width / 2;
+        out.at<float>(0, 1) = cy - height / 2;
+        out.at<float>(0, 2) = cx + width / 2;
+        out.at<float>(0, 3) = cy + height / 2;
+        // std::cout << cv::format("score = %f, cls = %d, x1 = %d, y1 = %d, x2 = %d, y2 = %d, objectness = %f", out.at<float>(0, 4), int(out.at<float>(0, 5)), int(out.at<float>(0, 0)), int(out.at<float>(0, 1)), int(out.at<float>(0, 2)), int(out.at<float>(0, 3)), objectness) << std::endl;
+
+        outs.push_back(out);
+    }
+
+    Mat dets = outs;
+    if (dets.rows > 1)
+    {
+        // batched nms
+
+        float max_coord = -1;
+        for (i = 0; i < dets.rows; i++)
+            for (j = 0; j < 4; j++)
+                if (max_coord < dets.at<float>(i, j))
+                    max_coord = dets.at<float>(i, j);
+
+        std::vector<Rect2i> boxes;
+        std::vector<float> scores;
+        float offsets;
+        for (i = 0; i < dets.rows; i++)
+        {
+            offsets = dets.at<float>(i, 5) * (max_coord + 1);
+            boxes.push_back(
+                Rect2i(int(dets.at<float>(i, 0) + offsets),
+                       int(dets.at<float>(i, 1) + offsets),
+                       int(dets.at<float>(i, 2) + offsets),
+                       int(dets.at<float>(i, 3) + offsets))
+            );
+            scores.push_back(dets.at<float>(i, 4));
+        }
+        std::vector<int> keep;
+        dnn::NMSBoxes(boxes, scores, 0.5, 0.5, keep);
+
+        Mat dets_after_nms;
+        for (auto idx : keep)
+            dets_after_nms.push_back(dets.row(idx));
+
+        dets = dets_after_nms;
+    }
+
+    std::cout << "dets: " << dets.rows << std::endl;
+    for (int i = 0; i < dets.rows; i++)
+    {
+        int x1 = int(dets.at<float>(i, 0));
+        int y1 = int(dets.at<float>(i, 1));
+        int x2 = int(dets.at<float>(i, 2));
+        int y2 = int(dets.at<float>(i, 3));
+        float score = dets.at<float>(i, 4);
+        int cls = int(dets.at<float>(i, 5));
+        std::cout << cv::format("box [%d, %d, %d, %d], score %f, class %d\n", x1, y1, x2, y2, score, cls);
+    }
 
     Net::finalizeDevice();
 }

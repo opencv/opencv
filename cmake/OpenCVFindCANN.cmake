@@ -16,7 +16,8 @@ if(CANN_INSTALL_DIR)
     endif()
 
     # include
-    set(inc_cann "${CANN_INSTALL_DIR}/include")
+    set(incs_cann "${CANN_INSTALL_DIR}/include")
+    list(APPEND incs_cann "${CANN_INSTALL_DIR}/opp")
 
     # libs
     #  * libascendcl.so
@@ -52,25 +53,14 @@ if(CANN_INSTALL_DIR)
         set(HAVE_CANN OFF)
         return()
     endif()
-    #  * libfmk_parser.so, Tensorflow & Caffe parser
-    set(lib_fmk_parser "${CANN_INSTALL_DIR}/compiler/lib64")
-    find_library(found_lib_fmk_parser NAMES fmk_parser PATHS ${lib_fmk_parser} NO_DEFAULT_PATH)
-    if(found_lib_fmk_parser)
-        set(lib_fmk_parser ${found_lib_fmk_parser})
-        message(STATUS "CANN: libfmk_parser.so is found at ${lib_fmk_parser}")
+    #  * libopsproto.so
+    set(lib_opsproto "${CANN_INSTALL_DIR}/opp/op_proto/built-in")
+    find_library(found_lib_opsproto NAMES opsproto PATHS ${lib_opsproto} NO_DEFAULT_PATH)
+    if(found_lib_opsproto)
+        set(lib_opsproto ${found_lib_opsproto})
+        message(STATUS "CANN: libopsproto.so is found at ${lib_opsproto}")
     else()
-        message(STATUS "CANN: Missing libfmk_parser.so. Turning off HAVE_CANN")
-        set(HAVE_CANN OFF)
-        return()
-    endif()
-    #  * libfmk_onnx_parser.so, ONNX parser
-    set(lib_fmk_onnx_parser "${CANN_INSTALL_DIR}/compiler/lib64")
-    find_library(found_lib_fmk_onnx_parser NAMES fmk_onnx_parser PATHS ${lib_fmk_onnx_parser} NO_DEFAULT_PATH)
-    if(found_lib_fmk_onnx_parser)
-        set(lib_fmk_onnx_parser ${found_lib_fmk_onnx_parser})
-        message(STATUS "CANN: libfmk_onnx_parser.so is found at ${lib_fmk_onnx_parser}")
-    else()
-        message(STATUS "CANN: Missing libfmk_onnx_parser.so. Turning off HAVE_CANN")
+        message(STATUS "CANN: Missing libopsproto.so. Turning off HAVE_CANN")
         set(HAVE_CANN OFF)
         return()
     endif()
@@ -78,15 +68,14 @@ if(CANN_INSTALL_DIR)
 
     set(libs_cann "")
     list(APPEND libs_cann ${lib_ascendcl})
+    list(APPEND libs_cann ${lib_opsproto})
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
-    list(APPEND libs_cann ${lib_fmk_parser})
-    list(APPEND libs_cann ${lib_fmk_onnx_parser})
 
     try_compile(VALID_ASCENDCL
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/cann.cpp"
-        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${inc_cann}"
+        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${incs_cann}"
                     "-DLINK_LIBRARIES:STRING=${libs_cann}"
         OUTPUT_VARIABLE ASCEND_TRY_OUT)
 
@@ -100,16 +89,17 @@ if(CANN_INSTALL_DIR)
 endif()
 
 if(HAVE_CANN)
-    set(CANN_INCLUDE_DIRS ${inc_cann})
+    set(CANN_INCLUDE_DIRS ${incs_cann})
     set(CANN_LIBRARIES ${libs_cann})
     ocv_add_external_target(cann "${CANN_INCLUDE_DIRS}" "${CANN_LIBRARIES}" "HAVE_CANN")
+    ocv_warnings_disable(CMAKE_C_FLAGS -Wignored-qualifiers)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wignored-qualifiers)
 endif()
 
 MARK_AS_ADVANCED(
-    inc_cann
+    incs_cann
     libs_cann
     lib_ascendcl
     lib_graph
     lib_ge_compiler
-    lib_fmk_onnx_parser
 )
