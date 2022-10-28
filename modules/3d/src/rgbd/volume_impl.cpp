@@ -66,8 +66,8 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        intrinsics.fx, intrinsics.fy,
-        intrinsics.cx, intrinsics.cy);
+                    intrinsics.fx, intrinsics.fy,
+                    intrinsics.cx, intrinsics.cy);
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
@@ -178,9 +178,9 @@ int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 
-Vec6f TSDFVolume::getBoundingBox(int precision) const
+Vec6f TsdfVolume::getBoundingBox(int precision) const
 {
-    if (precision == BoundingBoxPrecision::VOXEL)
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
         CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
     }
@@ -193,9 +193,9 @@ Vec6f TSDFVolume::getBoundingBox(int precision) const
     }
 }
 
-void TSDFVolume::setEnableGrowth(bool /*v*/) { }
+void TsdfVolume::setEnableGrowth(bool /*v*/) { }
 
-bool TSDFVolume::getEnableGrowth() const
+bool TsdfVolume::getEnableGrowth() const
 {
     return true;
 }
@@ -387,12 +387,12 @@ void HashTsdfVolume::reset()
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
-void HashTSDFVolume::setEnableGrowth(bool v)
+void HashTsdfVolume::setEnableGrowth(bool v)
 {
     enableGrowth = v;
 }
 
-bool HashTSDFVolume::getEnableGrowth() const
+bool HashTsdfVolume::getEnableGrowth() const
 {
     return enableGrowth;
 }
@@ -584,7 +584,7 @@ void ColorTsdfVolume::reset()
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t ColorTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
-Vec6f ColoredTSDFVolume::getBoundingBox(int precision) const
+Vec6f ColorTsdfVolume::getBoundingBox(int precision) const
 {
     if (precision == BoundingBoxPrecision::VOXEL)
     {
@@ -599,9 +599,9 @@ Vec6f ColoredTSDFVolume::getBoundingBox(int precision) const
     }
 }
 
-void ColoredTSDFVolume::setEnableGrowth(bool /*v*/) { }
+void ColorTsdfVolume::setEnableGrowth(bool /*v*/) { }
 
-bool ColoredTSDFVolume::getEnableGrowth() const
+bool ColorTsdfVolume::getEnableGrowth() const
 {
     return true;
 }

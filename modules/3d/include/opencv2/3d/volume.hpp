@@ -102,11 +102,12 @@ public:
     */
     void reset();
 
+    //TODO: remove this
     /** @brief return visible blocks in volume.
     */
     int getVisibleBlocks() const;
 
-    /** @brief return number of vulmeunits in volume.
+    /** @brief return number of volume units in volume.
     */
     size_t getTotalVolumeUnits() const;
 
@@ -121,14 +122,14 @@ public:
     // VOLUME_UNIT - up to volume unit
     // VOXEL - up to voxel
     // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
-    virtual Vec6f getBoundingBox(int precision) const = 0;
+    virtual Vec6f getBoundingBox(int precision) const;
 
     // Enabels or disables new volume unit allocation during integration
     // Applicable for HashTSDF only
-    virtual void setEnableGrowth(bool v) = 0;
+    virtual void setEnableGrowth(bool v);
     // Returns if new volume units are allocated during integration or not
     // Applicable for HashTSDF only
-    virtual bool getEnableGrowth() const = 0;
+    virtual bool getEnableGrowth() const;
 
     class Impl;
 private:

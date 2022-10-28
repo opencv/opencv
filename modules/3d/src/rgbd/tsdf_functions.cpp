@@ -51,7 +51,7 @@ void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 // Integrate
 
 void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     Matx44f volumePose;
     settings.getVolumePose(volumePose);
@@ -59,9 +59,8 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
 }
 
 
-void integrateTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     //std::cout << "integrateTsdfVolumeUnit" << std::endl;
 

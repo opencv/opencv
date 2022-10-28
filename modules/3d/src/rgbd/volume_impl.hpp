@@ -37,6 +37,10 @@ public:
     virtual int getVisibleBlocks() const = 0;
     virtual size_t getTotalVolumeUnits() const = 0;
 
+    virtual Vec6f getBoundingBox(int precision) const = 0;
+    virtual void setEnableGrowth(bool v) = 0;
+    virtual bool getEnableGrowth() const = 0;
+
 public:
     const VolumeSettings& settings;
 #ifdef HAVE_OPENCL
@@ -243,6 +247,10 @@ void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, O
 void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }
+
+Vec6f Volume::getBoundingBox(int precision) const { return this->impl->getBoundingBox(precision); }
+void Volume::setEnableGrowth(bool v) { this->impl->setEnableGrowth(v); }
+bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 
 
 }
