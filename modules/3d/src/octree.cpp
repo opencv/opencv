@@ -179,11 +179,12 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, int _maxDepth)
     for(size_t idx = 0; idx < pointCloud.size(); idx++ )
     {
         if(!insertPoint(pointCloud[idx])){
-            //CV_LOG_INFO(NULL,"The Point which index is "<<idx<<" has been ignored!");
             cnt++;
         };
     }
-    CV_LOG_WARNING(NULL,"OverAll "<<cnt<<" points has been ignored!");
+    if(cnt!=0){
+        CV_LOG_WARNING(NULL,"OverAll "<<cnt<<" points has been ignored!");
+    }
     return true;
 }
 
