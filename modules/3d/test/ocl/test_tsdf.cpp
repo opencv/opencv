@@ -675,6 +675,7 @@ TEST(HashTSDF_GPU, reproduce_volPoseRot)
 {
     regressionVolPoseRot();
 }
+
 }
 }  // namespace
 

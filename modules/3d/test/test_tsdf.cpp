@@ -755,6 +755,96 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
+void boundingBoxGrowthTest(VolumeType volumeType, bool checkGrowth)
+{
+    VolumeSettings vs(volumeType);
+    Volume volume(volumeType, vs);
+
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+    Matx33f intr;
+    vs.getCameraIntegrateIntrinsics(intr);
+    bool onlySemisphere = true;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    Mat rgb = scene->rgb(poses[0]);
+    Mat points, normals, colors, newPoints, newNormals;
+
+    if (volumeType == VolumeType::ColorTSDF)
+        volume.integrate(depth, rgb, poses[0].matrix);
+    else
+        volume.integrate(depth, poses[0].matrix);
+
+    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+    if ( volumeType == VolumeType::TSDF || volumeType == VolumeType::ColorTSDF )
+    {
+        Vec3i volDims;
+        vs.getVolumeDimensions(volDims);
+        float voxelSize = vs.getVoxelSize();
+        Matx44f pose;
+        vs.getVolumePose(pose);
+        Vec3f start = Affine3f(pose).translation();
+        Vec3f end   = voxelSize * volDims + Affine3f(pose).translation();
+        //TODO: check bounding box to be equal to volume size
+    }
+
+    if (cvtest::debugLevel > 0)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, points, normals, colors);
+        else
+            volume.raycast(poses[0].matrix, points, normals);
+
+        if (volumeType == VolumeType::ColorTSDF)
+            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        else
+            displayImage(depth, points, normals, depthFactor, lightPose);
+    }
+
+    if (checkGrowth)
+    {
+        //TODO: check that pose
+        auto pose2 = poses[17];
+        Mat depth2 = scene->depth(pose2);
+        Mat rgb2 = scene->rgb(pose2);
+
+        Mat points, normals, colors, newPoints, newNormals;
+
+        volume.setEnableGrowth(false);
+
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.integrate(depth2, rgb2, pose2.matrix);
+        else
+            volume.integrate(depth2, pose2.matrix);
+
+        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+        //TODO: compare bounding boxes
+
+        if (cvtest::debugLevel > 0)
+        {
+            if (volumeType == VolumeType::ColorTSDF)
+                volume.raycast(pose2.matrix, points, normals, colors);
+            else
+                volume.raycast(pose2.matrix, points, normals);
+
+            if (volumeType == VolumeType::ColorTSDF)
+                displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            else
+                displayImage(depth, points, normals, depthFactor, lightPose);
+        }
+    }
+
+    //TODO: create scene with prolongating geometry
+    //TODO: render scene from 1st pose, integrate, measure bounding box
+    //TODO: if growthTest flag is on, enable/disable growth
+    //TODO: render scene from 2nd pose == 1st pose + translate(distance, 0, 0), integrate, measure bounding box
+}
+
 static Mat nanMask(Mat img)
 {
     int depth = img.depth();
@@ -963,6 +1053,11 @@ TEST(TSDF, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
+TEST(TSDF, boundingBox)
+{
+    boundingBoxGrowthTest(VolumeType::TSDF, false);
+}
+
 TEST(HashTSDF, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
@@ -1011,6 +1106,16 @@ TEST(HashTSDF, valid_points_common_framesize_mat)
 TEST(HashTSDF, valid_points_common_framesize_frame)
 {
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF, boundingBox)
+{
+    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
+}
+
+TEST(HashTSDF, enableGrowth)
+{
+    boundingBoxGrowthTest(VolumeType::HashTSDF, true);
 }
 
 TEST(HashTSDF, reproduce_volPoseRot)
@@ -1066,6 +1171,11 @@ TEST(ColorTSDF, valid_points_common_framesize_mat)
 TEST(ColorTSDF, valid_points_common_framesize_fetch)
 {
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF, boundingBox)
+{
+    boundingBoxGrowthTest(VolumeType::ColorTSDF, false);
 }
 
 #else
@@ -1136,6 +1246,13 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(TSDF_CPU, boundingBox)
+{
+    cv::ocl::setUseOpenCL(false);
+    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -1286,13 +1403,32 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
     cv::ocl::setUseOpenCL(true);
 }
 
+TEST(ColorTSDF_CPU, boundingBox)
+{
+    cv::ocl::setUseOpenCL(false);
+    boundingBoxGrowthTest(VolumeType::ColorTSDF, false);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, boundingBox)
+{
+    cv::ocl::setUseOpenCL(false);
+    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, boundingBox)
+{
+    cv::ocl::setUseOpenCL(false);
+    boundingBoxGrowthTest(VolumeType::HashTSDF, true);
+    cv::ocl::setUseOpenCL(true);
+}
 
 // OpenCL tests
 TEST(HashTSDF_GPU, reproduce_volPoseRot)
 {
     regressionVolPoseRot();
 }
-
 
 #endif
 }
