@@ -422,16 +422,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS QuantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<QuantizeLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
