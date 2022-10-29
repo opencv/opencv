@@ -594,25 +594,25 @@ template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator/=(v_reg<_Tp, n>&
 
 /** @brief Bitwise AND
 
-For all types.. */
+Only for integer types. */
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator&(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator&=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise OR
 
-For all types.. */
+Only for integer types. */
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator|(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator|=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise XOR
 
-For all types.*/
+Only for integer types.*/
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator^(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator^=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise NOT
 
-For all types.*/
+Only for integer types.*/
 template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator~(const v_reg<_Tp, n>& a);
 
 
@@ -701,7 +701,6 @@ v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a) \
 } \
 
 CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BITWISE_NOT_, ~)
-CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BITWISE_NOT_, ~)
 
 #endif  // !CV_DOXYGEN
 
