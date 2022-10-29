@@ -1620,14 +1620,15 @@ CV_EXPORTS_W void blur( InputArray src, OutputArray dst,
                         Size ksize, Point anchor = Point(-1,-1),
                         int borderType = BORDER_DEFAULT );
 
-/** @brief Blurs an image using the StackBlur.
-The function applies and StackBlur to an image.
-StackBlur can generate similar results as Gaussian blur, and the time does not increase as the kernel size increases.
+/** @brief Blurs an image using the stackBlur.
+
+The function applies and stackBlur to an image.
+stackBlur can generate similar results as Gaussian blur, and the time consumption does not increase with the increase of kernel size.
 It creates a kind of moving stack of colors whilst scanning through the image. Thereby it just has to add one new block of color to the right side
 of the stack and remove the leftmost color. The remaining colors on the topmost layer of the stack are either added on or reduced by one,
-depending on if they are on the right or on the left side of the stack.
-Described here: http://underdestruction.com/2004/02/25/stackblur-2004.
-Stack Blur Algorithm by Mario Klingemann <mario@quasimondo.com>
+depending on if they are on the right or on the left side of the stack. The only supported borderType is BORDER_REPLICATE.
+Original paper was proposed by Mario Klingemann, which can be found http://underdestruction.com/2004/02/25/stackblur-2004.
+
 @param src input image. The number of channels can be arbitrary, but the depth should be one of
 CV_8U, CV_16U, CV_16S or CV_32F.
 @param dst output image of the same size and type as src.
