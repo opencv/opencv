@@ -51,7 +51,7 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   set(_min_libavutil_version 52.3.0)
   set(_min_libswscale_version 2.1.1)
   set(_min_libavresample_version 1.0.1)
-  set(_min_libavdevice_version 56.0.0)
+  set(_min_libavdevice_version 53.2.0)
   foreach(ffmpeg_lib ${_used_ffmpeg_libraries})
     if(FFMPEG_${ffmpeg_lib}_VERSION VERSION_LESS _min_${ffmpeg_lib}_version)
       message(STATUS "FFMPEG is disabled. Can't find suitable ${ffmpeg_lib} library"
