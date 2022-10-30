@@ -18,7 +18,7 @@ try:
 
         def test_garray_type(self):
             types = [cv.gapi.CV_BOOL  , cv.gapi.CV_INT   , cv.gapi.CV_DOUBLE , cv.gapi.CV_FLOAT,
-                     cv.gapi.CV_STRING, cv.gapi.CV_POINT , cv.gapi.CV_POINT2F, cv.gapi.POINT3f ,
+                     cv.gapi.CV_STRING, cv.gapi.CV_POINT , cv.gapi.CV_POINT2F, cv.gapi.CV_POINT3F ,
                      cv.gapi.CV_SIZE  , cv.gapi.CV_RECT  , cv.gapi.CV_SCALAR , cv.gapi.CV_MAT  ,
                      cv.gapi.CV_GMAT]
 
