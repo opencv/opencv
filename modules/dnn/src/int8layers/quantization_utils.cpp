@@ -117,6 +117,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        axis = normalize_axis(axis, shape(inputs[0]).size());
+
         if (is1D)
         {
             MatShape inputShape = shape(inputs[0]);
@@ -230,6 +232,8 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        axis = normalize_axis(axis, shape(inputs[0]).size());
 
         if (is1D)
         {
