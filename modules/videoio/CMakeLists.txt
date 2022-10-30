@@ -158,6 +158,10 @@ if(TARGET ocv.3rdparty.ueye)
   endif()
 endif()
 
+if(FFMPEG_libavdevice_FOUND)
+      add_definitions(-DHAVE_FFMPEG_LIBAVDEVICE)
+endif()
+
 if(TARGET ocv.3rdparty.ffmpeg)
   if(HAVE_FFMPEG_WRAPPER)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
