@@ -1143,7 +1143,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
     AVDictionary** stream_info_opts = NULL;
-    int orig_num_streams = ic->nb_streams;
+    unsigned int orig_num_streams = ic->nb_streams;
 
     if (entry != 0)
     {
