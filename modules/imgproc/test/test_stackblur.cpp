@@ -125,7 +125,8 @@ void _stackblurRef(const Mat& src, Mat& dst, Size ksize)
             }
 
             int sp1 = sp + 1;
-            sp1 &= -(sp1 < stackLenW);
+            if (sp1 >= stackLenW)
+                sp1 = 0;
 
             for(int ci = 0; ci < CN; ci++)
             {
@@ -143,7 +144,8 @@ void _stackblurRef(const Mat& src, Mat& dst, Size ksize)
             }
 
             ++sp;
-            if (sp >= stackLenW) sp = 0;
+            if (sp >= stackLenW)
+                sp = 0;
         }
     }
 
@@ -239,7 +241,7 @@ void stackBlurRef(const Mat& img, Mat& dst, Size ksize)
     else if (img.depth() == CV_32F)
         _stackblurRef<float>(img, dst, ksize);
     else
-        CV_Error_( CV_StsNotImplemented,
+        CV_Error(Error::StsNotImplemented,
                    ("Unsupported Mat type in stackBlurRef, "
                     "the supported formats are: CV_8U, CV_16U, CV_16S and CV_32F."));
 }

@@ -461,8 +461,6 @@ public:
 
     ~ParallelStackBlurRow() {}
 
-    ParallelStackBlurRow& operator=(const ParallelStackBlurRow &) { return *this; }
-
     /*
      * The idea is as follows:
      * The stack can be understood as a sliding window of length kernel size.
@@ -1084,8 +1082,6 @@ public:
 
     ~ParallelStackBlurColumn() {}
 
-    ParallelStackBlurColumn& operator=(const ParallelStackBlurColumn &) { return *this; }
-
     virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         if (radius == 0)
@@ -1146,7 +1142,8 @@ public:
             if (stackStart >= kernelSize) stackStart -= kernelSize;
 
             int sp1 = sp + 1;
-            sp1 &= -(sp1 < kernelSize);
+            if (sp1 >= kernelSize)
+                sp1 = 0;
 
             if (yp < hm)
             {
@@ -1176,7 +1173,8 @@ public:
 
             dstPtr += widthElem;
             ++sp;
-            if (sp >= kernelSize) sp = 0;
+            if (sp >= kernelSize)
+                sp = 0;
         }
     }
 
@@ -1255,7 +1253,7 @@ void stackBlur(InputArray _src, OutputArray _dst, Size ksize)
             parallel_for_(Range(0, widthElem), ParallelStackBlurColumn<float, float>(dst, dst, radiusH), numOfThreads);
     }
     else
-        CV_Error_( CV_StsNotImplemented,
+        CV_Error(Error::StsNotImplemented,
                    ("Unsupported input format in StackBlur, the supported formats are: CV_8U, CV_16U, CV_16S and CV_32F."));
 }
 } //namespace
