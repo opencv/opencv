@@ -750,7 +750,7 @@ fromConnection:(AVCaptureConnection *)connection{
         bgr_image->imageData = bgr_imagedata;
         bgr_image->imageSize = (int)currSize;
 
-        cvCvtColor(image, bgr_image, CV_BGRA2BGR);
+        cvtColor(image, bgr_image, CV_BGRA2BGR);
 
         // image taken from the buffer is incorrected rotated. I'm using cvTranspose + cvFlip.
         // There should be an option in iOS API to rotate the buffer output orientation.
@@ -1088,7 +1088,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     if (cvtCode == -1) {
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
-        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+        cvtColor(mDeviceImage, mOutImage, cvtCode);
     }
 
     CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -1373,10 +1373,10 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
 
     if (movieColor) {
         //assert(iplimage->nChannels == 3);
-        cvCvtColor(iplimage, argbimage, CV_BGR2BGRA);
+        cvtColor(iplimage, argbimage, CV_BGR2BGRA);
     }else{
         //assert(iplimage->nChannels == 1);
-        cvCvtColor(iplimage, argbimage, CV_GRAY2BGRA);
+        cvtColor(iplimage, argbimage, CV_GRAY2BGRA);
     }
     //IplImage -> CGImage conversion
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();

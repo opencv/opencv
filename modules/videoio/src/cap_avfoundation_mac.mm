@@ -687,7 +687,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvCvtColor(mDeviceImage, mOutImage, CV_BGRA2BGR);
+        cvtColor(mDeviceImage, mOutImage, CV_BGRA2BGR);
     } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {
         if ( currSize != width*3*height ) {
             currSize = width*3*height;
@@ -706,7 +706,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvCvtColor(mDeviceImage, mOutImage, CV_YUV2BGR_UYVY);
+        cvtColor(mDeviceImage, mOutImage, CV_YUV2BGR_UYVY);
     } else {
         fprintf(stderr, "OpenCV: unknown pixel format 0x%08X\n", pixelFormat);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -1010,8 +1010,8 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         }
     } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
                 pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
-        // cvCvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
-        // So, lie about the height of the buffer.  cvCvtColor(CV_YUV2GRAY_420) will only read the first 2/3 of it.
+        // cvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
+        // So, lie about the height of the buffer.  cvtColor(CV_YUV2GRAY_420) will only read the first 2/3 of it.
         height = height * 3 / 2;
         deviceChannels = 1;
 
@@ -1053,7 +1053,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         // Copy.
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
-        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+        cvtColor(mDeviceImage, mOutImage, cvtCode);
     }
 
 
@@ -1333,10 +1333,10 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
 
     if (movieColor) {
         //assert(iplimage->nChannels == 3);
-        cvCvtColor(iplimage, argbimage, CV_BGR2BGRA);
+        cvtColor(iplimage, argbimage, CV_BGR2BGRA);
     }else{
         //assert(iplimage->nChannels == 1);
-        cvCvtColor(iplimage, argbimage, CV_GRAY2BGRA);
+        cvtColor(iplimage, argbimage, CV_GRAY2BGRA);
     }
     //IplImage -> CGImage conversion
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
