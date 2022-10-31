@@ -40,6 +40,9 @@ public:
     virtual int getVisibleBlocks() const = 0;
     virtual size_t getTotalVolumeUnits() const = 0;
 
+    virtual void marchCubes(OutputArray, OutputArray) const = 0;
+    void saveMesh(const std::string& path) const;
+
 public:
     const VolumeSettings& settings;
 #ifdef HAVE_OPENCL
@@ -70,6 +73,7 @@ public:
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
 
+    virtual void marchCubes(OutputArray _vertices, OutputArray _faces) const override;
 public:
     Vec6f frameParams;
 #ifndef HAVE_OPENCL
@@ -112,6 +116,8 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    virtual void marchCubes(OutputArray _vertices, OutputArray _faces) const override;
 public:
     int lastVolIndex;
     int lastFrameId;
@@ -163,6 +169,8 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    virtual void marchCubes(OutputArray _vertices, OutputArray _faces) const override;
 private:
     Vec4i volStrides;
     Vec6f frameParams;
@@ -213,7 +221,8 @@ void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, O
 void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }
-
+void Volume::marchCubes(cv::OutputArray vertices, cv::OutputArray faces) const { this->impl->marchCubes(vertices, faces); }
+void Volume::saveMesh(const std::string& path) const { this->impl->saveMesh(path); };
 
 }
 

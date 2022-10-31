@@ -130,6 +130,12 @@ public:
     */
     size_t getTotalVolumeUnits() const;
 
+    // TODO: docstring
+    void marchCubes(OutputArray vertices, OutputArray faces) const;
+
+    // TODO: docstring
+    void saveMesh(const std::string& path) const;
+
     class Impl;
 private:
     Ptr<Impl> impl;
