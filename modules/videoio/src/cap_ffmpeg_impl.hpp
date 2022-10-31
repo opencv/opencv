@@ -283,7 +283,7 @@ static
 inline void get_monotonic_time(timespec *tv)
 {
     LARGE_INTEGER           t;
-    FILETIME				f;
+    FILETIME                f;
     double                  microseconds;
     static LARGE_INTEGER    offset;
     static double           frequencyToMicroseconds;
@@ -601,6 +601,7 @@ struct CvCapture_FFMPEG
     char              * filename;
 
     AVDictionary *dict;
+    AVDictionary *stream_dict;
 #if USE_AV_INTERRUPT_CALLBACK
     int open_timeout;
     int read_timeout;
@@ -1110,6 +1111,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
 #ifndef NO_GETENV
     char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    char* stream_options = getenv("OPENCV_FFMPEG_STREAM_OPTIONS");
+
     if(options == NULL)
     {
 #if LIBAVFORMAT_VERSION_MICRO >= 100  && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
@@ -1130,8 +1133,18 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #else
     av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
+
+    if(stream_options != NULL)
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using stream options from environment: " << stream_options);
+        av_dict_parse_string(&stream_dict, stream_options, ";", "|", 0);
+    }
+
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
+    AVDictionary** stream_info_opts = NULL;
+    int orig_num_streams = ic->nb_streams;
+
     if (entry != 0)
     {
       input_format = av_find_input_format(entry->value);
@@ -1145,7 +1158,22 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
         CV_WARN(_filename);
         goto exit_func;
     }
-    err = avformat_find_stream_info(ic, &dict);
+
+    stream_info_opts = static_cast<AVDictionary**>(av_calloc(ic->nb_streams, sizeof(*stream_info_opts)));
+    if (!stream_info_opts) {
+        CV_WARN("Unable to allocate stream info dictionary");
+        goto exit_func;
+    }
+
+    for (i = 0; i < ic->nb_streams; i++)
+        av_dict_copy(stream_info_opts, stream_dict, 0);
+
+    err = avformat_find_stream_info(ic, stream_info_opts);
+
+    for (i = 0; i < orig_num_streams; i++)
+        av_dict_free(&stream_info_opts[i]);
+    av_freep(&stream_info_opts);
+
     if (err < 0)
     {
         CV_LOG_WARNING(NULL, "Unable to read codec parameters from stream (" << _opencv_ffmpeg_get_error_string(err) << ")");
