@@ -11,14 +11,88 @@ namespace cv
 namespace dnn
 {
 
+static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int axis)
+{
+    // The data is the 1-D scales or zeropoints.
+    CV_Assert(axis >= 0 && targetShape.size() > axis && data.total() == targetShape[axis]);
+    std::vector<int> broadcast_axes;
+    for (int i = 0; i < targetShape.size(); i++)
+    {
+        if (i != axis)
+            broadcast_axes.push_back(i);
+    }
+
+    MatShape subTargetShape = shape(data);
+
+    // convert std::vector to 1D Mat.
+    for (auto broadcast_axis : broadcast_axes)
+    {
+        subTargetShape[broadcast_axis] = targetShape[broadcast_axis];
+        data = data.reshape(0, total(data, 0, broadcast_axis));
+        Mat tmp = cv::repeat(data, 1, subTargetShape[broadcast_axis]);
+        data = tmp.reshape(0, subTargetShape);
+    }
+}
+
+static void broadcastScaleAndZeropoint(Mat& scalesMat, Mat& zeropointsMat, const std::vector<float>& scales,
+                                       const std::vector<int>& zeropoints, const MatShape& targetShape, int axis)
+{
+    // broad cast the scales and zeropoint to the input shape.
+    MatShape subTargetShape(targetShape.size(), 1);
+    subTargetShape[axis] = scales.size();
+
+    zeropointsMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
+    scalesMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
+
+    const int len = scales.size();
+    // Deep copy the scales and zeropoint data and prevent the original data from being changed.
+
+    float * scalePtr = scalesMat.ptr<float>(0);
+    for (int i = 0; i < len; i++)
+        scalePtr[i] = scales[i];
+
+    float * zpPtr = zeropointsMat.ptr<float>(0);
+    for (int i = 0; i < len; i++)
+        zpPtr[i] = (float )zeropoints[i];
+
+    broadcast1D2TargetMat(scalesMat, targetShape, axis);
+    broadcast1D2TargetMat(zeropointsMat, targetShape, axis);
+}
+
 // Quantize FP32/FP16 Inputs to INT8
 class QuantizeLayerImpl CV_FINAL : public QuantizeLayer
 {
 public:
+    int axis;
+    bool is1D;
+    Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+
     QuantizeLayerImpl(const LayerParams& params)
     {
-        scale = params.get<float>("scales", 1.0f);
-        zeropoint = params.get<int>("zeropoints", 0);
+        is1D = params.get<bool>("is1D", false);
+        axis = params.get<int>("axis", 1);
+        if (!is1D)
+        {
+            scales.push_back(params.get<float>("scales", 1.0f));
+            zeropoints.push_back(params.get<int>("zeropoints", 0));
+        }
+        else
+        {
+            DictValue paramScales = params.get("scales");
+            int i, n = paramScales.size();
+
+            CV_Assert(n > 0);
+            scales.resize(n, 0.);
+            for (i = 0; i < n; i++)
+                scales[i] = paramScales.get<float>(i);
+
+            zeropoints.resize(n, 0);
+            DictValue paramZp = params.get("zeropoints");
+            n = paramZp.size();
+
+            for (i = 0; i < n; i++)
+                zeropoints[i] = paramZp.get<int>(i);
+        }
         setParamsFrom(params);
     }
 
@@ -42,6 +116,14 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        axis = normalize_axis(axis, shape(inputs[0]).size());
+
+        if (is1D)
+        {
+            MatShape inputShape = shape(inputs[0]);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -58,7 +140,7 @@ public:
             inputs[0] = inputFp32;  // replace
         }
 
-        inputs[0].convertTo(outputs[0], CV_8S, 1.f/scale, zeropoint);
+        inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
         return true;
     }
 #endif
@@ -68,14 +150,26 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !is1D,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        inputs[0].convertTo(outputs[0], CV_8S, 1.f/scale, zeropoint);
+        if (outputs[0].depth() != CV_8S)
+            outputs[0].convertTo(outputs[0], CV_8S);
+
+        if (is1D)
+        {
+            Mat inputTmp;
+            divide(inputs[0], scalesMat, inputTmp);
+            subtract(inputTmp, zeropointsMat, inputTmp);
+
+            inputTmp.convertTo(outputs[0], CV_8S);
+        }
+        else
+            inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
     }
 };
 
@@ -83,10 +177,38 @@ public:
 class DequantizeLayerImpl CV_FINAL : public DequantizeLayer
 {
 public:
+    int axis;
+    bool is1D;
+    Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+
     DequantizeLayerImpl(const LayerParams& params)
     {
-        scale = params.get<float>("scales", 1.0f);
-        zeropoint = params.get<int>("zeropoints", 0);
+        is1D = params.get<bool>("is1D", false);
+        axis = params.get<int>("axis", 1);
+
+        if (!is1D)
+        {
+            scales.push_back(params.get<float>("scales", 1.0f));
+            zeropoints.push_back(params.get<int>("zeropoints", 0));
+        }
+        else
+        {
+            DictValue paramScales = params.get("scales");
+            int i, n = paramScales.size();
+
+            CV_Assert(n > 0);
+            scales.resize(n);
+            for (i = 0; i < n; i++)
+                scales[i] = paramScales.get<float>(i);
+
+            zeropoints.resize(n, 0);
+            DictValue paramZp = params.get("zeropoints");
+            n = paramZp.size();
+
+            for (i = 0; i < n; i++)
+                zeropoints[i] = paramZp.get<int>(i);
+        }
+
         setParamsFrom(params);
     }
 
@@ -110,6 +232,14 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+
+        axis = normalize_axis(axis, shape(inputs[0]).size());
+
+        if (is1D)
+        {
+            MatShape inputShape = shape(inputs[0]);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -120,7 +250,7 @@ public:
         outputs_.getUMatVector(outputs);
 
         UMat outputFp32;
-        inputs[0].convertTo(outputFp32, CV_32F, scale, -(scale*zeropoint));
+        inputs[0].convertTo(outputFp32, CV_32F, scales[0], -(scales[0]*zeropoints[0]));
 
         if (outputs_.depth() == CV_16S)
             convertFp16(outputFp32, outputs[0]);
@@ -135,14 +265,25 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !is1D,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        inputs[0].convertTo(outputs[0], CV_32F, scale, -(scale*zeropoint));
+        if (outputs[0].depth() != CV_32F)
+            outputs[0].convertTo(outputs[0], CV_32F);
+
+        if (is1D)
+        {
+            Mat inputTmp;
+            inputs[0].convertTo(inputTmp, CV_32F);
+            subtract(inputTmp, zeropointsMat, inputTmp);
+            multiply(inputTmp, scalesMat, outputs[0]);
+        }
+        else
+            inputs[0].convertTo(outputs[0], CV_32F, scales[0], -(scales[0]*zeropoints[0]));
     }
 };
 
