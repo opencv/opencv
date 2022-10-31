@@ -331,7 +331,7 @@ public:
     @param nfeatures The number of best features to retain. The features are ranked by their scores
     (measured in SIFT algorithm as the local contrast)
     
-    @param octaves The number octaves.
+    @param nOctaves The number octaves.
 
     @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
     number of octaves is computed automatically from the image resolution.
@@ -350,7 +350,7 @@ public:
     @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
     is captured with a weak camera with soft lenses, you might want to reduce the number.
     */
-    CV_WRAP static Ptr<SIFT2> create(int nfeatures = 0, int octaves = 4, int nOctaveLayers = 3,
+    CV_WRAP static Ptr<SIFT2> create(int nfeatures = 0, int nOctaves = 4, int nOctaveLayers = 3,
                                      double contrastThreshold = 0.04, double edgeThreshold = 10,
                                      double sigma = 1.6);
 
@@ -358,7 +358,7 @@ public:
     @param nfeatures The number of best features to retain. The features are ranked by their scores
     (measured in SIFT algorithm as the local contrast)
     
-    @param octaves The number octaves.
+    @param nOctaves The number octaves.
 
     @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
     number of octaves is computed automatically from the image resolution.
@@ -378,10 +378,12 @@ public:
     is captured with a weak camera with soft lenses, you might want to reduce the number.
 
     @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
+
+    @param rootSift Compute the root sift normalized histogram.
     */
-    CV_WRAP static Ptr<SIFT2> create(int nfeatures, int octaves, int nOctaveLayers,
+    CV_WRAP static Ptr<SIFT2> create(int nfeatures, int nOctaves, int nOctaveLayers,
                                      double contrastThreshold, double edgeThreshold,
-                                     double sigma, int descriptorType);
+                                     double sigma, int descriptorType, bool rootSift);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };

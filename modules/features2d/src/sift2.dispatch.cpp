@@ -5,6 +5,7 @@
 // Copyright (c) 2006-2010, Rob Hess <hess@eecs.oregonstate.edu>
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2020, Intel Corporation, all rights reserved.
+// Copyright (C) 2022, whuaegeansea@gmail.com.
 
 /**********************************************************************************************\
  Implementation of SIFT is based on the code from http://blogs.oregonstate.edu/hess/code/sift/
@@ -88,7 +89,7 @@ class SIFT2_Impl : public SIFT2
 public:
     explicit SIFT2_Impl( int nfeatures = 0, int nOctaves= 4, int nOctaveLayers = 3,
                           double contrastThreshold = 0.04, double edgeThreshold = 10,
-                          double sigma = 1.6, int descriptorType = CV_32F);
+                          double sigma = 1.6, int descriptorType = CV_32F, bool rootSift = true );
 
     //! returns the descriptor size in floats (128)
     int descriptorSize() const CV_OVERRIDE;
@@ -119,6 +120,7 @@ protected:
     CV_PROP_RW double edgeThreshold;
     CV_PROP_RW double sigma;
     CV_PROP_RW int descriptor_type;
+    CV_PROP_RW bool rootSift;
     
 };
 
@@ -127,20 +129,17 @@ Ptr<SIFT2> SIFT2::create( int _nfeatures, int _nOctaves, int _nOctaveLayers,
 {
     CV_TRACE_FUNCTION();
 
-    return makePtr<SIFT2_Impl>(_nfeatures, _nOctaves, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F);
+    return makePtr<SIFT2_Impl>(_nfeatures, _nOctaves, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F, true);
 }
 
 Ptr<SIFT2> SIFT2::create( int _nfeatures, int _nOctaves, int _nOctaveLayers,
-                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
+                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType, bool _rootSift )
 {
     CV_TRACE_FUNCTION();
 
-    // The number of octaves greater than 0.
-    CV_Assert(_nOctaves >= 0);
-
     // SIFT descriptor supports 32bit floating point and 8bit unsigned int.
     CV_Assert(_descriptorType == CV_32F || _descriptorType == CV_8U);
-    return makePtr<SIFT2_Impl>(_nfeatures, _nOctaves, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _descriptorType);
+    return makePtr<SIFT2_Impl>(_nfeatures, _nOctaves, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _descriptorType, _rootSift);
 }
 
 String SIFT2::getDefaultName() const
@@ -168,7 +167,9 @@ static Mat createInitialImage2( const Mat& img, bool doubleImageSize, float sigm
         gray.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT2_FIXPT_SCALE, 0);
     }
     else
+    {
         img.convertTo(gray_fpt, DataType<sift_wt>::type, SIFT2_FIXPT_SCALE, 0);
+    }
 
     float sig_diff;
 
@@ -219,7 +220,9 @@ void SIFT2_Impl::buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, i
         {
             Mat& dst = pyr[o*(nOctaveLayers + 3) + i];
             if( o == 0  &&  i == 0 )
+            {
                 dst = base;
+            }
             // base of new octave is halved image from end of previous octave
             else if( i == 0 )
             {
@@ -346,21 +349,22 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
 
     float contrastThreshold2 = contrastThreshold / nOctaveLayers;
 
-    const int num_Octaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
-    const int threshold = cvFloor(0.8 * contrastThreshold2 * 255 * SIFT2_FIXPT_SCALE);
+    const int num_octaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
+    const int threshold = cvFloor(0.8f * contrastThreshold2 * (255 * SIFT2_FIXPT_SCALE));
 
     keypoints.clear();
     TLSDataAccumulator<std::vector<KeyPoint> > tls_kpts_struct;
 
-    for( int o = 0; o < num_Octaves; o++ )
-        for( int i = 1; i <= nOctaveLayers; i++ )
+    for (int o = num_octaves - 1; o > 0; --o)
+    {
+        for (int i = nOctaveLayers; i >=1; --i)
         {
-            const int idx = o*(nOctaveLayers+2)+i;
+            const int idx = o * (nOctaveLayers + 2) + i;
             const Mat& img = dog_pyr[idx];
             const int step = (int)img.step1();
             const int rows = img.rows, cols = img.cols;
 
-            parallel_for_(Range(SIFT2_IMG_BORDER, rows-SIFT2_IMG_BORDER),
+            parallel_for_(Range(SIFT2_IMG_BORDER, rows - SIFT2_IMG_BORDER),
                 findScaleSpaceExtremaComputer2(
                     o, i, threshold, idx, step, cols,
                     nOctaveLayers,
@@ -369,6 +373,24 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
                     sigma,
                     gauss_pyr, dog_pyr, tls_kpts_struct));
         }
+
+        if (nfeatures > 0)
+        {
+            std::vector<std::vector<KeyPoint>*> kpt_vecs;
+            tls_kpts_struct.gather(kpt_vecs);
+
+            int num_keypoints = 0;
+            for (size_t i = 0; i < kpt_vecs.size(); ++i)
+            {
+                num_keypoints += (int)kpt_vecs[i]->size();
+            }
+
+            if (num_keypoints > nfeatures)
+            {
+                break;
+            }
+        }
+    }
 
     std::vector<std::vector<KeyPoint>*> kpt_vecs;
     tls_kpts_struct.gather(kpt_vecs);
@@ -380,7 +402,8 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
     }
     keypoints.reserve(num_keypoints);
 
-    for (size_t i = 0; i < kpt_vecs.size(); ++i) {
+    for (size_t i = 0; i < kpt_vecs.size(); ++i)
+    {
         keypoints.insert(keypoints.end(), kpt_vecs[i]->begin(), kpt_vecs[i]->end());
     }
 }
@@ -389,12 +412,12 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
 static
 void calcSIFTDescriptor2(
         const Mat& img, Point2f ptf, float ori, float scl,
-        int d, int n, Mat& dst, int row
+        Mat& dst, int row, bool rootSift
 )
 {
     CV_TRACE_FUNCTION();
 
-    CV_CPU_DISPATCH(calcSIFTDescriptor2, (img, ptf, ori, scl, d, n, dst, row),
+    CV_CPU_DISPATCH(calcSIFTDescriptor2, (img, ptf, ori, scl,  dst, row, rootSift),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -405,12 +428,14 @@ public:
                             const std::vector<KeyPoint>& _keypoints,
                             Mat& _descriptors,
                             int _nOctaveLayers,
-                            int _firstOctave)
+                            int _firstOctave,
+                            bool _rootSift)
         : gpyr(_gpyr),
           keypoints(_keypoints),
           descriptors(_descriptors),
           nOctaveLayers(_nOctaveLayers),
-          firstOctave(_firstOctave) { }
+          firstOctave(_firstOctave),
+          rootSift(_rootSift){ }
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
@@ -419,7 +444,7 @@ public:
         const int begin = range.start;
         const int end = range.end;
 
-        static const int d = SIFT2_DESCR_WIDTH, n = SIFT2_DESCR_HIST_BINS;
+        
 
         for ( int i = begin; i<end; i++ )
         {
@@ -433,9 +458,11 @@ public:
             const Mat& img = gpyr[(octave - firstOctave)*(nOctaveLayers + 3) + layer];
 
             float angle = 360.f - kpt.angle;
-            if(std::abs(angle - 360.f) < FLT_EPSILON)
+            if (std::abs(angle - 360.f) < FLT_EPSILON)
+            {
                 angle = 0.f;
-            calcSIFTDescriptor2(img, ptf, angle, size*0.5f, d, n, descriptors, i);
+            }
+            calcSIFTDescriptor2(img, ptf, angle, size*0.5f, descriptors, i, rootSift);
         }
     }
 private:
@@ -444,21 +471,23 @@ private:
     Mat& descriptors;
     int nOctaveLayers;
     int firstOctave;
+    bool rootSift;
 };
 
 static void calcDescriptors2(const std::vector<Mat>& gpyr, const std::vector<KeyPoint>& keypoints,
-                            Mat& descriptors, int nOctaveLayers, int firstOctave )
+                            Mat& descriptors, int nOctaveLayers, int firstOctave, bool rootSift )
 {
     CV_TRACE_FUNCTION();
-    parallel_for_(Range(0, static_cast<int>(keypoints.size())), calcDescriptorsComputer2(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave));
+    parallel_for_(Range(0, static_cast<int>(keypoints.size())), calcDescriptorsComputer2(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave, rootSift));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
 SIFT2_Impl::SIFT2_Impl( int _nfeatures, int _nOctaves, int _nOctaveLayers,
-           double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType)
+           double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType, bool _rootSift )
     : nfeatures(_nfeatures), nOctaves(_nOctaves), nOctaveLayers(_nOctaveLayers),
-    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma), descriptor_type(_descriptorType)
+    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma),
+    descriptor_type(_descriptorType), rootSift(_rootSift)
 {
 }
 
@@ -474,7 +503,7 @@ int SIFT2_Impl::descriptorType() const
 
 int SIFT2_Impl::defaultNorm() const
 {
-    return NORM_L2;
+    return rootSift ? NORM_L1 : NORM_L2;
 }
 
 
@@ -488,11 +517,15 @@ void SIFT2_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     int firstOctave = -1, actualNOctaves = 0, actualNLayers = 0;
     Mat image = _image.getMat(), mask = _mask.getMat();
 
-    if( image.empty() || image.depth() != CV_8U )
-        CV_Error( Error::StsBadArg, "image is empty or has incorrect depth (!=CV_8U)" );
+    if (image.empty() || image.depth() != CV_8U)
+    {
+        CV_Error(Error::StsBadArg, "image is empty or has incorrect depth (!=CV_8U)");
+    }
 
-    if( !mask.empty() && mask.type() != CV_8UC1 )
-        CV_Error( Error::StsBadArg, "mask has incorrect type (!=CV_8UC1)" );
+    if (!mask.empty() && mask.type() != CV_8UC1)
+    {
+        CV_Error(Error::StsBadArg, "mask has incorrect type (!=CV_8UC1)");
+    }
 
     if( useProvidedKeypoints )
     {
@@ -534,25 +567,26 @@ void SIFT2_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         buildDoGPyramid(gpyr, dogpyr);
         //t = (double)getTickCount();
         findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
-        KeyPointsFilter::removeDuplicatedSorted( keypoints );
 
-        if( nfeatures > 0 )
-            KeyPointsFilter::retainBest(keypoints, nfeatures);
         //t = (double)getTickCount() - t;
         //printf("keypoint detection time: %g\n", t*1000./tf);
 
-        if( firstOctave < 0 )
-            for( size_t i = 0; i < keypoints.size(); i++ )
+        if (firstOctave < 0)
+        {
+            float scale = 1.f / (float)(1 << -firstOctave);
+            for (size_t i = 0; i < keypoints.size(); i++)
             {
                 KeyPoint& kpt = keypoints[i];
-                float scale = 1.f/(float)(1 << -firstOctave);
                 kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
                 kpt.pt *= scale;
                 kpt.size *= scale;
             }
+        }
 
-        if( !mask.empty() )
-            KeyPointsFilter::runByPixelsMask( keypoints, mask );
+        if (!mask.empty())
+        {
+            KeyPointsFilter::runByPixelsMask(keypoints, mask);
+        }
     }
     else
     {
@@ -567,7 +601,7 @@ void SIFT2_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         _descriptors.create((int)keypoints.size(), dsize, descriptor_type);
 
         Mat descriptors = _descriptors.getMat();
-        calcDescriptors2(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave);
+        calcDescriptors2(gpyr, keypoints, descriptors, nOctaveLayers, firstOctave, rootSift);
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);
     }

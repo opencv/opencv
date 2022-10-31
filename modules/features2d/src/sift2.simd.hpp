@@ -5,6 +5,7 @@
 // Copyright (c) 2006-2010, Rob Hess <hess@eecs.oregonstate.edu>
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2020, Intel Corporation, all rights reserved.
+// Copyright (C) 2022, whuaegeansea@gmail.com.
 
 /**********************************************************************************************\
  Implementation of SIFT is based on the code from http://blogs.oregonstate.edu/hess/code/sift/
@@ -153,7 +154,7 @@ void findScaleSpaceExtrema2(
 
 void calcSIFTDescriptor2(
         const Mat& img, Point2f ptf, float ori, float scl,
-        int d, int n, Mat& dst, int row
+        Mat& dst, int row, bool rootSift
 );
 
 
@@ -203,7 +204,7 @@ float calcOrientationHist2(
             float dx = (j - pt.x);
             X[k] = currptr[j + 1] - currptr[j - 1];
             Y[k] = currptr[j - step] - currptr[j + step];
-            W[k] = (float)(dy2 + dx * dx) * expf_scale;
+            W[k] = (dy2 + dx * dx) * expf_scale;
             k++;
         }
     }
@@ -248,9 +249,13 @@ float calcOrientationHist2(
     {
         int bin = cvRound(tmp_nd360 * Ori[k]);
         if (bin >= n)
+        {
             bin -= n;
+        }
         if (bin < 0)
+        {
             bin += n;
+        }
         temphist[bin] += W[k]*Mag[k];
     }
 
@@ -402,8 +407,10 @@ bool adjustLocalExtrema2(
         float v = currptr[c];
 
         contr = v * img_scale + t * 0.5f;
-        if( std::abs( contr )  < contrastThreshold )
+        if (std::abs(contr) < contrastThreshold)
+        {
             return false;
+        }
 
         // principal curvatures are computed using the trace and det of Hessian
         float v2 = v * 2.f;
@@ -414,8 +421,10 @@ bool adjustLocalExtrema2(
         float tr = dxx + dyy;
         float det = dxx * dyy - dxy * dxy;
 
-        if( det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1.f)*(edgeThreshold + 1.f)*det )
+        if (det <= 0 || tr * tr * edgeThreshold >= (edgeThreshold + 1.f) * (edgeThreshold + 1.f) * det)
+        {
             return false;
+        }
     }
 
     kpt.pt.x = ((float)c + xc) * octv_pow; 
@@ -568,7 +577,9 @@ public:
                 for (int k = 0; k<vecsize;k++)
                 {
                     if ((mask & (1<<k)) == 0)
+                    {
                         continue;
+                    }
 
                     CV_TRACE_REGION("pixel_candidate_simd");
 
@@ -577,7 +588,9 @@ public:
                     if (!adjustLocalExtrema2(dog_pyr, kpt, o, octv_pow, layer, r1, c1,
                                             nOctaveLayers, (float)contrastThreshold,
                                             (float)edgeThreshold, (float)sigma))
+                    {
                         continue;
+                    }
                     float scl_octv = kpt.size*half_inv_octv;
 
                     float omax = calcOrientationHist2(gauss_pyr[o*(nOctaveLayers+3) + layer],
@@ -597,7 +610,9 @@ public:
                             bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
                             kpt.angle = 360.f - bins_per_rad * bin;
                             if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+                            {
                                 kpt.angle = 0.f;
+                            }
 
                             kpts_.push_back(kpt);
                         }
@@ -612,7 +627,9 @@ public:
             {
                 sift_wt val = currptr[c];
                 if (std::abs(val) <= threshold)
+                {
                     continue;
+                }
 
                 sift_wt _00,_01,_02;
                 sift_wt _10,    _12;
@@ -677,7 +694,9 @@ public:
                     if (!adjustLocalExtrema2(dog_pyr, kpt, o, octv_pow, layer, r1, c1,
                                             nOctaveLayers, (float)contrastThreshold,
                                             (float)edgeThreshold, (float)sigma))
+                    {
                         continue;
+                    }
 
                     float scl_octv = kpt.size*half_inv_octv;
                     float omax = calcOrientationHist2(gauss_pyr[o*(nOctaveLayers+3) + layer],
@@ -697,7 +716,9 @@ public:
                             bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
                             kpt.angle = 360.f - bins_per_rad * bin;
                             if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
+                            {
                                 kpt.angle = 0.f;
+                            }
 
                             kpts_.push_back(kpt);
                         }
@@ -749,11 +770,13 @@ void findScaleSpaceExtrema2(
 }
 
 void calcSIFTDescriptor2(
-        const Mat& img, Point2f ptf, float ori, float scl,
-        int d, int n, Mat& dstMat, int row
+    const Mat& img, Point2f ptf, float ori, float scl,
+    Mat& dstMat, int row, bool rootSift
 )
 {
     CV_TRACE_FUNCTION();
+
+    static const int d = SIFT2_DESCR_WIDTH, n = SIFT2_DESCR_HIST_BINS;
 
     Point pt(cvRound(ptf.x), cvRound(ptf.y));
     float cos_t = cosf(ori*(float)(CV_PI/180));
@@ -761,19 +784,21 @@ void calcSIFTDescriptor2(
     float bins_per_rad = n / 360.f;
     float exp_scale = -1.f/(d * d * 0.5f);
     float hist_width = SIFT2_DESCR_SCL_FCTR * scl;
+    float inv_hist_width = 1.0f / hist_width;
     int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
     // Clip the radius to the diagonal of the image to avoid autobuffer too large exception
-    radius = std::min(radius, (int)std::sqrt(((double) img.cols)*img.cols + ((double) img.rows)*img.rows));
-    cos_t /= hist_width;
-    sin_t /= hist_width;
+    radius = std::min(radius, (int)std::sqrt(((double)img.cols) * img.cols + ((double)img.rows) * img.rows));
+    cos_t *= inv_hist_width;
+    sin_t *= inv_hist_width;
 
-    int i, j, k, len = (radius*2+1)*(radius*2+1), histlen = (d+2)*(d+2)*(n+2);
+    int i, j, k, len = (radius * 2 + 1) * (radius * 2 + 1);
+    const int histlen = (d + 2) * (d + 2) * (n + 2);
     int rows = img.rows, cols = img.cols;
-    int half_d = d / 2;
+    float half_d = (float)(d / 2);
     const int step = (int)img.step1();
 
     cv::utils::BufferArea area;
-    float *X = NULL, *Y = NULL, *Mag, *Ori = NULL, *W = NULL, *RBin = NULL, *CBin = NULL, *hist = NULL, *rawDst = NULL;
+    float* X = NULL, * Y = NULL, * Mag, * Ori = NULL, * W = NULL, * RBin = NULL, * CBin = NULL, * hist = NULL, * rawDst = NULL;
     area.allocate(X, len, CV_SIMD_WIDTH);
     area.allocate(Y, len, CV_SIMD_WIDTH);
     area.allocate(Ori, len, CV_SIMD_WIDTH);
@@ -795,25 +820,23 @@ void calcSIFTDescriptor2(
     for (i = i_min, k = 0; i <= i_max; ++i)
     {
         float dy = (float)i - pt.y;
-        int r = i;
-        const sift_wt* currptr = img.ptr<sift_wt>(r);
-        float i_sin_t = dy * sin_t, i_cos_t = dy * cos_t;
+        const sift_wt* currptr = img.ptr<sift_wt>(i);
+        float dy_sin_t = dy * sin_t, dy_cos_t = dy * cos_t;
         for (j = j_min; j <= j_max; ++j)
         {
             float dx = (float)j - pt.x;
             // Calculate sample's histogram array coords rotated relative to ori.
             // Subtract 0.5 so samples that fall e.g. in the center of row 1 (i.e.
             // r_rot = 1.5) have full weight placed in row 1 after interpolation.
-            float c_rot = dx * cos_t - i_sin_t;
-            float r_rot = dx * sin_t + i_cos_t;
+            float c_rot = dx * cos_t - dy_sin_t;
+            float r_rot = dx * sin_t + dy_cos_t;
             float rbin = r_rot + half_d - 0.5f;
             float cbin = c_rot + half_d - 0.5f;
-            int c = j;
 
             if (rbin > -1 && rbin < d && cbin > -1 && cbin < d)
             {
-                float dx = (float)(currptr[c+1] - currptr[c-1]);
-                float dy = (float)(currptr[c-step] - currptr[c+step]);
+                float dx = currptr[j + 1] - currptr[j - 1];
+                float dy = currptr[j - step] - currptr[j + step];
                 X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
                 W[k] = (c_rot * c_rot + r_rot * r_rot) * exp_scale;
                 k++;
@@ -827,19 +850,35 @@ void calcSIFTDescriptor2(
     cv::hal::exp32f(W, W, len);
 
     k = 0;
+
+    const int d2 = d + 2;
+    const int d3 = d + 3;
+    const int n2 = n + 2;
+    const int n3 = n + 3;
+    const int d2_n2 = d2 + n2;
+    const int d3_n2 = d3 + n2;
+
 #if CV_SIMD
     {
         const int vecsize = v_float32::nlanes;
+        const int vecsize2 = vecsize + vecsize;
+        const int vecsize3 = vecsize2 + vecsize;
+        const int vecsize4 = vecsize3 + vecsize;
+        const int vecsize5 = vecsize4 + vecsize;
+        const int vecsize6 = vecsize5 + vecsize;
+        const int vecsize7 = vecsize6 + vecsize;
+        const int vecsize8 = vecsize7 + vecsize;
+
         int CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx_buf[vecsize];
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rco_buf[8*vecsize];
-        const v_float32 __ori  = vx_setall_f32(ori);
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rco_buf[vecsize8];
+        const v_float32 __ori = vx_setall_f32(ori);
         const v_float32 __bins_per_rad = vx_setall_f32(bins_per_rad);
         const v_int32 __n = vx_setall_s32(n);
         const v_int32 __1 = vx_setall_s32(1);
         const v_int32 __0 = vx_setzero_s32();
-        const v_int32 __d_plus_2 = vx_setall_s32(d+2);
-        const v_int32 __n_plus_2 = vx_setall_s32(n+2);
-        for( ; k <= len - vecsize; k += vecsize )
+        const v_int32 __d2 = vx_setall_s32(d2);
+        const v_int32 __n2 = vx_setall_s32(n2);
+        for (; k <= len - vecsize; k += vecsize)
         {
             v_float32 rbin = vx_load_aligned(RBin + k);
             v_float32 cbin = vx_load_aligned(CBin + k);
@@ -864,49 +903,54 @@ void calcSIFTDescriptor2(
             v_float32 v_rco011 = v_rc01*obin, v_rco010 = v_rc01 - v_rco011;
             v_float32 v_rco001 = v_rc00*obin, v_rco000 = v_rc00 - v_rco001;
 
-            v_int32 idx = v_muladd(v_muladd(r0+__1, __d_plus_2, c0+__1), __n_plus_2, o0);
+            v_int32 idx = v_muladd(v_muladd(r0+__1, __d2, c0+__1), __n2, o0);
             v_store_aligned(idx_buf, idx);
 
-            v_store_aligned(rco_buf,           v_rco000);
-            v_store_aligned(rco_buf+vecsize,   v_rco001);
-            v_store_aligned(rco_buf+vecsize*2, v_rco010);
-            v_store_aligned(rco_buf+vecsize*3, v_rco011);
-            v_store_aligned(rco_buf+vecsize*4, v_rco100);
-            v_store_aligned(rco_buf+vecsize*5, v_rco101);
-            v_store_aligned(rco_buf+vecsize*6, v_rco110);
-            v_store_aligned(rco_buf+vecsize*7, v_rco111);
+            v_store_aligned(rco_buf,          v_rco000);
+            v_store_aligned(rco_buf+vecsize,  v_rco001);
+            v_store_aligned(rco_buf+vecsize2, v_rco010);
+            v_store_aligned(rco_buf+vecsize3, v_rco011);
+            v_store_aligned(rco_buf+vecsize4, v_rco100);
+            v_store_aligned(rco_buf+vecsize5, v_rco101);
+            v_store_aligned(rco_buf+vecsize6, v_rco110);
+            v_store_aligned(rco_buf+vecsize7, v_rco111);
 
-            for(int id = 0; id < vecsize; id++)
+            for (int id = 0; id < vecsize; id++)
             {
-                hist[idx_buf[id]] += rco_buf[id];
-                hist[idx_buf[id]+1] += rco_buf[vecsize + id];
-                hist[idx_buf[id]+(n+2)] += rco_buf[2*vecsize + id];
-                hist[idx_buf[id]+(n+3)] += rco_buf[3*vecsize + id];
-                hist[idx_buf[id]+(d+2)*(n+2)] += rco_buf[4*vecsize + id];
-                hist[idx_buf[id]+(d+2)*(n+2)+1] += rco_buf[5*vecsize + id];
-                hist[idx_buf[id]+(d+3)*(n+2)] += rco_buf[6*vecsize + id];
-                hist[idx_buf[id]+(d+3)*(n+2)+1] += rco_buf[7*vecsize + id];
+                const int idx_id = idx_buf[id];
+                hist[idx_id] += rco_buf[id];
+                hist[idx_id+1] += rco_buf[vecsize + id];
+                hist[idx_id+n2] += rco_buf[vecsize2 + id];
+                hist[idx_id+n3] += rco_buf[vecsize3 + id];
+                hist[idx_id+d2_n2] += rco_buf[vecsize4 + id];
+                hist[idx_id+d2_n2+1] += rco_buf[vecsize5 + id];
+                hist[idx_id+d3_n2] += rco_buf[vecsize6 + id];
+                hist[idx_id+d3_n2+1] += rco_buf[vecsize7 + id];
             }
         }
     }
 #endif
-    for( ; k < len; k++ )
+    for (; k < len; k++)
     {
         float rbin = RBin[k], cbin = CBin[k];
         float obin = (Ori[k] - ori)*bins_per_rad;
         float mag = Mag[k]*W[k];
 
-        int r0 = cvFloor( rbin );
-        int c0 = cvFloor( cbin );
-        int o0 = cvFloor( obin );
+        int r0 = cvFloor(rbin);
+        int c0 = cvFloor(cbin);
+        int o0 = cvFloor(obin);
         rbin -= r0;
         cbin -= c0;
         obin -= o0;
 
-        if( o0 < 0 )
+        if (o0 < 0)
+        {
             o0 += n;
-        if( o0 >= n )
+        }
+        if (o0 >= n)
+        {
             o0 -= n;
+        }
 
         // histogram update using tri-linear interpolation
         float v_r1 = mag*rbin, v_r0 = mag - v_r1;
@@ -917,32 +961,31 @@ void calcSIFTDescriptor2(
         float v_rco011 = v_rc01*obin, v_rco010 = v_rc01 - v_rco011;
         float v_rco001 = v_rc00*obin, v_rco000 = v_rc00 - v_rco001;
 
-        int idx = ((r0+1)*(d+2) + c0+1)*(n+2) + o0;
+        int idx = ((r0+1)*d2 + c0+1)*n2 + o0;
         hist[idx] += v_rco000;
         hist[idx+1] += v_rco001;
-        hist[idx+(n+2)] += v_rco010;
-        hist[idx+(n+3)] += v_rco011;
-        hist[idx+(d+2)*(n+2)] += v_rco100;
-        hist[idx+(d+2)*(n+2)+1] += v_rco101;
-        hist[idx+(d+3)*(n+2)] += v_rco110;
-        hist[idx+(d+3)*(n+2)+1] += v_rco111;
+        hist[idx+n2] += v_rco010;
+        hist[idx+n3] += v_rco011;
+        hist[idx+d2_n2] += v_rco100;
+        hist[idx+d2_n2+1] += v_rco101;
+        hist[idx+d3_n2] += v_rco110;
+        hist[idx+d3_n2+1] += v_rco111;
     }
 
-    int d_plus_2 = d+2;
-    int n_plus_2 = n+2;
     // finalize histogram, since the orientation histograms are circular
-    for( i = 0; i < d; i++ )
-    {    
-        int tmp1 = (i+1)*d_plus_2;
-        int tmp2 = i*d;
-        for( j = 0; j < d; j++ )
+    for (i = 0; i < d; i++)
+    {
+        int tmp1 = (i + 1) * d2;
+        int tmp2 = i * d;
+        for (j = 0; j < d; j++)
         {
-            int idx = (tmp1 + (j+1))*n_plus_2;
-            hist[idx] += hist[idx+n];
-            hist[idx+1] += hist[idx+n+1];
-            for( k = 0; k < n; k++ )
+            int tmp3 = (tmp2 + j) * n;
+            int idx = (tmp1 + (j + 1)) * n2;
+            hist[idx] += hist[idx + n];
+            hist[idx + 1] += hist[idx + n + 1];
+            for (k = 0; k < n; k++)
             {
-                rawDst[(tmp2 + j)*n + k] = hist[idx+k];
+                rawDst[tmp3 + k] = hist[idx + k];
             }
         }
     }
@@ -951,13 +994,13 @@ void calcSIFTDescriptor2(
     // and scale the result, so that it can be easily converted
     // to byte array
     float nrm2 = 0;
-    len = d*d*n;
+    len = d * d * n;
     k = 0;
 #if CV_SIMD
     {
         v_float32 __nrm2 = vx_setzero_f32();
         v_float32 __rawDst;
-        for( ; k <= len - v_float32::nlanes; k += v_float32::nlanes )
+        for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
         {
             __rawDst = vx_load_aligned(rawDst + k);
             __nrm2 = v_fma(__rawDst, __rawDst, __nrm2);
@@ -965,122 +1008,170 @@ void calcSIFTDescriptor2(
         nrm2 = (float)v_reduce_sum(__nrm2);
     }
 #endif
-    for( ; k < len; k++ )
-        nrm2 += rawDst[k]*rawDst[k];
-
-    float thr = std::sqrt(nrm2)*SIFT2_DESCR_MAG_THR;
-
-    i = 0, nrm2 = 0;
-#if 0 //CV_AVX2
-    // This code cannot be enabled because it sums nrm2 in a different order,
-    // thus producing slightly different results
+    for (; k < len; ++k)
     {
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) nrm2_buf[8];
-        __m256 __dst;
-        __m256 __nrm2 = _mm256_setzero_ps();
-        __m256 __thr = _mm256_set1_ps(thr);
-        for( ; i <= len - 8; i += 8 )
+        nrm2 += rawDst[k] * rawDst[k];
+    }
+
+    float thr = std::sqrt(nrm2) * SIFT2_DESCR_MAG_THR;
+
+    k = 0, nrm2 = 0;
+#if CV_SIMD
+    {
+        v_float32 __thr = vx_setall_f32(thr);
+        v_float32 __nrm2 = vx_setzero_f32();
+        v_float32 __rawDst;
+        v_float32 __minVal;
+        for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
         {
-            __dst = _mm256_loadu_ps(&rawDst[i]);
-            __dst = _mm256_min_ps(__dst, __thr);
-            _mm256_storeu_ps(&rawDst[i], __dst);
-#if CV_FMA3
-            __nrm2 = _mm256_fmadd_ps(__dst, __dst, __nrm2);
-#else
-            __nrm2 = _mm256_add_ps(__nrm2, _mm256_mul_ps(__dst, __dst));
-#endif
+            __rawDst = vx_load_aligned(rawDst + k);
+            __minVal = v_min(__rawDst, __thr);
+            __nrm2 = v_fma(__minVal, __minVal, __nrm2);
+            v_store_aligned(rawDst + k, __minVal);
         }
-        _mm256_store_ps(nrm2_buf, __nrm2);
-        nrm2 = nrm2_buf[0] + nrm2_buf[1] + nrm2_buf[2] + nrm2_buf[3] +
-               nrm2_buf[4] + nrm2_buf[5] + nrm2_buf[6] + nrm2_buf[7];
+        nrm2 = (float)v_reduce_sum(__nrm2);
     }
 #endif
-    for( ; i < len; i++ )
+    for (; k < len; ++k)
     {
-        float val = std::min(rawDst[i], thr);
-        rawDst[i] = val;
-        nrm2 += val*val;
+        float val = std::min(rawDst[k], thr);
+        rawDst[k] = val;
+        nrm2 += val * val;
     }
-    nrm2 = SIFT2_INT_DESCR_FCTR/std::max(std::sqrt(nrm2), FLT_EPSILON);
 
-#if 1
-    k = 0;
-if( dstMat.type() == CV_32F )
-{
-    float* dst = dstMat.ptr<float>(row);
-#if CV_SIMD
-    v_float32 __dst;
-    v_float32 __min = vx_setzero_f32();
-    v_float32 __max = vx_setall_f32(255.0f); // max of uchar
-    v_float32 __nrm2 = vx_setall_f32(nrm2);
-    for( k = 0; k <= len - v_float32::nlanes; k += v_float32::nlanes )
+
+    if (!rootSift)
     {
-        __dst = vx_load_aligned(rawDst + k);
-        __dst = v_min(v_max(v_cvt_f32(v_round(__dst * __nrm2)), __min), __max);
-        v_store(dst + k, __dst);
-    }
+        k = 0;
+        nrm2 = SIFT2_INT_DESCR_FCTR / std::max(std::sqrt(nrm2), FLT_EPSILON);
+        if (dstMat.type() == CV_32F)
+        {
+            float* dst = dstMat.ptr<float>(row);
+#if CV_SIMD
+            v_float32 __dst;
+            v_float32 __min = vx_setzero_f32();
+            v_float32 __max = vx_setall_f32(255.0f); // max of uchar
+            v_float32 __nrm2 = vx_setall_f32(nrm2);
+            for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
+            {
+                __dst = vx_load_aligned(rawDst + k);
+                __dst = v_min(v_max(v_cvt_f32(v_round(__dst * __nrm2)), __min), __max);
+                v_store(dst + k, __dst);
+            }
 #endif
-    for( ; k < len; k++ )
-    {
-        dst[k] = saturate_cast<uchar>(rawDst[k]*nrm2);
-    }
-}
-else // CV_8U
-{
-    uint8_t* dst = dstMat.ptr<uint8_t>(row);
+            for (; k < len; k++)
+            {
+                dst[k] = saturate_cast<uchar>(rawDst[k] * nrm2);
+            }
+        }
+        else // CV_8U
+        {
+            uchar* dst = dstMat.ptr<uchar>(row);
 #if CV_SIMD
-    v_float32 __dst0, __dst1;
-    v_uint16 __pack01;
-    v_float32 __nrm2 = vx_setall_f32(nrm2);
-    for( k = 0; k <= len - v_float32::nlanes * 2; k += v_float32::nlanes * 2 )
-    {
-        __dst0 = vx_load_aligned(rawDst + k);
-        __dst1 = vx_load_aligned(rawDst + k + v_float32::nlanes);
+            v_float32 __dst0, __dst1;
+            v_uint16 __pack01;
+            v_float32 __nrm2 = vx_setall_f32(nrm2);
+            for (; k <= len - v_float32::nlanes * 2; k += v_float32::nlanes * 2)
+            {
+                __dst0 = vx_load_aligned(rawDst + k);
+                __dst1 = vx_load_aligned(rawDst + k + v_float32::nlanes);
 
-        __pack01 = v_pack_u(v_round(__dst0 * __nrm2), v_round(__dst1 * __nrm2));
-        v_pack_store(dst + k, __pack01);
-    }
+                __pack01 = v_pack_u(v_round(__dst0 * __nrm2), v_round(__dst1 * __nrm2));
+                v_pack_store(dst + k, __pack01);
+            }
 #endif
 
 #if defined(__GNUC__) && __GNUC__ >= 9
-// avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
+            // avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
 #endif
-    for( ; k < len; k++ )
-    {
-        dst[k] = saturate_cast<uchar>(rawDst[k]*nrm2);
-    }
+            for (; k < len; k++)
+            {
+                dst[k] = saturate_cast<uchar>(rawDst[k] * nrm2);
+            }
 #if defined(__GNUC__) && __GNUC__ >= 9
 #pragma GCC diagnostic pop
 #endif
-}
-#else
-    float* dst = dstMat.ptr<float>(row);
-    float nrm1 = 0;
-    for( k = 0; k < len; k++ )
-    {
-        rawDst[k] *= nrm2;
-        nrm1 += rawDst[k];
+        }
     }
-    nrm1 = 1.f/std::max(nrm1, FLT_EPSILON);
-if( dstMat.type() == CV_32F )
-{
-    for( k = 0; k < len; k++ )
-    {
-        dst[k] = std::sqrt(rawDst[k] * nrm1);
-    }
-}
-else // CV_8U
-{
-    for( k = 0; k < len; k++ )
-    {
-        dst[k] = saturate_cast<uchar>(std::sqrt(rawDst[k] * nrm1)*SIFT2_INT_DESCR_FCTR);
-    }
-}
+    else {
+        k = 0;
+        float nrm1 = 0;
+#if CV_SIMD
+        {
+            v_float32 __nrm1 = vx_setzero_f32();
+            v_float32 __rawDst;
+            for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
+            {
+                __rawDst = vx_load_aligned(rawDst + k);
+                __nrm1 += __rawDst;
+            }
+            nrm1 = (float)v_reduce_sum(__nrm1);
+        }
 #endif
-}
+        for (; k < len; ++k)
+        {
+            nrm1 += rawDst[k];
+        }
 
+        k = 0;
+        nrm1 = 1.f / std::max(nrm1, FLT_EPSILON);
+
+        if (dstMat.type() == CV_32F)
+        {
+            float* dst = dstMat.ptr<float>(row);
+#if CV_SIMD
+            v_float32 __dst;
+            v_float32 __min = vx_setzero_f32();
+            v_float32 __max = vx_setall_f32(255.0f); // max of uchar
+            v_float32 __nrm1 = vx_setall_f32(nrm1);
+            v_float32 __fctr = vx_setall_f32(SIFT2_INT_DESCR_FCTR);
+            for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
+            {
+                __dst = vx_load_aligned(rawDst + k);
+                __dst = v_min(v_max(v_cvt_f32(v_round(v_sqrt(__dst * __nrm1) * __fctr)), __min), __max);
+                v_store(dst + k, __dst);
+            }
+#endif
+            for (; k < len; k++)
+            {
+                dst[k] = saturate_cast<uchar>(SIFT2_INT_DESCR_FCTR * std::sqrt(rawDst[k] * nrm1));
+            }
+        }
+        else // CV_8U
+        {
+            uchar* dst = dstMat.ptr<uchar>(row);
+#if CV_SIMD
+            v_float32 __dst0, __dst1;
+            v_uint16 __pack01;
+            v_float32 __nrm1 = vx_setall_f32(nrm1);
+            v_float32 __fctr = vx_setall_f32(SIFT2_INT_DESCR_FCTR);
+            for (; k <= len - v_float32::nlanes * 2; k += v_float32::nlanes * 2)
+            {
+                __dst0 = vx_load_aligned(rawDst + k);
+                __dst1 = vx_load_aligned(rawDst + k + v_float32::nlanes);
+
+                __pack01 = v_pack_u(v_round(v_sqrt(__dst0 * __nrm1) * __fctr), v_round(v_sqrt(__dst1 * __nrm1) * __fctr));
+                v_pack_store(dst + k, __pack01);
+            }
+#endif
+
+#if defined(__GNUC__) && __GNUC__ >= 9
+            // avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#endif
+            for (; k < len; k++)
+            {
+                dst[k] = saturate_cast<uchar>(SIFT2_INT_DESCR_FCTR * std::sqrt(rawDst[k] * nrm1));
+            }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
+        }
+    }
+}
 #endif
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // namespace
