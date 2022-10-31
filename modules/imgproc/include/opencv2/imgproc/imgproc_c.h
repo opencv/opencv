@@ -57,47 +57,7 @@ extern "C" {
 *                                    Image Processing                                    *
 \****************************************************************************************/
 
-/** @brief Calculates all spatial and central moments up to the 3rd order
-@see cv::moments
-*/
-CVAPI(void) cvMoments( const CvArr* arr, CvMoments* moments, int binary CV_DEFAULT(0));
-
-/** @brief Retrieve spatial moments */
-CVAPI(double)  cvGetSpatialMoment( CvMoments* moments, int x_order, int y_order );
-/** @brief Retrieve central moments */
-CVAPI(double)  cvGetCentralMoment( CvMoments* moments, int x_order, int y_order );
-/** @brief Retrieve normalized central moments */
-CVAPI(double)  cvGetNormalizedCentralMoment( CvMoments* moments,
-                                             int x_order, int y_order );
-
-/** @brief Calculates 7 Hu's invariants from precalculated spatial and central moments
-@see cv::HuMoments
-*/
-CVAPI(void) cvGetHuMoments( CvMoments*  moments, CvHuMoments*  hu_moments );
-
 /*********************************** data sampling **************************************/
-
-/** @brief Retrieves quadrangle from the input array.
-
-    matrixarr = ( a11  a12 | b1 )   dst(x,y) <- src(A[x y]' + b)
-                ( a21  a22 | b2 )   (bilinear interpolation is used to retrieve pixels
-                                     with fractional coordinates)
-*/
-CVAPI(void)  cvGetQuadrangleSubPix( const CvArr* src, CvArr* dst,
-                                    const CvMat* map_matrix );
-
-/** @brief Computes earth mover distance between
-   two weighted point sets (called signatures)
-@see cv::EMD
-*/
-CVAPI(float)  cvCalcEMD2( const CvArr* signature1,
-                          const CvArr* signature2,
-                          int distance_type,
-                          CvDistanceFunction distance_func CV_DEFAULT(NULL),
-                          const CvArr* cost_matrix CV_DEFAULT(NULL),
-                          CvArr* flow CV_DEFAULT(NULL),
-                          float* lower_bound CV_DEFAULT(NULL),
-                          void* userdata CV_DEFAULT(NULL));
 
 /****************************************************************************************\
 *                              Contours retrieving                                       *

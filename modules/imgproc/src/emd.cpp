@@ -145,7 +145,7 @@ static float icvDistL1( const float *x, const float *y, void *user_param );
 static float icvDistC( const float *x, const float *y, void *user_param );
 
 /* The main function */
-CV_IMPL float cvCalcEMD2( const CvArr* signature_arr1,
+static float cvCalcEMD2( const CvArr* signature_arr1,
             const CvArr* signature_arr2,
             int dist_type,
             CvDistanceFunction dist_func,
