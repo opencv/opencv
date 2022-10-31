@@ -1292,7 +1292,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #ifdef CV_FFMPEG_CODECPAR
                 avcodec_parameters_to_context(context, par);
 #endif
-                err = avcodec_open2(context, codec, NULL);
+                err = avcodec_open2(context, codec, stream_info_opts);
                 if (err >= 0) {
 #if USE_AV_HW_CODECS
                     va_type = hw_type_to_va_type(hw_type);
