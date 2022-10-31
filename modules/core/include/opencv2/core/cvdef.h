@@ -810,7 +810,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  define CV_CONSTEXPR
 #endif
 
-// Integer types portatibility
+// Integer types portability
 #ifdef OPENCV_STDINT_HEADER
 #include OPENCV_STDINT_HEADER
 #elif defined(__cplusplus)

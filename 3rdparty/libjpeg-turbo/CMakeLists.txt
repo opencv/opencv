@@ -56,8 +56,6 @@ if(MSVC_IDE AND CMAKE_GENERATOR_PLATFORM MATCHES "arm64")
   set(CPU_TYPE arm64)
 endif()
 
-message(STATUS "${BITS}-bit build (${CPU_TYPE})")
-
 OCV_OPTION(ENABLE_LIBJPEG_TURBO_SIMD "Include SIMD extensions for libjpeg-turbo, if available for this platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF BUILD_JPEG)
 option(WITH_ARITH_ENC "Include arithmetic encoding support when emulating the libjpeg v6b API/ABI" TRUE)
@@ -185,9 +183,10 @@ if(WITH_SIMD)
     set_source_files_properties(${SIMD_OBJS} PROPERTIES GENERATED 1)
   endif()
 else()
-  add_library(simd OBJECT src/jsimd_none.c)
+  add_library(jsimd OBJECT src/jsimd_none.c)
+  set_target_properties(jsimd PROPERTIES FOLDER "3rdparty")
   if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
-    set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+    set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
   endif()
 endif()
 
@@ -195,7 +194,7 @@ ocv_list_add_prefix(JPEG_SOURCES src/)
 
 set(JPEG_SOURCES ${JPEG_SOURCES} ${SIMD_OBJS})
 
-add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:simd> ${SIMD_OBJS})
+add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:jsimd> ${SIMD_OBJS})
 
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}

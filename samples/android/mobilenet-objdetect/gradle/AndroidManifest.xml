@@ -10,8 +10,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">  <!--Full screen mode-->
-        <activity android:name=".MainActivity"
-            android:screenOrientation="landscape">  <!--Screen orientation-->
+        <activity
+                  android:exported="true"
+                  android:name=".MainActivity"
+                  android:screenOrientation="landscape">  <!--Screen orientation-->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
