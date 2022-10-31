@@ -13,6 +13,7 @@
 
 #include <condition_variable>
 #include <stdexcept>
+#include <thread>
 
 namespace opencv_test
 {
