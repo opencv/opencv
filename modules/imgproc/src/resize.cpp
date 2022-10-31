@@ -4088,15 +4088,3 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     hal::resize(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, inv_scale_x, inv_scale_y, interpolation);
 }
-
-
-CV_IMPL void
-cvResize( const CvArr* srcarr, CvArr* dstarr, int method )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() );
-    cv::resize( src, dst, dst.size(), (double)dst.cols/src.cols,
-        (double)dst.rows/src.rows, method );
-}
-
-/* End of file. */

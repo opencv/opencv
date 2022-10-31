@@ -57,90 +57,6 @@ extern "C" {
 *                                    Image Processing                                    *
 \****************************************************************************************/
 
-/** @brief Resizes image (input array is resized to fit the destination array)
-@see cv::resize
-*/
-CVAPI(void)  cvResize( const CvArr* src, CvArr* dst,
-                       int interpolation CV_DEFAULT( CV_INTER_LINEAR ));
-
-/** @brief Warps image with affine transform
-@note ::cvGetQuadrangleSubPix is similar to ::cvWarpAffine, but the outliers are extrapolated using
-replication border mode.
-@see cv::warpAffine
-*/
-CVAPI(void)  cvWarpAffine( const CvArr* src, CvArr* dst, const CvMat* map_matrix,
-                           int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
-                           CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
-
-
-/** @brief Computes rotation_matrix matrix
-@see cv::getRotationMatrix2D
-*/
-CVAPI(CvMat*)  cv2DRotationMatrix( CvPoint2D32f center, double angle,
-                                   double scale, CvMat* map_matrix );
-
-/** @brief Warps image with perspective (projective) transform
-@see cv::warpPerspective
-*/
-CVAPI(void)  cvWarpPerspective( const CvArr* src, CvArr* dst, const CvMat* map_matrix,
-                                int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
-                                CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
-
-/** @brief Computes perspective transform matrix for mapping src[i] to dst[i] (i=0,1,2,3)
-@see cv::getPerspectiveTransform
-*/
-CVAPI(CvMat*) cvGetPerspectiveTransform( const CvPoint2D32f* src,
-                                         const CvPoint2D32f* dst,
-                                         CvMat* map_matrix );
-
-/** @brief Returns a structuring element of the specified size and shape for morphological operations.
-
-@note the created structuring element IplConvKernel\* element must be released in the end using
-`cvReleaseStructuringElement(&element)`.
-
-@param cols Width of the structuring element
-@param rows Height of the structuring element
-@param anchor_x x-coordinate of the anchor
-@param anchor_y y-coordinate of the anchor
-@param shape element shape that could be one of the cv::MorphShapes_c
-@param values integer array of cols*rows elements that specifies the custom shape of the
-structuring element, when shape=CV_SHAPE_CUSTOM.
-
-@see cv::getStructuringElement
- */
- CVAPI(IplConvKernel*)  cvCreateStructuringElementEx(
-            int cols, int  rows, int  anchor_x, int  anchor_y,
-            int shape, int* values CV_DEFAULT(NULL) );
-
-/** @brief releases structuring element
-@see cvCreateStructuringElementEx
-*/
-CVAPI(void)  cvReleaseStructuringElement( IplConvKernel** element );
-
-/** @brief erodes input image (applies minimum filter) one or more times.
-   If element pointer is NULL, 3x3 rectangular element is used
-@see cv::erode
-*/
-CVAPI(void)  cvErode( const CvArr* src, CvArr* dst,
-                      IplConvKernel* element CV_DEFAULT(NULL),
-                      int iterations CV_DEFAULT(1) );
-
-/** @brief dilates input image (applies maximum filter) one or more times.
-
-   If element pointer is NULL, 3x3 rectangular element is used
-@see cv::dilate
-*/
-CVAPI(void)  cvDilate( const CvArr* src, CvArr* dst,
-                       IplConvKernel* element CV_DEFAULT(NULL),
-                       int iterations CV_DEFAULT(1) );
-
-/** @brief Performs complex morphological transformation
-@see cv::morphologyEx
-*/
-CVAPI(void)  cvMorphologyEx( const CvArr* src, CvArr* dst,
-                             CvArr* temp, IplConvKernel* element,
-                             int operation, int iterations CV_DEFAULT(1) );
-
 /** @brief Calculates all spatial and central moments up to the 3rd order
 @see cv::moments
 */
@@ -166,7 +82,6 @@ CVAPI(void) cvGetHuMoments( CvMoments*  moments, CvHuMoments*  hu_moments );
     matrixarr = ( a11  a12 | b1 )   dst(x,y) <- src(A[x y]' + b)
                 ( a21  a22 | b2 )   (bilinear interpolation is used to retrieve pixels
                                      with fractional coordinates)
-@see cvWarpAffine
 */
 CVAPI(void)  cvGetQuadrangleSubPix( const CvArr* src, CvArr* dst,
                                     const CvMat* map_matrix );

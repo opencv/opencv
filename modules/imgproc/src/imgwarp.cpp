@@ -3400,45 +3400,6 @@ cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)
     return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
 }
 
-CV_IMPL void
-cvWarpAffine( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
-              int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    cv::Mat matrix = cv::cvarrToMat(marr);
-    CV_Assert( src.type() == dst.type() );
-    cv::warpAffine( src, dst, matrix, dst.size(), flags,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-}
-
-CV_IMPL void
-cvWarpPerspective( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
-                   int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    cv::Mat matrix = cv::cvarrToMat(marr);
-    CV_Assert( src.type() == dst.type() );
-    cv::warpPerspective( src, dst, matrix, dst.size(), flags,
-        (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-}
-
-
-CV_IMPL CvMat*
-cvGetPerspectiveTransform( const CvPoint2D32f* src,
-                          const CvPoint2D32f* dst,
-                          CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix),
-        M = cv::getPerspectiveTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
-
-
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 ****************************************************************************************/
