@@ -53,7 +53,7 @@ extern bool DNN_DIAGNOSTICS_RUN;
 class ONNXLayerHandler;
 
 template <typename T>
-static T getScaleFromMat(Mat m)
+static T getScalarFromMat(Mat m)
 {
     CV_Assert(m.total() == 1);
     return m.at<T>(0);
@@ -380,7 +380,10 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
         inpShapes[i] = shape(inputs[i]);
         if (i > 0 && ddepth != inputs[i].depth())
             CV_Error(Error::StsNotImplemented, "Mixed input data types.");
-        ddepth = inputs[i].depth();
+
+        // Quantize and Dequantize layer have different output type than input.
+        if (params.type != "Quantize" && params.type != "Dequantize")
+            ddepth = inputs[i].depth();
     }
 
     std::vector<MatShape> outShapes, internalShapes;
@@ -3240,21 +3243,67 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
 {
     CV_Assert(node_proto.input_size() == 2 || node_proto.input_size() == 3);
     layerParams.type = (node_proto.op_type() == "QuantizeLinear") ? "Quantize" : "Dequantize";
+    int axis = layerParams.get<int>("axis", 1);
+    // For QuantizeLinear and DequantizeLinear, the scale and zeropoint can be a Scalar (per-tensor quantized)
+    // or 1-D tensor (per-channel quantized).
+    bool is1D = false;
 
-    float scale = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int zeropoint = 0;
+    Mat scaleMat = getBlob(node_proto, 1);
+    if(scaleMat.total() > 1) is1D = true;
+
+    Mat zpMat;
     if (node_proto.input_size() == 3)
-         zeropoint = (int)getScaleFromMat<int8_t>(getBlob(node_proto, 2));
+    {
+        zpMat = getBlob(node_proto, 2);
+        CV_Assert(zpMat.total() ==  scaleMat.total()); // zero point should has the same shape as scale.
+    }
 
-    layerParams.set("scales", scale);
-    layerParams.set("zeropoints", zeropoint);
+    if (is1D)
+    {
+        const int num = scaleMat.total();
+
+        std::vector<int> zeropoints(num, 0);
+        std::vector<float> scales(num, 0);
+
+        for (int i = 0; i < num; i++)
+        {
+            scales[i] = scaleMat.at<float>(i);
+            if (!zpMat.empty())
+                zeropoints[i] = zpMat.depth() == CV_32S ?
+                                zpMat.at<int>(i) : (int)zpMat.at<int8_t>(i);
+        }
+
+        layerParams.set("is1D", true);
+        layerParams.set("axis", axis);
+        layerParams.set("scales", DictValue::arrayReal(scales.data(), scales.size()));
+        layerParams.set("zeropoints", DictValue::arrayInt(zeropoints.data(), zeropoints.size()));
+    }
+    else
+    {
+        int zeropoint = zpMat.empty() ? 0 : zpMat.depth() == CV_32S ?
+                                            getScalarFromMat<int>(zpMat) : (int)getScalarFromMat<int8_t>(zpMat);
+        float scale = getScalarFromMat<float>(scaleMat);
+
+        layerParams.set("is1D", false);
+        layerParams.set("scales", scale);
+        layerParams.set("zeropoints", zeropoint);
+    }
 
     if (layerParams.type == "Quantize")
         layerParams.set("depth", CV_8S);
     else // Dequantize
         layerParams.set("depth", CV_32F);
 
-    addLayer(layerParams, node_proto);
+    if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) // Variable input.
+    {
+        std::vector<Mat> inputs, outputs;
+        inputs.push_back(getBlob(node_proto, 0));
+
+        runLayer(layerParams, inputs, outputs);
+        addConstant(node_proto.output(0), outputs[0]);
+    }
+    else
+        addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
@@ -3263,8 +3312,8 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     int ninputs = node_proto.input_size();
     CV_Assert(ninputs == 8 || ninputs == 9);
 
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int inp_zp = (int)getScaleFromMat<int8_t>(getBlob(node_proto, 2));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int inp_zp = (int)getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
     if (layerParams.has("pad"))
     {
@@ -3312,8 +3361,8 @@ void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeP
     bool per_channel = w_scale.total() == outCn;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
 
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 6));
-    int8_t out_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 7));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
+    int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
 
     Mat bias = (ninputs == 9) ? getBlob(node_proto, 8) : Mat::zeros(1, outCn, CV_32S);
 
@@ -3349,8 +3398,8 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
 
     int firstInpDims = outShapes[node_proto.input(0)].size();
 
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
     Mat weights = getBlob(node_proto, 3).t();
     int outCn = weights.size[0];
@@ -3361,8 +3410,8 @@ void ONNXImporter::parseQMatMul(LayerParams& layerParams, const opencv_onnx::Nod
     bool per_channel = w_scale.total() == outCn ? true : false;
     Mat wt_sc = (w_scale.total() == outCn) ? w_scale : Mat(1, outCn, CV_32F, Scalar(w_scale.at<float>(0)));
 
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 6));
-    int8_t out_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 7));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
+    int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
 
     Mat bias(1, outCn, CV_32S);
     Mat outputMultiplier(1, outCn, CV_32F);
@@ -3411,8 +3460,8 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
 
     int firstInpDims = outShapes[node_proto.input(0)].size();
 
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
     int outCn = weights.size[0];
     int secondInpDims = weights.dims;
@@ -3431,8 +3480,8 @@ void ONNXImporter::parseQGemm(LayerParams& layerParams, const opencv_onnx::NodeP
             CV_Error(Error::StsUnsupportedFormat, "The zero-point non-zero case of W is not supported!");
     }
 
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 7));
-    int8_t out_zp = ninputs == 9 ? getScaleFromMat<int8_t>(getBlob(node_proto, 8)) : 0;
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 7));
+    int8_t out_zp = ninputs == 9 ? getScalarFromMat<int8_t>(getBlob(node_proto, 8)) : 0;
 
     Mat bias;
     if (constBlobs.find(node_proto.input(6)) != constBlobs.end())
@@ -3475,11 +3524,11 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
             constId = i;
     }
 
-    float inp_0_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_0_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
+    float inp_0_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_0_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
 
-    float inp_1_sc = getScaleFromMat<float>(getBlob(node_proto, 4));
-    int8_t inp_1_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 5));
+    float inp_1_sc = getScalarFromMat<float>(getBlob(node_proto, 4));
+    int8_t inp_1_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 5));
 
     // Set 2nd input as the const input
     if (constId == 0)
@@ -3488,11 +3537,11 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
         cv::swap(inp_0_zp, inp_1_zp);
     }
 
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 6));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 6));
 
     int8_t out_zp = 0;
     if (node_proto.input_size() == 8)
-        out_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 7));
+        out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 7));
 
     std::vector<float> inp_scales = {inp_0_sc, inp_1_sc};
     std::vector<int8_t> inp_zps = {inp_0_zp, inp_1_zp};
@@ -3608,10 +3657,10 @@ void ONNXImporter::parseQLeakyRelu(LayerParams& layerParams, const opencv_onnx::
     CV_Assert(node_proto.input_size() == 4 || node_proto.input_size() == 5);
 
     float slope = layerParams.get<float>("alpha");
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 3));
-    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScaleFromMat<int8_t>(getBlob(node_proto, 4));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 3));
+    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScalarFromMat<int8_t>(getBlob(node_proto, 4));
 
     Mat lookUpTable(1, 256, CV_8S);
     int8_t* table = lookUpTable.ptr<int8_t>();
@@ -3637,10 +3686,10 @@ void ONNXImporter::parseQSigmoid(LayerParams& layerParams, const opencv_onnx::No
 {
     CV_Assert(node_proto.input_size() == 4 || node_proto.input_size() == 5);
 
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 3));
-    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScaleFromMat<int8_t>(getBlob(node_proto, 4));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 3));
+    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScalarFromMat<int8_t>(getBlob(node_proto, 4));
 
     Mat lookUpTable(1, 256, CV_8S);
     int8_t* table = lookUpTable.ptr<int8_t>();
@@ -3665,10 +3714,10 @@ void ONNXImporter::parseQAvgPool(LayerParams& layerParams, const opencv_onnx::No
 {
     CV_Assert(node_proto.input_size() == 4 || node_proto.input_size() == 5);
 
-    float inp_sc = getScaleFromMat<float>(getBlob(node_proto, 1));
-    int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 2));
-    float out_sc = getScaleFromMat<float>(getBlob(node_proto, 3));
-    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScaleFromMat<int8_t>(getBlob(node_proto, 4));
+    float inp_sc = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
+    float out_sc = getScalarFromMat<float>(getBlob(node_proto, 3));
+    int8_t out_zp = node_proto.input_size() == 4 ? 0 : getScalarFromMat<int8_t>(getBlob(node_proto, 4));
 
     layerParams.type = "PoolingInt8";
     layerParams.set("pool", "ave");
@@ -3687,13 +3736,13 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
     layerParams.type = "ConcatInt8";
     int num_inputs = node_proto.input_size();
 
-    float out_scale = getScaleFromMat<float>(getBlob(node_proto, 0));
-    int8_t out_zp = getScaleFromMat<int8_t>(getBlob(node_proto, 1));
+    float out_scale = getScalarFromMat<float>(getBlob(node_proto, 0));
+    int8_t out_zp = getScalarFromMat<int8_t>(getBlob(node_proto, 1));
 
     for (int i = 2; i < num_inputs; i += 3)
     {
-        float inp_scale = getScaleFromMat<float>(getBlob(node_proto, i + 1));
-        int8_t inp_zp = getScaleFromMat<int8_t>(getBlob(node_proto, i + 2));
+        float inp_scale = getScalarFromMat<float>(getBlob(node_proto, i + 1));
+        int8_t inp_zp = getScalarFromMat<int8_t>(getBlob(node_proto, i + 2));
 
         if (inp_scale != out_scale || inp_zp != out_zp)
         {

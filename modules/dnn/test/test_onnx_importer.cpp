@@ -1824,11 +1824,22 @@ TEST_P(Test_ONNX_layers, Gemm)
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
-    testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
-    testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
-    testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+    // The difference of QOperator and QDQ format:
+    // https://onnxruntime.ai/docs/performance/quantization.html#onnx-quantization-representation-format.
+    {
+        SCOPED_TRACE("QOperator quantized model.");
+        testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+        testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    }
 
-    testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    {
+        SCOPED_TRACE("QDQ quantized model.");
+        testONNXModels("quantized_conv_uint8_weights_qdq", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights_qdq", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights_qdq", npy, 0.06, 0.4);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
