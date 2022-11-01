@@ -187,217 +187,7 @@ static void deprecateNotFoundNoOpBehavior()
 #define CV_NOT_FOUND_DEPRECATION deprecateNotFoundNoOpBehavior()
 #endif
 
-CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(name);
 
-    {
-        auto window = findWindow_(name);
-        if (window)
-        {
-            /*bool res = */window->setProperty(prop_id, prop_value);
-            return;
-        }
-    }
-
-#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
-    auto backend = getCurrentUIBackend();
-    if (backend)
-    {
-        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
-        CV_NOT_FOUND_DEPRECATION;
-    }
-    else
-    {
-        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
-    }
-    return;
-#else
-    switch(prop_id)
-    {
-    //change between fullscreen or not.
-    case cv::WND_PROP_FULLSCREEN:
-
-        if (prop_value != cv::WINDOW_NORMAL && prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
-            break;
-
-        #if defined (HAVE_QT)
-            cvSetModeWindow_QT(name,prop_value);
-        #elif defined(HAVE_WIN32UI)
-            cvSetModeWindow_W32(name,prop_value);
-        #elif defined (HAVE_GTK)
-            cvSetModeWindow_GTK(name,prop_value);
-        #elif defined (HAVE_COCOA)
-            cvSetModeWindow_COCOA(name,prop_value);
-        #elif defined (WINRT)
-            cvSetModeWindow_WinRT(name, prop_value);
-        #endif
-
-    break;
-
-    case cv::WND_PROP_AUTOSIZE:
-        #if defined (HAVE_QT)
-            cvSetPropWindow_QT(name,prop_value);
-        #endif
-    break;
-
-    case cv::WND_PROP_ASPECT_RATIO:
-        #if defined (HAVE_QT)
-            cvSetRatioWindow_QT(name,prop_value);
-        #endif
-    break;
-
-    case cv::WND_PROP_TOPMOST:
-        #if defined (HAVE_QT)
-            // nothing
-        #elif defined(HAVE_WIN32UI)
-            cvSetPropTopmost_W32(name, (prop_value != 0 ? true : false));
-        #elif defined(HAVE_COCOA)
-            cvSetPropTopmost_COCOA(name, (prop_value != 0 ? true : false));
-        #endif
-    break;
-
-    case cv::WND_PROP_VSYNC:
-        #if defined (HAVE_QT)
-            // nothing
-        #elif defined (HAVE_WIN32UI)
-            cvSetPropVsync_W32(name, (prop_value != 0));
-        #else
-            // not implemented yet for other toolkits
-        #endif
-    break;
-
-    default:;
-    }
-#endif
-}
-
-/* return -1 if error */
-CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
-{
-    CV_TRACE_FUNCTION();
-    CV_Assert(name);
-
-    {
-        auto window = findWindow_(name);
-        if (window)
-        {
-            double v = window->getProperty(prop_id);
-            if (cvIsNaN(v))
-                return -1;
-            return v;
-        }
-    }
-
-#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
-    auto backend = getCurrentUIBackend();
-    if (backend)
-    {
-        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
-        CV_NOT_FOUND_DEPRECATION;
-    }
-    else
-    {
-        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
-    }
-    return -1;
-#else
-    switch(prop_id)
-    {
-    case cv::WND_PROP_FULLSCREEN:
-
-        #if defined (HAVE_QT)
-            return cvGetModeWindow_QT(name);
-        #elif defined(HAVE_WIN32UI)
-            return cvGetModeWindow_W32(name);
-        #elif defined (HAVE_GTK)
-            return cvGetModeWindow_GTK(name);
-        #elif defined (HAVE_COCOA)
-            return cvGetModeWindow_COCOA(name);
-        #elif defined (WINRT)
-            return cvGetModeWindow_WinRT(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_AUTOSIZE:
-
-        #if defined (HAVE_QT)
-            return cvGetPropWindow_QT(name);
-        #elif defined(HAVE_WIN32UI)
-            return cvGetPropWindowAutoSize_W32(name);
-        #elif defined (HAVE_GTK)
-            return cvGetPropWindowAutoSize_GTK(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_ASPECT_RATIO:
-
-        #if defined (HAVE_QT)
-            return cvGetRatioWindow_QT(name);
-        #elif defined(HAVE_WIN32UI)
-            return cvGetRatioWindow_W32(name);
-        #elif defined (HAVE_GTK)
-            return cvGetRatioWindow_GTK(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_OPENGL:
-
-        #if defined (HAVE_QT)
-            return cvGetOpenGlProp_QT(name);
-        #elif defined(HAVE_WIN32UI)
-            return cvGetOpenGlProp_W32(name);
-        #elif defined (HAVE_GTK)
-            return cvGetOpenGlProp_GTK(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_VISIBLE:
-        #if defined (HAVE_QT)
-            return cvGetPropVisible_QT(name);
-        #elif defined(HAVE_WIN32UI)
-            return cvGetPropVisible_W32(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_TOPMOST:
-        #if defined (HAVE_QT)
-            return -1;
-        #elif defined(HAVE_WIN32UI)
-            return cvGetPropTopmost_W32(name);
-        #elif defined(HAVE_COCOA)
-            return cvGetPropTopmost_COCOA(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    case cv::WND_PROP_VSYNC:
-        #if defined (HAVE_QT)
-            return -1;
-        #elif defined (HAVE_WIN32UI)
-            return cvGetPropVsync_W32(name);
-        #else
-            return -1;
-        #endif
-    break;
-
-    default:
-        return -1;
-    }
-#endif
-}
 
 cv::Rect cv::getWindowImageRect(const String& winname)
 {
@@ -478,7 +268,7 @@ void cv::namedWindow( const String& winname, int flags )
         }
     }
 
-    cvNamedWindow( winname.c_str(), flags );
+    namedWindowImpl( winname.c_str(), flags );
 }
 
 void cv::destroyWindow( const String& winname )
@@ -541,14 +331,14 @@ void cv::resizeWindow( const String& winname, int width, int height )
     }
     return;
 #else
-    cvResizeWindow( winname.c_str(), width, height );
+    resizeWindowImpl( winname.c_str(), width, height );
 #endif
 }
 
 void cv::resizeWindow(const String& winname, const cv::Size& size)
 {
    CV_TRACE_FUNCTION();
-   cvResizeWindow(winname.c_str(), size.width, size.height);
+   resizeWindowImpl(winname.c_str(), size.width, size.height);
 }
 
 void cv::moveWindow( const String& winname, int x, int y )
@@ -576,7 +366,7 @@ void cv::moveWindow( const String& winname, int x, int y )
     }
     return;
 #else
-    cvMoveWindow( winname.c_str(), x, y );
+    moveWindowImpl( winname.c_str(), x, y );
 #endif
 }
 
@@ -622,16 +412,217 @@ void cv::setWindowTitle(const String& winname, const String& title)
 #endif
 }
 
-void cv::setWindowProperty(const String& winname, int prop_id, double prop_value)
+void cv::setWindowProperty(const String& name, int prop_id, double prop_value)
 {
     CV_TRACE_FUNCTION();
-    cvSetWindowProperty( winname.c_str(), prop_id, prop_value);
+    CV_Assert(!name.empty());
+
+    {
+        auto window = findWindow_(name);
+        if (window)
+        {
+            /*bool res = */window->setProperty(prop_id, prop_value);
+            return;
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
+    switch(prop_id)
+    {
+    //change between fullscreen or not.
+    case cv::WND_PROP_FULLSCREEN:
+
+        if (prop_value != cv::WINDOW_NORMAL && prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
+            break;
+
+        #if defined (HAVE_QT)
+            cvSetModeWindow_QT(name.c_str(),prop_value);
+        #elif defined(HAVE_WIN32UI)
+            cvSetModeWindow_W32(name.c_str(),prop_value);
+        #elif defined (HAVE_GTK)
+            cvSetModeWindow_GTK(name.c_str(),prop_value);
+        #elif defined (HAVE_COCOA)
+            cvSetModeWindow_COCOA(name.c_str(),prop_value);
+        #elif defined (WINRT)
+            cvSetModeWindow_WinRT(name.c_str(), prop_value);
+        #endif
+
+    break;
+
+    case cv::WND_PROP_AUTOSIZE:
+        #if defined (HAVE_QT)
+            cvSetPropWindow_QT(name.c_str(),prop_value);
+        #endif
+    break;
+
+    case cv::WND_PROP_ASPECT_RATIO:
+        #if defined (HAVE_QT)
+            cvSetRatioWindow_QT(name.c_str(),prop_value);
+        #endif
+    break;
+
+    case cv::WND_PROP_TOPMOST:
+        #if defined (HAVE_QT)
+            // nothing
+        #elif defined(HAVE_WIN32UI)
+            cvSetPropTopmost_W32(name.c_str(), (prop_value != 0 ? true : false));
+        #elif defined(HAVE_COCOA)
+            cvSetPropTopmost_COCOA(name.c_str(), (prop_value != 0 ? true : false));
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_QT)
+            // nothing
+        #elif defined (HAVE_WIN32UI)
+            cvSetPropVsync_W32(name.c_str(), (prop_value != 0));
+        #else
+            // not implemented yet for other toolkits
+        #endif
+    break;
+
+    default:;
+    }
+#endif
+
 }
 
-double cv::getWindowProperty(const String& winname, int prop_id)
+double cv::getWindowProperty(const String& name, int prop_id)
 {
     CV_TRACE_FUNCTION();
-    return cvGetWindowProperty(winname.c_str(), prop_id);
+    CV_Assert(!name.empty());
+
+    {
+        auto window = findWindow_(name);
+        if (window)
+        {
+            double v = window->getProperty(prop_id);
+            if (cvIsNaN(v))
+                return -1;
+            return v;
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return -1;
+#else
+    switch(prop_id)
+    {
+    case cv::WND_PROP_FULLSCREEN:
+
+        #if defined (HAVE_QT)
+            return cvGetModeWindow_QT(name.c_str());
+        #elif defined(HAVE_WIN32UI)
+            return cvGetModeWindow_W32(name.c_str());
+        #elif defined (HAVE_GTK)
+            return cvGetModeWindow_GTK(name.c_str());
+        #elif defined (HAVE_COCOA)
+            return cvGetModeWindow_COCOA(name.c_str());
+        #elif defined (WINRT)
+            return cvGetModeWindow_WinRT(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_AUTOSIZE:
+
+        #if defined (HAVE_QT)
+            return cvGetPropWindow_QT(name.c_str());
+        #elif defined(HAVE_WIN32UI)
+            return cvGetPropWindowAutoSize_W32(name.c_str());
+        #elif defined (HAVE_GTK)
+            return cvGetPropWindowAutoSize_GTK(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_ASPECT_RATIO:
+
+        #if defined (HAVE_QT)
+            return cvGetRatioWindow_QT(name.c_str());
+        #elif defined(HAVE_WIN32UI)
+            return cvGetRatioWindow_W32(name.c_str());
+        #elif defined (HAVE_GTK)
+            return cvGetRatioWindow_GTK(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_OPENGL:
+
+        #if defined (HAVE_QT)
+            return cvGetOpenGlProp_QT(name.c_str());
+        #elif defined(HAVE_WIN32UI)
+            return cvGetOpenGlProp_W32(name.c_str());
+        #elif defined (HAVE_GTK)
+            return cvGetOpenGlProp_GTK(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_VISIBLE:
+        #if defined (HAVE_QT)
+            return cvGetPropVisible_QT(name.c_str());
+        #elif defined(HAVE_WIN32UI)
+            return cvGetPropVisible_W32(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_TOPMOST:
+        #if defined (HAVE_QT)
+            return -1;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetPropTopmost_W32(name.c_str());
+        #elif defined(HAVE_COCOA)
+            return cvGetPropTopmost_COCOA(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_QT)
+            return -1;
+        #elif defined (HAVE_WIN32UI)
+            return cvGetPropVsync_W32(name.c_str());
+        #else
+            return -1;
+        #endif
+    break;
+
+    default:
+        return -1;
+    }
+#endif
+
 }
 
 int cv::waitKeyEx(int delay)
@@ -1005,7 +996,7 @@ void cv::imshow( const String& winname, InputArray _img )
     {
         Mat img = _img.getMat();
         CvMat c_img = cvMat(img);
-        cvShowImage(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), &c_img);
     }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
@@ -1014,7 +1005,7 @@ void cv::imshow( const String& winname, InputArray _img )
     {
         Mat img = _img.getMat();
         CvMat c_img = cvMat(img);
-        cvShowImage(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), &c_img);
     }
     else
     {
@@ -1091,7 +1082,7 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 #endif
 }
 
-// Without OpenGL
+//========================= OpenGL fallback =========================
 
 #ifndef HAVE_OPENGL
 
@@ -1112,11 +1103,10 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #endif // !HAVE_OPENGL
 
-#if defined (HAVE_QT)
+//========================= Qt fallback =========================
 
 // moved to window_QT.cpp
-
-#else
+#ifndef HAVE_QT
 
 static const char* NO_QT_ERR_MSG = "The library is compiled without QT support";
 
@@ -1170,16 +1160,13 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
     CV_Error(CV_StsNotImplemented, NO_QT_ERR_MSG);
 }
 
-#endif
+#endif // !HAVE_QT
 
-#if   defined (HAVE_WIN32UI)  // see window_w32.cpp
-#elif defined (HAVE_GTK)      // see window_gtk.cpp
-#elif defined (HAVE_COCOA)    // see window_cocoa.mm
-#elif defined (HAVE_QT)       // see window_QT.cpp
-#elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
-#elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
-#else
+//========================= NO GUI fallback =========================
+
+#if !defined (HAVE_WIN32UI) && !defined (HAVE_GTK) && !defined (HAVE_COCOA) && !defined (HAVE_QT)
+    && !defined (HAVE_WAYLAND) && !defined (WINRT) && !defined (WINRT_8_0)
 
 // No windowing system present at compile time ;-(
 //
@@ -1196,9 +1183,9 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
     funcname, __FILE__, __LINE__)
 
 
-CV_IMPL int cvNamedWindow( const char*, int )
+int namedWindowImpl( const char*, int )
 {
-    CV_NO_GUI_ERROR("cvNamedWindow");
+    CV_NO_GUI_ERROR("namedWindowImpl");
 }
 
 CV_IMPL void cvDestroyWindow( const char* )
@@ -1212,20 +1199,20 @@ cvDestroyAllWindows( void )
     CV_NO_GUI_ERROR( "cvDestroyAllWindows" );
 }
 
-CV_IMPL void
-cvShowImage( const char*, const CvArr* )
+void
+showImageImpl( const char*, const CvArr* )
 {
-    CV_NO_GUI_ERROR( "cvShowImage" );
+    CV_NO_GUI_ERROR( "showImageImpl" );
 }
 
-CV_IMPL void cvResizeWindow( const char*, int, int )
+void resizeWindowImpl( const char*, int, int )
 {
-    CV_NO_GUI_ERROR( "cvResizeWindow" );
+    CV_NO_GUI_ERROR( "resizeWindowImpl" );
 }
 
-CV_IMPL void cvMoveWindow( const char*, int, int )
+void moveWindowImpl( const char*, int, int )
 {
-    CV_NO_GUI_ERROR( "cvMoveWindow" );
+    CV_NO_GUI_ERROR( "moveWindowImpl" );
 }
 
 CV_IMPL int
@@ -1269,21 +1256,11 @@ CV_IMPL void cvSetTrackbarMin(const char*, const char*, int)
     CV_NO_GUI_ERROR( "cvSetTrackbarMin" );
 }
 
-CV_IMPL void* cvGetWindowHandle( const char* )
-{
-    CV_NO_GUI_ERROR( "cvGetWindowHandle" );
-}
-
-CV_IMPL const char* cvGetWindowName( void* )
-{
-    CV_NO_GUI_ERROR( "cvGetWindowName" );
-}
-
 CV_IMPL int cvWaitKey( int )
 {
     CV_NO_GUI_ERROR( "cvWaitKey" );
 }
 
-#endif
+#endif // NO_GUI
 
 /* End of file. */

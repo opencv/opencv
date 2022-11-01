@@ -53,32 +53,10 @@ extern "C" {
   @{
   */
 
-/* create window */
-CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(cv::WINDOW_AUTOSIZE) );
-
-/* Set and Get Property of the window */
-CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
-CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
-
-/* display image within window (highgui windows remember their content) */
-CVAPI(void) cvShowImage( const char* name, const CvArr* image );
-
-/* resize/move window */
-CVAPI(void) cvResizeWindow( const char* name, int width, int height );
-CVAPI(void) cvMoveWindow( const char* name, int x, int y );
-
-
 /* destroy window and all the trackers associated with it */
 CVAPI(void) cvDestroyWindow( const char* name );
 
 CVAPI(void) cvDestroyAllWindows(void);
-
-/* get native window handle (HWND in case of Win32 and Widget in case of X Window) */
-CVAPI(void*) cvGetWindowHandle( const char* name );
-
-/* get name of highgui window given its native handle */
-CVAPI(const char*) cvGetWindowName( void* window_handle );
-
 
 typedef void (CV_CDECL *CvTrackbarCallback)(int pos);
 
@@ -151,9 +129,6 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 \****************************************************************************************/
 
 #define cvAddSearchPath(path)
-#define cvvNamedWindow cvNamedWindow
-#define cvvShowImage cvShowImage
-#define cvvResizeWindow cvResizeWindow
 #define cvvDestroyWindow cvDestroyWindow
 #define cvvCreateTrackbar cvCreateTrackbar
 #define cvvAddSearchPath cvAddSearchPath

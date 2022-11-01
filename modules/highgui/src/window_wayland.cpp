@@ -2310,7 +2310,7 @@ protected:
 
 std::shared_ptr<cv_wl_core> CvWlCore::sInstance = nullptr;
 
-CV_IMPL int cvNamedWindow(const char *name, int flags) {
+int namedWindowImpl(const char *name, int flags) {
     return CvWlCore::getInstance().create_window(name, flags);
 }
 
@@ -2322,22 +2322,14 @@ CV_IMPL void cvDestroyAllWindows() {
     CvWlCore::getInstance().destroy_all_windows();
 }
 
-CV_IMPL void *cvGetWindowHandle(const char *name) {
-    return CvWlCore::getInstance().get_window_handle(name);
-}
-
-CV_IMPL const char *cvGetWindowName(void *window_handle) {
-    return CvWlCore::getInstance().get_window_name(window_handle).c_str();
-}
-
-CV_IMPL void cvMoveWindow(const char *name, int x, int y) {
+void moveWindowImpl(const char *name, int x, int y) {
     CV_UNUSED(name);
     CV_UNUSED(x);
     CV_UNUSED(y);
     CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot move window surfaces in Wayland");
 }
 
-CV_IMPL void cvResizeWindow(const char *name, int width, int height) {
+void resizeWindowImpl(const char *name, int width, int height) {
     if (auto window = CvWlCore::getInstance().get_window(name))
         window->show(cv::Size(width, height));
     else
@@ -2401,7 +2393,7 @@ CV_IMPL void cvSetMouseCallback(const char *window_name, CvMouseCallback on_mous
         window->set_mouse_callback(on_mouse, param);
 }
 
-CV_IMPL void cvShowImage(const char *name, const CvArr *arr) {
+void showImageImpl(const char *name, const CvArr *arr) {
     auto cv_core = CvWlCore::getInstance();
     auto window = cv_core.get_window(name);
     if (!window) {

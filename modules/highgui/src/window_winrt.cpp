@@ -56,9 +56,9 @@ void cv::winrt_initContainer(::Windows::UI::Xaml::Controls::Panel^ _container)
 
 /********************************** API Implementation *********************************************************/
 
-CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, const CvArr* arr)
 {
-    CV_FUNCNAME("cvShowImage");
+    CV_FUNCNAME("showImageImpl");
 
     __BEGIN__;
 
@@ -84,9 +84,9 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
     __END__;
 }
 
-CV_IMPL int cvNamedWindow(const char* name, int flags)
+int namedWindowImpl(const char* name, int flags)
 {
-    CV_FUNCNAME("cvNamedWindow");
+    CV_FUNCNAME("namedWindowImpl");
 
     if (!name)
         CV_ERROR(CV_StsNullPtr, "NULL name");
@@ -240,26 +240,14 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
 
 /********************************** Disabled or not supported API **********************************************/
 
-CV_IMPL void cvMoveWindow(const char* name, int x, int y)
+void moveWindowImpl(const char* name, int x, int y)
 {
-    CV_WINRT_NO_GUI_ERROR("cvMoveWindow");
+    CV_WINRT_NO_GUI_ERROR("moveWindowImpl");
 }
 
-CV_IMPL void cvResizeWindow(const char* name, int width, int height)
+void resizeWindowImpl(const char* name, int width, int height)
 {
-    CV_WINRT_NO_GUI_ERROR("cvResizeWindow");
-}
-
-CV_IMPL void* cvGetWindowHandle(const char*)
-{
-    CV_WINRT_NO_GUI_ERROR("cvGetWindowHandle");
-    return (void*) CV_StsNotImplemented;
-}
-
-CV_IMPL const char* cvGetWindowName(void*)
-{
-    CV_WINRT_NO_GUI_ERROR("cvGetWindowName");
-    return (const char*) CV_StsNotImplemented;
+    CV_WINRT_NO_GUI_ERROR("resizeWindowImpl");
 }
 
 void cvSetModeWindow_WinRT(const char* name, double prop_value) {

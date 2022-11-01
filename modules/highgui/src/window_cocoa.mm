@@ -51,9 +51,9 @@
 static int cocoa_InitSystem( int argc, char** argv) { return 0;}
 CV_IMPL void cvDestroyWindow( const char* name) {}
 CV_IMPL void cvDestroyAllWindows( void ) {}
-CV_IMPL void cvShowImage( const char* name, const CvArr* arr) {}
-CV_IMPL void cvResizeWindow( const char* name, int width, int height) {}
-CV_IMPL void cvMoveWindow( const char* name, int x, int y){}
+void showImageImpl( const char* name, const CvArr* arr) {}
+void resizeWindowImpl( const char* name, int width, int height) {}
+void moveWindowImpl( const char* name, int x, int y){}
 CV_IMPL int cvCreateTrackbar (const char* trackbar_name,const char* window_name,
                               int* val, int count, CvTrackbarCallback on_notify) {return  0;}
 CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,const char* window_name,
@@ -63,9 +63,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos) {}
 CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval) {}
 CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval) {}
-CV_IMPL void* cvGetWindowHandle( const char* name ) {return NULL;}
-CV_IMPL const char* cvGetWindowName( void* window_handle ) {return NULL;}
-CV_IMPL int cvNamedWindow( const char* name, int flags ) {return 0; }
+int namedWindowImpl( const char* name, int flags ) {return 0; }
 CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 //*** end IphoneOS Stubs ***/
 #else
@@ -207,14 +205,14 @@ CV_IMPL void cvDestroyAllWindows( void )
 }
 
 
-CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
+void showImageImpl( const char* name, const CvArr* arr)
 {
-    //cout << "cvShowImage" << endl;
+    //cout << "showImageImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if(!window)
     {
-        cvNamedWindow(name, cv::WINDOW_AUTOSIZE);
+        namedWindowImpl(name, cv::WINDOW_AUTOSIZE);
         window = cvGetWindow(name);
     }
 
@@ -269,10 +267,10 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     [localpool drain];
 }
 
-CV_IMPL void cvResizeWindow( const char* name, int width, int height)
+void resizeWindowImpl( const char* name, int width, int height)
 {
 
-    //cout << "cvResizeWindow" << endl;
+    //cout << "resizeWindowImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if(window && ![window autosize]) {
@@ -283,9 +281,9 @@ CV_IMPL void cvResizeWindow( const char* name, int width, int height)
     [localpool drain];
 }
 
-CV_IMPL void cvMoveWindow( const char* name, int x, int y)
+void moveWindowImpl( const char* name, int x, int y)
 {
-    CV_FUNCNAME("cvMoveWindow");
+    CV_FUNCNAME("moveWindowImpl");
     __BEGIN__;
 
     NSAutoreleasePool* localpool1 = [[NSAutoreleasePool alloc] init];
@@ -293,7 +291,7 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y)
 
     if(name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL window name" );
-    //cout << "cvMoveWindow"<< endl;
+    //cout << "moveWindowImpl"<< endl;
     window = cvGetWindow(name);
     if(window) {
         if([window firstContent]) {
@@ -514,33 +512,12 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     __END__;
 }
 
-CV_IMPL void* cvGetWindowHandle( const char* name )
-{
-    //cout << "cvGetWindowHandle" << endl;
-    return cvGetWindow(name);
-}
-
-
-CV_IMPL const char* cvGetWindowName( void* window_handle )
-{
-    //cout << "cvGetWindowName" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    for(NSString *key in windows) {
-        if([windows valueForKey:key] == window_handle) {
-            [localpool drain];
-            return [key UTF8String];
-        }
-    }
-    [localpool drain];
-    return 0;
-}
-
-CV_IMPL int cvNamedWindow( const char* name, int flags )
+int namedWindowImpl( const char* name, int flags )
 {
     if( !wasInitialized )
         cocoa_InitSystem(0, 0);
 
-    //cout << "cvNamedWindow" << endl;
+    //cout << "namedWindowImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if( window )

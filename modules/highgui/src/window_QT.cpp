@@ -554,7 +554,7 @@ static int icvInitSystem(int* c, char** v)
     return 0;
 }
 
-CV_IMPL int cvNamedWindow(const char* name, int flags)
+int namedWindowImpl(const char* name, int flags)
 {
     if (!guiMainThread)
         guiMainThread = new GuiReceiver;
@@ -596,25 +596,7 @@ CV_IMPL void cvDestroyAllWindows()
 }
 
 
-CV_IMPL void* cvGetWindowHandle(const char* name)
-{
-    if (!name)
-        CV_Error( CV_StsNullPtr, "NULL name string" );
-
-    return (void*) icvFindWindowByName(QLatin1String(name));
-}
-
-
-CV_IMPL const char* cvGetWindowName(void* window_handle)
-{
-    if( !window_handle )
-        CV_Error( CV_StsNullPtr, "NULL window handler" );
-
-    return ((CvWindow*)window_handle)->objectName().toLatin1().data();
-}
-
-
-CV_IMPL void cvMoveWindow(const char* name, int x, int y)
+void moveWindowImpl(const char* name, int x, int y)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -626,7 +608,7 @@ CV_IMPL void cvMoveWindow(const char* name, int x, int y)
         Q_ARG(int, y));
 }
 
-CV_IMPL void cvResizeWindow(const char* name, int width, int height)
+void resizeWindowImpl(const char* name, int width, int height)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -729,7 +711,7 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
 }
 
 
-CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, const CvArr* arr)
 {
     if (!guiMainThread)
         guiMainThread = new GuiReceiver;
@@ -961,7 +943,7 @@ void GuiReceiver::setWindowTitle(QString name, QString title)
 
     if (!w)
     {
-        cvNamedWindow(name.toLatin1().data());
+        namedWindowImpl(name.toLatin1().data());
         w = icvFindWindowByName(name);
     }
 
@@ -1052,7 +1034,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 
     if (!w) //as observed in the previous implementation (W32, GTK), create a new window is the pointer returned is null
     {
-        cvNamedWindow(name.toLatin1().data());
+        namedWindowImpl(name.toLatin1().data());
         w = icvFindWindowByName(name);
     }
 

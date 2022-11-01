@@ -317,7 +317,7 @@ cvImageWidget_size_request (GtkWidget      *widget,
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
 
     //printf("cvImageWidget_size_request ");
-    // the case the first time cvShowImage called or when AUTOSIZE
+    // the case the first time showImageImpl called or when AUTOSIZE
     if( image_widget->original_image &&
         ((image_widget->flags & cv::WINDOW_AUTOSIZE) ||
          (image_widget->flags & CV_WINDOW_NO_IMAGE)))
@@ -332,7 +332,7 @@ cvImageWidget_size_request (GtkWidget      *widget,
         requisition->width = image_widget->scaled_image->cols;
         requisition->height = image_widget->scaled_image->rows;
     }
-    // the case before cvShowImage called
+    // the case before showImageImpl called
     else{
         //printf("default ");
         requisition->width = 320;
@@ -1103,7 +1103,8 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
 #endif //GTK_VERSION3
 
 static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags);
-CV_IMPL int cvNamedWindow( const char* name, int flags )
+
+int namedWindowImpl( const char* name, int flags )
 {
     gtk_InitSystem(name ? 1 : 0,(char**)&name);
     CV_Assert(name && "NULL name string");
@@ -1373,8 +1374,8 @@ cvDestroyAllWindows( void )
 //     return window_size;
 // }
 
-CV_IMPL void
-cvShowImage( const char* name, const CvArr* arr )
+void
+showImageImpl( const char* name, const CvArr* arr )
 {
     CV_Assert(name && "NULL name string");
 
@@ -1383,7 +1384,7 @@ cvShowImage( const char* name, const CvArr* arr )
     auto window = icvFindWindowByName(name);
     if(!window)
     {
-        cvNamedWindow(name, 1);
+        namedWindowImpl(name, 1);
         window = icvFindWindowByName(name);
     }
     CV_Assert(window);
@@ -1404,7 +1405,7 @@ cvShowImage( const char* name, const CvArr* arr )
 }
 
 static void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int height);
-CV_IMPL void cvResizeWindow(const char* name, int width, int height )
+void resizeWindowImpl(const char* name, int width, int height )
 {
     CV_Assert(name && "NULL name string");
 
@@ -1434,7 +1435,7 @@ void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int heigh
 }
 
 
-CV_IMPL void cvMoveWindow( const char* name, int x, int y )
+void moveWindowImpl( const char* name, int x, int y )
 {
     CV_Assert(name && "NULL name string");
 
@@ -1703,34 +1704,6 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     trackbar->minval = minval;
     if (trackbar->maxval >= trackbar->minval)
         gtk_range_set_range(GTK_RANGE(trackbar->widget), trackbar->minval, trackbar->maxval);
-}
-
-
-CV_IMPL void* cvGetWindowHandle( const char* window_name )
-{
-    CV_Assert(window_name && "NULL window name");
-
-    CV_LOCK_MUTEX();
-
-    const auto window = icvFindWindowByName(window_name);
-    if(!window)
-        return NULL;
-
-    return (void*)window->widget;
-}
-
-
-CV_IMPL const char* cvGetWindowName( void* window_handle )
-{
-    CV_Assert(window_handle && "NULL window handle");
-
-    CV_LOCK_MUTEX();
-
-    CvWindow* window = icvWindowByWidget( (GtkWidget*)window_handle );
-    if (window)
-        return window->name.c_str();
-
-    return ""; // FIXME: NULL?
 }
 
 static GtkFileFilter* icvMakeGtkFilter(const char* name, const char* patterns, GtkFileFilter* images)
@@ -2171,7 +2144,6 @@ public:
     {
         auto window = window_.lock();
         CV_Assert(window);
-        // see cvGetWindowProperty
         switch (prop)
         {
         case cv::WND_PROP_FULLSCREEN:
@@ -2198,7 +2170,6 @@ public:
     {
         auto window = window_.lock();
         CV_Assert(window);
-        // see cvSetWindowProperty
         switch (prop)
         {
         case cv::WND_PROP_FULLSCREEN:
