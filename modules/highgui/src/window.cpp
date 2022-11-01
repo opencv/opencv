@@ -217,9 +217,9 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     switch(prop_id)
     {
     //change between fullscreen or not.
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
-        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
+        if (prop_value != cv::WINDOW_NORMAL && prop_value != cv::WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
@@ -236,13 +236,13 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
         #if defined (HAVE_QT)
             cvSetPropWindow_QT(name,prop_value);
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
         #endif
@@ -305,7 +305,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #else
     switch(prop_id)
     {
-    case CV_WND_PROP_FULLSCREEN:
+    case cv::WND_PROP_FULLSCREEN:
 
         #if defined (HAVE_QT)
             return cvGetModeWindow_QT(name);
@@ -322,7 +322,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_AUTOSIZE:
+    case cv::WND_PROP_AUTOSIZE:
 
         #if defined (HAVE_QT)
             return cvGetPropWindow_QT(name);
@@ -335,7 +335,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_ASPECTRATIO:
+    case cv::WND_PROP_ASPECT_RATIO:
 
         #if defined (HAVE_QT)
             return cvGetRatioWindow_QT(name);
@@ -348,7 +348,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_OPENGL:
+    case cv::WND_PROP_OPENGL:
 
         #if defined (HAVE_QT)
             return cvGetOpenGlProp_QT(name);
@@ -361,7 +361,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
-    case CV_WND_PROP_VISIBLE:
+    case cv::WND_PROP_VISIBLE:
         #if defined (HAVE_QT)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
@@ -919,11 +919,13 @@ int cv::getMouseWheelDelta( int flags )
     return CV_GET_WHEEL_DELTA(flags);
 }
 
+#if !defined (HAVE_GTK)
 int cv::startWindowThread()
 {
     CV_TRACE_FUNCTION();
-    return cvStartWindowThread();
+    return 0;
 }
+#endif // !GTK
 
 // OpenGL support
 
@@ -1112,61 +1114,7 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #if defined (HAVE_QT)
 
-cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight, int style, int spacing)
-{
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
-    void* pf = &f; // to suppress strict-aliasing
-    return *(cv::QtFont*)pf;
-}
-
-void cv::addText( const Mat& img, const String& text, Point org, const QtFont& font)
-{
-    CvMat _img = cvMat(img);
-    cvAddText( &_img, text.c_str(), cvPoint(org), (CvFont*)&font);
-}
-
-void cv::addText( const Mat& img, const String& text, Point org, const String& nameFont,
-        int pointSize, Scalar color, int weight, int style, int spacing)
-{
-    CvFont f = cvFontQt(nameFont.c_str(), pointSize, cvScalar(color), weight, style, spacing);
-    CvMat _img = cvMat(img);
-    cvAddText( &_img, text.c_str(), cvPoint(org), &f);
-}
-
-void cv::displayStatusBar(const String& name,  const String& text, int delayms)
-{
-    cvDisplayStatusBar(name.c_str(),text.c_str(), delayms);
-}
-
-void cv::displayOverlay(const String& name,  const String& text, int delayms)
-{
-    cvDisplayOverlay(name.c_str(),text.c_str(), delayms);
-}
-
-int cv::startLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[])
-{
-    return cvStartLoop(pt2Func, argc, argv);
-}
-
-void cv::stopLoop()
-{
-    cvStopLoop();
-}
-
-void cv::saveWindowParameters(const String& windowName)
-{
-    cvSaveWindowParameters(windowName.c_str());
-}
-
-void cv::loadWindowParameters(const String& windowName)
-{
-    cvLoadWindowParameters(windowName.c_str());
-}
-
-int cv::createButton(const String& button_name, ButtonCallback on_change, void* userdata, int button_type , bool initial_button_state  )
-{
-    return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
-}
+// moved to window_QT.cpp
 
 #else
 
@@ -1334,60 +1282,6 @@ CV_IMPL const char* cvGetWindowName( void* )
 CV_IMPL int cvWaitKey( int )
 {
     CV_NO_GUI_ERROR( "cvWaitKey" );
-}
-
-CV_IMPL int cvInitSystem( int , char** )
-{
-
-    CV_NO_GUI_ERROR( "cvInitSystem" );
-}
-
-CV_IMPL int cvStartWindowThread()
-{
-
-    CV_NO_GUI_ERROR( "cvStartWindowThread" );
-}
-
-//-------- Qt ---------
-CV_IMPL void cvAddText( const CvArr*, const char*, CvPoint , CvFont* )
-{
-    CV_NO_GUI_ERROR("cvAddText");
-}
-
-CV_IMPL void cvDisplayStatusBar(const char* , const char* , int )
-{
-    CV_NO_GUI_ERROR("cvDisplayStatusBar");
-}
-
-CV_IMPL void cvDisplayOverlay(const char* , const char* , int )
-{
-    CV_NO_GUI_ERROR("cvNamedWindow");
-}
-
-CV_IMPL int cvStartLoop(int (*)(int argc, char *argv[]), int , char* argv[])
-{
-    CV_UNUSED(argv);
-    CV_NO_GUI_ERROR("cvStartLoop");
-}
-
-CV_IMPL void cvStopLoop()
-{
-    CV_NO_GUI_ERROR("cvStopLoop");
-}
-
-CV_IMPL void cvSaveWindowParameters(const char* )
-{
-    CV_NO_GUI_ERROR("cvSaveWindowParameters");
-}
-
-// CV_IMPL void cvLoadWindowParameterss(const char* name)
-// {
-//     CV_NO_GUI_ERROR("cvLoadWindowParameters");
-// }
-
-CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
-{
-    CV_NO_GUI_ERROR("cvCreateButton");
 }
 
 #endif

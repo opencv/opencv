@@ -250,12 +250,6 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height)
     CV_WINRT_NO_GUI_ERROR("cvResizeWindow");
 }
 
-CV_IMPL int cvInitSystem(int, char**)
-{
-    CV_WINRT_NO_GUI_ERROR("cvInitSystem");
-    return CV_StsNotImplemented;
-}
-
 CV_IMPL void* cvGetWindowHandle(const char*)
 {
     CV_WINRT_NO_GUI_ERROR("cvGetWindowHandle");
@@ -274,10 +268,5 @@ void cvSetModeWindow_WinRT(const char* name, double prop_value) {
 
 double cvGetModeWindow_WinRT(const char* name) {
     CV_WINRT_NO_GUI_ERROR("cvGetModeWindow");
-    return CV_StsNotImplemented;
-}
-
-CV_IMPL int cvStartWindowThread() {
-    CV_WINRT_NO_GUI_ERROR("cvStartWindowThread");
     return CV_StsNotImplemented;
 }

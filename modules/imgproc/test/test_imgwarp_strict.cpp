@@ -288,10 +288,10 @@ void CV_ImageWarpBaseTest::validate_results() const
 
 #ifdef SHOW_IMAGE
                 const std::string w1("OpenCV impl (run func)"), w2("Reference func"), w3("Src image"), w4("Diff");
-                namedWindow(w1, CV_WINDOW_KEEPRATIO);
-                namedWindow(w2, CV_WINDOW_KEEPRATIO);
-                namedWindow(w3, CV_WINDOW_KEEPRATIO);
-                namedWindow(w4, CV_WINDOW_KEEPRATIO);
+                namedWindow(w1, cv::WINDOW_KEEPRATIO);
+                namedWindow(w2, cv::WINDOW_KEEPRATIO);
+                namedWindow(w3, cv::WINDOW_KEEPRATIO);
+                namedWindow(w4, cv::WINDOW_KEEPRATIO);
 
                 Mat diff;
                 absdiff(reference_dst, _dst, diff);

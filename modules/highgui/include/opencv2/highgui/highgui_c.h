@@ -53,77 +53,8 @@ extern "C" {
   @{
   */
 
-/****************************************************************************************\
-*                                  Basic GUI functions                                   *
-\****************************************************************************************/
-//YV
-//-----------New for Qt
-/* For font */
-enum {  CV_FONT_LIGHT           = 25,//QFont::Light,
-        CV_FONT_NORMAL          = 50,//QFont::Normal,
-        CV_FONT_DEMIBOLD        = 63,//QFont::DemiBold,
-        CV_FONT_BOLD            = 75,//QFont::Bold,
-        CV_FONT_BLACK           = 87 //QFont::Black
-};
-
-enum {  CV_STYLE_NORMAL         = 0,//QFont::StyleNormal,
-        CV_STYLE_ITALIC         = 1,//QFont::StyleItalic,
-        CV_STYLE_OBLIQUE        = 2 //QFont::StyleOblique
-};
-/* ---------*/
-
-//for color cvScalar(blue_component, green_component, red_component[, alpha_component])
-//and alpha= 0 <-> 0xFF (not transparent <-> transparent)
-CVAPI(CvFont) cvFontQt(const char* nameFont, int pointSize CV_DEFAULT(-1), CvScalar color CV_DEFAULT(cvScalarAll(0)), int weight CV_DEFAULT(CV_FONT_NORMAL),  int style CV_DEFAULT(CV_STYLE_NORMAL), int spacing CV_DEFAULT(0));
-
-CVAPI(void) cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont *arg2);
-
-CVAPI(void) cvDisplayOverlay(const char* name, const char* text, int delayms CV_DEFAULT(0));
-CVAPI(void) cvDisplayStatusBar(const char* name, const char* text, int delayms CV_DEFAULT(0));
-
-CVAPI(void) cvSaveWindowParameters(const char* name);
-CVAPI(void) cvLoadWindowParameters(const char* name);
-CVAPI(int) cvStartLoop(int (*pt2Func)(int argc, char *argv[]), int argc, char* argv[]);
-CVAPI(void) cvStopLoop( void );
-
-typedef void (CV_CDECL *CvButtonCallback)(int state, void* userdata);
-enum {CV_PUSH_BUTTON = 0, CV_CHECKBOX = 1, CV_RADIOBOX = 2};
-CVAPI(int) cvCreateButton( const char* button_name CV_DEFAULT(NULL),CvButtonCallback on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(NULL) , int button_type CV_DEFAULT(CV_PUSH_BUTTON), int initial_button_state CV_DEFAULT(0));
-//----------------------
-
-
-/* this function is used to set some external parameters in case of X Window */
-CVAPI(int) cvInitSystem( int argc, char** argv );
-
-CVAPI(int) cvStartWindowThread( void );
-
-// ---------  YV ---------
-enum
-{
-    //These 3 flags are used by cvSet/GetWindowProperty
-    CV_WND_PROP_FULLSCREEN = 0, //to change/get window's fullscreen property
-    CV_WND_PROP_AUTOSIZE   = 1, //to change/get window's autosize property
-    CV_WND_PROP_ASPECTRATIO= 2, //to change/get window's aspectratio property
-    CV_WND_PROP_OPENGL     = 3, //to change/get window's opengl support
-    CV_WND_PROP_VISIBLE    = 4,
-
-    //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
-    CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
-    CV_WINDOW_AUTOSIZE     = 0x00000001, //the user cannot resize the window, the size is constrainted by the image displayed
-    CV_WINDOW_OPENGL       = 0x00001000, //window with opengl support
-
-    //Those flags are only for Qt
-    CV_GUI_EXPANDED         = 0x00000000, //status bar and tool bar
-    CV_GUI_NORMAL           = 0x00000010, //old fashious way
-
-    //These 3 flags are used by cvNamedWindow and cvSet/GetWindowProperty
-    CV_WINDOW_FULLSCREEN   = 1,//change the window to fullscreen
-    CV_WINDOW_FREERATIO    = 0x00000100,//the image expends as much as it can (no ratio constraint)
-    CV_WINDOW_KEEPRATIO    = 0x00000000//the ration image is respected.
-};
-
 /* create window */
-CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOSIZE) );
+CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(cv::WINDOW_AUTOSIZE) );
 
 /* Set and Get Property of the window */
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
@@ -220,7 +151,6 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 \****************************************************************************************/
 
 #define cvAddSearchPath(path)
-#define cvvInitSystem cvInitSystem
 #define cvvNamedWindow cvNamedWindow
 #define cvvShowImage cvShowImage
 #define cvvResizeWindow cvResizeWindow
@@ -229,7 +159,7 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 #define cvvAddSearchPath cvAddSearchPath
 #define cvvWaitKey(name) cvWaitKey(0)
 #define cvvWaitKeyEx(name,delay) cvWaitKey(delay)
-#define HG_AUTOSIZE CV_WINDOW_AUTOSIZE
+#define HG_AUTOSIZE cv::WINDOW_AUTOSIZE
 #define set_preprocess_func cvSetPreprocessFuncWin32
 #define set_postprocess_func cvSetPostprocessFuncWin32
 

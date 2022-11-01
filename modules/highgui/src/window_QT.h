@@ -182,7 +182,7 @@ class CvButtonbar : public CvBar
 public:
     CvButtonbar(QWidget* arg, QString bar_name);
 
-    void addButton(QString button_name, CvButtonCallback call, void* userdata,  int button_type, int initial_button_state);
+    void addButton(QString button_name, cv::ButtonCallback call, void* userdata,  int button_type, int initial_button_state);
 
 private:
     void setLabel();
@@ -196,12 +196,12 @@ class CvPushButton : public QPushButton
 {
     Q_OBJECT
 public:
-    CvPushButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata);
+    CvPushButton(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -213,12 +213,12 @@ class CvCheckBox : public QCheckBox
 {
     Q_OBJECT
 public:
-    CvCheckBox(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvCheckBox(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -230,12 +230,12 @@ class CvRadioButton : public QRadioButton
 {
     Q_OBJECT
 public:
-    CvRadioButton(CvButtonbar* par, QString button_name, CvButtonCallback call, void* userdata, int initial_button_state);
+    CvRadioButton(CvButtonbar* par, QString button_name, cv::ButtonCallback call, void* userdata, int initial_button_state);
 
 private:
     CvButtonbar* myparent;
     QString button_name ;
-    CvButtonCallback callback;
+    cv::ButtonCallback callback;
     void* userdata;
 
 private slots:
@@ -297,7 +297,7 @@ class CvWindow : public CvWinModel
 {
     Q_OBJECT
 public:
-    CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
+    CvWindow(QString arg2, int flag = cv::WINDOW_NORMAL);
     ~CvWindow();
 
     void setMouseCallBack(CvMouseCallback m, void* param);

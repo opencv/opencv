@@ -48,8 +48,7 @@
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 /*** begin IPhone OS Stubs ***/
 // When highgui functions are referred to on iPhone OS, they will fail silently.
-CV_IMPL int cvInitSystem( int argc, char** argv) { return 0;}
-CV_IMPL int cvStartWindowThread(){ return 0; }
+static int cocoa_InitSystem( int argc, char** argv) { return 0;}
 CV_IMPL void cvDestroyWindow( const char* name) {}
 CV_IMPL void cvDestroyAllWindows( void ) {}
 CV_IMPL void cvShowImage( const char* name, const CvArr* arr) {}
@@ -144,9 +143,9 @@ static bool wasInitialized = false;
     }
 }*/
 
-CV_IMPL int cvInitSystem( int , char** )
+static int cocoa_InitSystem( int , char** )
 {
-    //cout << "cvInitSystem" << endl;
+    //cout << "cocoa_InitSystem" << endl;
     wasInitialized = true;
 
     pool = [[NSAutoreleasePool alloc] init];
@@ -182,12 +181,6 @@ static CVWindow *cvGetWindow(const char *name) {
     return retval;
 }
 
-CV_IMPL int cvStartWindowThread()
-{
-    //cout << "cvStartWindowThread" << endl;
-    return 0;
-}
-
 CV_IMPL void cvDestroyWindow( const char* name)
 {
 
@@ -221,7 +214,7 @@ CV_IMPL void cvShowImage( const char* name, const CvArr* arr)
     CVWindow *window = cvGetWindow(name);
     if(!window)
     {
-        cvNamedWindow(name, CV_WINDOW_AUTOSIZE);
+        cvNamedWindow(name, cv::WINDOW_AUTOSIZE);
         window = cvGetWindow(name);
     }
 
@@ -545,14 +538,14 @@ CV_IMPL const char* cvGetWindowName( void* window_handle )
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
     if( !wasInitialized )
-        cvInitSystem(0, 0);
+        cocoa_InitSystem(0, 0);
 
     //cout << "cvNamedWindow" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     CVWindow *window = cvGetWindow(name);
     if( window )
     {
-        [window setAutosize:(flags == CV_WINDOW_AUTOSIZE)];
+        [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
         [localpool drain];
         return 0;
     }
@@ -590,7 +583,7 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     [window setTitle:windowName];
     [window makeKeyAndOrderFront:nil];
 
-    [window setAutosize:(flags == CV_WINDOW_AUTOSIZE)];
+    [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
 
     [windows setValue:window forKey:windowName];
 
@@ -721,15 +714,15 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     localpool = [[NSAutoreleasePool alloc] init];
 
     fullscreenOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSFullScreenModeSetting];
-    if ( [[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_NORMAL )
+    if ( [[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_NORMAL )
     {
         [[window contentView] exitFullScreenModeWithOptions:fullscreenOptions];
-        window.status=CV_WINDOW_NORMAL;
+        window.status=cv::WINDOW_NORMAL;
     }
-    else if( ![[window contentView] isInFullScreenMode] && prop_value==CV_WINDOW_FULLSCREEN )
+    else if( ![[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_FULLSCREEN )
     {
         [[window contentView] enterFullScreenMode:[NSScreen mainScreen] withOptions:fullscreenOptions];
-        window.status=CV_WINDOW_FULLSCREEN;
+        window.status=cv::WINDOW_FULLSCREEN;
     }
 
     [localpool drain];

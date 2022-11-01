@@ -167,7 +167,7 @@ private:
 class CvWindow
 {
 public:
-    CvWindow(cv::String name, int flag = CV_WINDOW_NORMAL);
+    CvWindow(cv::String name, int flag = cv::WINDOW_NORMAL);
     ~CvWindow();
 
     /** @brief NOTE: prototype.
