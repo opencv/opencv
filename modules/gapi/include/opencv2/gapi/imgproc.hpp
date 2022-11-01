@@ -1070,14 +1070,14 @@ or #cornerMinEigenVal.
 
 @return vector of detected corners.
  */
-GAPI_EXPORTS_W GArray<Point2f> goodFeaturesToTrack(const GMat  &image,
-                                                       int    maxCorners,
-                                                       double qualityLevel,
-                                                       double minDistance,
-                                                 const Mat   &mask = Mat(),
-                                                       int    blockSize = 3,
-                                                       bool   useHarrisDetector = false,
-                                                       double k = 0.04);
+GAPI_EXPORTS_W GArray<Point2f> goodFeaturesToTrack(const GMat   &image,
+                                                         int    maxCorners,
+                                                         double qualityLevel,
+                                                         double minDistance,
+                                                   const Mat    &mask = Mat(),
+                                                         int    blockSize = 3,
+                                                         bool   useHarrisDetector = false,
+                                                         double k = 0.04);
 
 /** @brief Equalizes the histogram of a grayscale image.
 
