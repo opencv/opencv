@@ -222,42 +222,6 @@ CV_INLINE  void  cvCalcHist( IplImage** image, CvHistogram* hist,
     cvCalcArrHist( (CvArr**)image, hist, accumulate, mask );
 }
 
-/** @brief Calculates back project
-@see cvCalcBackProject, cv::calcBackProject
-*/
-CVAPI(void)  cvCalcArrBackProject( CvArr** image, CvArr* dst,
-                                   const CvHistogram* hist );
-
-#define  cvCalcBackProject(image, dst, hist) cvCalcArrBackProject((CvArr**)image, dst, hist)
-
-
-/** @brief Locates a template within an image by using a histogram comparison.
-
-The function calculates the back projection by comparing histograms of the source image patches with
-the given histogram. The function is similar to matchTemplate, but instead of comparing the raster
-patch with all its possible positions within the search window, the function CalcBackProjectPatch
-compares histograms. See the algorithm diagram below:
-
-![image](pics/backprojectpatch.png)
-
-@param image Source images (though, you may pass CvMat\*\* as well).
-@param dst Destination image.
-@param range
-@param hist Histogram.
-@param method Comparison method passed to cvCompareHist (see the function description).
-@param factor Normalization factor for histograms that affects the normalization scale of the
-destination image. Pass 1 if not sure.
-
-@see cvCalcBackProjectPatch
- */
-CVAPI(void)  cvCalcArrBackProjectPatch( CvArr** image, CvArr* dst, CvSize range,
-                                        CvHistogram* hist, int method,
-                                        double factor );
-
-#define  cvCalcBackProjectPatch( image, dst, range, hist, method, factor ) \
-     cvCalcArrBackProjectPatch( (CvArr**)image, dst, range, hist, method, factor )
-
-
 /** @brief equalizes histogram of 8-bit single-channel image
 @see cv::equalizeHist
 */

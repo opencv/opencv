@@ -1370,7 +1370,7 @@ CV_CalcHistTest hist_calc_test;
 
 
 
-////////////// cvCalcBackProject //////////////
+////////////// cv::calcBackProject //////////////
 
 class CV_CalcBackProjectTest : public CV_BaseHistTest
 {
@@ -1635,178 +1635,6 @@ int CV_CalcBackProjectTest::validate_test_results( int /*test_case_idx*/ )
 }
 
 
-////////////// cvCalcBackProjectPatch //////////////
-
-class CV_CalcBackProjectPatchTest : public CV_BaseHistTest
-{
-public:
-    CV_CalcBackProjectPatchTest();
-    ~CV_CalcBackProjectPatchTest();
-    void clear();
-
-protected:
-    int prepare_test_case( int test_case_idx );
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    vector<Mat> images;
-    vector<int> channels;
-
-    Size patch_size;
-    double factor;
-    int method;
-};
-
-
-CV_CalcBackProjectPatchTest::CV_CalcBackProjectPatchTest() :
-    images(CV_MAX_DIM+2), channels(CV_MAX_DIM+2)
-{
-    hist_count = 1;
-    gen_random_hist = 0;
-    init_ranges = 1;
-    img_max_log_size = 6;
-}
-
-
-CV_CalcBackProjectPatchTest::~CV_CalcBackProjectPatchTest()
-{
-    clear();
-}
-
-
-void CV_CalcBackProjectPatchTest::clear()
-{
-    CV_BaseHistTest::clear();
-}
-
-
-int CV_CalcBackProjectPatchTest::prepare_test_case( int test_case_idx )
-{
-    int code = CV_BaseHistTest::prepare_test_case( test_case_idx );
-
-    if( code > 0 )
-    {
-        RNG& rng = ts->get_rng();
-        int i, j, n, img_len = img_size.area();
-
-        patch_size.width = cvtest::randInt(rng) % img_size.width + 1;
-        patch_size.height = cvtest::randInt(rng) % img_size.height + 1;
-        patch_size.width = MIN( patch_size.width, 30 );
-        patch_size.height = MIN( patch_size.height, 30 );
-
-        factor = 1.;
-        method = cvtest::randInt(rng) % CV_CompareHistTest::MAX_METHOD;
-
-        for( i = 0; i < CV_MAX_DIM + 2; i++ )
-        {
-            if( i < cdims )
-            {
-                int nch = 1; //cvtest::randInt(rng) % 3 + 1;
-                images[i] = Mat(img_size, CV_MAKETYPE(img_type, nch));
-                channels[i] = cvtest::randInt(rng) % nch;
-                cvtest::randUni( rng, images[i], Scalar::all(low), Scalar::all(high) );
-            }
-            else if( i >= CV_MAX_DIM )
-            {
-                images[i] = Mat(img_size - patch_size + Size(1, 1), CV_32F);
-            }
-        }
-
-        cvTsCalcHist( images, hist[0], Mat(), channels );
-        cvNormalizeHist( hist[0], factor );
-
-        // now modify the images a bit
-        n = cvtest::randInt(rng) % (img_len/10+1);
-        for( i = 0; i < cdims; i++ )
-        {
-            uchar* data = images[i].data;
-            for( j = 0; j < n; j++ )
-            {
-                int idx = cvtest::randInt(rng) % img_len;
-                double val = cvtest::randReal(rng)*(high - low) + low;
-
-                if( img_type == CV_8U )
-                    ((uchar*)data)[idx] = (uchar)cvRound(val);
-                else
-                    ((float*)data)[idx] = (float)val;
-            }
-        }
-    }
-
-    return code;
-}
-
-
-void CV_CalcBackProjectPatchTest::run_func(void)
-{
-    CvMat dst = cvMat(images[CV_MAX_DIM]);
-    vector<CvMat >  img(cdims);
-    vector<CvMat*> pimg(cdims);
-    for(int i = 0; i < cdims; i++)
-    {
-        img[i] = cvMat(images[i]);
-        pimg[i] = &img[i];
-    }
-    cvCalcArrBackProjectPatch( (CvArr**)&pimg[0], &dst, cvSize(patch_size), hist[0], method, factor );
-}
-
-
-static void
-cvTsCalcBackProjectPatch( const vector<Mat>& images, Mat dst, Size patch_size,
-                          CvHistogram* hist, int method,
-                          double factor, const vector<int>& channels )
-{
-    CvHistogram* model = 0;
-
-    int x, y;
-    Size size = dst.size();
-
-    cvCopyHist( hist, &model );
-    cvNormalizeHist( hist, factor );
-
-    vector<Mat> img(images.size());
-    for( y = 0; y < size.height; y++ )
-    {
-        for( x = 0; x < size.width; x++ )
-        {
-            double result;
-
-            Rect roi(Point(x, y), patch_size);
-            for(size_t i = 0; i < img.size(); i++)
-                img[i] = images[i](roi);
-
-            cvTsCalcHist( img, model, Mat(), channels );
-            cvNormalizeHist( model, factor );
-            result = cvCompareHist( model, hist, method );
-            dst.at<float>(y, x) = (float)result;
-        }
-    }
-
-    cvReleaseHist( &model );
-}
-
-
-int CV_CalcBackProjectPatchTest::validate_test_results( int /*test_case_idx*/ )
-{
-    int code = cvtest::TS::OK;
-    double err_level = 5e-3;
-
-    Mat dst = images[CV_MAX_DIM+1];
-    vector<Mat> imagesv(cdims);
-    for(int i = 0; i < cdims; i++)
-        imagesv[i] = images[i];
-    cvTsCalcBackProjectPatch( imagesv, dst, patch_size, hist[0],
-                              method, factor, channels );
-
-    Mat a = images[CV_MAX_DIM], b = images[CV_MAX_DIM+1];
-    code = cvtest::cmpEps2( ts, a, b, err_level, true, "BackProjectPatch result" );
-
-    if( code < 0 )
-        ts->set_failed_test_info( code );
-
-    return code;
-}
-
-
 ////////////// cvCalcBayesianProb //////////////
 
 class CV_BayesianProbTest : public CV_BaseHistTest
@@ -1924,7 +1752,6 @@ TEST(Imgproc_Hist_Normalize, accuracy) { CV_NormHistTest test; test.safe_run(); 
 TEST(Imgproc_Hist_MinMaxVal, accuracy) { CV_MinMaxHistTest test; test.safe_run(); }
 
 TEST(Imgproc_Hist_CalcBackProject, accuracy) { CV_CalcBackProjectTest test; test.safe_run(); }
-TEST(Imgproc_Hist_CalcBackProjectPatch, accuracy) { CV_CalcBackProjectPatchTest test; test.safe_run(); }
 TEST(Imgproc_Hist_BayesianProb, accuracy) { CV_BayesianProbTest test; test.safe_run(); }
 
 TEST(Imgproc_Hist_Calc, calcHist_regression_11544)

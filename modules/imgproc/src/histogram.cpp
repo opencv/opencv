@@ -3015,8 +3015,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 }
 
 
-CV_IMPL void
-cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
+static void cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
 {
     if( !CV_IS_HIST(hist))
         CV_Error( CV_StsBadArg, "Bad histogram pointer" );
@@ -3064,84 +3063,6 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
                              0, sH, _dst, ranges, 1, uniform );
     }
 }
-
-
-////////////////////// B A C K   P R O J E C T   P A T C H /////////////////////////
-
-CV_IMPL void
-cvCalcArrBackProjectPatch( CvArr** arr, CvArr* dst, CvSize patch_size, CvHistogram* hist,
-                           int method, double norm_factor )
-{
-    CvHistogram* model = 0;
-
-    IplImage imgstub[CV_MAX_DIM], *img[CV_MAX_DIM];
-    IplROI roi;
-    CvMat dststub, *dstmat;
-    int i, dims;
-    int x, y;
-    cv::Size size;
-
-    if( !CV_IS_HIST(hist))
-        CV_Error( CV_StsBadArg, "Bad histogram pointer" );
-
-    if( !arr )
-        CV_Error( CV_StsNullPtr, "Null double array pointer" );
-
-    if( norm_factor <= 0 )
-        CV_Error( CV_StsOutOfRange,
-                  "Bad normalization factor (set it to 1.0 if unsure)" );
-
-    if( patch_size.width <= 0 || patch_size.height <= 0 )
-        CV_Error( CV_StsBadSize, "The patch width and height must be positive" );
-
-    dims = cvGetDims( hist->bins );
-    if (dims < 1)
-        CV_Error( CV_StsOutOfRange, "Invalid number of dimensions");
-    cvNormalizeHist( hist, norm_factor );
-
-    for( i = 0; i < dims; i++ )
-    {
-        CvMat stub, *mat;
-        mat = cvGetMat( arr[i], &stub, 0, 0 );
-        img[i] = cvGetImage( mat, &imgstub[i] );
-        img[i]->roi = &roi;
-    }
-
-    dstmat = cvGetMat( dst, &dststub, 0, 0 );
-    if( CV_MAT_TYPE( dstmat->type ) != CV_32FC1 )
-        CV_Error( CV_StsUnsupportedFormat, "Resultant image must have 32fC1 type" );
-
-    if( dstmat->cols != img[0]->width - patch_size.width + 1 ||
-        dstmat->rows != img[0]->height - patch_size.height + 1 )
-        CV_Error( CV_StsUnmatchedSizes,
-            "The output map must be (W-w+1 x H-h+1), "
-            "where the input images are (W x H) each and the patch is (w x h)" );
-
-    cvCopyHist( hist, &model );
-
-    size = cvGetMatSize(dstmat);
-    roi.coi = 0;
-    roi.width = patch_size.width;
-    roi.height = patch_size.height;
-
-    for( y = 0; y < size.height; y++ )
-    {
-        for( x = 0; x < size.width; x++ )
-        {
-            double result;
-            roi.xOffset = x;
-            roi.yOffset = y;
-
-            cvCalcHist( img, model );
-            cvNormalizeHist( model, norm_factor );
-            result = cvCompareHist( model, hist, method );
-            CV_MAT_ELEM( *dstmat, float, y, x ) = (float)result;
-        }
-    }
-
-    cvReleaseHist( &model );
-}
-
 
 // Calculates Bayes probabilistic histograms
 CV_IMPL void
