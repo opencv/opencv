@@ -163,7 +163,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
         for (y = 0; y < ssize.height; y += cell_size)
             for (x = 0; x < ssize.width; x += cell_size)
                 rectangle(src, Point(x, y), Point(x + std::min<int>(cell_size, ssize.width - x), y +
-                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), CV_FILLED);
+                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), cv::FILLED);
     }
     else
     {
@@ -442,7 +442,7 @@ void CV_Resize_Test::generate_test_data()
         for (y = 0; y < ssize.height; y += cell_size)
             for (x = 0; x < ssize.width; x += cell_size)
                 rectangle(src, Point(x, y), Point(x + std::min<int>(cell_size, ssize.width - x), y +
-                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), CV_FILLED);
+                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), cv::FILLED);
     }
     else
     {

@@ -1354,7 +1354,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
 
         for (int j = 0; j < 4; ++j)
         {
-            //cvLine( debug_img, cvPointFrom32f(q->corners[j]->pt), cvPointFrom32f(q->corners[(j+1)&3]->pt), color, 1, CV_AA, 0 );
             if (q->neighbors[j])
             {
                 int next_j = (j + 1) & 3;
@@ -1443,7 +1442,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         goto finalize;
 
     cur->row = 0;
-    //cvCircle( debug_img, cvPointFrom32f(cur->pt), 3, cvScalar(0,255,0), -1, 8, 0 );
 
     first = below; // remember the first corner in the next row
 
@@ -1452,7 +1450,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
     {
         right->row = 0;
         out_corners.push_back(right);
-        //cvCircle( debug_img, cvPointFrom32f(right->pt), 3, cvScalar(0,255-j*10,0), -1, 8, 0 );
         if( right->count == 2 )
             break;
         if( right->count != 3 || (int)out_corners.size() >= std::max(pattern_size.width,pattern_size.height) )
@@ -1497,7 +1494,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         {
             cur->row = i;
             out_corners.push_back(cur);
-            //cvCircle( debug_img, cvPointFrom32f(cur->pt), 3, cvScalar(0,0,255-j*10), -1, 8, 0 );
             if (cur->count == 2 + (i < height-1) && j > 0)
                 break;
 
