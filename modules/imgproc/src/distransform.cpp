@@ -866,21 +866,3 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst,
         distanceTransform(_src, _dst, noArray(), distanceType, maskSize, DIST_LABEL_PIXEL);
 
 }
-
-CV_IMPL void
-cvDistTransform( const void* srcarr, void* dstarr,
-                int distType, int maskSize,
-                const float * /*mask*/,
-                void* labelsarr, int labelType )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr);
-    const cv::Mat dst = cv::cvarrToMat(dstarr);
-    const cv::Mat labels = cv::cvarrToMat(labelsarr);
-
-    cv::distanceTransform(src, dst, labelsarr ? cv::_OutputArray(labels) : cv::_OutputArray(),
-                          distType, maskSize, labelType);
-
-}
-
-
-/* End of file. */

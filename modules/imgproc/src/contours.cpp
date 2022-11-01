@@ -426,6 +426,19 @@ static CvRect cvBoundingRect( CvArr* array, int update )
     return cvRect(rect);
 }
 
+static double cvThreshold( const void* srcarr, void* dstarr, double thresh, double maxval, int type )
+{
+    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
+
+    CV_Assert( src.size == dst.size && src.channels() == dst.channels() &&
+        (src.depth() == dst.depth() || dst.depth() == CV_8U));
+
+    thresh = cv::threshold( src, dst, thresh, maxval, type );
+    if( dst0.data != dst.data )
+        dst.convertTo( dst0, dst0.depth() );
+    return thresh;
+}
+
 /****************************************************************************************\
 *                         Raster->Chain Tree (Suzuki algorithms)                         *
 \****************************************************************************************/
