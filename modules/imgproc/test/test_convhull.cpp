@@ -174,15 +174,12 @@ protected:
     int dims;
     bool enable_flt_points;
 
-    CvMemStorage* storage;
     CvSeq* points1;
     CvMat* points2;
     void* points;
     void* result;
     double low_high_range;
     Scalar low, high;
-
-    bool test_cpp;
 };
 
 
@@ -191,7 +188,6 @@ CV_BaseShapeDescrTest::CV_BaseShapeDescrTest()
     points1 = 0;
     points2 = 0;
     points = 0;
-    storage = 0;
     test_case_count = 500;
     min_log_size = 0;
     max_log_size = 10;
@@ -199,8 +195,6 @@ CV_BaseShapeDescrTest::CV_BaseShapeDescrTest()
     low_high_range = 50;
     dims = 2;
     enable_flt_points = true;
-
-    test_cpp = false;
 }
 
 
@@ -213,7 +207,6 @@ CV_BaseShapeDescrTest::~CV_BaseShapeDescrTest()
 void CV_BaseShapeDescrTest::clear()
 {
     cvtest::BaseTest::clear();
-    cvReleaseMemStorage( &storage );
     cvReleaseMat( &points2 );
     points1 = 0;
     points = 0;
@@ -306,7 +299,6 @@ void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
 int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
 {
     int size;
-    int use_storage = 0;
     int point_type;
     int i;
     RNG& rng = ts->get_rng();
@@ -315,26 +307,15 @@ int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
 
     clear();
     size = cvRound( exp((cvtest::randReal(rng) * (max_log_size - min_log_size) + min_log_size)*CV_LOG2) );
-    use_storage = cvtest::randInt(rng) % 2;
     point_type = CV_MAKETYPE(cvtest::randInt(rng) %
         (enable_flt_points ? 2 : 1) ? CV_32F : CV_32S, dims);
 
-    if( use_storage )
-    {
-        storage = cvCreateMemStorage( (cvtest::randInt(rng)%10 + 1)*1024 );
-        points1 = cvCreateSeq( point_type, sizeof(CvSeq), CV_ELEM_SIZE(point_type), storage );
-        cvSeqPushMulti( points1, 0, size );
-        points = points1;
-    }
-    else
-    {
-        int rows = 1, cols = size;
-        if( cvtest::randInt(rng) % 2 )
-            rows = size, cols = 1;
+    int rows = 1, cols = size;
+    if( cvtest::randInt(rng) % 2 )
+        rows = size, cols = 1;
 
-        points2 = cvCreateMat( rows, cols, point_type );
-        points = points2;
-    }
+    points2 = cvCreateMat( rows, cols, point_type );
+    points = points2;
 
     for( i = 0; i < 4; i++ )
     {
@@ -350,8 +331,6 @@ int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
     }
 
     generate_point_set( points );
-
-    test_cpp = (cvtest::randInt(rng) & 16) == 0;
     return 1;
 }
 
@@ -403,7 +382,6 @@ protected:
 
     CvSeq* hull1;
     CvMat* hull2;
-    void* hull_storage;
     int orientation;
     int return_points;
 };
@@ -413,7 +391,6 @@ CV_ConvHullTest::CV_ConvHullTest()
 {
     hull1 = 0;
     hull2 = 0;
-    hull_storage = 0;
     orientation = return_points = 0;
 }
 
@@ -429,14 +406,12 @@ void CV_ConvHullTest::clear()
     CV_BaseShapeDescrTest::clear();
     cvReleaseMat( &hull2 );
     hull1 = 0;
-    hull_storage = 0;
 }
 
 
 int CV_ConvHullTest::prepare_test_case( int test_case_idx )
 {
     int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
-    int use_storage_for_hull = 0;
     RNG& rng = ts->get_rng();
 
     if( code <= 0 )
@@ -445,27 +420,16 @@ int CV_ConvHullTest::prepare_test_case( int test_case_idx )
     orientation = cvtest::randInt(rng) % 2 ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE;
     return_points = cvtest::randInt(rng) % 2;
 
-    use_storage_for_hull = (cvtest::randInt(rng) % 2) && !test_cpp;
-    if( use_storage_for_hull )
-    {
-        if( !storage )
-            storage = cvCreateMemStorage( (cvtest::randInt(rng)%10 + 1)*1024 );
-        hull_storage = storage;
-    }
+    int rows, cols;
+    int sz = points1 ? points1->total : points2->cols + points2->rows - 1;
+    int point_type = points1 ? CV_SEQ_ELTYPE(points1) : CV_MAT_TYPE(points2->type);
+
+    if( cvtest::randInt(rng) % 2 )
+        rows = sz, cols = 1;
     else
-    {
-        int rows, cols;
-        int sz = points1 ? points1->total : points2->cols + points2->rows - 1;
-        int point_type = points1 ? CV_SEQ_ELTYPE(points1) : CV_MAT_TYPE(points2->type);
+        rows = 1, cols = sz;
 
-        if( cvtest::randInt(rng) % 2 )
-            rows = sz, cols = 1;
-        else
-            rows = 1, cols = sz;
-
-        hull2 = cvCreateMat( rows, cols, return_points ? point_type : CV_32SC1 );
-        hull_storage = hull2;
-    }
+    hull2 = cvCreateMat( rows, cols, return_points ? point_type : CV_32SC1 );
 
     return code;
 }
@@ -473,39 +437,34 @@ int CV_ConvHullTest::prepare_test_case( int test_case_idx )
 
 void CV_ConvHullTest::run_func()
 {
-    if(!test_cpp)
-        hull1 = cvConvexHull2( points, hull_storage, orientation, return_points );
-    else
+    cv::Mat _points = cv::cvarrToMat(points);
+    bool clockwise = orientation == CV_CLOCKWISE;
+    size_t n = 0;
+    if( !return_points )
     {
-        cv::Mat _points = cv::cvarrToMat(points);
-        bool clockwise = orientation == CV_CLOCKWISE;
-        size_t n = 0;
-        if( !return_points )
-        {
-            std::vector<int> _hull;
-            cv::convexHull(_points, _hull, clockwise);
-            n = _hull.size();
-            memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-        }
-        else if(_points.type() == CV_32SC2)
-        {
-            std::vector<cv::Point> _hull;
-            cv::convexHull(_points, _hull, clockwise);
-            n = _hull.size();
-            memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-        }
-        else if(_points.type() == CV_32FC2)
-        {
-            std::vector<cv::Point2f> _hull;
-            cv::convexHull(_points, _hull, clockwise);
-            n = _hull.size();
-            memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-        }
-        if(hull2->rows > hull2->cols)
-            hull2->rows = (int)n;
-        else
-            hull2->cols = (int)n;
+        std::vector<int> _hull;
+        cv::convexHull(_points, _hull, clockwise);
+        n = _hull.size();
+        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
     }
+    else if(_points.type() == CV_32SC2)
+    {
+        std::vector<cv::Point> _hull;
+        cv::convexHull(_points, _hull, clockwise);
+        n = _hull.size();
+        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
+    }
+    else if(_points.type() == CV_32FC2)
+    {
+        std::vector<cv::Point2f> _hull;
+        cv::convexHull(_points, _hull, clockwise);
+        n = _hull.size();
+        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
+    }
+    if(hull2->rows > hull2->cols)
+        hull2->rows = (int)n;
+    else
+        hull2->cols = (int)n;
 }
 
 
@@ -1057,115 +1016,6 @@ TEST(Imgproc_minEnclosingCircle, regression_16051) {
 }
 
 /****************************************************************************************\
-*                                   Perimeter Test                                     *
-\****************************************************************************************/
-
-class CV_PerimeterTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_PerimeterTest();
-
-protected:
-    int prepare_test_case( int test_case_idx );
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    CvSlice slice;
-    int is_closed;
-    double result;
-};
-
-
-CV_PerimeterTest::CV_PerimeterTest()
-{
-}
-
-
-int CV_PerimeterTest::prepare_test_case( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
-    RNG& rng = ts->get_rng();
-    int total;
-
-    if( code < 0 )
-        return code;
-
-    is_closed = cvtest::randInt(rng) % 2;
-
-    if( points1 )
-    {
-        points1->flags |= CV_SEQ_KIND_CURVE;
-        if( is_closed )
-            points1->flags |= CV_SEQ_FLAG_CLOSED;
-        total = points1->total;
-    }
-    else
-        total = points2->cols + points2->rows - 1;
-
-    if( (cvtest::randInt(rng) % 3) && !test_cpp )
-    {
-        slice.start_index = cvtest::randInt(rng) % total;
-        slice.end_index = cvtest::randInt(rng) % total;
-    }
-    else
-        slice = CV_WHOLE_SEQ;
-
-    return 1;
-}
-
-
-void CV_PerimeterTest::run_func()
-{
-    if(!test_cpp)
-        result = cvArcLength( points, slice, points1 ? -1 : is_closed );
-    else
-        result = cv::arcLength(cv::cvarrToMat(points),
-            !points1 ? is_closed != 0 : (points1->flags & CV_SEQ_FLAG_CLOSED) != 0);
-}
-
-
-int CV_PerimeterTest::validate_test_results( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    int i, len = slice.end_index - slice.start_index, total = points2->cols + points2->rows - 1;
-    double result0 = 0;
-    Point2f prev_pt, pt;
-    CvPoint2D32f *ptr;
-
-    if( len < 0 )
-        len += total;
-
-    len = MIN( len, total );
-    //len -= !is_closed && len == total;
-
-    ptr = (CvPoint2D32f*)points2->data.fl;
-    prev_pt = ptr[(is_closed ? slice.start_index+len-1 : slice.start_index) % total];
-
-    for( i = 0; i < len + (len < total && (!is_closed || len==1)); i++ )
-    {
-        pt = ptr[(i + slice.start_index) % total];
-        double dx = pt.x - prev_pt.x, dy = pt.y - prev_pt.y;
-        result0 += sqrt(dx*dx + dy*dy);
-        prev_pt = pt;
-    }
-
-    if( cvIsNaN(result) || cvIsInf(result) )
-    {
-        ts->printf( cvtest::TS::LOG, "cvArcLength() returned invalid value (%g)\n", result );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-    }
-    else if( fabs(result - result0) > FLT_EPSILON*100*result0 )
-    {
-        ts->printf( cvtest::TS::LOG, "The function returned %g, while the correct result is %g\n", result, result0 );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-    }
-
-    if( code < 0 )
-        ts->set_failed_test_info( code );
-    return code;
-}
-
-
-/****************************************************************************************\
 *                                   FitEllipse Test                                      *
 \****************************************************************************************/
 
@@ -1624,97 +1474,15 @@ _exit_:
     return code;
 }
 
-////////////////////////////////////// Perimeter/Area/Slice test ///////////////////////////////////
-
-class CV_PerimeterAreaSliceTest : public cvtest::BaseTest
-{
-public:
-    CV_PerimeterAreaSliceTest();
-    ~CV_PerimeterAreaSliceTest();
-protected:
-    void run(int);
-};
-
-CV_PerimeterAreaSliceTest::CV_PerimeterAreaSliceTest()
-{
-}
-CV_PerimeterAreaSliceTest::~CV_PerimeterAreaSliceTest() {}
-
-void CV_PerimeterAreaSliceTest::run( int )
-{
-    Ptr<CvMemStorage> storage(cvCreateMemStorage());
-    RNG& rng = theRNG();
-    const double min_r = 90, max_r = 120;
-
-    for( int i = 0; i < 100; i++ )
-    {
-        ts->update_context( this, i, true );
-        int n = rng.uniform(3, 30);
-        cvClearMemStorage(storage);
-        CvSeq* contour = cvCreateSeq(CV_SEQ_POLYGON, sizeof(CvSeq), sizeof(CvPoint), storage);
-        double dphi = CV_PI*2/n;
-        Point center;
-        center.x = rng.uniform(cvCeil(max_r), cvFloor(640-max_r));
-        center.y = rng.uniform(cvCeil(max_r), cvFloor(480-max_r));
-
-        for( int j = 0; j < n; j++ )
-        {
-            CvPoint pt = CV_STRUCT_INITIALIZER;
-            double r = rng.uniform(min_r, max_r);
-            double phi = j*dphi;
-            pt.x = cvRound(center.x + r*cos(phi));
-            pt.y = cvRound(center.y - r*sin(phi));
-            cvSeqPush(contour, &pt);
-        }
-
-        CvSlice slice = {0, 0};
-        for(;;)
-        {
-            slice.start_index = rng.uniform(-n/2, 3*n/2);
-            slice.end_index = rng.uniform(-n/2, 3*n/2);
-            int len = cvSliceLength(slice, contour);
-            if( len > 2 )
-                break;
-        }
-        CvSeq *cslice = cvSeqSlice(contour, slice);
-        /*printf( "%d. (%d, %d) of %d, length = %d, length1 = %d\n",
-               i, slice.start_index, slice.end_index,
-               contour->total, cvSliceLength(slice, contour), cslice->total );
-
-        double area0 = cvContourArea(cslice);
-        double area1 = cvContourArea(contour, slice);
-        if( area0 != area1 )
-        {
-            ts->printf(cvtest::TS::LOG,
-                       "The contour area slice is computed differently (%g vs %g)\n", area0, area1 );
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }*/
-
-        double len0 = cvArcLength(cslice, CV_WHOLE_SEQ, 1);
-        double len1 = cvArcLength(contour, slice, 1);
-        if( len0 != len1 )
-        {
-            ts->printf(cvtest::TS::LOG,
-                       "The contour arc length is computed differently (%g vs %g)\n", len0, len1 );
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
-    }
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
 
 TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
 TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
 TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
 TEST(Imgproc_MinCircle2, accuracy) { CV_MinCircleTest2 test; test.safe_run(); }
-TEST(Imgproc_ContourPerimeter, accuracy) { CV_PerimeterTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }
 TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
-TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; test.safe_run(); }
 TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
 

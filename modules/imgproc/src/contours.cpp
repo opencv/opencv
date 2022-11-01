@@ -50,61 +50,381 @@ using namespace cv;
      (deltas)[4] = -(nch),  (deltas)[5] =  (step) - (nch),  \
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
 
-static const CvPoint icvCodeDeltas[8] =
-    { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
+static const CvPoint icvCodeDeltas[8] = {
+    {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}
+};
 
-CV_IMPL void
-cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
+
+namespace cv
 {
-    int i;
 
-    if( !chain || !reader )
-        CV_Error( CV_StsNullPtr, "" );
-
-    if( chain->elem_size != 1 || chain->header_size < (int)sizeof(CvChain))
-        CV_Error( CV_StsBadSize, "" );
-
-    cvStartReadSeq( (CvSeq *) chain, (CvSeqReader *) reader, 0 );
-
-    reader->pt = chain->origin;
-    for( i = 0; i < 8; i++ )
-    {
-        reader->deltas[i][0] = (schar) icvCodeDeltas[i].x;
-        reader->deltas[i][1] = (schar) icvCodeDeltas[i].y;
-    }
-}
-
-
-/* retrieves next point of the chain curve and updates reader */
-CV_IMPL CvPoint
-cvReadChainPoint( CvChainPtReader * reader )
+// Calculates bounding rectangle of a point set or retrieves already calculated
+static Rect pointSetBoundingRect( const Mat& points )
 {
-    if( !reader )
-        CV_Error( CV_StsNullPtr, "" );
+    int npoints = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
 
-    cv::Point2i pt = reader->pt;
+    int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i;
+    bool is_float = depth == CV_32F;
 
-    schar *ptr = reader->ptr;
-    if (ptr)
+    if( npoints == 0 )
+        return Rect();
+
+#if CV_SIMD
+    const int64_t* pts = points.ptr<int64_t>();
+
+    if( !is_float )
     {
-        int code = *ptr++;
-
-        if( ptr >= reader->block_max )
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_int32::nlanes/2; i+= v_int32::nlanes/2 )
         {
-            cvChangeSeqBlock( (CvSeqReader *) reader, 1 );
-            ptr = reader->ptr;
+            v_int32 ptXY2 = v_reinterpret_as_s32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_int32::nlanes/4 )
+        {
+            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_int64::nlanes/2;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = minval.get0();
+        xmax = maxval.get0();
+        ymin = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))).get0();
+        ymax = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))).get0();
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_int32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, minval2.get0());
+            xmax = max(xmax, maxval2.get0());
+            ymin = min(ymin, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2))).get0());
+            ymax = max(ymax, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0());
+        }
+#endif
+    }
+    else
+    {
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - v_float32::nlanes/2; i+= v_float32::nlanes/2 )
+        {
+            v_float32 ptXY2 = v_reinterpret_as_f32(vx_load(pts + i));
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - v_float32::nlanes/4 )
+        {
+            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += v_float32::nlanes/4;
+        }
+        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        {
+            minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = cvFloor(minval.get0());
+        xmax = cvFloor(maxval.get0());
+        ymin = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))).get0());
+        ymax = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))).get0());
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_float32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, cvFloor(minval2.get0()));
+            xmax = max(xmax, cvFloor(maxval2.get0()));
+            ymin = min(ymin, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))).get0()));
+            ymax = max(ymax, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0()));
+        }
+#endif
+    }
+#else
+    const Point* pts = points.ptr<Point>();
+    Point pt = pts[0];
+
+    if( !is_float )
+    {
+        xmin = xmax = pt.x;
+        ymin = ymax = pt.y;
+
+        for( i = 1; i < npoints; i++ )
+        {
+            pt = pts[i];
+
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
+        }
+    }
+    else
+    {
+        Cv32suf v;
+        // init values
+        xmin = xmax = CV_TOGGLE_FLT(pt.x);
+        ymin = ymax = CV_TOGGLE_FLT(pt.y);
+
+        for( i = 1; i < npoints; i++ )
+        {
+            pt = pts[i];
+            pt.x = CV_TOGGLE_FLT(pt.x);
+            pt.y = CV_TOGGLE_FLT(pt.y);
+
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
 
-        reader->ptr = ptr;
-        reader->code = (schar)code;
-        CV_Assert( (code & ~7) == 0 );
-        reader->pt.x = pt.x + icvCodeDeltas[code].x;
-        reader->pt.y = pt.y + icvCodeDeltas[code].y;
+        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
     }
+#endif
 
-    return cvPoint(pt);
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
 }
 
+
+static Rect maskBoundingRect( const Mat& img )
+{
+    CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
+
+    Size size = img.size();
+    int xmin = size.width, ymin = -1, xmax = -1, ymax = -1, i, j, k;
+
+    for( i = 0; i < size.height; i++ )
+    {
+        const uchar* _ptr = img.ptr(i);
+        const uchar* ptr = (const uchar*)alignPtr(_ptr, 4);
+        int have_nz = 0, k_min, offset = (int)(ptr - _ptr);
+        j = 0;
+        offset = MIN(offset, size.width);
+        for( ; j < offset; j++ )
+            if( _ptr[j] )
+            {
+                have_nz = 1;
+                break;
+            }
+        if( j < offset )
+        {
+            if( j < xmin )
+                xmin = j;
+            if( j > xmax )
+                xmax = j;
+        }
+        if( offset < size.width )
+        {
+            xmin -= offset;
+            xmax -= offset;
+            size.width -= offset;
+            j = 0;
+            for( ; j <= xmin - 4; j += 4 )
+                if( *((int*)(ptr+j)) )
+                    break;
+            for( ; j < xmin; j++ )
+                if( ptr[j] )
+                {
+                    xmin = j;
+                    if( j > xmax )
+                        xmax = j;
+                    have_nz = 1;
+                    break;
+                }
+            k_min = MAX(j-1, xmax);
+            k = size.width - 1;
+            for( ; k > k_min && (k&3) != 3; k-- )
+                if( ptr[k] )
+                    break;
+            if( k > k_min && (k&3) == 3 )
+            {
+                for( ; k > k_min+3; k -= 4 )
+                    if( *((int*)(ptr+k-3)) )
+                        break;
+            }
+            for( ; k > k_min; k-- )
+                if( ptr[k] )
+                {
+                    xmax = k;
+                    have_nz = 1;
+                    break;
+                }
+            if( !have_nz )
+            {
+                j &= ~3;
+                for( ; j <= k - 3; j += 4 )
+                    if( *((int*)(ptr+j)) )
+                        break;
+                for( ; j <= k; j++ )
+                    if( ptr[j] )
+                    {
+                        have_nz = 1;
+                        break;
+                    }
+            }
+            xmin += offset;
+            xmax += offset;
+            size.width += offset;
+        }
+        if( have_nz )
+        {
+            if( ymin < 0 )
+                ymin = i;
+            ymax = i;
+        }
+    }
+
+    if( xmin >= size.width )
+        xmin = ymin = 0;
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+} // namespace cv::
+
+cv::Rect cv::boundingRect(InputArray array)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat m = array.getMat();
+    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+}
+
+// utility function for cvBoundingRect
+static CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
+                                  CvContour* contour_header, CvSeqBlock* block )
+{
+    CV_Assert( arr != 0 && contour_header != 0 && block != 0 );
+
+    int eltype;
+    CvMat hdr;
+    CvMat* mat = (CvMat*)arr;
+
+    if( !CV_IS_MAT( mat ))
+        CV_Error( CV_StsBadArg, "Input array is not a valid matrix" );
+
+    if( CV_MAT_CN(mat->type) == 1 && mat->width == 2 )
+        mat = cvReshape(mat, &hdr, 2);
+
+    eltype = CV_MAT_TYPE( mat->type );
+    if( eltype != CV_32SC2 && eltype != CV_32FC2 )
+        CV_Error( CV_StsUnsupportedFormat,
+        "The matrix can not be converted to point sequence because of "
+        "inappropriate element type" );
+
+    if( (mat->width != 1 && mat->height != 1) || !CV_IS_MAT_CONT(mat->type))
+        CV_Error( CV_StsBadArg,
+        "The matrix converted to point sequence must be "
+        "1-dimensional and continuous" );
+
+    cvMakeSeqHeaderForArray(
+            (seq_kind & (CV_SEQ_KIND_MASK|CV_SEQ_FLAG_CLOSED)) | eltype,
+            sizeof(CvContour), CV_ELEM_SIZE(eltype), mat->data.ptr,
+            mat->width*mat->height, (CvSeq*)contour_header, block );
+
+    return (CvSeq*)contour_header;
+}
+
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
+static CvRect cvBoundingRect( CvArr* array, int update )
+{
+    cv::Rect rect;
+    CvContour contour_header;
+    CvSeq* ptseq = 0;
+    CvSeqBlock block;
+
+    CvMat stub, *mat = 0;
+    int calculate = update;
+
+    if( CV_IS_SEQ( array ))
+    {
+        ptseq = (CvSeq*)array;
+        if( !CV_IS_SEQ_POINT_SET( ptseq ))
+            CV_Error( CV_StsBadArg, "Unsupported sequence type" );
+
+        if( ptseq->header_size < (int)sizeof(CvContour))
+        {
+            update = 0;
+            calculate = 1;
+        }
+    }
+    else
+    {
+        mat = cvGetMat( array, &stub );
+        if( CV_MAT_TYPE(mat->type) == CV_32SC2 ||
+            CV_MAT_TYPE(mat->type) == CV_32FC2 )
+        {
+            ptseq = cvPointSeqFromMat(CV_SEQ_KIND_GENERIC, mat, &contour_header, &block);
+            mat = 0;
+        }
+        else if( CV_MAT_TYPE(mat->type) != CV_8UC1 &&
+                CV_MAT_TYPE(mat->type) != CV_8SC1 )
+            CV_Error( CV_StsUnsupportedFormat,
+                "The image/matrix format is not supported by the function" );
+        update = 0;
+        calculate = 1;
+    }
+
+    if( !calculate )
+        return ((CvContour*)ptseq)->rect;
+
+    if( mat )
+    {
+        rect = cvRect(cv::maskBoundingRect(cv::cvarrToMat(mat)));
+    }
+    else if( ptseq->total )
+    {
+        cv::AutoBuffer<double> abuf;
+        rect = cvRect(cv::pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
+    }
+    if( update )
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
+}
 
 /****************************************************************************************\
 *                         Raster->Chain Tree (Suzuki algorithms)                         *
@@ -309,150 +629,6 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
     return scanner;
 }
 
-CV_IMPL CvContourScanner
-cvStartFindContours( void* _img, CvMemStorage* storage,
-                     int  header_size, int mode,
-                     int  method, CvPoint offset )
-{
-    return cvStartFindContours_Impl(_img, storage, header_size, mode, method, offset, 1);
-}
-
-/*
-   Final stage of contour processing.
-   Three variants possible:
-      1. Contour, which was retrieved using border following, is added to
-         the contour tree. It is the case when the icvSubstituteContour function
-         was not called after retrieving the contour.
-
-      2. New contour, assigned by icvSubstituteContour function, is added to the
-         tree. The retrieved contour itself is removed from the storage.
-         Here two cases are possible:
-            2a. If one deals with plane variant of algorithm
-                (hierarchical structure is not reconstructed),
-                the contour is removed completely.
-            2b. In hierarchical case, the header of the contour is not removed.
-                It's marked as "link to contour" and h_next pointer of it is set to
-                new, substituting contour.
-
-      3. The similar to 2, but when NULL pointer was assigned by
-         icvSubstituteContour function. In this case, the function removes
-         retrieved contour completely if plane case and
-         leaves header if hierarchical (but doesn't mark header as "link").
-      ------------------------------------------------------------------------
-      The 1st variant can be used to retrieve and store all the contours from the image
-      (with optional conversion from chains to contours using some approximation from
-      restricted set of methods). Some characteristics of contour can be computed in the
-      same pass.
-
-      The usage scheme can look like:
-
-      icvContourScanner scanner;
-      CvMemStorage*  contour_storage;
-      CvSeq*  first_contour;
-      CvStatus  result;
-
-      ...
-
-      icvCreateMemStorage( &contour_storage, block_size/0 );
-
-      ...
-
-      cvStartFindContours
-              ( img, contour_storage,
-                header_size, approx_method,
-                [external_only,]
-                &scanner );
-
-      for(;;)
-      {
-          [CvSeq* contour;]
-          result = icvFindNextContour( &scanner, &contour/0 );
-
-          if( result != CV_OK ) break;
-
-          // calculate some characteristics
-          ...
-      }
-
-      if( result < 0 ) goto error_processing;
-
-      cvEndFindContours( &scanner, &first_contour );
-      ...
-
-      -----------------------------------------------------------------
-
-      Second variant is more complex and can be used when someone wants store not
-      the retrieved contours but transformed ones. (e.g. approximated with some
-      non-default algorithm ).
-
-      The scheme can be the as following:
-
-      icvContourScanner scanner;
-      CvMemStorage*  contour_storage;
-      CvMemStorage*  temp_storage;
-      CvSeq*  first_contour;
-      CvStatus  result;
-
-      ...
-
-      icvCreateMemStorage( &contour_storage, block_size/0 );
-      icvCreateMemStorage( &temp_storage, block_size/0 );
-
-      ...
-
-      icvStartFindContours8uC1R
-              ( <img_params>, temp_storage,
-                header_size, approx_method,
-                [retrival_mode],
-                &scanner );
-
-      for(;;)
-      {
-          CvSeq* temp_contour;
-          CvSeq* new_contour;
-          result = icvFindNextContour( scanner, &temp_contour );
-
-          if( result != CV_OK ) break;
-
-          <approximation_function>( temp_contour, contour_storage,
-                                    &new_contour, <parameters...> );
-
-          icvSubstituteContour( scanner, new_contour );
-          ...
-      }
-
-      if( result < 0 ) goto error_processing;
-
-      cvEndFindContours( &scanner, &first_contour );
-      ...
-
-      ----------------------------------------------------------------------------
-      Third method to retrieve contours may be applied if contours are irrelevant
-      themselves but some characteristics of them are used only.
-      The usage is similar to second except slightly different internal loop
-
-      for(;;)
-      {
-          CvSeq* temp_contour;
-          result = icvFindNextContour( &scanner, &temp_contour );
-
-          if( result != CV_OK ) break;
-
-          // calculate some characteristics of temp_contour
-
-          icvSubstituteContour( scanner, 0 );
-          ...
-      }
-
-      new_storage variable is not needed here.
-
-      Note, that the second and the third methods can interleave. I.e. it is possible to
-      retain contours that satisfy with some criteria and reject others.
-      In hierarchic case the resulting tree is the part of original tree with
-      some nodes absent. But in the resulting tree the contour1 is a child
-      (may be indirect) of contour2 iff in the original tree the contour1
-      is a child (may be indirect) of contour2.
-*/
 static void
 icvEndProcessContour( CvContourScanner scanner )
 {
@@ -480,23 +656,6 @@ icvEndProcessContour( CvContourScanner scanner )
                                   &(scanner->frame) );
         }
         scanner->l_cinfo = 0;
-    }
-}
-
-/* replaces one contour with another */
-CV_IMPL void
-cvSubstituteContour( CvContourScanner scanner, CvSeq * new_contour )
-{
-    _CvContourInfo *l_cinfo;
-
-    if( !scanner )
-        CV_Error( CV_StsNullPtr, "" );
-
-    l_cinfo = scanner->l_cinfo;
-    if( l_cinfo && l_cinfo->contour && l_cinfo->contour != new_contour )
-    {
-        l_cinfo->contour = new_contour;
-        scanner->subst_flag = 1;
     }
 }
 
@@ -1028,8 +1187,7 @@ icvFetchContourEx_32s( int*                 ptr,
 }
 
 
-CvSeq *
-cvFindNextContour( CvContourScanner scanner )
+static CvSeq * cvFindNextContour( CvContourScanner scanner )
 {
     if( !scanner )
         CV_Error( CV_StsNullPtr, "" );
@@ -1309,8 +1467,7 @@ cvFindNextContour( CvContourScanner scanner )
    The function add to tree the last retrieved/substituted contour,
    releases temp_storage, restores state of dst_storage (if needed), and
    returns pointer to root of the contour tree */
-CV_IMPL CvSeq *
-cvEndFindContours( CvContourScanner * _scanner )
+static  CvSeq * cvEndFindContours( CvContourScanner * _scanner )
 {
     CvContourScanner scanner;
     CvSeq *first = 0;
@@ -1785,35 +1942,6 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     }
 
     return count;
-}
-
-/*F///////////////////////////////////////////////////////////////////////////////////////
-//    Name: cvFindContours
-//    Purpose:
-//      Finds all the contours on the bi-level image.
-//    Context:
-//    Parameters:
-//      img  - source image.
-//             Non-zero pixels are considered as 1-pixels
-//             and zero pixels as 0-pixels.
-//      step - full width of source image in bytes.
-//      size - width and height of the image in pixels
-//      storage - pointer to storage where will the output contours be placed.
-//      header_size - header size of resulting contours
-//      mode - mode of contour retrieval.
-//      method - method of approximation that is applied to contours
-//      first_contour - pointer to first contour pointer
-//    Returns:
-//      CV_OK or error code
-//    Notes:
-//F*/
-CV_IMPL int
-cvFindContours( void*  img,  CvMemStorage*  storage,
-                CvSeq**  firstContour, int  cntHeaderSize,
-                int  mode,
-                int  method, CvPoint offset )
-{
-    return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
 void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
