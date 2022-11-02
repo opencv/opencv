@@ -179,7 +179,7 @@ void integrateHashTsdfVolumeUnit(
     {
         VolumeUnit& vu = volumeUnits.emplace(idx, VolumeUnit()).first->second;
 
-        Matx44f subvolumePose = pose.translate(volumeUnitIdxToVolume(idx, volumeUnitSize)).matrix;
+        Matx44f subvolumePose = pose.translate(pose.rotation() * volumeUnitIdxToVolume(idx, volumeUnitSize)).matrix;
 
         vu.pose = subvolumePose;
         vu.index = lastVolIndex; lastVolIndex++;
