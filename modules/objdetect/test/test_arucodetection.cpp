@@ -242,7 +242,7 @@ void CV_ArucoDetectionPerspective::run(int) {
     cameraMatrix.at<double>(0, 0) = cameraMatrix.at<double>(1, 1) = 650;
     cameraMatrix.at<double>(0, 2) = imgSize.width / 2;
     cameraMatrix.at<double>(1, 2) = imgSize.height / 2;
-    Ptr<aruco::DetectorParameters> params = aruco::DetectorParameters::create();
+    Ptr<aruco::DetectorParameters> params = makePtr<aruco::DetectorParameters>();
     params->minDistanceToBorder = 1;
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
 
@@ -325,7 +325,7 @@ CV_ArucoDetectionMarkerSize::CV_ArucoDetectionMarkerSize() {}
 
 
 void CV_ArucoDetectionMarkerSize::run(int) {
-    Ptr<aruco::DetectorParameters> params = aruco::DetectorParameters::create();
+    Ptr<aruco::DetectorParameters> params = makePtr<aruco::DetectorParameters>();
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
     int markerSide = 20;
     int imageSize = 200;
@@ -404,7 +404,7 @@ void CV_ArucoBitCorrection::run(int) {
     Ptr<aruco::Dictionary> _dictionary2 = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
     aruco::Dictionary &dictionary1 = *_dictionary1;
     aruco::Dictionary &dictionary2 = *_dictionary2;
-    Ptr<aruco::DetectorParameters> params = aruco::DetectorParameters::create();
+    Ptr<aruco::DetectorParameters> params = makePtr<aruco::DetectorParameters>();
     aruco::ArucoDetector detector1(_dictionary1, params);
     int markerSide = 50;
     int imageSize = 150;
@@ -564,7 +564,7 @@ TEST(CV_ArucoDetectMarkers, regression_3192)
 TEST(CV_ArucoDetectMarkers, regression_2492)
 {
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_5X5_50));
-    detector.params->minMarkerDistanceRate = 0.026;
+    detector.detectorParams->minMarkerDistanceRate = 0.026;
     vector<int> markerIds;
     vector<vector<Point2f> > markerCorners;
     string imgPath = cvtest::findDataFile("aruco/regression_2492.png");
@@ -641,7 +641,7 @@ TEST_P(ArucoThreading, number_of_threads_does_not_change_results)
     Mat img(height_img, height_img, CV_8UC1, Scalar(255));
     img_marker.copyTo(img(Rect(shift, shift, height_marker, height_marker)));
 
-    detector.params->cornerRefinementMethod = GetParam();
+    detector.detectorParams->cornerRefinementMethod = GetParam();
 
     vector<vector<Point2f> > original_corners;
     vector<int> original_ids;

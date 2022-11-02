@@ -33,12 +33,12 @@ Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
 
 Ptr<Dictionary> Dictionary::create(int nMarkers, int markerSize, int randomSeed) {
     const Ptr<Dictionary> baseDictionary = makePtr<Dictionary>();
-    return create(nMarkers, markerSize, baseDictionary, randomSeed);
+    return extendDictionary(nMarkers, markerSize, baseDictionary, randomSeed);
 }
 
 
-Ptr<Dictionary> Dictionary::create(int nMarkers, int markerSize,
-                                   const Ptr<Dictionary> &baseDictionary, int randomSeed) {
+Ptr<Dictionary> Dictionary::extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary,
+                                             int randomSeed) {
     return generateCustomDictionary(nMarkers, markerSize, baseDictionary, randomSeed);
 }
 

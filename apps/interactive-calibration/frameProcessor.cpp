@@ -79,7 +79,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 
     std::vector<std::vector<cv::Point2f> > corners, rejected;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
+    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::makePtr<cv::aruco::DetectorParameters>(), rejected);
     cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
     if(ids.size() > 0)

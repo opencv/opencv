@@ -13,10 +13,9 @@ namespace aruco {
 //! @{
 
 
-/**
- * @brief Dictionary/Set of markers. It contains the inner codification
+/** @brief Dictionary/Set of markers, it contains the inner codification
  *
- * bytesList contains the marker codewords where
+ * BytesList contains the marker codewords where:
  * - bytesList.rows is the dictionary size
  * - each marker is encoded using `nbytes = ceil(markerSize*markerSize/8.)`
  * - each row contains all 4 rotations of the marker, so its length is `4*nbytes`
@@ -31,29 +30,27 @@ class CV_EXPORTS_W Dictionary {
     CV_PROP_RW int maxCorrectionBits; // maximum number of bits that can be corrected
 
 
-    Dictionary(const Mat &_bytesList = Mat(), int _markerSize = 0, int _maxcorr = 0);
+    CV_WRAP Dictionary(const Mat &bytesList = Mat(), int _markerSize = 0, int maxcorr = 0);
 
 
-    /**
-    * Dictionary(const Dictionary &_dictionary);
-    */
-    Dictionary(const Ptr<Dictionary> &dictionary);
+    CV_WRAP Dictionary(const Ptr<Dictionary> &dictionary);
 
 
     /** @brief returns generateCustomDictionary(nMarkers, markerSize, randomSeed)
+     *
      * @see generateCustomDictionary
      */
     CV_WRAP_AS(create) static Ptr<Dictionary> create(int nMarkers, int markerSize, int randomSeed=0);
 
 
-    /** @brief returns generateCustomDictionary(nMarkers, markerSize, baseDictionary, randomSeed)
-     * @see generateCustomDictionary
+    /** @brief extend base dictionary by new nMarkers
      */
-    CV_WRAP_AS(create_from) static Ptr<Dictionary> create(int nMarkers, int markerSize,
-            const Ptr<Dictionary> &baseDictionary, int randomSeed=0);
+    CV_WRAP static Ptr<Dictionary> extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary,
+                                                    int randomSeed=0);
 
-    /**
-     * @brief Read a new dictionary from FileNode. Format:\n
+    /** @brief Read a new dictionary from FileNode.
+     *
+     * Dictionary format:\n
      * nmarkers: 35\n
      * markersize: 6\n
      * maxCorrectionBits: 5\n
@@ -63,8 +60,7 @@ class CV_EXPORTS_W Dictionary {
      */
     CV_WRAP bool readDictionary(const cv::FileNode& fn);
 
-    /**
-     * @brief Write a dictionary to FileStorage. Format is the same as in readDictionary().
+    /** @brief Write a dictionary to FileStorage, format is the same as in readDictionary().
      */
     CV_WRAP void writeDictionary(Ptr<FileStorage>& fs);
 
@@ -73,33 +69,30 @@ class CV_EXPORTS_W Dictionary {
      */
     CV_WRAP static Ptr<Dictionary> get(int dict);
 
-    /**
-     * @brief Given a matrix of bits. Returns whether if marker is identified or not.
+    /** @brief Given a matrix of bits. Returns whether if marker is identified or not.
+     *
      * It returns by reference the correct id (if any) and the correct rotation
      */
     CV_WRAP bool identify(const Mat &onlyBits, CV_OUT int &idx, CV_OUT int &rotation, double maxCorrectionRate) const;
 
-    /**
-      * @brief Returns the distance of the input bits to the specific id. If allRotations is true,
-      * the four posible bits rotation are considered
-      */
+    /** @brief Returns the distance of the input bits to the specific id.
+     *
+     * If allRotations is true, the four posible bits rotation are considered
+     */
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
 
 
-    /**
-     * @brief Draw a canonical marker image
+    /** @brief Draw a canonical marker image
      */
     CV_WRAP void drawMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
 
 
-    /**
-      * @brief Transform matrix of bits to list of bytes in the 4 rotations
+    /** @brief Transform matrix of bits to list of bytes in the 4 rotations
       */
     CV_WRAP static Mat getByteListFromBits(const Mat &bits);
 
 
-    /**
-      * @brief Transform list of bytes to matrix of bits
+    /** @brief Transform list of bytes to matrix of bits
       */
     CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize);
 };
@@ -107,8 +100,8 @@ class CV_EXPORTS_W Dictionary {
 
 
 
-/**
- * @brief Predefined markers dictionaries/sets
+/** @brief Predefined markers dictionaries/sets
+ *
  * Each dictionary indicates the number of bits and the number of markers contained
  * - DICT_ARUCO_ORIGINAL: standard ArUco Library Markers. 1024 markers, 5x5 bits, 0 minimum
                           distance
@@ -138,14 +131,12 @@ enum PREDEFINED_DICTIONARY_NAME {
 };
 
 
-/**
-  * @brief Returns one of the predefined dictionaries defined in PREDEFINED_DICTIONARY_NAME
+/** @brief Returns one of the predefined dictionaries defined in PREDEFINED_DICTIONARY_NAME
   */
 CV_EXPORTS Ptr<Dictionary> getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name);
 
 
-/**
-  * @brief Returns one of the predefined dictionaries referenced by DICT_*.
+/** @brief Returns one of the predefined dictionaries referenced by DICT_*.
   */
 CV_EXPORTS_W Ptr<Dictionary> getPredefinedDictionary(int dict);
 
@@ -159,8 +150,7 @@ CV_EXPORTS_AS(custom_dictionary) Ptr<Dictionary> generateCustomDictionary(
         int randomSeed=0);
 
 
-/**
-  * @brief Generates a new customizable marker dictionary
+/** @brief Generates a new customizable marker dictionary
   *
   * @param nMarkers number of markers in the dictionary
   * @param markerSize number of bits per dimension of each markers
