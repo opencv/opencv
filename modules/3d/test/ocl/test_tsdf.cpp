@@ -571,6 +571,164 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
+
+static Mat nanMask(Mat img)
+{
+    int depth = img.depth();
+    Mat mask(img.size(), CV_8U);
+    for (int y = 0; y < img.rows; y++)
+    {
+        uchar *maskRow = mask.ptr<uchar>(y);
+        if (depth == CV_32F)
+        {
+            Vec4f *imgrow = img.ptr<Vec4f>(y);
+            for (int x = 0; x < img.cols; x++)
+            {
+                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
+            }
+        }
+        else if (depth == CV_64F)
+        {
+            Vec4d *imgrow = img.ptr<Vec4d>(y);
+            for (int x = 0; x < img.cols; x++)
+            {
+                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
+            }
+        }
+    }
+    return mask;
+}
+
+template <typename VT>
+static Mat_<typename VT::value_type> normalsErrorT(Mat_<VT> srcNormals, Mat_<VT> dstNormals)
+{
+    typedef typename VT::value_type Val;
+    Mat out(srcNormals.size(), cv::traits::Depth<Val>::value, Scalar(0));
+    for (int y = 0; y < srcNormals.rows; y++)
+    {
+
+        VT *srcrow = srcNormals[y];
+        VT *dstrow = dstNormals[y];
+        Val *outrow = out.ptr<Val>(y);
+        for (int x = 0; x < srcNormals.cols; x++)
+        {
+            VT sn = srcrow[x];
+            VT dn = dstrow[x];
+
+            Val dot = sn.dot(dn);
+            Val v(0.0);
+            // Just for rounding errors
+            if (std::abs(dot) < 1)
+                v = std::min(std::acos(dot), std::acos(-dot));
+
+            outrow[x] = v;
+        }
+    }
+    return out;
+}
+
+static Mat normalsError(Mat srcNormals, Mat dstNormals)
+{
+    int depth = srcNormals.depth();
+    int channels = srcNormals.channels();
+
+    if (depth == CV_32F)
+    {
+        if (channels == 3)
+        {
+            return normalsErrorT<Vec3f>(srcNormals, dstNormals);
+        }
+        else if (channels == 4)
+        {
+            return normalsErrorT<Vec4f>(srcNormals, dstNormals);
+        }
+    }
+    else if (depth == CV_64F)
+    {
+        if (channels == 3)
+        {
+            return normalsErrorT<Vec3d>(srcNormals, dstNormals);
+        }
+        else if (channels == 4)
+        {
+            return normalsErrorT<Vec4d>(srcNormals, dstNormals);
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsInternal, "This type is unsupported");
+    }
+    return Mat();
+}
+
+void regressionVolPoseRot()
+{
+    // Make 2 volumes which differ only in their pose (especially rotation)
+    VolumeSettings vs(VolumeType::HashTSDF);
+    Volume volume0(VolumeType::HashTSDF, vs);
+
+    VolumeSettings vsRot(vs);
+    Matx44f pose;
+    vsRot.getVolumePose(pose);
+    pose = Affine3f(Vec3f(1, 1, 1), Vec3f()).matrix;
+    vsRot.setVolumePose(pose);
+    Volume volumeRot(VolumeType::HashTSDF, vsRot);
+
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+    Matx33f intr;
+    vs.getCameraIntegrateIntrinsics(intr);
+    bool onlySemisphere = false;
+    float depthFactor = vs.getDepthFactor();
+    Vec3f lightPose = Vec3f::all(0.f);
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    UMat udepth;
+    depth.copyTo(udepth);
+
+    volume0.integrate(udepth, poses[0].matrix);
+    volumeRot.integrate(udepth, poses[0].matrix);
+
+    UMat upts, unrm, uptsRot, unrmRot;
+
+    volume0.raycast(poses[0].matrix, upts, unrm);
+    volumeRot.raycast(poses[0].matrix, uptsRot, unrmRot);
+
+    Mat mpts = upts.getMat(ACCESS_READ), mnrm = unrm.getMat(ACCESS_READ);
+    Mat mptsRot = uptsRot.getMat(ACCESS_READ), mnrmRot = unrmRot.getMat(ACCESS_READ);
+
+    if (cvtest::debugLevel > 0)
+    {
+        displayImage(depth, mpts, mnrm, depthFactor, lightPose);
+        displayImage(depth, mptsRot, mnrmRot, depthFactor, lightPose);
+    }
+
+    std::vector<Mat> ptsCh(3), ptsRotCh(3);
+    split(mpts, ptsCh);
+    split(uptsRot, ptsRotCh);
+    Mat maskPts0 = ptsCh[2] > 0;
+    Mat maskPtsRot = ptsRotCh[2] > 0;
+    Mat maskNrm0 = nanMask(mnrm);
+    Mat maskNrmRot = nanMask(mnrmRot);
+    Mat maskPtsDiff, maskNrmDiff;
+    cv::bitwise_xor(maskPts0, maskPtsRot, maskPtsDiff);
+    cv::bitwise_xor(maskNrm0, maskNrmRot, maskNrmDiff);
+    double ptsDiffNorm = cv::sum(maskPtsDiff)[0]/255.0;
+    double nrmDiffNorm = cv::sum(maskNrmDiff)[0]/255.0;
+
+    EXPECT_LE(ptsDiffNorm, 773);
+    EXPECT_LE(nrmDiffNorm, 773);
+
+    double normPts = cv::norm(mpts, mptsRot, NORM_INF, (maskPts0 & maskPtsRot));
+    Mat absdot = normalsError(mnrm, mnrmRot);
+    double normNrm = cv::norm(absdot, NORM_L2, (maskNrm0 & maskNrmRot));
+
+    EXPECT_LE(normPts, 2.0);
+    EXPECT_LE(normNrm, 73.05);
+}
+
+
 TEST(TSDF_GPU, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
@@ -671,6 +829,10 @@ TEST(HashTSDF_GPU, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
+TEST(HashTSDF_GPU, reproduce_volPoseRot)
+{
+    regressionVolPoseRot();
+}
 }
 }  // namespace
 
