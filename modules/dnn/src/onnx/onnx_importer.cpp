@@ -2053,39 +2053,6 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-void findBroadAxis(const MatShape& broadShape, const MatShape& outShape, size_t& axis, int& broadAxis)
-{
-    // Currently, this function can only complete 1-dimensional expansion of broadShape.
-    // If there are two dimensions in broadShape that need to be expended, it will fail.
-    const size_t diff = outShape.size() - broadShape.size();
-
-    // find the first non-one element of the broadcasting shape
-    axis = 0;
-    for (; axis < broadShape.size() && broadShape[axis] == 1; ++axis) {}
-
-    // find the last non-one element of the broadcasting shape
-    size_t endAxis = broadShape.size();
-    for (; endAxis > axis && broadShape[endAxis - 1] == 1; --endAxis) {}
-
-    // find one between axis and endAxis - as it needs to be broadcasted,
-    // dimensions from the left of axis and from the right of endAxis will be handled by Scale layer
-    broadAxis = -1;
-    for (size_t i = axis; i < endAxis; ++i)
-    {
-        size_t outAxis = i + diff;
-        if (outShape[outAxis] == broadShape[i])
-        {
-            continue;
-        }
-
-        // ensure we need to broadcast only 1 dimension in the middle
-        CV_Assert(broadShape[i] == 1 && broadAxis == -1);
-        broadAxis = static_cast<int>(outAxis);
-    }
-
-    axis += diff;
-}
-
 void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
