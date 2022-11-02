@@ -510,7 +510,6 @@ void ocl_integrateHashTsdfVolumeUnit(
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Matx44f vol2camMatrix = (Affine3f(cameraPose).inv() * pose).matrix;
-    Matx44f camInvMatrix = Affine3f(cameraPose).inv().matrix;
 
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
@@ -580,7 +579,6 @@ void ocl_integrateHashTsdfVolumeUnit(
         ocl::KernelArg::ReadOnly(pixNorms),
         ocl::KernelArg::ReadOnly(isActiveFlags),
         vol2camMatrix,
-        camInvMatrix,
         voxelSize,
         volumeUnitResolution,
         volStrides.val,
