@@ -30,23 +30,12 @@ class CV_EXPORTS_W Dictionary {
     CV_PROP_RW int maxCorrectionBits; // maximum number of bits that can be corrected
 
 
-    CV_WRAP Dictionary(const Mat &bytesList = Mat(), int _markerSize = 0, int maxcorr = 0);
+    CV_WRAP Dictionary();
+
+    CV_WRAP Dictionary(const Mat &bytesList, int _markerSize, int maxcorr = 0);
 
 
     CV_WRAP Dictionary(const Ptr<Dictionary> &dictionary);
-
-
-    /** @brief returns generateCustomDictionary(nMarkers, markerSize, randomSeed)
-     *
-     * @see generateCustomDictionary
-     */
-    CV_WRAP_AS(create) static Ptr<Dictionary> create(int nMarkers, int markerSize, int randomSeed=0);
-
-
-    /** @brief extend base dictionary by new nMarkers
-     */
-    CV_WRAP static Ptr<Dictionary> extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary,
-                                                    int randomSeed=0);
 
     /** @brief Read a new dictionary from FileNode.
      *
@@ -63,11 +52,6 @@ class CV_EXPORTS_W Dictionary {
     /** @brief Write a dictionary to FileStorage, format is the same as in readDictionary().
      */
     CV_WRAP void writeDictionary(Ptr<FileStorage>& fs);
-
-    /**
-     * @see getPredefinedDictionary
-     */
-    CV_WRAP static Ptr<Dictionary> get(int dict);
 
     /** @brief Given a matrix of bits. Returns whether if marker is identified or not.
      *
@@ -140,17 +124,7 @@ CV_EXPORTS Ptr<Dictionary> getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME na
   */
 CV_EXPORTS_W Ptr<Dictionary> getPredefinedDictionary(int dict);
 
-
-/**
-  * @see generateCustomDictionary
-  */
-CV_EXPORTS_AS(custom_dictionary) Ptr<Dictionary> generateCustomDictionary(
-        int nMarkers,
-        int markerSize,
-        int randomSeed=0);
-
-
-/** @brief Generates a new customizable marker dictionary
+/** @brief Extend base dictionary by new nMarkers
   *
   * @param nMarkers number of markers in the dictionary
   * @param markerSize number of bits per dimension of each markers
@@ -162,11 +136,8 @@ CV_EXPORTS_AS(custom_dictionary) Ptr<Dictionary> generateCustomDictionary(
   * included and the rest are generated based on them. If the size of baseDictionary is higher
   * than nMarkers, only the first nMarkers in baseDictionary are taken and no new marker is added.
   */
-CV_EXPORTS_AS(custom_dictionary_from) Ptr<Dictionary> generateCustomDictionary(
-        int nMarkers,
-        int markerSize,
-        const Ptr<Dictionary> &baseDictionary,
-        int randomSeed=0);
+CV_EXPORTS_W Ptr<Dictionary> extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary = makePtr<Dictionary>(),
+                                              int randomSeed=0);
 
 
 

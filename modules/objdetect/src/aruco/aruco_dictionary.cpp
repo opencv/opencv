@@ -16,6 +16,7 @@ namespace aruco {
 
 using namespace std;
 
+Dictionary::Dictionary(): markerSize(0), maxCorrectionBits(0) {}
 
 Dictionary::Dictionary(const Ptr<Dictionary> &_dictionary) {
     markerSize = _dictionary->markerSize;
@@ -28,18 +29,6 @@ Dictionary::Dictionary(const Mat &_bytesList, int _markerSize, int _maxcorr) {
     markerSize = _markerSize;
     maxCorrectionBits = _maxcorr;
     bytesList = _bytesList;
-}
-
-
-Ptr<Dictionary> Dictionary::create(int nMarkers, int markerSize, int randomSeed) {
-    const Ptr<Dictionary> baseDictionary = makePtr<Dictionary>();
-    return extendDictionary(nMarkers, markerSize, baseDictionary, randomSeed);
-}
-
-
-Ptr<Dictionary> Dictionary::extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary,
-                                             int randomSeed) {
-    return generateCustomDictionary(nMarkers, markerSize, baseDictionary, randomSeed);
 }
 
 
@@ -80,11 +69,6 @@ void Dictionary::writeDictionary(Ptr<FileStorage>& fs) {
             marker.push_back(bitMarker.at<uint8_t>(j) + '0');
         *fs << markerName << marker;
     }
-}
-
-
-Ptr<Dictionary> Dictionary::get(int dict) {
-    return getPredefinedDictionary(dict);
 }
 
 
@@ -365,11 +349,10 @@ static int _getSelfDistance(const Mat &marker) {
 }
 
 
-Ptr<Dictionary> generateCustomDictionary(int nMarkers, int markerSize,
-                                         const Ptr<Dictionary> &baseDictionary, int randomSeed) {
+Ptr<Dictionary> extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary, int randomSeed) {
     RNG rng((uint64)(randomSeed));
 
-    Ptr<Dictionary> out = makePtr<Dictionary>();
+    Ptr<Dictionary> out = makePtr<Dictionary>(Mat(), markerSize);
     out->markerSize = markerSize;
 
     // theoretical maximum intermarker distance
@@ -453,13 +436,6 @@ Ptr<Dictionary> generateCustomDictionary(int nMarkers, int markerSize,
 
     return out;
 }
-
-
-Ptr<Dictionary> generateCustomDictionary(int nMarkers, int markerSize, int randomSeed) {
-    Ptr<Dictionary> baseDictionary = makePtr<Dictionary>();
-    return generateCustomDictionary(nMarkers, markerSize, baseDictionary, randomSeed);
-}
-
 
 }
 }

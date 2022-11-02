@@ -849,7 +849,6 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     CV_Assert(!_image.empty());
     const Ptr<DetectorParameters>& detectorParams = arucoDetectorImpl->detectorParams;
     const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
-    const Ptr<RefineParameters>& refineParams = arucoDetectorImpl->refineParams;
 
     CV_Assert(detectorParams->markerBorderBits > 0);
     // check that the parameters are set correctly if Aruco3 is used
