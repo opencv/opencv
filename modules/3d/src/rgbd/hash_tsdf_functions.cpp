@@ -204,7 +204,6 @@ void integrateHashTsdfVolumeUnit(
         totalVolUnits.push_back(keyvalue.first);
     }
 
-
     //! Mark volumes in the camera frustum as active
     Range inFrustumRange(0, (int)volumeUnits.size());
     parallel_for_(inFrustumRange, [&](const Range& range) {
@@ -1172,8 +1171,8 @@ void ocl_raycastHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * volResolution.x;
 
     Vec4f boxMin, boxMax(volumeUnitSize - voxelSize,
-        volumeUnitSize - voxelSize,
-        volumeUnitSize - voxelSize);
+                         volumeUnitSize - voxelSize,
+                         volumeUnitSize - voxelSize);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1183,9 +1182,6 @@ void ocl_raycastHashTsdfVolumeUnit(
 
     Matx44f cam2volRotGPU = cam2vol.matrix;
     Matx44f vol2camRotGPU = vol2cam.matrix;
-
-    UMat volPoseGpu = Mat(pose.matrix).getUMat(ACCESS_READ);
-    UMat invPoseGpu = Mat(pose.inv().matrix).getUMat(ACCESS_READ);
 
     UMat hashesGpu = Mat(hashTable.hashes, false).getUMat(ACCESS_READ);
     UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
