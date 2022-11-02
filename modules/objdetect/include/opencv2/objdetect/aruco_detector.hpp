@@ -276,15 +276,6 @@ struct CV_EXPORTS_W RefineParameters {
 class CV_EXPORTS_W ArucoDetector : public Algorithm
 {
 public:
-    /// dictionary indicates the type of markers that will be searched
-    CV_PROP_RW Ptr<Dictionary> dictionary;
-
-    /// marker detection parameters, check DetectorParameters docs to see available settings
-    CV_PROP_RW Ptr<DetectorParameters> detectorParams;
-
-    /// marker refine parameters
-    CV_PROP_RW Ptr<RefineParameters> refineParams;
-
     /** @brief Basic ArucoDetector constructor
      *
      * @param dictionary indicates the type of markers that will be searched
@@ -346,22 +337,20 @@ public:
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray());
 
+    Ptr<Dictionary> getDictionary() const;
+    Ptr<DetectorParameters> getDetectorParameters() const;
+    Ptr<RefineParameters> getRefineParameters() const;
+
     /** @brief Stores algorithm parameters in a file storage
     */
-    virtual void write(FileStorage& fs) const override {
-        Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
-        dictionary->writeDictionary(pfs);
-        detectorParams->writeDetectorParameters(pfs);
-        refineParams->writeRefineParameters(pfs);
-    }
+    virtual void write(FileStorage& fs) const override;
 
     /** @brief Reads algorithm parameters from a file storage
     */
-    CV_WRAP virtual void read(const FileNode& fn) override {
-        dictionary->readDictionary(fn);
-        detectorParams->readDetectorParameters(fn);
-        refineParams->readRefineParameters(fn);
-    }
+    CV_WRAP virtual void read(const FileNode& fn) override;
+protected:
+    struct ArucoDetectorImpl;
+    Ptr<ArucoDetectorImpl> arucoDetectorImpl;
 };
 
 /** @brief Draw detected markers in image

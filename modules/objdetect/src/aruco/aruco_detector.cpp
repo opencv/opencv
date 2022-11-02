@@ -821,14 +821,36 @@ static inline void findCornerInPyrImage(const float scale_init, const int closes
     }
 }
 
+struct ArucoDetector::ArucoDetectorImpl {
+    /// dictionary indicates the type of markers that will be searched
+    Ptr<Dictionary> dictionary;
+
+    /// marker detection parameters, check DetectorParameters docs to see available settings
+    Ptr<DetectorParameters> detectorParams;
+
+    /// marker refine parameters
+    Ptr<RefineParameters> refineParams;
+    ArucoDetectorImpl() {}
+
+    ArucoDetectorImpl(const Ptr<Dictionary> &_dictionary, const Ptr<DetectorParameters> &_detectorParams,
+                      const Ptr<RefineParameters> &_refineParams): dictionary(_dictionary),
+                      detectorParams(_detectorParams), refineParams(_refineParams) {}
+
+};
+
 ArucoDetector::ArucoDetector(const Ptr<Dictionary> &_dictionary,
                              const Ptr<DetectorParameters> &_detectorParams,
-                             const Ptr<RefineParameters> &_refineParams):
-                             dictionary(_dictionary), detectorParams(_detectorParams), refineParams(_refineParams){}
+                             const Ptr<RefineParameters> &_refineParams) {
+    arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionary, _detectorParams, _refineParams);
+}
 
 void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
                                   OutputArrayOfArrays _rejectedImgPoints) {
     CV_Assert(!_image.empty());
+    const Ptr<DetectorParameters>& detectorParams = arucoDetectorImpl->detectorParams;
+    const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
+    const Ptr<RefineParameters>& refineParams = arucoDetectorImpl->refineParams;
+
     CV_Assert(detectorParams->markerBorderBits > 0);
     // check that the parameters are set correctly if Aruco3 is used
     CV_Assert(!(detectorParams->useAruco3Detection == true &&
@@ -1075,6 +1097,9 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
                                           InputOutputArrayOfArrays _detectedCorners, InputOutputArray _detectedIds,
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) {
+    const Ptr<DetectorParameters>& detectorParams = arucoDetectorImpl->detectorParams;
+    const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
+    const Ptr<RefineParameters>& refineParams = arucoDetectorImpl->refineParams;
     CV_Assert(refineParams->minRepDistance > 0);
 
     if(_detectedIds.total() == 0 || _rejectedCorners.total() == 0) return;
@@ -1234,6 +1259,29 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
     }
 }
 
+void ArucoDetector::write(FileStorage &fs) const {
+    Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
+    arucoDetectorImpl->dictionary->writeDictionary(pfs);
+    arucoDetectorImpl->detectorParams->writeDetectorParameters(pfs);
+    arucoDetectorImpl->refineParams->writeRefineParameters(pfs);
+}
+
+void ArucoDetector::read(const FileNode &fn) {
+    arucoDetectorImpl->dictionary->readDictionary(fn);
+    arucoDetectorImpl->detectorParams->readDetectorParameters(fn);
+    arucoDetectorImpl->refineParams->readRefineParameters(fn);
+}
+
+Ptr<Dictionary> ArucoDetector::getDictionary() const {
+    return arucoDetectorImpl->dictionary;
+}
+
+Ptr<DetectorParameters> ArucoDetector::getDetectorParameters() const {
+    return arucoDetectorImpl->detectorParams;
+}
+Ptr<RefineParameters> ArucoDetector::getRefineParameters() const {
+    return arucoDetectorImpl->refineParams;
+}
 
 void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
                          InputArray _ids, Scalar borderColor) {

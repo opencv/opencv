@@ -40,7 +40,7 @@ void CV_ArucoDetectionSimple::run(int) {
             for(int x = 0; x < 2; x++) {
                 Mat marker;
                 int id = i * 4 + y * 2 + x;
-                aruco::drawMarker(detector.dictionary, id, markerSidePixels, marker);
+                aruco::drawMarker(detector.getDictionary(), id, markerSidePixels, marker);
                 Point2f firstCorner =
                     Point2f(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
                             markerSidePixels / 2.f + y * (1.5f * markerSidePixels));
@@ -145,7 +145,7 @@ static void getSyntheticRT(double yaw, double pitch, double distance, Mat &rvec,
 /**
  * @brief Create a synthetic image of a marker with perspective
  */
-static Mat projectMarker(Ptr<aruco::Dictionary> &dictionary, int id, Mat cameraMatrix, double yaw,
+static Mat projectMarker(const Ptr<aruco::Dictionary> &dictionary, int id, Mat cameraMatrix, double yaw,
                          double pitch, double distance, Size imageSize, int markerBorder,
                          vector<Point2f> &corners, int encloseMarker=0) {
 
@@ -259,7 +259,7 @@ void CV_ArucoDetectionPerspective::run(int) {
 
                 /// create synthetic image
                 Mat img=
-                    projectMarker(detector.dictionary, currentId, cameraMatrix, deg2rad(yaw), deg2rad(pitch),
+                    projectMarker(detector.getDictionary(), currentId, cameraMatrix, deg2rad(yaw), deg2rad(pitch),
                                       distance, imgSize, markerBorder, groundTruthCorners, szEnclosed);
                 // marker :: Inverted
                 if(ArucoAlgParams::DETECT_INVERTED_MARKER == arucoAlgParams){
@@ -337,7 +337,7 @@ void CV_ArucoDetectionMarkerSize::run(int) {
 
         // create synthetic image
         Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
-        aruco::drawMarker(detector.dictionary, id, markerSide, marker);
+        aruco::drawMarker(detector.getDictionary(), id, markerSide, marker);
         Mat aux = img.colRange(30, 30 + markerSide).rowRange(50, 50 + markerSide);
         marker.copyTo(aux);
 
@@ -564,7 +564,7 @@ TEST(CV_ArucoDetectMarkers, regression_3192)
 TEST(CV_ArucoDetectMarkers, regression_2492)
 {
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_5X5_50));
-    detector.detectorParams->minMarkerDistanceRate = 0.026;
+    detector.getDetectorParameters()->minMarkerDistanceRate = 0.026;
     vector<int> markerIds;
     vector<vector<Point2f> > markerCorners;
     string imgPath = cvtest::findDataFile("aruco/regression_2492.png");
@@ -635,13 +635,13 @@ TEST_P(ArucoThreading, number_of_threads_does_not_change_results)
 
     // Create a test image
     Mat img_marker;
-    aruco::drawMarker(detector.dictionary, 23, height_marker, img_marker, 1);
+    aruco::drawMarker(detector.getDictionary(), 23, height_marker, img_marker, 1);
 
     // Copy to bigger image to get a white border
     Mat img(height_img, height_img, CV_8UC1, Scalar(255));
     img_marker.copyTo(img(Rect(shift, shift, height_marker, height_marker)));
 
-    detector.detectorParams->cornerRefinementMethod = GetParam();
+    detector.getDetectorParameters()->cornerRefinementMethod = GetParam();
 
     vector<vector<Point2f> > original_corners;
     vector<int> original_ids;
