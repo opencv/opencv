@@ -182,9 +182,8 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, int _maxDepth)
             cnt++;
         };
     }
-    if(cnt!=0){
-        CV_LOG_WARNING(NULL,"OverAll "<<cnt<<" points has been ignored!");
-    }
+
+    CV_LOG_IF_WARNING(NULL,cnt!=0,"OverAll "<<cnt<<" points has been ignored! The number of point clouds contained in the current octree is "<<pointCloud.size()-cnt);
     return true;
 }
 
@@ -352,11 +351,12 @@ bool deletePointRecurse(Ptr<OctreeNode>& _node)
 bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point, int maxDepth)
 {
     OctreeNode& node = *_node;
-    if(node.depth==0 && !node.isPointInBound(point, node.origin, node.size))
+    bool pointInBoundFlag = node.isPointInBound(point, node.origin, node.size);
+    if(node.depth==0 && !pointInBoundFlag)
     {
         CV_Error(Error::StsBadArg, "The point is out of boundary!");
     }
-    else if (!node.isPointInBound(point, node.origin, node.size)){
+    else if (!pointInBoundFlag){
         return false;
     }
 
