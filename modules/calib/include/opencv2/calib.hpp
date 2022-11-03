@@ -1130,7 +1130,7 @@ Multiview calibraton.
 @param[in] imageSize   of size NUM_CAMERAS x 2 -- size of images
 @param[in] detection_mask - detection mask of size NUM_CAMERAS x NUM_FRAMES - boolean
 @param[in] is_fisheye of size NUM_CAMERAS -- indicates whether i-th camera is fisheye. Currently supported either all or none.
-@param[in] USE_INTRINSICS_GUESS - if true then intrinsic parameters (K and distortion) are not estimated
+@param[in] use_intrinsics_guess - if true then intrinsic parameters (K and distortion) are not estimated
 @param[in] flags_intrinsics -- flags that are used for intrinsics calibration.
 @param[out] Rs Output of size NUM_CAMERAS x 3 x 1 -- rotation matrices wrt camera 0, where Rs[0] = 0
 @param[out] Ts Output of size NUM_CAMERAS x 3 x 1 -- translation vectors wrt camera 0, where Ts[0] = 0
