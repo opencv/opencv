@@ -165,7 +165,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, p
         print("Multi-view calibration failed with the following exception:", e.__class__)
         sys.exit(0)
     print('calibration time', time.time() - start_time, 'seconds')
-    print('rvecs', Rs)
+    print('rvecs', rvecs)
     print('tvecs', Ts)
     print('K', Ks)
     print('distortion', distortions)
