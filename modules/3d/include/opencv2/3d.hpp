@@ -2548,8 +2548,9 @@ public:
     /** @brief Insert a point data to a OctreeNode.
     *
     * @param point The point data in Point3f format.
+    * @return Returns whether the insertion is successful.
     */
-    void insertPoint(const Point3f& point);
+    bool insertPoint(const Point3f& point);
 
     /** @brief Read point cloud data and create OctreeNode.
     *
