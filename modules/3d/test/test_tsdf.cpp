@@ -895,15 +895,15 @@ void regressionVolPoseRot()
     double ptsDiffNorm = cv::sum(maskPtsDiff)[0]/255.0;
     double nrmDiffNorm = cv::sum(maskNrmDiff)[0]/255.0;
 
-    EXPECT_LE(ptsDiffNorm, 773);
-    EXPECT_LE(nrmDiffNorm, 773);
+    EXPECT_LE(ptsDiffNorm, 786);
+    EXPECT_LE(nrmDiffNorm, 786);
 
     double normPts = cv::norm(pts, ptsRot, NORM_INF, (maskPts0 & maskPtsRot));
     Mat absdot = normalsError(nrm, nrmRot);
     double normNrm = cv::norm(absdot, NORM_L2, (maskNrm0 & maskNrmRot));
 
     EXPECT_LE(normPts, 2.0);
-    EXPECT_LE(normNrm, 73.05);
+    EXPECT_LE(normNrm, 73.08);
 }
 
 
