@@ -16,7 +16,7 @@ This tutorial consists of the following sections:
 * Introduction
 * Briefly
 * How to run
-* Python sample
+* Python example
 * Python visualization
 * Details Of The Algorithm
 * Method Input
@@ -52,7 +52,7 @@ How to run:
 
 Assume we have `N` camera views, for each `i`-th view there are `M` images containing pattern points (e.g., checkerboard).
 
-Python sample
+Python example
 --
 There are two options to run the sample code in Python (`opencv/samples/python/multiview_calibration.py`) either with raw images or provided points.
 The first option is to prepare `N` files where each file has path to image per line (images of a specific camera of the corresponding file). For example, a file for camera `i` should look like (`file_i.txt`):
@@ -79,7 +79,7 @@ Additional (optional) flags to Python sample that could be used are as follows:
 * `--path_to_save` - path to save results in pickle file
 * `--path_to_visualize` - path to results pickle file needed to run visualization
 * `--visualize` - visualization flag (True or False), if True only runs visualization but path_to_visualize must be provided
-* resize_image_detection - True / False, if True an image will be resized to speed-up corners detection
+* `--resize_image_detection` - True / False, if True an image will be resized to speed-up corners detection
 
 Alternatively, the Python sample could be run from JSON file that should contain image points, pattern points, and boolean indicator whether a camera is fisheye.
 The example of JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (currently under [pull request](https://github.com/opencv/opencv_extra/pull/1001)). Its format should be dictionary with the following items:
@@ -100,9 +100,11 @@ The description of flags could be found directly by running the sample script wi
 python3 multiview_calibration.py --help
 ```
 
-
-The expected output in Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/`) should be the following:
+The expected output in Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/` generated in Blender) should be the following:
 ![](images/terminal-demo.png)
+
+The expected output for real-life calibration images in `opencv_extra/testdata/python/real_multiview_calibration_images` is the following:
+![](images/terminal-real-demo.png)
 
 Python visualization:
 ----
@@ -132,9 +134,9 @@ Details Of The Algorithm:
 ----
 1. If the intrinsics are not provided, the calibration procedure starts intrinsics calibration independently for each camera using OpenCV function `cv::calibrateCamera` [see this turorial](https://github.com/opencv/opencv/blob/5.x/doc/tutorials/calib3d/camera_calibration/camera_calibration.markdown).
 * a. If input is a combination of fisheye and pinhole cameras, then fisheye images are calibrated with the default OpenCV calibrate function. The reason is that stereo calibration in OpenCV does not support a mix of fisheye and pinhole cameras. The following flags are used in this scenario;
-* * i. [#CALIB_RATIONAL_MODEL](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa204766e24f2e413e7a7c9f8b9e93f16c) - it extends default (5 coefficients) distortion model and returns more parameters.
-* * ii. [#CALIB_ZERO_TANGENT_DIST](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa769b5792d4e9c4ae073eaf317aec73ef) - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
-* * iii. [#CALIB_FIX_K5](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa5e080a1f6b8e545196c2c2e874dce6ac), [#CALIB_FIX_K6](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa7d57502505ca433b25116aebadf33088) - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
+* * i. #CALIB_RATIONAL_MODEL [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa204766e24f2e413e7a7c9f8b9e93f16c) - it extends default (5 coefficients) distortion model and returns more parameters.
+* * ii. #CALIB_ZERO_TANGENT_DIST [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa769b5792d4e9c4ae073eaf317aec73ef) - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
+* * iii. #CALIB_FIX_K5 [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa5e080a1f6b8e545196c2c2e874dce6ac), #CALIB_FIX_K6 [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa7d57502505ca433b25116aebadf33088) - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
 * b. Output of intrinsic calibration is also rotation, translation vectors (transform of pattern points to camera frame), and errors per frame.
 * * i. For each frame, the index of the camera with the lowest error among all cameras is saved.
 2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation ([see solvePnP](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d)) to estimate rotation / translation vectors, and reprojection error for each frame.
@@ -177,7 +179,7 @@ The high-level output of the proposed method is the following:
 
 Pseudocode:
 ----
-The idea of the method could be demostrated in a high-level pseudocode whereas the whole C++ implementation of the proposed approach is implemented in `opencv/modules/calib/src/multiview_calibration.cpp` file.
+The idea of the method could be demonstrated in a high-level pseudocode whereas the whole C++ implementation of the proposed approach is implemented in `opencv/modules/calib/src/multiview_calibration.cpp` file.
 
 ```python
 def mutiviewCalibration (pattern_points, image_points, detection_mask):
