@@ -1587,8 +1587,10 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #endif // HAVE_OPENCL
 
 #if defined(HAVE_OPENGL)
-#  if defined(__ANDROID__) || defined(__linux__)
+#  if defined(__ANDROID__) || defined(HAVE_EGL_INTEROP)
 #    include <EGL/egl.h>
+#  elif defined(__linux__)
+#    include <GL/glx.h>
 #  endif
 #endif // HAVE_OPENGL
 
@@ -1682,10 +1684,14 @@ Context& initializeContextFromGL()
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-#elif defined(__ANDROID__) || defined(__linux__)
+#elif defined(__ANDROID__) || defined(HAVE_EGL_INTEROP)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
+#elif defined(__linux__)
+            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+            CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+            CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
 #endif
             0
         };
