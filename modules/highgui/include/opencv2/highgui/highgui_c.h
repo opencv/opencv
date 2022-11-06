@@ -55,14 +55,7 @@ extern "C" {
 
 /* destroy window and all the trackers associated with it */
 CVAPI(void) cvDestroyWindow( const char* name );
-
 CVAPI(void) cvDestroyAllWindows(void);
-
-typedef void (CV_CDECL *CvTrackbarCallback)(int pos);
-
-/* create trackbar and display it on top of given window, set callback */
-CVAPI(int) cvCreateTrackbar( const char* trackbar_name, const char* window_name,
-                             int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
 
 typedef void (CV_CDECL *CvTrackbarCallback2)(int pos, void* userdata);
 
@@ -130,7 +123,6 @@ CVAPI(void) cvUpdateWindow(const char* window_name);
 
 #define cvAddSearchPath(path)
 #define cvvDestroyWindow cvDestroyWindow
-#define cvvCreateTrackbar cvCreateTrackbar
 #define cvvAddSearchPath cvAddSearchPath
 #define cvvWaitKey(name) cvWaitKey(0)
 #define cvvWaitKeyEx(name,delay) cvWaitKey(delay)

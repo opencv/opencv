@@ -2533,14 +2533,6 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
 }
 
 CV_IMPL int
-cvCreateTrackbar(const char* trackbar_name, const char* window_name,
-                 int* val, int count, CvTrackbarCallback on_notify)
-{
-    return icvCreateTrackbar(trackbar_name, window_name, val, count,
-        on_notify, 0, 0);
-}
-
-CV_IMPL int
 cvCreateTrackbar2(const char* trackbar_name, const char* window_name,
                   int* val, int count, CvTrackbarCallback2 on_notify2,
                   void* userdata)

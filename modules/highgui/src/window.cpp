@@ -1216,13 +1216,6 @@ void moveWindowImpl( const char*, int, int )
 }
 
 CV_IMPL int
-cvCreateTrackbar( const char*, const char*,
-                  int*, int, CvTrackbarCallback )
-{
-    CV_NO_GUI_ERROR( "cvCreateTrackbar" );
-}
-
-CV_IMPL int
 cvCreateTrackbar2( const char* /*trackbar_name*/, const char* /*window_name*/,
                    int* /*val*/, int /*count*/, CvTrackbarCallback2 /*on_notify2*/,
                    void* /*userdata*/ )

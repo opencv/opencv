@@ -54,8 +54,6 @@ CV_IMPL void cvDestroyAllWindows( void ) {}
 void showImageImpl( const char* name, const CvArr* arr) {}
 void resizeWindowImpl( const char* name, int width, int height) {}
 void moveWindowImpl( const char* name, int x, int y){}
-CV_IMPL int cvCreateTrackbar (const char* trackbar_name,const char* window_name,
-                              int* val, int count, CvTrackbarCallback on_notify) {return  0;}
 CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,const char* window_name,
                               int* val, int count, CvTrackbarCallback2 on_notify2, void* userdata) {return 0;}
 CV_IMPL void cvSetMouseCallback( const char* name, CvMouseCallback function, void* info) {}
@@ -308,12 +306,12 @@ void moveWindowImpl( const char* name, int x, int y)
     __END__;
 }
 
-CV_IMPL int cvCreateTrackbar (const char* trackbar_name,
+static int cocoa_CreateTrackbar (const char* trackbar_name,
                               const char* window_name,
                               int* val, int count,
                               CvTrackbarCallback on_notify)
 {
-    CV_FUNCNAME("cvCreateTrackbar");
+    CV_FUNCNAME("cocoa_CreateTrackbar");
 
 
     int result = 0;
@@ -327,7 +325,7 @@ CV_IMPL int cvCreateTrackbar (const char* trackbar_name,
     if(window_name == NULL)
         CV_ERROR( CV_StsNullPtr, "NULL window name" );
 
-    //cout << "cvCreateTrackbar" << endl ;
+    //cout << "cocoa_CreateTrackbar" << endl ;
     window = cvGetWindow(window_name);
     if(window) {
         [window createSliderWithName:trackbar_name
@@ -350,7 +348,7 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name,
 {
     //cout <<"cvCreateTrackbar2" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    int res = cvCreateTrackbar(trackbar_name, window_name, val, count, NULL);
+    int res = cocoa_CreateTrackbar(trackbar_name, window_name, val, count, NULL);
     if(res) {
         CVWindow *window = cvGetWindow(window_name);
         if (window && [window respondsToSelector:@selector(sliders)]) {

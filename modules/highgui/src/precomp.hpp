@@ -89,11 +89,13 @@
 #define CV_WINDOW_MAGIC_VAL     0x00420042
 #define CV_TRACKBAR_MAGIC_VAL   0x00420043
 
-// Obsolete functions hidden here
+// Obsolete but widely used types and functions hidden here
+typedef void (CV_CDECL *CvTrackbarCallback)(int pos);
 int namedWindowImpl(const char* name, int flags = cv::WINDOW_AUTOSIZE);
 void showImageImpl( const char* name, const CvArr* image );
 void resizeWindowImpl( const char* name, int width, int height );
 void moveWindowImpl( const char* name, int x, int y );
+
 
 
 //Yannick Verdie 2010, Max Kostin 2015

@@ -2336,18 +2336,6 @@ void resizeWindowImpl(const char *name, int width, int height) {
         throw_system_error("Could not get window name", errno)
 }
 
-CV_IMPL int cvCreateTrackbar(const char *name_bar, const char *window_name, int *value, int count,
-                             CvTrackbarCallback on_change) {
-    CV_UNUSED(name_bar);
-    CV_UNUSED(window_name);
-    CV_UNUSED(value);
-    CV_UNUSED(count);
-    CV_UNUSED(on_change);
-    CV_LOG_ONCE_WARNING(nullptr, "Not implemented, use cvCreateTrackbar2");
-
-    return 0;
-}
-
 CV_IMPL int cvCreateTrackbar2(const char *trackbar_name, const char *window_name, int *val, int count,
                               CvTrackbarCallback2 on_notify, void *userdata) {
     if (auto window = CvWlCore::getInstance().get_window(window_name))

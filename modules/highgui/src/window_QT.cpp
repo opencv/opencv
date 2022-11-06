@@ -639,23 +639,6 @@ CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int
     return 1; //dummy value
 }
 
-CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
-{
-    if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
-
-    QMetaObject::invokeMethod(guiMainThread,
-        "addSlider",
-        autoBlockingConnection(),
-        Q_ARG(QString, QString(name_bar)),
-        Q_ARG(QString, QString(window_name)),
-        Q_ARG(void*, (void*)value),
-        Q_ARG(int, count),
-        Q_ARG(void*, (void*)on_change));
-
-    return 1; //dummy value
-}
-
 CV_IMPL int cvGetTrackbarPos(const char* name_bar, const char* window_name)
 {
     int result = -1;
