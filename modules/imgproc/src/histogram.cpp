@@ -2365,8 +2365,6 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 }
 
 
-const int CV_HIST_DEFAULT_TYPE = CV_32F;
-
 // Sets a value range for every histogram bin
 void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
 {
