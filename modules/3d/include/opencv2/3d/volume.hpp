@@ -23,7 +23,7 @@ public:
     * @param settings the custom settings for volume.
     */
     Volume(VolumeType vtype, const VolumeSettings& settings);
-    ~Volume();
+    virtual ~Volume();
 
     /** @brief Integrates the input data to the volume.
 
