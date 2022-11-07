@@ -231,8 +231,8 @@ struct SemisphereScene : Scene
             pose = pose.rotate(startPose.rotation());
             pose = pose.rotate(Vec3f(0.f, -0.5f, 0.f) * angle);
             pose = pose.translate(Vec3f(startPose.translation()[0] * sin(angle),
-                startPose.translation()[1],
-                startPose.translation()[2] * cos(angle)));
+                                        startPose.translation()[1],
+                                        startPose.translation()[2] * cos(angle)));
             poses.push_back(pose);
         }
 
@@ -755,94 +755,87 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-void boundingBoxGrowthTest(VolumeType volumeType, bool checkGrowth)
+void boundingBoxGrowthTest(VolumeType volumeType)
 {
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = true;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    Mat depth = scene->depth(poses[0]);
-    Mat rgb = scene->rgb(poses[0]);
-    Mat points, normals, colors, newPoints, newNormals;
-
-    if (volumeType == VolumeType::ColorTSDF)
-        volume.integrate(depth, rgb, poses[0].matrix);
-    else
-        volume.integrate(depth, poses[0].matrix);
-
-    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-
     if ( volumeType == VolumeType::TSDF || volumeType == VolumeType::ColorTSDF )
     {
-        Vec3i volDims;
-        vs.getVolumeDimensions(volDims);
+        Vec3i res;
+        vs.getVolumeResolution(res);
         float voxelSize = vs.getVoxelSize();
         Matx44f pose;
         vs.getVolumePose(pose);
-        Vec3f start = Affine3f(pose).translation();
-        Vec3f end   = voxelSize * volDims + Affine3f(pose).translation();
+        Vec3f end   = voxelSize * Vec3f(res);
+        Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
         //TODO: check bounding box to be equal to volume size
+        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+        Vec6f diff = bb - truebb;
+        double normdiff = std::sqrt(diff.ddot(diff));
+        ASSERT_LE(normdiff, std::numeric_limits<double>::epsilon());
     }
-
-    if (cvtest::debugLevel > 0)
+    else // HashTSDF
     {
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, points, normals, colors);
-        else
-            volume.raycast(poses[0].matrix, points, normals);
+        Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+        Matx33f intr;
+        vs.getCameraIntegrateIntrinsics(intr);
+        bool onlySemisphere = false;
+        float depthFactor = vs.getDepthFactor();
+        Vec3f lightPose = Vec3f::all(0.f);
+        Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+        std::vector<Affine3f> poses = scene->getPoses();
 
-        if (volumeType == VolumeType::ColorTSDF)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
-        else
-            displayImage(depth, points, normals, depthFactor, lightPose);
-    }
+        Mat depth = scene->depth(poses[0]);
+        Mat rgb = scene->rgb(poses[0]);
+        Mat points, normals;
 
-    if (checkGrowth)
-    {
-        //TODO: check that pose
-        auto pose2 = poses[17];
-        Mat depth2 = scene->depth(pose2);
-        Mat rgb2 = scene->rgb(pose2);
-
-        Mat points, normals, colors, newPoints, newNormals;
-
-        volume.setEnableGrowth(false);
-
-        if (volumeType == VolumeType::ColorTSDF)
-            volume.integrate(depth2, rgb2, pose2.matrix);
-        else
-            volume.integrate(depth2, pose2.matrix);
+        volume.integrate(depth, poses[0].matrix);
+        volume.integrate(depth, poses[0].matrix);
 
         Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-
-        //TODO: compare bounding boxes
+        //TODO: true value
+        Vec6f truebb;
+        Vec6f diff = bb - truebb;
+        double bbnorm = std::sqrt(diff.ddot(diff));
+        EXPECT_LE(bbnorm, 0.0);
 
         if (cvtest::debugLevel > 0)
         {
-            if (volumeType == VolumeType::ColorTSDF)
-                volume.raycast(pose2.matrix, points, normals, colors);
-            else
-                volume.raycast(pose2.matrix, points, normals);
+            volume.raycast(poses[0].matrix, points, normals);
 
-            if (volumeType == VolumeType::ColorTSDF)
-                displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
-            else
-                displayImage(depth, points, normals, depthFactor, lightPose);
+            displayImage(depth, points, normals, depthFactor, lightPose);
         }
-    }
 
-    //TODO: create scene with prolongating geometry
-    //TODO: render scene from 1st pose, integrate, measure bounding box
-    //TODO: if growthTest flag is on, enable/disable growth
-    //TODO: render scene from 2nd pose == 1st pose + translate(distance, 0, 0), integrate, measure bounding box
+        // TODO: check that pose
+        Mat depth2 = scene->depth(poses[0].translate(Vec3f(1.2f, 0, 0)));
+
+        volume.setEnableGrowth(false);
+
+        //DEBUG
+        //volume.integrate(depth2, pose2.matrix);
+        volume.integrate(depth2, poses[0].matrix);
+
+        Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+        // TODO: true value
+        Vec6f truebb2;
+        Vec6f diff2 = bb2 - truebb2;
+        double bbnorm2 = std::sqrt(diff2.ddot(diff2));
+        EXPECT_LE(bbnorm2, 0.0);
+
+        if (cvtest::debugLevel > 0)
+        {
+            volume.raycast(poses[0].matrix, points, normals);
+
+            displayImage(depth, points, normals, depthFactor, lightPose);
+        }
+
+        // TODO: create scene with prolongating geometry
+        // TODO: render scene from 1st pose, integrate, measure bounding box
+        // TODO: if growthTest flag is on, enable/disable growth
+        // TODO: render scene from 2nd pose == 1st pose + translate(distance, 0, 0), integrate, measure bounding box
+    }
 }
 
 static Mat nanMask(Mat img)
@@ -1055,7 +1048,7 @@ TEST(TSDF, valid_points_common_framesize_frame)
 
 TEST(TSDF, boundingBox)
 {
-    boundingBoxGrowthTest(VolumeType::TSDF, false);
+    boundingBoxGrowthTest(VolumeType::TSDF);
 }
 
 TEST(HashTSDF, raycast_custom_framesize_normals_mat)
@@ -1108,14 +1101,9 @@ TEST(HashTSDF, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF, boundingBox)
+TEST(HashTSDF, boundingBoxEnableGrowth)
 {
-    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
-}
-
-TEST(HashTSDF, enableGrowth)
-{
-    boundingBoxGrowthTest(VolumeType::HashTSDF, true);
+    boundingBoxGrowthTest(VolumeType::HashTSDF);
 }
 
 TEST(HashTSDF, reproduce_volPoseRot)
@@ -1175,7 +1163,7 @@ TEST(ColorTSDF, valid_points_common_framesize_fetch)
 
 TEST(ColorTSDF, boundingBox)
 {
-    boundingBoxGrowthTest(VolumeType::ColorTSDF, false);
+    boundingBoxGrowthTest(VolumeType::ColorTSDF);
 }
 
 #else
@@ -1252,7 +1240,7 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 TEST(TSDF_CPU, boundingBox)
 {
     cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
+    boundingBoxGrowthTest(VolumeType::HashTSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -1406,21 +1394,14 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
 TEST(ColorTSDF_CPU, boundingBox)
 {
     cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::ColorTSDF, false);
+    boundingBoxGrowthTest(VolumeType::ColorTSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, boundingBox)
+TEST(HashTSDF_CPU, boundingBoxEnableGrowth)
 {
     cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::HashTSDF, false);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, boundingBox)
-{
-    cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::HashTSDF, true);
+    boundingBoxGrowthTest(VolumeType::HashTSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
