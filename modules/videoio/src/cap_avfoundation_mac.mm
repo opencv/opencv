@@ -687,7 +687,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvtColor(mDeviceImage, mOutImage, CV_BGRA2BGR);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), CV_BGRA2BGR);
     } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {
         if ( currSize != width*3*height ) {
             currSize = width*3*height;
@@ -706,7 +706,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvtColor(mDeviceImage, mOutImage, CV_YUV2BGR_UYVY);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), CV_YUV2BGR_UYVY);
     } else {
         fprintf(stderr, "OpenCV: unknown pixel format 0x%08X\n", pixelFormat);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -1053,7 +1053,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         // Copy.
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
-        cvtColor(mDeviceImage, mOutImage, cvtCode);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), cvtCode);
     }
 
 
@@ -1333,10 +1333,10 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
 
     if (movieColor) {
         //assert(iplimage->nChannels == 3);
-        cvtColor(iplimage, argbimage, CV_BGR2BGRA);
+        cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), CV_BGR2BGRA);
     }else{
         //assert(iplimage->nChannels == 1);
-        cvtColor(iplimage, argbimage, CV_GRAY2BGRA);
+        cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), CV_GRAY2BGRA);
     }
     //IplImage -> CGImage conversion
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
