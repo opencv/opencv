@@ -42,15 +42,15 @@ int main(int argc, char *argv[])
             "{keypoints k       |2000  | number of keypoints to detect                                      }"
             "{ratio r           |0.7   | threshold for ratio test                                           }"
             "{iterations it     |500   | RANSAC maximum iterations count                                    }"
-            "{error e           |8.0   | RANSAC reprojection error                                          }"
-            "{confidence c      |0.90  | RANSAC confidence                                                  }"
+            "{error e           |6.0   | RANSAC reprojection error                                          }"
+            "{confidence c      |0.99  | RANSAC confidence                                                  }"
             "{inliers in        |30    | minimum inliers for Kalman update                                  }"
-            "{method  pnp       |1     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS - (5) AP3P - (9) NPNP}"
+            "{method  pnp       |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS - (5) AP3P - (9) NPNP}"
             "{fast f            |true  | use of robust fast match                                           }"
             "{feature           |ORB   | feature name (ORB, KAZE, AKAZE, BRISK, SIFT, SURF, BINBOOST, VGG)  }"
-            "{FLANN             |true | use FLANN library for descriptors matching                         }"
+            "{FLANN             |false | use FLANN library for descriptors matching                         }"
             "{save              |      | path to the directory where to save the image results              }"
-            "{displayFiltered   |true | display filtered pose (from Kalman filter)                         }"
+            "{displayFiltered   |false | display filtered pose (from Kalman filter)                         }"
             ;
     CommandLineParser parser(argc, argv, keys);
 
@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     string yml_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/cookies_ORB.yml"); // 3dpts + descriptors
     string ply_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.ply");         // mesh
 
-    Ptr<Feature2D> orb = ORB::create();
-    orb.dynamicCast<cv::ORB>()->setNLevels(1);
+    //Ptr<Feature2D> orb = ORB::create();
+    //orb.dynamicCast<cv::ORB>()->setNLevels(1);
 
     // Intrinsic camera parameters: UVC WEBCAM
     double f = 55;                           // focal length in mm
@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
 
     // RANSAC parameters
     int iterationsCount = 500;      // number of Ransac iterations.
-    float reprojectionError = 8.0;  // maximum allowed distance to consider it an inlier.
-    double confidence = 0.90;       // ransac successful confidence.
+    float reprojectionError = 6.0;  // maximum allowed distance to consider it an inlier.
+    double confidence = 0.99;       // ransac successful confidence.
 
     // Kalman Filter parameters
     int minInliersKalman = 30;    // Kalman threshold updating
@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
     // PnP parameters
     int pnpMethod = SOLVEPNP_ITERATIVE;
     string featureName = "ORB";
-    bool useFLANN = true;
+    bool useFLANN = false;
 
     // Save results
     string saveDirectory = "";
     Mat frameSave;
     int frameCount = 0;
 
-    bool displayFilteredPose = true;
+    bool displayFilteredPose = false;
 
     if (parser.has("help"))
     {
