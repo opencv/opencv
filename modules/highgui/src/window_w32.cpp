@@ -309,7 +309,7 @@ static const char* const mainHighGUIclassName = "Main HighGUI class";
 
 static void icvCleanupHighgui()
 {
-    cvDestroyAllWindows();
+    destroyAllWindowsImpl();
     UnregisterClass(highGUIclassName, hg_hinstance);
     UnregisterClass(mainHighGUIclassName, hg_hinstance);
 }
@@ -1131,9 +1131,9 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
 
-CV_IMPL void cvSetOpenGlContext(const char* name)
+void setOpenGLContextImpl(const char* name)
 {
-    CV_FUNCNAME("cvSetOpenGlContext");
+    CV_FUNCNAME("setOpenGLContextImpl");
 
     AutoLock lock(getWindowMutex());
 
@@ -1151,9 +1151,9 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
         CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
 }
 
-CV_IMPL void cvUpdateWindow(const char* name)
+void updateWindowImpl(const char* name)
 {
-    CV_FUNCNAME("cvUpdateWindow");
+    CV_FUNCNAME("updateWindowImpl");
 
     AutoLock lock(getWindowMutex());
 
@@ -1167,7 +1167,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
     InvalidateRect(window->hwnd, 0, 0);
 }
 
-CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback callback, void* userdata)
+void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
     CV_FUNCNAME("cvCreateOpenGLCallback");
 
@@ -1242,9 +1242,9 @@ static void icvRemoveWindow(const std::shared_ptr<CvWindow>& window_)
 }
 
 
-CV_IMPL void cvDestroyWindow(const char* name)
+void destroyWindowImpl(const char* name)
 {
-    CV_FUNCNAME("cvDestroyWindow");
+    CV_FUNCNAME("destroyWindowImpl");
 
     AutoLock lock(getWindowMutex());
 
@@ -1619,13 +1619,13 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_MOUSEHWHEEL:
        if (window.on_mouse)
        {
-          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
-                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
-                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
-                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
-          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+          int flags = (wParam & MK_LBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_SHIFT        ? cv::EVENT_FLAG_LBUTTON : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_LBUTTON   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? cv::EVENT_FLAG_LBUTTON    : cv::EVENT_FLAG_LBUTTON);
 
           // Set the wheel delta of mouse wheel to be in the upper word of 'event'
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -1817,22 +1817,22 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         {
             POINT pt;
 
-            int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
-                        (wParam & MK_MBUTTON ? CV_EVENT_FLAG_MBUTTON : 0)|
-                        (wParam & MK_CONTROL ? CV_EVENT_FLAG_CTRLKEY : 0)|
-                        (wParam & MK_SHIFT ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                        (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY : 0);
-            int event = uMsg == WM_LBUTTONDOWN ? CV_EVENT_LBUTTONDOWN :
-                        uMsg == WM_RBUTTONDOWN ? CV_EVENT_RBUTTONDOWN :
-                        uMsg == WM_MBUTTONDOWN ? CV_EVENT_MBUTTONDOWN :
-                        uMsg == WM_LBUTTONUP ? CV_EVENT_LBUTTONUP :
-                        uMsg == WM_RBUTTONUP ? CV_EVENT_RBUTTONUP :
-                        uMsg == WM_MBUTTONUP ? CV_EVENT_MBUTTONUP :
-                        uMsg == WM_LBUTTONDBLCLK ? CV_EVENT_LBUTTONDBLCLK :
-                        uMsg == WM_RBUTTONDBLCLK ? CV_EVENT_RBUTTONDBLCLK :
-                        uMsg == WM_MBUTTONDBLCLK ? CV_EVENT_MBUTTONDBLCLK :
-                                                   CV_EVENT_MOUSEMOVE;
+            int flags = (wParam & MK_LBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_RBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_MBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_CONTROL ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_SHIFT ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_LBUTTON : 0);
+            int event = uMsg == WM_LBUTTONDOWN ? cv::EVENT_LBUTTONDOWN :
+                        uMsg == WM_RBUTTONDOWN ? cv::EVENT_RBUTTONDOWN :
+                        uMsg == WM_MBUTTONDOWN ? cv::EVENT_MBUTTONDOWN :
+                        uMsg == WM_LBUTTONUP ? cv::EVENT_LBUTTONUP :
+                        uMsg == WM_RBUTTONUP ? cv::EVENT_FLAG_LBUTTON :
+                        uMsg == WM_MBUTTONUP ? cv::EVENT_FLAG_LBUTTON :
+                        uMsg == WM_LBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
+                        uMsg == WM_RBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
+                        uMsg == WM_MBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
+                                                   cv::EVENT_MOUSEMOVE;
             if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN)
                 SetCapture(hwnd);
             if (uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP)
@@ -2093,7 +2093,7 @@ static LRESULT CALLBACK HGToolbarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 
 
 CV_IMPL void
-cvDestroyAllWindows(void)
+destroyAllWindowsImpl(void)
 {
     std::vector< std::shared_ptr<CvWindow> > g_windows;
     {
@@ -2291,8 +2291,7 @@ int pollKey_W32()
     }
 }
 
-CV_IMPL int
-cvWaitKey(int delay)
+int waitKeyImpl(int delay)
 {
     int64 time0 = cv::getTickCount();
     int64 timeEnd = time0 + (int64)(delay * 0.001f * cv::getTickFrequency());
@@ -2532,8 +2531,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     return trackbar;
 }
 
-CV_IMPL int
-cvCreateTrackbar2(const char* trackbar_name, const char* window_name,
+int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
                   int* val, int count, CvTrackbarCallback2 on_notify2,
                   void* userdata)
 {
@@ -2541,10 +2539,9 @@ cvCreateTrackbar2(const char* trackbar_name, const char* window_name,
         0, on_notify2, userdata);
 }
 
-CV_IMPL void
-cvSetMouseCallback(const char* name, CvMouseCallback on_mouse, void* param)
+void setMouseCallbackImpl(const char* name, CvMouseCallback on_mouse, void* param)
 {
-    CV_FUNCNAME("cvSetMouseCallback");
+    CV_FUNCNAME("setMouseCallbackImpl");
 
     if (!name)
         CV_Error(Error::StsNullPtr, "NULL window name");
@@ -2560,9 +2557,9 @@ cvSetMouseCallback(const char* name, CvMouseCallback on_mouse, void* param)
 }
 
 
-CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
+int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 {
-    CV_FUNCNAME("cvGetTrackbarPos");
+    CV_FUNCNAME("getTrackbarPosImpl");
 
     AutoLock lock(getWindowMutex());
 
@@ -2581,9 +2578,9 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
 }
 
 
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos)
+void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("cvSetTrackbarPos");
+    CV_FUNCNAME("setTrackbarPosImpl");
 
     AutoLock lock(getWindowMutex());
 
@@ -2611,9 +2608,9 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("cvSetTrackbarMax");
+    CV_FUNCNAME("setTrackbarMaxImpl");
 
     if (trackbar_name == 0 || window_name == 0)
     {
@@ -2640,9 +2637,9 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("cvSetTrackbarMin");
+    CV_FUNCNAME("setTrackbarMinImpl");
 
     if (trackbar_name == 0 || window_name == 0)
     {
@@ -2666,18 +2663,6 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
         trackbar->minval = (minval<trackbar->maxval)?minval:trackbar->maxval;
         SendMessage(trackbar->hwnd, TBM_SETRANGEMIN, (WPARAM)TRUE, (LPARAM)minval);
     }
-}
-
-CV_IMPL void
-cvSetPreprocessFuncWin32_(const void* callback)
-{
-    hg_on_preprocess = (CvWin32WindowCallback)callback;
-}
-
-CV_IMPL void
-cvSetPostprocessFuncWin32_(const void* callback)
-{
-    hg_on_postprocess = (CvWin32WindowCallback)callback;
 }
 
 
@@ -2957,7 +2942,7 @@ public:
 
     void destroyAllWindows() CV_OVERRIDE
     {
-        cvDestroyAllWindows();
+        destroyAllWindowsImpl();
     }
 
     // namedWindow
@@ -2974,7 +2959,7 @@ public:
 
     int waitKeyEx(int delay) CV_OVERRIDE
     {
-        return cvWaitKey(delay);
+        return waitKeyImpl(delay);
     }
     int pollKey() CV_OVERRIDE
     {

@@ -96,9 +96,9 @@ int namedWindowImpl(const char* name, int flags)
     return CV_OK;
 }
 
-CV_IMPL void cvDestroyWindow(const char* name)
+void destroyWindowImpl(const char* name)
 {
-    CV_FUNCNAME("cvDestroyWindow");
+    CV_FUNCNAME("destroyWindowImpl");
 
     if (!name)
         CV_ERROR(CV_StsNullPtr, "NULL name string");
@@ -106,15 +106,15 @@ CV_IMPL void cvDestroyWindow(const char* name)
     HighguiBridge::getInstance().destroyWindow(name);
 }
 
-CV_IMPL void cvDestroyAllWindows()
+void destroyAllWindowsImpl()
 {
     HighguiBridge::getInstance().destroyAllWindows();
 }
 
-CV_IMPL int cvCreateTrackbar2(const char* trackbar_name, const char* window_name,
+int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
     int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
-    CV_FUNCNAME("cvCreateTrackbar2");
+    CV_FUNCNAME("createTrackbar2Impl");
 
     int pos = 0;
 
@@ -136,9 +136,9 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name, const char* window_name
     return CV_OK;
 }
 
-CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name, int pos)
+void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("cvSetTrackbarPos");
+    CV_FUNCNAME("setTrackbarPosImpl");
 
     CvTrackbar* trackbar = 0;
 
@@ -153,9 +153,9 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
         trackbar->setPosition(pos);
 }
 
-CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("cvSetTrackbarMax");
+    CV_FUNCNAME("setTrackbarMaxImpl");
 
     if (maxval >= 0)
     {
@@ -169,9 +169,9 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     }
 }
 
-CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("cvSetTrackbarMin");
+    CV_FUNCNAME("setTrackbarMinImpl");
 
     if (minval >= 0)
     {
@@ -185,11 +185,11 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     }
 }
 
-CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
+int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 {
     int pos = -1;
 
-    CV_FUNCNAME("cvGetTrackbarPos");
+    CV_FUNCNAME("getTrackbarPosImpl");
 
     if (trackbar_name == 0 || window_name == 0)
         CV_ERROR(CV_StsNullPtr, "NULL trackbar or window name");
@@ -204,9 +204,9 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
 
 /********************************** Not YET implemented API ****************************************************/
 
-CV_IMPL int cvWaitKey(int delay)
+int waitKeyImpl(int delay)
 {
-    CV_WINRT_NO_GUI_ERROR("cvWaitKey");
+    CV_WINRT_NO_GUI_ERROR("waitKeyImpl");
 
     // see https://msdn.microsoft.com/en-us/library/windows/desktop/ms724411(v=vs.85).aspx
     int time0 = GetTickCount64();
@@ -222,11 +222,11 @@ CV_IMPL int cvWaitKey(int delay)
     }
 }
 
-CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mouse, void* param)
+void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
-    CV_WINRT_NO_GUI_ERROR("cvSetMouseCallback");
+    CV_WINRT_NO_GUI_ERROR("setMouseCallbackImpl");
 
-    CV_FUNCNAME("cvSetMouseCallback");
+    CV_FUNCNAME("setMouseCallbackImpl");
 
     if (!window_name)
         CV_ERROR(CV_StsNullPtr, "NULL window name");

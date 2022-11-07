@@ -384,10 +384,10 @@ private slots:
 
 enum type_mouse_event { mouse_up = 0, mouse_down = 1, mouse_dbclick = 2, mouse_move = 3, mouse_wheel = 4 };
 static const int tableMouseButtons[][3]={
-    {CV_EVENT_LBUTTONUP, CV_EVENT_RBUTTONUP, CV_EVENT_MBUTTONUP},               //mouse_up
-    {CV_EVENT_LBUTTONDOWN, CV_EVENT_RBUTTONDOWN, CV_EVENT_MBUTTONDOWN},         //mouse_down
-    {CV_EVENT_LBUTTONDBLCLK, CV_EVENT_RBUTTONDBLCLK, CV_EVENT_MBUTTONDBLCLK},   //mouse_dbclick
-    {CV_EVENT_MOUSEMOVE, CV_EVENT_MOUSEMOVE, CV_EVENT_MOUSEMOVE},               //mouse_move
+    {cv::EVENT_LBUTTONUP, cv::EVENT_RBUTTONUP, cv::EVENT_MBUTTONUP},               //mouse_up
+    {cv::EVENT_LBUTTONDOWN, cv::EVENT_RBUTTONDOWN, cv::EVENT_MBUTTONDOWN},         //mouse_down
+    {cv::EVENT_LBUTTONDBLCLK, cv::EVENT_RBUTTONDBLCLK, cv::EVENT_MBUTTONDBLCLK},   //mouse_dbclick
+    {cv::EVENT_MOUSEMOVE, cv::EVENT_MOUSEMOVE, cv::EVENT_MOUSEMOVE},               //mouse_move
     {0, 0, 0}                                                                   //mouse_wheel, to prevent exceptions in code
 };
 

@@ -71,6 +71,7 @@
 #endif
 
 #include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/utils/trace.hpp"
 #include "opencv2/imgproc.hpp"
 
 using namespace cv;
@@ -738,19 +739,6 @@ std::shared_ptr<CvWindow> icvFindWindowByName(const char* name)
     return icvFindWindowByName(std::string(name));
 }
 
-
-static CvWindow* icvWindowByWidget( GtkWidget* widget )
-{
-    auto& g_windows = getGTKWindows();
-    for (size_t i = 0; i < g_windows.size(); ++i)
-    {
-        CvWindow* window = g_windows[i].get();
-        if (window->widget == widget || window->frame == widget || window->paned == widget)
-            return window;
-    }
-    return NULL;
-}
-
 static Rect getImageRect_(const std::shared_ptr<CvWindow>& window);
 
 CvRect cvGetWindowRect_GTK(const char* name)
@@ -1201,7 +1189,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
     if (window->useGl)
-        cvSetOpenGlContext(name.c_str());
+        setOpenGLContextImpl(name.c_str());
 #endif
 
     return window_ptr;
@@ -1210,7 +1198,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
 
-CV_IMPL void cvSetOpenGlContext(const char* name)
+void setOpenGLContextImpl(const char* name)
 {
     GdkGLContext* glcontext;
     GdkGLDrawable* gldrawable;
@@ -1233,7 +1221,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
         CV_Error( CV_OpenGlApiCallError, "Can't Activate The GL Rendering Context" );
 }
 
-CV_IMPL void cvUpdateWindow(const char* name)
+void updateWindowImpl(const char* name)
 {
     CV_Assert(name && "NULL name string");
 
@@ -1247,7 +1235,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
     gtk_widget_queue_draw( GTK_WIDGET(window->widget) );
 }
 
-CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback callback, void* userdata)
+void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
     CV_Assert(name && "NULL name string");
 
@@ -1289,7 +1277,7 @@ static void checkLastWindow()
 #ifdef HAVE_GTHREAD
         if( thread_started )
         {
-            // send key press signal to jump out of any waiting cvWaitKey's
+            // send key press signal to jump out of any waiting waitKeyImpl's
             g_cond_broadcast( cond_have_key );
         }
         else
@@ -1330,7 +1318,7 @@ void icvDeleteWindow_( CvWindow* window )
     checkLastWindow();
 }
 
-CV_IMPL void cvDestroyWindow( const char* name )
+void destroyWindowImpl( const char* name )
 {
     CV_Assert(name && "NULL name string");
 
@@ -1353,8 +1341,7 @@ CV_IMPL void cvDestroyWindow( const char* name )
 }
 
 
-CV_IMPL void
-cvDestroyAllWindows( void )
+void destroyAllWindowsImpl( void )
 {
     CV_LOCK_MUTEX();
 
@@ -1534,8 +1521,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     return 1;
 }
 
-CV_IMPL int
-cvCreateTrackbar2( const char* trackbar_name, const char* window_name,
+int createTrackbar2Impl( const char* trackbar_name, const char* window_name,
                    int* val, int count, CvTrackbarCallback2 on_notify2,
                    void* userdata )
 {
@@ -1590,8 +1576,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(
 }
 
 
-CV_IMPL void
-cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* param )
+void setMouseCallbackImpl( const char* window_name, CvMouseCallback on_mouse, void* param )
 {
     CV_Assert(window_name && "NULL window name");
 
@@ -1606,7 +1591,7 @@ cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* par
 }
 
 
-CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name )
+int getTrackbarPosImpl( const char* trackbar_name, const char* window_name )
 {
     CV_Assert(window_name && "NULL window name");
     CV_Assert(trackbar_name && "NULL trackbar name");
@@ -1625,7 +1610,7 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 }
 
 static void setTrackbarPos_(const std::shared_ptr<CvTrackbar>& trackbar, int pos);
-CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
+void setTrackbarPosImpl( const char* trackbar_name, const char* window_name, int pos )
 {
     CV_Assert(window_name && "NULL window name");
     CV_Assert(trackbar_name && "NULL trackbar name");
@@ -1657,7 +1642,7 @@ static void setTrackbarPos_(const std::shared_ptr<CvTrackbar>& trackbar, int pos
 }
 
 
-CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name, int maxval)
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
     CV_Assert(window_name && "NULL window name");
     CV_Assert(trackbar_name && "NULL trackbar name");
@@ -1678,7 +1663,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
 }
 
 
-CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name, int minval)
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
     CV_Assert(window_name && "NULL window name");
     CV_Assert(trackbar_name && "NULL trackbar name");
@@ -1900,7 +1885,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     {
         GdkEventMotion* event_motion = (GdkEventMotion*)event;
 
-        cv_event = CV_EVENT_MOUSEMOVE;
+        cv_event = cv::EVENT_MOUSEMOVE;
         pt32f.x = cvFloor(event_motion->x);
         pt32f.y = cvFloor(event_motion->y);
         state = event_motion->state;
@@ -1916,21 +1901,21 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 
         if( event_button->type == GDK_BUTTON_PRESS )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDOWN :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONDOWN :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONDOWN : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_LBUTTONDOWN :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONDOWN :
+                       event_button->button == 3 ? cv::EVENT_RBUTTONDOWN : 0;
         }
         else if( event_button->type == GDK_BUTTON_RELEASE )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONUP :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONUP :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONUP : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_LBUTTONUP :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONUP :
+                       event_button->button == 3 ? cv::EVENT_MBUTTONUP : 0;
         }
         else if( event_button->type == GDK_2BUTTON_PRESS )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDBLCLK :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONDBLCLK :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONDBLCLK : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_MBUTTONUP :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONUP :
+                       event_button->button == 3 ? cv::EVENT_MBUTTONUP : 0;
         }
         state = event_button->state;
     }
@@ -1943,9 +1928,9 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #if defined(GTK_VERSION3_4)
         // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separately
         double delta = (event->scroll.delta_x + event->scroll.delta_y);
-        cv_event   = (event->scroll.delta_x==0) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL;
+        cv_event   = (event->scroll.delta_x==0) ? cv::EVENT_MBUTTONUP : cv::EVENT_MBUTTONUP;
 #else
-        cv_event = CV_EVENT_MOUSEWHEEL;
+        cv_event = cv::EVENT_MBUTTONUP;
 #endif //GTK_VERSION3_4
 
         state    = event->scroll.state;
@@ -1955,11 +1940,11 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
             break;
 #endif //GTK_VERSION3_4
-        case GDK_SCROLL_LEFT:  cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_LEFT:  cv_event = cv::EVENT_MBUTTONUP;
             /* FALLTHRU */
         case GDK_SCROLL_UP:    flags |= ~0xffff;
             break;
-        case GDK_SCROLL_RIGHT: cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_RIGHT: cv_event = cv::EVENT_MBUTTONUP;
             /* FALLTHRU */
         case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
             break;
@@ -1999,16 +1984,16 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         {
             // handle non-keyboard (mouse) modifiers first
             flags |=
-                BIT_MAP(state, GDK_BUTTON1_MASK, CV_EVENT_FLAG_LBUTTON)  |
-                BIT_MAP(state, GDK_BUTTON2_MASK, CV_EVENT_FLAG_MBUTTON)  |
-                BIT_MAP(state, GDK_BUTTON3_MASK, CV_EVENT_FLAG_RBUTTON);
+                BIT_MAP(state, GDK_BUTTON1_MASK, cv::EVENT_MBUTTONUP)  |
+                BIT_MAP(state, GDK_BUTTON2_MASK, cv::EVENT_MBUTTONUP)  |
+                BIT_MAP(state, GDK_BUTTON3_MASK, cv::EVENT_MBUTTONUP);
             // keyboard modifiers
             state &= gtk_accelerator_get_default_mod_mask();
             flags |=
-                BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
-                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
-                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
-                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY);
+                BIT_MAP(state, GDK_SHIFT_MASK,   cv::EVENT_MBUTTONUP) |
+                BIT_MAP(state, GDK_CONTROL_MASK, cv::EVENT_MBUTTONUP)  |
+                BIT_MAP(state, GDK_MOD1_MASK,    cv::EVENT_MBUTTONUP)   |
+                BIT_MAP(state, GDK_MOD2_MASK,    cv::EVENT_MBUTTONUP);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }
@@ -2024,7 +2009,7 @@ static gboolean icvAlarm( gpointer user_data )
 }
 
 
-CV_IMPL int cvWaitKey( int delay )
+int waitKeyImpl( int delay )
 {
 #ifdef HAVE_GTHREAD
     if (thread_started && g_thread_self() != window_thread)
@@ -2320,7 +2305,7 @@ public:
 
     void destroyAllWindows() CV_OVERRIDE
     {
-        cvDestroyAllWindows();
+        destroyAllWindowsImpl();
     }
 
     // namedWindow
@@ -2337,11 +2322,11 @@ public:
 
     int waitKeyEx(int delay) CV_OVERRIDE
     {
-        return cvWaitKey(delay);
+        return waitKeyImpl(delay);
     }
     int pollKey() CV_OVERRIDE
     {
-        return cvWaitKey(1);  // TODO
+        return waitKeyImpl(1);  // TODO
     }
 };  // GTKBackendUI
 

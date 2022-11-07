@@ -167,8 +167,6 @@ It provides easy interface to:
             cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
         }
     @endcode
-
-    @defgroup highgui_c C API
 @}
 */
 

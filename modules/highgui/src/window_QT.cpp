@@ -367,7 +367,7 @@ double cvGetModeWindow_QT(const char* name)
     return result;
 }
 
-CV_IMPL int cvWaitKey(int delay)
+int waitKeyImpl(int delay)
 {
     int result = -1;
 
@@ -573,7 +573,7 @@ int namedWindowImpl(const char* name, int flags)
 }
 
 
-CV_IMPL void cvDestroyWindow(const char* name)
+void destroyWindowImpl(const char* name)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -585,7 +585,7 @@ CV_IMPL void cvDestroyWindow(const char* name)
 }
 
 
-CV_IMPL void cvDestroyAllWindows()
+void destroyAllWindowsImpl()
 {
     if (!guiMainThread)
         return;
@@ -621,7 +621,7 @@ void resizeWindowImpl(const char* name, int width, int height)
 }
 
 
-CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
+int createTrackbar2Impl(const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -639,7 +639,7 @@ CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int
     return 1; //dummy value
 }
 
-CV_IMPL int cvGetTrackbarPos(const char* name_bar, const char* window_name)
+int getTrackbarPosImpl(const char* name_bar, const char* window_name)
 {
     int result = -1;
 
@@ -652,7 +652,7 @@ CV_IMPL int cvGetTrackbarPos(const char* name_bar, const char* window_name)
 }
 
 
-CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int pos)
+void setTrackbarPosImpl(const char* name_bar, const char* window_name, int pos)
 {
     QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
 
@@ -661,7 +661,7 @@ CV_IMPL void cvSetTrackbarPos(const char* name_bar, const char* window_name, int
 }
 
 
-CV_IMPL void cvSetTrackbarMax(const char* name_bar, const char* window_name, int maxval)
+void setTrackbarMaxImpl(const char* name_bar, const char* window_name, int maxval)
 {
     QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
     if (t)
@@ -671,7 +671,7 @@ CV_IMPL void cvSetTrackbarMax(const char* name_bar, const char* window_name, int
 }
 
 
-CV_IMPL void cvSetTrackbarMin(const char* name_bar, const char* window_name, int minval)
+void setTrackbarMinImpl(const char* name_bar, const char* window_name, int minval)
 {
     QPointer<CvTrackbar> t = icvFindTrackBarByName(name_bar, window_name);
     if (t)
@@ -682,7 +682,7 @@ CV_IMPL void cvSetTrackbarMin(const char* name_bar, const char* window_name, int
 
 
 /* assign callback for mouse events */
-CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mouse, void* param)
+void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
     QPointer<CvWindow> w = icvFindWindowByName(QLatin1String(window_name));
 
@@ -714,7 +714,7 @@ void showImageImpl(const char* name, const CvArr* arr)
 
 #ifdef HAVE_QT_OPENGL
 
-CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallback callback, void* userdata)
+void setOpenGLDrawCallbackImpl(const char* window_name, CvOpenGlDrawCallback callback, void* userdata)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -728,7 +728,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 }
 
 
-CV_IMPL void cvSetOpenGlContext(const char* window_name)
+void setOpenGLContextImpl(const char* window_name)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -740,7 +740,7 @@ CV_IMPL void cvSetOpenGlContext(const char* window_name)
 }
 
 
-CV_IMPL void cvUpdateWindow(const char* window_name)
+void updateWindowImpl(const char* window_name)
 {
     if (!guiMainThread)
         CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -983,7 +983,7 @@ void GuiReceiver::createWindow(QString name, int flags)
 
     nb_windows++;
     new CvWindow(name, flags);
-    cvWaitKey(1);
+    waitKeyImpl(1);
 }
 
 
@@ -2400,23 +2400,23 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
     // icvmouseHandler called with flags == 0 where it really need.
     //flags = 0;
     if(modifiers & Qt::ShiftModifier)
-        flags |= CV_EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
     if(modifiers & Qt::ControlModifier)
-        flags |= CV_EVENT_FLAG_CTRLKEY;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
     if(modifiers & Qt::AltModifier)
-        flags |= CV_EVENT_FLAG_ALTKEY;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
 
     if(buttons & Qt::LeftButton)
-        flags |= CV_EVENT_FLAG_LBUTTON;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
     if(buttons & Qt::RightButton)
-        flags |= CV_EVENT_FLAG_RBUTTON;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
     if(buttons & Qt_MiddleButton)
-        flags |= CV_EVENT_FLAG_MBUTTON;
+        flags |= cv::EVENT_FLAG_SHIFTKEY;
 
     if (cv_event == -1) {
         if (category == mouse_wheel) {
             QWheelEvent *we = (QWheelEvent *) evnt;
-            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? cv::EVENT_FLAG_SHIFTKEY : cv::EVENT_FLAG_SHIFTKEY);
             flags |= (wheelEventDelta(we) & 0xffff)<<16;
             return;
         }
@@ -2424,18 +2424,18 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
         {
         case Qt::LeftButton:
             cv_event = tableMouseButtons[category][0];
-            flags |= CV_EVENT_FLAG_LBUTTON;
+            flags |= cv::EVENT_FLAG_SHIFTKEY;
             break;
         case Qt::RightButton:
             cv_event = tableMouseButtons[category][1];
-            flags |= CV_EVENT_FLAG_RBUTTON;
+            flags |= cv::EVENT_FLAG_SHIFTKEY;
             break;
         case Qt_MiddleButton:
             cv_event = tableMouseButtons[category][2];
-            flags |= CV_EVENT_FLAG_MBUTTON;
+            flags |= cv::EVENT_FLAG_SHIFTKEY;
             break;
         default:
-            cv_event = CV_EVENT_MOUSEMOVE;
+            cv_event = cv::EVENT_MOUSEMOVE;
         }
     }
 }

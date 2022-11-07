@@ -285,7 +285,7 @@ void cv::destroyWindow( const String& winname )
         }
     }
 
-    cvDestroyWindow( winname.c_str() );
+    destroyWindowImpl( winname.c_str() );
 }
 
 void cv::destroyAllWindows()
@@ -303,7 +303,7 @@ void cv::destroyAllWindows()
         }
     }
 
-    cvDestroyAllWindows();
+    destroyAllWindowsImpl();
 }
 
 void cv::resizeWindow( const String& winname, int width, int height )
@@ -638,7 +638,7 @@ int cv::waitKeyEx(int delay)
         }
     }
 
-    return cvWaitKey(delay);
+    return waitKeyImpl(delay);
 }
 
 int cv::waitKey(int delay)
@@ -677,7 +677,7 @@ int cv::pollKey()
     return pollKey_W32();
 #else
     // fallback. please implement a proper polling function
-    return cvWaitKey(1);
+    return waitKeyImpl(1);
 #endif
 }
 
@@ -737,7 +737,7 @@ int cv::createTrackbar(const String& trackbarName, const String& winName,
     }
     return 0;
 #else
-    return cvCreateTrackbar2(trackbarName.c_str(), winName.c_str(),
+    return createTrackbar2Impl(trackbarName.c_str(), winName.c_str(),
                              value, count, callback, userdata);
 #endif
 }
@@ -770,7 +770,7 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
     }
     return;
 #else
-    cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
+    setTrackbarPosImpl(trackbarName.c_str(), winName.c_str(), value );
 #endif
 }
 
@@ -804,7 +804,7 @@ void cv::setTrackbarMax(const String& trackbarName, const String& winName, int m
     }
     return;
 #else
-    cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+    setTrackbarMaxImpl(trackbarName.c_str(), winName.c_str(), maxval);
 #endif
 }
 
@@ -838,7 +838,7 @@ void cv::setTrackbarMin(const String& trackbarName, const String& winName, int m
     }
     return;
 #else
-    cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
+    setTrackbarMinImpl(trackbarName.c_str(), winName.c_str(), minval);
 #endif
 }
 
@@ -870,7 +870,7 @@ int cv::getTrackbarPos( const String& trackbarName, const String& winName )
     }
     return -1;
 #else
-    return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
+    return getTrackbarPosImpl(trackbarName.c_str(), winName.c_str());
 #endif
 }
 
@@ -900,14 +900,14 @@ void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void
     }
     return;
 #else
-    cvSetMouseCallback(windowName.c_str(), onMouse, param);
+    setMouseCallbackImpl(windowName.c_str(), onMouse, param);
 #endif
 }
 
 int cv::getMouseWheelDelta( int flags )
 {
     CV_TRACE_FUNCTION();
-    return CV_GET_WHEEL_DELTA(flags);
+    return ((short)((flags >> 16) & 0xffff)); // upper 16 bits
 }
 
 #if !defined (HAVE_GTK)
@@ -923,19 +923,19 @@ int cv::startWindowThread()
 void cv::setOpenGlDrawCallback(const String& name, OpenGlDrawCallback callback, void* userdata)
 {
     CV_TRACE_FUNCTION();
-    cvSetOpenGlDrawCallback(name.c_str(), callback, userdata);
+    setOpenGLDrawCallbackImpl(name.c_str(), callback, userdata);
 }
 
 void cv::setOpenGlContext(const String& windowName)
 {
     CV_TRACE_FUNCTION();
-    cvSetOpenGlContext(windowName.c_str());
+    setOpenGLContextImpl(windowName.c_str());
 }
 
 void cv::updateWindow(const String& windowName)
 {
     CV_TRACE_FUNCTION();
-    cvUpdateWindow(windowName.c_str());
+    updateWindowImpl(windowName.c_str());
 }
 
 #ifdef HAVE_OPENGL
@@ -1086,17 +1086,17 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 
 #ifndef HAVE_OPENGL
 
-CV_IMPL void cvSetOpenGlDrawCallback(const char*, CvOpenGlDrawCallback, void*)
+void setOpenGLDrawCallbackImpl(const char*, CvOpenGlDrawCallback, void*)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
-CV_IMPL void cvSetOpenGlContext(const char*)
+void setOpenGLContextImpl(const char*)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
-CV_IMPL void cvUpdateWindow(const char*)
+void updateWindowImpl(const char*)
 {
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
@@ -1188,19 +1188,17 @@ int namedWindowImpl( const char*, int )
     CV_NO_GUI_ERROR("namedWindowImpl");
 }
 
-CV_IMPL void cvDestroyWindow( const char* )
+void destroyWindowImpl( const char* )
 {
-    CV_NO_GUI_ERROR( "cvDestroyWindow" );
+    CV_NO_GUI_ERROR( "destroyWindowImpl" );
 }
 
-CV_IMPL void
-cvDestroyAllWindows( void )
+void destroyAllWindowsImpl( void )
 {
-    CV_NO_GUI_ERROR( "cvDestroyAllWindows" );
+    CV_NO_GUI_ERROR( "destroyAllWindowsImpl" );
 }
 
-void
-showImageImpl( const char*, const CvArr* )
+void showImageImpl( const char*, const CvArr* )
 {
     CV_NO_GUI_ERROR( "showImageImpl" );
 }
@@ -1215,43 +1213,41 @@ void moveWindowImpl( const char*, int, int )
     CV_NO_GUI_ERROR( "moveWindowImpl" );
 }
 
-CV_IMPL int
-cvCreateTrackbar2( const char* /*trackbar_name*/, const char* /*window_name*/,
+int createTrackbar2Impl( const char* /*trackbar_name*/, const char* /*window_name*/,
                    int* /*val*/, int /*count*/, CvTrackbarCallback2 /*on_notify2*/,
                    void* /*userdata*/ )
 {
-    CV_NO_GUI_ERROR( "cvCreateTrackbar2" );
+    CV_NO_GUI_ERROR( "createTrackbar2Impl" );
 }
 
-CV_IMPL void
-cvSetMouseCallback( const char*, CvMouseCallback, void* )
+void setMouseCallbackImpl( const char*, CvMouseCallback, void* )
 {
-    CV_NO_GUI_ERROR( "cvSetMouseCallback" );
+    CV_NO_GUI_ERROR( "setMouseCallbackImpl" );
 }
 
-CV_IMPL int cvGetTrackbarPos( const char*, const char* )
+int getTrackbarPosImpl( const char*, const char* )
 {
-    CV_NO_GUI_ERROR( "cvGetTrackbarPos" );
+    CV_NO_GUI_ERROR( "getTrackbarPosImpl" );
 }
 
-CV_IMPL void cvSetTrackbarPos( const char*, const char*, int )
+void setTrackbarPosImpl( const char*, const char*, int )
 {
-    CV_NO_GUI_ERROR( "cvSetTrackbarPos" );
+    CV_NO_GUI_ERROR( "setTrackbarPosImpl" );
 }
 
-CV_IMPL void cvSetTrackbarMax(const char*, const char*, int)
+void setTrackbarMaxImpl(const char*, const char*, int)
 {
-    CV_NO_GUI_ERROR( "cvSetTrackbarMax" );
+    CV_NO_GUI_ERROR( "setTrackbarMaxImpl" );
 }
 
-CV_IMPL void cvSetTrackbarMin(const char*, const char*, int)
+void setTrackbarMinImpl(const char*, const char*, int)
 {
-    CV_NO_GUI_ERROR( "cvSetTrackbarMin" );
+    CV_NO_GUI_ERROR( "setTrackbarMinImpl" );
 }
 
-CV_IMPL int cvWaitKey( int )
+int waitKeyImpl( int )
 {
-    CV_NO_GUI_ERROR( "cvWaitKey" );
+    CV_NO_GUI_ERROR( "waitKeyImpl" );
 }
 
 #endif // NO_GUI
