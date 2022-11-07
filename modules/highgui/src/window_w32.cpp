@@ -1363,8 +1363,7 @@ static void icvUpdateWindowPos(CvWindow& window)
 
 static void showImage_(CvWindow& window, const Mat& image);
 
-void
-showImageImpl(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, const CvArr* arr)
 {
     CV_FUNCNAME("showImageImpl");
 
@@ -1620,12 +1619,12 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
        if (window.on_mouse)
        {
           int flags = (wParam & MK_LBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_RBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_MBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_CONTROL      ? cv::EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_SHIFT        ? cv::EVENT_FLAG_LBUTTON : 0)|
-                      (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_LBUTTON   : 0);
-          int event = (uMsg == WM_MOUSEWHEEL    ? cv::EVENT_FLAG_LBUTTON    : cv::EVENT_FLAG_LBUTTON);
+                      (wParam & MK_RBUTTON      ? cv::EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? cv::EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? cv::EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? cv::EVENT_MOUSEWHEEL    : cv::EVENT_MOUSEHWHEEL);
 
           // Set the wheel delta of mouse wheel to be in the upper word of 'event'
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -1818,20 +1817,20 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             POINT pt;
 
             int flags = (wParam & MK_LBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_RBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_MBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_CONTROL ? cv::EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_SHIFT ? cv::EVENT_FLAG_LBUTTON : 0)|
-                        (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_LBUTTON : 0);
+                        (wParam & MK_RBUTTON ? cv::EVENT_FLAG_RBUTTON : 0)|
+                        (wParam & MK_MBUTTON ? cv::EVENT_FLAG_MBUTTON : 0)|
+                        (wParam & MK_CONTROL ? cv::EVENT_FLAG_CTRLKEY : 0)|
+                        (wParam & MK_SHIFT ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                        (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY : 0);
             int event = uMsg == WM_LBUTTONDOWN ? cv::EVENT_LBUTTONDOWN :
                         uMsg == WM_RBUTTONDOWN ? cv::EVENT_RBUTTONDOWN :
                         uMsg == WM_MBUTTONDOWN ? cv::EVENT_MBUTTONDOWN :
                         uMsg == WM_LBUTTONUP ? cv::EVENT_LBUTTONUP :
-                        uMsg == WM_RBUTTONUP ? cv::EVENT_FLAG_LBUTTON :
-                        uMsg == WM_MBUTTONUP ? cv::EVENT_FLAG_LBUTTON :
-                        uMsg == WM_LBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
-                        uMsg == WM_RBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
-                        uMsg == WM_MBUTTONDBLCLK ? cv::EVENT_FLAG_LBUTTON :
+                        uMsg == WM_RBUTTONUP ? cv::EVENT_RBUTTONUP :
+                        uMsg == WM_MBUTTONUP ? cv::EVENT_MBUTTONUP :
+                        uMsg == WM_LBUTTONDBLCLK ? cv::EVENT_LBUTTONDBLCLK :
+                        uMsg == WM_RBUTTONDBLCLK ? cv::EVENT_RBUTTONDBLCLK :
+                        uMsg == WM_MBUTTONDBLCLK ? cv::EVENT_MBUTTONDBLCLK :
                                                    cv::EVENT_MOUSEMOVE;
             if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN)
                 SetCapture(hwnd);
@@ -2092,8 +2091,7 @@ static LRESULT CALLBACK HGToolbarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 }
 
 
-CV_IMPL void
-destroyAllWindowsImpl(void)
+void destroyAllWindowsImpl(void)
 {
     std::vector< std::shared_ptr<CvWindow> > g_windows;
     {

@@ -51,7 +51,7 @@ namespace ocl {
 
 ///////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
-CV_ENUM(MatchTemplType, cv::TM_CCORR, cv::TM_CCORR, cv::TM_CCORR, cv::TM_CCORR, cv::TM_CCORR, cv::TM_CCORR)
+CV_ENUM(MatchTemplType, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
 
 PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, MatchTemplType, bool)
 {

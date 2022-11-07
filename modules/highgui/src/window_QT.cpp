@@ -2402,21 +2402,21 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
     if(modifiers & Qt::ShiftModifier)
         flags |= cv::EVENT_FLAG_SHIFTKEY;
     if(modifiers & Qt::ControlModifier)
-        flags |= cv::EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_CTRLKEY;
     if(modifiers & Qt::AltModifier)
-        flags |= cv::EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_ALTKEY;
 
     if(buttons & Qt::LeftButton)
-        flags |= cv::EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_LBUTTON;
     if(buttons & Qt::RightButton)
-        flags |= cv::EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_RBUTTON;
     if(buttons & Qt_MiddleButton)
-        flags |= cv::EVENT_FLAG_SHIFTKEY;
+        flags |= cv::EVENT_FLAG_MBUTTON;
 
     if (cv_event == -1) {
         if (category == mouse_wheel) {
             QWheelEvent *we = (QWheelEvent *) evnt;
-            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? cv::EVENT_FLAG_SHIFTKEY : cv::EVENT_FLAG_SHIFTKEY);
+            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? cv::EVENT_MOUSEWHEEL : cv::EVENT_MOUSEHWHEEL);
             flags |= (wheelEventDelta(we) & 0xffff)<<16;
             return;
         }
@@ -2424,15 +2424,15 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
         {
         case Qt::LeftButton:
             cv_event = tableMouseButtons[category][0];
-            flags |= cv::EVENT_FLAG_SHIFTKEY;
+            flags |= cv::EVENT_FLAG_LBUTTON;
             break;
         case Qt::RightButton:
             cv_event = tableMouseButtons[category][1];
-            flags |= cv::EVENT_FLAG_SHIFTKEY;
+            flags |= cv::EVENT_FLAG_RBUTTON;
             break;
         case Qt_MiddleButton:
             cv_event = tableMouseButtons[category][2];
-            flags |= cv::EVENT_FLAG_SHIFTKEY;
+            flags |= cv::EVENT_FLAG_MBUTTON;
             break;
         default:
             cv_event = cv::EVENT_MOUSEMOVE;

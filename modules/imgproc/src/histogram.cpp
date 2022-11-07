@@ -2047,7 +2047,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         const int len = it.planes[0].rows*it.planes[0].cols*H1.channels();
         j = 0;
 
-        if( (method == cv::HISTCMP_CHISQR) || (method == cv::HISTCMP_CHISQR))
+        if( (method == cv::HISTCMP_CHISQR) || (method == cv::HISTCMP_CHISQR_ALT))
         {
             for( ; j < len; j++ )
             {
@@ -2057,7 +2057,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                     result += a*a/b;
             }
         }
-        else if( method == cv::HISTCMP_CHISQR )
+        else if( method == cv::HISTCMP_CORREL )
         {
 #if CV_SIMD_64F
             v_float64 v_s1 = vx_setzero_f64();
@@ -2093,7 +2093,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             s22 += v_reduce_sum(v_s22);
             s1 += v_reduce_sum(v_s1);
             s2 += v_reduce_sum(v_s2);
-#elif CV_SIMD && 0 //Disable vectorization for cv::HISTCMP_CHISQR if f64 is unsupported due to low precision
+#elif CV_SIMD && 0 //Disable vectorization for cv::HISTCMP_CORREL if f64 is unsupported due to low precision
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_s11 = vx_setzero_f32();
@@ -2128,7 +2128,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 s22 += b*b;
             }
         }
-        else if( method == cv::HISTCMP_CHISQR )
+        else if( method == cv::HISTCMP_INTERSECT )
         {
 #if CV_SIMD_64F
             v_float64 v_result = vx_setzero_f64();
@@ -2150,7 +2150,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             for( ; j < len; j++ )
                 result += std::min(h1[j], h2[j]);
         }
-        else if( method == cv::HISTCMP_CHISQR )
+        else if( method == cv::HISTCMP_BHATTACHARYYA )
         {
 #if CV_SIMD_64F
             v_float64 v_s1 = vx_setzero_f64();
@@ -2176,7 +2176,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             s1 += v_reduce_sum(v_s1);
             s2 += v_reduce_sum(v_s2);
             result += v_reduce_sum(v_result);
-#elif CV_SIMD && 0 //Disable vectorization for cv::HISTCMP_CHISQR if f64 is unsupported due to low precision
+#elif CV_SIMD && 0 //Disable vectorization for cv::HISTCMP_BHATTACHARYYA if f64 is unsupported due to low precision
             v_float32 v_s1 = vx_setzero_f32();
             v_float32 v_s2 = vx_setzero_f32();
             v_float32 v_result = vx_setzero_f32();
@@ -2201,7 +2201,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 s2 += b;
             }
         }
-        else if( method == cv::HISTCMP_CHISQR )
+        else if( method == cv::HISTCMP_KL_DIV )
         {
             for( ; j < len; j++ )
             {
@@ -2220,9 +2220,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
 
-    if( method == cv::HISTCMP_CHISQR )
+    if( method == cv::HISTCMP_CHISQR_ALT )
         result *= 2;
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_CORREL )
     {
         size_t total = H1.total();
         double scale = 1./total;
@@ -2230,7 +2230,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
         double denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
         result = std::abs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1.;
     }
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_BHATTACHARYYA )
     {
         s1 *= s2;
         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
@@ -2253,14 +2253,14 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         CV_Assert( H1.size(i) == H2.size(i) );
 
     const SparseMat *PH1 = &H1, *PH2 = &H2;
-    if( PH1->nzcount() > PH2->nzcount() && method != cv::HISTCMP_CHISQR && method != cv::HISTCMP_CHISQR && method != cv::HISTCMP_CHISQR )
+    if( PH1->nzcount() > PH2->nzcount() && method != cv::HISTCMP_CHISQR && method != cv::HISTCMP_CHISQR_ALT && method != cv::HISTCMP_KL_DIV )
         std::swap(PH1, PH2);
 
     SparseMatConstIterator it = PH1->begin();
 
     int N1 = (int)PH1->nzcount(), N2 = (int)PH2->nzcount();
 
-    if( (method == cv::HISTCMP_CHISQR) || (method == cv::HISTCMP_CHISQR) )
+    if( (method == cv::HISTCMP_CHISQR) || (method == cv::HISTCMP_CHISQR_ALT) )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2274,7 +2274,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
                 result += a*a/b;
         }
     }
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_CORREL )
     {
         double s1 = 0, s2 = 0, s11 = 0, s12 = 0, s22 = 0;
 
@@ -2305,7 +2305,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         double denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
         result = std::abs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1.;
     }
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_INTERSECT )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2317,7 +2317,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
                 result += std::min(v1, v2);
         }
     }
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_BHATTACHARYYA )
     {
         double s1 = 0, s2 = 0;
 
@@ -2342,7 +2342,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
         result = std::sqrt(std::max(1. - result*s1, 0.));
     }
-    else if( method == cv::HISTCMP_CHISQR )
+    else if( method == cv::HISTCMP_KL_DIV )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2358,7 +2358,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
 
-    if( method == cv::HISTCMP_CHISQR )
+    if( method == cv::HISTCMP_CHISQR_ALT )
         result *= 2;
 
     return result;

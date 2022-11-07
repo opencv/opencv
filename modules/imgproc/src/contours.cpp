@@ -573,7 +573,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     scanner->approx_method2 = scanner->approx_method1 = method;
 
-    if( method == cv::CHAIN_APPROX_TC89_KCOS || method == cv::CHAIN_APPROX_TC89_KCOS )
+    if( method == cv::CHAIN_APPROX_TC89_L1 || method == cv::CHAIN_APPROX_TC89_KCOS )
         scanner->approx_method1 = cv::CHAIN_CODE;
 
     if( scanner->approx_method1 == cv::CHAIN_CODE )
@@ -612,7 +612,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     cvSaveMemStoragePos( storage, &(scanner->initial_pos) );
 
-    if( method > cv::CHAIN_APPROX_TC89_KCOS )
+    if( method > cv::CHAIN_APPROX_SIMPLE )
     {
         scanner->storage1 = cvCreateChildMemStorage( scanner->storage2 );
     }
@@ -702,7 +702,7 @@ icvFetchContour( schar                  *ptr,
     int             prev_s = -1, s, s_end;
     int             method = _method - 1;
 
-    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_TC89_KCOS );
+    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_SIMPLE );
 
     /* initialize local state */
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
@@ -900,7 +900,7 @@ icvFetchContourEx( schar*               ptr,
     int         prev_s = -1, s, s_end;
     int         method = _method - 1;
 
-    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_TC89_KCOS );
+    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_SIMPLE );
     CV_DbgAssert( 1 < nbd && nbd < 128 );
 
     /* initialize local state */
@@ -1094,7 +1094,7 @@ icvFetchContourEx_32s( int*                 ptr,
     const int   nbd0 = ccomp_val | new_flag;
     const int   nbd1 = nbd0 | right_flag;
 
-    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_TC89_KCOS );
+    CV_DbgAssert( (unsigned) _method <= cv::CHAIN_APPROX_SIMPLE );
 
     /* initialize local state */
     CV_INIT_3X3_DELTAS( deltas, step, 1 );
