@@ -1165,7 +1165,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 
 //========================= NO GUI fallback =========================
 
-#if !defined (HAVE_WIN32UI) && !defined (HAVE_GTK) && !defined (HAVE_COCOA) && !defined (HAVE_QT)
+#if !defined (HAVE_WIN32UI) && !defined (HAVE_GTK) && !defined (HAVE_COCOA) && !defined (HAVE_QT) \
     && !defined (HAVE_WAYLAND) && !defined (WINRT) && !defined (WINRT_8_0)
 
 // No windowing system present at compile time ;-(
