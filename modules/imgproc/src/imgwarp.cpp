@@ -1395,7 +1395,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t h = dsize.height;
     String buildOptions;
     unsigned mem_size = 32;
-    if (flags & CV_WARP_INVERSE_MAP)
+    if (flags & cv::WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
@@ -1410,7 +1410,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
     ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
 
 
@@ -1441,7 +1441,7 @@ static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
     size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
 }
 static bool ocl_logPolar(InputArray _src, OutputArray _dst,
@@ -1464,7 +1464,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t h = dsize.height;
     String buildOptions;
     unsigned mem_size = 32;
-    if (flags & CV_WARP_INVERSE_MAP)
+    if (flags & cv::WARP_INVERSE_MAP)
     {
         buildOptions = "-D InverseMap";
     }
@@ -1481,7 +1481,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
     ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
 
 
@@ -1512,7 +1512,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
     size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
     size_t localThreads[2] = { mem_size , mem_size };
     k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     return true;
 }
 #endif
@@ -3423,7 +3423,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     mapy.create(dsize, CV_32F);
     bool semiLog = (flags & WARP_POLAR_LOG) != 0;
 
-    if (!(flags & CV_WARP_INVERSE_MAP))
+    if (!(flags & cv::WARP_INVERSE_MAP))
     {
         CV_Assert(!dsize.empty());
         double Kangle = CV_2PI / dsize.height;
@@ -3463,7 +3463,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 my[rho] = (float)y;
             }
         }
-        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+        remap(_src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
     else
     {
@@ -3516,7 +3516,7 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
             }
         }
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
-              (flags & CV_WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+              (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
 }
 

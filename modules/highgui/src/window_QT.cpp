@@ -826,7 +826,7 @@ void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
 
     QImage qimg(mat->data.ptr, mat->cols, mat->rows, mat->step, QImage::Format_RGB888);
 
-    CvFont* font = (CvFont*)arg2;
+    QtFont* font = (QtFont*)arg2;
 
     QPainter qp(&qimg);
     if (font)

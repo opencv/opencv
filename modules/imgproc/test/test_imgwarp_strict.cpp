@@ -175,7 +175,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
     }
 
     // generating an interpolation type
-    interpolation = rng.uniform(0, CV_INTER_LANCZOS4 + 1);
+    interpolation = rng.uniform(0, cv::INTER_LANCZOS4 + 1);
 
     // generating the dst matrix structure
     double scale_x, scale_y;
@@ -1082,7 +1082,7 @@ void CV_WarpAffine_Test::generate_test_data()
 
     // warp_matrix is inverse
     if (rng.uniform(0., 1.) > 0)
-        interpolation |= CV_WARP_INVERSE_MAP;
+        interpolation |= cv::WARP_INVERSE_MAP;
 }
 
 void CV_WarpAffine_Test::run_func()
@@ -1123,7 +1123,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     else
         mapy = Mat();
 
-    if (!(interpolation & CV_WARP_INVERSE_MAP))
+    if (!(interpolation & cv::WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
 
     const int AB_BITS = MAX(10, (int)INTER_BITS);
@@ -1239,7 +1239,7 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         M = tmp;
     }
 
-    if (!(interpolation & CV_WARP_INVERSE_MAP))
+    if (!(interpolation & cv::WARP_INVERSE_MAP))
     {
         Mat tmp;
         invert(M, tmp);

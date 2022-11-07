@@ -53,50 +53,6 @@ extern "C" {
   @{
 */
 
-/** Connected component structure */
-typedef struct CvConnectedComp
-{
-    double area;    /**<area of the connected component  */
-    CvScalar value; /**<average color of the connected component */
-    CvRect rect;    /**<ROI of the component  */
-    CvSeq* contour; /**<optional component boundary
-                      (the contour might have child contours corresponding to the holes)*/
-}
-CvConnectedComp;
-
-/** Image smooth methods */
-enum SmoothMethod_c
-{
-    /** linear convolution with \f$\texttt{size1}\times\texttt{size2}\f$ box kernel (all 1's). If
-    you want to smooth different pixels with different-size box kernels, you can use the integral
-    image that is computed using integral */
-    CV_BLUR_NO_SCALE =0,
-    /** linear convolution with \f$\texttt{size1}\times\texttt{size2}\f$ box kernel (all
-    1's) with subsequent scaling by \f$1/(\texttt{size1}\cdot\texttt{size2})\f$ */
-    CV_BLUR  =1,
-    /** linear convolution with a \f$\texttt{size1}\times\texttt{size2}\f$ Gaussian kernel */
-    CV_GAUSSIAN  =2,
-    /** median filter with a \f$\texttt{size1}\times\texttt{size1}\f$ square aperture */
-    CV_MEDIAN =3,
-    /** bilateral filter with a \f$\texttt{size1}\times\texttt{size1}\f$ square aperture, color
-    sigma= sigma1 and spatial sigma= sigma2. If size1=0, the aperture square side is set to
-    cvRound(sigma2\*1.5)\*2+1. See cv::bilateralFilter */
-    CV_BILATERAL =4
-};
-
-/** Filters used in pyramid decomposition */
-enum
-{
-    CV_GAUSSIAN_5x5 = 7
-};
-
-/** Special filters */
-enum
-{
-    CV_SCHARR =-1,
-    CV_MAX_SOBEL_KSIZE =7
-};
-
 /** Constants for color conversion */
 enum
 {
@@ -362,34 +318,6 @@ enum
     CV_COLORCVT_MAX  = 143
 };
 
-
-/** Sub-pixel interpolation methods */
-enum
-{
-    CV_INTER_NN        =0,
-    CV_INTER_LINEAR    =1,
-    CV_INTER_CUBIC     =2,
-    CV_INTER_AREA      =3,
-    CV_INTER_LANCZOS4  =4
-};
-
-/** ... and other image warping flags */
-enum
-{
-    CV_WARP_FILL_OUTLIERS =8,
-    CV_WARP_INVERSE_MAP  =16
-};
-
-/** Shapes of a structuring element for morphological operations
-@see cv::MorphShapes, cv::getStructuringElement
-*/
-enum MorphShapes_c
-{
-    CV_SHAPE_RECT      =0,
-    CV_SHAPE_CROSS     =1,
-    CV_SHAPE_ELLIPSE   =2,
-    CV_SHAPE_CUSTOM    =100 //!< custom structuring element
-};
 
 /** Morphological operations */
 enum

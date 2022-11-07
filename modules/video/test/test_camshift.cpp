@@ -274,7 +274,7 @@ int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
         cvIsNaN(box.center.y) || cvIsInf(box.center.y) ||
         cvIsNaN(box.angle) || cvIsInf(box.angle) || box.angle < -180 || box.angle > 180 )
     {
-        ts->printf( cvtest::TS::LOG, "Invalid CvBox2D or CvConnectedComp was returned by cvCamShift\n" );
+        ts->printf( cvtest::TS::LOG, "Invalid Box2D was returned by CamShift\n" );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
         goto _exit_;
     }
@@ -415,7 +415,7 @@ int CV_MeanShiftTest::validate_test_results( int /*test_case_idx*/ )
         rect.y + rect.height > box0.center.y + delta )
     {
         ts->printf( cvtest::TS::LOG,
-            "Incorrect CvConnectedComp ((%d,%d,%d,%d) is not within (%.1f,%.1f,%.1f,%.1f))\n",
+            "Incorrect ConnectedComp ((%d,%d,%d,%d) is not within (%.1f,%.1f,%.1f,%.1f))\n",
             rect.x, rect.y, rect.x + rect.width, rect.y + rect.height,
             box0.center.x - delta, box0.center.y - delta, box0.center.x + delta, box0.center.y + delta );
         code = cvtest::TS::FAIL_BAD_ACCURACY;

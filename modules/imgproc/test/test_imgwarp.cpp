@@ -200,7 +200,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
 /////////////////////////
 
 static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& mapy,
-                        Mat* mask=0, int interpolation=CV_INTER_LINEAR )
+                        Mat* mask=0, int interpolation=cv::INTER_LINEAR )
 {
     int x, y, k;
     int drows = dst.rows, dcols = dst.cols;
@@ -211,7 +211,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
     int step = (int)(src.step / CV_ELEM_SIZE(depth));
     int delta;
 
-    if( interpolation != CV_INTER_CUBIC )
+    if( interpolation != cv::INTER_CUBIC )
     {
         delta = 0;
         scols -= 1; srows -= 1;
@@ -347,7 +347,7 @@ void CV_RemapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
 {
     CV_ImgWarpBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     types[INPUT][1] = types[INPUT][2] = CV_32FC1;
-    interpolation = CV_INTER_LINEAR;
+    interpolation = cv::INTER_LINEAR;
 }
 
 
@@ -502,7 +502,7 @@ void CV_GetRectSubPixTest::get_test_array_types_and_sizes( int test_case_idx, ve
 
     center.x = (float)(cvtest::randReal(rng)*src_size.width);
     center.y = (float)(cvtest::randReal(rng)*src_size.height);
-    interpolation = CV_INTER_LINEAR;
+    interpolation = cv::INTER_LINEAR;
 
     test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
@@ -984,11 +984,11 @@ TEST(Imgproc_linearPolar, identity)
     {
         linearPolar(src, dst,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR | CV_WARP_INVERSE_MAP);
+            cv::WARP_FILL_OUTLIERS | cv::INTER_LINEAR | cv::WARP_INVERSE_MAP);
 
         linearPolar(dst, src,
             Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            CV_WARP_FILL_OUTLIERS | CV_INTER_LINEAR);
+            cv::WARP_FILL_OUTLIERS | cv::INTER_LINEAR);
 
         double psnr = cvtest::PSNR(in(roi), src(roi));
         EXPECT_LE(25, psnr) << "iteration=" << i;

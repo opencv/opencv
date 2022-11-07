@@ -45,35 +45,4 @@
 
 #include "opencv2/imgproc/types_c.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** @addtogroup imgproc_c
-@{
-*/
-
-/** Font structure */
-typedef struct CvFont
-{
-  const char* nameFont;   //Qt:nameFont
-  CvScalar color;       //Qt:ColorFont -> cvScalar(blue_component, green_component, red_component[, alpha_component])
-    int         font_face;    //Qt: bool italic         /** =CV_FONT_* */
-    const int*  ascii;      //!< font data and metrics
-    const int*  greek;
-    const int*  cyrillic;
-    float       hscale, vscale;
-    float       shear;      //!< slope coefficient: 0 - normal, >0 - italic
-    int         thickness;    //!< Qt: weight               /** letters thickness */
-    float       dx;       //!< horizontal interval between letters
-    int         line_type;    //!< Qt: PointSize
-}
-CvFont;
-
-/** @} */
-
-#ifdef __cplusplus
-}
-#endif
-
 #endif

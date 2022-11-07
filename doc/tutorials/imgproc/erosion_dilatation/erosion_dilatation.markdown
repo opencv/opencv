@@ -204,9 +204,9 @@ receives three arguments:
 
     We can choose any of three shapes for our kernel:
 
-    -   Rectangular box: CV_SHAPE_RECT
-    -   Cross: CV_SHAPE_CROSS
-    -   Ellipse: CV_SHAPE_ELLIPSE
+    -   Rectangular box: cv::SHAPE_RECT
+    -   Cross: cv::SHAPE_CROSS
+    -   Ellipse: cv::SHAPE_ELLIPSE
 
     Together with the shape we specify the size of our kernel and the *anchor point*. If the anchor point is not
     specified, it is assumed to be in the center.
