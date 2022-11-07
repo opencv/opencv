@@ -93,9 +93,11 @@ int main(int argc, char *argv[])
             ;
     CommandLineParser parser(argc, argv, keys);
 
-    string img_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/resized_IMG_3875.JPG");  // image to register
+    string img_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/Box1.jpg");  // image to register
     string ply_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.ply");          // object mesh
     string write_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/cookies_ORB.yml");     // output file
+    Ptr<Feature2D> orb = ORB::create();
+    orb.dynamicCast<cv::ORB>()->setNLevels(1);
     int numKeyPoints = 2000;
     string featureName = "ORB";
 
@@ -133,7 +135,7 @@ int main(int argc, char *argv[])
     /**  GROUND TRUTH OF THE FIRST IMAGE  **/
 
     // Create & Open Window
-    namedWindow("MODEL REGISTRATION", WINDOW_KEEPRATIO);
+    namedWindow("MODEL REGISTRATION", WINDOW_AUTOSIZE);
 
     // Set up the mouse events
     setMouseCallback("MODEL REGISTRATION", onMouseModelRegistration, 0);

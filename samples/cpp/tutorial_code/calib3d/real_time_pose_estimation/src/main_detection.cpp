@@ -42,21 +42,24 @@ int main(int argc, char *argv[])
             "{keypoints k       |2000  | number of keypoints to detect                                      }"
             "{ratio r           |0.7   | threshold for ratio test                                           }"
             "{iterations it     |500   | RANSAC maximum iterations count                                    }"
-            "{error e           |6.0   | RANSAC reprojection error                                          }"
-            "{confidence c      |0.99  | RANSAC confidence                                                  }"
+            "{error e           |8.0   | RANSAC reprojection error                                          }"
+            "{confidence c      |0.90  | RANSAC confidence                                                  }"
             "{inliers in        |30    | minimum inliers for Kalman update                                  }"
-            "{method  pnp       |0     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS - (5) AP3P}"
+            "{method  pnp       |1     | PnP method: (0) ITERATIVE - (1) EPNP - (2) P3P - (3) DLS - (5) AP3P - (9) NPNP}"
             "{fast f            |true  | use of robust fast match                                           }"
             "{feature           |ORB   | feature name (ORB, KAZE, AKAZE, BRISK, SIFT, SURF, BINBOOST, VGG)  }"
-            "{FLANN             |false | use FLANN library for descriptors matching                         }"
+            "{FLANN             |true | use FLANN library for descriptors matching                         }"
             "{save              |      | path to the directory where to save the image results              }"
-            "{displayFiltered   |false | display filtered pose (from Kalman filter)                         }"
+            "{displayFiltered   |true | display filtered pose (from Kalman filter)                         }"
             ;
     CommandLineParser parser(argc, argv, keys);
 
     string video_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.mp4");       // recorded video
     string yml_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/cookies_ORB.yml"); // 3dpts + descriptors
     string ply_read_path = samples::findFile("samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/Data/box.ply");         // mesh
+
+    Ptr<Feature2D> orb = ORB::create();
+    orb.dynamicCast<cv::ORB>()->setNLevels(1);
 
     // Intrinsic camera parameters: UVC WEBCAM
     double f = 55;                           // focal length in mm
@@ -77,12 +80,12 @@ int main(int argc, char *argv[])
     // Robust Matcher parameters
     int numKeyPoints = 2000;      // number of detected keypoints
     float ratioTest = 0.70f;      // ratio test
-    bool fast_match = true;       // fastRobustMatch() or robustMatch()
+    bool fast_match = false;       // fastRobustMatch() or robustMatch()
 
     // RANSAC parameters
     int iterationsCount = 500;      // number of Ransac iterations.
-    float reprojectionError = 6.0;  // maximum allowed distance to consider it an inlier.
-    double confidence = 0.99;       // ransac successful confidence.
+    float reprojectionError = 8.0;  // maximum allowed distance to consider it an inlier.
+    double confidence = 0.90;       // ransac successful confidence.
 
     // Kalman Filter parameters
     int minInliersKalman = 30;    // Kalman threshold updating
@@ -90,14 +93,14 @@ int main(int argc, char *argv[])
     // PnP parameters
     int pnpMethod = SOLVEPNP_ITERATIVE;
     string featureName = "ORB";
-    bool useFLANN = false;
+    bool useFLANN = true;
 
     // Save results
     string saveDirectory = "";
     Mat frameSave;
     int frameCount = 0;
 
-    bool displayFilteredPose = false;
+    bool displayFilteredPose = true;
 
     if (parser.has("help"))
     {
@@ -178,7 +181,7 @@ int main(int argc, char *argv[])
     vector<KeyPoint> keypoints_model = model.get_keypoints();
 
     // Create & Open Window
-    namedWindow("REAL TIME DEMO", WINDOW_KEEPRATIO);
+    namedWindow("REAL TIME DEMO", WINDOW_AUTOSIZE);
 
     VideoCapture cap;                           // instantiate VideoCapture
     cap.open(video_read_path);                  // open a recorded video
