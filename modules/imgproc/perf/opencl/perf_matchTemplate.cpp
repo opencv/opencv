@@ -44,9 +44,9 @@ OCL_PERF_TEST_P(ImgSize_TmplSize_Method_MatType, MatchTemplate,
 
 /////////// matchTemplate (performance tests from 2.4) ////////////////////////
 
-typedef Size_MatType CV_TM_CCORRFixture;
+typedef Size_MatType TM_CCORRFixture;
 
-OCL_PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
+OCL_PERF_TEST_P(TM_CCORRFixture, matchTemplate,
                 ::testing::Combine(::testing::Values(Size(1000, 1000), Size(2000, 2000)),
                                OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
@@ -60,14 +60,14 @@ OCL_PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
 
     declare.in(src, templ, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR);
+    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, cv::TM_CCORR);
 
     SANITY_CHECK(dst, 1e-4);
 }
 
-typedef TestBaseWithParam<Size> CV_TM_CCORR_NORMEDFixture;
+typedef TestBaseWithParam<Size> TM_CCORR_NORMEDFixture;
 
-OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
+OCL_PERF_TEST_P(TM_CCORR_NORMEDFixture, matchTemplate,
                 ::testing::Values(Size(1000, 1000), Size(2000, 2000), Size(4000, 4000)))
 {
     const Size srcSize = GetParam(), templSize(5, 5);
@@ -78,7 +78,7 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
 
     declare.in(src, templ, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
+    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, cv::TM_CCORR);
 
     SANITY_CHECK(dst, 3e-2);
 }

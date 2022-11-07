@@ -318,19 +318,6 @@ enum
     CV_COLORCVT_MAX  = 143
 };
 
-
-/** Morphological operations */
-enum
-{
-    CV_MOP_ERODE        =0,
-    CV_MOP_DILATE       =1,
-    CV_MOP_OPEN         =2,
-    CV_MOP_CLOSE        =3,
-    CV_MOP_GRADIENT     =4,
-    CV_MOP_TOPHAT       =5,
-    CV_MOP_BLACKHAT     =6
-};
-
 /** Spatial and central moments */
 typedef struct CvMoments
 {
@@ -365,39 +352,7 @@ typedef struct CvHuMoments
 }
 CvHuMoments;
 
-/** Template matching methods */
-enum
-{
-    CV_TM_SQDIFF        =0,
-    CV_TM_SQDIFF_NORMED =1,
-    CV_TM_CCORR         =2,
-    CV_TM_CCORR_NORMED  =3,
-    CV_TM_CCOEFF        =4,
-    CV_TM_CCOEFF_NORMED =5
-};
-
 typedef float (CV_CDECL * CvDistanceFunction)( const float* a, const float* b, void* user_param );
-
-/** Contour retrieval modes */
-enum
-{
-    CV_RETR_EXTERNAL=0,
-    CV_RETR_LIST=1,
-    CV_RETR_CCOMP=2,
-    CV_RETR_TREE=3,
-    CV_RETR_FLOODFILL=4
-};
-
-/** Contour approximation methods */
-enum
-{
-    CV_CHAIN_CODE=0,
-    CV_CHAIN_APPROX_NONE=1,
-    CV_CHAIN_APPROX_SIMPLE=2,
-    CV_CHAIN_APPROX_TC89_L1=3,
-    CV_CHAIN_APPROX_TC89_KCOS=4,
-    CV_LINK_RUNS=5
-};
 
 /*
 Internal structure that is used for sequential retrieving contours from the image.
@@ -421,28 +376,6 @@ CvChainPtReader;
      (deltas)[2] = -(step), (deltas)[3] = -(step) - (nch),  \
      (deltas)[4] = -(nch),  (deltas)[5] =  (step) - (nch),  \
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
-
-
-/** Contour approximation algorithms */
-enum
-{
-    CV_POLY_APPROX_DP = 0
-};
-
-/** Shape matching methods */
-enum
-{
-    CV_CONTOURS_MATCH_I1  =1, //!< \f[I_1(A,B) =  \sum _{i=1...7}  \left |  \frac{1}{m^A_i} -  \frac{1}{m^B_i} \right |\f]
-    CV_CONTOURS_MATCH_I2  =2, //!< \f[I_2(A,B) =  \sum _{i=1...7}  \left | m^A_i - m^B_i  \right |\f]
-    CV_CONTOURS_MATCH_I3  =3  //!< \f[I_3(A,B) =  \max _{i=1...7}  \frac{ \left| m^A_i - m^B_i \right| }{ \left| m^A_i \right| }\f]
-};
-
-/** Shape orientation */
-enum
-{
-    CV_CLOCKWISE         =1,
-    CV_COUNTER_CLOCKWISE =2
-};
 
 
 /** Convexity defect */

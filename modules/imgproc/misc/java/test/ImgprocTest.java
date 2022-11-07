@@ -1308,7 +1308,7 @@ public class ImgprocTest extends OpenCVTestCase {
         contour1.put(0, 0, 1, 1, 5, 1, 4, 3, 6, 2);
         contour2.put(0, 0, 1, 1, 6, 1, 4, 1, 2, 5);
 
-        double distance = Imgproc.matchShapes(contour1, contour2, Imgproc.CV_CONTOURS_MATCH_I1, 1);
+        double distance = Imgproc.matchShapes(contour1, contour2, Imgproc.CONTOURS_MATCH_I1, 1);
 
         assertEquals(2.81109697365334, distance, EPS);
     }

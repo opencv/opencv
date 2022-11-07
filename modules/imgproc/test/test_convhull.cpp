@@ -382,7 +382,7 @@ protected:
 
     CvSeq* hull1;
     CvMat* hull2;
-    int orientation;
+    bool clockwise;
     int return_points;
 };
 
@@ -391,7 +391,8 @@ CV_ConvHullTest::CV_ConvHullTest()
 {
     hull1 = 0;
     hull2 = 0;
-    orientation = return_points = 0;
+    return_points = 0;
+    clockwise = false;
 }
 
 
@@ -417,7 +418,7 @@ int CV_ConvHullTest::prepare_test_case( int test_case_idx )
     if( code <= 0 )
         return code;
 
-    orientation = cvtest::randInt(rng) % 2 ? CV_CLOCKWISE : CV_COUNTER_CLOCKWISE;
+    clockwise = cvtest::randInt(rng) % 2 != 0;
     return_points = cvtest::randInt(rng) % 2;
 
     int rows, cols;
@@ -438,7 +439,6 @@ int CV_ConvHullTest::prepare_test_case( int test_case_idx )
 void CV_ConvHullTest::run_func()
 {
     cv::Mat _points = cv::cvarrToMat(points);
-    bool clockwise = orientation == CV_CLOCKWISE;
     size_t n = 0;
     if( !return_points )
     {
@@ -548,7 +548,7 @@ int CV_ConvHullTest::validate_test_results( int test_case_idx )
             float dx0 = pt1.x - pt0.x, dy0 = pt1.y - pt0.y;
             float dx1 = pt2.x - pt1.x, dy1 = pt2.y - pt1.y;
             double t = (double)dx0*dy1 - (double)dx1*dy0;
-            if( (t < 0) ^ (orientation != CV_COUNTER_CLOCKWISE) )
+            if( (t < 0) ^ clockwise )
             {
                 ts->printf( cvtest::TS::LOG, "The convex hull is not convex or has a wrong orientation (vtx %d)\n", i );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
