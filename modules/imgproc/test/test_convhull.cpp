@@ -1380,7 +1380,7 @@ int CV_FitLineTest::prepare_test_case( int test_case_idx )
     max_log_size = MAX(min_log_size,max_log_size);
     int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
     dist_type = cvtest::randInt(rng) % 6 + 1;
-    dist_type += dist_type == CV_DIST_C;
+    dist_type += dist_type == cv::DIST_C;
     reps = 0.1; aeps = 0.01;
     return code;
 }

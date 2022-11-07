@@ -56,6 +56,16 @@ _CvPtInfo;
 static const CvPoint icvCodeDeltas[8] =
     { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
 
+/** Freeman chain reader state */
+typedef struct CvChainPtReader
+{
+    CV_SEQ_READER_FIELDS()
+    char      code;
+    CvPoint   pt;
+    schar     deltas[8][2];
+}
+CvChainPtReader;
+
 static void cvStartReadChainPoints( CvChain * chain, CvChainPtReader * reader )
 {
     int i;

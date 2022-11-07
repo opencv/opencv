@@ -75,7 +75,7 @@ void showImageImpl(const char* name, const CvArr* arr)
     CV_CALL(image = cvGetMat(arr, &stub));
 
     //TODO: use approach from window_w32.cpp or cv::Mat(.., .., CV_8UC4)
-    //      and cvtColor(.., .., CV_BGR2BGRA) to convert image here
+    //      and cvtColor(.., .., cv::COLOR_BGR2BGRA) to convert image here
     //      than beforehand.
 
     window->updateImage(image);

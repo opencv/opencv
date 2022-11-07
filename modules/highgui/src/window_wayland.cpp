@@ -1475,7 +1475,7 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
 void cv_wl_viewer::set_image(cv::Mat const &image) {
     if (image.type() == CV_8UC1) {
         cv::Mat bgr;
-        cv::cvtColor(image, bgr, CV_GRAY2BGR);
+        cv::cvtColor(image, bgr, cv::COLOR_GRAY2BGR);
         image_ = bgr.clone();
     } else {
         image_ = image.clone();

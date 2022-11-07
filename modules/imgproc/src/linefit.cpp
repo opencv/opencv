@@ -331,26 +331,26 @@ static void fitLine2D( const Point2f * points, int count, int dist,
 
     switch (dist)
     {
-    case CV_DIST_L2:
+    case cv::DIST_L2:
         return fitLine2D_wods( points, count, 0, line );
 
-    case CV_DIST_L1:
+    case cv::DIST_L1:
         calc_weights = weightL1;
         break;
 
-    case CV_DIST_L12:
+    case cv::DIST_L12:
         calc_weights = weightL12;
         break;
 
-    case CV_DIST_FAIR:
+    case cv::DIST_FAIR:
         calc_weights_param = weightFair;
         break;
 
-    case CV_DIST_WELSCH:
+    case cv::DIST_WELSCH:
         calc_weights_param = weightWelsch;
         break;
 
-    case CV_DIST_HUBER:
+    case cv::DIST_HUBER:
         calc_weights_param = weightHuber;
         break;
 
@@ -475,26 +475,26 @@ static void fitLine3D( Point3f * points, int count, int dist,
 
     switch (dist)
     {
-    case CV_DIST_L2:
+    case cv::DIST_L2:
         return fitLine3D_wods( points, count, 0, line );
 
-    case CV_DIST_L1:
+    case cv::DIST_L1:
         calc_weights = weightL1;
         break;
 
-    case CV_DIST_L12:
+    case cv::DIST_L12:
         calc_weights = weightL12;
         break;
 
-    case CV_DIST_FAIR:
+    case cv::DIST_FAIR:
         calc_weights_param = weightFair;
         break;
 
-    case CV_DIST_WELSCH:
+    case cv::DIST_WELSCH:
         calc_weights_param = weightWelsch;
         break;
 
-    case CV_DIST_HUBER:
+    case cv::DIST_HUBER:
         calc_weights_param = weightHuber;
         break;
 

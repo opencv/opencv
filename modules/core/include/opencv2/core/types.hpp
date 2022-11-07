@@ -954,10 +954,6 @@ public:
     //! the full constructor
     Moments(double m00, double m10, double m01, double m20, double m11,
             double m02, double m30, double m21, double m12, double m03 );
-    ////! the conversion from CvMoments
-    //Moments( const CvMoments& moments );
-    ////! the conversion to CvMoments
-    //operator CvMoments() const;
 
     //! @name spatial moments
     //! @{

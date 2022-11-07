@@ -2320,7 +2320,7 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         }
         break;
     default:
-        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
+        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only cv::HOUGH_GRADIENT is supported." );
     }
 }
 

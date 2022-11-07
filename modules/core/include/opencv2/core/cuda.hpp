@@ -609,8 +609,8 @@ Below is an example that utilizes BufferPool with StackAllocator:
         GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
         GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
 
-        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+        cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
     }
 @endcode
 
@@ -675,8 +675,8 @@ and the corresponding memory is automatically returned to the pool for later usa
             d_src1.setTo(Scalar(i), stream1);
             d_src2.setTo(Scalar(i), stream2);
 
-            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+            cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
                                                                     // The order of destruction of the local variables is:
                                                                     //   d_dst2 => d_src2 => d_dst1 => d_src1
                                                                     // LIFO rule is satisfied, this code runs without error

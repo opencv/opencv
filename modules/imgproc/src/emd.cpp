@@ -113,6 +113,8 @@ typedef struct CvEMDState
 }
 CvEMDState;
 
+typedef float (CV_CDECL * CvDistanceFunction)( const float* a, const float* b, void* user_param );
+
 /* static function declaration */
 static int icvInitEMD( const float *signature1, int size1,
                        const float *signature2, int size2,
@@ -232,13 +234,13 @@ static float cvCalcEMD2( const CvArr* signature_arr1,
         user_param = (void *) (size_t)dims;
         switch (dist_type)
         {
-        case CV_DIST_L1:
+        case cv::DIST_L1:
             dist_func = icvDistL1;
             break;
-        case CV_DIST_L2:
+        case cv::DIST_L2:
             dist_func = icvDistL2;
             break;
-        case CV_DIST_C:
+        case cv::DIST_C:
             dist_func = icvDistC;
             break;
         default:

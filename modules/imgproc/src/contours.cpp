@@ -503,6 +503,13 @@ typedef struct _CvContourScanner
 }
 _CvContourScanner;
 
+/*
+Internal structure that is used for sequential retrieving contours from the image.
+It supports both hierarchical and plane variants of Suzuki algorithm.
+*/
+typedef struct _CvContourScanner* CvContourScanner;
+
+
 #define _CV_FIND_CONTOURS_FLAGS_EXTERNAL_ONLY    1
 #define _CV_FIND_CONTOURS_FLAGS_HIERARCHIC       2
 
@@ -637,7 +644,7 @@ cvStartFindContours_Impl( void* _img, CvMemStorage* storage,
 
     /* converts all pixels to 0 or 1 */
     if( CV_MAT_TYPE(mat->type) != CV_32S )
-        cvThreshold( mat, mat, 0, 1, CV_THRESH_BINARY );
+        cvThreshold( mat, mat, 0, 1, cv::THRESH_BINARY );
 
     return scanner;
 }
