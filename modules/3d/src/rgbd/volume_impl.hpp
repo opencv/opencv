@@ -141,6 +141,7 @@ public:
     int lastFrameId;
     Vec6f frameParams;
     int volumeUnitDegree;
+    bool enableGrowth;
 
 #ifndef HAVE_OPENCL
     Mat volUnitsData;

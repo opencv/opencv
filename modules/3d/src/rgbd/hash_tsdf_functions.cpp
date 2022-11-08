@@ -179,8 +179,6 @@ void integrateHashTsdfVolumeUnit(
 */
 
 
-    //std::cout << "integrateHashTsdfVolumeUnit()" << std::endl;
-
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
@@ -188,6 +186,8 @@ void integrateHashTsdfVolumeUnit(
     Mat volUnitsData = _volUnitsData.getMat();
     Mat pixNorms = _pixNorms.getMat();
 
+    if (enableGrowth)
+{
     //! Compute volumes to be allocated
     const int depthStride = volumeUnitDegree;
     const float invDepthFactor = 1.f / settings.getDepthFactor();
@@ -259,7 +259,6 @@ void integrateHashTsdfVolumeUnit(
         mutex.unlock();
     };
     parallel_for_(allocateRange, AllocateVolumeUnitsInvoker);
-    //AllocateVolumeUnitsInvoker(allocateRange);
 
     //! Perform the allocation
     for (auto idx : newIndices)
@@ -283,6 +282,7 @@ void integrateHashTsdfVolumeUnit(
         vu.lastVisibleIndex = frameId;
         vu.isActive = true;
     }
+}
 
     //! Get keys for all the allocated volume Units
     std::vector<Vec3i> totalVolUnits;
@@ -650,6 +650,8 @@ void ocl_integrateHashTsdfVolumeUnit(
     const Affine3f pose = Affine3f(_pose);
     Matx44f vol2camMatrix = (Affine3f(cameraPose).inv() * pose).matrix;
 
+if (enableGrowth)
+{
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
     allocateVolumeUnits(depth, depthFactor, pose, cameraPose, intrinsics, hashTable, volumeUnitDegree, truncDist, maxDepth, volumeUnitSize);
@@ -691,6 +693,7 @@ void ocl_integrateHashTsdfVolumeUnit(
         TsdfVoxel emptyVoxel(floatToTsdf(0.0f), 0);
         volUnitsData.rowRange(r) = Vec2b((uchar)(emptyVoxel.tsdf), (uchar)(emptyVoxel.weight));
     }
+}
 
     //! Mark volumes in the camera frustum as active
     markActive(cameraPose, intrinsics, depth.size(), frameId, pose, hashTable, isActiveFlags, lastVisibleIndices, maxDepth, volumeUnitSize);
