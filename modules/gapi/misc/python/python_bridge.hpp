@@ -36,6 +36,7 @@ WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,     G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,    G)  \
 WRAP_ARGS(cv::Point   , cv::gapi::ArgType::CV_POINT,     G)  \
 WRAP_ARGS(cv::Point2f , cv::gapi::ArgType::CV_POINT2F,   G)  \
+WRAP_ARGS(cv::Point3f , cv::gapi::ArgType::CV_POINT3F,   G)  \
 WRAP_ARGS(cv::Size    , cv::gapi::ArgType::CV_SIZE,      G)  \
 WRAP_ARGS(cv::Rect    , cv::gapi::ArgType::CV_RECT,      G)  \
 WRAP_ARGS(cv::Scalar  , cv::gapi::ArgType::CV_SCALAR,    G)  \
@@ -53,6 +54,7 @@ WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,   G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,  G)  \
 WRAP_ARGS(cv::Point   , cv::gapi::ArgType::CV_POINT,   G)  \
 WRAP_ARGS(cv::Point2f , cv::gapi::ArgType::CV_POINT2F, G)  \
+WRAP_ARGS(cv::Point3f , cv::gapi::ArgType::CV_POINT3F, G)  \
 WRAP_ARGS(cv::Size    , cv::gapi::ArgType::CV_SIZE,    G)  \
 WRAP_ARGS(cv::GArg    , cv::gapi::ArgType::CV_ANY,     G)  \
 WRAP_ARGS(cv::Rect    , cv::gapi::ArgType::CV_RECT,    G2) \
@@ -70,6 +72,7 @@ enum ArgType {
     CV_STRING,
     CV_POINT,
     CV_POINT2F,
+    CV_POINT3F,
     CV_SIZE,
     CV_RECT,
     CV_SCALAR,

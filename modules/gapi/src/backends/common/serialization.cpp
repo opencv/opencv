@@ -176,6 +176,13 @@ IIStream& operator>> (IIStream& is, cv::Point2f& pt) {
     return is >> pt.x >> pt.y;
 }
 
+IOStream& operator<< (IOStream& os, const cv::Point3f &pt) {
+    return os << pt.x << pt.y << pt.z;
+}
+IIStream& operator>> (IIStream& is, cv::Point3f& pt) {
+    return is >> pt.x >> pt.y >> pt.z;
+}
+
 IOStream& operator<< (IOStream& os, const cv::Size &sz) {
     return os << sz.width << sz.height;
 }
@@ -584,6 +591,7 @@ IIStream& operator>> (IIStream& is, cv::GArg &arg) {
             HANDLE_CASE(STRING  , std::string);
             HANDLE_CASE(POINT   , cv::Point);
             HANDLE_CASE(POINT2F , cv::Point2f);
+            HANDLE_CASE(POINT3F , cv::Point3f);
             HANDLE_CASE(SIZE    , cv::Size);
             HANDLE_CASE(RECT    , cv::Rect);
             HANDLE_CASE(SCALAR  , cv::Scalar);

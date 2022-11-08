@@ -164,7 +164,7 @@ try:
 
         def generate_random_points(self, sz):
             arr = np.random.random(sz).astype(np.float32).T
-            return list(zip(arr[0], arr[1]))
+            return list(zip(*[arr[i] for i in range(sz[1])]))
 
 
         def test_kmeans_2d(self):
@@ -181,6 +181,33 @@ try:
 
             # G-API
             data        = cv.GArrayT(cv.gapi.CV_POINT2F)
+            best_labels = cv.GArrayT(cv.gapi.CV_INT)
+
+            compactness, out_labels, centers = cv.gapi.kmeans(data, K, best_labels, criteria, attempts, flags)
+            comp = cv.GComputation(cv.GIn(data, best_labels), cv.GOut(compactness, out_labels, centers))
+
+            compact, labels, centers = comp.apply(cv.gin(in_vector, in_labels))
+
+            # Assert
+            self.assertTrue(compact >= 0)
+            self.assertEqual(amount, len(labels))
+            self.assertEqual(K, len(centers))
+
+
+        def test_kmeans_3d(self):
+            # K-means 3D params
+            count     = 100
+            sz        = (count, 3)
+            amount    = sz[0]
+            K         = 5
+            flags     = cv.KMEANS_RANDOM_CENTERS
+            attempts  = 1
+            criteria  = (cv.TERM_CRITERIA_MAX_ITER + cv.TERM_CRITERIA_EPS, 30, 0)
+            in_vector = self.generate_random_points(sz)
+            in_labels = []
+
+            # G-API
+            data        = cv.GArrayT(cv.gapi.CV_POINT3F)
             best_labels = cv.GArrayT(cv.gapi.CV_INT)
 
             compactness, out_labels, centers = cv.gapi.kmeans(data, K, best_labels, criteria, attempts, flags)
