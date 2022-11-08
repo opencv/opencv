@@ -275,11 +275,13 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #else
     if (useGPU)
     {
-        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms,
+                                        lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
     }
     else
     {
-        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth,
+                                    cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
         lastFrameId++;
     }
 #endif
@@ -410,37 +412,44 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
         this->settings.getVolumeResolution(res);
         float voxelSize = this->settings.getVoxelSize();
         float side = res[0] * voxelSize;
-        //TODO: this
 
-        std::vector<Point3f> pts;
-        //CPU: for (const auto& keyvalue : volumeUnits)
-        //GPU: for (int row = 0; row < hashTable.last; row++)
+        std::vector<Vec3i> vi;
+        if (useGPU)
         {
-            //TODO: this
-            Vec3i idx;
-
-            //CPU: Vec3i idx = keyvalue.first;
-            //GPU:
-            //cv::Vec4i idx4 = hashTable.data[row];
-            //cv::Vec3i idx(idx4[0], idx4[1], idx4[2]);
-
-            Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
-            pts.push_back(base);
-            pts.push_back(base + Point3f(side, 0, 0));
-            pts.push_back(base + Point3f(0, side, 0));
-            pts.push_back(base + Point3f(0, 0, side));
-            pts.push_back(base + Point3f(side, side, 0));
-            pts.push_back(base + Point3f(side, 0, side));
-            pts.push_back(base + Point3f(0, side, side));
-            pts.push_back(base + Point3f(side, side, side));
+            for (int row = 0; row < hashTable.last; row++)
+            {
+                Vec4i idx4 = hashTable.data[row];
+                vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
+            }
+        }
+        else
+        {
+            for (const auto& keyvalue : cpu_volumeUnits)
+            {
+                vi.push_back(keyvalue.first);
+            }
         }
 
-        if (pts.empty())
+        if (vi.empty())
         {
             return Vec6f();
         }
         else
         {
+            std::vector<Point3f> pts;
+            for (Vec3i idx : vi)
+            {
+                Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
+                pts.push_back(base);
+                pts.push_back(base + Point3f(side, 0, 0));
+                pts.push_back(base + Point3f(0, side, 0));
+                pts.push_back(base + Point3f(0, 0, side));
+                pts.push_back(base + Point3f(side, side, 0));
+                pts.push_back(base + Point3f(side, 0, side));
+                pts.push_back(base + Point3f(0, side, side));
+                pts.push_back(base + Point3f(side, side, side));
+            }
+
             const float mval = std::numeric_limits<float>::max();
             Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
             for (auto p : pts)
@@ -459,107 +468,6 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
         }
     }
 }
-
-/*
-Vec6f HashTSDFVolumeCPU::getBoundingBox(int precision) const
-{
-    if (precision == BoundingBoxPrecision::VOXEL)
-    {
-        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
-    }
-    else
-    {
-        std::vector<Point3f> pts;
-        for (const auto& keyvalue : volumeUnits)
-        {
-            Vec3i idx = keyvalue.first;
-            float side = volumeUnitResolution * voxelSize;
-            Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
-            pts.push_back(base);
-            pts.push_back(base + Point3f(side, 0, 0));
-            pts.push_back(base + Point3f(0, side, 0));
-            pts.push_back(base + Point3f(0, 0, side));
-            pts.push_back(base + Point3f(side, side, 0));
-            pts.push_back(base + Point3f(side, 0, side));
-            pts.push_back(base + Point3f(0, side, side));
-            pts.push_back(base + Point3f(side, side, side));
-        }
-
-        if (pts.empty())
-        {
-            return Vec6f();
-        }
-        else
-        {
-            const float mval = std::numeric_limits<float>::max();
-            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
-            for (auto p : pts)
-            {
-                // pt in local coords
-                Point3f pg = p;
-                bb[0] = min(bb[0], pg.x);
-                bb[1] = min(bb[1], pg.y);
-                bb[2] = min(bb[2], pg.z);
-                bb[3] = max(bb[3], pg.x);
-                bb[4] = max(bb[4], pg.y);
-                bb[5] = max(bb[5], pg.z);
-            }
-
-            return bb;
-        }
-    }
-}
-
-Vec6f HashTSDFVolumeGPU::getBoundingBox(int precision) const
-{
-    if (precision == BoundingBoxPrecision::VOXEL)
-    {
-        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
-    }
-    else
-    {
-        std::vector<Point3f> pts;
-        for (int row = 0; row < hashTable.last; row++)
-        {
-            cv::Vec4i idx4 = hashTable.data[row];
-            cv::Vec3i idx(idx4[0], idx4[1], idx4[2]);
-            float side = volumeUnitResolution * voxelSize;
-            Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
-            pts.push_back(base);
-            pts.push_back(base + Point3f(side, 0, 0));
-            pts.push_back(base + Point3f(0, side, 0));
-            pts.push_back(base + Point3f(0, 0, side));
-            pts.push_back(base + Point3f(side, side, 0));
-            pts.push_back(base + Point3f(side, 0, side));
-            pts.push_back(base + Point3f(0, side, side));
-            pts.push_back(base + Point3f(side, side, side));
-        }
-
-        if (pts.empty())
-        {
-            return Vec6f();
-        }
-        else
-        {
-            const float mval = std::numeric_limits<float>::max();
-            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
-            for (auto p : pts)
-            {
-                // pt in local coords
-                Point3f pg = p;
-                bb[0] = min(bb[0], pg.x);
-                bb[1] = min(bb[1], pg.y);
-                bb[2] = min(bb[2], pg.z);
-                bb[3] = max(bb[3], pg.x);
-                bb[4] = max(bb[4], pg.y);
-                bb[5] = max(bb[5], pg.z);
-            }
-
-            return bb;
-        }
-    }
-}
-*/
 
 // COLOR_TSDF
 
