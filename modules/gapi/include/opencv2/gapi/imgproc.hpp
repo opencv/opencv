@@ -654,8 +654,8 @@ center.
 @param borderValue border value in case of constant border type
 @sa  boxFilter, bilateralFilter, GaussianBlur, medianBlur
  */
-GAPI_EXPORTS GMat blur(const GMat& src, const Size& ksize, const Point& anchor = Point(-1,-1),
-                       int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
+GAPI_EXPORTS_W GMat blur(const GMat& src, const Size& ksize, const Point& anchor = Point(-1,-1),
+                         int borderType = BORDER_DEFAULT, const Scalar& borderValue = Scalar(0));
 
 
 //GAPI_EXPORTS_W void blur( InputArray src, OutputArray dst,
