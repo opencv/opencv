@@ -275,6 +275,8 @@ OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATI
 OCV_OPTION(WITH_FFMPEG "Include FFMPEG support" (NOT ANDROID)
   VISIBLE_IF NOT IOS AND NOT WINRT
   VERIFY HAVE_FFMPEG)
+OCV_OPTION(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE "Include FFMPEG/libavdevice library support." OFF
+  VISIBLE_IF WITH_FFMPEG)
 OCV_OPTION(WITH_GSTREAMER "Include Gstreamer support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT
   VERIFY HAVE_GSTREAMER AND GSTREAMER_VERSION VERSION_GREATER "0.99")
@@ -1444,7 +1446,9 @@ if(WITH_FFMPEG OR HAVE_FFMPEG)
   status("      avutil:"       FFMPEG_libavutil_VERSION     THEN "YES (${FFMPEG_libavutil_VERSION})"     ELSE NO)
   status("      swscale:"      FFMPEG_libswscale_VERSION    THEN "YES (${FFMPEG_libswscale_VERSION})"    ELSE NO)
   status("      avresample:"   FFMPEG_libavresample_VERSION THEN "YES (${FFMPEG_libavresample_VERSION})" ELSE NO)
-  status("      avdevice:"     FFMPEG_libavdevice_VERSION   THEN "YES (${FFMPEG_libavdevice_VERSION})"   ELSE NO)
+  if(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE)
+    status("      avdevice:"     FFMPEG_libavdevice_VERSION   THEN "YES (${FFMPEG_libavdevice_VERSION})"   ELSE NO)
+  endif()
 endif()
 
 if(WITH_GSTREAMER OR HAVE_GSTREAMER)
