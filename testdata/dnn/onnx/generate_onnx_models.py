@@ -1169,6 +1169,41 @@ save_data_and_model("matmul_3d", x, model)
 x = Variable(torch.randn(1, 3, 2, 4))
 save_data_and_model("matmul_4d", x, model)
 
+########### MatMul init ###########
+def generate_matmul_init(name, inputA, inputB):
+    output = inputA @ inputB
+    shapeA = inputA.shape
+    shapeB = inputB.shape
+    shapeY = output.shape
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, inputA.data)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output.data))
+
+    A = onnx.helper.make_tensor_value_info('A', onnx.TensorProto.FLOAT, shapeA)
+    B = onnx.helper.make_tensor_value_info('B', onnx.TensorProto.FLOAT, shapeB)
+    Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, shapeY)
+    B_INIT = onnx.helper.make_tensor("B", onnx.TensorProto.FLOAT, shapeB, inputB)
+
+
+    node = onnx.helper.make_node("MatMul", inputs=['A', "B",], outputs=['output'])
+    graph = onnx.helper.make_graph([node], name, [A, B], [Y], [B_INIT])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, os.path.join("models", name + ".onnx"))
+
+inputA = np.random.randn(2, 3).astype(np.float32)
+inputB = np.random.randn(3, 4).astype(np.float32)
+generate_matmul_init("matmul_2d_init", inputA, inputB)
+
+inputA = np.random.randn(5, 2, 3).astype(np.float32)
+inputB = np.random.randn(5, 3, 4).astype(np.float32)
+generate_matmul_init("matmul_3d_init", inputA, inputB)
+
+inputA = np.random.randn(6, 2, 3, 4).astype(np.float32)
+inputB = np.random.randn(6, 2, 4, 5).astype(np.float32)
+generate_matmul_init("matmul_4d_init", inputA, inputB)
+
 x = np.random.rand(1, 3, 2)
 output = np.mean(x, axis=1, keepdims=True)
 save_onnx_data_and_model(x, output, 'reduce_mean_axis1', 'ReduceMean', axes=(1), keepdims=True)
