@@ -2031,8 +2031,9 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    opencv_onnx::NodeProto node_proto = node_proto_;
     CV_Assert(node_proto.input_size() == 2);
     layerParams.type = "InnerProduct";
     layerParams.set("bias_term", false);
@@ -2044,8 +2045,24 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
     {
         Mat blob = getBlob(node_proto, 1);
         secondInpDims = blob.dims;
-        layerParams.blobs.push_back(blob.t());
-        layerParams.set("num_output", layerParams.blobs[0].size[0]);
+        if (secondInpDims == 2)
+        {
+            layerParams.blobs.push_back(blob.t());
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+        }
+        else
+        {
+            LayerParams constParams;
+            constParams.name = layerParams.name + "/const";
+            constParams.type = "Const";
+            constParams.blobs.push_back(blob);
+
+            opencv_onnx::NodeProto tmpProto;
+            tmpProto.add_output(constParams.name);
+            addLayer(constParams, tmpProto);
+
+            node_proto.set_input(1, constParams.name);
+        }
     } else {
         secondInpDims = outShapes[node_proto.input(1)].size();
     }
