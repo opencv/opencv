@@ -347,10 +347,14 @@ int main(int argc, char* argv[]) {
                 std::map<std::string, std::string>{{"CACHE_DIR", cached_dir}};
         }
 
-        const double work_time_ms =
-            check_and_read<double>(fs, "work_time", "Config");
-        if (work_time_ms < 0) {
-            throw std::logic_error("work_time must be positive");
+        auto opt_work_time_ms = readOpt<double>(fs["work_time"]);
+        cv::optional<int64_t> opt_work_time_mcs;
+        if (opt_work_time_ms) {
+            const double work_time_ms = opt_work_time_ms.value();
+            if (work_time_ms < 0) {
+                throw std::logic_error("work_time must be positive");
+            }
+            opt_work_time_mcs = cv::optional<int64_t>(utils::ms_to_mcs(work_time_ms));
         }
 
         auto pipelines_fn = check_and_get_fn(fs, "Pipelines", "Config");
@@ -369,6 +373,21 @@ int main(int argc, char* argv[]) {
         for (const auto& name : exec_list) {
             const auto& pl_fn = check_and_get_fn(pipelines_fn, name, "Pipelines");
             builder.setName(name);
+            StopCriterion::Ptr stop_criterion;
+            auto opt_num_iters = readOpt<int>(pl_fn["num_iters"]);
+            // NB: num_iters for specific pipeline takes priority over global work_time.
+            if (opt_num_iters) {
+                stop_criterion.reset(new NumItersCriterion(opt_num_iters.value()));
+            } else if (opt_work_time_mcs) {
+                stop_criterion.reset(new ElapsedTimeCriterion(opt_work_time_mcs.value()));
+            } else {
+                throw std::logic_error(
+                        "Failed: Pipeline " + name + " doesn't have stop criterion!\n"
+                        "Please specify either work_time: <value> in the config root"
+                        " or num_iters: <value> for specific pipeline.");
+            }
+            builder.setStopCriterion(std::move(stop_criterion));
+
             // NB: Set source
             {
                 const auto& src_fn = check_and_get_fn(pl_fn, "source", name);
@@ -464,7 +483,7 @@ int main(int argc, char* argv[]) {
         for (size_t i = 0; i < pipelines.size(); ++i) {
             threads[i] = std::thread([&, i]() {
                 try {
-                    pipelines[i]->run(work_time_ms);
+                    pipelines[i]->run();
                 } catch (...) {
                     eptrs[i] = std::current_exception();
                 }

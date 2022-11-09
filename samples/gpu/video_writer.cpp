@@ -2,7 +2,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_CUDACODEC) && defined(_WIN32)
+#if defined(HAVE_OPENCV_CUDACODEC)
 
 #include <vector>
 #include <numeric>
@@ -20,7 +20,7 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    const double FPS = 25.0;
+    constexpr double fps = 25.0;
 
     cv::VideoCapture reader(argv[1]);
 
@@ -37,17 +37,12 @@ int main(int argc, const char* argv[])
 
     cv::Mat frame;
     cv::cuda::GpuMat d_frame;
-
-    std::vector<double> cpu_times;
-    std::vector<double> gpu_times;
-    TickMeter tm;
+    cv::cuda::Stream stream;
 
     for (int i = 1;; ++i)
     {
         std::cout << "Read " << i << " frame" << std::endl;
-
         reader >> frame;
-
         if (frame.empty())
         {
             std::cout << "Stop" << std::endl;
@@ -57,46 +52,26 @@ int main(int argc, const char* argv[])
         if (!writer.isOpened())
         {
             std::cout << "Frame Size : " << frame.cols << "x" << frame.rows << std::endl;
-
             std::cout << "Open CPU Writer" << std::endl;
-
-            if (!writer.open("output_cpu.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), FPS, frame.size()))
+            const String outputFilename = "output_cpu.avi";
+            if (!writer.open(outputFilename, cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), fps, frame.size()))
                 return -1;
+            std::cout << "Writing to " << outputFilename << std::endl;
         }
 
         if (d_writer.empty())
         {
             std::cout << "Open CUDA Writer" << std::endl;
-
-            const cv::String outputFilename = "output_gpu.avi";
-            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), FPS);
+            const cv::String outputFilename = "output_gpu.h264";
+            d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), cv::cudacodec::Codec::H264, fps, cv::cudacodec::ColorFormat::BGR, 0, stream);
+            std::cout << "Writing to " << outputFilename << std::endl;
         }
 
-        d_frame.upload(frame);
-
+        d_frame.upload(frame, stream);
         std::cout << "Write " << i << " frame" << std::endl;
-
-        tm.reset(); tm.start();
         writer.write(frame);
-        tm.stop();
-        cpu_times.push_back(tm.getTimeMilli());
-
-        tm.reset(); tm.start();
         d_writer->write(d_frame);
-        tm.stop();
-        gpu_times.push_back(tm.getTimeMilli());
     }
-
-    std::cout << std::endl << "Results:" << std::endl;
-
-    std::sort(cpu_times.begin(), cpu_times.end());
-    std::sort(gpu_times.begin(), gpu_times.end());
-
-    double cpu_avg = std::accumulate(cpu_times.begin(), cpu_times.end(), 0.0) / cpu_times.size();
-    double gpu_avg = std::accumulate(gpu_times.begin(), gpu_times.end(), 0.0) / gpu_times.size();
-
-    std::cout << "CPU [XVID] : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << std::endl;
-    std::cout << "GPU [H264] : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << std::endl;
 
     return 0;
 }

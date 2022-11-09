@@ -96,21 +96,29 @@ struct LayerData
 
     int flag;
 
-    Ptr<Layer> getLayerInstance()
+
+    void resetAllocation()
     {
-        CV_TRACE_FUNCTION();
-        CV_TRACE_ARG_VALUE(type, "type", type.c_str());
+        if (id == 0)
+            return;  // skip "input" layer (assertion in Net::Impl::allocateLayers)
 
-        if (layerInstance)
-            return layerInstance;
+        layerInstance.release();
+        outputBlobs.clear();
+        inputBlobs.clear();
+        internals.clear();
 
-        layerInstance = LayerFactory::createLayerInstance(type, params);
-        if (!layerInstance)
-        {
-            CV_Error(Error::StsError, "Can't create layer \"" + name + "\" of type \"" + type + "\"");
-        }
+        outputBlobsWrappers.clear();
+        inputBlobsWrappers.clear();
+        internalBlobsWrappers.clear();
 
-        return layerInstance;
+        backendNodes.clear();
+
+        skip = false;
+        flag = 0;
+
+#ifdef HAVE_CUDA
+        cudaD2HBackgroundTransfers.clear();
+#endif
     }
 };
 

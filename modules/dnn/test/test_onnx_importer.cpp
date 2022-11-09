@@ -221,11 +221,21 @@ TEST_P(Test_ONNX_layers, GatherMulti)
 
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
     testONNXModels("conv3d");
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D_bias)
 {
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
     testONNXModels("conv3d_bias");
 }
 
@@ -682,6 +692,16 @@ TEST_P(Test_ONNX_layers, Compare_LT)
     testONNXModels("less");
 }
 
+TEST_P(Test_ONNX_layers, Compare_GTorEQ)
+{
+    testONNXModels("greater_or_equal");
+}
+
+TEST_P(Test_ONNX_layers, Compare_LEorEQ)
+{
+    testONNXModels("less_or_equal");
+}
+
 TEST_P(Test_ONNX_layers, CompareSameDims_EQ)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -857,6 +877,12 @@ TEST_P(Test_ONNX_layers, PoolConv3D)
 
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
 
     testONNXModels("pool_conv_3d");
 }
@@ -1063,10 +1089,9 @@ TEST_P(Test_ONNX_layers, Div)
     Mat out = net.forward();
 
     normAssert(ref, out, "", default_l1,  default_lInf);
-    expectNoFallbacksFromIE(net);
-    expectNoFallbacksFromCUDA(net);
 
-    testONNXModels("div_test_1x1",npy, 0, 0, false, true, 2);
+    // NaryEltwise layer suuports only CPU for now
+    testONNXModels("div_test_1x1", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
@@ -1084,6 +1109,11 @@ TEST_P(Test_ONNX_layers, Reshape)
 {
     testONNXModels("unsqueeze");
     testONNXModels("unsqueeze_opset_13");
+}
+
+TEST_P(Test_ONNX_layers, Unsqueeze_Neg_Axes)
+{
+    testONNXModels("unsqueeze_neg_axes");
 }
 
 TEST_P(Test_ONNX_layers, Squeeze)
@@ -1112,8 +1142,17 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
-    testONNXModels("split_sizes");
     testONNXModels("split_neg_axis");
+}
+
+// Mul inside with 0-d tensor, output should be A x 1, but is 1 x A. PR #22652
+TEST_P(Test_ONNX_layers, DISABLED_Split_sizes_0d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_sizes");
 }
 
 TEST_P(Test_ONNX_layers, Slice)
@@ -1785,11 +1824,22 @@ TEST_P(Test_ONNX_layers, Gemm)
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
-    testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
-    testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
-    testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+    // The difference of QOperator and QDQ format:
+    // https://onnxruntime.ai/docs/performance/quantization.html#onnx-quantization-representation-format.
+    {
+        SCOPED_TRACE("QOperator quantized model.");
+        testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+        testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    }
 
-    testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    {
+        SCOPED_TRACE("QDQ quantized model.");
+        testONNXModels("quantized_conv_uint8_weights_qdq", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights_qdq", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights_qdq", npy, 0.06, 0.4);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
@@ -2169,7 +2219,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.008;
+        l1 = 0.009;
         lInf = 0.04;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
@@ -2356,7 +2406,7 @@ TEST_P(Test_ONNX_layers, CumSum)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_layers, YOLOv7)
 {
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx");
+    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};

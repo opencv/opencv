@@ -38,7 +38,12 @@ struct Net::Impl : public detail::NetImplBase
     typedef std::map<int, LayerShapes> LayersShapesMap;
     typedef std::map<int, LayerData> MapIdToLayerData;
 
+    virtual ~Impl();
     Impl();
+    Impl(const Impl&) = delete;
+
+    // Inheritance support
+    Ptr<Net::Impl> basePtr_;
 
     Ptr<DataLayer> netInputLayer;
     std::vector<LayerPin> blobsToKeep;
@@ -49,7 +54,6 @@ struct Net::Impl : public detail::NetImplBase
     int preferableBackend;
     int preferableTarget;
     String halideConfigFile;
-    bool skipInfEngineInit;
     bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper>> backendWrappers;
@@ -59,22 +63,52 @@ struct Net::Impl : public detail::NetImplBase
     bool netWasAllocated;
     bool netWasQuantized;
     bool fusion;
-    bool isAsync;
+    bool isAsync;  // FIXIT: drop
+    bool useWinograd;
     std::vector<int64> layersTimings;
 
 
-    bool empty() const;
-    void setPreferableBackend(int backendId);
-    void setPreferableTarget(int targetId);
+    virtual bool empty() const;
+    virtual void setPreferableBackend(Net& net, int backendId);
+    virtual void setPreferableTarget(int targetId);
 
     // FIXIT use inheritance
-    Ptr<BackendWrapper> wrap(Mat& host);
+    virtual Ptr<BackendWrapper> wrap(Mat& host);
 
 
-    void clear();
+    virtual void clear();
+
+
+    virtual void validateBackendAndTarget();
 
     void setUpNet(const std::vector<LayerPin>& blobsToKeep_ = std::vector<LayerPin>());
 
+
+    virtual Ptr<Layer> createLayerInstance(const LayerData& ld) const
+    {
+        return LayerFactory::createLayerInstance(ld.type, const_cast<LayerParams&>(ld.params));
+    }
+    Ptr<Layer> getLayerInstance(LayerData& ld) const
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(type, "type", ld.type.c_str());
+
+        if (ld.layerInstance)
+            return ld.layerInstance;
+
+        ld.layerInstance = createLayerInstance(ld);
+        if (!ld.layerInstance && basePtr_)
+        {
+            ld.layerInstance = basePtr_->createLayerInstance(ld);
+            CV_LOG_IF_DEBUG(NULL, ld.layerInstance, "Created layer \"" + ld.name + "\" of type \"" + ld.type + "\" from upstream layers registry");
+        }
+        if (!ld.layerInstance)
+        {
+            CV_Error(Error::StsError, "Can't create layer \"" + ld.name + "\" of type \"" + ld.type + "\"");
+        }
+
+        return ld.layerInstance;
+    }
 
     Ptr<Layer> getLayer(int layerId) const;
     Ptr<Layer> getLayer(const LayerId& layerId) const;
@@ -118,7 +152,7 @@ struct Net::Impl : public detail::NetImplBase
 
     void setInputsNames(const std::vector<String>& inputBlobNames);
     void setInputShape(const String& inputName, const MatShape& shape);
-    void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
+    virtual void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean);
     Mat getParam(int layer, int numParam) const;
     void setParam(int layer, int numParam, const Mat& blob);
     std::vector<Ptr<Layer>> getLayerInputs(int layerId) const;
@@ -130,18 +164,12 @@ struct Net::Impl : public detail::NetImplBase
     int getLayersCount(const String& layerType) const;
 
 
-    // FIXIT use inheritance
-    void initBackend(const std::vector<LayerPin>& blobsToKeep_);
+    virtual void initBackend(const std::vector<LayerPin>& blobsToKeep_);
 
     void setHalideScheduler(const String& scheduler);
 #ifdef HAVE_HALIDE
     void compileHalide();
     void initHalideBackend();
-#endif
-
-#ifdef HAVE_DNN_NGRAPH
-    void addNgraphOutputs(LayerData& ld);
-    void initNgraphBackend(const std::vector<LayerPin>& blobsToKeep_);
 #endif
 
 #ifdef HAVE_WEBNN
@@ -183,11 +211,12 @@ struct Net::Impl : public detail::NetImplBase
     // TODO add getter
     void enableFusion(bool fusion_);
 
-    void fuseLayers(const std::vector<LayerPin>& blobsToKeep_);
+    virtual void fuseLayers(const std::vector<LayerPin>& blobsToKeep_);
+    void enableWinograd(bool useWinograd_);
 
     void allocateLayers(const std::vector<LayerPin>& blobsToKeep_);
 
-    void forwardLayer(LayerData& ld);
+    virtual void forwardLayer(LayerData& ld);
 
     void forwardToLayer(LayerData& ld, bool clearFlags = true);
 
@@ -243,22 +272,17 @@ struct Net::Impl : public detail::NetImplBase
     Mat getBlob(String outputName) const;
 
 #ifdef CV_CXX11
-    AsyncArray getBlobAsync(const LayerPin& pin);
+    virtual AsyncArray getBlobAsync(const LayerPin& pin);
 
     AsyncArray getBlobAsync(String outputName);
 #endif  // CV_CXX11
-
-#ifdef HAVE_INF_ENGINE
-    static
-    Net createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNet);
-#endif
 
     string dump(bool forceAllocation = false) const;
 
     void dumpNetworkToFile() const;
 
     // FIXIT drop from inference API
-    Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel) /*const*/;
+    Net quantize(Net& net, InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel) /*const*/;
     void getInputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
     void getOutputDetails(std::vector<float>& scales, std::vector<int>& zeropoints) /*const*/;
 
