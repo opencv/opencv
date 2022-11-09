@@ -14,6 +14,7 @@ FATAL: In-source builds are not allowed.
 ")
 endif()
 
+ADD_DEFINITIONS ( -DPQXX_HIDE_EXP_OPTIONAL )
 
 include(cmake/OpenCVMinDepVersions.cmake)
 
@@ -542,11 +543,15 @@ OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"   
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
+  add_definitions(-DPQXX_HIDE_EXP_OPTIONAL)
 endif()
 
 if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
   add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
+  add_definitions(-DPQXX_HIDE_EXP_OPTIONAL)
 endif()
+
+add_definitions(-DPQXX_HIDE_EXP_OPTIONAL)
 
 set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
 
@@ -1141,6 +1146,7 @@ endif()
 # ========================== C/C++ options ==========================
 if(CMAKE_CXX_COMPILER_VERSION)
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CXX_COMPILER_VERSION})")
+  message("${OPENCV_COMPILER_STR}")
 else()
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1}")
 endif()
