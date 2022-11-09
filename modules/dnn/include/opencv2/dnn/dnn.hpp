@@ -52,6 +52,11 @@
 
 namespace cv {
 namespace dnn {
+
+namespace accessor {
+class DnnNetAccessor;  // forward declaration
+}
+
 CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
@@ -76,9 +81,11 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
-#ifdef __OPENCV_BUILD
+#if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
+#if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+#endif
 #endif
     };
 
@@ -830,6 +837,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void enableFusion(bool fusion);
 
+        /** @brief Enables or disables the Winograd compute branch. The Winograd compute branch can speed up
+         * 3x3 Convolution at a small loss of accuracy.
+        * @param useWinograd true to enable the Winograd compute branch. The default is true.
+        */
+        CV_WRAP void enableWinograd(bool useWinograd);
+
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
@@ -840,8 +853,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-    private:
+
         struct Impl;
+        inline Impl* getImpl() const { return impl.get(); }
+        inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
+        friend class accessor::DnnNetAccessor;
+    protected:
         Ptr<Impl> impl;
     };
 

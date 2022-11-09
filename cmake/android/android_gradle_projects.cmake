@@ -3,7 +3,7 @@ set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin ve
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
 set(KOTLIN_PLUGIN_VERSION "1.4.10" CACHE STRING "Kotlin Plugin version")
-message(STATUS "kotlin Plugin version: ${KOTLIN_GRADLE_PLUGIN_VERSION}")
+message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
 
 if(BUILD_KOTLIN_EXTENSIONS)
   set(KOTLIN_PLUGIN_DECLARATION "apply plugin: 'kotlin-android'" CACHE STRING "Kotlin Plugin version")
@@ -50,9 +50,11 @@ endif()
 #string(REPLACE "\n" "\n${__spaces}" ANDROID_ABI_FILTER "${__spaces}${ANDROID_BUILD_ABI_FILTER}")
 #string(REPLACE REGEX "[ ]+$" "" ANDROID_ABI_FILTER "${ANDROID_ABI_FILTER}")
 set(ANDROID_ABI_FILTER "${ANDROID_BUILD_ABI_FILTER}")
+set(ANDROID_STRICT_BUILD_CONFIGURATION "true")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_BUILD_BASE_DIR}/build.gradle" @ONLY)
 
 set(ANDROID_ABI_FILTER "${ANDROID_INSTALL_ABI_FILTER}")
+set(ANDROID_STRICT_BUILD_CONFIGURATION "false")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}" COMPONENT samples)
 
@@ -80,6 +82,15 @@ foreach(fname ${GRADLE_WRAPPER_FILES})
   install(FILES "${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/${fname}" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples ${__permissions})
 endforeach()
 
+# force reusing of the same CMake version
+if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
+  if(NOT DEFINED _CMAKE_INSTALL_DIR)
+    get_filename_component(_CMAKE_INSTALL_DIR "${CMAKE_ROOT}" PATH)
+    get_filename_component(_CMAKE_INSTALL_DIR "${_CMAKE_INSTALL_DIR}" PATH)
+  endif()
+  ocv_update_file("${ANDROID_BUILD_BASE_DIR}/local.properties" "cmake.dir=${_CMAKE_INSTALL_DIR}")
+endif()
+
 file(WRITE "${ANDROID_BUILD_BASE_DIR}/settings.gradle" "
 include ':opencv'
 ")
@@ -94,6 +105,7 @@ include ':opencv'
 project(':opencv').projectDir = new File(opencvsdk + '/sdk')
 ")
 
+ocv_check_environment_variables(OPENCV_GRADLE_VERBOSE_OPTIONS)
 
 macro(add_android_project target path)
   get_filename_component(__dir "${path}" NAME)

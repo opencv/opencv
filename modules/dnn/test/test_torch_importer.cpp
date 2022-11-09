@@ -476,6 +476,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         ASSERT_TRUE(!net.empty());
     }
 
+    net.enableWinograd(false);
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 

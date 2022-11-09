@@ -3474,6 +3474,18 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
         return g_VI.isDeviceSetup(m_index);
     }
 
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+    {
+        // Flags are required to toggle auto exposure or not, but the setProperty interface does not support multiple parameters
+        bool enabled = cvRound(propVal) == 1;
+        long minExposure, maxExposure, delta, currentExposure, flags, defaultValue;
+        if (!g_VI.getVideoSettingCamera(m_index, CameraControl_Exposure, minExposure, maxExposure, delta, currentExposure, flags, defaultValue))
+        {
+            return false;
+        }
+        return g_VI.setVideoSettingCamera(m_index, CameraControl_Exposure, currentExposure, enabled ? CameraControl_Flags_Auto | CameraControl_Flags_Manual : CameraControl_Flags_Manual, enabled ? true : false);
+    }
+
     case CV_CAP_PROP_AUTOFOCUS:
     {
         // Flags are required to toggle autofocus or not, but the setProperty interface does not support multiple parameters

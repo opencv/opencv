@@ -160,7 +160,7 @@ public:
         double wr[27], wi[27] = {0}; // 27 = mat_order
         std::vector<double> work(lwork), eig_vecs(729);
         char jobvl = 'N', jobvr = 'V'; // only left eigen vectors are computed
-        dgeev_(&jobvl, &jobvr, &mat_order, (double*)solution_polynomial.data, &lda, wr, wi, nullptr, &ldvl,
+        OCV_LAPACK_FUNC(dgeev)(&jobvl, &jobvr, &mat_order, (double*)solution_polynomial.data, &lda, wr, wi, nullptr, &ldvl,
                &eig_vecs[0], &ldvr, &work[0], &lwork, &info);
         if (info != 0) return 0;
 #endif

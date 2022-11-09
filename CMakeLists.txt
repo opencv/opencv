@@ -266,6 +266,9 @@ OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library s
 OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
+OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" OFF
+  VISIBLE_IF WITH_CUDA
+  VERIFY HAVE_NVCUVENC)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_EIGEN)
@@ -1347,14 +1350,14 @@ if(WITH_JPEG OR HAVE_JPEG)
   elseif(BUILD_JPEG)
     status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
     if(ENABLE_LIBJPEG_TURBO_SIMD)
-      status("        SIMD Support Request:" "YES")
+      status("      SIMD Support Request:" "YES")
       if(HAVE_LIBJPEG_TURBO_SIMD)
-        status("        SIMD Support:" "YES")
+        status("      SIMD Support:" "YES")
       else()
-        status("        SIMD Support:" "NO")
+        status("      SIMD Support:" "NO")
       endif()
     else()
-      status("        SIMD Support Request:" "NO")
+      status("      SIMD Support Request:" "NO")
     endif()
   else()
     status("    JPEG:" "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
@@ -1661,6 +1664,7 @@ if(WITH_CUDA OR HAVE_CUDA)
     IF HAVE_CUFFT THEN "CUFFT"
     IF HAVE_CUBLAS THEN "CUBLAS"
     IF HAVE_NVCUVID THEN "NVCUVID"
+    IF HAVE_NVCUVENC THEN "NVCUVENC"
     IF CUDA_FAST_MATH THEN "FAST_MATH"
     ELSE "no extra features")
   status("")

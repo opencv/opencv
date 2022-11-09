@@ -1108,7 +1108,7 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1143,7 +1143,7 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1178,7 +1178,7 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1213,7 +1213,7 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1253,7 +1253,7 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const
@@ -1295,7 +1295,7 @@ struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
     }
 
     inline float calculate(float x) const

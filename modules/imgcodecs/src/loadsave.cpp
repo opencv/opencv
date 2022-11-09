@@ -929,6 +929,157 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
+static bool
+imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int count)
+{
+    CV_Assert(!buf.empty());
+    CV_Assert(buf.isContinuous());
+    CV_Assert(buf.checkVector(1, CV_8U) > 0);
+    Mat buf_row = buf.reshape(1, 1);  // decoders expects single row, avoid issues with vector columns
+
+    String filename;
+
+    ImageDecoder decoder = findDecoder(buf_row);
+    if (!decoder)
+        return 0;
+
+    if (count < 0) {
+        count = std::numeric_limits<int>::max();
+    }
+
+    if (!decoder->setSource(buf_row))
+    {
+        filename = tempfile();
+        FILE* f = fopen(filename.c_str(), "wb");
+        if (!f)
+            return 0;
+        size_t bufSize = buf_row.total() * buf.elemSize();
+        if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
+        {
+            fclose(f);
+            CV_Error(Error::StsError, "failed to write image data to temporary file");
+        }
+        if (fclose(f) != 0)
+        {
+            CV_Error(Error::StsError, "failed to write image data to temporary file");
+        }
+        decoder->setSource(filename);
+    }
+
+    // read the header to make sure it succeeds
+    bool success = false;
+    try
+    {
+        // read the header to make sure it succeeds
+        if (decoder->readHeader())
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+    }
+
+    int current = start;
+    while (success && current > 0)
+    {
+        if (!decoder->nextPage())
+        {
+            success = false;
+            break;
+        }
+        --current;
+    }
+
+    if (!success)
+    {
+        decoder.release();
+        if (!filename.empty())
+        {
+            if (0 != remove(filename.c_str()))
+            {
+                std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+            }
+        }
+        return 0;
+    }
+
+    while (current < count)
+    {
+        // grab the decoded type
+        int type = decoder->type();
+        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
+        {
+            if ((flags & IMREAD_ANYDEPTH) == 0)
+                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+            if ((flags & IMREAD_COLOR) != 0 ||
+                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
+                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+            else
+                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+        }
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+        }
+        catch (...)
+        {
+            std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+        }
+        if (!success)
+            break;
+
+        // optionally rotate the data if EXIF' orientation flag says so
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+        {
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        }
+
+        mats.push_back(mat);
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+
+    if (!filename.empty())
+    {
+        if (0 != remove(filename.c_str()))
+        {
+            std::cerr << "unable to remove temporary file:" << filename << std::endl << std::flush;
+        }
+    }
+
+    if (!success)
+        mats.clear();
+    return !mats.empty();
+}
+
+bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat();
+    return imdecodemulti_(buf, flags, mats, 0, -1);
+}
+
 bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {

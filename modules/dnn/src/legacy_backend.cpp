@@ -75,11 +75,7 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
-        return Ptr<BackendWrapper>(new NgraphBackendWrapper(targetId, m));
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of OpenVINO / Inference Engine + nGraph");
-#endif
+        CV_Assert(0 && "Internal error: DNN_BACKEND_INFERENCE_ENGINE_NGRAPH must be implemented through inheritance");
     }
     else if (backendId == DNN_BACKEND_WEBNN)
     {
